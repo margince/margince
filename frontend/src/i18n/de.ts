@@ -7248,6 +7248,9 @@ export const de = {
   "worklist.loading": "Dein Tag wird gelesen…",
   "worklist.queue": "Was als Nächstes zu tun ist",
   "worklist.summary": "{urgent} dringend · {due} fällig · {lower} nachrangig",
+  "worklist.completeness": "{shown} von {considered} angezeigt",
+  "worklist.completeness.bounded":
+    "{shown} von {considered} angezeigt · {sources} Quellen haben mehr",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearOfWhatWasRead":
     "Unter den Quellen, die geantwortet haben, wartet nichts.",

@@ -7181,6 +7181,9 @@ export const vi = {
   "worklist.queue": "Việc cần làm tiếp theo",
   "worklist.summary":
     "{urgent} khẩn cấp · {due} đến hạn · {lower} ưu tiên thấp",
+  "worklist.completeness": "Hiển thị {shown} trong {considered}",
+  "worklist.completeness.bounded":
+    "Hiển thị {shown} trong {considered} · {sources} nguồn còn nữa",
   "worklist.clear": "Không có gì đang chờ bạn.",
   "worklist.clearOfWhatWasRead":
     "Không có gì đang chờ trong các nguồn đã trả lời.",

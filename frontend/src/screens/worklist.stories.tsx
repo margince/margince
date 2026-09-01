@@ -35,10 +35,33 @@ export const AFullDay: Story = {
     stubDay({
       as_of: "2026-08-31T09:00:00Z",
       scope: "mine",
-      scope_options: ["mine", "team", "all"],
+      scope_options: ["mine", "unassigned", "team", "all"],
       summary: { urgent: 1, due: 2, lower_priority: 3, total: 5 },
       sources_unavailable: [],
       reach: [],
+      // More work than the page carries, which is the ordinary case and the one
+      // these figures exist for: four decisions sit behind the single row drawn.
+      counts: [
+        {
+          category: "customer_waiting",
+          considered: 1,
+          shown: 1,
+          more_available: false,
+        },
+        {
+          category: "deals_at_risk",
+          considered: 1,
+          shown: 1,
+          more_available: false,
+        },
+        { category: "tasks", considered: 1, shown: 1, more_available: false },
+        {
+          category: "decisions",
+          considered: 5,
+          shown: 1,
+          more_available: false,
+        },
+      ],
       queue: [
         {
           id: "waiting-1",
@@ -121,6 +144,8 @@ export const NothingWaiting: Story = {
       summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
       sources_unavailable: [],
       reach: [],
+      // A genuinely clear day: nothing read, nothing counted, nothing hidden.
+      counts: [],
       queue: [],
     });
     return (
@@ -143,6 +168,10 @@ export const PartlyUnread: Story = {
       sources_unavailable: [{ source: "capture_health", reason: "failed" }],
       queue: [],
       reach: [],
+      // Nothing counted, because the source that would have filled the day is
+      // the one that could not be read. The warning says so; the counts do not
+      // pretend otherwise.
+      counts: [],
     });
     return (
       <StoryProviders>

@@ -11,6 +11,7 @@ import { settingsAddress } from "./settings";
 import type {
   Worklist,
   WorklistComparison,
+  WorklistFilter,
   WorklistItem,
   WorklistReason,
   WorklistValue,
@@ -377,4 +378,66 @@ function knownSource(
   source: WorklistItem["source"],
 ): source is keyof typeof KNOWN_SOURCES {
   return source in KNOWN_SOURCES;
+}
+
+// How much of one kind of work the page is carrying, for the pill that narrows
+// to it.
+//
+// A count is drawn only when it is EXACT. `FilterPills` treats an absent count
+// as "no number" rather than as a zero, and that is the honest answer for a
+// category read to its bound: the server knows a floor, not a total, and a
+// floor printed as a count is a wrong number rather than a missing one.
+//
+// The `all` pill counts every category, because "all" is not a category and has
+// no row of its own.
+export function pillCount(
+  day: Worklist,
+  filter: WorklistFilter,
+): number | undefined {
+  if (filter === "all") {
+    return day.counts.some((count) => count.more_available)
+      ? undefined
+      : day.counts.reduce((total, count) => total + count.considered, 0);
+  }
+  const found = day.counts.find((count) => count.category === filter);
+  if (!found || found.more_available) {
+    return undefined;
+  }
+  return found.considered;
+}
+
+// What the page is NOT showing, in one line.
+//
+// The queue is a cut, and before this the reader had no way to tell a finished
+// day from a truncated one — a full first page read as an empty backlog. The
+// line is drawn only when there IS a difference to report: on a day the page
+// carries whole, saying "12 of 12" is noise.
+//
+// A source read to its bound makes the total a floor, and the sentence says so
+// rather than printing a number it cannot stand behind.
+export function completenessText(
+  day: Worklist,
+  t: T,
+  locale: Locale,
+): string | null {
+  const shown = day.counts.reduce((total, count) => total + count.shown, 0);
+  const considered = day.counts.reduce(
+    (total, count) => total + count.considered,
+    0,
+  );
+  const bounded = day.counts.filter((count) => count.more_available).length;
+  if (shown >= considered && bounded === 0) {
+    return null;
+  }
+  if (bounded > 0) {
+    return t("worklist.completeness.bounded", {
+      shown: formatNumber(shown, locale),
+      considered: formatNumber(considered, locale),
+      sources: formatNumber(bounded, locale),
+    });
+  }
+  return t("worklist.completeness", {
+    shown: formatNumber(shown, locale),
+    considered: formatNumber(considered, locale),
+  });
 }

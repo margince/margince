@@ -64,6 +64,7 @@ function day(over: Partial<Worklist> = {}): Worklist {
     summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
     sources_unavailable: [],
     reach: [],
+    counts: [],
     ...over,
   };
 }
