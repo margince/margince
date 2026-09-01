@@ -295,12 +295,17 @@ func (s *Store) move(
 		if err != nil {
 			return err
 		}
-		if err := permit(cur); err != nil {
-			return err
-		}
+		// Version BEFORE the transition rules. A tab that read the ask while it
+		// was open and pressed decline after somebody accepted is looking at a
+		// stale record, not attempting an illegal move — telling it the move
+		// was impossible sends the reader to check the state machine when what
+		// they need to do is reload.
 		if cur.Version != version {
 			return fmt.Errorf(
 				"introductions: this ask moved since you read it: %w", apperrors.ErrVersionSkew)
+		}
+		if err := permit(cur); err != nil {
+			return err
 		}
 		if err := write(ctx, tx, cur); err != nil {
 			return fmt.Errorf("introductions: recording the answer: %w", err)

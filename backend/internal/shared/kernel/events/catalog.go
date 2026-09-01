@@ -292,6 +292,15 @@ var catalog = map[string]struct {
 	"notice.created": {identityStreamEntity, 1},
 	"notice.read":    {identityStreamEntity, 1},
 
+	// An introduction request is about a CONTACT — who can open a door to
+	// them, and what came of asking — so it rides the person stream a
+	// consumer ranking that contact's open work already reads.
+	"intro_request.created":   {personStreamEntity, 1},
+	"intro_request.decided":   {personStreamEntity, 1},
+	"intro_request.completed": {personStreamEntity, 1},
+	"intro_request.replied":   {personStreamEntity, 1},
+	"intro_request.closed":    {personStreamEntity, 1},
+
 	"approval.requested": {approvalStreamEntity, 1},
 	"approval.decided":   {approvalStreamEntity, 1},
 
