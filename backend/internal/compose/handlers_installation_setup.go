@@ -14,6 +14,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -183,14 +184,22 @@ func (h installationSetupHandlers) connectorAppConfigured(ctx context.Context) (
 	// Every vendor the capture module holds an app for, asked FROM it: a list
 	// spelled here would go on reporting two after a third was added, and the
 	// step would read as unconfigured on an installation that had configured it.
+	// A read failure does NOT end the scan. The question is whether ANY vendor
+	// is configured, so one unreadable row cannot answer it — and failing the
+	// whole setup report over Microsoft's row would tell an installation that
+	// had configured Google it had configured nothing. The error is kept and
+	// raised only if no vendor answered yes, where it is the difference between
+	// "not configured" and "we could not tell".
+	var unreadable error
 	for _, p := range capture.AppProviders() {
 		status, err := h.connectorApps.Read(ctx, p)
 		if err != nil {
-			return false, err
+			unreadable = errors.Join(unreadable, err)
+			continue
 		}
 		if status.Configured {
 			return true, nil
 		}
 	}
-	return false, nil
+	return false, unreadable
 }

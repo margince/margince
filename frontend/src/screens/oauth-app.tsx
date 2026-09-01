@@ -278,7 +278,11 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                   })}
                 {status.source === "none" && t(copy.absent)}
               </p>
-              {status.source === "stored" && status.tenant && (
+              {/* Whatever the app's source: a directory pin is a fact about
+                  who can sign in, and an operator debugging a refused login
+                  needs it whether the app came from the environment or from
+                  this screen. */}
+              {status.tenant && (
                 <p className="t-caption">
                   {t("oauthApp.pinnedToDirectory", { tenant: status.tenant })}
                 </p>

@@ -355,7 +355,20 @@ func (s *ConnectorAppStore) swap(
 // retire deletes a secret nothing references any more, through the shared helper
 // for a detached credential.
 func (s *ConnectorAppStore) retire(ctx context.Context, ws ids.WorkspaceID, ref, lifecycle string) {
-	if ref == "" || s.vault == nil {
+	if ref == "" {
+		return
+	}
+	// No vault, but a ref to retire: the row is already gone, so refusing here
+	// would be refusing after the fact, and blocking the removal up front would
+	// leave an operator unable to withdraw an app while their vault is down —
+	// worse than the blob it saves. The ciphertext nothing references is inert;
+	// what is not acceptable is losing the knowledge that it is there, so this
+	// says so rather than returning as though there were nothing to do.
+	if s.vault == nil {
+		s.log.WarnContext(ctx,
+			"a client secret outlived the setting that referenced it: no vault is configured to retire it, "+
+				"so the sealed blob remains and must be reconciled out of band",
+			"credential_ref", ref, "lifecycle", lifecycle)
 		return
 	}
 	keyvault.DeleteDetached(ctx, s.vault, s.log, ws.UUID, keyvault.Ref(ref), lifecycle)

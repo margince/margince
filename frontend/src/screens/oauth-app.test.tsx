@@ -256,6 +256,19 @@ describe("the Microsoft app card", () => {
     expect(screen.queryByText("Google app")).toBeNull();
   });
 
+  // A DEPLOYMENT-SUPPLIED app can be pinned too, and the pin is a fact about
+  // who may sign in rather than a fact about where the app came from. Hiding it
+  // for the environment case would leave an operator debugging a refused login
+  // with no way to see that the directory is the reason.
+  it("reports the directory even when the app came from the environment", async () => {
+    const app = microsoft();
+    app.source = "environment";
+    mount(app, "microsoft");
+    expect(
+      await screen.findByText(`Pinned to directory ${DIRECTORY}.`),
+    ).toBeTruthy();
+  });
+
   it("reports the directory a stored app is pinned to", async () => {
     mount(microsoft(), "microsoft");
     expect(

@@ -1105,6 +1105,10 @@ export async function mockApi(
                 purpose: "mailbox_connect",
                 url: "https://api.brandt.example/v1/connectors/graph/callback",
               },
+              {
+                purpose: "calendar_connect",
+                url: "https://api.brandt.example/v1/connectors/graphcal/callback",
+              },
             ]
           : [
               {
@@ -1114,6 +1118,10 @@ export async function mockApi(
               {
                 purpose: "mailbox_connect",
                 url: "https://api.brandt.example/v1/connectors/gmail/callback",
+              },
+              {
+                purpose: "calendar_connect",
+                url: "https://api.brandt.example/v1/connectors/gcal/callback",
               },
             ],
       });

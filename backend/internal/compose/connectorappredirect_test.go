@@ -64,6 +64,47 @@ func TestTheAdvertisedSignInRedirectIsTheOneTheFlowSends(t *testing.T) {
 	}
 }
 
+// THE MICROSOFT TWIN, and the reason it is worth spelling twice rather than
+// asserting the pair once: the two vendors publish their sign-in URI from
+// different files, against different bases, and Microsoft matches the
+// registered value byte for byte just as Google does — with a refusal
+// (AADSTS50011) that names no URI, so a mismatch here is diagnosed by reading
+// this test or not at all.
+//
+// It also settles what ONE Entra registration covers. Sign-in is published
+// under the same AppProviderMicrosoft key the mailbox and calendar callbacks
+// use, so the card lists all three against one app, and an operator who
+// registers only what they see connecting mailboxes would break login.
+func TestTheAdvertisedMicrosoftSignInRedirectIsTheOneTheFlowSends(t *testing.T) {
+	var s Server
+	WithMicrosoftSignIn(MicrosoftSignInConfig{
+		ClientID: "cid", ClientSecret: "secret",
+		Tenant:       "0f9c1b2a-3d4e-5f60-8a1b-2c3d4e5f6071",
+		StateKey:     "0123456789012345678901234567890123",
+		RedirectBase: "https://api.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
+	})(&s, nil)
+
+	shown, ok := advertised(s.composed[capture.AppProviderMicrosoft].redirectURIs, crmcontracts.SignIn)
+	if !ok {
+		t.Fatal("a deployment that composed Microsoft sign-in advertises no sign-in redirect URI, so an operator is told to register nothing")
+	}
+
+	rec := httptest.NewRecorder()
+	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/microsoft/start", nil), "microsoft")
+	location := rec.Header().Get("Location")
+	if location == "" {
+		t.Fatal("the start route sent no redirect, so there is nothing to compare the advertised URI against")
+	}
+	consent, err := url.Parse(location)
+	if err != nil {
+		t.Fatalf("parsing the authorization request: %v", err)
+	}
+	if sent := consent.Query().Get("redirect_uri"); sent != shown {
+		t.Errorf("the sign-in URI advertised to the operator is %q, but the authorization request sends %q.\n"+
+			"Registering the advertised value would fail AADSTS50011.", shown, sent)
+	}
+}
+
 // The case an operator is actually in when they need this: they are CREATING
 // the OAuth client, so no client id exists yet. Withholding the URI until one
 // does would hide it exactly when it is needed, and leave them guessing the one

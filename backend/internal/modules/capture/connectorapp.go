@@ -74,7 +74,7 @@ const (
 // half-configured app that no code path would accept.
 type ConnectorApp struct {
 	// ClientID is the vendor's public identifier for the app.
-	ClientID string `json:"client_id"`
+	ClientID string `json:"client_id,omitempty"`
 	// ClientSecretRef addresses the sealed secret in the key vault. AS STORED
 	// it is a ref and never the secret, and no surface returns it.
 	//
@@ -83,7 +83,7 @@ type ConnectorApp struct {
 	// it was handed, and a second struct differing in one field's MEANING is how
 	// a ref reaches a vendor. The rule is one-directional: a value that came out
 	// of Credentials is never written back.
-	ClientSecretRef string `json:"client_secret_ref"`
+	ClientSecretRef string `json:"client_secret_ref,omitempty"`
 	// Tenant pins a Microsoft app to ONE Entra directory. Empty means the
 	// app authorizes any organization, which is what a multi-tenant
 	// registration is for. Google apps carry none and validation refuses one:
