@@ -25,8 +25,21 @@ import (
 // receivedDateTime ge <instant>. The window boundary is a product parameter
 // measured in months, so second-grain UTC rendering loses nothing.
 func receivedAfterFilter(after time.Time) string {
-	return "receivedDateTime ge " + after.UTC().Format(time.RFC3339)
+	return "receivedDateTime ge " + filterInstant(after).Format(time.RFC3339)
 }
+
+// filterInstant is the lower bound AS MICROSOFT WILL READ IT: second-grain,
+// because that is what RFC3339 rendering leaves of it.
+//
+// Spelled once and shared with the reconciliation, so the two cannot drift. They
+// did: the filter asked Graph for everything from the top of the second while
+// the tally compared against the exact instant, so a message arriving in the
+// fractional remainder counted on Microsoft's side and not on ours — a complete
+// anchor refused as short, every time a mailbox happened to receive one there.
+//
+// Held by: TestASubsecondLowerBoundDoesNotRefuseACompleteAnchor
+// (backend/internal/modules/capture/graph/client_test.go)
+func filterInstant(t time.Time) time.Time { return t.UTC().Truncate(time.Second) }
 
 // receivedBetweenFilter closes that window at the top: ge <after> and lt
 // <before>.
@@ -89,18 +102,24 @@ func entryIDs(entries []deltaEntry) []string {
 }
 
 // countWithin counts the DISTINCT entries a walk named that belong to
-// [after, before) — the window a tally covers.
+// [after, before) — the window a tally covers, with the lower bound read the way
+// Microsoft read it.
 //
-// An entry that does not carry an instant counts: it cannot be shown to be
-// outside the window, and refusing an anchor over what the response declined to
-// say would be refusing on our own ignorance rather than on evidence. What this
-// does exclude is the entry that says, in Microsoft's own words, that it belongs
-// to some older window — the one that would otherwise pad the walk's side of the
-// reconciliation and let a short round pass.
+// An entry that carries no instant does not count. The round ASKS for the field
+// ($select on the opening request), so its absence is not the ordinary silence
+// of a response that was never asked — it is an entry that cannot be shown to
+// belong to the window being reconciled, and one that cannot be shown to belong
+// is exactly what must not stand in for a message the round never reached. The
+// cost of the strict reading is a loud refusal that the next cycle retries; the
+// cost of the lenient one is a watermark stored over a gap, and the watermark
+// only moves forward.
 func countWithin(entries []deltaEntry, after, before time.Time) int {
+	from := filterInstant(after)
 	seen := make(map[string]bool, len(entries))
 	for _, e := range entries {
-		if !e.receivedAt.IsZero() && (e.receivedAt.Before(after) || !e.receivedAt.Before(before)) {
+		// One comparison covers the undated entry too: an absent instant decodes
+		// to the zero time, which precedes every window an anchor can ask for.
+		if e.receivedAt.Before(from) || !e.receivedAt.Before(before) {
 			continue
 		}
 		seen[e.id] = true
@@ -110,7 +129,15 @@ func countWithin(entries []deltaEntry, after, before time.Time) int {
 
 func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) ([]string, string, error) {
 	opened := time.Now().UTC()
-	q := url.Values{paramFilter: {receivedAfterFilter(after)}}
+	// $select, so the walk is answered in the two fields it reconciles on rather
+	// than in whatever Graph would send by default: receivedDateTime is not
+	// promised on every entry of a delta round, and this is the request that
+	// asks for it. It rides the deltaLink into every later round of the same
+	// stream, so a resume is answered the same way.
+	q := url.Values{
+		paramFilter: {receivedAfterFilter(after)},
+		paramSelect: {"id,receivedDateTime"},
+	}
 	// receivedDateTime bounds BOTH folders: Exchange stamps it on a sent
 	// message too, so one filter serves the pair rather than the sent side
 	// needing sentDateTime and a second spelling of "recently".
