@@ -409,6 +409,37 @@ type DealFigures struct {
 	ExpectedCloseDate *time.Time
 }
 
+// LeadResponses is the inbound leads still owed a first reply.
+//
+// The SDR's half of the morning. A routed lead nobody has answered goes cold on
+// a clock the product already runs — sla_deadline_at and sla_state are derived
+// on every lead read — and until now that clock ticked on a screen of its own
+// while the queue that claims to be "what should I do next" said nothing about
+// it.
+//
+// `tracked` is the installation's first-response policy, and false is not an
+// empty list: with the target switched off no lead owes a reply at a stated
+// time, so the lane renders ABSENT rather than empty. Saying "no leads are
+// overdue" where nothing measures overdue would be a claim the product cannot
+// support.
+type LeadResponses interface {
+	Owed(ctx context.Context, scope TaskScope, owner ids.UUID, limit int) (rows []OwedLead, tracked bool, err error)
+}
+
+// OwedLead is one inbound lead nobody has replied to yet.
+type OwedLead struct {
+	ID   ids.UUID
+	Name string
+	// OwnerID is zero when the lead is assigned to nobody, which is its own
+	// kind of urgency rather than a missing field.
+	OwnerID ids.UUID
+	// DeadlineAt is when the first reply was owed. Zero when the policy states
+	// no target, in which case State is empty too.
+	DeadlineAt time.Time
+	// State is the contract's own vocabulary: within_target, at_risk, breached.
+	State string
+}
+
 // Meetings is today's booked meetings that have not happened yet.
 //
 // Optional as the other two are: nil means this feed does not read meetings,
