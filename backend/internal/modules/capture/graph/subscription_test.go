@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -302,7 +303,12 @@ func TestASubscriptionIsFoundOnAPageAfterTheFirst(t *testing.T) {
 // token — at a path built from a provider-supplied id. An id carrying a path
 // segment must not redirect it at another resource.
 func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
-	var patched string
+	// Guarded for the reason oneSubscriptionStub gives below: the write happens
+	// on the server's goroutine and the read on this one.
+	var (
+		mu      sync.Mutex
+		patched string
+	)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/subscriptions", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, map[string]any{"value": []subscription{{
@@ -315,7 +321,9 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 	// `/subscriptions/../../me/messages` as though the escaping had failed, and
 	// it hides that the bytes sent never left the collection.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
 		patched = r.URL.EscapedPath()
+		mu.Unlock()
 		writeJSON(w, map[string]any{
 			"id": "sub-1", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 		})
@@ -333,8 +341,11 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 	}
 	// Nothing was PATCHed at all: the id is refused before a request is built,
 	// so this does not rest on how the far end normalizes what it received.
-	if patched != "" {
-		t.Errorf("a renewal was sent to %q for a provider-supplied id that is not a subscription id", patched)
+	mu.Lock()
+	sent := patched
+	mu.Unlock()
+	if sent != "" {
+		t.Errorf("a renewal was sent to %q for a provider-supplied id that is not a subscription id", sent)
 	}
 }
 
@@ -572,13 +583,23 @@ func (o *countingOAuth) AccessToken(ctx context.Context, refresh string) (string
 }
 
 // oneSubscriptionStub answers GET /subscriptions/{id} with the given status and
-// body, and records the raw path the request took.
-func oneSubscriptionStub(t *testing.T, status int, body map[string]any) (*httptest.Server, *string) {
+// body, and returns a reader for the raw path the request took.
+//
+// Through a mutex rather than a bare pointer: the handler runs on the server's
+// own goroutine, and nothing in net/http promises the test goroutine an edge to
+// read across afterwards, so -race is entitled to call the plain version a data
+// race whatever it does in practice.
+func oneSubscriptionStub(t *testing.T, status int, body map[string]any) (*httptest.Server, func() string) {
 	t.Helper()
-	var path string
+	var (
+		mu   sync.Mutex
+		path string
+	)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
 		path = r.URL.EscapedPath()
+		mu.Unlock()
 		if status != http.StatusOK {
 			w.WriteHeader(status)
 			return
@@ -587,7 +608,11 @@ func oneSubscriptionStub(t *testing.T, status int, body map[string]any) (*httpte
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	return srv, &path
+	return srv, func() string {
+		mu.Lock()
+		defer mu.Unlock()
+		return path
+	}
 }
 
 func TestReadingASubscriptionReportsWhereItDelivers(t *testing.T) {
@@ -609,8 +634,8 @@ func TestReadingASubscriptionReportsWhereItDelivers(t *testing.T) {
 		t.Errorf("NotificationURL = %q, want the endpoint — it is the whole reason for this read",
 			sub.NotificationURL)
 	}
-	if *path != "/subscriptions/sub-1" {
-		t.Errorf("read %q, want the subscription addressed inside its own collection", *path)
+	if got := path(); got != "/subscriptions/sub-1" {
+		t.Errorf("read %q, want the subscription addressed inside its own collection", got)
 	}
 }
 
@@ -636,8 +661,8 @@ func TestAReadCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 		GetSubscription(context.Background(), "at", "../../me/messages"); !errors.Is(err, ErrSubscriptionGone) {
 		t.Fatalf("err = %v, want ErrSubscriptionGone for an id that cannot be addressed", err)
 	}
-	if *path != "" {
-		t.Errorf("the request went out to %q — an id like this must not reach the wire at all", *path)
+	if got := path(); got != "" {
+		t.Errorf("the request went out to %q — an id like this must not reach the wire at all", got)
 	}
 }
 
