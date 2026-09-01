@@ -30,15 +30,16 @@ import (
 // disownOverDB nulls a record's owner column at the database. A create over
 // the wire stamps the calling seat as owner when the body names none, so the
 // unowned state these queue tests are about has to be produced after the
-// fact. The column varies by table: person and lead use owner_id, activity
-// (a task's self-assignment, taskAssignee in activity.go) uses assignee_id.
+// fact. The package-local Env fixture spells this same idiom inline through
+// e.WsExec instead of sharing this helper — a different fixture type, not a
+// second copy of the invariant.
 func disownOverDB(t *testing.T, e *apptest.AppEnv, table, column, id string) {
 	t.Helper()
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(t.Context(), `UPDATE `+table+` SET `+column+` = NULL WHERE id = $1`, id)
 		return err
 	}); err != nil {
-		t.Fatalf("disown %s %s: %v", table, id, err)
+		t.Fatalf("disown %s.%s for %s: %v", table, column, id, err)
 	}
 }
 
@@ -113,25 +114,16 @@ func TestTheActivityListNarrowsByAssigneeOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var me struct {
-		User struct {
-			ID string `json:"id"`
-		} `json:"user"`
-	}
-	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
-		t.Fatalf("GET /v1/me = %d, want 200", status)
-	}
+	me := callerUserID(t, e)
 	mine := createdRecord(t, e, "/v1/activities", AnyMap{
-		"kind": "task", "subject": "Call the buyer", "due_at": "2026-09-01T09:00:00Z", "assignee_id": me.User.ID,
+		"kind": "task", "subject": "Call the buyer", "due_at": "2026-09-01T09:00:00Z", "assignee_id": me,
 	})
-	// A task posted with no assignee is self-assigned to the caller at write
-	// time (taskAssignee, activity.go) — the unowned state this filter must
-	// exclude has to be produced after the fact, same as the person/lead
-	// queue tests below.
-	nobodys := createdRecord(t, e, "/v1/activities", AnyMap{"kind": "task", "subject": "Nobody's"})
-	disownOverDB(t, e, "activity", "assignee_id", nobodys)
+	// The caller now owns a task it posts unassigned, so this row is
+	// disowned to be the one the filter must not return.
+	unassigned := createdRecord(t, e, "/v1/activities", AnyMap{"kind": "task", "subject": "Nobody's"})
+	disownOverDB(t, e, "activity", "assignee_id", unassigned)
 
-	onlyRecord(t, e, "/v1/activities?assignee_id="+me.User.ID, mine, "the open task that person holds")
+	onlyRecord(t, e, "/v1/activities?assignee_id="+me, mine, "the open task that person holds")
 }
 
 func TestThePipelineListAnswersIncludeArchivedOnTheWire(t *testing.T) {
