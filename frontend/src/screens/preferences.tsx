@@ -11,6 +11,7 @@ import {
 } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { usePublicLocale } from "../i18n/publiclocale";
 import { problemMessageOf, throwProblem } from "./common";
 import {
   type Draft,
@@ -80,6 +81,8 @@ export function explainPublicError(
 
 function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
   const t = useT();
+  // The link carried the message's language; the page speaks it too.
+  usePublicLocale();
   const queryClient = useQueryClient();
   const queryKey = ["preference-center", token];
 

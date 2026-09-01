@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import { Button, Card, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
+import { usePublicLocale } from "../i18n/publiclocale";
 import { throwProblem } from "./common";
 import {
   explainPublicError,
@@ -46,6 +47,8 @@ function UnsubscribeBody({
   purpose,
 }: Readonly<{ token: string; purpose: string }>) {
   const t = useT();
+  // The link carried the message's language; the page speaks it too.
+  usePublicLocale();
   const queryClient = useQueryClient();
   const queryKey = ["preference-center", token];
   const doneHeading = useRef<HTMLHeadingElement>(null);

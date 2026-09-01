@@ -77,7 +77,14 @@ export const LOCALES = ["en", "de", "vi"] as const satisfies readonly Locale[];
 
 export const DEFAULT_LOCALE: Locale = "en";
 
-function isLocale(value: string): value is Locale {
+/**
+ * Whether a string names a language this product speaks.
+ *
+ * Exported for the public pages: an email's `?lang=` is text a link
+ * carried, so it is validated here rather than trusted, and the same
+ * predicate that admits a stored pick admits that one.
+ */
+export function isLocale(value: string): value is Locale {
   return LOCALES.some((locale) => locale === value);
 }
 
