@@ -1477,6 +1477,15 @@ export const de = {
   "timeline.kind.message": "Nachricht",
   "timeline.kind.change": "Datensatz",
   "timeline.withheld": "Inhalt nur f\u00fcr Beteiligte",
+  "compose.threadShare": "Verlauf teilen",
+  "compose.threadKeepPrivate": "Privat halten",
+  "compose.threadStillHeld":
+    "Weiterhin zurückgehalten: {count} weitere Person(en) in diesem Verlauf haben ihn nicht freigegeben.",
+  "compose.reason.posture": "Durch Ihre Einstellung zurückgehalten",
+  "compose.reason.workspaceFloor": "Durch die Organisation zurückgehalten",
+  "compose.reason.noRecord": "Zurückgehalten, kein Datensatz",
+  "compose.reason.pendingVerdict": "Bis zur Einstufung zurückgehalten",
+  "compose.reason.manual": "Privat gehalten",
   "compose.audience": "Sichtbarkeit",
   "compose.audienceTitle": "Wer darf diese Nachricht lesen?",
   "compose.audienceLegend": "Sichtbarkeit dieser einen Nachricht",
@@ -3812,6 +3821,37 @@ export const de = {
     "Du hast zugestimmt, aber die Vollmacht, unter der Margince gearbeitet hat, ist abgelaufen. Schalte die Option aus und wieder ein, um sie zu erneuern — bis dahin wird dein Überblick nicht vorbereitet.",
   "overnightGrant.renewScope":
     "Du hast zugestimmt, aber Margince kann inzwischen mehr, und die erteilte Vollmacht deckt die neue Arbeit nicht ab. Schalte die Option aus und wieder ein, um sie zu erweitern — bis dahin wird dein Überblick nicht vorbereitet.",
+  "senders.title": "Absender",
+  "senders.sub":
+    "Was über jede Adresse entschieden wurde, die Ihr Postfach eingebracht hat — und Ihre eigene Antwort, wo Sie eine gegeben haben. Nur Ihre Absender; Kolleginnen und Kollegen sehen diese Liste nie.",
+  "senders.emptyTitle": "Noch nichts entschieden",
+  "senders.emptyBody":
+    "Sobald Ihr Postfach E-Mails eingebracht hat, steht hier jeder Absender mit dem, was aus ihm wurde.",
+  "senders.colSender": "Absender",
+  "senders.colDecision": "Entschieden",
+  "senders.colRecord": "Kontakt",
+  "senders.colActions": "Aktionen",
+  "senders.recordYes": "Ja",
+  "senders.recordNo": "Nein",
+  "senders.byYou": "— von Ihnen entschieden",
+  "senders.markBusiness": "Geschäftlich",
+  "senders.keepOut": "Aussperren",
+  "senders.withdraw": "Zurücknehmen",
+  "senders.keepOutTitle": "Diesen Absender dauerhaft aussperren?",
+  "senders.keepOutBody":
+    "Es wird kein Kontakt angelegt, und die E-Mails, die dieser Absender bereits in Ihr Postfach eingebracht hat, werden vernichtet. E-Mails, die auch eine Kollegin importiert hat, bleiben ihr erhalten.",
+  "senders.keepOutConfirm": "Aussperren und vernichten",
+  "senders.kind.person": "Eine Person",
+  "senders.kind.roleMailbox": "Ein Funktionspostfach",
+  "senders.kind.organizationSender": "Eine Organisation",
+  "senders.kind.newsletter": "Ein Newsletter",
+  "senders.kind.transactional": "Ein automatisiertes Werkzeug",
+  "senders.kind.spam": "Spam",
+  "senders.kind.personal": "Privat",
+  "senders.kind.advisor": "Beratung",
+  "senders.kind.business": "Geschäftlich",
+  "senders.kind.keptOut": "Ausgesperrt",
+  "senders.kind.undecided": "Noch nicht entschieden",
   "mailSharing.title": "E-Mail-Freigabe",
   "mailSharing.sub":
     "Erfasste E-Mails sind für alle Kolleginnen und Kollegen lesbar, die den Kontakt sehen können. Standardmäßig eingeschaltet — das macht die Pipeline gemeinsam.",
@@ -3820,6 +3860,11 @@ export const de = {
     "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen und Domains vorab ausschließen.",
   "mailSharing.danger":
     "ACHTUNG: E-Mail-Freigabe ausschalten macht die Nutzung des CRM schwierig. Neue E-Mails sind dann nur noch für die Beteiligten der jeweiligen Nachricht sichtbar.",
+  "mailSharing.sharedPosture.label": "Postfächern erlauben, sofort zu teilen",
+  "mailSharing.sharedPosture.help":
+    "Erlaubt Kolleginnen und Kollegen, das eigene Postfach auf „geteilt“ zu stellen — eine erfasste Nachricht ist dann für das Team lesbar, sobald sie ankommt, bevor sie eingestuft wurde. Standardmäßig aus.",
+  "mailSharing.sharedPosture.warning":
+    "Das Postfach von Beschäftigten in ein gemeinsames CRM einzulesen, ist in Deutschland und Österreich Gegenstand einer Betriebsvereinbarung. Wer dies einschaltet, erklärt, dass Ihre Organisation eine solche hat. Margince prüft das nicht.",
   "mailSharing.save": "Speichern",
   "connectors.sub":
     "Postfächer, die dein CRM automatisch füllen. Trenne eines bei Bedarf — bereits erfasste Datensätze bleiben.",
@@ -3853,6 +3898,24 @@ export const de = {
     "Folgt der Einstellung Ihrer Organisation. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
   "connectors.signatureEnrich.ownAnswer":
     "Eigene Antwort dieses Postfachs — bleibt bestehen, was auch immer Ihre Organisation einstellt.",
+  "connectors.mailPosture.label": "Wer E-Mails aus diesem Postfach lesen darf",
+  "connectors.mailPosture.classified": "Zurückgehalten bis eingestuft",
+  "connectors.mailPosture.held": "Immer zurückgehalten",
+  "connectors.mailPosture.shared": "Mit dem Team geteilt",
+  "connectors.mailPosture.sharedNeedsAdmin":
+    "„Mit dem Team geteilt“ muss eine Administratorin für diese Organisation erlauben.",
+  "connectors.mailPosture.help.classified":
+    "Eine neue Nachricht bleibt auf die Beteiligten beschränkt, bis eine Einstufung den Verlauf als gewöhnlich beurteilt. Kolleginnen und Kollegen sehen vorher nichts.",
+  "connectors.mailPosture.help.held":
+    "Eine neue Nachricht bleibt auf die Beteiligten beschränkt, unabhängig von jeder Einstufung. Sie geben einen Verlauf selbst frei, einzeln.",
+  "connectors.mailPosture.help.shared":
+    "Eine neue Nachricht ist für Kolleginnen und Kollegen lesbar, sobald sie ankommt.",
+  "connectors.mailPosture.historyTitle": "Und die bereits erfassten E-Mails?",
+  "connectors.mailPosture.historyBody":
+    "Diese Antwort gilt für E-Mails, die ab jetzt erfasst werden. Bereits erfasste E-Mails behalten ihre Sichtbarkeit, sofern Sie sie nicht entsprechend einschränken.",
+  "connectors.mailPosture.historyConfirm": "Sichtbarkeit ändern",
+  "connectors.mailPosture.historyApply":
+    "Auch bereits erfasste E-Mails einschränken",
   "connectors.disconnectTitle": "Dieses Postfach trennen?",
   "connectors.disconnectBody":
     "Dies löscht die für dieses Postfach gespeicherte Zugangsdaten. Die Erfassung stoppt sofort; alles bereits Erfasste bleibt in deinem CRM, und beim erneuten Verbinden wird wieder um Erlaubnis gebeten.",

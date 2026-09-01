@@ -1518,6 +1518,15 @@ export const en = {
   "timeline.kind.message": "Message",
   "timeline.kind.change": "Record",
   "timeline.withheld": "Content for participants only",
+  "compose.threadShare": "Share thread",
+  "compose.threadKeepPrivate": "Keep private",
+  "compose.threadStillHeld":
+    "Still held: {count} other seat(s) on this thread have not shared it.",
+  "compose.reason.posture": "Held by your setting",
+  "compose.reason.workspaceFloor": "Held by the organization",
+  "compose.reason.noRecord": "Held, no record",
+  "compose.reason.pendingVerdict": "Held until classified",
+  "compose.reason.manual": "Kept private",
   "compose.audience": "Visibility",
   "compose.audienceTitle": "Who may read this message?",
   "compose.audienceLegend": "Visibility of this one message",
@@ -3848,6 +3857,37 @@ export const en = {
     "You said yes, but the authority Margince was working under has expired. Turn this off and on again to renew it — until then your brief is not being prepared.",
   "overnightGrant.renewScope":
     "You said yes, but Margince has learned to do more since, and the authority you gave does not cover the new work. Turn this off and on again to widen it — until then your brief is not being prepared.",
+  "senders.title": "Senders",
+  "senders.sub":
+    "What was decided about each address your mailbox brought in — and your own answer where you gave one. Your senders only; a colleague never sees this list.",
+  "senders.emptyTitle": "Nothing decided yet",
+  "senders.emptyBody":
+    "Once your mailbox has brought in mail, every sender it saw is listed here with what became of them.",
+  "senders.colSender": "Sender",
+  "senders.colDecision": "Decided",
+  "senders.colRecord": "Contact",
+  "senders.colActions": "What you can do",
+  "senders.recordYes": "Yes",
+  "senders.recordNo": "No",
+  "senders.byYou": "— you decided",
+  "senders.markBusiness": "Business",
+  "senders.keepOut": "Keep out",
+  "senders.withdraw": "Undo",
+  "senders.keepOutTitle": "Keep this sender out for good?",
+  "senders.keepOutBody":
+    "No contact is created, and the mail this sender already brought into your mailbox is destroyed. Mail a colleague also imported stays theirs.",
+  "senders.keepOutConfirm": "Keep out and destroy",
+  "senders.kind.person": "A person",
+  "senders.kind.roleMailbox": "A role mailbox",
+  "senders.kind.organizationSender": "An organization",
+  "senders.kind.newsletter": "A newsletter",
+  "senders.kind.transactional": "An automated tool",
+  "senders.kind.spam": "Spam",
+  "senders.kind.personal": "Personal",
+  "senders.kind.advisor": "An advisor",
+  "senders.kind.business": "Business",
+  "senders.kind.keptOut": "Kept out",
+  "senders.kind.undecided": "Not yet decided",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
     "Captured mail is readable by every colleague who can see the contact. On by default — it is what makes the pipeline shared.",
@@ -3856,6 +3896,11 @@ export const en = {
     "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
   "mailSharing.danger":
     "DANGER: Switching off email sharing will make usage of the CRM difficult. New mail will be visible only to the people on each message.",
+  "mailSharing.sharedPosture.label": "Allow mailboxes to share on arrival",
+  "mailSharing.sharedPosture.help":
+    "Lets a colleague put their own mailbox in the shared posture, where a captured message is readable by the team the moment it lands, before anything has judged it. Off by default.",
+  "mailSharing.sharedPosture.warning":
+    "Reading an employee's mailbox into a shared CRM is what a works-council agreement covers in Germany and Austria. Turning this on says your organization holds one. Margince does not check.",
   "mailSharing.save": "Save",
   "connectors.sub":
     "Mailboxes capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
@@ -3889,6 +3934,23 @@ export const en = {
     "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
   "connectors.signatureEnrich.ownAnswer":
     "This mailbox's own answer, kept whatever your organization's setting becomes.",
+  "connectors.mailPosture.label": "Who may read mail from this inbox",
+  "connectors.mailPosture.classified": "Held until classified",
+  "connectors.mailPosture.held": "Always held",
+  "connectors.mailPosture.shared": "Shared with the team",
+  "connectors.mailPosture.sharedNeedsAdmin":
+    "“Shared with the team” needs an admin to allow it for this organization.",
+  "connectors.mailPosture.help.classified":
+    "A new message is held to the people on it until a classifier judges the thread ordinary. Colleagues see nothing before that.",
+  "connectors.mailPosture.help.held":
+    "A new message is held to the people on it, whatever any classifier concludes. You share a thread yourself, one at a time.",
+  "connectors.mailPosture.help.shared":
+    "A new message is readable by colleagues the moment it lands.",
+  "connectors.mailPosture.historyTitle": "And the mail already captured?",
+  "connectors.mailPosture.historyBody":
+    "This answer governs mail captured from here on. Mail already in the CRM keeps the audience it has, unless you narrow it to match.",
+  "connectors.mailPosture.historyConfirm": "Change what colleagues may read",
+  "connectors.mailPosture.historyApply": "Also narrow mail already captured",
   "connectors.disconnectTitle": "Disconnect this inbox?",
   "connectors.disconnectBody":
     "This will delete the credential we stored for this mailbox. Capture stops immediately; everything already captured stays in your CRM, and reconnecting will ask for permission again.",

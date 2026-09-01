@@ -1474,6 +1474,15 @@ export const vi = {
   "timeline.kind.message": "Tin nhắn",
   "timeline.kind.change": "Bản ghi",
   "timeline.withheld": "Nội dung chỉ dành cho người tham gia",
+  "compose.threadShare": "Chia sẻ chuỗi",
+  "compose.threadKeepPrivate": "Giữ riêng tư",
+  "compose.threadStillHeld":
+    "Vẫn được giữ lại: {count} người khác trong chuỗi thư này chưa chia sẻ.",
+  "compose.reason.posture": "Giữ lại theo thiết lập của bạn",
+  "compose.reason.workspaceFloor": "Giữ lại theo tổ chức",
+  "compose.reason.noRecord": "Giữ lại, chưa có hồ sơ",
+  "compose.reason.pendingVerdict": "Giữ lại đến khi phân loại",
+  "compose.reason.manual": "Được giữ riêng tư",
   "compose.audience": "Hiển thị",
   "compose.audienceTitle": "Ai được đọc tin nhắn này?",
   "compose.audienceLegend": "Hiển thị của riêng tin nhắn này",
@@ -3776,6 +3785,37 @@ export const vi = {
     "Bạn đã đồng ý, nhưng quyền mà Margince đang dùng đã hết hạn. Tắt rồi bật lại tùy chọn này để gia hạn — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
   "overnightGrant.renewScope":
     "Bạn đã đồng ý, nhưng Margince nay làm được nhiều hơn, và quyền bạn đã cấp không bao gồm phần việc mới. Tắt rồi bật lại tùy chọn này để mở rộng — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
+  "senders.title": "Người gửi",
+  "senders.sub":
+    "Những gì đã được quyết định về từng địa chỉ mà hộp thư của bạn mang vào — và câu trả lời của chính bạn nếu có. Chỉ người gửi của bạn; đồng nghiệp không bao giờ thấy danh sách này.",
+  "senders.emptyTitle": "Chưa quyết định điều gì",
+  "senders.emptyBody":
+    "Khi hộp thư của bạn đã mang thư vào, mọi người gửi sẽ được liệt kê ở đây cùng kết quả xử lý.",
+  "senders.colSender": "Người gửi",
+  "senders.colDecision": "Đã quyết định",
+  "senders.colRecord": "Liên hệ",
+  "senders.colActions": "Thao tác",
+  "senders.recordYes": "Có",
+  "senders.recordNo": "Không",
+  "senders.byYou": "— bạn đã quyết định",
+  "senders.markBusiness": "Công việc",
+  "senders.keepOut": "Chặn",
+  "senders.withdraw": "Hoàn tác",
+  "senders.keepOutTitle": "Chặn vĩnh viễn người gửi này?",
+  "senders.keepOutBody":
+    "Không tạo liên hệ, và thư mà người gửi này đã mang vào hộp thư của bạn sẽ bị hủy. Thư mà đồng nghiệp cũng đã nhập vẫn thuộc về họ.",
+  "senders.keepOutConfirm": "Chặn và hủy",
+  "senders.kind.person": "Một người",
+  "senders.kind.roleMailbox": "Hộp thư chức năng",
+  "senders.kind.organizationSender": "Một tổ chức",
+  "senders.kind.newsletter": "Bản tin",
+  "senders.kind.transactional": "Công cụ tự động",
+  "senders.kind.spam": "Thư rác",
+  "senders.kind.personal": "Cá nhân",
+  "senders.kind.advisor": "Cố vấn",
+  "senders.kind.business": "Công việc",
+  "senders.kind.keptOut": "Đã chặn",
+  "senders.kind.undecided": "Chưa quyết định",
   "mailSharing.title": "Chia sẻ email",
   "mailSharing.sub":
     "Email được thu thập sẽ hiển thị với mọi đồng nghiệp có quyền xem liên hệ. Bật mặc định — đây là điều làm cho pipeline được chia sẻ.",
@@ -3784,6 +3824,11 @@ export const vi = {
     "Có thể giới hạn từng tin nhắn sau đó, và loại trừ địa chỉ hoặc tên miền ngay từ đầu.",
   "mailSharing.danger":
     "NGUY HIỂM: Tắt chia sẻ email sẽ khiến việc sử dụng CRM trở nên khó khăn. Email mới chỉ hiển thị với những người trong từng tin nhắn.",
+  "mailSharing.sharedPosture.label": "Cho phép hộp thư chia sẻ ngay khi nhận",
+  "mailSharing.sharedPosture.help":
+    "Cho phép đồng nghiệp đặt hộp thư của họ ở chế độ chia sẻ, khi đó thư thu thập được cả nhóm đọc ngay lúc đến, trước khi có bất kỳ đánh giá nào. Mặc định tắt.",
+  "mailSharing.sharedPosture.warning":
+    "Việc đọc hộp thư của nhân viên vào một CRM dùng chung thuộc phạm vi thỏa thuận với hội đồng lao động ở Đức và Áo. Bật mục này nghĩa là tổ chức của bạn đã có thỏa thuận đó. Margince không kiểm tra điều này.",
   "mailSharing.save": "Lưu",
   "connectors.sub":
     "Các hộp thư đang thu thập vào CRM của bạn. Cần thì ngắt kết nối hộp nào cũng được — bản ghi đã thu thập vẫn giữ nguyên.",
@@ -3817,6 +3862,23 @@ export const vi = {
     "Đang theo thiết lập của tổ chức. Đổi ở đây thì hộp thư này giữ lựa chọn riêng.",
   "connectors.signatureEnrich.ownAnswer":
     "Lựa chọn riêng của hộp thư này, giữ nguyên dù thiết lập của tổ chức thay đổi.",
+  "connectors.mailPosture.label": "Ai được đọc thư từ hộp thư này",
+  "connectors.mailPosture.classified": "Giữ lại cho đến khi phân loại",
+  "connectors.mailPosture.held": "Luôn giữ lại",
+  "connectors.mailPosture.shared": "Chia sẻ với nhóm",
+  "connectors.mailPosture.sharedNeedsAdmin":
+    "“Chia sẻ với nhóm” cần quản trị viên cho phép trong tổ chức này.",
+  "connectors.mailPosture.help.classified":
+    "Thư mới chỉ dành cho những người có trong thư, cho đến khi bộ phân loại đánh giá chuỗi thư là thông thường. Trước đó đồng nghiệp không thấy gì.",
+  "connectors.mailPosture.help.held":
+    "Thư mới chỉ dành cho những người có trong thư, bất kể bộ phân loại kết luận thế nào. Bạn tự chia sẻ từng chuỗi thư một.",
+  "connectors.mailPosture.help.shared":
+    "Thư mới có thể được đồng nghiệp đọc ngay khi đến.",
+  "connectors.mailPosture.historyTitle": "Còn thư đã thu thập thì sao?",
+  "connectors.mailPosture.historyBody":
+    "Lựa chọn này áp dụng cho thư được thu thập từ nay về sau. Thư đã có trong CRM giữ nguyên phạm vi hiển thị, trừ khi bạn thu hẹp cho khớp.",
+  "connectors.mailPosture.historyConfirm": "Thay đổi phạm vi hiển thị",
+  "connectors.mailPosture.historyApply": "Thu hẹp cả thư đã thu thập",
   "connectors.disconnectTitle": "Ngắt kết nối hộp thư này?",
   "connectors.disconnectBody":
     "Thao tác này xoá thông tin xác thực chúng tôi đã lưu cho hộp thư. Việc thu thập dừng ngay; mọi thứ đã thu thập vẫn nằm trong CRM của bạn, và kết nối lại thì phải xin quyền lần nữa.",
