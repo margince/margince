@@ -7416,6 +7416,7 @@ export const de = {
   "worklist.because.repeated_failure": "dasselbe schlägt immer wieder fehl",
   "worklist.because.legal_deadline": "eine gesetzliche Frist läuft",
   "worklist.because.meeting_soon": "beginnt gleich",
+  "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.stale": "wartet schon lange",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
   "worklist.above.level": "Über dem Nächsten, weil es dringlichere Arbeit ist.",

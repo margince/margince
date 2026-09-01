@@ -12094,6 +12094,7 @@ const (
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
+	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
@@ -12127,6 +12128,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindMaterial:
 		return true
 	case WorklistReasonKindMeetingSoon:
+		return true
+	case WorklistReasonKindMeetingUnprepared:
 		return true
 	case WorklistReasonKindNoChampion:
 		return true

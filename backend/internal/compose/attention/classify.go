@@ -137,6 +137,12 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		level = levelWaiting
 		reasons = append(reasons, reason("meeting_soon", nil))
 	}
+	// Nothing written down for it, said only where the lane could actually tell
+	// — an absent kind means the reader may not read the row's content, not
+	// that the meeting is ready. Silence beats a warning nobody can act on.
+	if item.Kind != nil && *item.Kind == meetingKindUnprepared {
+		reasons = append(reasons, reason("meeting_unprepared", nil))
+	}
 	row := base(item, level, "meetings", "meeting_unprepared")
 	// A meeting's start time IS a deadline the reader is racing, so it counts
 	// as work due — unlike a proposal's expiry, which merely lapses.

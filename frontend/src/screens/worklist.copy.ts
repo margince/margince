@@ -159,6 +159,7 @@ const KNOWN_REASONS = {
   repeated_failure: true,
   legal_deadline: true,
   meeting_soon: true,
+  meeting_unprepared: true,
   stale: true,
 } as const;
 

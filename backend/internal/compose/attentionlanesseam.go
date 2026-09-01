@@ -18,6 +18,7 @@ package compose
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -341,8 +342,10 @@ func (m attentionMeetings) Today(
 		if !meetingStillWorthPreparing(row) {
 			continue
 		}
+		needsPrep, known := meetingPrep(row)
 		ahead = append(ahead, attention.Meeting{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
+			NeedsPrep: needsPrep, PrepKnown: known,
 		})
 	}
 	// Soonest first: the lane is a countdown, and the store returns activities
@@ -360,6 +363,32 @@ func (m attentionMeetings) Today(
 // installations whose calendars are connected.
 func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
 	return row.MeetingStatus == nil || *row.MeetingStatus == crmcontracts.ActivityMeetingStatusBooked
+}
+
+// meetingPrep answers whether a meeting has anything written down for it, and
+// whether that question could be answered at all.
+//
+// The signals are the two the row already carries: a body (the agenda or the
+// notes somebody typed) and a link to a record outside this organization (the
+// customer the meeting is with). A meeting with neither is one nobody has
+// prepared.
+//
+// It refuses to answer for a WITHHELD row, and that refusal is the point. A
+// reader outside the activity's audience receives the row with its body nulled
+// — content_state says so — so reading "no body" as "no agenda" would report
+// every colleague's meeting as unprepared, to a reader who cannot open it to
+// find out. Absent beats wrong: the caller draws nothing.
+func meetingPrep(row crmcontracts.Activity) (needsPrep bool, known bool) {
+	if row.ContentState != nil && *row.ContentState != crmcontracts.ActivityContentStateAvailable {
+		return false, false
+	}
+	if row.Body != nil && strings.TrimSpace(*row.Body) != "" {
+		return false, true
+	}
+	if row.Links != nil && len(*row.Links) > 0 {
+		return false, true
+	}
+	return true, true
 }
 
 // subjectOfMeeting is the line a meeting shows, or NOTHING.

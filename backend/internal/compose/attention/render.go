@@ -392,7 +392,7 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 	subject := meeting.Subject
 	starts := meeting.StartsAt
-	return crmcontracts.AttentionItem{
+	item := crmcontracts.AttentionItem{
 		Id:      meeting.ID.String(),
 		Source:  crmcontracts.AttentionItemSource("meeting"),
 		Title:   &subject,
@@ -400,7 +400,25 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 		DueAt:   &starts,
 		Actions: []crmcontracts.AttentionItemActions{},
 	}
+	// `kind` is the producer's own sub-type, for the icon and the label and
+	// never for authority — which is exactly what "nobody has written anything
+	// down for this yet" is. Carried here rather than as a field of its own so
+	// the contract gains no vocabulary for a display hint.
+	//
+	// Set only when the answer is KNOWN. A meeting whose content this reader may
+	// not read arrives with an empty body for a reason that is not preparation,
+	// and `meetingPrep` refuses to guess; an absent kind is that refusal
+	// reaching the page, where it draws nothing.
+	if meeting.PrepKnown && meeting.NeedsPrep {
+		kind := meetingKindUnprepared
+		item.Kind = &kind
+	}
+	return item
 }
+
+// meetingKindUnprepared marks a meeting with nothing written down for it.
+// Spelled once here and read by classifyMeeting, so the two cannot drift.
+const meetingKindUnprepared = "unprepared"
 
 // receiptItem renders one thing the system did on its own.
 //
