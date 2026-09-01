@@ -6880,6 +6880,10 @@ export const vi = {
   "person.meeting.risks": "Rủi ro và điểm cần lưu ý",
   "person.meeting.talking_points": "Gợi ý nội dung trao đổi",
   "person.meeting.company_context": "Lần gặp gần nhất",
+  "person.meeting.background": "Bối cảnh và nguồn",
+  "person.meeting.omittedSource": "Không có trong bản tóm tắt này",
+  "person.meeting.preparedFor": "Chuẩn bị cho {name}",
+  "person.meeting.preparedForAt": "Chuẩn bị cho {name} · {org}",
 
   "co.strip.healthSummary": "Tình hình",
   "co.strip.healthSummary.failingOf": "{failing}/{rated} đang gặp rủi ro",

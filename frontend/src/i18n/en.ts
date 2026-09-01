@@ -7003,6 +7003,10 @@ export const en = {
   "person.meeting.risks": "Risks and watch-outs",
   "person.meeting.talking_points": "Suggested talking points",
   "person.meeting.company_context": "When you last met",
+  "person.meeting.background": "Background and sources",
+  "person.meeting.omittedSource": "Not in this brief",
+  "person.meeting.preparedFor": "Prepared for {name}",
+  "person.meeting.preparedForAt": "Prepared for {name} · {org}",
 
   "co.strip.healthSummary": "Health",
   "co.strip.healthSummary.failingOf": "{failing} of {rated} at risk",
