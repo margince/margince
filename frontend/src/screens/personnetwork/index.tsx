@@ -118,6 +118,11 @@ export function PersonNetworkTab({
 
       <div className="pn-work-grid">
         <div className="pn-main-column">
+          {/* The lead, or nothing. With no way in the strip above has already
+              said so as this page's Best Path — its whole job is to answer
+              first — and a paragraph here repeating the same sentence made the
+              page say it twice in two different weights, which reads as two
+              findings rather than one. */}
           {read.lead ? (
             <LeadPanel
               route={read.lead}
@@ -125,12 +130,7 @@ export function PersonNetworkTab({
               blocked={blockedReason(read.lead, t)}
               onAsk={setAsking}
             />
-          ) : read.legacy ? null : (
-            // Only when there is genuinely no way in. A legacy payload has one
-            // — the card below draws it — so saying "nobody" here would
-            // contradict the card a few lines down.
-            <p className="pn-route">{t("person.graph.noRoute")}</p>
-          )}
+          ) : null}
 
           {/* The alternatives, and only those: the lead is drawn above, so
               listing it again would ask the reader which of the two identical
@@ -236,7 +236,15 @@ function readGraph(
     // The card shows what the lead panel does NOT: the other routes when there
     // are some, and the legacy singular `route` when a server that predates the
     // candidate list is answering — which the panel cannot draw at all.
-    alternatives: routes.length > 1 || routes.length === 0,
+    //
+    // An empty `routes` is NOT the legacy case on its own. A current server
+    // answering "nobody reaches this contact" sends an empty list and no
+    // `route`, and drawing the card then put a heading reading "Best first,
+    // pick the one you can actually use" above nothing — beside the paragraph
+    // that had already said nobody reaches them, so the page said it twice and
+    // offered a choice of none. The legacy payload is the one that has a
+    // singular `route` to draw.
+    alternatives: routes.length > 1 || (routes.length === 0 && !!data.route),
     skipLead: routes.length > 1,
     legacy: routes.length === 0 ? data.route : undefined,
     withheld: (data.groups_omitted ?? []).length > 0,
