@@ -134,6 +134,11 @@ type personProfileFieldRow struct {
 	CapturedBy      string
 	Confidence      *float64
 	ObservedAt      *time.Time
+	// Superseded is the value this row replaces when it is not one of this
+	// table's own — a title a human typed straight onto the person, which
+	// leaves no row here to read the old value from. Empty otherwise, and the
+	// conflict clause then keeps what the row itself carried.
+	Superseded string
 }
 
 // writePersonProfileField writes one evidence row and reports whether it landed.
@@ -174,11 +179,12 @@ func writePersonProfileField(ctx context.Context, tx pgx.Tx, personID ids.Person
 	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO person_profile_field
-		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by, observed_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, now()))
+		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by,
+		   observed_at, superseded_value)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, now()), NULLIF($10, ''))
 		ON CONFLICT (person_id, field) `+precedence.conflictClause(),
 		personID, row.Field, row.Value, row.EvidenceSnippet, row.SourceRef,
-		row.Confidence, row.Source, row.CapturedBy, row.ObservedAt)
+		row.Confidence, row.Source, row.CapturedBy, row.ObservedAt, row.Superseded)
 	if err != nil {
 		return false, fmt.Errorf("people: profile field evidence row (%s): %w", row.Field, err)
 	}

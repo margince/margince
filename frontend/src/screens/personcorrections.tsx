@@ -172,6 +172,22 @@ function EnrichedField({
         — “{field.evidence_snippet}”
       </p>
 
+      {/* What this value replaced. The replacement is otherwise silent: the
+          contact stated something newer and the record simply changed, and a
+          reader who remembers typing the old value needs to see where it went
+          rather than doubt what they typed. */}
+      {field.superseded_value && (
+        <p
+          style={{
+            margin: "var(--space-1) 0 0",
+            fontSize: "0.85rem",
+            opacity: 0.75,
+          }}
+        >
+          {t("person.enriched.replaced", { was: field.superseded_value })}
+        </p>
+      )}
+
       {mayCorrect && (
         <div
           style={{

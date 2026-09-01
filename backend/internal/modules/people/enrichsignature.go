@@ -3,13 +3,18 @@
 
 package people
 
-// The signature-enrich apply half (ADR-0063, §2.9): the model's gated
-// fields land here — fill-ONLY-empty (a human-set value is never touched;
-// GATE-AI-4), every accepted field upserts its PO-DDL-12 evidence row so
-// the value stays auditable back to the verbatim signature line, and the
-// field-provenance stamp rides the same commit. org_name is evidence-only:
-// it NEVER creates or renames an organization (the deterministic domain
-// path owns employer derivation).
+// The signature-enrich apply half (ADR-0063, §2.9): the model's gated fields
+// land here, by RECENCY — a signature is the contact stating their own details
+// on a date, so a later one replaces what the record holds and keeps the
+// replaced value for one click of undo. Every accepted field upserts its
+// PO-DDL-12 evidence row so the value stays auditable back to the verbatim
+// signature line, and the field-provenance stamp rides the same commit.
+//
+// The rule the recency does not override is a human's correction, which the
+// caller supplies as SignatureField.CorrectedAt.
+//
+// org_name is evidence-only: it NEVER creates or renames an organization (the
+// deterministic domain path owns employer derivation).
 
 import (
 	"context"
@@ -53,15 +58,15 @@ type SignatureField struct {
 // SignatureApplyResult counts what one apply did — honest numbers for the
 // digest, not fabrications.
 type SignatureApplyResult struct {
-	Applied int // evidence rows written (first verdict per field wins)
-	Skipped int // fields already answered (occupied column or existing row)
+	Applied int // fields this statement was newer than, and therefore replaced
+	Skipped int // fields answered later than this, or ruled on by a human
 }
 
 // ApplySignatureFields lands one person's gated signature fields in one
-// transaction. Column-backed fields (title; phone as a first phone row)
-// fill only when empty; every field that lands writes its evidence row and
-// provenance stamp. A field whose column is occupied or whose evidence row
-// exists is counted skipped — the earlier answer (human or agent) stands.
+// transaction. A field lands when this statement is NEWER than what the record
+// holds, and every one that lands writes its evidence row and provenance stamp.
+// A field is counted skipped when the record already carries something stated
+// later, or when a human's correction stands against it.
 func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID, sourceActivity ids.UUID, fields []SignatureField) (SignatureApplyResult, error) {
 	var res SignatureApplyResult
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
@@ -272,7 +277,7 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 	// a single answer that the newer statement replaces.
 	if f.Name == "phone" {
 		outcome, err := applyObservedPhone(ctx, tx, personID, observedPhone{
-			Phone: value, PhoneType: "work", SourceRef: sourceRef,
+			Phone: value, PhoneType: emailTypeWork, SourceRef: sourceRef,
 			Source: enrichSource, CapturedBy: enrichCapturedBy, ObservedAt: observedAt,
 		})
 		if err != nil || outcome != observedApplied {

@@ -25,6 +25,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -47,13 +48,22 @@ func storedConfidence(ctx context.Context, t *testing.T, e *dedupeEnv, personID 
 	return got
 }
 
-// fillFromSignature runs the machine pass that scores what it writes.
+// fillFromSignature runs the machine pass that scores what it writes, dating
+// the statement now — a signature read today, which is the newest thing said
+// about the field unless a case says otherwise.
 func fillFromSignature(ctx context.Context, t *testing.T, e *dedupeEnv, personID ids.PersonID, f SignatureField) bool {
+	t.Helper()
+	return fillFromSignatureObserved(ctx, t, e, personID, time.Now(), f)
+}
+
+// fillFromSignatureObserved is the same pass with the statement's own date,
+// which is what the supersede rule compares.
+func fillFromSignatureObserved(ctx context.Context, t *testing.T, e *dedupeEnv, personID ids.PersonID, observedAt time.Time, f SignatureField) bool {
 	t.Helper()
 	var verdict signatureVerdict
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		verdict, err = e.store.applySignatureField(ctx, tx, personID, "mailto:signature", f)
+		verdict, err = e.store.applySignatureField(ctx, tx, personID, "mailto:signature", observedAt, f)
 		return err
 	}); err != nil {
 		t.Fatalf("apply the signature field %s: %v", f.Name, err)

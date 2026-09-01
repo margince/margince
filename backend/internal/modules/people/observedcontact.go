@@ -33,9 +33,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -90,6 +91,16 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, f
 	if f.CorrectionAt != nil && !f.CorrectionAt.Before(f.ObservedAt) {
 		return observedDeferredToCorrection, nil
 	}
+	// The subject before any row this transaction writes, and the write
+	// authority before any of it: Art. 17 erasure holds the subject and then
+	// deletes what hangs off it, so taking them the other way round deadlocks
+	// against the eraser and fails an erasure when it loses.
+	if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return observedSkipped, nil
+		}
+		return observedSkipped, err
+	}
 
 	// A column a human typed into leaves no sidecar row, so the value about to
 	// be replaced would otherwise be lost to the undo buffer. Read it first and
@@ -104,15 +115,10 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, f
 	landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
 		Field: f.Field, Value: f.Value, EvidenceSnippet: f.Evidence, SourceRef: f.SourceRef,
 		Source: f.Source, CapturedBy: f.CapturedBy, Confidence: f.Confidence,
-		ObservedAt: &observedAt,
+		ObservedAt: &observedAt, Superseded: seeded,
 	}, supersedeOnNewerObservation)
 	if err != nil || !landed {
 		return observedSkipped, err
-	}
-	if seeded != "" {
-		if err := recordSupersededColumn(ctx, tx, personID, f, seeded); err != nil {
-			return observedSkipped, err
-		}
 	}
 
 	column, mirrored := observedFieldColumn(f.Field)
@@ -144,8 +150,8 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, f
 // guess which column the line belongs in, and would write a street into a
 // country as readily as not.
 func observedFieldColumn(field string) (string, bool) {
-	if field == "title" {
-		return "title", true
+	if field == fieldTitle {
+		return fieldTitle, true
 	}
 	return "", false
 }
@@ -178,19 +184,6 @@ func seedFromColumn(ctx context.Context, tx pgx.Tx, personID ids.PersonID, f obs
 	return *current, nil
 }
 
-// recordSupersededColumn puts the column's former value into the undo buffer of
-// the row that just replaced it.
-func recordSupersededColumn(ctx context.Context, tx pgx.Tx, personID ids.PersonID, f observedField, was string) error {
-	if _, err := tx.Exec(ctx, `
-		UPDATE person_profile_field
-		SET superseded_value = $3, superseded_captured_by = NULL, superseded_observed_at = NULL
-		WHERE person_id = $1 AND field = $2 AND superseded_value IS NULL`,
-		personID, f.Field, was); err != nil {
-		return fmt.Errorf("people: recording the superseded %s: %w", f.Field, err)
-	}
-	return nil
-}
-
 // observedPhone is one dated statement of a number.
 type observedPhone struct {
 	Phone      string
@@ -218,14 +211,24 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 	parsed, err := values.ParsePhone(p.Phone)
 	if err != nil {
 		// Declined, not failed: a number this reader cannot parse is one field
-		// skipped, exactly like an absent one. The same door the create and the
-		// signature pass go through, so a card cannot store a shape they refuse.
+		// skipped, exactly like an absent one. Propagating it would abandon the
+		// other fields of the same signature over one contact's formatting,
+		// which is the choice readSignatureValue already made for this shape.
+		//nolint:nilerr // a footer this reader cannot parse is a skipped field, not a fault
 		return observedSkipped, nil
+	}
+	// Held before the first child row, for applyObservedField's reason: the
+	// eraser takes the subject first and this must not race it the other way.
+	if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return observedSkipped, nil
+		}
+		return observedSkipped, err
 	}
 	normalized := parsed.String()
 	phoneType := p.PhoneType
 	if phoneType == "" {
-		phoneType = "work"
+		phoneType = emailTypeWork
 	}
 
 	// Same number already on the record: confirm it rather than duplicate it.
@@ -254,7 +257,7 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 	// The row of this type this statement replaces, if it is older. Chosen by
 	// id so the archive and the insert name the same row: several live numbers
 	// of one type are permitted, and the primary is the one displayed.
-	var supersededID *uuid.UUID
+	var supersededID *ids.UUID
 	if err := tx.QueryRow(ctx, `
 		SELECT id FROM person_phone
 		WHERE person_id = $1 AND phone_type = $2 AND archived_at IS NULL AND observed_at < $3
