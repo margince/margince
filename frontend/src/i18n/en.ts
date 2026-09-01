@@ -6852,6 +6852,8 @@ export const en = {
   "provider.profile.neverRun": "Nobody has looked this contact up yet.",
   "provider.profile.queued": "Queued",
   "provider.profile.inProgress": "Looking them up…",
+  "provider.profile.working": "Asking {provider}. This takes up to a minute.",
+  "provider.profile.landing": "Answer received. Putting it on the record.",
   "provider.profile.completed": "Found",
   "provider.profile.noMatch": "The provider had nothing for this contact.",
   "provider.profile.stale":
@@ -6863,7 +6865,7 @@ export const en = {
   "provider.profile.rateLimited":
     "Not bought: the provider asked us to slow down.",
   "provider.profile.providerError":
-    "The provider failed on its last call, so automatic lookups are held back. Press the free check below — one that gets through clears this by itself.",
+    "The last call to the provider failed. Automatic lookups are paused; a free check that gets through resumes them.",
   "provider.profile.submissionUnknown":
     "We never learned how this lookup ended. It may have been charged for.",
   "provider.profile.claimsUnwritten":
@@ -6886,8 +6888,7 @@ export const en = {
   "provider.profile.location": "Location",
   "provider.profile.departments": "Departments",
   "provider.profile.seniorities": "Seniority",
-  "provider.profile.notRequested":
-    "Not asked for: {categories}. A blank here means nobody bought it, not that the provider had nothing.",
+  "provider.profile.notRequested": "Never asked for: {categories}.",
   // The receipt. Without it a lookup that returned one detail out of six read
   // exactly like one that returned all six, and nothing on the page said when
   // the answer arrived.
@@ -6900,8 +6901,7 @@ export const en = {
   "provider.profile.receiptAt": "Looked up {at}.",
   "provider.profile.receipt":
     "Looked up {at} · asked for {asked} details, got {answered} back.",
-  "provider.profile.noAnswer":
-    "Asked for and not found: {categories}. The provider was asked and had nothing for this contact.",
+  "provider.profile.noAnswer": "Asked for, none found: {categories}.",
   // The provider's own vocabulary, in words a reader knows. Not translated
   // one-for-one from the key: these are what a rep would call the thing.
   "provider.category.professionalEmail": "work email",

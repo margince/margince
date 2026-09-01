@@ -3,25 +3,25 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
+import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { EvidenceMark } from "../design-system/evidencemark";
-import { Eyebrow } from "../design-system/eyebrow";
+import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   ProviderMark,
   providerBrandName,
 } from "../design-system/provider-mark";
 import { formatDateAbbrev, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { categoryNames } from "./provider-categories";
 import {
   canEnrichNow,
-  isRunning,
   profileLabel,
   profileTone,
   useProviderConnections,
@@ -142,6 +142,15 @@ function ProviderPanel({
   // says never_run and carries purchases, and a plate reading "nothing bought"
   // over somebody's bought mobile number invites paying for it twice.
   const firstRun = profile.state === "never_run" && !hasValues(profile);
+  // Whether a lookup is happening RIGHT NOW, which the section's own state
+  // cannot answer: it reports the connection's condition ahead of the run, so
+  // a live run under a connection that last failed reads as provider_error.
+  const running = stillMoving(profile.latest_run);
+  // Two phases, and the reader cares which. `asking` is the provider working;
+  // `landing` is the provider done and the values being folded onto the record.
+  // Both keep the watch alive, and saying "asking Surfe" over the second one
+  // reports work nobody is doing — the vendor has already answered.
+  const asking = running && profile.latest_run?.state !== "completed";
   // The vendor as the reader should see it named. Spelled once and used by
   // both the heading and the plate: two spellings would let a section headed
   // "Surfe" explain a purchase from "surfe".
@@ -164,8 +173,23 @@ function ProviderPanel({
         </span>
       }
       titleAction={
-        <Badge tone={profileTone(profile.state)}>
-          {t(profileLabel(profile.state))}
+        // A live run outranks the section's own state in the HEADER, which is
+        // the one place the two disagree honestly. The section state answers
+        // "what should this reader know about enrichment here" and puts the
+        // connection's condition first — right for a page at rest, wrong over
+        // a lookup the reader is watching, where it reports a failure from
+        // hours ago as though it were the thing happening now.
+        //
+        // Through the same two maps every other state uses, asked with
+        // `in_progress` rather than with a tone picked here: a local answer
+        // would be a second opinion about what running looks like, and the two
+        // would drift the first time the shared one changed.
+        <Badge tone={profileTone(asking ? "in_progress" : profile.state)}>
+          {t(
+            asking
+              ? "provider.profile.inProgress"
+              : profileLabel(profile.state),
+          )}
         </Badge>
       }
       actions={
@@ -176,6 +200,7 @@ function ProviderPanel({
             enrich={enrich}
             free={free}
             catalogPending={catalogPending}
+            running={running}
             // This contact has already been looked up, so the press is a
             // RE-CHECK: same free details, asked again because a job may have
             // changed. The empty-state twin below is the first lookup and says
@@ -195,6 +220,19 @@ function ProviderPanel({
             {problemMessageOf(enrich.error, t)}
           </Callout>
         )}
+        {/* A lookup takes about half a minute, and for that half-minute the
+            panel used to be identical to one where nothing had happened: no
+            line, no change, the same buttons. A reader who pressed and saw
+            nothing move concluded the button was broken, which was the only
+            conclusion available to them. Above the values, because it is a
+            caveat about what is under it. */}
+        {running && (
+          <Callout tone="info" live="status">
+            {asking
+              ? t("provider.profile.working", { provider: name })
+              : t("provider.profile.landing")}
+          </Callout>
+        )}
         {firstRun ? (
           <EmptyState
             title={t("provider.profile.emptyTitle")}
@@ -205,6 +243,7 @@ function ProviderPanel({
                 enrich={enrich}
                 free={free}
                 catalogPending={catalogPending}
+                running={running}
               />
             }
           >
@@ -213,7 +252,12 @@ function ProviderPanel({
         ) : (
           <ProviderValues profile={profile} />
         )}
-        <BuyPriced personId={personId} profile={profile} enrich={enrich} />
+        <BuyPriced
+          personId={personId}
+          profile={profile}
+          enrich={enrich}
+          running={running}
+        />
         <RunWatch personId={personId} profile={profile} />
       </PanelBody>
     </Panel>
@@ -232,10 +276,15 @@ function BuyPriced({
   personId,
   profile,
   enrich,
+  running,
 }: Readonly<{
   personId: string;
   profile: Profile;
   enrich: ReturnType<typeof useEnrichRun>;
+  // Whether a run is still moving, from the panel that already asked. Not
+  // recomputed here: two answers to "is a lookup happening" would drift, and
+  // the one that drifts wrong leaves a spending button on screen.
+  running: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -251,7 +300,7 @@ function BuyPriced({
       (connection?.configuration.categories?.[entry.category] ?? false) &&
       !alreadyHeld(profile, entry.category),
   );
-  if (buyable.length === 0 || !canEnrichNow(profile.state)) {
+  if (buyable.length === 0 || !canEnrichNow(profile.state, running)) {
     return null;
   }
   return (
@@ -361,115 +410,11 @@ function RunReceipt({ profile }: Readonly<{ profile: Profile }>) {
 
 function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const source = boughtFrom(profile);
+  const facts = useProviderFacts(profile);
   return (
     <>
       <RunReceipt profile={profile} />
-      {profile.emails.length > 0 && (
-        <div>
-          <Eyebrow as="h4">{t("provider.profile.emails")}</Eyebrow>
-          {profile.emails.map((email) => (
-            <div key={email.value}>
-              <EvidenceMark value={email.value} source={source} />{" "}
-              {email.email_type && (
-                <span className="t-caption">
-                  {/* Which label this is, and WHOSE it is. An address the
-                      provider did not classify is labelled from what we
-                      asked for, and saying so is the whole point of the
-                      distinction. */}
-                  {email.email_type_source === "provider"
-                    ? t("provider.profile.emailType.provider", {
-                        type: email.email_type,
-                      })
-                    : t("provider.profile.emailType.requested", {
-                        type: email.email_type,
-                      })}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      {profile.mobile_phones.length > 0 && (
-        <div>
-          <Eyebrow as="h4">{t("provider.profile.mobiles")}</Eyebrow>
-          {profile.mobile_phones.map((phone) => (
-            <div key={phone.value}>
-              <EvidenceMark value={phone.value} source={source} />{" "}
-              {phone.confidence != null && (
-                <span className="t-caption">
-                  {t("provider.profile.confidence", {
-                    percent: formatNumber(
-                      Math.round(phone.confidence * 100),
-                      locale,
-                    ),
-                  })}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      {profile.linkedin_url && (
-        <div>
-          <Eyebrow as="h4">{t("provider.profile.linkedin")}</Eyebrow>
-          <EvidenceMark value={profile.linkedin_url} source={source} />
-        </div>
-      )}
-      {profile.current_employment && (
-        <div>
-          <Eyebrow as="h4">{t("provider.profile.employment")}</Eyebrow>
-          <EvidenceMark
-            value={[
-              profile.current_employment.job_title,
-              profile.current_employment.company_name,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            source={source}
-          />
-        </div>
-      )}
-      {profile.job_history.length > 0 && (
-        <div>
-          <Eyebrow as="h4">{t("provider.profile.jobHistory")}</Eyebrow>
-          {profile.job_history.map((job) => (
-            <div key={`${job.company_name}-${job.job_title ?? ""}`}>
-              <EvidenceMark
-                value={[job.job_title, job.company_name]
-                  .filter(Boolean)
-                  .join(" · ")}
-                source={source}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-      {profile.location && (
-        <div>
-          <Eyebrow as="h4">{t("provider.profile.location")}</Eyebrow>
-          <EvidenceMark value={profile.location} source={source} />
-        </div>
-      )}
-      {profile.departments.length > 0 && (
-        <div>
-          <Eyebrow as="h4">{t("provider.profile.departments")}</Eyebrow>
-          <EvidenceMark
-            value={profile.departments.join(", ")}
-            source={source}
-          />
-        </div>
-      )}
-      {profile.seniorities.length > 0 && (
-        <div>
-          <Eyebrow as="h4">{t("provider.profile.seniorities")}</Eyebrow>
-          <EvidenceMark
-            value={profile.seniorities.join(", ")}
-            source={source}
-          />
-        </div>
-      )}
+      <FactList facts={facts} />
       {(profile.categories_without_answer?.length ?? 0) > 0 && (
         // What was PAID for and came back empty. The other half of the same
         // question as the line below, and the half that was missing: a run
@@ -497,6 +442,127 @@ function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
       )}
     </>
   );
+}
+
+/** Every bought value as one label→value table.
+ *
+ *  Nine stacked `<div><Eyebrow/>…</div>` blocks before this, each styling
+ *  itself: a reader scanning for the mobile number read nine headings down the
+ *  card instead of one column of labels. `FactList` is the catalog's primitive
+ *  for exactly this shape and it is what every other record surface uses.
+ *
+ *  Rows are BUILT rather than rendered conditionally, because FactList takes an
+ *  array: a fact with no value is left out entirely, and an empty `<dd>` would
+ *  claim we know the value and it is blank.
+ */
+function useProviderFacts(profile: Profile): Fact[] {
+  const t = useT();
+  const { locale } = useLocale();
+  const source = boughtFrom(profile);
+  const mark = (value: string) => (
+    <EvidenceMark value={value} source={source} />
+  );
+  return [
+    ...reachFacts(profile, t, locale, mark),
+    ...roleFacts(profile, t, mark),
+  ];
+}
+
+type Translate = ReturnType<typeof useT>;
+type Mark = (value: string) => ReactNode;
+
+/** How to reach them: the addresses and numbers somebody paid for, each with
+ *  the qualifier that decides whether to trust it. */
+function reachFacts(
+  profile: Profile,
+  t: Translate,
+  locale: Locale,
+  mark: Mark,
+): Fact[] {
+  const facts: Fact[] = profile.emails.map((email) => ({
+    key: `email-${email.value}`,
+    term: t("provider.profile.emails"),
+    value: mark(email.value),
+    // Which label this is, and WHOSE it is. An address the provider did not
+    // classify is labelled from what we asked for, and saying so is the whole
+    // point of the distinction.
+    note: email.email_type
+      ? t(
+          email.email_type_source === "provider"
+            ? "provider.profile.emailType.provider"
+            : "provider.profile.emailType.requested",
+          { type: email.email_type },
+        )
+      : undefined,
+  }));
+  for (const phone of profile.mobile_phones) {
+    facts.push({
+      key: `phone-${phone.value}`,
+      term: t("provider.profile.mobiles"),
+      value: mark(phone.value),
+      note:
+        phone.confidence == null
+          ? undefined
+          : t("provider.profile.confidence", {
+              percent: formatNumber(Math.round(phone.confidence * 100), locale),
+            }),
+    });
+  }
+  if (profile.linkedin_url) {
+    facts.push({
+      key: "linkedin",
+      term: t("provider.profile.linkedin"),
+      value: mark(profile.linkedin_url),
+    });
+  }
+  return facts;
+}
+
+/** Who they are: where they work now, where they worked before, and the three
+ *  attributes the provider files them under. */
+function roleFacts(profile: Profile, t: Translate, mark: Mark): Fact[] {
+  const facts: Fact[] = [];
+  if (profile.current_employment) {
+    facts.push({
+      key: "employment",
+      term: t("provider.profile.employment"),
+      value: mark(roleLine(profile.current_employment)),
+    });
+  }
+  for (const job of profile.job_history) {
+    facts.push({
+      key: `job-${job.company_name}-${job.job_title ?? ""}`,
+      term: t("provider.profile.jobHistory"),
+      value: mark(roleLine(job)),
+    });
+  }
+  for (const [key, term, value] of [
+    ["location", "provider.profile.location", profile.location],
+    [
+      "departments",
+      "provider.profile.departments",
+      profile.departments.join(", "),
+    ],
+    [
+      "seniorities",
+      "provider.profile.seniorities",
+      profile.seniorities.join(", "),
+    ],
+  ] as const) {
+    if (value) {
+      facts.push({ key, term: t(term), value: mark(value) });
+    }
+  }
+  return facts;
+}
+
+/** A role as one line: what they do, and where. Either half may be absent —
+ *  the provider returns a company with no title often enough that joining
+ *  unconditionally printed a leading separator. */
+function roleLine(
+  role: Readonly<{ job_title?: string | null; company_name?: string | null }>,
+): string {
+  return [role.job_title, role.company_name].filter(Boolean).join(" · ");
 }
 
 /** The lookup itself, hoisted so the header button and the first-run plate
@@ -540,10 +606,14 @@ function EnrichNow({
   enrich,
   free,
   catalogPending,
+  running,
   recheck = false,
   small = false,
 }: Readonly<{
   free: string[];
+  /** Whether a run is still moving. See canEnrichNow: the section state alone
+   *  cannot answer it, and a button offered over a live run spends twice. */
+  running: boolean;
   // Whether the connection catalog has answered yet. Separate from `free`
   // being empty, which a connection selling nothing free also produces.
   catalogPending: boolean;
@@ -559,7 +629,7 @@ function EnrichNow({
   small?: boolean;
 }>) {
   const t = useT();
-  if (!canEnrichNow(profile.state)) {
+  if (!canEnrichNow(profile.state, running)) {
     return null;
   }
   return (
@@ -617,23 +687,67 @@ function useRunWatch(personId: string, profile: Profile) {
       if (error) {
         throwProblem(error);
       }
-      // A run that has stopped moving is the page's cue to re-read: the
-      // claims land in the same transaction as the terminal state, so by
-      // now the section has something new to show.
-      if (data && !RUNNING_RUN_STATES.has(data.state)) {
+      // Re-read on every answer that is not still moving, INCLUDING the
+      // completed-but-unapplied tick. That tick is what turns the section from
+      // "asking the provider" into the values themselves, and skipping it left
+      // the page one refresh short of the thing being waited for.
+      if (!stillMoving(data)) {
         void queryClient.invalidateQueries({
           queryKey: ["person360", personId],
         });
       }
       return data;
     },
-    enabled: runId != null && isRunning(profile.state),
+    // The RUN's own state, never the section's. The section answers "what
+    // should this reader know about enrichment here", and the CONNECTION's
+    // condition outranks the run history in that answer — so on an impaired
+    // connection the section reads provider_error while a run the reader just
+    // started is genuinely in flight. Arming off the section left the watch
+    // asleep through exactly that lookup: it completed, the page never
+    // re-read, and the button looked dead for the half-minute it took.
+    //
+    // `applied` and `claims_unwritten` extend it past the terminal state: a run
+    // is not done from this page's point of view until its values are ON the
+    // record, and the apply commits after the run completes.
+    enabled: runId != null && stillMoving(profile.latest_run),
+    // The same rule the arming uses, read from the answer just received rather
+    // than from the prop: the prop only changes when the page refetches, which
+    // is the thing this poll exists to cause.
+    //
+    // Under a CEILING, because the rule alone has no end. Every ordinary route
+    // out of `stillMoving` is a state the platform writes — a terminal run, an
+    // exhausted hand-off — so a run the workers stop advancing leaves these
+    // flags exactly as they are, and a tab left open asks for it every 2.5
+    // seconds until it is closed. The ceiling turns that into a page that
+    // stopped waiting, which is a thing a reader can see and act on.
     refetchInterval: (query) =>
-      query.state.data && RUNNING_RUN_STATES.has(query.state.data.state)
-        ? 2500
+      keepPolling(query.state.data, query.state.dataUpdateCount)
+        ? POLL_EVERY_MS
         : false,
   });
 }
+
+/** Whether the page asks after this run again.
+ *
+ *  The rule and its ceiling in one place, so a test can put the ceiling to it
+ *  without waiting out ten minutes of real interval. */
+export function keepPolling(
+  run: components["schemas"]["ProviderRun"] | undefined,
+  asked: number,
+): boolean {
+  return stillMoving(run) && asked < POLL_LIMIT;
+}
+
+const POLL_EVERY_MS = 2500;
+
+/** How many times the page asks after a run before giving up on it.
+ *
+ *  Ten minutes at POLL_EVERY_MS. Long enough to cover the slowest honest path —
+ *  the hand-off's retry ladder, which ends by writing `claims_unwritten` and
+ *  stopping the watch on its own — and short enough that a genuinely stuck run
+ *  stops costing a request every few seconds for as long as somebody leaves the
+ *  tab open. */
+export const POLL_LIMIT = 240;
 
 /** The run states that are still moving. `submitting` counts: the run is
  *  mid-flight to the provider, and treating it as finished would offer a
@@ -641,6 +755,32 @@ function useRunWatch(personId: string, profile: Profile) {
 const RUNNING_RUN_STATES = new Set<
   components["schemas"]["ProviderRun"]["state"]
 >(["queued", "submitting", "in_progress"]);
+
+/** Whether this page should keep watching a run.
+ *
+ *  Longer than the run machine's own idea of moving. A completed run's values
+ *  reach the record in a SECOND commit, so a watch that stopped at `completed`
+ *  refreshed the page one step before the thing the reader is waiting for — the
+ *  values — existed. `applied` is the server saying that step happened.
+ *
+ *  `claims_unwritten` ends it too, and is not the same fact: the purchase
+ *  succeeded and the hand-off did not, so nothing further is coming and the
+ *  section says so rather than spinning forever.
+ *
+ *  A page opened AFTER the run completed but before the apply committed still
+ *  starts the watch, which is why this is asked of the run rather than of the
+ *  click that started it. */
+function stillMoving(
+  run: components["schemas"]["ProviderRun"] | undefined,
+): boolean {
+  if (!run) {
+    return false;
+  }
+  if (RUNNING_RUN_STATES.has(run.state)) {
+    return true;
+  }
+  return run.state === "completed" && !run.applied && !run.claims_unwritten;
+}
 
 /** The categories this connection buys for nothing, from the server's own
  *  catalog. Empty while the connections are still loading, which keeps a

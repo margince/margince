@@ -135,7 +135,7 @@ func providerClaimWriter(ctx context.Context, tx pgx.Tx, w integrations.ClaimWri
 
 // providerStoredClaimApplier folds a purchase the domain already stored onto
 // the record, for the catch-up sweep.
-func providerStoredClaimApplier(ctx context.Context, tx pgx.Tx, personID, runID string) error {
+func providerStoredClaimApplier(ctx context.Context, tx pgx.Tx, personID, runID string) (bool, error) {
 	return people.ApplyStoredProviderClaims(ctx, tx, personID, runID)
 }
 

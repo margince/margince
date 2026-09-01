@@ -207,8 +207,15 @@ func (s *Store) applyOneStored(ctx context.Context, tx pgx.Tx, runID, personID s
 		// gives for the same reason.
 		return s.discardClaims(ctx, tx, runID)
 	}
-	if err := s.applyStoredClaims(ctx, tx, personID, runID); err != nil {
+	applied, err := s.applyStoredClaims(ctx, tx, personID, runID)
+	if err != nil {
 		return err
+	}
+	if !applied {
+		// Nothing was stored yet: the hand-off that writes the claims has not
+		// committed. Left unstamped so the next tick tries again, rather than
+		// recorded as applied over a record that never received anything.
+		return nil
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE provider_run SET applied_at = now() WHERE id = $1`, runID); err != nil {

@@ -177,19 +177,26 @@ func connectorCapturedBy(providerName string) string { return "connector:" + pro
 // One statement's difference from the hand-off path, and everything after it is
 // shared: a purchase applied late must land exactly as one applied on arrival,
 // or the record would depend on when the sweep happened to reach it.
-func ApplyStoredProviderClaims(ctx context.Context, tx pgx.Tx, personID, runID string) error {
+// It answers whether there was anything to apply. A run commits its terminal
+// state before the hand-off writes its claims, so a sweep can arrive between the
+// two and find none — and the caller must not record that as applied.
+func ApplyStoredProviderClaims(ctx context.Context, tx pgx.Tx, personID, runID string) (bool, error) {
 	claims, err := storedClaimsOfRun(ctx, tx, runID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if len(claims) == 0 {
-		return nil
+		return false, nil
 	}
 	providerName, err := claimProviderOfRun(ctx, tx, runID)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return ApplyProviderClaims(ctx, tx, runID, personID, providerName, claims)
+	// Applied is about having FOUND the purchase, not about any field moving:
+	// a run whose values the record already held has been folded, and telling a
+	// waiting client otherwise would keep it waiting for a change that is never
+	// coming.
+	return true, ApplyProviderClaims(ctx, tx, runID, personID, providerName, claims)
 }
 
 // storedClaimsOfRun reads back what one run bought, in the shape the applier

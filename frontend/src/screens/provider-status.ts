@@ -146,18 +146,29 @@ export function isRunning(state: ProviderProfileState): boolean {
  *  refuses it — and not where no provider is connected, since there is
  *  nothing to ask.
  *
+ *  `running` is the CALLER's answer, from the run, because this state cannot
+ *  give it. Two ways it is wrong on its own, and both leave a spending button
+ *  where there should be none: it puts the connection's condition first, so a
+ *  live run under a connection whose last call failed reads `provider_error`;
+ *  and a run that is `completed` but whose values have not been folded onto the
+ *  record yet reads `completed`, while the duplicate-spend fence in the server
+ *  covers only the live states — so the same priced detail is buyable twice.
+ *
  *  `stale` is refused for the same reason as `not_connected`, and the two are
  *  one fact wearing two labels: stale IS the disconnected provider whose
  *  purchases we retained. The section says so ("the provider is no longer
  *  connected, so this cannot be refreshed"), and the server agrees — a run
  *  needs a connected connection. A button beside that sentence is one the
  *  server was always going to refuse. */
-export function canEnrichNow(state: ProviderProfileState): boolean {
+export function canEnrichNow(
+  state: ProviderProfileState,
+  running: boolean,
+): boolean {
   return (
     state !== "not_connected" &&
     state !== "not_eligible" &&
     state !== "stale" &&
-    !isRunning(state)
+    !running
   );
 }
 

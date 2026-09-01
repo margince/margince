@@ -3,7 +3,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { PersonProviderSection } from "./personprovider";
+import {
+  keepPolling,
+  PersonProviderSection,
+  POLL_LIMIT,
+} from "./personprovider";
 import {
   completedProviderRun,
   providerCompletedProfile,
@@ -367,7 +371,7 @@ describe("a lookup that came back mostly empty", () => {
   it("names the categories the provider had nothing for, in words a rep knows", async () => {
     mount(mostlyEmpty(), queuedRun);
 
-    const line = await screen.findByText(/Asked for and not found/);
+    const line = await screen.findByText(/Asked for, none found/);
     // The provider's vocabulary is a set of keys — `professional_email`,
     // `linkedin_profile`. Printed raw they are not words anybody uses.
     expect(line.textContent).toContain("work email");
@@ -559,5 +563,210 @@ describe("the details that cost credits", () => {
     await screen.findByText(providerCompletedProfile.emails[0].value);
     expect(screen.queryByRole("button", { name: /Buy work email/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Buy mobile/ })).toBeNull();
+  });
+});
+
+// The watch arms off the RUN, never off the section's state.
+//
+// The section answers "what should this reader know about enrichment here", and
+// the CONNECTION's condition outranks the run history in that answer — so on a
+// connection that last failed, the section reads provider_error while a run the
+// reader just started is genuinely in flight. Arming off the section left the
+// watch asleep through exactly that lookup: it completed, the page never
+// re-read, and for the half-minute it took the button looked dead. That is the
+// state a reader is MOST likely to be pressing from, because the message beside
+// it tells them to.
+describe("watching a run that is still moving", () => {
+  const inFlight = (): components["schemas"]["ProviderRun"] => ({
+    ...completedProviderRun,
+    id: "run-live",
+    state: "in_progress",
+    applied: false,
+  });
+
+  // A run the platform stops advancing leaves its flags exactly as they are,
+  // and every ordinary way out of `stillMoving` is a state the platform writes.
+  // Without a ceiling an open tab asks after it every 2.5 seconds until it is
+  // closed — so the page gives up, which is a thing a reader can see.
+  it("stops asking after a run the platform never finishes", () => {
+    const stuck = {
+      ...completedProviderRun,
+      id: "run-stuck",
+      applied: false,
+    };
+    // The rule is still true about the run itself: this is a ceiling on asking,
+    // not a claim that the run finished.
+    expect(keepPolling(stuck, 0)).toBe(true);
+    expect(keepPolling(stuck, POLL_LIMIT - 1)).toBe(true);
+    expect(keepPolling(stuck, POLL_LIMIT)).toBe(false);
+  });
+
+  // The half a reader can see. The poll below is what makes the page correct;
+  // this is what stops it looking broken while it works.
+  it("says a lookup is happening, and does not report the old failure over it", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-live": () =>
+        jsonResponse(inFlight()),
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[
+            { ...neverRun(), state: "provider_error", latest_run: inFlight() },
+          ]}
+        />
+      </StoryProviders>,
+    );
+
+    expect(await screen.findByText(/Asking Surfe/)).toBeDefined();
+    // The connection's last failure is real and belongs on the page at rest.
+    // Over a lookup the reader is watching it is a stale fact dressed as a
+    // live one, which is what sent Lars looking for a broken button.
+    expect(screen.queryByText(/last call to the provider failed/)).toBeNull();
+    expect(await screen.findByText("Looking them up…")).toBeDefined();
+  });
+
+  // Two phases, and the reader is told which. Once the provider has answered,
+  // saying "asking Surfe" reports work nobody is doing — the vendor is done and
+  // the values are being folded onto the record.
+  it("says the answer is landing once the provider has finished", async () => {
+    const unapplied = {
+      ...completedProviderRun,
+      id: "run-landing",
+      applied: false,
+    };
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-landing": () =>
+        jsonResponse(unapplied),
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[
+            { ...neverRun(), state: "completed", latest_run: unapplied },
+          ]}
+        />
+      </StoryProviders>,
+    );
+
+    expect(
+      await screen.findByText("Answer received. Putting it on the record."),
+    ).toBeDefined();
+    expect(screen.queryByText(/Asking Surfe/)).toBeNull();
+  });
+
+  // The money case. The server's duplicate-spend fence covers the LIVE run
+  // states only, so a completed-but-unapplied run is buyable again — and the
+  // claim has not landed yet, so nothing else hides the button either. Two
+  // presses, two charges, for one detail.
+  it("offers no purchase button while a run's values are still landing", async () => {
+    const unapplied = {
+      ...completedProviderRun,
+      id: "run-landing-2",
+      applied: false,
+    };
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-landing-2": () =>
+        jsonResponse(unapplied),
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[
+            { ...neverRun(), state: "completed", latest_run: unapplied },
+          ]}
+        />
+      </StoryProviders>,
+    );
+
+    await screen.findByText("Answer received. Putting it on the record.");
+    expect(screen.queryByRole("button", { name: /Buy / })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Check again/ })).toBeNull();
+  });
+
+  it("polls a live run even while the connection reads as failed", async () => {
+    let polls = 0;
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-live": () => {
+        polls += 1;
+        return jsonResponse(inFlight());
+      },
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[
+            // The section is impaired; the run underneath it is not.
+            { ...neverRun(), state: "provider_error", latest_run: inFlight() },
+          ]}
+        />
+      </StoryProviders>,
+    );
+
+    await expect.poll(() => polls).toBeGreaterThan(0);
+  });
+
+  // A run whose values have not been folded onto the record yet is not done
+  // from this page's point of view: the apply commits AFTER the run completes,
+  // so a watch that stopped at `completed` refreshed one step before the thing
+  // the reader is waiting for existed.
+  it("keeps watching a completed run until its values are applied", async () => {
+    let polls = 0;
+    const unapplied = {
+      ...completedProviderRun,
+      id: "run-unapplied",
+      applied: false,
+    };
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-unapplied": () => {
+        polls += 1;
+        return jsonResponse(unapplied);
+      },
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[
+            { ...neverRun(), state: "completed", latest_run: unapplied },
+          ]}
+        />
+      </StoryProviders>,
+    );
+
+    await expect.poll(() => polls).toBeGreaterThan(0);
+  });
+
+  // And it stops. A watch with no end condition is a request every 2.5 seconds
+  // for as long as the tab is open.
+  it("does not watch a run whose values are already on the record", async () => {
+    let polls = 0;
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-1": () => {
+        polls += 1;
+        return jsonResponse(completedProviderRun);
+      },
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[providerCompletedProfile]}
+        />
+      </StoryProviders>,
+    );
+
+    await screen.findByRole("button", { name: /Check again/ });
+    expect(polls).toBe(0);
   });
 });

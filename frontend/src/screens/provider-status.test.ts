@@ -76,20 +76,34 @@ describe("the provider status vocabulary", () => {
     // state where both answers were true would be a double-spend invitation.
     for (const state of PROFILE_STATES) {
       if (isRunning(state)) {
-        expect(canEnrichNow(state), state).toBe(false);
+        expect(canEnrichNow(state, true), state).toBe(false);
       }
+    }
+  });
+
+  it("refuses a purchase over a live run whatever the section says", () => {
+    // The section state cannot answer "is a run happening": it puts the
+    // CONNECTION's condition first, so a live run under a connection whose
+    // last call failed reads provider_error — and a run that is completed but
+    // whose values have not been folded onto the record yet reads completed.
+    //
+    // Both are states this function otherwise permits, and the server's
+    // duplicate-spend fence covers only the live run states, so the priced
+    // button offered in that window buys the same detail a second time.
+    for (const state of PROFILE_STATES) {
+      expect(canEnrichNow(state, true), state).toBe(false);
     }
   });
 
   it("offers the purchase exactly where one could succeed", () => {
     // not_connected has nobody to ask; not_eligible has been refused for
     // this subject. Every other terminal state is a fair retry.
-    expect(canEnrichNow("not_connected")).toBe(false);
-    expect(canEnrichNow("not_eligible")).toBe(false);
-    expect(canEnrichNow("never_run")).toBe(true);
-    expect(canEnrichNow("no_match")).toBe(true);
-    expect(canEnrichNow("completed")).toBe(true);
-    expect(canEnrichNow("provider_error")).toBe(true);
+    expect(canEnrichNow("not_connected", false)).toBe(false);
+    expect(canEnrichNow("not_eligible", false)).toBe(false);
+    expect(canEnrichNow("never_run", false)).toBe(true);
+    expect(canEnrichNow("no_match", false)).toBe(true);
+    expect(canEnrichNow("completed", false)).toBe(true);
+    expect(canEnrichNow("provider_error", false)).toBe(true);
   });
 
   it("colours a refused key as danger and an unconnected provider as neither", () => {
