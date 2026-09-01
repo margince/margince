@@ -244,6 +244,10 @@ func (s *Service) worklistFrom(
 		// survived folding and the cut. Both are already in hand, so no figure
 		// here costs a query that could disagree with the page it describes.
 		Reach: reachOf(considered, shown, boundedSources(day)),
+		// The same accounting per kind of work. Both read the same two
+		// snapshots, so the per-source and per-category figures are two views of
+		// one answer rather than two answers.
+		Counts: countsOf(considered, shown, boundedSources(day)),
 	}
 	if filter != "" {
 		narrowed := crmcontracts.WorklistFilter(filter)

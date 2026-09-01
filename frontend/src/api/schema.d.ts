@@ -25248,6 +25248,13 @@ export interface components {
              *     is where the queue says which. Empty only when no source was read at all.
              */
             reach: components["schemas"]["WorklistReach"][];
+            /**
+             * @description The same accounting per KIND of work rather than per producer — what a filter
+             *     pill counts, and what lets the page say how much it is not showing. Counted
+             *     before any narrowing, so a filtered page still reports the categories it is
+             *     not drawing.
+             */
+            counts: components["schemas"]["WorklistCount"][];
         };
         /**
          * @description What one source contributed, in numbers that say what they counted.
@@ -25277,6 +25284,44 @@ export interface components {
              *     page that stopped one short of more, and it says the cautious thing rather than
              *     claiming a source is complete when it is not. The client renders `considered` as
              *     "200+" rather than "200".
+             */
+            more_available: boolean;
+        };
+        /**
+         * @description What one CATEGORY of work held, and how much of it reached the page.
+         *
+         *     The same three figures `WorklistReach` reports per source, asked of the thing a
+         *     reader actually filters by. A client cannot derive one from the other: which
+         *     source belongs to which category is decided here, and summing `reach` in the
+         *     browser would be a second copy of that map, wrong the first time a source moves
+         *     lane.
+         *
+         *     This is what a filter pill draws its number from, and what lets the page say how
+         *     much it is not showing. Without it the queue was a cut at 25 rows that said
+         *     nothing about the rest, so a full first page made a real backlog look like zero.
+         *
+         *     `considered` counts what this read weighed BEFORE any category narrowing, which
+         *     is why a page filtered to meetings can still say how many tasks there were. It is
+         *     not a total when `more_available` is true.
+         *
+         *     `shown` counts what the page carries, with a folded group counted as the items it
+         *     stands for rather than as the single row that stands for them.
+         */
+        WorklistCount: {
+            /**
+             * @description Which kind of work these numbers are about. The same vocabulary the filter uses.
+             * @enum {string}
+             */
+            category: "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            /** @description How many items of this kind were read and ranked, before any narrowing. */
+            considered: number;
+            /** @description How many of them the page carries, counting a folded group as its members. */
+            shown: number;
+            /**
+             * @description True when any source behind this category was read to its work bound, so items
+             *     MAY exist past what was considered. A category inherits its sources' honesty:
+             *     reporting "12 decisions" over a pile the read never finished counting is the
+             *     failure this flag exists to prevent.
              */
             more_available: boolean;
         };
