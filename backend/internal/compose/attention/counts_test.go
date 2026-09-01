@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // countFor finds one category's figures, failing loudly rather than returning a
@@ -155,5 +156,99 @@ func TestCountsAreOrderedTheSameWayTwice(t *testing.T) {
 		if first.Counts[i].Category != second.Counts[i].Category {
 			t.Fatalf("position %d was %q then %q", i, first.Counts[i].Category, second.Counts[i].Category)
 		}
+	}
+}
+
+// The source-to-category map agrees with the classifiers.
+//
+// The classifiers decide a row's category; countsOf needs the same answer for a
+// bounded source that produced no surviving row. Two spellings of one fact, so
+// this feeds a row from each source through the real classification and
+// requires categoryOfSource to have said the same thing. A source that changes
+// lane fails here rather than reporting its truncation against the wrong cut.
+func TestTheSourceMapAgreesWithTheClassifiers(t *testing.T) {
+	lanes := []struct {
+		source crmcontracts.AttentionItemSource
+		day    crmcontracts.Attention
+	}{
+		{"task", crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
+			item("x", "task", withDue(rankInstant)),
+		}}},
+		{"deal_at_risk", crmcontracts.Attention{AsOf: rankInstant, AtRisk: lane(
+			item("x", "deal_at_risk", withDeal(1000)),
+		)}},
+		{"meeting", crmcontracts.Attention{AsOf: rankInstant, Meetings: lane(
+			item("x", "meeting", withDue(rankInstant)),
+		)}},
+		{"approval", crmcontracts.Attention{AsOf: rankInstant, NeedsYou: []crmcontracts.AttentionItem{
+			item("x", "approval", withKind("send_email")),
+		}}},
+		{"notice", crmcontracts.Attention{AsOf: rankInstant, Notices: lane(item("x", "notice"))}},
+		{"bounce", crmcontracts.Attention{AsOf: rankInstant, Bounces: lane(item("x", "bounce"))}},
+		{"relationship_decay", crmcontracts.Attention{AsOf: rankInstant, RelationshipDecay: lane(
+			item("x", "relationship_decay"),
+		)}},
+		{"conversation_claim", crmcontracts.Attention{AsOf: rankInstant, Commitments: lane(
+			item("x", "conversation_claim", withDue(rankInstant)),
+		)}},
+		{"dsr", crmcontracts.Attention{AsOf: rankInstant, Dsr: lane(item("x", "dsr", withDue(rankInstant)))}},
+		{"failed_approval", crmcontracts.Attention{AsOf: rankInstant, DidNotRun: lane(
+			item("x", "failed_approval"),
+		)}},
+		{"automation_run", crmcontracts.Attention{AsOf: rankInstant, AutomationHealth: lane(
+			item("x", "automation_run"),
+		)}},
+	}
+
+	for _, l := range lanes {
+		rows := classifyDay(l.day, rankInstant)
+		if len(rows) != 1 {
+			t.Fatalf("%s: the lane classified %d rows, and the fixture holds one", l.source, len(rows))
+		}
+		classified := rows[0].item.Category
+		mapped := categoryOfSource(crmcontracts.WorklistItemSource(l.source))
+		if classified != mapped {
+			t.Fatalf("%s: the classifier files it under %q and the map says %q — a truncation of this source would be reported against the wrong cut",
+				l.source, classified, mapped)
+		}
+	}
+}
+
+// A waiting customer, whose classifier takes a different argument shape.
+func TestTheSourceMapAgreesForAWaitingCustomer(t *testing.T) {
+	row := classifyWaiting(WaitingCustomer{Since: rankInstant}, rankInstant)
+
+	if got := categoryOfSource(sourceWaiting); row.item.Category != got {
+		t.Fatalf("the classifier files a wait under %q and the map says %q", row.item.Category, got)
+	}
+}
+
+// A bounded source whose every row was filtered out still says the read did
+// not finish.
+//
+// The scope filter runs before this snapshot, so a lane can come back full of a
+// colleague's work and leave nothing behind. Counted from rows alone the
+// category vanishes entirely and the page reports nothing was there — which is
+// the false-empty this accounting exists to prevent, reintroduced by the
+// accounting itself.
+func TestABoundedSourceFilteredToNothingStillSaysThereMayBeMore(t *testing.T) {
+	deals := []crmcontracts.AttentionItem{}
+	for i := 0; i < quietDealBound; i++ {
+		row := item("d"+string(rune('a'+i%26)), "deal_at_risk", withDeal(1000))
+		row.Deal.OwnerId = uuidPtr(ids.MustParse("01a05500-0000-7000-8000-0000000000ee"))
+		deals = append(deals, row)
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &deals}
+
+	// Unassigned drops every row that has an owner, so the lane read fifty and
+	// kept none.
+	out := (&Service{}).worklistFrom(t.Context(), day, scopeUnassigned, "", 25, nil)
+
+	count := countFor(t, out, "deals_at_risk")
+	if count.Considered != 0 {
+		t.Fatalf("considered = %d, and every row was filtered out", count.Considered)
+	}
+	if !count.MoreAvailable {
+		t.Fatal("a lane read to its bound reported a finished read, so the page would say nothing was there")
 	}
 }

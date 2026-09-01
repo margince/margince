@@ -413,26 +413,39 @@ export function pillCount(
 // line is drawn only when there IS a difference to report: on a day the page
 // carries whole, saying "12 of 12" is noise.
 //
-// A source read to its bound makes the total a floor, and the sentence says so
-// rather than printing a number it cannot stand behind.
+// It reads only the cut the reader is LOOKING at. `considered` is snapshotted
+// before the category narrowing, so on a filtered page the other categories keep
+// their full figures and contribute nothing shown — summing them all would
+// answer "5 of 35" on a page that is showing every one of the five things the
+// reader asked for, and conflate "you filtered this out" with "this did not
+// fit".
+//
+// Where a source was read to its bound the total is a floor, and the sentence
+// says a source has more rather than printing a number it cannot stand behind.
 export function completenessText(
   day: Worklist,
+  filter: WorklistFilter,
   t: T,
   locale: Locale,
 ): string | null {
-  const shown = day.counts.reduce((total, count) => total + count.shown, 0);
-  const considered = day.counts.reduce(
+  const counted =
+    filter === "all"
+      ? day.counts
+      : day.counts.filter((count) => count.category === filter);
+  const shown = counted.reduce((total, count) => total + count.shown, 0);
+  const considered = counted.reduce(
     (total, count) => total + count.considered,
     0,
   );
-  const bounded = day.counts.filter((count) => count.more_available).length;
+  const bounded = counted.filter((count) => count.more_available).length;
   if (shown >= considered && bounded === 0) {
     return null;
   }
   if (bounded > 0) {
+    // No fraction: the figure it would divide by is a floor, and "200 of 200
+    // shown · 1 source has more" contradicts itself in one sentence.
     return t("worklist.completeness.bounded", {
       shown: formatNumber(shown, locale),
-      considered: formatNumber(considered, locale),
       sources: formatNumber(bounded, locale),
     });
   }

@@ -7328,7 +7328,7 @@ export const en = {
   "worklist.summary": "{urgent} urgent · {due} due · {lower} lower-priority",
   "worklist.completeness": "{shown} of {considered} shown",
   "worklist.completeness.bounded":
-    "{shown} of {considered} shown · {sources} sources have more",
+    "{shown} shown · {sources} sources have more",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearOfWhatWasRead":
     "Nothing is waiting among the sources that answered.",

@@ -103,6 +103,20 @@ func countsOf(
 		seen[category] = row
 		return row
 	}
+	// Seeded from the SOURCES first, the way reach is, and not from the rows.
+	//
+	// A bounded source that contributed no surviving row still truncated its
+	// read, and a count built only from rows cannot know that: the scope filter
+	// runs before this snapshot, so a lane can come back full of a colleague's
+	// work and leave nothing behind. Counting rows alone then reports an exact
+	// figure over a category whose read stopped early — which is the one thing
+	// these numbers exist to prevent.
+	for source, bounded := range bounds {
+		if !bounded {
+			continue
+		}
+		at(categoryOfSource(source)).MoreAvailable = true
+	}
 	for _, row := range considered {
 		count := at(row.item.Category)
 		count.Considered++
@@ -118,7 +132,12 @@ func countsOf(
 		// A folded group is ONE row standing for many, and the reader is being
 		// shown all of them at once. Counting the group as a single shown item
 		// would report a category as barely present on a page where it is the
-		// dominant thing — the same attribution reach makes back to sources.
+		// dominant thing.
+		//
+		// Attributed to the BATCH ROW's own category rather than to each
+		// member's, which reach has to do: a group only ever folds rows that
+		// share a category (batchKeyOf gates on it), so the row's category is
+		// its members'.
 		if row.item.Batch != nil && row.item.Batch.Count > 0 {
 			at(row.item.Category).Shown += row.item.Batch.Count
 			continue
@@ -133,4 +152,34 @@ func countsOf(
 	// of one unchanged day have to produce the same bytes.
 	sort.Slice(out, func(i, j int) bool { return out[i].Category < out[j].Category })
 	return out
+}
+
+// categoryOfSource says which cut of the queue a producer's rows land in.
+//
+// The classifiers decide this per row, and this is the only other place that
+// needs it: to seed a category for a bounded source that contributed no
+// surviving row. Two spellings of one fact, and the test beside it feeds every
+// source through a classifier and requires the same answer, so a source that
+// changes lane fails here rather than reporting its truncation against the
+// wrong cut.
+func categoryOfSource(source crmcontracts.WorklistItemSource) crmcontracts.WorklistItemCategory {
+	switch source {
+	case sourceWaiting:
+		return "customer_waiting"
+	case sourceAtRisk, "brief_item":
+		return "deals_at_risk"
+	case "meeting":
+		return "meetings"
+	case sourceTask, "conversation_claim":
+		return "tasks"
+	case "approval", "dedupe_candidate":
+		return "decisions"
+	default:
+		// Everything the product reports about ITSELF — health, notices,
+		// bounces, undelivered mail, failed approvals, privacy deadlines. The
+		// default rather than a list, because a source added tomorrow is far
+		// more likely to be one of those than a new kind of sales work, and
+		// naming it "system" is the answer that under-claims.
+		return "system"
+	}
 }

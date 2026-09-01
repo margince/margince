@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { WorklistScreen } from "./worklist";
+import { completenessText } from "./worklist.copy";
 
 // What the page says about the work it is NOT showing.
 //
@@ -150,6 +151,27 @@ describe("what the page says about what it is not showing", () => {
     expect(screen.queryByRole("button", { name: /Decisions.*200/ })).toBeNull();
   });
 
+  it("does not print a fraction whose denominator is a floor", async () => {
+    stub(
+      day([
+        {
+          category: "decisions",
+          considered: 200,
+          shown: 200,
+          more_available: true,
+        },
+      ]),
+    );
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(screen.getByText(/sources have more/)).toBeTruthy();
+    });
+    // "200 of 200 shown - 1 source has more" contradicts itself in one
+    // sentence: the number it divides by is a floor, not a total.
+    expect(screen.queryByText(/200 of 200/)).toBeNull();
+  });
+
   it("says a source has more rather than claiming a total", async () => {
     stub(
       day([
@@ -166,5 +188,36 @@ describe("what the page says about what it is not showing", () => {
     await waitFor(() => {
       expect(screen.getByText(/1 source(s)? ha(s|ve) more/)).toBeTruthy();
     });
+  });
+
+  // A narrowed page reads only the cut the reader is looking at.
+  //
+  // `considered` is snapshotted before the narrowing, so the other categories
+  // keep their full figures and contribute nothing shown. Summing them all
+  // answers "5 of 35" on a page showing every one of the five things that were
+  // asked for — conflating "you filtered this out" with "this did not fit".
+  it("counts only the cut the reader asked for", () => {
+    const page = day([
+      {
+        category: "deals_at_risk",
+        considered: 5,
+        shown: 5,
+        more_available: false,
+      },
+      { category: "tasks", considered: 30, shown: 0, more_available: false },
+    ]);
+    const t = ((key: string, vars?: Record<string, string>) =>
+      `${key}:${vars?.shown}/${vars?.considered}`) as never;
+
+    const filtered = completenessText(page, "deals_at_risk", t, "en");
+    const unfiltered = completenessText(page, "all", t, "en");
+
+    if (filtered !== null) {
+      throw new Error(
+        `a page showing all five of what was asked for still reported ${filtered}`,
+      );
+    }
+    // Unfiltered, the same day genuinely IS hiding the thirty tasks.
+    expect(unfiltered).toContain("5/35");
   });
 });

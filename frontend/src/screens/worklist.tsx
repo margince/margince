@@ -308,7 +308,7 @@ function WorklistHeader({
   const t = useT();
   const { locale } = useLocale();
   const scopes = day.scope_options;
-  const completeness = completenessText(day, t, locale);
+  const completeness = completenessText(day, filter, t, locale);
   return (
     <div className="worklist-header">
       <p className="t-h2 worklist-lead">

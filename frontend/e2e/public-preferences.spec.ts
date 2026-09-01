@@ -109,11 +109,11 @@ test.describe("the pages a message links to", () => {
     await mockPublicEdge(page, sent);
 
     await page.goto(`/#/unsubscribe/${TOKEN}/${PURPOSE}`);
-    await page
-      .getByRole("button", { name: de["prefs.unsub.confirm"] })
-      .click();
+    await page.getByRole("button", { name: de["prefs.unsub.confirm"] }).click();
 
-    await expect(page.getByRole("heading", { name: de["prefs.unsub.doneTitle"] })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: de["prefs.unsub.doneTitle"] }),
+    ).toBeVisible();
     const post = sent.find((r) => r.method === "POST");
     expect(post?.url).toContain(`purpose=${PURPOSE}`);
   });
@@ -126,18 +126,16 @@ test.describe("the pages a message links to", () => {
     await mockPublicEdge(page, sent);
 
     await page.goto(`/#/unsubscribe/${TOKEN}/${PURPOSE}`);
-    await page
-      .getByRole("button", { name: de["prefs.unsub.confirm"] })
-      .click();
-    await expect(page.getByRole("heading", { name: de["prefs.unsub.doneTitle"] })).toBeVisible();
+    await page.getByRole("button", { name: de["prefs.unsub.confirm"] }).click();
+    await expect(
+      page.getByRole("heading", { name: de["prefs.unsub.doneTitle"] }),
+    ).toBeVisible();
 
     // RELOAD rather than navigate: the address has not changed, so a goto
     // to the same hash leaves the confirmed view standing — which is what
     // a reader pressing the link in the mail a second time actually does.
     await page.reload();
-    await page
-      .getByRole("button", { name: de["prefs.unsub.confirm"] })
-      .click();
+    await page.getByRole("button", { name: de["prefs.unsub.confirm"] }).click();
     await expect(
       page.getByRole("heading", { name: de["prefs.unsub.alreadyOff"] }),
     ).toBeVisible();
@@ -221,7 +219,9 @@ test.describe("the pages a message links to", () => {
     await button.focus();
     await page.keyboard.press("Enter");
 
-    await expect(page.getByRole("heading", { name: de["prefs.unsub.doneTitle"] })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: de["prefs.unsub.doneTitle"] }),
+    ).toBeVisible();
     expect(sent.some((r) => r.method === "POST")).toBe(true);
   });
 });

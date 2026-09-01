@@ -303,7 +303,7 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	atCap("bounce", day.Bounces, doneCap)
 	// Each of these carries its own, declared where the lane is read.
 	atCap("task", &day.Planned, plannedCap)
-	atCap("deal_at_risk", day.AtRisk, quietDealBound)
+	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
 	atCap("relationship_decay", day.RelationshipDecay, decayBound)
 	atCap("conversation_claim", day.Commitments, doneCap)
 	// The decision lane is read deeper than the rest, because a batch row
