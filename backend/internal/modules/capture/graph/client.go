@@ -76,11 +76,16 @@ var ErrUnreachable = fmt.Errorf("graph: could not reach Microsoft: %w", connecto
 // resync hint); Sync falls back to a bounded re-anchor rather than failing.
 var ErrDeltaGone = fmt.Errorf("graph: delta cursor no longer valid: %w", connector.ErrCursorGone)
 
-// OAuth is the OAuth2 handshake surface: build the consent URL, exchange the
-// authorization code for a refresh token, and mint a fresh access token from
-// a stored refresh token.
-type OAuth interface {
-	AuthCodeURL(state, redirectURI string) string
+// Authorizer is the TOKEN half of the handshake: exchange an authorization code
+// for a refresh token, and mint a fresh access token from a stored one.
+//
+// The narrower half a connector holds, split from OAuth for the same reason
+// googleconn splits its own: an installation whose Entra app arrives at runtime
+// resolves the app per call, and a per-call resolution cannot build a consent
+// URL — AuthCodeURL takes no context and cannot report that the app is
+// unreachable. So the transport keeps that half, resolving the app itself, and
+// the connector holds this one.
+type Authorizer interface {
 	Exchange(ctx context.Context, code, redirectURI string) (oauthflow.TokenGrant, error)
 	AccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
 	// Refresh redeems the stored refresh token asking for exactly the scopes
@@ -93,6 +98,14 @@ type OAuth interface {
 	// grant never carried — and dropping the rotation ages the connection out
 	// on Microsoft's own 90-day idle clock.
 	Refresh(ctx context.Context, refreshToken string, granted []string) (oauthflow.TokenRefresh, error)
+}
+
+// OAuth is the full handshake surface: an Authorizer that can also send a person
+// to Microsoft's consent screen. The transport holds this; a connector holds the
+// narrower half.
+type OAuth interface {
+	Authorizer
+	AuthCodeURL(state, redirectURI string) string
 }
 
 // API is the Graph mail surface the connector uses. Reading is what almost all

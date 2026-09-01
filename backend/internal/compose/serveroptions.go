@@ -216,29 +216,30 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// reference to a blob nothing wrote.
 		keys := ai.NewProviderKeyStore(NewSettingsStore(pool), vault, s.log)
 		s.voiceHandlers = s.WithProviderKeys(keys)
-		// The Google app rides the same reasoning: its client SECRET is sealed,
-		// so the surface exists only where there is somewhere to seal it.
-		googleApp := capture.NewGoogleAppStore(NewSettingsStore(pool), vault, s.log)
+		// The connector OAuth apps ride the same reasoning: each client SECRET is
+		// sealed, so the surface exists only where there is somewhere to seal it.
+		connectorApps := capture.NewConnectorAppStore(NewSettingsStore(pool), vault, s.log)
 		// The FIELD this option owns, not the whole struct. Replacing the struct
 		// would zero the environment client id and the redirect URIs that
 		// WithGmailCapture and WithGoogleSignIn set, leaving the operator a card
 		// reporting no app and no URLs to register — and it would do so only on
 		// the option orders where keyvault happens to run last, which nothing
 		// holds.
-		s.googleAppHandlers.store = googleApp
+		s.connectorAppHandlers.store = connectorApps
 		// And the connect transport resolves the STORED app per request, so an
 		// app set through Settings works without restarting the api. The worker
 		// resolves it the same way for the sync poll's token refresh, which is
 		// why the resolver is built by a shared constructor rather than here.
-		s.googleAppResolver = googleAppCredentialsFrom(googleApp)
+		s.googleAppResolver = appCredentialsFrom(connectorApps, capture.AppProviderGoogle)
+		s.microsoftAppResolver = appCredentialsFrom(connectorApps, capture.AppProviderMicrosoft)
 		// And the setup surface, which reads all three. It is wired here rather
 		// than beside the AI block because the Google half only exists once the
 		// vault does — a setup answer composed from two of the three stores
 		// would report a step unconfigured for the wrong reason.
 		s.installationSetupHandlers = installationSetupHandlers{
-			routing:      ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS),
-			providerKeys: keys,
-			googleApp:    googleApp,
+			routing:       ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS),
+			providerKeys:  keys,
+			connectorApps: connectorApps,
 		}
 		// Rebuild the capture registry with the vault so the connector-
 		// credential paths (Connect seals, Sync resolves) have their custodian.
@@ -247,10 +248,11 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// gmail-carrying registry when the app is configured.
 		if s.connectorHandlers.registry == nil {
 			s.connectorHandlers = connectorHandlers{
-				registry:          NewCaptureRegistry(pool, vault, s.captureConfig),
-				authority:         identity.NewService(pool),
-				googleCredentials: s.googleAppResolver,
-				publicOrigin:      s.originStatus,
+				registry:             NewCaptureRegistry(pool, vault, s.captureConfig),
+				authority:            identity.NewService(pool),
+				googleCredentials:    s.googleAppResolver,
+				microsoftCredentials: s.microsoftAppResolver,
+				publicOrigin:         s.originStatus,
 			}
 		}
 		// The overlay incumbent connection lifecycle needs the same

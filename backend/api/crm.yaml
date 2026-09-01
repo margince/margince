@@ -9714,13 +9714,13 @@ paths:
       description: |
         The onboarding gate's one question, answered in one place. A fresh installation cannot
         read a company website until it can call a model, and cannot capture mail until it has a
-        Google app — so a client asks here rather than composing the answer out of several
+        connector OAuth app — so a client asks here rather than composing the answer out of several
         surfaces and drifting from whatever the server actually requires.
 
         `blocking` is the SERVER's policy, not the screen's, and the two questions are not the
         same one. A step that is unconfigured and blocking is one the installation may not
         proceed past; a step may be unconfigured and non-blocking, which is how something an
-        installation can be used without (mail capture, on a deployment with no Google app) is
+        installation can be used without (mail capture, on a deployment with no connector OAuth app) is
         reported as still outstanding rather than as a gate. `complete` is exactly "no blocking
         step is unconfigured", so a client never recomputes it.
 
@@ -9733,16 +9733,29 @@ paths:
               schema: { $ref: '#/components/schemas/InstallationSetup' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
-  /installation/google-app:
+  /installation/oauth-apps/{provider}:
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        description: >-
+          Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google
+          Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook
+          calendar. One app per vendor per installation — keying it by connector instead would let
+          one installation hold two Google projects and hand a rep whichever their first consent
+          happened to reach.
+        schema:
+          type: string
+          enum: [google, microsoft]
     get:
       tags: [Identity]
-      operationId: getGoogleApp
+      operationId: getOauthApp
       security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Whether this installation has a Google OAuth app, and which one.
+      summary: Whether this installation has one vendor's OAuth app, and which one.
       description: |
-        One Google app per installation, supplied by whoever operates it — every mailbox a rep
-        connects rides it, and Gmail capture cannot run without it.
+        One app per vendor per installation, supplied by whoever operates it — every mailbox and
+        calendar a rep connects rides it, and that vendor's capture cannot run without it.
 
         Readable by any seat that may read capture settings, which is every seeded role: a rep
         about to connect their mailbox needs to know whether the installation has an app at all.
@@ -9752,7 +9765,7 @@ paths:
         vault and this answers only whether one is held. The client ID **is** returned, because
         it is not a secret — it travels in every authorization redirect a browser makes — and an
         operator needs to see which app their installation is using to check it against the
-        Google console.
+        vendor's console.
 
         Human session only. An agent never reads the installation's OAuth app.
       responses:
@@ -9760,9 +9773,18 @@ paths:
           description: The app, without its secret.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/GoogleApp' }
+              schema: { $ref: '#/components/schemas/ConnectorApp' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404':
+          description: >-
+            No such vendor. This build serves `google` and `microsoft`; a name outside that set is
+            refused rather than defaulted, because guessing would store one vendor's secret under
+            another's key. A vendor this build DOES serve with no app stored is not this — it is a
+            200 reporting `source: none`, or a 204 from the delete.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '503':
           description: >-
             This installation has no key vault, so there is no sealed secret to report. The
@@ -9772,10 +9794,10 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
     put:
       tags: [Identity]
-      operationId: setGoogleApp
+      operationId: setOauthApp
       security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Store the installation's Google OAuth app (admin/ops).
+      summary: Store one vendor's OAuth app for this installation (admin/ops).
       description: |
         Seals the client secret in the key vault and records the app. Sending a pair when one is
         already stored ROTATES it: the new secret is sealed before the reference moves, and the
@@ -9786,11 +9808,11 @@ paths:
         just sent, and echoing it would put it in a response body that proxies log and browsers
         cache.
 
-        422 for a half-supplied pair, and for a client id that is not one — Google's ids end in
-        `.apps.googleusercontent.com`, and a value that does not is almost always the project
-        number or an API key copied from the same screen. Refusing it here names the mistake,
-        where accepting it would surface much later as an opaque `invalid_client` from Google on
-        somebody's first connect attempt.
+        422 for a half-supplied pair, and for a client id that is not one. Google's ids end in
+        `.apps.googleusercontent.com`, and Microsoft's are GUIDs — a value that is neither is
+        almost always a neighbouring field copied from the same console screen. Refusing it here
+        names the mistake, where accepting it would surface much later as an opaque
+        `invalid_client` from the vendor on somebody's first connect attempt.
 
         Takes effect immediately: the connect transport resolves the stored app per request
         rather than at boot, so a rotation reaches the next authorization without a restart.
@@ -9802,11 +9824,20 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/GoogleAppInput' }
+            schema: { $ref: '#/components/schemas/ConnectorAppInput' }
       responses:
         '204': { description: 'Sealed. The secret is not echoed.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404':
+          description: >-
+            No such vendor. This build serves `google` and `microsoft`; a name outside that set is
+            refused rather than defaulted, because guessing would store one vendor's secret under
+            another's key. A vendor this build DOES serve with no app stored is not this — it is a
+            200 reporting `source: none`, or a 204 from the delete.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: >-
@@ -9817,24 +9848,34 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Identity]
-      operationId: deleteGoogleApp
+      operationId: deleteOauthApp
       security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Remove the installation's Google OAuth app (admin/ops).
+      summary: Remove one vendor's OAuth app (admin/ops).
       description: |
         Drops the app and destroys the sealed secret. An installation that holds none succeeds:
         the caller asked for a state and that state already holds, which is why this is 204
         rather than 404 — and why it is safe to retry.
 
-        Gmail stops being connectable immediately. Mailboxes already connected keep their own
-        stored tokens, which this does not touch — removing the app is not disconnecting anybody,
-        though their next token refresh will fail once the worker restarts without it.
+        That vendor's mail and calendar stop being connectable immediately. Mailboxes already
+        connected keep their own stored tokens, which this does not touch — removing the app is
+        not disconnecting anybody, though their next token refresh will fail once the worker
+        restarts without it.
 
         Audit-only write (no event stream, EVT-NOEVT-3).
       responses:
         '204': { description: 'Removed, or there was nothing to remove.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404':
+          description: >-
+            No such vendor. This build serves `google` and `microsoft`; a name outside that set is
+            refused rather than defaulted, because guessing would store one vendor's secret under
+            another's key. A vendor this build DOES serve with no app stored is not this — it is a
+            200 reporting `source: none`, or a 204 from the delete.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '503':
           description: >-
             This installation has no key vault, so there is no sealed secret to remove. The
@@ -18914,10 +18955,12 @@ components:
       properties:
         step:
           type: string
-          enum: [ai_models, google_app]
+          enum: [ai_models, oauth_app]
           description: >-
             Which step this is. `ai_models` is a bound tier→model routing plus a credential for
-            every cloud vendor it names; `google_app` is the installation's Google OAuth app.
+            every cloud vendor it names; `oauth_app` is a connector OAuth app — Google's or
+            Microsoft's, either of which makes mailbox and calendar capture connectable, so the
+            step is done once ANY vendor's app is available.
         configured:
           type: boolean
           description: Whether this step is done.
@@ -18927,23 +18970,34 @@ components:
             Whether leaving it unconfigured stops the installation being used. The server's
             policy, not the screen's — a posture that does not need a step reports it
             non-blocking rather than expecting the client to know the rule.
-    GoogleApp:
+    ConnectorApp:
       type: object
       additionalProperties: false
-      required: [configured, client_id, source, redirect_uris]
+      required: [provider, configured, client_id, source, redirect_uris]
       properties:
+        provider:
+          type: string
+          enum: [google, microsoft]
+          description: Which vendor's app this describes, echoed so a cached response cannot be misread.
         configured:
           type: boolean
           description: >-
-            Whether a Google app is available to this installation from any source — true when
-            `source` is `stored` or `environment`. It answers "can Gmail and Calendar be
-            connected", which is a different question from where the app came from.
+            Whether this vendor's app is available to this installation from any source — true when
+            `source` is `stored` or `environment`. It answers "can this vendor's mail and calendar
+            be connected", which is a different question from where the app came from.
         client_id:
           type: string
           description: >-
-            Google's public identifier for the app in use, or empty when there is none. Returned in
-            the clear because it is not a secret — it travels in every authorization redirect — and
-            an operator needs it to check which app the installation uses.
+            The vendor's public identifier for the app in use, or empty when there is none. Returned
+            in the clear because it is not a secret — it travels in every authorization redirect —
+            and an operator needs it to check which app the installation uses.
+        tenant:
+          type: string
+          description: >-
+            The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when
+            the app authorizes any organization — and always omitted for `google`, which has no
+            such concept, where a value would be a field that silently does nothing. A client that
+            expects a string here reads the unpinned case as the wrong shape rather than as absent.
         source:
           type: string
           enum: [stored, environment, none]
@@ -18955,12 +19009,12 @@ components:
         redirect_uris:
           type: array
           description: >-
-            Every callback URL that must be registered as an Authorized redirect URI on the Google
-            OAuth client, one per purpose this deployment actually serves. A purpose that is not
-            composed is absent rather than listed, because telling an operator to register a URL
-            nothing answers sends them to debug a mismatch that was never the cause.
+            Every callback URL that must be registered as a redirect URI on the vendor's OAuth
+            client, one per purpose this deployment actually serves. A purpose that is not composed
+            is absent rather than listed, because telling an operator to register a URL nothing
+            answers sends them to debug a mismatch that was never the cause.
           items:
-            $ref: '#/components/schemas/GoogleAppRedirectUri'
+            $ref: '#/components/schemas/ConnectorAppRedirectUri'
     SignInProvider:
       type: object
       additionalProperties: false
@@ -18980,33 +19034,36 @@ components:
           type: boolean
           description: Whether this installation currently offers it on the login screen.
 
-    GoogleAppRedirectUri:
+    ConnectorAppRedirectUri:
       type: object
       additionalProperties: false
       required: [purpose, url]
       description: >-
-        One callback URL that must be registered as an Authorized redirect URI on the Google
-        OAuth client. Built by the code that SENDS it, so the value shown to an operator and the
-        value Google receives cannot be different bytes.
+        One callback URL that must be registered as a redirect URI on the vendor's OAuth client.
+        The `url` is the exact value this deployment sends the vendor, byte for byte — paste it as
+        given rather than reconstructing it.
       properties:
         purpose:
           type: string
           enum: [sign_in, mailbox_connect, calendar_connect]
           description: >-
             Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and
-            `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are
-            SEPARATE connectors served on different paths — one Google app backs all three, and
-            registering only some of them fails the others with `redirect_uri_mismatch`.
+            `calendar_connect` are the per-user mail and calendar consent callbacks, which are
+            SEPARATE connectors served on different paths. ONE app backs all three on either
+            vendor, and registering only some of them fails the others at the consent screen —
+            Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names
+            the URL that was missing.
 
             None is derivable from another: the sign-in callback rides a base that already carries
             `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on
-            a split deployment those are different hosts.
+            a split deployment those are different hosts. Only the purposes this deployment
+            actually serves are listed.
         url:
           type: string
           format: uri
           description: The absolute URL to register, exactly as it must be pasted.
 
-    GoogleAppInput:
+    ConnectorAppInput:
       type: object
       additionalProperties: false
       required: [client_id, client_secret]
@@ -19016,9 +19073,10 @@ components:
           minLength: 1
           maxLength: 512
           description: >-
-            Google's OAuth client id, which ends in `.apps.googleusercontent.com`. A value that
-            does not is refused: it is almost always the project number or an API key copied from
-            the same console screen.
+            The vendor's OAuth client id. Google's end in `.apps.googleusercontent.com`; Microsoft's
+            is the Application (client) ID from the Entra app registration's Overview, a GUID. A
+            value of neither shape is refused: it is almost always a neighbouring field copied from
+            the same console screen — the project number, an API key, or the app's display name.
         client_secret:
           type: string
           minLength: 1
@@ -19027,6 +19085,16 @@ components:
           description: >-
             The app's client secret. WRITE-ONLY — no response in this contract returns it, and the
             setting that records it holds an opaque vault reference rather than these bytes.
+        tenant:
+          type: string
+          maxLength: 512
+          description: >-
+            The Entra directory (tenant) id to pin a `microsoft` app to, so only that directory's
+            members may authorize. Omit it to authorize any organization, which is what a
+            multi-tenant registration is for. Refused for `google`, and refused for the authority
+            aliases `common`, `organizations` and `consumers` — each of those widens the app to a
+            population nobody vetted, and an empty field says the same thing without an alias a
+            reader has to know to interpret.
     AiProviderKeyList:
       type: object
       additionalProperties: false

@@ -57,10 +57,10 @@ var vaultWriters = map[string]string{
 	// Sealed alongside a SETTINGS write, which is what carries the audit row
 	// (settings.SetTx -> storekit.Audit, under the setting's own verb). The two
 	// boot seals each stamp their own actor so they stay distinguishable there.
-	"internal/compose/deploymentsecretseal.go":   "audit_log via the settings write, actor deployment-secret-seal",
-	"internal/compose/providerkeyseal.go":        "audit_log via the settings write, actor routing-seed",
-	"internal/modules/ai/providerkeystore.go":    "audit_log via the settings write, under the ProviderKeys verb",
-	"internal/modules/capture/googleappstore.go": "audit_log via the settings write, under capture settings' update verb",
+	"internal/compose/deploymentsecretseal.go":      "audit_log via the settings write, actor deployment-secret-seal",
+	"internal/compose/providerkeyseal.go":           "audit_log via the settings write, actor routing-seed",
+	"internal/modules/ai/providerkeystore.go":       "audit_log via the settings write, under the ProviderKeys verb",
+	"internal/modules/capture/connectorappstore.go": "audit_log via the settings write, under capture settings' update verb",
 
 	// The declared no-domain-fact posture: bytes move, nothing changes meaning,
 	// so it records operationally rather than as an entity change.

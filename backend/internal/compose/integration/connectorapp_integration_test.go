@@ -52,9 +52,9 @@ func (e *SearchEnv) captureAdmin() context.Context {
 	return e.captureCtx(principal.ObjectGrant{Read: true, Update: true})
 }
 
-func googleAppStore(t *testing.T, e *SearchEnv) *capture.GoogleAppStore {
+func googleAppStore(t *testing.T, e *SearchEnv) *capture.ConnectorAppStore {
 	t.Helper()
-	return capture.NewGoogleAppStore(compose.NewSettingsStore(e.Pool), searchVault(t, e), discard())
+	return capture.NewConnectorAppStore(compose.NewSettingsStore(e.Pool), searchVault(t, e), discard())
 }
 
 // The stored setting holds a REFERENCE and never the secret.
@@ -67,7 +67,7 @@ func TestTheStoredGoogleAppHoldsARefAndNeverTheSecret(t *testing.T) {
 	ctx := e.captureAdmin()
 	const secret = "GOCSPX-super-secret-value"
 
-	if err := googleAppStore(t, e).Set(ctx, testClientID, secret); err != nil {
+	if err := googleAppStore(t, e).Set(ctx, capture.AppProviderGoogle, testClientID, secret, ""); err != nil {
 		t.Fatalf("storing the app: %v", err)
 	}
 
@@ -96,7 +96,7 @@ func TestTheAuditTrailOfAGoogleAppChangeCarriesNoRef(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 
-	if err := googleAppStore(t, e).Set(ctx, testClientID, "GOCSPX-audited"); err != nil {
+	if err := googleAppStore(t, e).Set(ctx, capture.AppProviderGoogle, testClientID, "GOCSPX-audited", ""); err != nil {
 		t.Fatalf("storing: %v", err)
 	}
 	ref := storedGoogleRef(ctx, t, e)
@@ -128,18 +128,18 @@ func TestTheStoredGoogleAppIsWhatTheConnectTransportResolves(t *testing.T) {
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)
 
-	if err := store.Set(ctx, testClientID, "GOCSPX-first"); err != nil {
+	if err := store.Set(ctx, capture.AppProviderGoogle, testClientID, "GOCSPX-first", ""); err != nil {
 		t.Fatalf("storing the app: %v", err)
 	}
-	id, secret, ok, err := store.Credentials(ctx)
+	app, ok, err := store.Credentials(ctx, capture.AppProviderGoogle)
 	if err != nil {
 		t.Fatalf("resolving: %v", err)
 	}
 	if !ok {
 		t.Fatal("a stored app did not resolve")
 	}
-	if id != testClientID || secret != "GOCSPX-first" {
-		t.Errorf("resolved %q / %q, want the stored pair", id, secret)
+	if app.ClientID != testClientID || app.ClientSecretRef != "GOCSPX-first" {
+		t.Errorf("resolved %q / %q, want the stored pair", app.ClientID, app.ClientSecretRef)
 	}
 }
 
@@ -148,7 +148,7 @@ func TestTheStoredGoogleAppIsWhatTheConnectTransportResolves(t *testing.T) {
 func TestNoGoogleAppResolvesToNothingRatherThanAnError(t *testing.T) {
 	e := SetupSearch(t)
 
-	_, _, ok, err := googleAppStore(t, e).Credentials(e.captureAdmin())
+	_, ok, err := googleAppStore(t, e).Credentials(e.captureAdmin(), capture.AppProviderGoogle)
 	if err != nil {
 		t.Fatalf("resolving an unconfigured installation: %v", err)
 	}
@@ -167,23 +167,23 @@ func TestRotatingTheGoogleAppRetiresTheOldSecret(t *testing.T) {
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)
 
-	if err := store.Set(ctx, testClientID, "GOCSPX-first"); err != nil {
+	if err := store.Set(ctx, capture.AppProviderGoogle, testClientID, "GOCSPX-first", ""); err != nil {
 		t.Fatalf("storing: %v", err)
 	}
 	firstRef := storedGoogleRef(ctx, t, e)
 
-	if err := store.Set(ctx, testClientID, "GOCSPX-second"); err != nil {
+	if err := store.Set(ctx, capture.AppProviderGoogle, testClientID, "GOCSPX-second", ""); err != nil {
 		t.Fatalf("rotating: %v", err)
 	}
 	if storedGoogleRef(ctx, t, e) == firstRef {
 		t.Fatal("the ref did not move, so the rotation stored nothing new")
 	}
-	_, secret, _, err := store.Credentials(ctx)
+	app, _, err := store.Credentials(ctx, capture.AppProviderGoogle)
 	if err != nil {
 		t.Fatalf("resolving after rotation: %v", err)
 	}
-	if secret != "GOCSPX-second" {
-		t.Errorf("resolved %q after rotation, want the new secret", secret)
+	if app.ClientSecretRef != "GOCSPX-second" {
+		t.Errorf("resolved %q after rotation, want the new secret", app.ClientSecretRef)
 	}
 	assertVaultRefGone(ctx, t, e, firstRef, "the superseded client secret")
 }
@@ -195,15 +195,15 @@ func TestRemovingTheGoogleAppIsIdempotentAndDestroysTheSecret(t *testing.T) {
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)
 
-	if err := store.Set(ctx, testClientID, "GOCSPX-only"); err != nil {
+	if err := store.Set(ctx, capture.AppProviderGoogle, testClientID, "GOCSPX-only", ""); err != nil {
 		t.Fatalf("storing: %v", err)
 	}
 	ref := storedGoogleRef(ctx, t, e)
 
-	if err := store.Remove(ctx); err != nil {
+	if err := store.Remove(ctx, capture.AppProviderGoogle); err != nil {
 		t.Fatalf("removing: %v", err)
 	}
-	status, err := store.Read(ctx)
+	status, err := store.Read(ctx, capture.AppProviderGoogle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestRemovingTheGoogleAppIsIdempotentAndDestroysTheSecret(t *testing.T) {
 		t.Errorf("after removal the app reads %+v, want empty", status)
 	}
 	assertVaultRefGone(ctx, t, e, ref, "the removed client secret")
-	if err := store.Remove(ctx); err != nil {
+	if err := store.Remove(ctx, capture.AppProviderGoogle); err != nil {
 		t.Errorf("removing an absent app failed: %v", err)
 	}
 }
@@ -228,7 +228,7 @@ func TestAMalformedClientIDIsRefusedWithoutSealingAnything(t *testing.T) {
 	ctx := e.captureAdmin()
 
 	before := googleSealedCount(t, e)
-	err := googleAppStore(t, e).Set(ctx, "1234567890", "GOCSPX-never-sealed")
+	err := googleAppStore(t, e).Set(ctx, capture.AppProviderGoogle, "1234567890", "GOCSPX-never-sealed", "")
 	if err == nil {
 		t.Fatal("a project number was accepted as a client id")
 	}
@@ -250,7 +250,7 @@ func TestAnUnprivilegedSeatCannotStoreAGoogleApp(t *testing.T) {
 	e := SetupSearch(t)
 	before := googleSealedCount(t, e)
 
-	err := googleAppStore(t, e).Set(e.captureCtx(principal.ObjectGrant{Read: true}), testClientID, "GOCSPX-refused")
+	err := googleAppStore(t, e).Set(e.captureCtx(principal.ObjectGrant{Read: true}), capture.AppProviderGoogle, testClientID, "GOCSPX-refused", "")
 	if err == nil {
 		t.Fatal("a seat holding only read stored the installation's Google app")
 	}
@@ -341,27 +341,27 @@ func TestGoogleAppCredentialsResolveTheSealedSecret(t *testing.T) {
 
 	// An installation with no app is not an error: the connect surface says so
 	// rather than failing, so ok=false must come back with a nil error.
-	if _, _, ok, err := store.Credentials(ctx); err != nil || ok {
+	if _, ok, err := store.Credentials(ctx, capture.AppProviderGoogle); err != nil || ok {
 		t.Fatalf("Credentials on an unconfigured installation = (ok=%v, err=%v), want (false, nil)", ok, err)
 	}
 
-	if err := store.Set(ctx, testClientID, "GOCSPX-resolve-me"); err != nil {
+	if err := store.Set(ctx, capture.AppProviderGoogle, testClientID, "GOCSPX-resolve-me", ""); err != nil {
 		t.Fatalf("storing: %v", err)
 	}
-	id, secret, ok, err := store.Credentials(ctx)
+	app, ok, err := store.Credentials(ctx, capture.AppProviderGoogle)
 	if err != nil || !ok {
 		t.Fatalf("Credentials after storing = (ok=%v, err=%v), want (true, nil)", ok, err)
 	}
-	if id != testClientID || secret != "GOCSPX-resolve-me" {
-		t.Fatalf("Credentials resolved (%q, %q), want the stored pair", id, secret)
+	if app.ClientID != testClientID || app.ClientSecretRef != "GOCSPX-resolve-me" {
+		t.Fatalf("Credentials resolved (%q, %q), want the stored pair", app.ClientID, app.ClientSecretRef)
 	}
 
 	// Removed, it stops resolving — the transport must not keep serving an app
 	// the operator has taken away.
-	if err := store.Remove(ctx); err != nil {
+	if err := store.Remove(ctx, capture.AppProviderGoogle); err != nil {
 		t.Fatalf("removing: %v", err)
 	}
-	if _, _, ok, err := store.Credentials(ctx); err != nil || ok {
+	if _, ok, err := store.Credentials(ctx, capture.AppProviderGoogle); err != nil || ok {
 		t.Fatalf("Credentials after removal = (ok=%v, err=%v), want (false, nil)", ok, err)
 	}
 }
@@ -376,15 +376,15 @@ func TestGoogleAppRefusesAnOversizedHalfWithoutSealingIt(t *testing.T) {
 	store := googleAppStore(t, e)
 
 	oversized := strings.Repeat("x", 513)
-	if err := store.Set(ctx, testClientID, oversized); err == nil {
+	if err := store.Set(ctx, capture.AppProviderGoogle, testClientID, oversized, ""); err == nil {
 		t.Fatal("an oversized client secret was accepted")
 	}
-	if err := store.Set(ctx, oversized+".apps.googleusercontent.com", "GOCSPX-fine"); err == nil {
+	if err := store.Set(ctx, capture.AppProviderGoogle, oversized+".apps.googleusercontent.com", "GOCSPX-fine", ""); err == nil {
 		t.Fatal("an oversized client id was accepted")
 	}
 	// Refused BEFORE anything was sealed: the app still reads as empty, so no
 	// blob was written that would then need retiring.
-	status, err := store.Read(ctx)
+	status, err := store.Read(ctx, capture.AppProviderGoogle)
 	if err != nil {
 		t.Fatal(err)
 	}

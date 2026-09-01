@@ -891,20 +891,20 @@ func (stubs) UndoImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id open
 	httperr.NotImplemented(w, r, "UndoImportRun")
 }
 
-func (stubs) DeleteGoogleApp(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "DeleteGoogleApp")
-}
-
-func (stubs) GetGoogleApp(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetGoogleApp")
-}
-
-func (stubs) SetGoogleApp(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "SetGoogleApp")
-}
-
 func (stubs) GetLicenseEntitlement(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetLicenseEntitlement")
+}
+
+func (stubs) DeleteOauthApp(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "DeleteOauthApp")
+}
+
+func (stubs) GetOauthApp(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "GetOauthApp")
+}
+
+func (stubs) SetOauthApp(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "SetOauthApp")
 }
 
 func (stubs) GetInstallationSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
