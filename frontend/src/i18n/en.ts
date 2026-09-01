@@ -6312,7 +6312,8 @@ export const en = {
   "aiRouting.done": "Done",
   "aiRouting.noKey": "no key",
   "aiRouting.unpriced": "unpriced",
-  "aiRouting.effect": "Changes take effect on the next call.",
+  "aiRouting.effect":
+    "Saved bindings reach every process within a minute, without a restart.",
   "aiProviderKeys.title": "Model provider keys",
   "aiProviderKeys.sub":
     "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",

@@ -6269,7 +6269,8 @@ export const de = {
   "aiRouting.done": "Fertig",
   "aiRouting.noKey": "kein Schlüssel",
   "aiRouting.unpriced": "kein Preis",
-  "aiRouting.effect": "Änderungen greifen ab dem nächsten Aufruf.",
+  "aiRouting.effect":
+    "Gespeicherte Bindungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
   "aiProviderKeys.title": "Anbieter-Schlüssel",
   "aiProviderKeys.sub":
     "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",

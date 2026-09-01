@@ -6208,7 +6208,8 @@ export const vi = {
   "aiRouting.done": "Xong",
   "aiRouting.noKey": "chưa có khoá",
   "aiRouting.unpriced": "chưa định giá",
-  "aiRouting.effect": "Thay đổi có hiệu lực từ lần gọi kế tiếp.",
+  "aiRouting.effect":
+    "Ràng buộc đã lưu sẽ đến mọi tiến trình trong vòng một phút, không cần khởi động lại.",
   "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
   "aiProviderKeys.sub":
     "Thông tin xác thực mà bản cài đặt này dùng để gọi từng nhà cung cấp mô hình. Khóa được niêm phong trong kho khóa và không bao giờ hiển thị lại — hãy thay thế nếu bạn cần đổi.",
