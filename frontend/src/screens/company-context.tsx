@@ -32,6 +32,7 @@ import {
 } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { CompanyMark } from "./companymark";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
 import { formatNumber } from "../format/format";
@@ -672,6 +673,10 @@ function CompanyFactsCard({
           {(profile) =>
             form && (
               <>
+                {/* The company's FACE, above the statements about it. It is the
+                    one thing on this card a reader recognises at a glance, and
+                    the only one that also stands at the top of the sidebar. */}
+                <CompanyMark profile={profile} canEdit={canEdit} />
                 <SettingList>
                   {ESSENTIALS.fields.map((field) => (
                     <CompanyFactRow

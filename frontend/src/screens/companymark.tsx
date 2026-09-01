@@ -1,0 +1,144 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { Avatar, Button } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import { FileDropzone } from "../design-system/filedropzone";
+import { useT } from "../i18n";
+import { problemMessageOf, throwProblem } from "./common";
+import "./companymark.css";
+
+type CompanyProfile = components["schemas"]["CompanyProfile"];
+
+// What the picker offers, and what the server will decode. Both lists say the
+// same thing, and this one is the browser's filter only: a drop is not filtered
+// by it, and the server refuses what it cannot read either way.
+const ACCEPTED_IMAGES = "image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon";
+
+/**
+ * The installation's own mark: what it is now, and the two things a person can
+ * do about it.
+ *
+ * The mark is normally the one the website read resolved from the company's own
+ * site. This is the other door — for an installation whose site declares no
+ * icon, and for the read that resolved the wrong picture. Uploading takes the
+ * field: while a person's own mark stands, a later read leaves it alone.
+ * Removing gives it back, so the record returns to its monogram and the next
+ * read may resolve one again.
+ */
+export function CompanyMark({
+  profile,
+  canEdit,
+}: Readonly<{ profile: CompanyProfile; canEdit: boolean }>) {
+  const t = useT();
+  const client = useQueryClient();
+  // The response IS the new profile, so it is written straight into the entry
+  // the shell's brand block and this card both read. A refetch would ask the
+  // server a question it just answered, and the rail would wear the old mark
+  // until it came back.
+  const settle = (next: CompanyProfile) => {
+    client.setQueryData(["company"], next);
+  };
+  const upload = useMutation({
+    mutationFn: async (file: File): Promise<CompanyProfile> => {
+      // Sent as multipart by hand rather than through the typed client: the
+      // generated client serializes JSON bodies, and this endpoint takes a
+      // file part.
+      const body = new FormData();
+      body.append("file", file);
+      // contract-fetch:allow multipart — see the note above
+      const response = await fetch("/v1/company/logo", {
+        method: "POST",
+        body,
+        credentials: "include",
+      });
+      const payload = await response.json().catch(() => undefined);
+      if (!response.ok) {
+        throwProblem(payload);
+      }
+      return payload as CompanyProfile;
+    },
+    onSuccess: settle,
+  });
+  // Removal carries no body, so it goes through the typed client like every
+  // other write. Only the upload has to be spelled by hand.
+  const remove = useMutation({
+    mutationFn: async (): Promise<CompanyProfile> => {
+      const { data, error } = await api.DELETE("/company/logo");
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: settle,
+  });
+  // The picker is closed until it is asked for. A dropzone standing open under
+  // a mark the company already has reads as the thing to do, and the thing to
+  // do on this row is usually nothing.
+  const [picking, setPicking] = useState(false);
+  const busy = upload.isPending || remove.isPending;
+  const failure = upload.error ?? remove.error;
+
+  return (
+    <div className="company-mark">
+      <Avatar
+        identity={profile.organization_id}
+        name={profile.display_name}
+        src={profile.logo_url}
+        shape="organization"
+        size="lg"
+      />
+      <div className="company-mark-body">
+        <b>{t("settings.companyMark")}</b>
+        <p className="t-caption">
+          {profile.logo_url
+            ? t("settings.companyMarkPresent")
+            : t("settings.companyMarkNone")}
+        </p>
+        {canEdit && (
+          <div className="company-mark-actions">
+            <Button
+              variant="secondary"
+              onClick={() => setPicking((open) => !open)}
+              disabled={busy}
+            >
+              {profile.logo_url
+                ? t("settings.companyMarkReplace")
+                : t("settings.companyMarkAdd")}
+            </Button>
+            {profile.logo_url && (
+              <Button
+                variant="ghost"
+                onClick={() => remove.mutate()}
+                disabled={busy}
+              >
+                {t("settings.companyMarkRemove")}
+              </Button>
+            )}
+          </div>
+        )}
+        {picking && canEdit && (
+          <FileDropzone
+            label={t("settings.companyMarkPick")}
+            hint={t("settings.companyMarkHint")}
+            emptyLabel={t("settings.companyMarkEmpty")}
+            accept={ACCEPTED_IMAGES}
+            onPick={(file) => {
+              setPicking(false);
+              upload.mutate(file);
+            }}
+          />
+        )}
+        {failure && (
+          <Callout tone="danger" live="alert">
+            {problemMessageOf(failure, t)}
+          </Callout>
+        )}
+      </div>
+    </div>
+  );
+}
