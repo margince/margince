@@ -35,8 +35,36 @@ set -eu
 base="${1:?usage: check-dco.sh <base-sha> <head-sha>}"
 head="${2:?usage: check-dco.sh <base-sha> <head-sha>}"
 
-range="${base}..${head}"
 missing=0
+
+# WHAT WAS WRONG WAS THE ASSERTION, NOT THE RANGE.
+#
+# `base..head` is every commit reachable from head and not from base, so when the
+# base branch advances independently it still names exactly the commits this pull
+# request introduces — the base's own new commits are excluded, which is the
+# point. The range never needed changing.
+#
+# The ancestry check did. The caller hands over
+# `github.event.pull_request.base.sha`, the tip of the base branch when the event
+# fired, and a branch tip MOVES: anything merged to main after a pull request
+# branched puts that tip off the head's ancestry, and asserting otherwise failed
+# every open pull request on somebody else's merge.
+#
+# What survives is the question that assertion was reaching for — do these two
+# share any history at all — asked in the form that cannot be answered by a busy
+# afternoon.
+#
+# And it is `base`, not `git merge-base base head`. With criss-cross history
+# there is more than one best common ancestor, merge-base names one of them, and
+# a range starting there can reach a commit the OTHER ancestor already gave the
+# base. This gate would then judge a commit the pull request did not introduce,
+# and refuse it for somebody else's missing trailer.
+if ! git merge-base "$base" "$head" >/dev/null 2>&1; then
+	echo "DCO: ${base} and ${head} share no history, so there is no range of" >&2
+	echo "commits this pull request introduces. Check the base and head it was given." >&2
+	exit 1
+fi
+range="${base}..${head}"
 
 # WHAT THE RANGE COVERS, asserted before it is trusted.
 #
@@ -47,17 +75,15 @@ missing=0
 # the one way a gate must not break: it reads a smaller history, reports PASS,
 # and no assertion fails to say so.
 #
+# Dropping the ancestry assertion above does not retire that guard, it leaves it
+# the whole job: a head already contained in the base yields an empty range, and
+# the count below is the only thing that refuses it.
+#
 # Held HERE rather than at each call site, because the required caller is the
 # one that had no guard: main-health.yml asserted its baseline's ancestry and
 # ci.yml — the job the `ci` fan-in makes required — called this bare. A
 # protection that lives in the advisory lane and not the blocking one protects
 # nothing.
-if ! git merge-base --is-ancestor "$base" "$head"; then
-	echo "DCO: ${base} is not an ancestor of ${head} — the range ${range} does not" >&2
-	echo "cover the commits it is meant to judge, and an empty one would read as a" >&2
-	echo "clean pass having examined nothing." >&2
-	exit 1
-fi
 
 # Merges included: this is what the range HOLDS, not what needs a trailer. A
 # range covering only merge commits is a real thing (a merge queue's own head),

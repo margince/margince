@@ -2921,7 +2921,20 @@ export function TimelineActions({
       <Button small onClick={() => setRelink(true)}>
         {t("compose.relink")}
       </Button>
-      {activity.audience_reason ? (
+      {/* Captured mail's audience is derived, never a direct write, and
+          ThreadAudienceAction's own endpoint refuses a thread_key with no
+          capture_import row behind it (capture/threadverdict.go). A hand-typed
+          REPLY carries a thread_key too — outboundmessage.go stamps every send
+          with the RFC822 thread it answers, imported or not — so thread_key
+          alone would route a rep's own threaded reply to the one control that
+          404s on it. `audience_reason` is no better a signal: it is null on an
+          untouched captured row (the wrong per-message dialog offered first)
+          and non-null on a narrowed hand-typed one, whose missing
+          capture_import row makes ThreadAudienceAction disappear for good.
+          captured_by's own prefix is what actually says "capture wrote this"
+          — `connector:<name>:<uuid>`, never `human:<uuid>` or `agent:<id>` —
+          so it is the one signal correct in every direction. */}
+      {(activity.captured_by ?? "").startsWith("connector:") ? (
         <ThreadAudienceAction
           activity={activity}
           entityType={entityType}

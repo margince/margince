@@ -120,6 +120,12 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// The contact answered. It is a verb of its own because nothing a person
 		// presses produces it: the fact is observed from captured activity.
 		"replied": true,
+		// A rep decided what to do about a waiting message and it left the
+		// queue. The verb carries its object for the reason password_link_issued
+		// does: "recorded" alone would not say what was recorded, and on the
+		// activity stream — which also carries captures and edits — the
+		// distinction is the whole point of the type.
+		"disposition_recorded": true,
 	}
 
 	for _, typ := range Types() {

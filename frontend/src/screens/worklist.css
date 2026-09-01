@@ -24,6 +24,88 @@
   margin: var(--space-4) 0;
 }
 
+/* The way into the pane: the rank, made pressable.
+   A button rather than the whole row, because the row already holds links and
+   verbs — a control wrapping controls is a press whose target the reader has
+   to guess at. It carries no chrome of its own so the rank still reads as a
+   number rather than as a button that happens to say "3". */
+.worklist-rank-select {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.worklist-rank-select:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The selected row, marked on its edge rather than by a fill: a filled row
+   competes with the focus card above it for the same "this is the one" claim. */
+.worklist-row-selected {
+  box-shadow: inset 3px 0 0 0 var(--accent);
+}
+
+.worklist-pane-facts {
+  display: grid;
+  gap: var(--space-1) var(--space-3);
+  grid-template-columns: auto 1fr;
+  margin: 0;
+}
+
+.worklist-pane-facts dt,
+.worklist-pane-facts dd {
+  margin: 0;
+}
+
+/* The one thing to do next.
+   Denser than a row and quieter than a banner: it earns its place by saying
+   more, not by shouting. The evidence lines step down the type ramp so a reader
+   scanning finds the name, then the money, then the reason. */
+.worklist-focus {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.worklist-focus-what {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.worklist-focus-facts,
+.worklist-focus-why,
+.worklist-focus-cost {
+  margin: 0;
+}
+
+.worklist-focus-why,
+.worklist-focus-cost {
+  color: var(--textSecondary);
+}
+
+.worklist-focus-verb {
+  margin-top: var(--space-2);
+}
+
+/* The band heading, above the first row of its run.
+   Inside the list item rather than between them, because an <ol> may hold only
+   <li> children — a heading placed as a sibling would be invalid structure that
+   the browser silently reparents. The margin collapses to nothing on the first
+   heading, which needs no gap above it. */
+.worklist-band {
+  color: var(--textSecondary);
+  display: block;
+  margin: var(--space-5) 0 var(--space-2);
+}
+
+.worklist-list > li:first-child .worklist-band {
+  margin-top: 0;
+}
+
 .worklist-row {
   align-items: flex-start;
   display: flex;
@@ -55,6 +137,7 @@
   margin: 0;
 }
 
+.worklist-row-detail,
 .worklist-row-facts,
 .worklist-row-sample,
 .worklist-row-because,
