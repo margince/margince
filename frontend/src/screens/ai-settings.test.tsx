@@ -215,4 +215,46 @@ describe("AiSettingsTab", () => {
     await user.click(within(dialog).getByRole("button", { name: /discard/i }));
     expect(await screen.findByText("AI usage & budget")).toBeTruthy();
   });
+
+  // And a form that has been SAVED is no longer unsaved.
+  //
+  // The re-seed guard refuses to touch a dirty form, and a successful write
+  // leaves the form dirty by that measure until the draft is re-seeded from what
+  // the server returned. Without that, the page went on offering to discard
+  // edits that had already landed — the worst shape this question can take,
+  // because a reader who says yes loses nothing and learns to distrust it.
+  it("stops asking once the edits have been saved", async () => {
+    const user = userEvent.setup();
+    const saved = {
+      ...ROUTING,
+      tiers: { premium: { provider: "anthropic", model: "claude-opus-5" } },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.includes("/ai/routing")) {
+          // The PUT answers with the stored document, which is what the form
+          // re-seeds from.
+          return jsonResponse(req.method === "PUT" ? saved : ROUTING);
+        }
+        return backendFor(OPERATOR)(input, init);
+      }),
+    );
+    render(<AiSettingsTab />);
+
+    const lane = await screen.findByTestId("ai-routing-tier-premium");
+    await user.click(within(lane).getByRole("button", { name: /change/i }));
+    const model = within(lane).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "claude-opus-5");
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+    await screen.findByText(/Routing saved/i);
+
+    // Leaving now is an ordinary move, not a question.
+    await user.click(screen.getByRole("button", { name: "Usage" }));
+    expect(await screen.findByText("AI usage & budget")).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
 });

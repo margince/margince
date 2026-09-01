@@ -387,7 +387,27 @@ function RoutingForm({
       )}
       <div className="card-actions">
         <Button
-          onClick={() => replace.mutate(draft)}
+          onClick={() =>
+            replace.mutate(draft, {
+              // A saved draft is no longer unsaved. The re-seed guard above
+              // refuses to touch a DIRTY form, and after a successful write the
+              // form is still dirty by that measure — so without this the card
+              // stayed dirty for ever and the page went on offering to discard
+              // edits that had already landed.
+              //
+              // Seeded from what the server RETURNED rather than from what was
+              // sent: the store decides the stored document, and a write it
+              // normalised would otherwise leave the form dirty again on the
+              // difference.
+              onSuccess: (saved) => {
+                if (!saved) {
+                  return;
+                }
+                setDraft(saved);
+                setSeeded(routingIdentity(saved));
+              },
+            })
+          }
           pending={replace.isPending}
           busyLabel={t("aiRouting.saving")}
           reason={canManage ? undefined : t("aiRouting.adminOnly")}
