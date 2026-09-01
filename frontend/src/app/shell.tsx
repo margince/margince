@@ -133,14 +133,19 @@ function BrandBlock() {
       })}
     >
       {/* The mark the onboarding website read resolved from the company's own
-          site. Avatar draws its deterministic monogram underneath, so a company
-          whose site declared no icon still has a face rather than a gap. */}
-      <Avatar
-        identity={installation.organization_id}
-        name={installation.display_name}
-        src={installation.logo_url}
-        shape="organization"
-      />
+          site, in the slot the product's mark holds otherwise — one slot, so the
+          brand block does not move when onboarding finishes and so the rail's
+          own rules about the mark have one thing to name. Avatar draws its
+          deterministic monogram underneath, and a company whose site declared no
+          icon has a face rather than a gap. */}
+      <span className="ws-chip ws-chip-company">
+        <Avatar
+          identity={installation.organization_id}
+          name={installation.display_name}
+          src={installation.logo_url}
+          shape="organization"
+        />
+      </span>
       <span className="ws-name">
         <b>{installation.display_name}</b>
         <span className="ws-org">{t("shell.poweredBy")}</span>

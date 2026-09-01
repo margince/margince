@@ -16,7 +16,9 @@ import { Shell, WorkspaceRail } from "./shell";
 import {
   fixtureSection,
   ignoreSearch,
+  newClient,
   render,
+  renderWith,
   stubPhoneViewport,
 } from "./testing/shellharness";
 
@@ -567,6 +569,62 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(
       screen.getByRole("link", { name: "Margince" }).getAttribute("href"),
     ).toBe("#/home");
+  });
+
+  // Whose product this is, above whose product it runs on. Every reader of a
+  // live installation is in this case — the cases above are the pre-onboarding
+  // one — so the heading is the company they work for and the product is the
+  // line beneath it.
+  it("heads the rail with the company and puts the product under it", () => {
+    const client = newClient();
+    client.setQueryData(["company"], {
+      organization_id: "11111111-1111-4111-8111-111111111111",
+      display_name: "Demo GmbH",
+      logo_url: "/v1/organizations/11111111-1111-4111-8111-111111111111/logo",
+    });
+    renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
+    const home = screen.getByRole("link", {
+      name: "Demo GmbH home, powered by Margince",
+    });
+    expect(within(home).getByText("Demo GmbH")).toBeTruthy();
+    expect(within(home).getByText("Powered by Margince")).toBeTruthy();
+    expect(home.getAttribute("href")).toBe("#/home");
+  });
+
+  // The mark is the company's own, drawn from the site the onboarding read
+  // resolved it from — not the product's, and not a monogram standing in for a
+  // logo the installation actually has.
+  it("draws the company's resolved logo as the rail's mark", () => {
+    const client = newClient();
+    client.setQueryData(["company"], {
+      organization_id: "22222222-2222-4222-8222-222222222222",
+      display_name: "Demo GmbH",
+      logo_url: "/v1/organizations/22222222-2222-4222-8222-222222222222/logo",
+    });
+    const { container } = renderWith(
+      client,
+      <WorkspaceRail route={{ screen: "home" }} />,
+    );
+    expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
+      "/v1/organizations/22222222-2222-4222-8222-222222222222/logo",
+    );
+  });
+
+  // A company whose site declared no icon has a face rather than a gap: the
+  // monogram is the floor under the mark, so an absent logo_url is a rendering
+  // decision and never an empty slot.
+  it("draws the company's monogram when no logo resolved", () => {
+    const client = newClient();
+    client.setQueryData(["company"], {
+      organization_id: "33333333-3333-4333-8333-333333333333",
+      display_name: "Demo GmbH",
+    });
+    const { container } = renderWith(
+      client,
+      <WorkspaceRail route={{ screen: "home" }} />,
+    );
+    expect(container.querySelector(".ws-chip img")).toBeNull();
+    expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
   });
 
   // The other half of the same rule: outside a level the head is the head. The
