@@ -79,6 +79,7 @@ var projectionMaintenanceSites = gatekit.Waive(map[string]string{
 	"internal/modules/search:recomputePairs":                 "the fold runs under the system principal from the cg:graph-edge consumer; it rewrites the projection from the base tables and returns nothing to a caller",
 	"internal/modules/search:recomputeContactPairs":          "the contact fold, same contract as recomputePairs: system principal, rewrites from base tables, returns nothing",
 	"internal/modules/search:affectedContactPairs":           "resolves which pairs an activity touches for the fold — including stale edges of a relinked participant; the keys never leave the maintenance path",
+	"internal/modules/search:affectedPairs":                  "the colleague half of affectedContactPairs, same contract: names which pairs an activity touches for the fold, stale edges of a relinked participant included, and the keys never leave the maintenance path",
 	"internal/modules/search:contactPairsForPerson":          "resolves a person's pairs for the fold on merge/archive; the keys never leave the maintenance path",
 	"internal/compose/org360:contactRoutes":                  "gated by its one caller: contacts.go asks mayReadRoutes (activity read — the projection derives from activity) before calling, and a refusal omits the routes rather than reaching this read",
 	"internal/compose/org360:readInContactWith":              "gated by its one caller: readOurSide requires person and activity read before calling, and only already-drawn contact ids reach it",
