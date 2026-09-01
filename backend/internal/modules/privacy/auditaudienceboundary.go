@@ -65,6 +65,15 @@ var auditGovernedTypes = []string{
 //
 //   - attachment_extraction reaches its activity through attachment, two hops.
 //
+//   - governed is coalesced to TRUE, because the two arms that ask a question
+//     ask it of a row that may be GONE — an audit trail outlives what it
+//     describes, and erasing an attachment leaves its images behind by design.
+//     A scalar subquery over no row answers NULL, and NULL there is not a third
+//     answer to "is this content governed": it is not knowing, and not knowing
+//     has to read as governed. Otherwise a vanished attachment's image would be
+//     MORE readable than a live one's, and the three-valued arithmetic would
+//     carry NULL out through content_readable to a caller scanning a bool.
+//
 //   - transcript_read carries activity_id NOT NULL.
 //
 //   - scheduled_send carries activity_id once released and anchor_activity_id for
@@ -89,7 +98,7 @@ const auditActivityRouteSQL = `
 		             SELECT coalesce(ss.activity_id, ss.anchor_activity_id)
 		               FROM scheduled_send ss WHERE ss.id = a.entity_id)
 		         END AS activity_id,
-		         CASE a.entity_type
+		         coalesce(CASE a.entity_type
 		           WHEN 'attachment' THEN (
 		             SELECT att.entity_type = 'activity'
 		               FROM attachment att WHERE att.id = a.entity_id)
@@ -99,7 +108,7 @@ const auditActivityRouteSQL = `
 		               JOIN attachment att ON att.id = ext.attachment_id
 		              WHERE ext.id = a.entity_id)
 		           ELSE true
-		         END AS governed`
+		         END, true) AS governed`
 
 // auditActivityJoin reaches the activity an audit row's image describes, and
 // only for rows that describe one.

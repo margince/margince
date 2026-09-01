@@ -450,3 +450,47 @@ func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
 		})
 	}
 }
+
+// AN ATTACHMENT WHOSE ROW IS GONE IS GOVERNED, not ungoverned.
+//
+// The audit trail outlives what it describes, so the route's question — is this
+// content governed by an activity's audience — is asked of a row that may no
+// longer be there, and a scalar subquery over no row answers NULL. NULL is not a
+// third answer: it is not knowing, and not knowing has to read as governed.
+//
+// Reading it the other way would make a vanished attachment's image MORE
+// readable than a live one's, which is the wrong direction for a boundary. No
+// erasure here on purpose — a tombstone withholds the image on its own, so a
+// case that had one would pass whichever way this resolved.
+func TestAnAttachmentWithNoRowLeftIsWithheldRatherThanReleased(t *testing.T) {
+	e := setupAuditBoundary(t)
+	entityType := "attachment"
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, after, occurred_at)
+		 VALUES ($1, 'human', 'user:'||$2::text, 'create', $3, $4,
+		         '{"filename":"sara-subject-passport.pdf","subject":"Sara Subject contract"}'::jsonb, $5)`,
+		ids.NewV7(), e.user, entityType, id, boundaryEarlier); err != nil {
+		t.Fatalf("seeding the attachment image: %v", err)
+	}
+
+	limit := 50
+	page, err := ListAuditLog(e.ctx, e.db, AuditFilter{EntityType: &entityType, EntityID: &id, Limit: &limit})
+	if err != nil {
+		t.Fatalf("ListAuditLog: %v", err)
+	}
+	var found bool
+	for _, entry := range page.Entries {
+		if entry.Action != "create" {
+			continue
+		}
+		found = true
+		if strings.Contains(string(entry.After), "Sara Subject") {
+			t.Errorf("an attachment whose row is gone still names the subject: %s — a boundary "+
+				"that opens when it cannot tell is not a boundary", entry.After)
+		}
+	}
+	if !found {
+		t.Fatal("the create row is absent from the page, so this proved nothing")
+	}
+}
