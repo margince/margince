@@ -19,8 +19,8 @@ package automation
 // ActivityScan read (activities/lasttouch.go's source='system'
 // exclusion applies to both alike) and differ only in which params key
 // names their own cadence and what their own reminder says — the shared
-// anchor helpers below (touchAnchor, activityStaleMatch,
-// anchorReminderTaskEffect, anchorIdempotencyKey) exist so that
+// anchor helpers (touchAnchor, activityStaleMatch and anchorIdempotencyKey
+// below, anchorReminderTaskEffect in taskeffect.go) exist so that
 // difference is the ONLY thing their Match/Plan/IdempotencyKey bodies
 // spell out. renewal_reminder rides a different anchor (a custom
 // renewal-date field's value, not a last-touch timestamp) and its own
@@ -34,7 +34,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -144,59 +143,6 @@ func activityStaleMatch(ev workflow.Event, days clockDaysExtractor) (bool, error
 	return anchor.Before(cutoff), nil
 }
 
-// taskCreateEffect is the ONE create_task effect shape every task-minting
-// starter plans — the clock reminders here AND the event starters in
-// handlers_event.go (stage_change_create_task, route_lead). A task of
-// the given subject, due at dueAt, linked to whatever entity actually
-// fired. Sharing the builder keeps the effect's JSON keys
-// (task/subject/due_at/links/entity_type/entity_id) in exactly one place,
-// so an editor-facing schema change lands once, not in three hand-copied
-// maps that could drift.
-func taskCreateEffect(ev workflow.Event, subject string, dueAt time.Time) (workflow.Effect, error) {
-	return taskCreateEffectFor(ev, subject, dueAt, nil)
-}
-
-// taskCreateEffectFor is taskCreateEffect with an owner.
-//
-// A task minted for a record somebody already answers for belongs to that
-// person. Left unowned it lands in the unassigned queue — the right home for
-// work nobody owns, and the wrong answer when the owner is named on the record
-// that fired: a routed lead mints a follow-up, the follow-up carries no
-// assignee, and the rep whose lead it is never sees it in their own queue.
-//
-// A nil owner is the honest answer for a record nobody owns yet, and it stays
-// nil rather than falling back to whoever the workflow happened to run as.
-func taskCreateEffectFor(
-	ev workflow.Event, subject string, dueAt time.Time, owner *ids.UUID,
-) (workflow.Effect, error) {
-	fields := map[string]any{
-		fieldKind: "task",
-		"subject": subject,
-		"due_at":  dueAt,
-		"links": []map[string]any{{
-			"entity_type": string(ev.Entity.Type), "entity_id": ev.Entity.ID,
-		}},
-	}
-	if owner != nil {
-		fields["assignee_id"] = *owner
-	}
-	args, err := json.Marshal(fields)
-	if err != nil {
-		return workflow.Effect{}, fmt.Errorf("automation: encoding the task: %w", err)
-	}
-	return workflow.Effect{Actions: []workflow.Action{{
-		Kind: workflow.ActionCreateTask, Target: ev.Entity, Args: args,
-	}}}, nil
-}
-
-// anchorReminderTaskEffect is the clock handlers' view of taskCreateEffect:
-// a reminder due AT the anchor moment (ev.OccurredAt), anchored on the
-// fired entity, with the caller's own wording — no_activity_reminder,
-// check_in_cadence, and renewal_reminder all plan through it.
-func anchorReminderTaskEffect(ev workflow.Event, subject string) (workflow.Effect, error) {
-	return taskCreateEffect(ev, subject, ev.OccurredAt)
-}
-
 // anchorIdempotencyKey is the load-bearing occurrence key (Task 12) every
 // anchor-derived clock handler derives its dedupe key from: keyed on the
 // ENTITY plus the ANCHOR, never ev.ID — a fresh time-scan pass mints a
@@ -259,13 +205,13 @@ func (noActivityReminder) Match(_ context.Context, ev workflow.Event) (bool, err
 // Plan mints one create_task reminder anchored on the stale entity,
 // naming the anchor in the subject so the reminder is never a mystery
 // number (P6).
-func (noActivityReminder) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
+func (w noActivityReminder) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
 	anchor, err := touchAnchor(ev)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
 	subject := fmt.Sprintf("Check in — no activity since %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ev, subject)
+	return anchorReminderTaskEffect(ctx, w.ex, ev, subject)
 }
 
 func (w noActivityReminder) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -342,13 +288,13 @@ func (checkInCadence) Match(_ context.Context, ev workflow.Event) (bool, error) 
 	return activityStaleMatch(ev, checkInCadenceDays)
 }
 
-func (checkInCadence) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
+func (w checkInCadence) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
 	anchor, err := touchAnchor(ev)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
 	subject := fmt.Sprintf("Time for a check-in — last touched %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ev, subject)
+	return anchorReminderTaskEffect(ctx, w.ex, ev, subject)
 }
 
 func (w checkInCadence) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -479,13 +425,13 @@ func (renewalReminder) Match(_ context.Context, ev workflow.Event) (bool, error)
 	return !anchor.Before(today) && !anchor.After(horizon), nil
 }
 
-func (renewalReminder) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
+func (w renewalReminder) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
 	anchor, err := renewalAnchor(ev)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
 	subject := fmt.Sprintf("Renewal coming up — %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ev, subject)
+	return anchorReminderTaskEffect(ctx, w.ex, ev, subject)
 }
 
 func (w renewalReminder) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

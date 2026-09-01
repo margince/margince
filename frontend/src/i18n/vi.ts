@@ -7095,6 +7095,7 @@ export const vi = {
   "worklist.overdue": "Quá hạn",
   "worklist.scope.label": "Công việc của ai",
   "worklist.scope.mine": "Của tôi",
+  "worklist.scope.unassigned": "Chưa có người phụ trách",
   "worklist.scope.team": "Nhóm của tôi",
   "worklist.scope.all": "Tất cả",
   "worklist.filter.label": "Loại công việc",

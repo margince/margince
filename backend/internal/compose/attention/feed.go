@@ -107,15 +107,13 @@ type Service struct {
 	// a hundred and fifty is a wrong number rather than a bounded one.
 	decisionDepth int
 	now           Clock
-	// mineOnly narrows the producers that can be narrowed to the acting
-	// reader's own work. Set per read (Assemble keeps the lane feed's
-	// behaviour; the ranked queue's default scope sets it), because the same
-	// service answers both surfaces.
-	mineOnly bool
-	// tasks read at this scope. Separate from mineOnly because a task carries an
-	// assignee and so has a third answer available to it — unowned work, which
-	// is nobody's rather than everybody's — where a mailbox or a notice is
-	// per-reader by construction and has only two.
+	// taskScope narrows the task lane to whose work this read answers for. Set
+	// per read (Assemble keeps the lane feed's behaviour; the ranked queue's
+	// resolved scope sets it), because the same service answers both surfaces.
+	//
+	// A task carries an assignee and so has three answers available to it —
+	// anybody's, the reader's, nobody's — where a mailbox or a notice is
+	// per-reader by construction and has only one.
 	taskScope TaskScope
 }
 
@@ -125,7 +123,6 @@ type Service struct {
 // reader's page.
 func (s *Service) forReader() *Service {
 	narrowed := *s
-	narrowed.mineOnly = true
 	narrowed.taskScope = TasksMine
 	return &narrowed
 }

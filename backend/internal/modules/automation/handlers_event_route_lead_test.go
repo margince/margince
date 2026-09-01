@@ -35,7 +35,7 @@ func (p *fakeCreateRecorder) Create(_ context.Context, in datasource.CreateInput
 // follow-up belongs to, so a recorder that refused the read would fail every
 // test of the create path for a reason about the fixture.
 func (p *fakeCreateRecorder) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
-	fields, err := json.Marshal(leadOwnerFields{})
+	fields, err := json.Marshal(map[string]any{})
 	if err != nil {
 		return datasource.Record{}, err
 	}
@@ -274,7 +274,7 @@ func TestRouteLeadIdempotencyKeyIsStablePerEvent(t *testing.T) {
 // models a lead routing has not reached yet.
 func routeLeadPlanner(t *testing.T, leadID ids.UUID, owner *ids.UUID) routeLeadCreateTask {
 	t.Helper()
-	fields, err := json.Marshal(leadOwnerFields{OwnerID: owner})
+	fields, err := json.Marshal(map[string]any{"owner_id": owner})
 	if err != nil {
 		t.Fatalf("marshal the lead fixture: %v", err)
 	}
@@ -332,5 +332,44 @@ func TestRouteLeadLeavesAnUnownedLeadsFollowUpUnassigned(t *testing.T) {
 	}
 	if _, named := args["assignee_id"]; named {
 		t.Fatalf("an unowned lead named an assignee: %v", args["assignee_id"])
+	}
+}
+
+// Every automation-minted task inherits the owner of the record that fired, not
+// just route_lead's.
+//
+// A task with no assignee reaches no rep's own queue. Before "mine" became
+// exact these rows were visible to everybody, which hid the omission; now an
+// unowned reminder about a deal somebody owns waits in a queue nobody opened,
+// so the rule has to hold for every handler that mints one.
+func TestAStageChangeTaskInheritsTheDealsOwner(t *testing.T) {
+	dealID := ids.NewV7()
+	owner := ids.NewV7()
+	fields, err := json.Marshal(map[string]any{"owner_id": owner})
+	if err != nil {
+		t.Fatalf("marshal the deal fixture: %v", err)
+	}
+	w := stageChangeCreateTask{ex: Executors{Provider: &fakeReadProvider{record: datasource.Record{
+		Ref:    datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID},
+		Fields: fields,
+	}}}}
+	ev := workflow.Event{
+		Entity:     datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID},
+		OccurredAt: time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC),
+		Payload:    json.RawMessage(`{"to_semantic":"open"}`),
+	}
+
+	eff, err := w.Plan(context.Background(), ev)
+	if err != nil {
+		t.Fatalf("Plan err = %v, want nil", err)
+	}
+	var args struct {
+		AssigneeID string `json:"assignee_id"`
+	}
+	if err := json.Unmarshal(eff.Actions[0].Args, &args); err != nil {
+		t.Fatalf("action.Args do not decode: %v", err)
+	}
+	if args.AssigneeID != owner.String() {
+		t.Fatalf("the stage-change task went to %q, wanted the deal's owner %v", args.AssigneeID, owner)
 	}
 }

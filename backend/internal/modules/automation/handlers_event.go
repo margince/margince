@@ -92,7 +92,7 @@ func (stageChangeCreateTask) Match(_ context.Context, ev workflow.Event) (bool, 
 // task effects handlers plan — named once so the string doesn't drift.
 const fieldKind = "kind"
 
-func (w stageChangeCreateTask) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
+func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
 	dueInDays, err := DueInDays(ev.Params, 2)
 	if err != nil {
 		return workflow.Effect{}, err
@@ -100,8 +100,9 @@ func (w stageChangeCreateTask) Plan(_ context.Context, ev workflow.Event) (workf
 	// The fired entity IS the deal (this handler triggers only on
 	// deal.stage_changed), so taskCreateEffect's string(ev.Entity.Type)
 	// resolves to "deal" — the same value this map hardcoded before the
-	// shared builder existed.
-	return taskCreateEffect(ev, "Plan the next step after the stage change",
+	// shared builder existed. The deal's owner is who the next step belongs
+	// to; without them the task reaches nobody's own queue.
+	return ownedTaskEffect(ctx, w.ex, ev, "Plan the next step after the stage change",
 		ev.OccurredAt.AddDate(0, 0, dueInDays))
 }
 
@@ -166,22 +167,8 @@ func (w routeLeadCreateTask) Plan(ctx context.Context, ev workflow.Event) (workf
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	rec, err := w.ex.Provider.Read(ctx, ev.Entity)
-	if err != nil {
-		return workflow.Effect{}, fmt.Errorf("automation: reading the new lead: %w", err)
-	}
-	var lead leadOwnerFields
-	if err := json.Unmarshal(rec.Fields, &lead); err != nil {
-		return workflow.Effect{}, fmt.Errorf("automation: decoding the lead's owner: %w", err)
-	}
-	return taskCreateEffectFor(ev, "Follow up with the new lead",
-		ev.OccurredAt.AddDate(0, 0, dueInDays), lead.OwnerID)
-}
-
-// leadOwnerFields is the one column route_lead needs off the new lead's record.
-// A local shape for the same reason dealOwnerFields is one.
-type leadOwnerFields struct {
-	OwnerID *ids.UUID `json:"owner_id"`
+	return ownedTaskEffect(ctx, w.ex, ev, "Follow up with the new lead",
+		ev.OccurredAt.AddDate(0, 0, dueInDays))
 }
 
 func (w routeLeadCreateTask) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

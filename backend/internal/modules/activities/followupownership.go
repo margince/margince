@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -151,10 +152,13 @@ func (s *Store) AlignSystemTaskAssigneeToLead(ctx context.Context, leadID ids.Le
 	}
 	moved := 0
 	for _, task := range wrong {
-		if err := s.assignSystemTask(ctx, task.id, task.version, owner); err != nil {
+		reassigned, err := s.assignSystemTask(ctx, task.id, task.version, owner)
+		if err != nil {
 			return 0, fmt.Errorf("assigning system task %s: %w", task.id, err)
 		}
-		moved++
+		if reassigned {
+			moved++
+		}
 	}
 	return moved, nil
 }
@@ -184,32 +188,63 @@ func (s *Store) leadOwner(ctx context.Context, leadID ids.LeadID) (ids.UserID, b
 	return *owner, true, nil
 }
 
-// assignSystemTask points one selected task at the owner.
+// assignmentAttempts bounds the re-read below, for the reason completionAttempts
+// bounds its own: each attempt is a lost race with a different writer, and more
+// than a couple means a row somebody is editing continuously.
+const assignmentAttempts = 3
+
+// assignSystemTask points one selected task at the owner, answering whether
+// THIS call moved it.
 //
-// Version skew is not retried the way a completion is. A task somebody moved
-// underneath this call was moved by a writer with a live opinion about who owns
-// it — a human reassigning it by hand, or a later firing of this same handler
-// reading a newer owner — and overwriting that with an owner read before their
-// change is how an automation takes work back off the person it was just given
-// to. The next lead.updated reconciles again if the disagreement is real.
+// Version skew is a RE-READ, not a skip — the same conclusion completeSystemTask
+// reached over the same select-then-write shape. Every update to an activity
+// bumps its version, so skew here usually means somebody edited the subject or
+// the due date, not that anybody expressed an opinion about who owns it.
+// Skipping on that would leave the task pointing at nobody with no promise of
+// another firing: lead.updated fires when the LEAD changes, and the task's own
+// edits do not produce one.
+//
+// A task that has come to disagree with the lead about its owner is left alone.
+// That is the case where somebody did decide, and re-reading the lead's owner
+// over their decision is how an automation takes work back off the person it
+// was just handed to.
 func (s *Store) assignSystemTask(
 	ctx context.Context, id ids.ActivityID, version int64, owner ids.UserID,
-) error {
-	_, err := s.UpdateActivity(ctx, id, UpdateActivityInput{
-		AssigneeID: &owner,
-		IfVersion:  &version,
-	})
-	switch {
-	case err == nil:
-		return nil
-	case errors.Is(err, apperrors.ErrNotFound):
-		// Archived between the selection and the write. No task to move, and
-		// failing here would strand every other task this call selected.
-		return nil
-	case errors.Is(err, apperrors.ErrVersionSkew):
-		// Somebody with a newer opinion got there first. See above.
-		return nil
-	default:
-		return err
+) (bool, error) {
+	for attempt := 0; attempt < assignmentAttempts; attempt++ {
+		_, err := s.UpdateActivity(ctx, id, UpdateActivityInput{
+			AssigneeID: &owner,
+			IfVersion:  &version,
+		})
+		switch {
+		case err == nil:
+			return true, nil
+		case errors.Is(err, apperrors.ErrNotFound):
+			// Either the task was archived between the selection and the write,
+			// or the owner is no longer an active seat (UpdateActivity checks
+			// the assignee exists). Both mean there is nothing to do here, and
+			// failing would strand every other task this call selected.
+			return false, nil
+		case !errors.Is(err, apperrors.ErrVersionSkew):
+			return false, err
+		}
+		current, err := s.GetActivity(ctx, id, storekit.LiveOnly)
+		if err != nil {
+			if errors.Is(err, apperrors.ErrNotFound) {
+				return false, nil
+			}
+			return false, err
+		}
+		if current.AssigneeId != nil && ids.UUID(*current.AssigneeId) != owner.UUID {
+			// Somebody assigned it to a different person while this call was in
+			// flight. Their decision is newer than the one this call is
+			// carrying, so it stands.
+			return false, nil
+		}
+		if current.Version == nil {
+			return false, nil
+		}
+		version = *current.Version
 	}
+	return false, nil
 }
