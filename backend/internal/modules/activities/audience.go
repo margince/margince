@@ -82,8 +82,16 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		// the derivation actually reads.
 		//
 		// A hand-logged row has no contributors and stays writable here.
-		if err := refuseCapturedAudienceWrite(ctx, tx, id); err != nil {
-			return err
+		//
+		// held skips this: a captured, held row is refused by
+		// activity_refuse_restricted_mutation below either way, and that
+		// refusal outranks this one — 422 tells the caller their request is
+		// fixable by asking the owner endpoint instead, which a held row's
+		// request never is.
+		if !held {
+			if err := refuseCapturedAudienceWrite(ctx, tx, id); err != nil {
+				return err
+			}
 		}
 		if err := ensureVersion(ctx, tx, id, in.IfVersion, held); err != nil {
 			return err

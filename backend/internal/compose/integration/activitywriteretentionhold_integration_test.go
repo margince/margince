@@ -125,13 +125,34 @@ func TestARetentionHeldRowStaysHiddenFromAnUnrelatedWriter(t *testing.T) {
 	LinkActivity(t, owner, heldActivity, "person", theirPerson)
 	held := ids.From[ids.ActivityKind](heldActivity)
 
+	// All four write paths, not just one: each composes lockActivityForWrite
+	// and auth.EnsureActivityWritableIn independently, so a boundary that
+	// held for UpdateActivity alone would still leave the other three able
+	// to disclose the row through a 423 an unrelated caller should never see.
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	subject := "rewritten"
-	if _, err := e.Activities.UpdateActivity(rep, held, activities.UpdateActivityInput{Subject: &subject}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("an unrelated writer on a held row answered %v, want ErrNotFound — "+
-			"ErrPermissionDenied here is itself the disclosure that the row exists and is held, "+
-			"to a caller the ordinary DISCOVER gate would have told nothing", err)
+	assertHidden := func(name string, err error) {
+		t.Helper()
+		if !errors.Is(err, apperrors.ErrNotFound) {
+			t.Errorf("%s: an unrelated writer on a held row answered %v, want ErrNotFound — "+
+				"ErrPermissionDenied (or a 423) here is itself the disclosure that the row exists "+
+				"and is held, to a caller the ordinary DISCOVER gate would have told nothing", name, err)
+		}
 	}
+
+	subject := "rewritten"
+	_, err := e.Activities.UpdateActivity(rep, held, activities.UpdateActivityInput{Subject: &subject})
+	assertHidden("UpdateActivity", err)
+
+	_, err = e.Activities.SetAudience(rep, held, activities.SetAudienceInput{Audience: "workspace"})
+	assertHidden("SetAudience", err)
+
+	_, err = e.Activities.RelinkActivity(rep, held, activities.RelinkActivityInput{
+		EntityType: "person", EntityID: theirPerson,
+	})
+	assertHidden("RelinkActivity", err)
+
+	_, err = e.Activities.ArchiveActivity(rep, held, nil)
+	assertHidden("ArchiveActivity", err)
 }
 
 // TestAnUnboundedCallerStillFacesTheAudienceArmOnAHeldRow is the second half
@@ -162,7 +183,7 @@ func TestAnUnboundedCallerStillFacesTheAudienceArmOnAHeldRow(t *testing.T) {
 		VALUES ($1, 'task', 'Confidential Task', 'body', now(), 'manual', 'human:someone-else',
 		        $2, 'participants',
 		        now(), now(), now() + interval '5 years', 'commercial_correspondence',
-		        now(), 'commercial_correspondence')`, e.Rep1)
+		        now(), 'commercial_correspondence')`, e.AdminUser)
 	held := ids.From[ids.ActivityKind](heldTask)
 
 	subject := "rewritten"

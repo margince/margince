@@ -131,8 +131,9 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// per-function scan just does not cross the one-hop indirection a
 	// helper shared by three write paths puts between the call site and
 	// storekit.LockRow.
-	"internal/modules/activities:SetAudience":    "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
-	"internal/modules/activities:UpdateActivity": "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
+	"internal/modules/activities:SetAudience":           "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
+	"internal/modules/activities:UpdateActivity":        "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
+	"internal/modules/activities:RefuseArchiveActivity": "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above; this self-touch (SET archived_at = archived_at) never commits, since the trigger it deliberately provokes refuses every write to the held row it runs against",
 	// This IS a compare-and-set write; what this gate cannot see is the shape it
 	// checks the outcome in. It witnesses RowsAffected on a tx.Exec, and this
 	// sends the same conditional UPDATE through QueryRow so the value the write

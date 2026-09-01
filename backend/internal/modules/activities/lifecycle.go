@@ -11,7 +11,6 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"slices"
 	"time"
 
@@ -156,18 +155,35 @@ func ensureAssigneeExists(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID
 // answer with, and writes nothing.
 //
 // It exists so a confirm-first archive is refused BEFORE a human is asked
-// rather than after they have answered: the two probes below are the whole of
+// rather than after they have answered: the probes below are the whole of
 // what the archive requires of a caller, and asking them here is what keeps a
 // staged approval from being spent on a call the store was always going to
 // refuse. Deliberately NO version probe — a version that is right at staging
 // can be wrong by the time the human answers, so the pin is the write's
 // business and never a reason to refuse a staging.
+//
+// A held row's refusal is surfaced the same way ArchiveActivity's own is: by
+// crossing activity_refuse_restricted_mutation, not by a second copy of what
+// the trigger already says. The touch changes nothing (SET archived_at =
+// archived_at), and the transaction never commits — the trigger refuses
+// every write to a held row, so there is nothing left to roll back deliberately.
 func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) error {
 	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureActivityWritable(ctx, tx, id.UUID)
+		held, err := lockActivityForWrite(ctx, tx, id.UUID)
+		if err != nil {
+			return err
+		}
+		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+			return err
+		}
+		if !held {
+			return nil
+		}
+		_, err = tx.Exec(ctx, `UPDATE activity SET archived_at = archived_at WHERE id = $1`, id.UUID)
+		return err
 	})
 }
 
@@ -224,74 +240,6 @@ func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersio
 		return err
 	})
 	return out, err
-}
-
-type RelinkActivityInput struct {
-	EntityType string
-	// note: the relink target is polymorphic (any entity kind, re-admitted
-	// against the kind vocabulary below), so the id stays untyped (rule 6).
-	EntityID              ids.UUID
-	ReplaceExistingOfType bool
-	// IfVersion is the version the caller read the ACTIVITY at, re-checked
-	// inside the transaction that moves it.
-	//
-	// It is what closes the window a dynamic tier opens: the resolver reads the
-	// activity to decide whether this destination may auto-execute, that read
-	// commits, and the agent controls both sides of the gap — so the verdict is
-	// only true of the record as it WAS. auth/admit.go binds the version it was
-	// resolved from for exactly this, and until it reached here nothing
-	// re-checked it (#2614).
-	//
-	// Only the SINGLE relink carries one. A thread or a named set moves many
-	// activities and one version cannot speak for them, so the batch doors
-	// refuse a pin rather than applying it to whichever row happens to match.
-	IfVersion *int64
-}
-
-func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in RelinkActivityInput) (crmcontracts.Activity, error) {
-	column, err := admitRelink(ctx, in)
-	if err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	var out crmcontracts.Activity
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := relinkAdmittedRow(ctx, tx, id, in, column); err != nil {
-			return err
-		}
-		var err2 error
-		out, err2 = readActivity(ctx, tx, id, storekit.LiveOnly)
-		return err2
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return crmcontracts.Activity{}, apperrors.ErrNotFound
-	}
-	return out, err
-}
-
-// RelinkActivityInTx is the single relink on the CALLER's transaction: the
-// same admission, the same target probe and the same guarded row write as
-// RelinkActivity, for a caller that must commit the link together with a
-// record of its own — the confirm of a project attribution candidate closes
-// the candidate in the transaction that writes the link, so neither can be
-// read without the other. It answers whether a link was written; replaying an
-// association the activity already carries is a no-op.
-func RelinkActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) (bool, error) {
-	column, err := admitRelink(ctx, in)
-	if err != nil {
-		return false, err
-	}
-	return relinkAdmittedRow(ctx, tx, id, in, column)
-}
-
-// LockActivityLive takes the row lock on one live activity for the rest of the
-// caller's transaction, for a caller that must read something about the
-// activity and then relink it as ONE state — the attribution confirm reads
-// where the message is filed before filing it. The lock belongs to this
-// module because the row does; a gone or archived activity answers the same
-// not-found every live read gives.
-func LockActivityLive(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
-	_, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly)
-	return err
 }
 
 // relinkAdmittedRow is the transactional half both doors share: the target

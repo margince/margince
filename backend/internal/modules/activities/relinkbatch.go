@@ -41,6 +41,79 @@ type RelinkBatchResult struct {
 	Relinked int
 }
 
+// RelinkActivityInput is one relink: the destination and, for the single
+// door only, the version pin closing the resolver-to-write gap.
+type RelinkActivityInput struct {
+	EntityType string
+	// note: the relink target is polymorphic (any entity kind, re-admitted
+	// against the kind vocabulary below), so the id stays untyped (rule 6).
+	EntityID              ids.UUID
+	ReplaceExistingOfType bool
+	// IfVersion is the version the caller read the ACTIVITY at, re-checked
+	// inside the transaction that moves it.
+	//
+	// It is what closes the window a dynamic tier opens: the resolver reads the
+	// activity to decide whether this destination may auto-execute, that read
+	// commits, and the agent controls both sides of the gap — so the verdict is
+	// only true of the record as it WAS. auth/admit.go binds the version it was
+	// resolved from for exactly this, and until it reached here nothing
+	// re-checked it.
+	//
+	// Only the SINGLE relink carries one. A thread or a named set moves many
+	// activities and one version cannot speak for them, so the batch doors
+	// refuse a pin rather than applying it to whichever row happens to match.
+	IfVersion *int64
+}
+
+// RelinkActivity is the single-relink door: admits the request, then commits
+// the same guarded write RelinkActivityInTx applies inside the caller's own
+// transaction, in one of its own.
+func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in RelinkActivityInput) (crmcontracts.Activity, error) {
+	column, err := admitRelink(ctx, in)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	var out crmcontracts.Activity
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := relinkAdmittedRow(ctx, tx, id, in, column); err != nil {
+			return err
+		}
+		var err2 error
+		out, err2 = readActivity(ctx, tx, id, storekit.LiveOnly)
+		return err2
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return crmcontracts.Activity{}, apperrors.ErrNotFound
+	}
+	return out, err
+}
+
+// RelinkActivityInTx is the single relink on the CALLER's transaction: the
+// same admission, the same target probe and the same guarded row write as
+// RelinkActivity, for a caller that must commit the link together with a
+// record of its own — the confirm of a project attribution candidate closes
+// the candidate in the transaction that writes the link, so neither can be
+// read without the other. It answers whether a link was written; replaying an
+// association the activity already carries is a no-op.
+func RelinkActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) (bool, error) {
+	column, err := admitRelink(ctx, in)
+	if err != nil {
+		return false, err
+	}
+	return relinkAdmittedRow(ctx, tx, id, in, column)
+}
+
+// LockActivityLive takes the row lock on one live activity for the rest of the
+// caller's transaction, for a caller that must read something about the
+// activity and then relink it as ONE state — the attribution confirm reads
+// where the message is filed before filing it. The lock belongs to this
+// module because the row does; a gone or archived activity answers the same
+// not-found every live read gives.
+func LockActivityLive(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+	_, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly)
+	return err
+}
+
 // admitRelink is the pre-transaction admission every relink door shares: the
 // destination must be named, the caller must hold activity.UPDATE, and the
 // destination type must be one the timeline files under. It answers the link
