@@ -39,6 +39,14 @@ const worklistPage = 25
 // rather than to "how many are there".
 const waitingLead = 8
 
+// leadResponseBound is how many leads still owed a reply one read carries.
+//
+// Declared here and passed through the interface, the way plannedCap is, so
+// the number the reach figure reports is the number the read actually asked
+// for. A source read to its bound reports "more may exist" rather than a total
+// it does not know.
+const leadResponseBound = 50
+
 // worklistMaxPage is the ceiling the contract publishes. A larger ask is
 // clamped rather than refused: the number is a request for how much to draw,
 // and answering the most that can be drawn is more useful than an error.
@@ -98,9 +106,21 @@ func (s *Service) Worklist(
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
 	waiting, waitingErr := reader.waitingCustomers(ctx, day.AsOf)
-	out := s.worklistFrom(ctx, day, resolved, filter, limit, waiting)
+	// The same rule for the leads still owed a reply: read beside the day,
+	// under the ownership dial this read already resolved, so `mine` narrows
+	// in the store's own query rather than by dropping rows afterwards.
+	leads, leadsErr := reader.owedLeads(ctx)
+	// On the READER, not on s. The narrowing lives on the copy forOwner made,
+	// and projecting from the original left s.taskOwner zero — so keepOwnedBy
+	// never ran and a page headed with a rep's name was never narrowed to them
+	// at all. The lead lane made this visible: its rows are the first that
+	// keepOwnedBy has to keep deliberately rather than by carrying a deal.
+	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads)
 	if waitingErr != nil {
 		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
+	}
+	if leadsErr != nil {
+		out.SourcesUnavailable = append(out.SourcesUnavailable, *leadsErr)
 	}
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
@@ -143,7 +163,7 @@ func (s *Service) waitingCustomers(
 
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
-	waiting []WaitingCustomer,
+	waiting []WaitingCustomer, leads leadRead,
 ) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
@@ -190,9 +210,28 @@ func (s *Service) worklistFrom(
 		}
 		rows = append(rows, row)
 	}
+	// The leads still owed a first reply, ranked among everything else rather
+	// than in a queue of their own. Longest overdue first, so the few that LEAD
+	// are the ones most likely to have been forgotten.
+	sort.SliceStable(leads.rows, func(i, j int) bool {
+		return leads.rows[i].DeadlineAt.Before(leads.rows[j].DeadlineAt)
+	})
+	for i, lead := range leads.rows {
+		row := classifyLead(lead, day.AsOf)
+		// Past the lead, an overdue lead sorts BELOW the other kinds without
+		// ceasing to be one — the same treatment a ninth waiting customer gets,
+		// and for the same reason: its level still states the fact.
+		if i >= leadLead {
+			row.crowded = true
+		}
+		rows = append(rows, row)
+	}
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
+	// One late reply is one row, not three: the escalation's own task about a
+	// lead this queue already shows says nothing the lead row does not.
+	rows = dropEscalationTasksAlreadyOwed(rows)
 
 	switch {
 	// Whose queue this is, applied to the rows the same way the lane applied it
@@ -205,6 +244,18 @@ func (s *Service) worklistFrom(
 		rows = keepReadersOwn(ctx, rows)
 	case scope == scopeUnassigned:
 		rows = keepUnowned(rows)
+	}
+	// The lead read's own bound, which boundedSources cannot see: it reads
+	// beside the assembled day rather than as one of its lanes, so the figure
+	// travels with the rows.
+	bounded := boundedSources(day)
+	// Recorded ONLY when the lane ran. reachOf emits a row for every key in
+	// this map, so writing false for a source that never read would publish a
+	// zero-valued reach entry — the page reporting a source as successfully
+	// read and empty, which is exactly the claim an untracked policy must not
+	// make.
+	if leads.read {
+		bounded[sourceLeadResponse] = leads.bounded()
 	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
@@ -246,11 +297,11 @@ func (s *Service) worklistFrom(
 		// `considered` is every candidate this read weighed, `shown` what
 		// survived folding and the cut. Both are already in hand, so no figure
 		// here costs a query that could disagree with the page it describes.
-		Reach: reachOf(considered, shown, boundedSources(day)),
+		Reach: reachOf(considered, shown, bounded),
 		// The same accounting per kind of work. Both read the same two
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
-		Counts: countsOf(considered, shown, boundedSources(day)),
+		Counts: countsOf(considered, shown, bounded),
 	}
 	if filter != "" {
 		narrowed := crmcontracts.WorklistFilter(filter)

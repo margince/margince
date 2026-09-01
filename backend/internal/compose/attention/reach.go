@@ -166,6 +166,8 @@ func categoryOfSource(source crmcontracts.WorklistItemSource) crmcontracts.Workl
 	switch source {
 	case sourceWaiting:
 		return "customer_waiting"
+	case sourceLeadResponse:
+		return categoryLeads
 	case sourceAtRisk, "brief_item":
 		return "deals_at_risk"
 	case "meeting":

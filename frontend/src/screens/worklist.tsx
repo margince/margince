@@ -42,6 +42,7 @@ import "./worklist.css";
 const FILTERS: readonly WorklistFilter[] = [
   "all",
   "customer_waiting",
+  "leads",
   "deals_at_risk",
   "meetings",
   "tasks",

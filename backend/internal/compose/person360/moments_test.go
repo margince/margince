@@ -444,7 +444,10 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 // deadline first, then oldest. The card speaks for the first row, so these
 // pages are built in that order rather than the timeline's.
 func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
-	now := time.Now()
+	// The package's fixed noon, not time.Now(): the "due later today" case
+	// below asks a CALENDAR-day question, so a real clock decides it by what
+	// hour the suite happens to run. Two hours past 22:00 is tomorrow, and the
+	// sentence flips to "Due in 1 days."
 	filed := now.Add(-48 * time.Hour)
 	page := &crmcontracts.Person360{
 		NextSteps: &struct {
@@ -501,7 +504,6 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 // is a rule about where a fact was recorded rather than about what the reader
 // should do next.
 func TestAnOverdueTaskOutranksASilence(t *testing.T) {
-	now := time.Now()
 	quiet := func() *crmcontracts.Person360 {
 		return &crmcontracts.Person360{
 			LastOutboundAt: ptr(now.Add(-9 * 24 * time.Hour)),
