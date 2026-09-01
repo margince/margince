@@ -32,6 +32,7 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -166,7 +167,51 @@ func (c *Connector) Watch(ctx context.Context, auth connector.Auth, notification
 	if sub.Expiration.After(deadline) {
 		sub.Expiration = deadline
 	}
-	return connector.WatchResult{ExpiresAt: sub.Expiration, Ref: sub.ID}, nil
+	return connector.WatchResult{ExpiresAt: sub.Expiration, Ref: encodeWatchRef(sub.ID, notificationURL)}, nil
+}
+
+// watchRef is what a renewal has to know: WHICH subscription, and the endpoint
+// it was registered to deliver to.
+//
+// The endpoint travels with the id because a renewal only ever extends a
+// deadline — it never re-states where the subscription points. EnsureSubscription
+// looked its subscription up BY notificationURL, so a deployment whose URL had
+// moved got a fresh subscription on the new endpoint for free. A renewal by id
+// has no such tell, and extending the old one would keep notifications flowing
+// to an endpoint nobody is serving while the new webhook stays poll-only.
+type watchRef struct {
+	ID  string `json:"id"`
+	URL string `json:"url"`
+}
+
+func encodeWatchRef(id, notificationURL string) string {
+	// Marshalling two strings cannot fail, and a handle is not worth failing a
+	// registration over in any case: an empty ref costs the next renewal a
+	// listing, which is what every renewal did before this existed.
+	b, err := json.Marshal(watchRef{ID: id, URL: notificationURL})
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+// decodeWatchRef reads a stored handle back. It reports whether the handle can
+// be used to renew AT notificationURL — false for anything unreadable, for a
+// handle with no id, and for one made against a different endpoint. Every false
+// means the same thing to the caller: go the long way round.
+func decodeWatchRef(stored, notificationURL string) (string, bool) {
+	// One condition rather than a branch per reason: a handle is either usable
+	// here or it is not, and the caller does the same thing either way. The two
+	// field tests would in fact carry this on their own — encoding/json rejects
+	// malformed input before it writes anything, so an unreadable handle reaches
+	// these lines as the zero value — but reading the error is what says so on
+	// purpose rather than by omission.
+	var ref watchRef
+	err := json.Unmarshal([]byte(stored), &ref)
+	if err != nil || ref.ID == "" || ref.URL != notificationURL {
+		return "", false
+	}
+	return ref.ID, true
 }
 
 // RenewWatch extends the subscription named by ref (connector.WatchRenewer).
@@ -192,8 +237,16 @@ func (c *Connector) RenewWatch(
 	if err != nil {
 		return connector.WatchResult{}, err
 	}
+	id, renewable := decodeWatchRef(ref, notificationURL)
+	if !renewable {
+		// A handle that does not name a subscription registered at THIS endpoint
+		// answers no question a renewal is asking. Watch settles it by looking
+		// up what actually points at the endpoint, and registers when nothing
+		// does.
+		return c.Watch(ctx, auth, notificationURL)
+	}
 	deadline := c.now().Add(maxSubscriptionMinutes * time.Minute).UTC()
-	sub, err := c.api.RenewSubscription(ctx, access, ref, deadline)
+	sub, err := c.api.RenewSubscription(ctx, access, id, deadline)
 	if errors.Is(err, ErrSubscriptionGone) {
 		return c.Watch(ctx, auth, notificationURL)
 	}
@@ -210,7 +263,7 @@ func (c *Connector) RenewWatch(
 	if sub.Expiration.After(deadline) {
 		sub.Expiration = deadline
 	}
-	return connector.WatchResult{ExpiresAt: sub.Expiration, Ref: sub.ID}, nil
+	return connector.WatchResult{ExpiresAt: sub.Expiration, Ref: encodeWatchRef(sub.ID, notificationURL)}, nil
 }
 
 // EnsureSubscription renews the subscription already pointing at

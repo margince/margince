@@ -71,14 +71,22 @@ type Watcher interface {
 type WatchResult struct {
 	HistoryID string
 	ExpiresAt time.Time
-	// Ref is the PROVIDER'S OWN HANDLE on the subscription, where it issues one
-	// — a Microsoft Graph subscription id. Stored in
-	// capture_connection.watch_ref and handed back to WatchRenewer.RenewWatch,
-	// so a renewal addresses the subscription it made rather than going looking
-	// for it.
+	// Ref is the connector's OPAQUE HANDLE on the subscription it just made.
+	// Stored verbatim in capture_connection.watch_ref and handed back to
+	// WatchRenewer.RenewWatch, so a renewal addresses the subscription it made
+	// rather than going looking for it.
+	//
+	// Opaque, and not "the provider's id": it has to carry whatever a renewal
+	// needs in order to know the stored subscription is still the right one to
+	// extend. The Graph connector packs the endpoint in beside the subscription
+	// id for that reason, and nothing outside the connector reads either half.
 	//
 	// Empty where the provider has no such handle: a Gmail watch is addressed by
 	// the mailbox and the topic, and there is nothing to remember.
+	//
+	// The registry's side of the contract is to store it and to CLEAR it when
+	// the connection is rebound to a different account — a handle names a
+	// subscription in the mailbox it was made against, and that mailbox is gone.
 	Ref string
 }
 

@@ -386,7 +386,7 @@ func TestARenewalExtendsTheStoredSubscriptionWithoutListingAnything(t *testing.T
 	c := pinnedConn(api)
 
 	res, err := c.RenewWatch(context.Background(), authBytes(t),
-		"https://api.example/webhooks/graph?token=t", "sub-stored")
+		"https://api.example/webhooks/graph?token=t", encodeWatchRef("sub-stored", "https://api.example/webhooks/graph?token=t"))
 	if err != nil {
 		t.Fatalf("RenewWatch: %v", err)
 	}
@@ -401,9 +401,9 @@ func TestARenewalExtendsTheStoredSubscriptionWithoutListingAnything(t *testing.T
 	if !res.ExpiresAt.Equal(want) {
 		t.Errorf("reported %v, want the deadline Microsoft honored", res.ExpiresAt)
 	}
-	if res.Ref != "sub-stored" {
-		t.Errorf("Ref = %q, want the id that was renewed — the registry stores this and the next "+
-			"renewal addresses it", res.Ref)
+	if id, ok := decodeWatchRef(res.Ref, "https://api.example/webhooks/graph?token=t"); !ok || id != "sub-stored" {
+		t.Errorf("Ref = %q, want a handle on the id that was renewed — the registry stores this and "+
+			"the next renewal addresses it", res.Ref)
 	}
 }
 
@@ -419,7 +419,7 @@ func TestARenewalWhoseSubscriptionIsGoneRegistersAFreshOne(t *testing.T) {
 	c := pinnedConn(api)
 
 	res, err := c.RenewWatch(context.Background(), authBytes(t),
-		"https://api.example/webhooks/graph?token=t", "sub-vanished")
+		"https://api.example/webhooks/graph?token=t", encodeWatchRef("sub-vanished", "https://api.example/webhooks/graph?token=t"))
 	if err != nil {
 		t.Fatalf("RenewWatch on a subscription Microsoft has dropped: %v — the mailbox would stay "+
 			"on the poll for as long as the stored id kept failing", err)
@@ -429,5 +429,58 @@ func TestARenewalWhoseSubscriptionIsGoneRegistersAFreshOne(t *testing.T) {
 	}
 	if res.Ref == "" || res.Ref == "sub-vanished" {
 		t.Errorf("Ref = %q, want the id of the subscription that now exists", res.Ref)
+	}
+}
+
+// AND A HANDLE MADE AGAINST A DIFFERENT ENDPOINT is not renewed at all.
+//
+// A renewal extends a deadline; it never re-states where the subscription
+// points. Before a handle existed, every renewal went through
+// EnsureSubscription, which looks its subscription up BY notificationURL — so a
+// deployment whose webhook URL had moved got a fresh subscription on the new
+// endpoint without anyone arranging it. Extending the stored one instead would
+// keep Microsoft delivering to an endpoint nobody serves, and leave the new
+// webhook poll-only with nothing failing to say so.
+func TestARenewalWhoseEndpointMovedRegistersAtTheNewOne(t *testing.T) {
+	api := &fakeAPI{email: owner}
+	c := pinnedConn(api)
+
+	moved := "https://api.example/webhooks/graph?token=NEW"
+	res, err := c.RenewWatch(context.Background(), authBytes(t), moved,
+		encodeWatchRef("sub-at-old-endpoint", "https://api.example/webhooks/graph?token=t"))
+	if err != nil {
+		t.Fatalf("RenewWatch: %v", err)
+	}
+	if api.renewCalls != 0 {
+		t.Errorf("renewed %d time(s) naming %q — extending a subscription registered against the "+
+			"previous endpoint keeps notifications going where nobody is listening", api.renewCalls, api.renewID)
+	}
+	if api.subCalls != 1 {
+		t.Errorf("%d EnsureSubscription call(s), want one: it is the call that looks a subscription "+
+			"up BY the endpoint, and registers when none points there", api.subCalls)
+	}
+	if _, ok := decodeWatchRef(res.Ref, moved); !ok {
+		t.Errorf("Ref = %q, want a handle usable at the endpoint it was just made for — otherwise "+
+			"every later renewal repeats this round trip", res.Ref)
+	}
+}
+
+// AND AN UNREADABLE HANDLE is the same answer, which is what makes a connection
+// stored before handles existed cost one listing and no incident.
+func TestAnUnreadableHandleFallsBackRatherThanFailing(t *testing.T) {
+	for _, stored := range []string{"", "sub-1", "{}", `{"id":"sub-1"}`} {
+		t.Run("stored="+stored, func(t *testing.T) {
+			api := &fakeAPI{email: owner}
+			c := pinnedConn(api)
+			if _, err := c.RenewWatch(context.Background(), authBytes(t),
+				"https://api.example/webhooks/graph?token=t", stored); err != nil {
+				t.Fatalf("RenewWatch: %v", err)
+			}
+			if api.renewCalls != 0 || api.subCalls != 1 {
+				t.Errorf("renewed %d and ensured %d, want 0 and 1 — a handle that names no "+
+					"subscription at this endpoint answers nothing a renewal is asking",
+					api.renewCalls, api.subCalls)
+			}
+		})
 	}
 }
