@@ -199,8 +199,8 @@ Four states, and they never collapse into each other:
 - **`current`** — every scenario this site ships was measured, and each one's
   stamp is the one this build computes, so the band describes the request this
   build actually sends. A stamp covers all three parts of that claim: the
-  scenario, the request the site's own code builds from it, and the request the
-  grader those scores come from is sent.
+  scenario, the request the site's own code builds from it, and the request sent
+  to the grader that scored it.
 - **`partial`** — everything the record measured is still current, and the corpus
   has since grown cases it has never seen. Explicitly **not** stale: the record is
   wrong about nothing, merely incomplete, and clearing it costs the new scenarios
@@ -281,7 +281,12 @@ aicert: payload trace → /…/margince-next/.tmp/aicert/aicert-trace-20260719T0
 One JSON object per call, in the **same shape as the `ai_call_payload` table** —
 `request_payload` (system + messages) and `response_payload`, both run through the
 *same* SecretStripper that guards egress, so a credential in a prompt is scrubbed
-before it reaches disk. Each line also carries `role` (`candidate`/`judge`),
+before it reaches disk. Scrubbing is not the reason this is safe to leave on,
+though: the payloads themselves are written in full, and what makes them
+harmless here is that every fixture under `corpus/` is synthetic by rule — no
+real company, person or deal. The file is local-only and gitignored. Point the
+same tracing at real input (`make ai-probe` on a fetched page, say) and you are
+writing that input to disk, scrubbed of credentials and of nothing else. Each line also carries `role` (`candidate`/`judge`),
 `task`, `scenario`, `run`, `call`, `served_model` and the token/latency numbers, so
 you can pinpoint the failing run — and the failing call inside it, since a site
 may answer in several:
