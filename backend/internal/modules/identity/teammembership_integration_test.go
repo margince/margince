@@ -111,6 +111,63 @@ func TestAnArchivedTeamMakesNobodyTeammates(t *testing.T) {
 	}
 }
 
+// A deactivated colleague is nobody's teammate any more.
+//
+// team_membership survives a deactivation — SetTeamMember refuses to ADD a
+// suspended member, but nothing removes one who leaves — so a membership-only
+// answer keeps calling them a teammate. Both callers then act on it: one opens
+// a departed person's queue, and the other puts a coaching notice in an inbox
+// nobody will ever read.
+func TestADeactivatedColleagueIsNoLongerATeammate(t *testing.T) {
+	e := setupRevocationEnv(t, "team-membership-deactivated")
+	ctx := context.Background()
+
+	sales, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, "DACH Sales")
+	if err != nil {
+		t.Fatalf("creating the team: %v", err)
+	}
+	leaver := inviteMember(ctx, t, e, "leaver@acme.test", "Leigh Ver")
+	for _, member := range []ids.UUID{e.admin.UserID.UUID, leaver.UUID} {
+		if err := e.svc.SetTeamMember(e.wsCtx(e.admin), e.admin, sales.ID, member, true); err != nil {
+			t.Fatalf("adding %s to DACH Sales: %v", member, err)
+		}
+	}
+
+	// Teammates BEFORE, so the assertion after is a change rather than a query
+	// that never matched.
+	shares, err := e.svc.SharesLiveTeamWithCaller(e.wsCtx(e.admin), leaver)
+	if err != nil {
+		t.Fatalf("asking about a teammate: %v", err)
+	}
+	if !shares {
+		t.Fatal("two members of a live team did not read as teammates")
+	}
+
+	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin,
+		DeactivateUserInput{UserID: leaver}); err != nil {
+		t.Fatalf("deactivating the leaver: %v", err)
+	}
+
+	// The membership row is still there — this is the case that needs the
+	// status check rather than the join.
+	var memberships int
+	if err := e.owner.QueryRow(ctx,
+		`SELECT count(*) FROM team_membership WHERE user_id = $1`, leaver).Scan(&memberships); err != nil {
+		t.Fatalf("counting the leaver's memberships: %v", err)
+	}
+	if memberships == 0 {
+		t.Fatal("the deactivation removed the membership row, so this test proves nothing about the status check")
+	}
+
+	shares, err = e.svc.SharesLiveTeamWithCaller(e.wsCtx(e.admin), leaver)
+	if err != nil {
+		t.Fatalf("asking after the deactivation: %v", err)
+	}
+	if shares {
+		t.Fatal("a deactivated colleague still read as a teammate")
+	}
+}
+
 // A caller is their own teammate. A reader naming their own id follows the same
 // path as any other ask, and refusing them their own queue would be a bug the
 // two-person cases above cannot see.

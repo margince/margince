@@ -7439,6 +7439,7 @@ export const en = {
   "worklist.owner.label": "Whose queue",
   "worklist.manager.cancel": "Cancel",
   "worklist.owner.mine": "My own day",
+  "worklist.owner.backToMine": "Back to my own day",
   "worklist.manager.reassign": "Reassign",
   "worklist.manager.reassignTo": "Hand it to",
   "worklist.manager.reassignConfirm": "Hand it over",

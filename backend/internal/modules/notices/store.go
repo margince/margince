@@ -54,7 +54,9 @@ type Notice struct {
 // mutation. The recipient's existence is held by the row's own FK: a notice
 // to nobody fails loudly rather than landing unread forever.
 func (s *Store) Create(ctx context.Context, recipient ids.UserID, kind, subject, body string) (ids.UUID, error) {
-	row, err := s.insertNotice(ctx, recipient, kind, subject, body)
+	// No evidence: a system flow's authority is the engine's own, which the
+	// audit row's actor already states.
+	row, err := s.insertNotice(ctx, recipient, kind, subject, body, nil)
 	return row.ID, err
 }
 
@@ -64,7 +66,9 @@ func (s *Store) Create(ctx context.Context, recipient ids.UserID, kind, subject,
 // wants nothing else, and widening it would make four call sites carry a value
 // none of them reads. The coach path does read it: it answers 201 with the
 // notice, and the created_at on that answer has to be the row's own.
-func (s *Store) insertNotice(ctx context.Context, recipient ids.UserID, kind, subject, body string) (Notice, error) {
+func (s *Store) insertNotice(
+	ctx context.Context, recipient ids.UserID, kind, subject, body string, evidence map[string]any,
+) (Notice, error) {
 	if kind == "" || subject == "" {
 		return Notice{}, errors.New("notices: a notice names its kind and its subject")
 	}
@@ -86,8 +90,8 @@ func (s *Store) insertNotice(ctx context.Context, recipient ids.UserID, kind, su
 			id, recipient, kind, subject, body, capturedBy).Scan(&createdAt); err != nil {
 			return fmt.Errorf("notices: recording the notice: %w", err)
 		}
-		auditID, err := storekit.AuditEvent(ctx, tx, "create", "notice", id,
-			map[string]any{"kind": kind, "recipient_user_id": recipient.String()})
+		auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "create", "notice", id,
+			map[string]any{"kind": kind, "recipient_user_id": recipient.String()}, evidence)
 		if err != nil {
 			return err
 		}

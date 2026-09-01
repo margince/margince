@@ -136,6 +136,35 @@ func TestASystemPassDoesNotCoach(t *testing.T) {
 	}
 }
 
+// A caller who may not coach learns nothing about the request's shape.
+//
+// Authorization runs before validation, so every ask from a rep answers the
+// same refusal whatever is in it. The reverse order let a rep tell a real kind
+// from an invented one — 422 against 403 — which is a vocabulary the contract
+// publishes but not one this endpoint should confirm to somebody it is about to
+// turn away.
+func TestARefusedCallerCannotTellAValidRequestFromAnInvalidOne(t *testing.T) {
+	e := setupNotices(t)
+	rep := e.asRole(e.other, "rep")
+
+	_, valid := e.store.RaiseCoachNotice(
+		rep, teammatesSaying(true), e.recipient, crmcontracts.CoachGeneral, "a word")
+	_, unknownKind := e.store.RaiseCoachNotice(
+		rep, teammatesSaying(true), e.recipient, crmcontracts.NoticeKind("automation"), "a word")
+	_, noRecipient := e.store.RaiseCoachNotice(
+		rep, teammatesSaying(true), ids.UserID{}, crmcontracts.CoachGeneral, "a word")
+
+	for name, err := range map[string]error{
+		"a well-formed ask": valid,
+		"an unknown kind":   unknownKind,
+		"no recipient":      noRecipient,
+	} {
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("%s from a rep answered %v, wanted the same refusal as every other ask", name, err)
+		}
+	}
+}
+
 // A kind outside the vocabulary is a malformed request, not a permission
 // decision: the caller may well coach, and asked for something that is not a
 // coaching notice.

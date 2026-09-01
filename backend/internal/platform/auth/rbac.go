@@ -279,6 +279,11 @@ const roleAdmin = "admin"
 // The keys are spelled here rather than read from the module that seeds them
 // because platform sits below modules in the DAG, exactly as roleAdmin above
 // is. TestTheCoachingRolesAreSeededRoles holds the two spellings together.
+//
+// Matching on the KEY is matching on the seeded role, because `role.key` is
+// UNIQUE: an operator cannot author a custom role keyed `manager` beside the
+// Team Lead — the insert fails. So a principal carrying one of these keys holds
+// the seeded seat it names, which is the same ground RequireAdmin stands on.
 var coachingRoles = []string{roleAdmin, "management", "manager"}
 
 // RequireCoach admits a seat that may raise a coaching notice.

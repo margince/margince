@@ -487,6 +487,16 @@ export function WorklistScreen() {
     <div className="wrap worklist">
       {/* No label: the shell already heads this page, and a second "Worklist"
           would be announced twice and nest an h3 above the queue's own h2. */}
+      {/* The way BACK, drawn OUTSIDE the surface state.
+          A named owner this reader may not open answers 403, so the day fails
+          to load and the body — the owner picker with it — never renders.
+          Without this the reader is stranded on a page whose only control is
+          gone, and reloading is the way out. */}
+      {owner !== "" && state === "failed" && (
+        <Button onClick={() => setOwner("")}>
+          {t("worklist.owner.backToMine")}
+        </Button>
+      )}
       <SurfaceState
         state={state}
         emptyLabel={t("worklist.clear")}

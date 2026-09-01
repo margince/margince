@@ -69,14 +69,20 @@ export function OwnerPicker({
 
 // Who the reader may hand work to, as options.
 //
-// The roster is the workspace's, and the server refuses a reassignment the
-// caller may not make. Drawing only teammates here would need a membership read
-// this screen does not have, and guessing at one would draw a shorter list than
-// the reader is entitled to.
+// AGENT SEATS ARE EXCLUDED. `PATCH /activities/{id}` accepts any active user id
+// — its check is existence, not seat kind — so an agent seat would take the
+// task and hold it where no person's queue shows it. That is a wider hole than
+// this control (issue on the endpoint), and offering the seat here would be
+// this page walking a reader into it.
+//
+// Everyone else the roster carries is offered. Narrowing to teammates would
+// need a membership read this screen does not have, and the server refuses a
+// reassignment the caller may not make.
 function useAssigneeOptions(exclude: string | undefined) {
   const roster = useRoster("user", true);
   return (roster.data ?? [])
     .filter((entry) => entry.id !== exclude)
+    .filter((entry) => !("is_agent" in entry && entry.is_agent))
     .map((entry) => ({
       value: entry.id,
       label: "display_name" in entry ? entry.display_name : entry.id,

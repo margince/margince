@@ -7293,6 +7293,7 @@ export const vi = {
   "worklist.owner.label": "Hàng việc của ai",
   "worklist.manager.cancel": "Huỷ",
   "worklist.owner.mine": "Ngày của tôi",
+  "worklist.owner.backToMine": "Quay lại ngày của tôi",
   "worklist.manager.reassign": "Giao lại",
   "worklist.manager.reassignTo": "Giao cho",
   "worklist.manager.reassignConfirm": "Giao lại",

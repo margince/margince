@@ -49,8 +49,8 @@ type Teammates interface {
 //
 // Derived from the contract's enum rather than kept as a parallel list: a kind
 // the contract admits and this map does not would reach a recipient with a
-// blank headline, and Create refuses a blank subject, so the failure would be a
-// 500 on a request the contract said was valid.
+// blank headline, and the write refuses a blank subject, so the failure would
+// be a 500 on a request the contract said was valid.
 var coachSubjects = map[crmcontracts.NoticeKind]string{
 	crmcontracts.CoachReplyAging:        "A customer reply is getting old",
 	crmcontracts.CoachDealNeedsNextStep: "A deal needs its next step",
@@ -60,12 +60,28 @@ var coachSubjects = map[crmcontracts.NoticeKind]string{
 
 // RaiseCoachNotice records one person's nudge to a teammate.
 //
-// Refuses before it writes, in this order, because each answer costs more than
-// the one above it: an unknown kind is a malformed request, a non-teammate is a
-// permission decision, and only then does the row go in.
+// AUTHORIZATION FIRST, then the request's own shape. A caller who may not coach
+// learns nothing about what a well-formed coaching request looks like — every
+// ask answers the same 403, whatever they put in it. The reverse order told a
+// rep which kinds the vocabulary holds by answering 422 for a wrong one and 403
+// for a right one, which is a shape the contract publishes anyway but is not
+// this endpoint's to confirm.
 func (s *Store) RaiseCoachNotice(
 	ctx context.Context, mates Teammates, recipient ids.UserID, kind crmcontracts.NoticeKind, note string,
 ) (Notice, error) {
+	// May this seat coach at all. Refuses an agent, a system pass and a buyer
+	// as well as a rep: coaching is a thing a lead does, and a background flow
+	// raising one would be writing in a person's voice.
+	if err := auth.RequireCoach(ctx); err != nil {
+		return Notice{}, err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		// RequireCoach admits only a human principal, so this is the seated
+		// identity behind it — needed for the self-coaching check below, and
+		// unreachable through the gate above.
+		return Notice{}, apperrors.ErrPermissionDenied
+	}
 	if !kind.Valid() {
 		return Notice{}, &values.ParseError{
 			Field: "kind", Code: "unknown_notice_kind",
@@ -76,7 +92,7 @@ func (s *Store) RaiseCoachNotice(
 	if !named {
 		// The contract admitted a kind this map does not answer for. Refusing
 		// is the honest answer: the alternative is a notice whose headline is
-		// blank, which Create rejects one layer down as a server error.
+		// blank, which the write rejects one layer down as a server error.
 		return Notice{}, fmt.Errorf("notices: no subject for kind %q", kind)
 	}
 	if recipient.IsZero() {
@@ -96,20 +112,6 @@ func (s *Store) RaiseCoachNotice(
 			Message: fmt.Sprintf("a coaching note is at most %d characters", noteBound),
 		}
 	}
-
-	// May this seat coach at all. Refuses an agent, a system pass and a buyer
-	// as well as a rep: coaching is a thing a lead does, and a background flow
-	// raising one would be writing in a person's voice.
-	if err := auth.RequireCoach(ctx); err != nil {
-		return Notice{}, err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		// RequireCoach admits only a human principal, so this is the seated
-		// identity behind it — needed for the self-coaching check below, and
-		// unreachable through the gate above.
-		return Notice{}, apperrors.ErrPermissionDenied
-	}
 	if recipient.UUID == actor.UserID {
 		// Coaching yourself is not a refusal case worth a permission error, but
 		// it is not a notice either: it would sit in the raiser's own queue
@@ -127,5 +129,16 @@ func (s *Store) RaiseCoachNotice(
 		return Notice{}, apperrors.ErrPermissionDenied
 	}
 
-	return s.insertNotice(ctx, recipient, string(kind), subject, note)
+	// What ACTUALLY admitted this write, recorded beside it.
+	//
+	// The audit row's authorization_rule renders the caller's object policy —
+	// `role[manager] notice.create …` — and no such grant was consulted: the
+	// admitting facts are the coaching role and the live-team edge, and the
+	// second is a fact about the world on the day it was true. Membership
+	// changes, so a reader years later asking "why was this allowed" needs the
+	// edge stated rather than re-derived from a team that has since moved.
+	return s.insertNotice(ctx, recipient, string(kind), subject, note, map[string]any{
+		"admitted_by":      "coaching_role_and_live_team",
+		"shared_live_team": true,
+	})
 }

@@ -29,6 +29,7 @@ var (
 	coachingRolesDecl = regexp.MustCompile(`var coachingRoles = \[\]string\{([^}]*)\}`)
 	roleKeyLiteral    = regexp.MustCompile(`"([a-z_]+)"`)
 	seededRoleEntry   = regexp.MustCompile(`\{"([a-z_]+)",\s*"[^"]*"\}`)
+	roleAdminDecl     = regexp.MustCompile(`const roleAdmin = "([a-z_]+)"`)
 )
 
 func TestTheCoachingRolesAreSeededRoles(t *testing.T) {
@@ -83,9 +84,15 @@ func coachingRoleKeys(t *testing.T) []string {
 	if decl == nil {
 		return nil
 	}
-	// roleAdmin is a const reference rather than a literal, so it is spelled
-	// here the once. A rename of that constant fails the build, not this gate.
-	keys := []string{"admin"}
+	// roleAdmin enters the list as a const reference, so its VALUE is read from
+	// its own declaration rather than assumed. Spelling "admin" here instead
+	// would leave this gate green after somebody changed what that constant
+	// holds — the exact drift it exists to catch, in the one key it cannot see.
+	adminDecl := roleAdminDecl.FindSubmatch(raw)
+	if adminDecl == nil {
+		t.Fatal("could not read roleAdmin's value out of rbac.go — the declaration this gate reads has moved")
+	}
+	keys := []string{string(adminDecl[1])}
 	for _, m := range roleKeyLiteral.FindAllSubmatch(decl[1], -1) {
 		keys = append(keys, string(m[1]))
 	}

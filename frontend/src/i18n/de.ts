@@ -7364,6 +7364,7 @@ export const de = {
   "worklist.owner.label": "Wessen Liste",
   "worklist.manager.cancel": "Abbrechen",
   "worklist.owner.mine": "Mein eigener Tag",
+  "worklist.owner.backToMine": "Zurück zu meinem Tag",
   "worklist.manager.reassign": "Neu zuweisen",
   "worklist.manager.reassignTo": "Übergeben an",
   "worklist.manager.reassignConfirm": "Übergeben",
