@@ -30,14 +30,23 @@ type Pluralize = ReturnType<typeof usePlural>;
 export function RoutesCard({
   graph,
   onAsk,
-}: Readonly<{ graph: Graph; onAsk?: (route: RouteCandidate) => void }>) {
+  skipLead,
+}: Readonly<{
+  graph: Graph;
+  onAsk?: (route: RouteCandidate) => void;
+  // Drop the head of the list, for a caller that already drew it as the lead.
+  // Showing it twice would ask the reader which of the two is the
+  // recommendation.
+  skipLead?: boolean;
+}>) {
   const t = useT();
-  const routes = graph.routes ?? [];
+  const all = graph.routes ?? [];
+  const routes = skipLead ? all.slice(1) : all;
   // `routes` is optional in the contract and `route` is not, so a response from
   // a server that predates the list still carries the recommendation. Reading
   // only the list would render that payload as "nobody can reach them" — the
   // one sentence on this card a reader must never see wrongly.
-  const legacy = routes.length === 0 ? graph.route : undefined;
+  const legacy = all.length === 0 ? graph.route : undefined;
   return (
     <Card
       title={t("person.intro.routesTitle")}

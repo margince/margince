@@ -335,7 +335,10 @@ describe("PersonNetworkTab", () => {
     });
     renderPanel();
 
-    await user.click(await screen.findByRole("button", { name: "Dana" }));
+    // The map composes a node's accessible name from its label, its lane and
+    // its engagement words, so the name is matched by its label rather than
+    // equal to it.
+    await user.click(await screen.findByRole("button", { name: /Dana/ }));
 
     expect(await screen.findByText("with this contact")).toBeTruthy();
   });
@@ -393,13 +396,13 @@ describe("PersonNetworkTab", () => {
     );
     const { showContact } = renderPanel();
 
-    await user.click(await screen.findByRole("button", { name: "Dana" }));
+    await user.click(await screen.findByRole("button", { name: /Dana/ }));
     expect(await screen.findByText("with this contact")).toBeTruthy();
 
     showContact("p-2");
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Elif" })).toBeTruthy(),
+      expect(screen.getByRole("button", { name: /Elif/ })).toBeTruthy(),
     );
     expect(screen.queryByText("with this contact")).toBeNull();
     expect(screen.queryByText("No recorded correspondence with .")).toBeNull();
