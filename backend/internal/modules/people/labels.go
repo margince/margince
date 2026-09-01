@@ -29,7 +29,7 @@ import (
 )
 
 // PersonLabels answers each named person's display name, under the caller's
-// own grants. The column is full_name — the field personFace puts on a card —
+// own grants. The column is full_name — the field a merge card names —
 // and a person with none is absent rather than blank.
 func (s *Store) PersonLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
 	return s.labelsOf(ctx, entityPerson, "person", "full_name", want)

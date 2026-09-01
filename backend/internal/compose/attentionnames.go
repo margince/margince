@@ -16,7 +16,6 @@ import (
 	"errors"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -87,45 +86,4 @@ func (n attentionNames) read(ctx context.Context, entityType string, want []ids.
 		// A type outside the vocabulary names nothing rather than guessing.
 		return map[ids.UUID]string{}, nil
 	}
-}
-
-// The three faces a merge decision compares.
-//
-// Each answers the same two questions in that record's own terms: which one is
-// this, and which side carries more. `detail` is the field a reader actually
-// uses to tell two near-identical records apart — a company's domain, a
-// person's address — never an id.
-
-func organizationFace(row crmcontracts.Organization) attention.RecordFace {
-	face := attention.RecordFace{
-		Label:        row.DisplayName,
-		CreatedAt:    &row.CreatedAt,
-		RelatedCount: row.ContactCount,
-	}
-	if row.Domains != nil && len(*row.Domains) > 0 {
-		face.Detail = (*row.Domains)[0].Domain
-	}
-	return face
-}
-
-func personFace(row crmcontracts.Person) attention.RecordFace {
-	face := attention.RecordFace{Label: row.FullName, CreatedAt: &row.CreatedAt}
-	if row.Emails != nil && len(*row.Emails) > 0 {
-		face.Detail = string((*row.Emails)[0].Email)
-	}
-	return face
-}
-
-func leadFace(row crmcontracts.Lead) attention.RecordFace {
-	face := attention.RecordFace{CreatedAt: &row.CreatedAt}
-	if row.FullName != nil {
-		face.Label = *row.FullName
-	}
-	switch {
-	case row.Email != nil:
-		face.Detail = string(*row.Email)
-	case row.CompanyName != nil:
-		face.Detail = *row.CompanyName
-	}
-	return face
 }

@@ -63,13 +63,18 @@ type ApprovalQuery struct {
 // Duplicates is the dedupe queue, read through the people module. Every method
 // carries that module's both-sides-visible rule; nothing here re-derives it.
 //
-// Describe names the two records of a pair. It is separate from OpenCandidates
-// because naming a record is a READ of that record: the queue row proves a pair
-// was detected, never that this reader may see what it points at.
+// DescribeMany names records of ONE entity type. It is separate from
+// OpenCandidates because naming a record is a READ of that record: the queue row
+// proves a pair was detected, never that this reader may see what it points at.
+//
+// A SET at a time, not a record at a time. The lane renders up to ten pairs, so
+// naming them one by one is twenty scoped reads on the surface a rep opens first
+// every morning. An id the reader may not see is simply ABSENT from the answer,
+// which is what its refusal meant.
 type Duplicates interface {
 	OpenCandidates(ctx context.Context, limit int) ([]DuplicatePair, error)
 	CountOpen(ctx context.Context) (int, error)
-	Describe(ctx context.Context, entityType string, id ids.UUID) (RecordFace, error)
+	DescribeMany(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]RecordFace, error)
 }
 
 // DuplicatePair is one open candidate: the pair, and what the detector saw.

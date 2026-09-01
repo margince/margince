@@ -45,8 +45,8 @@ const actionOpen crmcontracts.AttentionItemActions = "open"
 // honest answer: the alternative is a merge button over a record they cannot
 // read.
 func (s *Service) duplicateItem(
-	ctx context.Context, pair DuplicatePair,
-) (crmcontracts.AttentionItem, error) {
+	pair DuplicatePair, known pairFaces,
+) crmcontracts.AttentionItem {
 	kind := pair.EntityType
 	confidence := float32(pair.Confidence)
 	item := crmcontracts.AttentionItem{
@@ -56,12 +56,10 @@ func (s *Service) duplicateItem(
 		Confidence: &confidence,
 		Actions:    []crmcontracts.AttentionItemActions{},
 	}
-	left, right, ok, err := s.faces(ctx, pair)
-	if err != nil {
-		return crmcontracts.AttentionItem{}, err
-	}
-	if !ok {
-		return item, nil
+	left, leftKnown := known.side(pair.EntityType, pair.LeftID)
+	right, rightKnown := known.side(pair.EntityType, pair.RightID)
+	if !leftKnown || !rightKnown {
+		return item
 	}
 	item.Pair = &crmcontracts.AttentionPair{
 		Left:     left,
@@ -69,48 +67,51 @@ func (s *Service) duplicateItem(
 		Evidence: evidenceRows(pair.Evidence),
 	}
 	item.Actions = []crmcontracts.AttentionItemActions{"merge"}
-	return item, nil
+	return item
 }
 
-// faces names both sides, or neither.
+// pairFaces holds the records a page names, keyed by entity type then by id. An
+// id with no entry is one this reader may not see.
+type pairFaces map[string]map[ids.UUID]RecordFace
+
+func (f pairFaces) side(entityType string, id ids.UUID) (crmcontracts.AttentionPairSide, bool) {
+	face, ok := f[entityType][id]
+	if !ok {
+		return crmcontracts.AttentionPairSide{}, false
+	}
+	return pairSide(id, face), true
+}
+
+// namePairs reads every record the page will name, one query per entity type
+// rather than one per record.
 //
-// A REFUSAL on one side is not an error to return: the rest of the day is still
-// readable, and one record this caller may not see must not empty the whole
-// lane. A refusal is `ErrPermissionDenied` (the object grant) or `ErrNotFound`
-// (a row-scope miss, which answers not-found so existence stays hidden).
+// A REFUSAL is not an error to return: the rest of the day is still readable,
+// and records this caller may not see must not empty the whole lane. A refusal
+// is `ErrPermissionDenied` (the object grant, refused whole) or `ErrNotFound`
+// (a row-scope miss, which the batched read reports as an absence — existence
+// stays hidden either way).
 //
 // Any OTHER error is returned. A database that will not answer is not a record
 // the reader lacks the grants for, and rendering it as withheld would tell them
 // a pair is hidden from their account when nothing of the kind is true — the
 // same lie the lane assembler refuses to tell when a whole lane fails.
-func (s *Service) faces(
-	ctx context.Context, pair DuplicatePair,
-) (crmcontracts.AttentionPairSide, crmcontracts.AttentionPairSide, bool, error) {
-	left, ok, err := s.face(ctx, pair.EntityType, pair.LeftID)
-	if err != nil || !ok {
-		return crmcontracts.AttentionPairSide{}, crmcontracts.AttentionPairSide{}, false, err
+func (s *Service) namePairs(ctx context.Context, pairs []DuplicatePair) (pairFaces, error) {
+	wanted := map[string][]ids.UUID{}
+	for _, pair := range pairs {
+		wanted[pair.EntityType] = append(wanted[pair.EntityType], pair.LeftID, pair.RightID)
 	}
-	right, ok, err := s.face(ctx, pair.EntityType, pair.RightID)
-	if err != nil || !ok {
-		return crmcontracts.AttentionPairSide{}, crmcontracts.AttentionPairSide{}, false, err
+	named := make(pairFaces, len(wanted))
+	for entityType, rowIDs := range wanted {
+		faces, err := s.duplicates.DescribeMany(ctx, entityType, rowIDs)
+		switch {
+		case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+			continue
+		case err != nil:
+			return nil, err
+		}
+		named[entityType] = faces
 	}
-	return left, right, true, nil
-}
-
-// face names one side: the record, whether the reader may see it, and whether
-// the read itself failed.
-func (s *Service) face(
-	ctx context.Context, entityType string, id ids.UUID,
-) (crmcontracts.AttentionPairSide, bool, error) {
-	record, err := s.duplicates.Describe(ctx, entityType, id)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
-		return crmcontracts.AttentionPairSide{}, false, nil
-	case err != nil:
-		return crmcontracts.AttentionPairSide{}, false, err
-	default:
-		return pairSide(id, record), true, nil
-	}
+	return named, nil
 }
 
 func pairSide(id ids.UUID, face RecordFace) crmcontracts.AttentionPairSide {

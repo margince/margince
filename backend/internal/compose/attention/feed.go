@@ -411,13 +411,13 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 		return nil, laneCount{}, err
 	}
 
+	named, err := s.namePairs(ctx, pairs)
+	if err != nil {
+		return nil, laneCount{}, err
+	}
 	duplicates := make([]crmcontracts.AttentionItem, 0, len(pairs))
 	for _, pair := range pairs {
-		item, err := s.duplicateItem(ctx, pair)
-		if err != nil {
-			return nil, laneCount{}, err
-		}
-		duplicates = append(duplicates, item)
+		duplicates = append(duplicates, s.duplicateItem(pair, named))
 	}
 	approvals := make([]crmcontracts.AttentionItem, 0, len(staged))
 	for _, approval := range staged {
