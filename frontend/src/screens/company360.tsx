@@ -9,7 +9,6 @@ import { Badge, Button, Skeleton, StatCard } from "../design-system/atoms";
 import { type TimelineEntry, TimelineRow } from "../design-system/composed";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { Popover } from "../design-system/popover";
 import {
   liveProjects,
   type PickableProject,
@@ -17,6 +16,7 @@ import {
   useClearVanishedChoice,
   useSoleProjectDefault,
 } from "../design-system/projectpicker";
+import { ReadingsGrid } from "../design-system/readingsgrid";
 import {
   omitted,
   SurfaceState,
@@ -49,7 +49,7 @@ import {
   useAccountStanding,
 } from "./companylookups";
 import { EntityRef } from "./entityref";
-import { Citations, SentenceList, WrittenBy } from "./record360";
+import { Citations, FoundMove, SentenceList, WrittenBy } from "./record360";
 import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
 
 // The company view's data layer and its right-rail cards.
@@ -995,52 +995,50 @@ export function StateStrip({
     //
     // The region's name and the page rhythm are the SCREEN's to set; the tiles
     // inside are the shared primitive's, unreached-into.
-    <section className="co-readings" aria-label={t("co.strip.title")}>
-      <div className="co-readings-grid" data-testid="company-strip">
-        {/* The verdict first, then what it is made of. Stage and expected close
-            left the row with the plate: the lifecycle is read on the record's
-            own name badge and the close date on the deal that carries it, and
-            a reading in two places is one the reader has to reconcile. */}
-        <AccountHealthStat
-          health={view?.health}
-          orgId={orgId}
-          locale={locale}
-          withheld={healthWithheld}
-          t={t}
-        />
-        <PipelineCard
-          commercial={strip.commercial}
-          dimension={view?.health?.commercial}
-          locale={locale}
-          recordZone={recordZone}
-          onOpen={onOpenTab && (() => onOpenTab("deals"))}
-          t={t}
-        />
-        {/* Money is a reading every account gets now, not only a customer: on
+    <ReadingsGrid label={t("co.strip.title")} testId="company-strip">
+      {/* The verdict first, then what it is made of. Stage and expected close
+          left the row with the plate: the lifecycle is read on the record's
+          own name badge and the close date on the deal that carries it, and
+          a reading in two places is one the reader has to reconcile. */}
+      <AccountHealthStat
+        health={view?.health}
+        orgId={orgId}
+        locale={locale}
+        withheld={healthWithheld}
+        t={t}
+      />
+      <PipelineCard
+        commercial={strip.commercial}
+        dimension={view?.health?.commercial}
+        locale={locale}
+        recordZone={recordZone}
+        onOpen={onOpenTab && (() => onOpenTab("deals"))}
+        t={t}
+      />
+      {/* Money is a reading every account gets now, not only a customer: on
             one we have never billed it says so, which is a fact about the
             account, where an absent fourth card is a hole the reader has to
             interpret. */}
-        <MoneyStat
-          orgId={orgId}
-          locale={locale}
-          customer={customer}
-          dimension={view?.health?.payment}
-          onOpen={onOpenTab && (() => onOpenTab("finance"))}
-          t={t}
-        />
-        {/* Whose move it is and the worst open signal both live in the daily
+      <MoneyStat
+        orgId={orgId}
+        locale={locale}
+        customer={customer}
+        dimension={view?.health?.payment}
+        onOpen={onOpenTab && (() => onOpenTab("finance"))}
+        t={t}
+      />
+      {/* Whose move it is and the worst open signal both live in the daily
             brief's context band (companytoday.tsx), off the same `engagement`
             and `signal` fields — so these cards carry the account's STANDING
             and the brief carries what is DATED. */}
-        <HealthStat
-          health={view?.health}
-          locale={locale}
-          withheld={healthWithheld}
-          onOpen={onOpenTab && (() => onOpenTab("people"))}
-          t={t}
-        />
-      </div>
-    </section>
+      <HealthStat
+        health={view?.health}
+        locale={locale}
+        withheld={healthWithheld}
+        onOpen={onOpenTab && (() => onOpenTab("people"))}
+        t={t}
+      />
+    </ReadingsGrid>
   );
 }
 
@@ -1903,75 +1901,46 @@ export function useSuggestionsBody({
       </>
     ) : undefined;
   const rows = suggestions.map((suggestion) => (
-    <PanelRow key={suggestion.fingerprint} className="co-move">
-      <span className="co-move-body">
-        {/* Who found this, and when. The mark says a machine did — the same
-            indigo the card's own band carries, because it is the same claim
-            about authorship rather than a second kind of importance. */}
-        <span className="co-move-by">
-          <Sparkles aria-hidden="true" className="co-move-spark" />
-          {t("co.suggest.found")}
-          {suggestion.due_at && (
-            <span className="t-mono co-move-when">
-              {formatDate(suggestion.due_at, locale, recordZone)}
-            </span>
-          )}
-        </span>
-        {/* The ASK, at the row's loudest weight: what the rule wants done.
-            Falls back to the kind only when the rule named no title of
-            its own. */}
-        <span className="co-move-ask">
-          {suggestion.title ?? t(`co.suggest.kind.${suggestion.kind}`)}
-        </span>
-        {/* The WHY, under the ask and quieter: the reason is the suggestion,
-            and the rest of the row is chrome around it.
-
-            It is also the handle on what the advice rests on. The records the
-            rule fired on used to sit beside it as a row of chips, which put
-            the working on screen for every reader whether or not they were
-            questioning the advice; behind the reason they are one glance away
-            for the reader who is, and out of the way of the one who is not. */}
-        <Popover className="co-move-why" onHover label={suggestion.reason}>
-          <span className="co-move-basis-head t-eyebrow">
-            {t("co.suggest.basedOn")}
-          </span>
-          <Citations
-            evidence={suggestion.evidence}
-            nameOf={nameOf}
-            onOpenRecord={onOpenRecord}
+    <FoundMove
+      key={suggestion.fingerprint}
+      // The day the reading behind the row is dated. Never a deadline the
+      // system chose.
+      when={
+        suggestion.due_at
+          ? formatDate(suggestion.due_at, locale, recordZone)
+          : undefined
+      }
+      // The ASK: what the rule wants done. Falls back to the kind only when the
+      // rule named no title of its own.
+      title={suggestion.title ?? t(`co.suggest.kind.${suggestion.kind}`)}
+      // The WHY, and behind it the records the rule fired on.
+      why={suggestion.reason}
+      basis={
+        <Citations
+          evidence={suggestion.evidence}
+          nameOf={nameOf}
+          onOpenRecord={onOpenRecord}
+        />
+      }
+      // What performing the advice means, named by the server. A rule that
+      // could not name one carries null and this renders nothing rather than
+      // a control that does nothing.
+      action={
+        suggestion.action && onPerform ? (
+          <SuggestionActionButton
+            action={suggestion.action}
+            onPerform={onPerform}
           />
-        </Popover>
-        <span className="co-move-do">
-          <span className="co-move-actions">
-            {/* What performing the advice means, named by the server. A
-                rule that could not name one carries null and this
-                renders nothing rather than a control that does nothing. */}
-            {suggestion.action && onPerform && (
-              <SuggestionActionButton
-                action={suggestion.action}
-                onPerform={onPerform}
-              />
-            )}
-            {/* Putting this off is not the row's verb and must not look like
-                one: bordered beside the action it would offer a reader two
-                equal choices, when only one of them advances the account. */}
-            <Button
-              small
-              className="co-move-defer"
-              onClick={() => dismiss.mutate(suggestion.fingerprint)}
-              // Only the row in flight is disabled: one dismissal must not
-              // freeze the rep's other choices.
-              disabled={
-                dismiss.isPending &&
-                dismiss.variables === suggestion.fingerprint
-              }
-            >
-              {t("co.suggest.dismiss")}
-            </Button>
-          </span>
-        </span>
-      </span>
-    </PanelRow>
+        ) : undefined
+      }
+      // Only the row in flight is disabled: one dismissal must not freeze the
+      // rep's other choices.
+      defer={{
+        onDefer: () => dismiss.mutate(suggestion.fingerprint),
+        pending:
+          dismiss.isPending && dismiss.variables === suggestion.fingerprint,
+      }}
+    />
   ));
   return { ready: true, rows, count: suggestions.length, footer };
 }

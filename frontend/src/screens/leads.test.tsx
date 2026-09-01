@@ -1996,7 +1996,14 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // unlabelled button on the page along with it.
       const name =
         button.textContent?.trim() || (button.getAttribute("aria-label") ?? "");
-      if (viewControls.has(name) || contextColumn?.contains(button)) {
+      // The call's own disclosure is skipped the same way: it opens the
+      // readings a verdict rests on and writes nothing, and its name carries a
+      // count that changes with the record.
+      if (
+        viewControls.has(name) ||
+        contextColumn?.contains(button) ||
+        button.classList.contains("r360-rests-toggle")
+      ) {
         continue;
       }
       expect(

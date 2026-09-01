@@ -1875,7 +1875,7 @@ export const de = {
   "lead.filterScoreCool": "Ab 40",
   "lead.details": "Details",
   "lead.ladder.title": "Wo dieser Lead steht",
-  "lead.railTitle": "Zust\u00e4ndigkeit und Score",
+  "lead.railTitle": "Verantwortlich",
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
@@ -5044,7 +5044,6 @@ export const de = {
   "deal360.verdict.drifting": "Schläft ein",
   "deal360.verdict.blocked": "Blockiert",
   "deal360.verdict.cold": "Kalt",
-  "deal360.next": "Was als Nächstes zu tun ist",
   "dealmail.title": "E-Mail",
   "dealmail.sub.reply":
     "Sie haben geschrieben, und noch hat niemand geantwortet.",
@@ -6695,7 +6694,6 @@ export const de = {
 
   "person.page.loading": "Wird geladen…",
   "person.page.notOpened": "Dieser Kontakt konnte nicht geöffnet werden.",
-  "person.page.asideLabel": "Beziehungskontext",
   "person.page.buyingRole": "Rolle im Kauf",
   "person.page.owner": "Zuständig",
   "person.page.ownerAssigned": "Zugewiesen",
@@ -6703,8 +6701,6 @@ export const de = {
   "person.page.linkedin": "LinkedIn",
   "person.page.openProfile": "Profil öffnen",
   "person.rail.detailsTitle": "Details",
-  "person.rail.contactMethodImmutable":
-    "Beim Anlegen dieses Kontakts festgelegt. E-Mail und Telefon können hier nicht geändert werden.",
   "person.rail.archivedReadOnly":
     "Dieser Kontakt ist archiviert. Stelle ihn wieder her, um hier etwas zu ändern.",
   "person.rail.employmentVersionUnresolved":
@@ -6753,15 +6749,11 @@ export const de = {
 
   "person.strip.lastInbound": "Zuletzt eingehend",
   "person.strip.lastOutbound": "Zuletzt ausgehend",
-  "person.strip.reciprocity": "Gegenseitigkeit",
-  "person.strip.openDeal": "Offener Deal",
   "person.strip.nextMeeting": "Nächster Termin",
-  "person.strip.consent": "Einwilligung",
   "person.strip.never": "Nie",
   "person.strip.today": "Heute",
   "person.strip.yesterday": "Gestern",
   "person.strip.days": "vor {count} Tagen",
-  "person.strip.inOut": "{inbound} ein · {outbound} aus",
   "person.strip.noOpenDeal": "Kein offener Deal",
   "person.strip.noMeeting": "Keiner",
   "person.consent.allowedWord": "Erlaubt",
@@ -7551,4 +7543,56 @@ export const de = {
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
   "worklist.batch.unnamedCause": "Etwas",
+  "person.readings.title": "Wo dieser Kontakt steht",
+  "person.readings.move": "Wer ist am Zug",
+  "person.readings.yourMove": "Du",
+  "person.readings.theirMove": "Sie",
+  "person.readings.quiet": "Verstummt",
+  "person.readings.neverSpoke": "Noch nie gesprochen",
+  "person.readings.lastFromThem": "zuletzt von ihnen: {when}",
+  "person.readings.neverReplied": "bisher nichts von ihnen",
+  "person.readings.promises": "Offene Zusagen",
+  "person.readings.nothingOwed": "nichts offen",
+  "person.readings.onTime": "noch keine überfällig",
+  "person.readings.deal": "Deals, die sie entscheiden",
+  "person.readings.openDeals": "Deals öffnen",
+  "person.readings.openMeetings": "Termine öffnen",
+  "deal360.brief": "Was dieser Deal ist",
+  "deal.strip.openHistory": "Zum Verlauf",
+  "deal.strip.lastTouch": "Letzter Kontakt",
+  "lead.standing.qualified": "Qualifiziert",
+  "lead.standing.qualifiedOn":
+    "Qualifiziert am {at}. Dieser Lead ist jetzt ein Kontakt.",
+  "lead.standing.qualifiedUndated": "Dieser Lead ist jetzt ein Kontakt.",
+  "lead.standing.closed": "Geschlossen",
+  "lead.standing.closedFor":
+    "Geschlossen: {reason}. Der Datensatz bleibt als Spur.",
+  "lead.standing.closedUnreasoned":
+    "Geschlossen. Der Datensatz bleibt als Spur.",
+  "lead.standing.yourMove": "Du bist am Zug",
+  "lead.standing.noResponse": "Niemand hat diesen Lead bisher beantwortet.",
+  "lead.standing.theirMove": "Sie sind am Zug",
+  "lead.standing.answeredOn":
+    "Wir haben am {at} geantwortet. Bisher kam nichts zurück.",
+  "lead.standing.inMotion": "In Bewegung",
+  "lead.standing.engagedBecause":
+    "Sie haben geantwortet, oder ein Termin steht im Kalender.",
+  "lead.standing.rests.promoted": "Zu einem Kontakt befördert.",
+  "lead.standing.rests.closed": "Disqualifiziert, kein Grund erfasst.",
+  "lead.standing.rests.ladder": "Lead-Leiter",
+  "lead.standing.rests.record": "Lead-Datensatz",
+  "lead.standing.rests.captured": "Erfasst am {at}.",
+  "lead.standing.rests.noResponse": "Keine erste Antwort erfasst.",
+  "lead.standing.rests.engaged": "Engagement erfasst am {at}.",
+  "lead.readings.title": "Wo dieser Lead steht",
+  "lead.readings.firstResponse": "Erste Antwort",
+  "lead.readings.noClock": "kein Antwortziel gesetzt",
+  "lead.today.answer": "{name} antworten",
+  "lead.today.answerMeta": "Erste Antwort steht aus",
+  "lead.today.nextTask": "Nächste Aufgabe",
+  "lead.readings.answered": "Beantwortet",
+  "lead.standing.dueBy":
+    "Noch hat niemand geantwortet. Die erste Antwort ist bis {at} fällig.",
+  "lead.standing.overdueSince":
+    "Noch hat niemand geantwortet. Die erste Antwort war am {at} fällig.",
 } as const satisfies Record<MessageKey, string>;

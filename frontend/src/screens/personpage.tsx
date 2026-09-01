@@ -19,6 +19,7 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
+import { ContactLink } from "../design-system/contactlink";
 import { IconAction } from "../design-system/iconaction";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { liveProjects } from "../design-system/projectpicker";
@@ -31,7 +32,6 @@ import { ConsentSection } from "./consent";
 import { LogActivityAction } from "./logactivity";
 import {
   hasCommercial,
-  hasCommitments,
   hasMatters,
   PersonBriefCard,
   PersonCommercialCard,
@@ -48,8 +48,8 @@ import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";
 import { PersonRail } from "./personrail";
+import { PersonReadings } from "./personreadings";
 import { PersonResearchTab } from "./personresearch";
-import { PersonStrip } from "./personstrip";
 import { PERSON_TABS, type PersonTab, personTabRoute } from "./persontab";
 import {
   PersonDealsTab,
@@ -59,6 +59,7 @@ import {
 import { PersonToday } from "./persontoday";
 import type { Transport } from "./persontransports";
 import { primaryTransportAction, useTransports } from "./persontransports";
+import { RecordReading, RecordReadingPair } from "./record360";
 import "./person360.css";
 
 // The person record page V2 (ADR-0096, concept person-record-page-v2).
@@ -270,19 +271,6 @@ export function PersonPageV2({
   const emailAllowed = (guard.data?.entries ?? []).some(
     (entry) => entry.channel === "email" && entry.verdict === "allowed",
   );
-  // The strip's consent slot asks a narrower, louder question than the hero
-  // button above: not "may I write at all" but "what did the guard decide
-  // about email", and a refusal is the one verdict that must read as loud as
-  // a grant. Blocked only when every email entry says so; undefined when
-  // there is no email entry to judge, which is not the same as a refusal.
-  const emailEntries = (guard.data?.entries ?? []).filter(
-    (entry) => entry.channel === "email",
-  );
-  const consentVerdict = emailAllowed
-    ? "allowed"
-    : emailEntries.length > 0
-      ? "blocked"
-      : undefined;
 
   // The action loop. Every surface the contract can name routes here.
   //
@@ -406,29 +394,48 @@ export function PersonPageV2({
                 deals and the Documents tab a filing cabinet, and a row of
                 relationship readings over either is a header for a page it is
                 not describing. */}
-            <PersonStrip view={view.data} consentVerdict={consentVerdict} />
-            {view.data.moment && (
-              <PersonToday
-                moment={view.data.moment}
-                firstName={firstName}
-                onAction={runAction}
-              />
-            )}
+            <PersonReadings
+              view={view.data}
+              onOpenTab={(next) => navigate(personTabRoute(id, next))}
+            />
+            {/* ONE READING, IN PARTS — the shape every record page reads in:
+                the call with the thread it was read from, the day's work, and
+                under them the two sections a reader consults rather than
+                reads. What was said lately and what is owed are the pair,
+                because the moment above is argued from exactly those two. */}
+            <RecordReading>
+              {view.data.moment && (
+                <PersonToday
+                  moment={view.data.moment}
+                  firstName={firstName}
+                  view={view.data}
+                  onAction={runAction}
+                  onOpenTasks={() => navigate({ screen: "worklist" })}
+                />
+              )}
+              <RecordReadingPair>
+                <PersonMemory view={view.data} />
+                <PersonCommitmentsCard view={view.data} firstName={firstName} />
+              </RecordReadingPair>
+            </RecordReading>
+            {/* The contact in prose, under the reading of it: the moment
+                answers what to DO, this answers who they ARE to us, in
+                sentences with their sources under them. */}
             <PersonBriefCard
               brief={brief.data}
               loading={brief.isLoading}
               view={view.data}
             />
-            {hasCommercial(view.data) && (
-              <PersonCommercialCard view={view.data} />
+            {(hasCommercial(view.data) || hasMatters(view.data)) && (
+              <RecordReadingPair>
+                {hasCommercial(view.data) && (
+                  <PersonCommercialCard view={view.data} />
+                )}
+                {hasMatters(view.data) && (
+                  <PersonMattersCard view={view.data} firstName={firstName} />
+                )}
+              </RecordReadingPair>
             )}
-            {hasCommitments(view.data) && (
-              <PersonCommitmentsCard view={view.data} firstName={firstName} />
-            )}
-            {hasMatters(view.data) && (
-              <PersonMattersCard view={view.data} firstName={firstName} />
-            )}
-            <PersonMemory view={view.data} />
             {/* What this person has agreed to, and the one way to ask them
                 directly. It renders on a thin record too: what you may send is
                 a live fact whether or not anyone has written to them yet. */}
@@ -554,17 +561,22 @@ function PersonIdentityLine({
   return (
     <div className="pe-identity-meta">
       <div className="pe-meta-line">
+        {/* The address and the number are LINKS: a reader who sees an address
+            expects to click it, and a header that showed one and did nothing
+            taught them the record was a printout. The link hands the value to
+            their own client; the Write verb above stays the way to write on
+            the product's behalf, behind its consent gate. */}
         {email && (
-          <span className="pe-meta-fact">
+          <ContactLink kind="email" value={email} className="pe-meta-link">
             <Mail size={13} aria-hidden="true" />
             {email}
-          </span>
+          </ContactLink>
         )}
         {phone && (
-          <span className="pe-meta-fact">
+          <ContactLink kind="phone" value={phone} className="pe-meta-link">
             <Phone size={13} aria-hidden="true" />
             {phone}
-          </span>
+          </ContactLink>
         )}
         {person.address?.city && (
           <span className="pe-meta-fact">

@@ -430,6 +430,14 @@
   overflow: visible;
 }
 
+/* One question per panel, in the page's own rhythm: the gap is the account
+   rail's, so a rep who reads both records reads the same column. */
+.pe-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .pe-rail .pe-sect {
   border-top: 1px solid var(--borderSubtle);
   padding-top: 0;

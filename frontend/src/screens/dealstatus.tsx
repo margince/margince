@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ListChecks, RefreshCw, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
@@ -12,20 +12,25 @@ import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { useDealSignals } from "./dealsignals";
 import { PersonMeetingBrief } from "./persondrawers";
 import {
-  BriefTitle,
+  CallCard,
+  FoundMove,
   SentenceList,
   SignalStrip,
   type StandingTone,
-  VerdictHead,
+  TodayPanel,
   WrittenBy,
 } from "./record360";
 import "./dealstatus.css";
 
-// Deal360 — the deal page's written briefing, read before a call.
+// Deal360 — the deal page's written briefing, read before a call, in the
+// cards every record page reads in.
 //
-// It leads the page rather than sitting in the margin, because it is the one
-// thing on the screen that answers "what do I need to know" instead of "what
-// is recorded". Everything else on the page is a record; this is the reading.
+// THE CALL: the standing the server reached, the first line of its reasoning
+// beside it, the findings that tripped, and the deal's own thread under them.
+// THE DAY'S WORK: the one move the briefing names, with the verb that performs
+// it. THE BRIEF: what has happened and what the buyer wants, in prose with its
+// sources, and the rest of the reasoning behind a fold for the reader who
+// wants it. Everything else on the page is a record; this is the reading.
 //
 // The READ writes nothing a user can see: the server caches the briefing per
 // reader, so a repeat view costs nothing and a changed deal is rewritten
@@ -38,8 +43,9 @@ type DealStatusCardMove = components["schemas"]["DealStatusCardMove"];
 type DealStatusCardSection = components["schemas"]["DealStatusCardSection"];
 
 // The verdict words the server may send, and how each reads to a person. A
-// word this build does not know renders as no badge rather than as itself:
-// the reader has learned four, and a fifth in raw form teaches them nothing.
+// word this build does not know renders as itself rather than as nothing:
+// the reader has learned four, and a fifth arriving from a newer server is
+// still a call the card must show.
 const VERDICT_LABELS: Record<string, MessageKey> = {
   live: "deal360.verdict.live",
   drifting: "deal360.verdict.drifting",
@@ -90,7 +96,20 @@ export function useDealStatusCard(dealId: string) {
 export function DealStatusCardPanel({
   dealId,
   dealName,
-}: Readonly<{ dealId: string; dealName: string }>) {
+  pulse,
+  spine,
+}: Readonly<{
+  dealId: string;
+  dealName: string;
+  // Whose move it is, in one sentence (DealPulse). Under the call rather than
+  // in the header: it is a reading of the same status card, and the sentence
+  // the standing rests on.
+  pulse?: ReactNode;
+  // The deal's story as a thread, under the call it was read from. Handed in
+  // because the rows it is drawn from are the page's timeline, which this
+  // card does not read.
+  spine?: ReactNode;
+}>) {
   const t = useT();
   const queryClient = useQueryClient();
   const status = useDealStatusCard(dealId);
@@ -108,20 +127,26 @@ export function DealStatusCardPanel({
     onSuccess: (data) =>
       queryClient.setQueryData(["deal-status", dealId], data),
   });
+  if (status.data?.story) {
+    return (
+      <Briefing
+        dealId={dealId}
+        dealName={dealName}
+        card={status.data}
+        pulse={pulse}
+        spine={spine}
+        onRewrite={() => rewrite.mutate()}
+        rewriting={rewrite.isPending}
+      />
+    );
+  }
+  // Neither the pending read nor the failed one draws the call. That card
+  // exists to state a verdict, and a card holding a spinner where the verdict
+  // goes is the reading claiming to have reached one. The head every written
+  // reading carries still names what is being read.
   return (
-    // The head every written reading carries: a machine read this record, and
-    // here is the record it read. The old title named the CARD ("Deal360") and
-    // left the claim to a subtitle, which is the one line a scanner skips.
-    <Panel title={<BriefTitle name={dealName} />} tone="ai" className="co-lead">
+    <CallCard name={dealName}>
       <QueryStates query={status} pendingLines={6}>
-        {status.data?.story ? (
-          <Briefing
-            dealId={dealId}
-            card={status.data}
-            onRewrite={() => rewrite.mutate()}
-            rewriting={rewrite.isPending}
-          />
-        ) : null}
         {status.isSuccess && !status.data?.story ? (
           // `story` is required on the wire and the server always writes at
           // least one line, so reaching here means a response that is not the
@@ -132,18 +157,24 @@ export function DealStatusCardPanel({
           </PanelBody>
         ) : null}
       </QueryStates>
-    </Panel>
+    </CallCard>
   );
 }
 
 function Briefing({
   dealId,
+  dealName,
   card,
+  pulse,
+  spine,
   onRewrite,
   rewriting,
 }: Readonly<{
   dealId: string;
+  dealName: string;
   card: DealStatusCard;
+  pulse?: ReactNode;
+  spine?: ReactNode;
   onRewrite: () => void;
   rewriting: boolean;
 }>) {
@@ -158,70 +189,85 @@ function Briefing({
   // The findings ride the coverage card's own query, so this costs no second
   // request and the two cannot disagree about what is wrong with the deal.
   const coverage = useDealSignals(dealId, true);
+  const because = card.verdict?.because.sentences ?? [];
   return (
     <>
       {/* The call, first and alone. It used to sit fourth, under three
           paragraphs — which meant the one word a reader scanning thirty deals
-          needs was the last thing they reached. */}
-      {card.verdict ? (
-        <VerdictHead
-          label={verdictLabel(card.verdict.standing, t)}
-          tone={verdictTone(card.verdict.standing)}
-          // The lead sentence keeps its RECEIPTS. Passing its bare text was
-          // the one place on this card where a claim rendered uncited — and
-          // it is the sentence a reader is most likely to challenge, on a
-          // card whose whole premise is that they can. It goes through the
-          // same SentenceList every other sentence does.
-          because={
-            card.verdict.because.sentences.length > 0 ? (
-              <SentenceList
-                sentences={card.verdict.because.sentences.slice(0, 1)}
-                onOpenRecord={open}
-              />
-            ) : undefined
-          }
-        />
-      ) : null}
-      <SignalStrip signals={coverage.signals} />
-      {card.next ? <Move dealId={dealId} move={card.next} /> : null}
-      {/* The reading, behind a fold. Every word of it is still here and still
-          cited; what changed is that it no longer stands between the reader
-          and the call. A rep working THIS deal opens it; a rep scanning for
-          the deal that needs them does not have to. */}
-      <details className="deal360-fold">
-        <summary>{t("deal360.readFull")}</summary>
-        <Section section={card.story} onOpenRecord={open} />
-        <Section
-          heading={t("deal360.blocker")}
-          section={card.blocker}
-          onOpenRecord={open}
-          tone="warn"
-        />
-        <Section
-          heading={t("deal360.buyer")}
-          section={card.buyer}
-          onOpenRecord={open}
-        />
-        {/* The rest of the verdict's reasoning. Its first line is already in
-            the head above, so this renders only what the head did not. */}
-        {card.verdict && card.verdict.because.sentences.length > 1 ? (
+          needs was the last thing they reached. The lead sentence keeps its
+          RECEIPTS: it is the sentence a reader is most likely to challenge, on
+          a card whose whole premise is that they can. */}
+      <CallCard
+        name={dealName}
+        standing={
+          card.verdict
+            ? {
+                label: verdictLabel(card.verdict.standing, t),
+                tone: verdictTone(card.verdict.standing),
+              }
+            : undefined
+        }
+        because={
+          because.length > 0 ? (
+            <SentenceList sentences={because.slice(0, 1)} onOpenRecord={open} />
+          ) : undefined
+        }
+      >
+        {pulse ? <PanelBody>{pulse}</PanelBody> : null}
+        <SignalStrip signals={coverage.signals} />
+        {spine}
+      </CallCard>
+      <TodayPanel>
+        {card.next ? (
+          <Move key="next" dealId={dealId} move={card.next} />
+        ) : null}
+      </TodayPanel>
+      {/* The reading, under the call and the work: what has happened and
+          where that leaves things, in prose with its sources. What is holding
+          the deal up, what the buyer wants and the rest of the reasoning sit
+          behind a fold — every word still here and still cited, and none of it
+          between a scanning reader and the call. */}
+      <Panel
+        title={t("deal360.brief")}
+        titleAction={<WrittenBy by={card.generated_by} />}
+        footer={
+          <div className="deal360-foot">
+            <Button
+              variant="ghost"
+              small
+              pending={rewriting}
+              onClick={onRewrite}
+            >
+              <RefreshCw aria-hidden />
+              {t("deal360.rewrite")}
+            </Button>
+          </div>
+        }
+      >
+        <Section section={card.story} onOpenRecord={open} lead />
+        <details className="deal360-fold">
+          <summary>{t("deal360.readFull")}</summary>
           <Section
-            section={{
-              sentences: card.verdict.because.sentences.slice(1),
-            }}
+            heading={t("deal360.blocker")}
+            section={card.blocker}
+            onOpenRecord={open}
+            tone="warn"
+          />
+          <Section
+            heading={t("deal360.buyer")}
+            section={card.buyer}
             onOpenRecord={open}
           />
-        ) : null}
-      </details>
-      <PanelBody>
-        <div className="deal360-foot">
-          <WrittenBy by={card.generated_by} />
-          <Button variant="ghost" pending={rewriting} onClick={onRewrite}>
-            <RefreshCw aria-hidden />
-            {t("deal360.rewrite")}
-          </Button>
-        </div>
-      </PanelBody>
+          {/* The rest of the verdict's reasoning. Its first line is already in
+              the call above, so this renders only what the head did not. */}
+          {because.length > 1 ? (
+            <Section
+              section={{ sentences: because.slice(1) }}
+              onOpenRecord={open}
+            />
+          ) : null}
+        </details>
+      </Panel>
     </>
   );
 }
@@ -234,11 +280,15 @@ function Section({
   section,
   onOpenRecord,
   tone,
+  lead,
 }: Readonly<{
   heading?: string;
   section: DealStatusCardSection | undefined;
   onOpenRecord: (entityType: string, entityId: string) => void;
   tone?: "warn";
+  // The brief's opening block leads with its judgement, the way every other
+  // written reading on a record does.
+  lead?: boolean;
 }>) {
   if (!section || section.sentences.length === 0) {
     return null;
@@ -250,7 +300,11 @@ function Section({
           {heading}
         </p>
       ) : null}
-      <SentenceList sentences={section.sentences} onOpenRecord={onOpenRecord} />
+      <SentenceList
+        sentences={section.sentences}
+        onOpenRecord={onOpenRecord}
+        leadWithJudgement={lead}
+      />
     </PanelBody>
   );
 }
@@ -276,24 +330,27 @@ function activityIdOf(move: DealStatusCardMove): string | null {
   return typeof raw === "string" && raw !== "" ? raw : null;
 }
 
+// The move the briefing names, as the one row the agent is asking for: the
+// reason is the ask, the evidence under it is what it rests on, and the verb
+// at the row's end performs it.
 function Move({
   dealId,
   move,
 }: Readonly<{ dealId: string; move: DealStatusCardMove }>) {
-  const t = useT();
   return (
-    <PanelBody>
-      <p className="t-caption">{t("deal360.next")}</p>
-      <p className="deal360-move-reason">{move.reason}</p>
-      <MoveButton dealId={dealId} move={move} />
-      {move.evidence.length > 0 ? (
-        <ul className="deal360-evidence t-small">
-          {move.evidence.map((row) => (
-            <li key={`${row.activity_id ?? ""}-${row.text}`}>{row.text}</li>
-          ))}
-        </ul>
-      ) : null}
-    </PanelBody>
+    <FoundMove
+      title={move.reason}
+      basis={
+        move.evidence.length > 0 ? (
+          <ul className="deal360-evidence t-small">
+            {move.evidence.map((row) => (
+              <li key={`${row.activity_id ?? ""}-${row.text}`}>{row.text}</li>
+            ))}
+          </ul>
+        ) : undefined
+      }
+      action={<MoveButton dealId={dealId} move={move} />}
+    />
   );
 }
 
@@ -336,6 +393,7 @@ function MoveButton({
         <>
           <Button
             variant="primary"
+            small
             pending={createTask.isPending}
             onClick={() => createTask.mutate(taskBody)}
           >
@@ -362,7 +420,7 @@ function MoveButton({
       }
       return (
         <>
-          <Button variant="primary" onClick={() => setBriefOpen(true)}>
+          <Button variant="primary" small onClick={() => setBriefOpen(true)}>
             <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>

@@ -11,13 +11,13 @@ import {
   Button,
   Disclosure,
   Field,
-  StatCard,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { RecordView } from "../design-system/composed";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ContactLink } from "../design-system/contactlink";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
 import { OffsiteLink } from "../design-system/offsitelink";
@@ -28,17 +28,18 @@ import {
   useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
-import { StatStrip } from "../design-system/statstrip";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import {
   formatDateAbbrev,
+  formatDateTime,
   formatDecimal,
   formatNumber,
 } from "../format/format";
+import { daysPast } from "../format/lateness";
 import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   LoadMoreButton,
@@ -63,18 +64,26 @@ import {
 } from "./entityref";
 import { RecordHistoryTab, useRecordHistory } from "./history";
 import {
-  FirstResponseLine,
-  leadStatusLabel,
   promoteEligible,
   scoreFactorLabel,
   scoreTone,
-  terminalBadge,
 } from "./leadpresentation";
+import { LeadReadings } from "./leadreadings";
 import { DisqualifyDialog } from "./leads.disqualify";
 import { QualifyDialog } from "./leads.qualify";
 import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
+import { leadStanding } from "./leadstanding";
 import { LogActivity } from "./logactivity";
+import {
+  CallCard,
+  RecordReading,
+  RecordReadingPair,
+  RecordSpine,
+  TodayPanel,
+  TodoRow,
+  timelineSpineSource,
+} from "./record360";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
 import "./leads.css";
@@ -856,10 +865,6 @@ function LeadLadderPanel({
             onQualify={onQualify}
             onDisqualify={onDisqualify}
           />
-          {/* The first-response line only exists while the target is on: the
-              server derives sla_state from the setting, so an installation
-              that never opted in sees nothing here. */}
-          <FirstResponseLine lead={lead} />
         </div>
       </PanelBody>
     </Panel>
@@ -867,15 +872,54 @@ function LeadLadderPanel({
 }
 
 /**
- * The rail: who owns this lead, and why it scores what it scores.
+ * The rail: the lead's own words, and who owns it.
  *
- * Both are READINGS with an edit behind them — the answer to "should I be
- * working this one", which a rep consults while doing the work in the column
- * beside it. They were stacked in the middle of that column, between the
- * ladder and the composer, where every one of them pushed the next action
- * further down the page.
+ * Both are things a rep CONSULTS while doing the work in the column beside
+ * it. The score used to fold into this column too; it is a reading with an
+ * edit behind it and sits in the record's reading now, beside the inputs that
+ * feed it.
  */
 function LeadRail({
+  lead,
+  writer,
+  terminalReasonId,
+}: Readonly<{
+  lead: Lead;
+  writer: LeadWriter;
+  terminalReasonId: string;
+}>) {
+  const { readOnly } = writer;
+  const t = useT();
+  const me = useMe();
+  return (
+    <div className="record-stack">
+      <LeadIdentityFields
+        lead={lead}
+        save={writer.saveField}
+        saving={writer.patch.isPending}
+        readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
+      />
+      <Panel title={t("lead.railTitle")}>
+        <PanelBody>
+          <LeadOwner
+            lead={lead}
+            meId={me.data?.user?.id}
+            terminalReasonId={terminalReasonId}
+            pending={writer.patch.isPending || readOnly}
+            onAssign={(ownerId) => writer.save({ owner_id: ownerId })}
+          />
+        </PanelBody>
+      </Panel>
+    </div>
+  );
+}
+
+/**
+ * The score as a card of the reading: it folds to one line with its top
+ * factor, and opens for the breakdown and the override. Beside it, in the
+ * pair, the inputs a rep enters by hand.
+ */
+function LeadScoreCard({
   lead,
   id,
   writer,
@@ -886,10 +930,8 @@ function LeadRail({
   writer: LeadWriter;
   terminalReasonId: string;
 }>) {
-  const { readOnly } = writer;
   const t = useT();
   const { locale } = useLocale();
-  const me = useMe();
   const [overriding, setOverriding] = useState(false);
   const [scoreValue, setScoreValue] = useState("");
   const [reasonValue, setReasonValue] = useState("");
@@ -908,121 +950,151 @@ function LeadRail({
       setReasonValue("");
     }
   }, [saved]);
-
   return (
-    <div className="record-stack">
-      <LeadIdentityFields
-        lead={lead}
-        save={writer.saveField}
-        saving={writer.patch.isPending}
-        readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
-      />
-      <Panel title={t("lead.railTitle")}>
-        <PanelBody>
-          <div className="lead-stack">
-            <LeadOwner
-              lead={lead}
-              meId={me.data?.user?.id}
-              terminalReasonId={terminalReasonId}
-              pending={writer.patch.isPending || readOnly}
-              onAssign={(ownerId) => writer.save({ owner_id: ownerId })}
-            />
-            {/* The score is a reading, not the work: it folds to one line with
-              its top factor, and opens for the breakdown, the override and
-              the rep's own inputs. */}
-            <Disclosure
-              summary={
-                <span className="lead-score-summary">
-                  <Badge tone={scoreTone(lead.score)}>
-                    {t("lead.score")}: {formatNumber(lead.score, locale)}
-                  </Badge>{" "}
-                  <span className="t-caption">
-                    {lead.score_reason
-                      ? scoreFactorLabel(lead.score_reason, t)
-                      : t("lead.scoreNoSignals")}
-                  </span>
-                </span>
-              }
-            >
-              <LeadScorePanel
-                lead={lead}
-                id={id}
-                terminalReasonId={terminalReasonId}
-                overriding={overriding}
-                setOverriding={setOverriding}
-                scoreValue={scoreValue}
-                setScoreValue={setScoreValue}
-                reasonValue={reasonValue}
-                setReasonValue={setReasonValue}
-                writer={writer}
-              />
-              <LeadManualSignals
-                // Keyed by lead: a half-typed input for one lead must not be
-                // submitted against the next one the reader navigates to.
-                key={id}
-                id={id}
-                readOnlyReason={
-                  readOnly ? t("lead.terminalReadOnly") : undefined
-                }
-              />
-            </Disclosure>
-          </div>
-        </PanelBody>
-      </Panel>
-    </div>
+    <Panel title={t("lead.score")}>
+      <PanelBody>
+        <Disclosure
+          summary={
+            <span className="lead-score-summary">
+              <Badge tone={scoreTone(lead.score)}>
+                {t("lead.score")}: {formatNumber(lead.score, locale)}
+              </Badge>{" "}
+              <span className="t-caption">
+                {lead.score_reason
+                  ? scoreFactorLabel(lead.score_reason, t)
+                  : t("lead.scoreNoSignals")}
+              </span>
+            </span>
+          }
+        >
+          <LeadScorePanel
+            lead={lead}
+            id={id}
+            terminalReasonId={terminalReasonId}
+            overriding={overriding}
+            setOverriding={setOverriding}
+            scoreValue={scoreValue}
+            setScoreValue={setScoreValue}
+            reasonValue={reasonValue}
+            setReasonValue={setReasonValue}
+            writer={writer}
+          />
+        </Disclosure>
+      </PanelBody>
+    </Panel>
   );
-}
-
-/** The status as the strip states it: the terminal wording when it has one. */
-function statusReading(lead: Lead, t: ReturnType<typeof useT>): string {
-  const terminal = terminalBadge(lead.status);
-  const label = terminal?.label ?? leadStatusLabel(lead.status);
-  return label ? t(label) : lead.status;
 }
 
 /**
- * The lead's readings, across the band: the six facts that change how a
- * reader interprets everything under them.
- *
- * A strip rather than the row of badges this was, for the reason `StatStrip`
- * exists: six pills of equal weight are read as decoration and skipped, while
- * ruled slots with their labels are read as a table of what is true. Every
- * slot states its absence in words — a lead with no company has none, and an
- * empty slot would say the page failed to load one.
+ * THE CALL on a lead: where it stands, as a fact the server already decided
+ * said in a word, with the lead's own thread under it — what was said, the
+ * silence since, what is dated ahead.
  */
-function LeadStrip({ lead }: Readonly<{ lead: Lead }>) {
+function LeadCall({
+  lead,
+  activities,
+  hasMore,
+}: Readonly<{
+  lead: Lead;
+  activities: readonly components["schemas"]["Activity"][];
+  hasMore: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
-  const sources = useLeadSources();
+  const standing = leadStanding(lead, t, locale, viewerZone());
   return (
-    <StatStrip>
-      <StatCard
-        label={t("lead.score")}
-        value={formatNumber(lead.score, locale)}
-        numeric
-        detail={
-          lead.score_override_reason
-            ? t("lead.overriddenBadge")
-            : lead.score_reason
-              ? scoreFactorLabel(lead.score_reason, t)
-              : t("lead.scoreNoSignals")
-        }
+    <CallCard
+      name={leadIdentityName(lead) || t("lead.unnamed")}
+      standing={{ label: standing.label, tone: standing.tone }}
+      because={standing.because}
+      restsOn={standing.restsOn}
+    >
+      <RecordSpine
+        source={timelineSpineSource(
+          activities,
+          // The page has no server `as_of` for a lead, so the thread is read
+          // at the moment it is drawn, in the reader's own clock.
+          new Date().toISOString(),
+          hasMore,
+        )}
       />
-      <StatCard label={t("lead.status")} value={statusReading(lead, t)} />
-      <StatCard
-        label={t("lead.source")}
-        value={
-          lead.source
-            ? sourceLabelFor(lead, sources.data?.data, t)
-            : t("lead.detailsUnset")
-        }
-      />
-      <StatCard
-        label={t("create.companyName")}
-        value={lead.company_name ?? t("lead.detailsUnset")}
-      />
-    </StatStrip>
+    </CallCard>
   );
+}
+
+// What needs a person on this lead: the first response, while it is owed, and
+// the next task on it. Neither is the agent's move — a lead carries no
+// suggestions — so both draw as to-dos the record already carries. A closed
+// lead is not worked and draws none.
+function leadTodoRows(lead: Lead, t: Translator, locale: Locale): ReactNode[] {
+  if (lead.archived_at) {
+    return [];
+  }
+  const zone = viewerZone();
+  const rows: ReactNode[] = [];
+  if (!lead.first_response_at) {
+    rows.push(
+      <TodoRow
+        key="answer"
+        title={t("lead.today.answer", {
+          name: leadIdentityName(lead) || t("lead.unnamed"),
+        })}
+        meta={t("lead.today.answerMeta")}
+        due={firstResponseDue(lead, t, locale, zone)}
+      />,
+    );
+  }
+  if (lead.next_task_subject) {
+    const late = lead.next_task_due_at
+      ? daysPast(Date.parse(lead.next_task_due_at), Date.now()).late
+      : false;
+    rows.push(
+      <TodoRow
+        key="task"
+        title={lead.next_task_subject}
+        meta={t("lead.today.nextTask")}
+        due={
+          lead.next_task_due_at
+            ? {
+                label: late
+                  ? t("co.next.overdue")
+                  : t("co.next.due", {
+                      when: formatDateAbbrev(
+                        lead.next_task_due_at,
+                        locale,
+                        zone,
+                      ),
+                    }),
+                tone: late ? "danger" : undefined,
+              }
+            : { label: t("co.next.undated") }
+        }
+      />,
+    );
+  }
+  return rows;
+}
+
+// When the first response is owed, in the server's own three states. No clock
+// means owed without a date, which is not the same as late.
+function firstResponseDue(
+  lead: Lead,
+  t: Translator,
+  locale: Locale,
+  zone: string,
+): { label: string; tone?: "warn" | "danger" } | undefined {
+  if (!lead.sla_deadline_at || !lead.sla_state) {
+    return undefined;
+  }
+  if (lead.sla_state === "breached") {
+    return { label: t("co.next.overdue"), tone: "danger" };
+  }
+  return {
+    label: t("co.next.due", {
+      when: formatDateTime(lead.sla_deadline_at, locale, zone),
+    }),
+    tone: lead.sla_state === "at_risk" ? "warn" : undefined,
+  };
 }
 
 /**
@@ -1318,6 +1390,9 @@ function LeadOverviewPane({
   writer,
   promotion,
   overlay,
+  terminalReasonId,
+  activities,
+  activitiesHaveMore,
   onQualify,
   onDisqualify,
   onTouchLogged,
@@ -1327,6 +1402,10 @@ function LeadOverviewPane({
   writer: LeadWriter;
   promotion: PromotionRecord;
   overlay: boolean;
+  terminalReasonId: string;
+  // The lead's timeline page, which the thread under the call is drawn from.
+  activities: readonly components["schemas"]["Activity"][];
+  activitiesHaveMore: boolean;
   onQualify: () => void;
   onDisqualify: () => void;
   // Owned by LeadScreen, ABOVE the tab switch: the refresh timers this
@@ -1334,6 +1413,8 @@ function LeadOverviewPane({
   // History mid-climb.
   onTouchLogged: () => void;
 }>) {
+  const t = useT();
+  const { locale } = useLocale();
   return (
     <div className="record-stack">
       {/* A promoted lead's page leads with what the promotion did — the
@@ -1348,6 +1429,39 @@ function LeadOverviewPane({
         onQualify={onQualify}
         onDisqualify={onDisqualify}
       />
+      {/* ONE READING, IN PARTS — the shape every record page reads in: the
+          call with the lead's own thread under it, what needs a person, and
+          under them the two sections a reader consults rather than reads —
+          why it scores what it scores, and what the rep knows about it. */}
+      <RecordReading>
+        <LeadCall
+          lead={lead}
+          activities={activities}
+          hasMore={activitiesHaveMore}
+        />
+        <TodayPanel>{leadTodoRows(lead, t, locale)}</TodayPanel>
+        <RecordReadingPair>
+          <LeadScoreCard
+            lead={lead}
+            id={id}
+            writer={writer}
+            terminalReasonId={terminalReasonId}
+          />
+          <Panel title={t("lead.signalsTitle")}>
+            <PanelBody>
+              <LeadManualSignals
+                // Keyed by lead: a half-typed input for one lead must not be
+                // submitted against the next one the reader navigates to.
+                key={id}
+                id={id}
+                readOnlyReason={
+                  writer.readOnly ? t("lead.terminalReadOnly") : undefined
+                }
+              />
+            </PanelBody>
+          </Panel>
+        </RecordReadingPair>
+      </RecordReading>
       {/* The composer follows the facts so opening a lead answers "what
           should I do" before asking the rep to type. */}
       {!lead.archived_at && !overlay && (
@@ -1599,9 +1713,16 @@ function LeadRecord({
       // reader has to know this is a prospect and not a contact BEFORE they
       // read anything else about them (ADR-0108 §1).
       subtitle={<Badge tone="accent">{t("lead.marker")}</Badge>}
+      // The address is a LINK: a reader who sees one expects to click it,
+      // and a header that showed it and did nothing taught them the record
+      // was a printout.
       pulse={
         lead.email ? (
-          <span className="t-mono lead-email">{lead.email}</span>
+          <ContactLink
+            kind="email"
+            value={lead.email}
+            className="t-mono lead-email"
+          />
         ) : null
       }
       actions={
@@ -1646,7 +1767,7 @@ function LeadRecord({
       // tab bar and re-flow the page under the reader.
       band={
         <>
-          <LeadStrip lead={lead} />
+          <LeadReadings lead={lead} />
           {/* The page's one write serves both columns and every tab, so what
               it REFUSES is stated where both are visible. In the ladder panel
               this reached only the Overview tab, and a rail write refused
@@ -1695,7 +1816,6 @@ function LeadRecord({
       <PageAside>
         <LeadRail
           lead={lead}
-          id={id}
           writer={writer}
           terminalReasonId={terminalReasonId}
         />
@@ -1707,6 +1827,9 @@ function LeadRecord({
           writer={writer}
           promotion={promotion}
           overlay={overlay}
+          terminalReasonId={terminalReasonId}
+          activities={timelineQuery.activities}
+          activitiesHaveMore={timelineQuery.hasNextPage}
           onQualify={() => setDialog("qualify")}
           onDisqualify={() => setDialog("disqualify")}
           onTouchLogged={refreshAfterTouch}

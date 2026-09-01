@@ -23,7 +23,7 @@ import {
   providerCompletedProfile,
 } from "./personprovider.fixtures";
 import { PersonRail } from "./personrail";
-import { PersonStrip } from "./personstrip";
+import { PersonReadings } from "./personreadings";
 import type { PersonTab } from "./persontab";
 import {
   PersonDealsTab,
@@ -791,13 +791,13 @@ export const PageConsentRefused: Story = {
   render: () => <Page guardEntries={guardRefusesMail} />,
 };
 
-// --- Readings: PersonStrip alone --------------------------------------------
+// --- Readings: PersonReadings alone -----------------------------------------
 
 export const Readings: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: 900 }}>
-        <PersonStrip view={populated} consentVerdict="allowed" />
+        <PersonReadings view={populated} />
       </div>
     </StoryProviders>
   ),
@@ -807,7 +807,7 @@ export const ReadingsWithheld: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: 900 }}>
-        <PersonStrip view={withheld} consentVerdict={undefined} />
+        <PersonReadings view={withheld} />
       </div>
     </StoryProviders>
   ),
@@ -820,7 +820,7 @@ export const ReadingsBlocked: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: 900 }}>
-        <PersonStrip view={populated} consentVerdict="blocked" />
+        <PersonReadings view={populated} />
       </div>
     </StoryProviders>
   ),
@@ -833,6 +833,7 @@ export const LeadMoment: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <PersonToday
+          view={populated}
           moment={meetingPrepMoment}
           firstName="Dana"
           onAction={() => {}}
@@ -847,6 +848,7 @@ export const LeadMomentWarning: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <PersonToday
+          view={populated}
           moment={goneQuietMoment}
           firstName="Dana"
           onAction={() => {}}
@@ -885,6 +887,7 @@ export const LeadMomentLadder: Story = {
       >
         {REMAINING_MOMENTS.map((moment) => (
           <PersonToday
+            view={populated}
             key={moment.claim_key}
             moment={moment}
             firstName="Dana"

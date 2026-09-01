@@ -122,7 +122,12 @@ import {
 } from "./listquery";
 import { PartnerTab } from "./partners";
 import { PersonMeetingBrief } from "./persondrawers";
-import { OverlayFallback, RecordSpine } from "./record360";
+import {
+  OverlayFallback,
+  RecordReading,
+  RecordReadingPair,
+  RecordSpine,
+} from "./record360";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -2517,7 +2522,7 @@ function CompanyOverviewStack({
           header and the interval, not by a box: cards inside a bordered
           container are cards inside a card. */}
       {!overlay && (
-        <div className="co-reading">
+        <RecordReading>
           <TodayOnThisAccount
             orgId={org.id}
             view={view}
@@ -2542,7 +2547,7 @@ function CompanyOverviewStack({
               />
             }
           />
-          <div className="co-reading-pair">
+          <RecordReadingPair>
             {/* What is moving, and for each piece the one reason it wants a
                 person.
                 Drawn on EVERY account, including one with nothing open. "No
@@ -2586,7 +2591,7 @@ function CompanyOverviewStack({
                 onOpenHistory={onOpenHistory}
               />
             </Panel>
-          </div>
+          </RecordReadingPair>
           {/* The commercial standing: what the account is signed for, and what
               it has won and lost over its life. FIGURES only, because the work
               section above already names every open deal and listing them
@@ -2600,7 +2605,7 @@ function CompanyOverviewStack({
               onAllDeals={onAllDeals}
             />
           </Panel>
-        </div>
+        </RecordReading>
       )}
       {/* Is this an account we should be selling to at all — the question an
           account with nothing in flight is actually asking, and the reason

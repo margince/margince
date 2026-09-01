@@ -1,33 +1,59 @@
-import { CalendarDays, CheckSquare, FileText, Send, Users } from "lucide-react";
+import {
+  CalendarDays,
+  CheckSquare,
+  FileText,
+  Search,
+  Send,
+  Users,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Button } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
-import { formatNumber } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
+import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRoster } from "./entityref";
 import { interactionIcon } from "./interactionchrome";
 import {
-  BriefTitle,
+  CallCard,
+  FoundMove,
   type Grounding,
+  RecordSpine,
+  type SpineSource,
   type StandingTone,
-  VerdictHead,
+  TodayPanel,
+  TodoRow,
 } from "./record360";
 
-// "Today with {first name}" (concept §5.5, ADR-0096 D2).
+// "Today with {first name}" (concept §5.5, ADR-0096 D2), in the two cards
+// every record page reads in.
+//
+// THE CALL: the rule the server's ladder picked, as the standing; `why_now` as
+// the sentence it rests on; the records behind it one disclosure away; and
+// under them the contact's own thread — what was said, the silence since, what
+// is dated ahead. THE DAY'S WORK: the moment's headline as the ask, with the
+// verb that performs it and the evidence under it; and beneath, the open tasks
+// already on somebody's list.
 //
 // ONE moment, chosen server-side by the fixed ladder. The client renders what
-// it is given and computes nothing: a page that picked its own headline from
-// date comparisons would drift from every other client showing the same
-// record, which is the drift the rule/version stamp exists to make impossible.
+// it is given and computes nothing about WHICH moment: a page that picked its
+// own headline from date comparisons would drift from every other client
+// showing the same record, which is the drift the rule/version stamp exists
+// to make impossible. What the client does compute is arithmetic between two
+// dates it was handed — the thread's gap, a task's lateness — which is the
+// same arithmetic on every record.
 //
 // The action is a TYPED descriptor, so this renders only buttons whose
 // destination the server named. An action with no destination still renders —
 // some are their own destination — but one this client cannot route is not
 // invented into a button that 404s.
 
+type Person360 = components["schemas"]["Person360"];
 type PersonMoment = components["schemas"]["PersonMoment"];
 type PersonMomentAction = components["schemas"]["PersonMomentAction"];
+type Activity = components["schemas"]["Activity"];
 
 // The rule that fired, in one word over the sentence it produced.
 //
@@ -73,21 +99,23 @@ function standingTone(rule: PersonMoment["rule"]): StandingTone {
 export function PersonToday({
   moment,
   firstName,
+  view,
   onAction,
+  onOpenTasks,
 }: Readonly<{
   moment: PersonMoment;
   firstName: string;
+  // The record the thread and the open tasks are read from. The same read the
+  // moment arrived on, so the thread cannot disagree with the call above it.
+  view: Person360;
   onAction: (action: PersonMomentAction) => void;
+  // Where the day's work sends a reader for the whole task list.
+  onOpenTasks?: () => void;
 }>) {
   const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
-  // The amber treatment is the finding itself — a relationship that stopped,
-  // or a promise that is late — so it colours the card rather than a badge
-  // inside it.
-  const warn =
-    moment.rule === "gone_quiet" || moment.rule === "overdue_promise";
-  const secondary = moment.secondary_actions ?? [];
+  const taskRows = useOpenTaskRows(view);
   // What the moment rests on, in the shape every claim on a record states it:
   // the label a reader can act on, and the kind of record it was read from.
   // Same disclosure as the account's call, because it is the same promise —
@@ -97,72 +125,91 @@ export function PersonToday({
     quote: item.label,
     from: t(MOMENT_EVIDENCE_LABEL[item.type]),
   }));
-  return (
-    // The record's 360 card, in the person's own words: the same head every
-    // written reading carries, tinted as the machine's work rather than as one
-    // more thing to read.
-    <Panel
-      tone="ai"
-      className="co-lead"
-      title={<BriefTitle name={firstName} />}
-      footer={
-        <div className="pe-today-foot">
+  const footer = (
+    <div className="pe-today-foot">
+      <span>
+        {plural("person.today.source", moment.evidence.length, {
+          count: formatNumber(moment.evidence.length, locale),
+        })}
+      </span>
+      {moment.freshness_at && (
+        <>
+          <span aria-hidden="true">·</span>
           <span>
-            {plural("person.today.source", moment.evidence.length, {
-              count: formatNumber(moment.evidence.length, locale),
+            {t("person.today.updated", {
+              when: freshness(moment.freshness_at, t, locale),
             })}
           </span>
-          {moment.freshness_at && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span>
-                {t("person.today.updated", {
-                  when: freshness(moment.freshness_at, t, locale),
-                })}
-              </span>
-            </>
-          )}
-        </div>
-      }
-    >
-      {/* The call, then what it is standing on — the same head the account's
-          own reading carries, so a rep who reads both records reads them the
-          same way. */}
-      <VerdictHead
-        label={t(MOMENT_RULE_LABEL[moment.rule])}
-        tone={standingTone(moment.rule)}
-        because={moment.headline}
+        </>
+      )}
+    </div>
+  );
+  return (
+    <>
+      <CallCard
+        name={firstName}
+        standing={{
+          label: t(MOMENT_RULE_LABEL[moment.rule]),
+          tone: standingTone(moment.rule),
+        }}
+        // Why now, as the sentence the call rests on: the headline is the
+        // ask, and it leads the day's work below.
+        because={moment.why_now}
         restsOn={restsOn}
-      />
-      <PanelBody className="pe-today-lead">
-        <div>
-          <ul className="pe-today-evidence">
-            {moment.evidence.map((item) => (
-              <li key={`${item.type}-${item.id ?? item.label}`}>
-                {evidenceIcon(item.type)}
-                <span>{item.label}</span>
-              </li>
-            ))}
-          </ul>
+        footer={footer}
+      >
+        <RecordSpine
+          source={spineSourceOf(view)}
+          commercial={{ next_close_on: view.commercial?.deal?.close_date }}
+        />
+      </CallCard>
+      <TodayPanel onOpenTasks={onOpenTasks}>
+        {/* Rung 10 is a moment like any other: "nothing needs you today" is
+            the answer a reader came for, and the verb the ladder still names
+            on it — log what happened — rides the row like every other. */}
+        <MomentMove key="moment" moment={moment} onAction={onAction} />
+        {taskRows}
+      </TodayPanel>
+    </>
+  );
+}
 
-          {/* The rule that fired, named. A reader who disagrees with the verdict
-              can see what produced it, which is the difference between a system
-              that judges and one that explains. */}
-          {warn && <p className="pe-today-rule">{moment.why_now}</p>}
-        </div>
-
-        {/* Every action the moment carries, with its readiness under it: the
-            verbs live beside the moment they act on rather than in a second
-            list elsewhere on the page, which would let the two disagree about
-            what to do next. Readiness is stated rather than left to a disabled
-            button, because "you may not do this yet" and "this will ask you to
-            confirm" are different answers. */}
+// The move the ladder recommends, as the one row the agent is asking for. The
+// headline is the ask; the verb at the row's end carries the server's own
+// label for what performs it; and the evidence listed under the ask is the same
+// list the call above rests on, because the move and the call were read from
+// the same records.
+function MomentMove({
+  moment,
+  onAction,
+}: Readonly<{
+  moment: PersonMoment;
+  onAction: (action: PersonMomentAction) => void;
+}>) {
+  const secondary = moment.secondary_actions ?? [];
+  return (
+    <FoundMove
+      title={moment.headline}
+      basis={
+        <ul className="pe-today-evidence">
+          {moment.evidence.map((item) => (
+            <li key={`${item.type}-${item.id ?? item.label}`}>
+              {evidenceIcon(item.type)}
+              <span>{item.label}</span>
+            </li>
+          ))}
+        </ul>
+      }
+      action={
         <div className="pe-today-actions">
           <ActionVerb
             action={moment.recommended_action}
             primary
             onAction={onAction}
           />
+          {/* Every other verb the moment carries, beside the one it leads with
+              rather than in a second list elsewhere on the page, which would
+              let the two disagree about what to do next. */}
           {secondary.map((action) => (
             <ActionVerb
               key={action.label}
@@ -171,9 +218,105 @@ export function PersonToday({
             />
           ))}
         </div>
-      </PanelBody>
-    </Panel>
+      }
+    />
   );
+}
+
+// The open tasks already on this contact's record, quieter than the move
+// above them: commitments the record already carries, which a reader scans.
+//
+// Rows rather than a component, because the panel counts what it is handed to
+// decide whether the day is quiet — and a component that renders nothing is
+// still one child. A withheld section yields no rows; the rail says what was
+// withheld.
+function useOpenTaskRows(view: Person360): ReactNode[] {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const tasks = (view.next_steps?.data ?? []).filter((task) => !task.is_done);
+  // The assignee's name off the workspace roster, so the row's mark is the
+  // colleague it sits with rather than an id. Asked for only when a task names
+  // one.
+  const roster = useRoster(
+    "user",
+    tasks.some((task) => Boolean(task.assignee_id)),
+  );
+  const nameOf = (userId: string | null | undefined): string | undefined => {
+    if (!userId) {
+      return undefined;
+    }
+    const entry = roster.data?.find((candidate) => candidate.id === userId);
+    return entry && "display_name" in entry ? entry.display_name : undefined;
+  };
+  const asOf = Date.parse(view.as_of);
+  return tasks
+    .slice(0, OPEN_TASKS_SHOWN)
+    .map((task) => (
+      <TodoRow
+        key={task.id}
+        who={nameOf(task.assignee_id)}
+        title={task.subject ?? t("person.moment.evidence.task")}
+        due={taskDue(task, asOf, t, locale, zone)}
+      />
+    ));
+}
+
+// How many open tasks the day's work lists before the reader is sent to the
+// full list. Three is what reads as a glance beside the move above them.
+const OPEN_TASKS_SHOWN = 3;
+
+// When a task is owed, coloured only once it is late. A task with no date says
+// so rather than leaving the slot empty, which reads as a date that failed to
+// load. Lateness is measured against the read's own `as_of`, so the row agrees
+// with the dates beside it and does not drift while a tab is left open.
+function taskDue(
+  task: Activity,
+  asOf: number,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  zone: string,
+): { label: string; tone?: "danger" } {
+  if (!task.due_at) {
+    return { label: t("co.next.undated") };
+  }
+  const { late } = daysPast(Date.parse(task.due_at), asOf);
+  if (late) {
+    return { label: t("co.next.overdue"), tone: "danger" };
+  }
+  return {
+    label: t("co.next.due", { when: formatDate(task.due_at, locale, zone) }),
+  };
+}
+
+/**
+ * spineSourceOf reads the contact's 360 as the thread's source. The two
+ * shapes agree on every field but the tasks: the spine wants a task's id under
+ * `activity_id` and a settled `overdue`, and the 360 sends activity rows, so
+ * the tasks are re-read here — from the same rows, against the same `as_of`.
+ */
+export function spineSourceOf(view: Person360): SpineSource {
+  const asOf = Date.parse(view.as_of);
+  return {
+    as_of: view.as_of,
+    last_inbound_at: view.last_inbound_at,
+    last_outbound_at: view.last_outbound_at,
+    activities: view.activities,
+    next_steps: view.next_steps
+      ? {
+          data: view.next_steps.data
+            .filter((task) => !task.is_done)
+            .map((task) => ({
+              activity_id: task.id,
+              subject: task.subject ?? "",
+              due_at: task.due_at,
+              overdue: task.due_at
+                ? daysPast(Date.parse(task.due_at), asOf).late
+                : false,
+            })),
+        }
+      : undefined,
+  };
 }
 
 // One verb: the button, and under it what will happen when it is pressed.
@@ -191,6 +334,7 @@ function ActionVerb({
     <span className="pe-today-verb">
       <Button
         variant={primary ? "primary" : "ghost"}
+        small
         onClick={() => onAction(action)}
         disabled={action.state === "blocked"}
         title={action.blocked_reason}
@@ -198,6 +342,9 @@ function ActionVerb({
         {actionIcon(action.kind)}
         {action.label}
       </Button>
+      {/* Readiness is stated rather than left to a disabled button, because
+          "you may not do this yet" and "this will ask you to confirm" are
+          different answers. */}
       <span className="pe-today-verb-state">{readiness(action, t)}</span>
     </span>
   );
@@ -217,6 +364,8 @@ function actionIcon(kind: string): ReactNode {
       return <Send size={15} aria-hidden="true" />;
     case "complete_task":
       return <CheckSquare size={15} aria-hidden="true" />;
+    case "open_research":
+      return <Search size={15} aria-hidden="true" />;
     default:
       return <FileText size={15} aria-hidden="true" />;
   }
@@ -273,9 +422,9 @@ function freshness(
   return t("person.today.freshDaysAgo", { count: formatNumber(days, locale) });
 }
 
-// The quiet-success state renders through the same component: rung 10 is a
-// moment like any other, and "nothing needs you today" is the answer a reader
-// came for rather than an empty card.
+// The quiet-success state renders through the same cards: rung 10 is a moment
+// like any other, and "nothing needs you today" is the answer a reader came
+// for.
 export function isQuiet(moment: PersonMoment): boolean {
   return moment.rule === "nothing_needed";
 }

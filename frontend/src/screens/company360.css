@@ -406,6 +406,18 @@
   color: var(--textPrimary);
 }
 
+/* The reason with nothing behind it: the same voice as the one that opens the
+   working, without the rule that promises it. A dotted rule over a reason that
+   opens nothing teaches the reader the working is never there. */
+.co-move-reason {
+  display: inline;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  max-width: 78ch;
+  color: var(--textMeta);
+  text-wrap: pretty;
+}
+
 /* The panel over that reason names itself: the reason is behind it by then,
    and a list of records with nothing over it is a reader guessing which
    question it answers. */
@@ -565,35 +577,6 @@
 .co-fact-suspect {
   display: inline-block;
   margin-inline-start: 0.4rem;
-}
-
-/* The readings row's PLACE on the page. The tiles themselves are `StatCard`'s
-   — this sheet owns where the row sits and how its cards divide the width, and
-   nothing about how a card draws. */
-.co-readings {
-  margin-block-end: var(--space-4);
-}
-
-/* Four free-standing cards across, folding as the column narrows rather than
-   at a breakpoint: `auto-fit` lets the row decide how many fit, and the
-   `min(100%, …)` floor is what stops a single card overflowing a column
-   narrower than the floor itself. Cards, not a plate — these read one at a
-   time, each a door into the tab that holds its detail.
-
-   The floor is 10.5rem because four readings have to fit ACROSS the record
-   column with the context panel open, which is the width the page is read at.
-   At 13rem the fourth card wrapped to a row of its own and the rest of that
-   row was empty — which reads as a reading that failed to load rather than as
-   a row that ended. */
-.co-readings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
-  gap: var(--space-3);
-  /* Every card in a row is the height of the tallest. They differ in what they
-     carry — one states a basis, one a source, one only a number — and sized to
-     their own contents they came out ragged, which reads as four cards of
-     different importance rather than four readings of one account. */
-  align-items: stretch;
 }
 
 /* The strip itself withheld, rather than absent: one line where the readings
@@ -1747,6 +1730,22 @@
 .co-todo-meta {
   font-size: var(--fs-meta);
   color: var(--textMeta);
+}
+
+/* When the to-do is owed, at the row's far end. Quiet unless it is late: a
+   list where every date is coloured has no colour left for the one that
+   matters, and the one that matters is the promise nobody kept. */
+.co-todo-due {
+  flex: none;
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+.co-todo-due-warn {
+  color: var(--warn);
+}
+.co-todo-due-danger {
+  color: var(--danger);
 }
 
 /* Tinted, not filled. Three filled buttons down a column outshout the single
