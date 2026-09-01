@@ -100,14 +100,17 @@ func NewCaptureEnricher(pool *pgxpool.Pool, brain completer, log *slog.Logger) *
 // trouble is logged and the person is retried next cycle (their evidence rows
 // are still absent).
 //
-// It reports whether the candidate set FILLED the limit, which is the caller's
-// signal that more people are due right now. Two things make that worth acting
-// on rather than leaving to the nightly pass. A mailbox sync lands hundreds of
-// messages at once, so the 101st contact would wait until tonight for details a
-// rep is about to read. And the trigger's own uniqueness means mail arriving
-// mid-pass dedupes against a pass that has already listed its candidates —
-// so without a continuation that message waits for the nightly run too,
-// whatever the queue depth.
+// It reports whether the pass filled its limit AND moved at least one person,
+// which is the caller's signal that more people are due right now. Two things
+// make that worth acting on rather than leaving to the nightly pass. A mailbox
+// sync lands hundreds of messages at once, so the 101st contact would wait
+// until tonight for details a rep is about to read. And the trigger's own
+// uniqueness means mail arriving mid-pass dedupes against a pass that has
+// already listed its candidates — so without a continuation that message waits
+// for the nightly run too, whatever the queue depth.
+//
+// Both halves are load-bearing; see the return statement for why progress
+// alone bounds the chain.
 //
 // A full set is not proof that anyone is left: the last pass may have finished
 // exactly at the limit. The continuation costs one job that lists no candidates
@@ -137,6 +140,7 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	// rows, so SignatureCandidates re-selects them on the next pass. Failing
 	// the workspace row for one unparseable reply would retry the whole
 	// candidate set to re-reach the same person.
+	var advanced int
 	for _, cand := range candidates {
 		if err := e.enrichOne(wsCtx, cand); err != nil {
 			if isBudgetStop(err) {
@@ -148,9 +152,26 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 			}
 			e.log.WarnContext(wsCtx, "signature enrich: candidate failed",
 				"person", cand.PersonID.String(), "err", err)
+			continue
 		}
+		advanced++
 	}
-	return len(candidates) == e.limit, nil
+	// A continuation needs BOTH a full set and somebody moved off it.
+	//
+	// The full set alone would chain forever. A failed candidate writes no
+	// watermark on purpose — the comment above says why — so it stays the
+	// newest mail and fills the next pass too. Queueing on the count alone,
+	// a hundred candidates whose model call keeps failing would re-select
+	// themselves, enqueue another job, and do it again: an unbroken chain of
+	// jobs that each succeed, spend the model budget, and starve every older
+	// person behind them. River's attempt cap cannot stop it, because no job
+	// in the chain ever fails.
+	//
+	// Requiring progress bounds the chain by the work actually done. A pass
+	// that moved nobody is the end of it, and the nightly cycle owns the
+	// candidates it could not read — which is where they lived before this
+	// continuation existed.
+	return advanced > 0 && len(candidates) == e.limit, nil
 }
 
 func isBudgetStop(err error) bool { return errors.Is(err, ai.ErrBudgetDeferred) }

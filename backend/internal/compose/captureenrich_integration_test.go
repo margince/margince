@@ -397,3 +397,41 @@ type budgetStoppedBrain struct{}
 func (b *budgetStoppedBrain) Complete(context.Context, model.Request) (model.Response, error) {
 	return model.Response{}, ai.ErrBudgetDeferred
 }
+
+// TestAPassThatMovedNobodyAsksForNoContinuation is the runaway bound.
+//
+// A candidate whose model call fails writes no watermark, deliberately, so it
+// stays the newest mail and fills the next pass too. If a full set alone
+// queued a continuation, a hundred permanently failing candidates would
+// re-select themselves and enqueue another job forever — every job succeeding,
+// every one spending the model budget, and River's attempt cap unable to see
+// it because nothing ever fails.
+func TestAPassThatMovedNobodyAsksForNoContinuation(t *testing.T) {
+	e := integration.Setup(t)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
+	for i := range 2 {
+		seedEnrichPerson(t, e, fmt.Sprintf("stuck%d@acme.example", i), body)
+	}
+
+	// Output the pass cannot parse: the candidate fails, is logged, and keeps
+	// its place at the head of the queue.
+	enricher := NewCaptureEnricher(e.Pool, &unparseableBrain{}, slog.New(slog.DiscardHandler))
+	enricher.limit = 2
+
+	filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if filled {
+		t.Error("a pass that enriched nobody asked for a continuation — " +
+			"the same candidates would fill the next pass and chain forever")
+	}
+}
+
+// unparseableBrain answers with text the verdict parser rejects, which fails
+// the candidate without failing the pass.
+type unparseableBrain struct{}
+
+func (b *unparseableBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	return model.Response{Text: "not json"}, nil
+}
