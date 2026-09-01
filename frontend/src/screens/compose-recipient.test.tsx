@@ -198,6 +198,90 @@ describe("ComposeModal recipient", () => {
     expect(screen.queryByText("petra@buyer.test")).toBeNull();
   });
 
+  // Two conversations with one counterparty. The change vacates the offer,
+  // but the address the lookup resolves does not move, and the cache makes
+  // that sharp: a cached answer never passes back through "unknown". The offer
+  // is owed all the same, or the field is empty for a reply to somebody the
+  // thread names.
+  it("offers the address again when the next conversation has the same counterparty", async () => {
+    stubRoutes({
+      "GET /activities/act-1/reply-recipient": () =>
+        jsonResponse(THREAD_RECIPIENT),
+      "GET /activities/act-2/reply-recipient": () =>
+        jsonResponse(THREAD_RECIPIENT),
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(["compose-reply-recipient", "act-2"], THREAD_RECIPIENT);
+    const composer = (activityId: string) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ComposeModal
+            activityId={activityId}
+            entityType="person"
+            entityId="p-1"
+            open
+            onClose={vi.fn()}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const view = rtlRender(composer("act-1"));
+    expect(await screen.findByText("dietmar@buyer.test")).toBeTruthy();
+
+    view.rerender(composer("act-2"));
+    await waitFor(() => {
+      expect(screen.getByText("dietmar@buyer.test")).toBeTruthy();
+    });
+  });
+
+  // The slot is ours; what the reader put beside it is theirs. A change of
+  // conversation swaps the one address the composer offered and touches
+  // nothing the reader committed.
+  it("keeps the recipient the reader added when the conversation changes", async () => {
+    stubRoutes({
+      "GET /activities/act-1/reply-recipient": () =>
+        jsonResponse(THREAD_RECIPIENT),
+      "GET /activities/act-2/reply-recipient": () =>
+        jsonResponse({
+          full_name: "Petra Novak",
+          first_name: "Petra",
+          address: "petra@buyer.test",
+        }),
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const composer = (activityId: string) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ComposeModal
+            activityId={activityId}
+            entityType="person"
+            entityId="p-1"
+            open
+            onClose={vi.fn()}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const view = rtlRender(composer("act-1"));
+    expect(await screen.findByText("dietmar@buyer.test")).toBeTruthy();
+
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByLabelText("To"),
+      "colleague@buyer.test{Enter}",
+    );
+    expect(await screen.findByText("colleague@buyer.test")).toBeTruthy();
+
+    view.rerender(composer("act-2"));
+    expect(await screen.findByText("petra@buyer.test")).toBeTruthy();
+    expect(screen.getByText("colleague@buyer.test")).toBeTruthy();
+    expect(screen.queryByText("dietmar@buyer.test")).toBeNull();
+  });
+
   it("leaves the field empty for a contact with no address on record", async () => {
     stubRoutes({
       "GET /activities/act-1/reply-recipient": () =>

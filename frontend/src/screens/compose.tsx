@@ -2348,6 +2348,7 @@ export function ComposeModal({
     vacated.current = true;
     setTo((current) => current.filter((address) => address !== previous));
   }, [answering]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the anchor is a key here, not a read — two conversations with one counterparty resolve to the same address, and the offer the change above vacated has to be made again even though the address did not move.
   useEffect(() => {
     if (threadRecipient === undefined || offered.current) {
       return;
@@ -2370,7 +2371,7 @@ export function ComposeModal({
         ? current
         : [...current, threadRecipient];
     });
-  }, [threadRecipient]);
+  }, [threadRecipient, answering]);
   // The anchor as a RECORD, not just an id: the conversation pane reads its
   // `thread_key`. A caller-named activity is fetched (that read already runs,
   // for the thread's filing); a resolved one is the row `latest` is holding.
