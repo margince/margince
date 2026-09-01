@@ -83,7 +83,12 @@ func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
 	person := seedLinkedPerson(t, e, "spaet@kanzlei.example")
 	personID := ids.From[ids.PersonKind](person)
 
-	openAt := time.Now().Add(-time.Hour)
+	// Truncated to microseconds: postgres's timestamptz resolution is
+	// microseconds, so a nanosecond-precision time.Now() compares unequal to
+	// its own round trip through the column — not a clock difference, a
+	// storage one, and one this test would otherwise fail on at random
+	// depending on which run drew a nonzero nanosecond remainder.
+	openAt := time.Now().Add(-time.Hour).Truncate(time.Microsecond)
 	seedLinkedActivityAt(t, e, person, "workspace", openAt)
 
 	svc := person360.NewService(e.Pool, e.People, e.Deals, e.Projects,
@@ -104,7 +109,7 @@ func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
 	// counted, last-inbound would visibly jump forward to it rather than
 	// merely fail to move — a stronger proof than "the value is unchanged",
 	// which a same-instant tie could also produce for the wrong reason.
-	heldAt := time.Now().Add(time.Hour)
+	heldAt := time.Now().Add(time.Hour).Truncate(time.Microsecond)
 	seedLinkedActivityAt(t, e, person, "participants", heldAt)
 
 	after, err := svc.Assemble(e.Admin(), personID)
