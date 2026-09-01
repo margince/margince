@@ -6175,6 +6175,7 @@ export const vi = {
   "aiSettings.tab.usage": "Mức dùng",
   "aiSettings.tab.logs": "Nhật ký",
   "aiSettings.withheld": "Không thuộc quyền xem của bạn",
+  "aiSettings.unread": "Không đọc được",
   "aiSettings.pending": "Đang đọc…",
   "aiSettings.spend.label": "Chi tiêu tháng này",
   "aiSettings.spend.value": "{spent} trên {budget} token",

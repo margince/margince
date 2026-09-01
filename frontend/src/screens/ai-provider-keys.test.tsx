@@ -330,4 +330,27 @@ describe("AiProviderKeysCard", () => {
     expect(screen.getByRole("button", { name: /^add$/i })).toBeDisabled();
     expect(screen.getByText(/^not set$/i)).toBeTruthy();
   });
+
+  // A credential must not survive the fold. Closing the editor DROPS what was
+  // typed, so a key half-pasted and thought better of does not reappear the
+  // next time the row is opened — on a screenshare, or for whoever is at the
+  // desk next.
+  it("drops a typed key when the editor is closed again", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
+    render(<AiProviderKeysCard />);
+    await screen.findByText(/^not set$/i);
+
+    const row = await openKey(user, "openai");
+    await user.type(
+      within(row).getByPlaceholderText(/paste the api key/i),
+      "sk-typed-then-abandoned",
+    );
+    // Close, then open again: the field is empty, not holding what was typed.
+    await user.click(within(row).getByRole("button", { name: /^add$/i }));
+    await user.click(within(row).getByRole("button", { name: /^add$/i }));
+    expect(within(row).getByPlaceholderText(/paste the api key/i)).toHaveValue(
+      "",
+    );
+  });
 });

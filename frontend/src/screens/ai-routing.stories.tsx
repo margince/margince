@@ -166,7 +166,12 @@ export const Withheld: Story = { render: story(BOUND, NO_GRANT) };
 // not empty the picker or fail the form, because the box still binds anything
 // typed into it.
 export const VendorCannotBeAsked: Story = {
+  // Only GEMINI is overridden; the rest of the default list rides along, so the
+  // lanes bound to other vendors still answer. Dropping them would have made
+  // every other row read as a vendor that replied with nothing, which is a
+  // different state from the one this story is about.
   render: story(BOUND, MANAGER, {
+    ...VENDOR_LIST,
     gemini: { provider: "gemini", models: [], unavailable: "unreachable" },
   }),
 };

@@ -28,7 +28,7 @@ import {
 } from "./ai-models";
 import { useProviderKeys } from "./ai-provider-keys";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { RefreshFromSources } from "./rates";
+import { RefreshFromSources } from "./rate-refresh";
 import "./ai-settings.css";
 
 // Which vendor this installation's text is sent to (ai-operational-spec §1.4).

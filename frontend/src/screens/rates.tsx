@@ -16,6 +16,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
 import { calendarDay } from "../format/calendarday";
 import { viewerZone } from "../format/timezone";
@@ -37,51 +38,6 @@ function trimDecimal(value: string): string {
     return value;
   }
   return value.replace(/0+$/, "").replace(/\.$/, "");
-}
-
-// RefreshFromSources enqueues an async refresh that stages proposals into the
-// approvals inbox (the job runs in the background — nothing to poll here). The
-// button stays available so an admin can trigger another refresh; success and
-// failure both surface next to it.
-export function RefreshFromSources({
-  path,
-}: Readonly<{
-  path: "/fx-rates/propose-refresh" | "/ai-model-rates/propose-refresh";
-}>) {
-  const t = useT();
-  const refresh = useMutation({
-    mutationFn: async () => {
-      const { error } = await api.POST(path);
-      if (error) {
-        throwProblem(error);
-      }
-    },
-  });
-  return (
-    <span className="rates-refresh">
-      <Button
-        variant="ghost"
-        small
-        onClick={() => refresh.mutate()}
-        disabled={refresh.isPending}
-      >
-        {t("settings.rates.refresh")}
-      </Button>
-      {refresh.isSuccess ? (
-        <span className="t-small" role="status">
-          {t("settings.rates.refreshEnqueued")}
-        </span>
-      ) : null}
-      {/* The failure is spoken, and the retry is the button it sits beside —
-          which stays enabled, so the reader does not need a second control that
-          would do the same thing. */}
-      {refresh.isError ? (
-        <span className="rates-error" role="alert">
-          {problemMessageOf(refresh.error, t)}
-        </span>
-      ) : null}
-    </span>
-  );
 }
 
 // Withheld, not absent (design-system README, "Absent, disabled, or withheld"):

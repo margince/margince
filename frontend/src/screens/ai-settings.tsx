@@ -168,7 +168,7 @@ function SpendStat() {
     return (
       <StatCard
         label={t("aiSettings.spend.label")}
-        value={t("aiSettings.pending")}
+        value={readingState(query.isError, t)}
       />
     );
   }
@@ -236,7 +236,7 @@ function ProvidersStat() {
     return (
       <StatCard
         label={t("aiSettings.providers.label")}
-        value={t("aiSettings.pending")}
+        value={readingState(keys.isError, t)}
       />
     );
   }
@@ -288,4 +288,15 @@ function boundProviders(
   }
   named.add(routing.embeddings.provider);
   return named;
+}
+
+// What a reading says before it has one.
+//
+// A read that FAILED and a read that has not arrived are different facts, and
+// only one of them resolves by waiting: "Reading…" over a failed request is a
+// page that says it is still working forever. The failure is stated instead —
+// the readings are a glance, and the card that owns each figure carries the
+// error and its retry under the tab.
+function readingState(failed: boolean, t: ReturnType<typeof useT>): string {
+  return failed ? t("aiSettings.unread") : t("aiSettings.pending");
 }

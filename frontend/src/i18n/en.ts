@@ -6279,6 +6279,7 @@ export const en = {
   "aiSettings.tab.usage": "Usage",
   "aiSettings.tab.logs": "Logs",
   "aiSettings.withheld": "Not yours to see",
+  "aiSettings.unread": "Could not be read",
   "aiSettings.pending": "Reading…",
   "aiSettings.spend.label": "Spend this month",
   "aiSettings.spend.value": "{spent} of {budget} tokens",

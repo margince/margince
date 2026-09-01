@@ -362,7 +362,7 @@ type Info struct {
 	Lane string
 }
 
-// The lanes a ModelInfo can state. Spelled here rather than imported from the
+// The lanes an Info can state. Spelled here rather than imported from the
 // ai module because the port cannot depend on a module, and duplicated
 // deliberately: these are the wire's own two words, and the ai module's Lane
 // type is what maps them onto its price sheet.

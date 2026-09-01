@@ -7,11 +7,11 @@ package integration
 
 // Asking a vendor what it serves, end to end.
 //
-// Three of these need a real database, because each is about what the
-// INSTALLATION holds rather than what this process was handed: the profile that
-// decides whether a vendor may be reached at all, the grant that decides whether
-// this reader may ask, and the stored binding that supplies the host. None can
-// be shown against a store built from a literal.
+// Every one of these needs a real database, because each turns on what the
+// INSTALLATION holds rather than on what this process was handed: the profile
+// that decides whether a vendor may be reached at all, the grant that decides
+// whether this reader may ask, and the stored binding that supplies the host.
+// None can be shown against a store built from a literal.
 
 import (
 	"context"

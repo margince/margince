@@ -6235,6 +6235,7 @@ export const de = {
   "aiSettings.tab.usage": "Verbrauch",
   "aiSettings.tab.logs": "Protokoll",
   "aiSettings.withheld": "Nicht für Sie einsehbar",
+  "aiSettings.unread": "Konnte nicht gelesen werden",
   "aiSettings.pending": "Wird gelesen…",
   "aiSettings.spend.label": "Verbrauch diesen Monat",
   "aiSettings.spend.value": "{spent} von {budget} Token",

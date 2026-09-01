@@ -311,3 +311,87 @@ func TestFakeClientPublishesBothLanes(t *testing.T) {
 		t.Fatalf("the fake must publish one of each lane: %+v", models)
 	}
 }
+
+// A name this surface cannot ask AT ALL — an adapter that does not exist — is
+// `not_published` rather than `unreachable`.
+//
+// The difference is the whole point of the closed vocabulary: `unreachable`
+// says the vendor was asked and did not answer, and a reader who saw that for a
+// typo would go looking for a network fault behind a provider nothing called.
+func TestAnUnknownProviderIsNotReportedAsUnreachable(t *testing.T) {
+	if got := unavailableFor(errNoProviderKey); got != AvailabilityNoKey {
+		t.Fatalf("a missing credential is %q, want no_key", got)
+	}
+	if got := unavailableFor(errNoBaseURL); got != AvailabilityNoEndpoint {
+		t.Fatalf("a missing host is %q, want no_endpoint", got)
+	}
+	_, err := SelectBrain(ProviderConfig{Provider: "not-a-vendor"}, noCloudKeys())
+	if err == nil {
+		t.Fatal("SelectBrain accepted a provider that does not exist")
+	}
+	if got := unavailableFor(err); got != AvailabilityNotPublished {
+		t.Fatalf("an unknown adapter is %q, want not_published", got)
+	}
+}
+
+// Two lanes may name one vendor at two hosts, and Go randomises map iteration —
+// so the host this read picks has to be the same one every time, or the picker's
+// list changes under a reader who touched nothing.
+func TestTheHostAskedIsStableAcrossReads(t *testing.T) {
+	cfg := RoutingConfig{
+		Tiers: map[Tier]ProviderConfig{
+			TierPremium:    {Provider: providerOpenAICompatible, BaseURL: "https://b.example"},
+			TierCheapCloud: {Provider: providerOpenAICompatible, BaseURL: "https://a.example"},
+			TierFrontier:   {Provider: providerOpenAICompatible, BaseURL: "https://c.example"},
+		},
+	}
+	first := boundProviderConfig(cfg, providerOpenAICompatible).BaseURL
+	if first == "" {
+		t.Fatal("a bound vendor answered with no host")
+	}
+	// Repeated rather than asserted against one literal: WHICH host wins is
+	// arbitrary and may change; that the same one wins every time is the
+	// property.
+	for range 32 {
+		if got := boundProviderConfig(cfg, providerOpenAICompatible).BaseURL; got != first {
+			t.Fatalf("the host moved between reads: %q then %q", first, got)
+		}
+	}
+}
+
+// A vendor this installation has not bound falls back to the adapter's own
+// default, which is what makes the picker useful before anything is bound.
+func TestAnUnboundVendorFallsBackToTheAdapterDefault(t *testing.T) {
+	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierPremium: {Provider: providerGemini, Model: "gemini-3.5-flash"},
+	}}
+	if got := boundProviderConfig(cfg, providerAnthropic); got.BaseURL != "" {
+		t.Fatalf("an unbound vendor invented a host: %q", got.BaseURL)
+	}
+	// And the embeddings lane's host is found too — it binds separately, and a
+	// broker reached only there would otherwise be asked at the wrong address.
+	cfg.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{
+		Provider: providerOpenAICompatible, BaseURL: "https://embed.example",
+	}}
+	if got := boundProviderConfig(cfg, providerOpenAICompatible); got.BaseURL != "https://embed.example" {
+		t.Fatalf("the embeddings host was not found: %q", got.BaseURL)
+	}
+}
+
+// The cap is the picker's bound, and it binds every vendor — including the one
+// whose list arrives in a single unpaginated body.
+func TestOllamaObeysTheListCap(t *testing.T) {
+	many := make([]map[string]any, 0, modelListLimit+10)
+	for i := range modelListLimit + 10 {
+		many = append(many, map[string]any{"name": fmt.Sprintf("m%d:latest", i)})
+	}
+	lister := listerFor(t, ProviderConfig{Provider: providerOllama}, "/api/tags",
+		map[string]any{"models": many})
+	models, err := lister.ListModels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != modelListLimit {
+		t.Fatalf("returned %d models, want the cap of %d", len(models), modelListLimit)
+	}
+}

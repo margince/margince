@@ -272,6 +272,9 @@ func (c *ollamaClient) ListModels(ctx context.Context) ([]model.Info, error) {
 	}
 	models := make([]model.Info, 0, len(out.Models))
 	for _, m := range out.Models {
+		if len(models) == modelListLimit {
+			break
+		}
 		models = append(models, model.Info{ID: m.Name})
 	}
 	return models, nil

@@ -10526,23 +10526,21 @@ paths:
         Asks the VENDOR what it currently serves, so the routing form offers models that exist
         rather than only the ones somebody last hand-entered on the price sheet.
 
-        AVAILABILITY only — never price. Of the vendors this product speaks to, only an
-        OpenAI-wire broker publishes prices on its list endpoint, and reading those would make
-        this a second answer to a question `/ai-model-rates` already owns as an effective-dated
-        record. A model listed here that the sheet cannot price is bindable and reports UNPRICED.
+        AVAILABILITY only — never price. `/ai-model-rates` is the effective-dated record a call
+        is costed against, and a model listed here that it cannot price is bindable and reports
+        UNPRICED.
 
-        The vendor is named; the ENDPOINT is not. The host comes from the stored binding for
-        that vendor, or from the adapter's compiled default — never from the request — because
-        the AI outbound client carries no egress allowlist.
+        The vendor is named, and only the vendor: the host it is reached at comes from this
+        installation's own stored binding, or from the adapter's default. There is no request
+        parameter that selects an endpoint.
 
-        A vendor that cannot be asked is NOT an error: the response is 200 with `unavailable`
-        naming the state, because none of these should break the form. The model field takes
-        any id the vendor serves whether or not it appears here.
+        A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`
+        naming the state. The model field on the routing form takes any id the vendor serves,
+        whether or not it appears here.
 
-        `lane` is stated only where the vendor states it. Gemini publishes
-        `supportedGenerationMethods`, so its embedders are told apart from its chat models; the
-        other vendors return one undifferentiated list and a caller that needs the distinction
-        must not guess, because an embedder bound to a chat tier cannot serve a call.
+        `lane` is stated only where the vendor states it. A caller that needs the distinction
+        must treat an absent `lane` as unknown rather than as chat: an embedder bound to a chat
+        tier cannot serve a call.
       responses:
         '200':
           description: What the vendor serves, or why it could not be asked.
@@ -19161,8 +19159,12 @@ components:
       additionalProperties: false
       required: [provider, models]
       description: >-
-        One vendor's own answer about what it serves. `models` is empty exactly when
-        `unavailable` is set — the two never disagree.
+        One vendor's own answer about what it serves.
+
+        An empty `models` with NO `unavailable` is a vendor that answered and serves nothing —
+        a local runner with no model pulled onto it is the ordinary case. It is a different
+        state from a vendor that could not be asked, which always sets `unavailable`, and a
+        client that folded the two would tell a reader to paste a key they already have.
       properties:
         provider:
           type: string

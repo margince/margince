@@ -144,13 +144,22 @@ export function useAvailableModels(provider: string, enabled: boolean) {
     staleTime: 5 * 60 * 1000,
     retry: false,
     queryFn: async (): Promise<AvailableModels> => {
-      const { data, error } = await api.GET("/ai/available-models/{provider}", {
-        params: { path: { provider } },
-      });
-      if (error || !data) {
+      // Caught, not just checked. `api.GET` REJECTS when the transport fails —
+      // offline, a dropped connection, a proxy closing the socket — and that
+      // path never reaches the `error` field below, so without this the hook
+      // rejects and the field loses the stated reason it was built to keep.
+      try {
+        const { data, error } = await api.GET(
+          "/ai/available-models/{provider}",
+          { params: { path: { provider } } },
+        );
+        if (error || !data) {
+          return { provider, models: [], unavailable: "unreachable" };
+        }
+        return data;
+      } catch {
         return { provider, models: [], unavailable: "unreachable" };
       }
-      return data;
     },
   });
 }

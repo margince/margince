@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -125,8 +126,13 @@ func (s *RoutingStore) ListAvailableModels(
 //
 // The two states a reader can act on are told apart: a vendor with no
 // credential is a key to paste, and an OpenAI-wire binding with no host is an
-// address to fill in. Anything else is the adapter refusing a binding this
-// screen did not offer, which is not a state to report as availability.
+// address to fill in.
+//
+// Everything else is a name this surface cannot ask AT ALL — an adapter that
+// does not exist, or a binding with no provider on it — and that is
+// `not_published` rather than `unreachable`. The difference is not cosmetic:
+// `unreachable` says the vendor was asked and did not answer, which would have
+// a reader chasing a network fault for a provider nothing ever called.
 func unavailableFor(err error) ModelAvailability {
 	if errors.Is(err, errNoProviderKey) {
 		return AvailabilityNoKey
@@ -134,7 +140,7 @@ func unavailableFor(err error) ModelAvailability {
 	if errors.Is(err, errNoBaseURL) {
 		return AvailabilityNoEndpoint
 	}
-	return AvailabilityUnreachable
+	return AvailabilityNotPublished
 }
 
 // boundProviderConfig is the binding this installation would call `provider`
@@ -145,8 +151,16 @@ func unavailableFor(err error) ModelAvailability {
 // not name yet falls back to the adapter's compiled default, which is what
 // makes the picker useful before anything is bound. No model id: this asks what
 // the vendor serves, not what one lane currently names.
+//
+// The tiers are walked in a FIXED order. Two lanes may name one vendor at two
+// hosts — a broker and a self-hosted gateway is the ordinary case — and Go
+// randomises map iteration, so ranging the map directly asked a different host
+// on each request and the picker's list changed under a reader who had touched
+// nothing. Which of two hosts wins is arbitrary; that the same one wins every
+// time is not.
 func boundProviderConfig(cfg RoutingConfig, provider string) ProviderConfig {
-	for _, binding := range cfg.Tiers {
+	for _, tier := range sortedTiers(cfg.Tiers) {
+		binding := cfg.Tiers[tier]
 		if binding.Provider == provider && binding.BaseURL != "" {
 			return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
 		}
@@ -155,4 +169,20 @@ func boundProviderConfig(cfg RoutingConfig, provider string) ProviderConfig {
 		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL}
 	}
 	return ProviderConfig{Provider: provider}
+}
+
+// sortedTiers is the tier names in a stable order.
+//
+// Sorted rather than ranked by the cost ladder: this picks WHICH HOST to ask a
+// vendor about, and the ladder ranks how capable a lane is, which says nothing
+// about that. A rank borrowed here would read as a preference the code does not
+// actually hold, and would be a second copy of an order that lives in the task
+// contract.
+func sortedTiers(tiers map[Tier]ProviderConfig) []Tier {
+	out := make([]Tier, 0, len(tiers))
+	for tier := range tiers {
+		out = append(out, tier)
+	}
+	slices.Sort(out)
+	return out
 }

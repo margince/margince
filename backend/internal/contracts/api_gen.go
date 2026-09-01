@@ -16073,7 +16073,8 @@ type AvailableModel struct {
 // AvailableModelLane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
 type AvailableModelLane string
 
-// AvailableModelList One vendor's own answer about what it serves. `models` is empty exactly when `unavailable` is set — the two never disagree.
+// AvailableModelList One vendor's own answer about what it serves.
+// An empty `models` with NO `unavailable` is a vendor that answered and serves nothing — a local runner with no model pulled onto it is the ordinary case. It is a different state from a vendor that could not be asked, which always sets `unavailable`, and a client that folded the two would tell a reader to paste a key they already have.
 type AvailableModelList struct {
 	Models []AvailableModel `json:"models"`
 

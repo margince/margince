@@ -166,11 +166,33 @@ function useCallTrace(task: string, enabled: boolean) {
  * arrived, and the installation has never called. A zero here would be an
  * instant in 1970, and a "never" would be a claim this hook cannot make for the
  * first two.
+ *
+ * Its OWN query rather than the card's. The card pages through a filtered trace
+ * on demand; this wants the newest row and wants it to keep up, and the two
+ * cannot share a key without one imposing its refetch on the other — a poll
+ * over every page the reader had loaded.
  */
 export function useLastCallAt(): number | null {
   const canSee = useCan("automation", "update");
-  const query = useCallTrace("", canSee);
-  const newest = query.data?.pages[0]?.data[0];
+  const query = useQuery({
+    enabled: canSee,
+    queryKey: ["ai-call-latest"],
+    // The header says how long ago the last call was, so the figure has to move
+    // while the page is open. A minute is the resolution it reads at.
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await api.GET("/ai/calls", {});
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  // Read through the grant, not only around it. A revoked grant disables the
+  // query but leaves its last answer in the cache, and returning that would go
+  // on showing a seat the runtime activity it may no longer see.
+  if (!canSee) {
+    return null;
+  }
+  const newest = query.data?.data[0];
   return newest ? Date.parse(newest.occurred_at) : null;
 }
 

@@ -218,7 +218,15 @@ function ProviderKeyRow({
           {!keyless && (
             <span className="ai-lane-open">
               <Button
-                onClick={() => setEditing((open) => !open)}
+                // Closing DROPS what was typed. The field holds a credential,
+                // and one left in state comes back the next time the row is
+                // opened — on a screenshare, or for whoever is at the desk next.
+                onClick={() => {
+                  if (editing) {
+                    setValue("");
+                  }
+                  setEditing((open) => !open);
+                }}
                 aria-expanded={editing}
                 reason={canManage ? undefined : t("aiProviderKeys.adminOnly")}
               >
