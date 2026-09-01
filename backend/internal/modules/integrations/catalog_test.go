@@ -147,3 +147,52 @@ func TestEveryRegisteredAdapterPricesWhatItDeclares(t *testing.T) {
 		})
 	}
 }
+
+// A category the provider only issues alongside another must be priced with
+// it. The buy button asks for both (boughtWith, frontend/src/screens/
+// personprovider.tsx) and quotes ONE figure — this entry's — so an entry
+// carrying only its own price would name a number smaller than the press
+// spends.
+//
+// Derived from the descriptor's own RequiresAnswerTo rather than naming a
+// category: the defect is a property of the pairing rule, so an adapter that
+// declares a new pair is covered the day it lands.
+//
+// Run over the offline fake, which is the only adapter this module may import
+// — a module never imports a sibling, and surfe is one. That costs nothing
+// here: TestTheOfflineFakeDescribesTheSameProductAsTheLiveAdapter
+// (backend/internal/compose/providerdescriptorparity_test.go) compares
+// RequiresAnswerTo and CostTable between the fake and the live adapter, so a
+// fake that passes this and a live adapter that would not cannot both exist.
+func TestAPricedCategoryCarriesItsPrerequisitesPrice(t *testing.T) {
+	desc := NewOfflineProvider(0, func() time.Time { return time.Unix(0, 0).UTC() }).Descriptor()
+	if len(desc.RequiresAnswerTo) == 0 {
+		// Under-recognition is the one way this gate must not break: with no
+		// pairs to walk it would report PASS over a rule nobody checked.
+		t.Fatal("the fake declares no prerequisites, so this gate walked nothing — it mirrors an adapter that has one")
+	}
+	entries := map[string]CategoryCost{}
+	for _, entry := range catalogOf(desc) {
+		entries[entry.Category] = entry
+	}
+	for category, prerequisite := range desc.RequiresAnswerTo {
+		paired, ok := entries[string(category)]
+		if !ok {
+			t.Errorf("category %q has a prerequisite but no catalog entry to price it in", category)
+			continue
+		}
+		if paired.Requires != string(prerequisite) {
+			t.Errorf("%q names prerequisite %q, catalog entry says %q",
+				category, prerequisite, paired.Requires)
+		}
+		// Pool by pool, because a pair spanning two pools is the case here:
+		// summing to one total would pass a price that charged the mobile
+		// pool twice and the email pool not at all.
+		for pool, n := range desc.CostTable[prerequisite] {
+			if paired.Cost[string(pool)] < n {
+				t.Errorf("%q costs %v, which does not cover its prerequisite %q at %d in pool %q — the button would quote less than the press spends",
+					category, paired.Cost, prerequisite, n, pool)
+			}
+		}
+	}
+}
