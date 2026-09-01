@@ -7,16 +7,34 @@ export type PurposeView =
 // key → subscribed. The toggle is binary; the wire state is ternary.
 export type Draft = Record<string, boolean>;
 
-// Default-deny: only an explicit grant is a subscription. "unknown" (no
-// record) and "withdrawn" both mean we may not send, so both read as off.
-export function displayOn(state: PurposeView["state"]): boolean {
-  return state === "granted";
+/**
+ * Whether this row reads as ON.
+ *
+ * It answers from the server's `choice`, never from the raw state, and
+ * the difference is the whole reason that field exists. `state` is
+ * `unknown` both for a marketing lane nobody opted into and for direct
+ * correspondence nobody has objected to — off in the first case, ON in
+ * the second — so a page reading the raw value told a reader they were
+ * "not subscribed" to ordinary replies their sender is entitled to send
+ * under legitimate interest, and showed an always-on lane as switched
+ * off.
+ *
+ * Only an explicit objection is off. That is the shape of the law the
+ * engine applies: consent lanes need a grant (which is what makes their
+ * choice `opted_out` until one exists), while correspondence and
+ * transactional mail run on a basis the recipient may object to rather
+ * than one they must first give.
+ */
+export function displayOn(purpose: PurposeView): boolean {
+  return purpose.choice !== "opted_out";
 }
 
 export function initialDraft(purposes: PurposeView[]): Draft {
   const draft: Draft = {};
   for (const purpose of purposes) {
-    draft[purpose.key] = displayOn(purpose.state);
+    // A locked row is on regardless of what the record says, so the draft
+    // starts where the row is drawn rather than where its raw state sits.
+    draft[purpose.key] = purpose.locked || displayOn(purpose);
   }
   return draft;
 }
@@ -36,7 +54,7 @@ export function dirtyKeys(purposes: PurposeView[], draft: Draft): string[] {
     .filter(
       (purpose) => !(purpose.grant_needs_confirmation && draft[purpose.key]),
     )
-    .filter((purpose) => draft[purpose.key] !== displayOn(purpose.state))
+    .filter((purpose) => draft[purpose.key] !== displayOn(purpose))
     .map((purpose) => purpose.key);
 }
 
@@ -90,4 +108,38 @@ export function labelOf(
 ): string {
   const key = PURPOSE_LABEL_KEYS[purpose.key];
   return key ? t(key) : purpose.label;
+}
+
+/**
+ * The sentence under a row, naming what is true rather than guessing.
+ *
+ * Three states, not two. "Subscribed" and "not subscribed" only describe
+ * a lane somebody opts INTO; applied to direct correspondence they told a
+ * reader they were "not subscribed" to the ordinary replies their sender
+ * is entitled to send, which is both wrong and alarming. A lane running
+ * on no objection says so.
+ */
+export function stateLineKey(purpose: PurposeView, on: boolean): MessageKey {
+  if (!on) {
+    return "prefs.optedOut";
+  }
+  return purpose.choice === "opted_in"
+    ? "prefs.subscribed"
+    : "prefs.noObjection";
+}
+
+/**
+ * Whether a row shows as on, draft included.
+ *
+ * A LOCKED row is on, full stop, and no draft entry can move it. It
+ * carries an "always on" badge and a disabled control, so rendering it
+ * unchecked said the opposite of the badge beside it — and the server
+ * refuses to change it either way, which makes any other value a claim
+ * the product cannot honour.
+ */
+export function rowIsOn(purpose: PurposeView, draft: Draft): boolean {
+  if (purpose.locked) {
+    return true;
+  }
+  return draft[purpose.key] ?? displayOn(purpose);
 }

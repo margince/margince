@@ -40,21 +40,41 @@ function render(ui: ReactNode) {
   );
 }
 
+// The fixture answers as the server does: `choice` is what the recipient
+// decided, derived there, and the page renders it rather than guessing
+// from `state`.
 const CENTER = {
+  masked_email: "m•••••@example.com",
+  workspace_name: "Demo Workspace",
+  refused: [],
   purposes: [
     {
       key: "transactional",
       label: "Deal & service messages",
       state: "granted",
       locked: true,
+      grant_needs_confirmation: false,
+      choice: "opted_in",
+      can_opt_in: false,
     },
     {
       key: "marketing_email",
       label: "Product updates",
       state: "granted",
       locked: false,
+      grant_needs_confirmation: false,
+      choice: "opted_in",
+      can_opt_in: true,
     },
-    { key: "events", label: "Events", state: "unknown", locked: false },
+    {
+      key: "events",
+      label: "Events",
+      state: "unknown",
+      locked: false,
+      grant_needs_confirmation: false,
+      choice: "opted_out",
+      can_opt_in: true,
+    },
   ],
 };
 
@@ -141,7 +161,9 @@ describe("PreferenceCenterScreen", () => {
       name: en["prefs.purpose.transactional"],
     });
     expect(toggle).toBeDisabled();
-    expect(screen.getByText(/always on/i)).toBeInTheDocument();
+    // The BADGE specifically: the unsubscribe-all hint below now names
+    // the same words when it explains what it will not touch.
+    expect(screen.getByText(en["prefs.alwaysOn"])).toBeInTheDocument();
   });
 
   it("stages changes — nothing is written until Save", async () => {
@@ -331,7 +353,7 @@ describe("one-click unsubscribe (G-7)", () => {
     });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /unsubscribe from all/i }),
+      await screen.findByRole("button", { name: en["prefs.unsubscribeAll"] }),
     );
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/you're off/i)).toBeInTheDocument();
@@ -352,7 +374,7 @@ describe("one-click unsubscribe (G-7)", () => {
     });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /unsubscribe from all/i }),
+      await screen.findByRole("button", { name: en["prefs.unsubscribeAll"] }),
     );
     expect(await screen.findByText(/already off/i)).toBeInTheDocument();
   });
@@ -368,7 +390,7 @@ describe("one-click unsubscribe (G-7)", () => {
     });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /unsubscribe from all/i }),
+      await screen.findByRole("button", { name: en["prefs.unsubscribeAll"] }),
     );
     expect(await screen.findByText(/too many attempts/i)).toBeInTheDocument();
     expect(
@@ -386,7 +408,7 @@ describe("one-click unsubscribe (G-7)", () => {
     });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /unsubscribe from all/i }),
+      await screen.findByRole("button", { name: en["prefs.unsubscribeAll"] }),
     );
     expect(await screen.findByText(/try again shortly/i)).toBeInTheDocument();
   });
@@ -394,14 +416,30 @@ describe("one-click unsubscribe (G-7)", () => {
   // Re-subscribing must be an explicit opt-in — never a silent re-grant.
   it("stages an undo rather than immediately re-granting", async () => {
     const put = vi.fn(() => jsonResponse(CENTER));
+    // The re-read after the unsubscribe has to AGREE with it: the row the
+    // POST just stopped comes back opted_out, so undoing it is a real
+    // change to stage rather than a no-op the save bar would ignore.
+    const afterUnsubscribe = {
+      ...CENTER,
+      purposes: CENTER.purposes.map((purpose) =>
+        purpose.key === "marketing_email"
+          ? { ...purpose, state: "withdrawn", choice: "opted_out" }
+          : purpose,
+      ),
+    };
+    let stopped = false;
     stubCenter({
-      "POST /public/preferences/tok-123/unsubscribe": () =>
-        jsonResponse({ unsubscribed: ["marketing_email"] }),
+      "GET /public/preferences/tok-123": () =>
+        jsonResponse(stopped ? afterUnsubscribe : CENTER),
+      "POST /public/preferences/tok-123/unsubscribe": () => {
+        stopped = true;
+        return jsonResponse({ unsubscribed: ["marketing_email"] });
+      },
       "PUT /public/preferences/tok-123": put,
     });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /unsubscribe from all/i }),
+      await screen.findByRole("button", { name: en["prefs.unsubscribeAll"] }),
     );
     await userEvent.click(await screen.findByRole("button", { name: /undo/i }));
     expect(put).not.toHaveBeenCalled();

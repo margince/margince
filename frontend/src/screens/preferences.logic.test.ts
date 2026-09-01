@@ -4,6 +4,7 @@ import {
   displayOn,
   initialDraft,
   type PurposeView,
+  rowIsOn,
   toChoices,
 } from "./preferences.logic";
 
@@ -78,10 +79,40 @@ const doiPurposes: PurposeView[] = [
 
 describe("display state", () => {
   // Default-deny: no record and a withdrawal both mean "we may not send".
-  it("reads only an explicit grant as subscribed", () => {
-    expect(displayOn("granted")).toBe(true);
-    expect(displayOn("withdrawn")).toBe(false);
-    expect(displayOn("unknown")).toBe(false);
+  // The rule the raw state cannot express. `state: unknown` is off for a
+  // lane somebody must opt INTO and ON for one they may object to, so the
+  // page reads the server's derived choice — reading `state` told a
+  // recipient they were "not subscribed" to ordinary replies, and drew an
+  // always-on row as switched off.
+  it("reads the recipient's decision, not the raw record", () => {
+    const at = (choice: PurposeView["choice"]): PurposeView => ({
+      key: "k",
+      label: "L",
+      state: "unknown",
+      locked: false,
+      grant_needs_confirmation: false,
+      can_opt_in: true,
+      choice,
+    });
+    expect(displayOn(at("opted_in"))).toBe(true);
+    expect(displayOn(at("no_objection"))).toBe(true);
+    expect(displayOn(at("opted_out"))).toBe(false);
+  });
+
+  // A locked row carries an "always on" badge and a disabled control, so
+  // any other value contradicts the badge beside it.
+  it("shows a locked purpose as on whatever the record says", () => {
+    const locked: PurposeView = {
+      key: "transactional",
+      label: "T",
+      state: "unknown",
+      locked: true,
+      grant_needs_confirmation: false,
+      can_opt_in: false,
+      choice: "no_objection",
+    };
+    expect(rowIsOn(locked, {})).toBe(true);
+    expect(rowIsOn(locked, { transactional: false })).toBe(true);
   });
 });
 
@@ -92,7 +123,9 @@ describe("draft diffing", () => {
       transactional: true,
       marketing_email: true,
       events: false,
-      research: false,
+      // no_objection: on, because nobody has objected to it. Reading the
+      // raw "unknown" here is what showed a live lane as switched off.
+      research: true,
     });
     expect(dirtyKeys(purposes, draft)).toEqual([]);
   });

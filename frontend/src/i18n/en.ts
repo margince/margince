@@ -5027,6 +5027,8 @@ export const en = {
   "prefs.purpose.marketing_email": "Product news",
   "prefs.purpose.transactional": "Security & service messages",
   "prefs.sentVia": "Sent via Margince",
+  "prefs.noObjection": "On — you have not objected to these",
+  "prefs.optedOut": "Off — you asked us to stop these",
   "prefs.invalidLink":
     "This link is no longer valid. Preference links expire and can be withdrawn — ask for a fresh one from any recent email.",
   "buyer.opening": "Opening your Deal Room…",
@@ -5121,9 +5123,7 @@ export const en = {
     "This briefing could not be read. Reload the page, or write it again.",
   "prefs.rateLimited":
     "Too many attempts from here just now. Wait a minute and reload.",
-  "prefs.subscribed": "Subscribed",
-  "prefs.notSubscribed":
-    "Not subscribed — you receive nothing for this purpose",
+  "prefs.subscribed": "On — you asked for these",
   "prefs.alwaysOn": "always on",
   // The public confirm-your-details page. Margince speaks in first person here,
   // as it does in onboarding: short flat sentences, says what it will and will
@@ -5154,9 +5154,9 @@ export const en = {
     "I have recorded your answer. Anything you changed goes to a person here to apply, and this link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used already, or it may have expired.",
-  "prefs.lockedWhy": "Transactional — exempt from opt-out.",
+  "prefs.lockedWhy": "Needed for something you asked for, so it stays on.",
   "prefs.confirmationNeededWhy":
-    "To start receiving this, use the confirmation link we email you. You can stop it here at any time.",
+    "To switch this on, use the confirmation link in our email. You can switch it off here at any time.",
   "prefs.notSaved": "Not saved yet.",
   "prefs.savePending": "Pending: {changes}.",
   "prefs.saveProof":
@@ -5173,9 +5173,9 @@ export const en = {
   "prefs.wording.marketing_email":
     '"Send me product updates & occasional marketing email."',
   "prefs.wording.events": '"Send me event & webinar invitations."',
-  "prefs.unsubscribeAll": "Unsubscribe from all marketing",
+  "prefs.unsubscribeAll": "Stop everything I can switch off",
   "prefs.unsubscribeAllHint":
-    "Prefer to stop all non-essential mail at once? You'll still get transactional messages.",
+    "This switches off every row above that has a checkbox you can use. Rows marked ALWAYS ON stay on — you need them for things you asked for.",
   "prefs.oneClickDone":
     "Done — you're off our marketing email. It takes effect immediately across every campaign.",
   "prefs.oneClickAlreadyOff": "Nothing to do — these were already off.",

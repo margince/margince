@@ -4961,6 +4961,8 @@ export const de = {
   "prefs.purpose.marketing_email": "Produktneuigkeiten",
   "prefs.purpose.transactional": "Sicherheit & laufende Vorgänge",
   "prefs.sentVia": "Gesendet über Margince",
+  "prefs.noObjection": "An — du hast dem nicht widersprochen",
+  "prefs.optedOut": "Aus — du hast uns gebeten, damit aufzuhören",
   "prefs.invalidLink":
     "Dieser Link ist nicht mehr gültig. Präferenz-Links laufen ab oder können widerrufen werden — frag in einer aktuellen E-Mail nach einem neuen.",
   "buyer.opening": "Ihr Deal Room wird geöffnet …",
@@ -5058,9 +5060,7 @@ export const de = {
     "Dieses Briefing konnte nicht gelesen werden. Seite neu laden oder neu schreiben.",
   "prefs.rateLimited":
     "Gerade zu viele Versuche von hier aus. Warte eine Minute und lade neu.",
-  "prefs.subscribed": "Abonniert",
-  "prefs.notSubscribed":
-    "Nicht abonniert — du bekommst für diesen Zweck nichts",
+  "prefs.subscribed": "An — du hast danach gefragt",
   "prefs.alwaysOn": "immer an",
   "confirm.title": "Ihre Daten",
   "confirm.intro":
@@ -5088,9 +5088,10 @@ export const de = {
     "Ich habe Ihre Antwort erfasst. Änderungen gehen an eine Person hier zur Übernahme, und dieser Link ist jetzt verbraucht.",
   "confirm.invalidLink":
     "Dieser Link ist nicht mehr gültig. Er wurde möglicherweise schon benutzt oder ist abgelaufen.",
-  "prefs.lockedWhy": "Transaktional — von der Abmeldung ausgenommen.",
+  "prefs.lockedWhy":
+    "Gehört zu etwas, das du angefordert hast, und bleibt deshalb an.",
   "prefs.confirmationNeededWhy":
-    "Um dies zu erhalten, nutzen Sie den Bestätigungslink aus unserer E-Mail. Abbestellen können Sie hier jederzeit.",
+    "Zum Einschalten nutze den Bestätigungslink aus unserer E-Mail. Ausschalten kannst du es hier jederzeit.",
   "prefs.notSaved": "Noch nicht gespeichert.",
   "prefs.savePending": "Ausstehend: {changes}.",
   "prefs.saveProof":
@@ -5107,9 +5108,9 @@ export const de = {
   "prefs.wording.marketing_email":
     "„Schick mir Produkt-Updates und gelegentliche Marketing-E-Mails.“",
   "prefs.wording.events": "„Schick mir Einladungen zu Events und Webinaren.“",
-  "prefs.unsubscribeAll": "Von allem Marketing abmelden",
+  "prefs.unsubscribeAll": "Alles abschalten, was ich abschalten kann",
   "prefs.unsubscribeAllHint":
-    "Lieber alle nicht notwendigen Mails auf einmal stoppen? Transaktionale Nachrichten bekommst du weiterhin.",
+    "Das schaltet jede Zeile oben aus, die ein anklickbares Kästchen hat. Zeilen mit IMMER AN bleiben an — die brauchst du für Dinge, die du selbst angefordert hast.",
   "prefs.oneClickDone":
     "Erledigt — du bekommst keine Marketing-E-Mails mehr von uns. Das gilt sofort für jede Kampagne.",
   "prefs.oneClickAlreadyOff": "Nichts zu tun — das war bereits abgeschaltet.",

@@ -4923,6 +4923,8 @@ export const vi = {
   "prefs.purpose.marketing_email": "Tin tức sản phẩm",
   "prefs.purpose.transactional": "Bảo mật và dịch vụ",
   "prefs.sentVia": "Được gửi qua Margince",
+  "prefs.noObjection": "Bật — bạn chưa phản đối",
+  "prefs.optedOut": "Tắt — bạn đã yêu cầu chúng tôi dừng",
   "prefs.invalidLink":
     "Liên kết này không còn hiệu lực. Liên kết tuỳ chọn sẽ hết hạn và có thể bị thu hồi — hãy lấy một liên kết mới từ bất kỳ email gần đây nào.",
   "buyer.opening": "Đang mở Deal Room của bạn…",
@@ -5017,8 +5019,7 @@ export const vi = {
     "Không đọc được bản tóm tắt này. Hãy tải lại trang hoặc viết lại.",
   "prefs.rateLimited":
     "Vừa có quá nhiều lần thử từ đây. Hãy đợi một phút rồi tải lại.",
-  "prefs.subscribed": "Đã đăng ký",
-  "prefs.notSubscribed": "Chưa đăng ký — bạn không nhận gì cho mục đích này",
+  "prefs.subscribed": "Bật — bạn đã yêu cầu",
   "prefs.alwaysOn": "luôn bật",
   "confirm.title": "Thông tin của bạn",
   "confirm.intro":
@@ -5046,9 +5047,9 @@ export const vi = {
     "Tôi đã ghi nhận câu trả lời của bạn. Những thay đổi sẽ được một người ở đây áp dụng, và liên kết này đã được dùng.",
   "confirm.invalidLink":
     "Liên kết này không còn hiệu lực. Có thể nó đã được dùng hoặc đã hết hạn.",
-  "prefs.lockedWhy": "Thư giao dịch — không thuộc diện từ chối nhận.",
+  "prefs.lockedWhy": "Cần cho việc bạn đã yêu cầu, nên vẫn bật.",
   "prefs.confirmationNeededWhy":
-    "Để bắt đầu nhận, hãy dùng liên kết xác nhận trong email của chúng tôi. Bạn có thể dừng nhận tại đây bất cứ lúc nào.",
+    "Để bật, hãy dùng liên kết xác nhận trong email của chúng tôi. Bạn có thể tắt ở đây bất cứ lúc nào.",
   "prefs.notSaved": "Chưa lưu.",
   "prefs.savePending": "Đang chờ: {changes}.",
   "prefs.saveProof":
@@ -5065,9 +5066,9 @@ export const vi = {
   "prefs.wording.marketing_email":
     '"Hãy gửi cho tôi tin cập nhật sản phẩm & email tiếp thị thỉnh thoảng."',
   "prefs.wording.events": '"Hãy gửi cho tôi lời mời sự kiện & webinar."',
-  "prefs.unsubscribeAll": "Huỷ đăng ký mọi thư tiếp thị",
+  "prefs.unsubscribeAll": "Tắt mọi thứ tôi có thể tắt",
   "prefs.unsubscribeAllHint":
-    "Muốn dừng toàn bộ thư không thiết yếu cùng lúc? Bạn vẫn nhận được thư giao dịch.",
+    "Thao tác này tắt mọi hàng phía trên có ô đánh dấu bạn dùng được. Các hàng ghi LUÔN BẬT vẫn bật — bạn cần chúng cho những việc chính bạn đã yêu cầu.",
   "prefs.oneClickDone":
     "Xong — bạn đã ra khỏi danh sách email tiếp thị. Việc này có hiệu lực ngay trên mọi chiến dịch.",
   "prefs.oneClickAlreadyOff": "Không cần làm gì — những mục này vốn đã tắt.",
