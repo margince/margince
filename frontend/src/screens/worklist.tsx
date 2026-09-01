@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Eyebrow } from "../design-system/eyebrow";
 import { FilterPills } from "../design-system/filterpills";
 import { Panel, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -63,6 +64,19 @@ const FILTERS: readonly WorklistFilter[] = [
 // show is worse than no verb.
 function reviewFilter(item: WorklistItem): WorklistFilter {
   return item.category === "system" ? "system" : "decisions";
+}
+
+// Whether this row opens its band — the first row overall, or the first after a
+// row of a different band.
+//
+// A row with no band opens nothing: an older server that does not send one
+// leaves the page ungrouped rather than drawing a heading it cannot name.
+function opensBand(queue: readonly WorklistItem[], index: number): boolean {
+  const band = queue[index]?.band;
+  if (!band) {
+    return false;
+  }
+  return index === 0 || queue[index - 1]?.band !== band;
 }
 
 // One row.
@@ -484,6 +498,18 @@ function WorklistBody({
           <ol className="worklist-list">
             {day.queue.map((item, index) => (
               <li key={`${item.source}-${item.id}`}>
+                {/* The heading, drawn where the band CHANGES. The server sends
+                    the queue already sorted so each band is one contiguous run,
+                    so a change is a boundary and never a second visit — which
+                    is what lets a heading be drawn from the row rather than by
+                    grouping the list into buckets the order would then fight. */}
+                {opensBand(day.queue, index) && (
+                  <Eyebrow as="h3" className="worklist-band">
+                    {t(
+                      `worklist.band.${item.band ?? "keep_momentum"}` as const,
+                    )}
+                  </Eyebrow>
+                )}
                 <WorklistRow
                   item={item}
                   position={index + 1}
