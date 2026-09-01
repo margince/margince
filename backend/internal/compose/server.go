@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -171,6 +172,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// hours either side of local midnight.
 		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
 		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool))),
+		// One clock, passed to both halves: the store stamps when each move
+		// happened and the transport works out when an unanswered ask goes
+		// stale, so two clocks here would let an ask be born already due.
+		introductionHandlers: introductions.NewHandlers(
+			introductions.NewStore(InstallationDB(pool), time.Now), time.Now),
 		// The accept-write needs no option to wire: it resolves the reading a
 		// human was already shown (RD-AC-N-5) rather than producing one, so it
 		// works wherever the readings do. An attachment that has never been read

@@ -1560,6 +1560,174 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /people/{id}/intro-requests:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [People]
+      operationId: listIntroRequests
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The asks about this contact that the caller is party to.
+      description: |
+        One rep asking a colleague to open a door is a favour between two people, so an ask is
+        visible to the two of them and to nobody else. A rep who is neither the requester nor
+        the introducer sees an empty list rather than a refusal: whether a colleague was asked
+        about this contact is exactly the fact the row protects.
+
+        Newest first. Settled asks stay in the list — what was asked and answered is the
+        history the next ask is decided against.
+      responses:
+        '200':
+          description: The asks this caller is party to.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntroRequestListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [People]
+      operationId: createIntroRequest
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Ask a colleague to introduce you to this contact.
+      description: |
+        The requester is the authenticated person and is never a field on the body — an ask
+        that could name its own requester would let one rep spend another's goodwill, and the
+        colleague answering would be answering the wrong person.
+
+        The route is named by its parts (`introducer_user_id`, and `through_person_id` for an
+        indirect one) rather than by the `route_id` a graph read hands the client. A write
+        that parsed an opaque display string back apart would be trusting the client to have
+        kept it honest.
+
+        One open ask per route: asking the same colleague about the same contact twice while
+        the first is unanswered is a duplicate, not a reminder, and it answers `409`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntroRequestInput' }
+      responses:
+        '201':
+          description: The ask is recorded and the colleague can see it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntroRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /intro-requests/{id}/decision:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [People]
+      operationId: decideIntroRequest
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Answer an ask made of you.
+      description: |
+        Four answers and no others: `accepted` (I will make the introduction),
+        `name_drop_approved` (you may use my name, but I am not writing), `suggest_other`
+        (ask this colleague instead — who must be named) and `declined`.
+
+        Only the introducer answers. The requester answering on their own behalf would make
+        the colleague's consent a formality, so it is a `403` rather than a validation error.
+
+        `name_drop_approved` is not a weaker `accepted`. It permits a mention and nothing
+        more, and the ask can only ever complete as a name-drop from there — no path in this
+        contract turns lent permission into a handshake that happened.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntroRequestDecisionInput' }
+      responses:
+        '200':
+          description: The answer is recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntroRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /intro-requests/{id}/complete:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [People]
+      operationId: completeIntroRequest
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Record that the introduction happened, or that the name was used.
+      description: |
+        WHICH of the two this records comes from the state the ask is in, never from the
+        caller: an accepted ask completes as an introduction and a name-drop-approved one as
+        a name-drop. There is no field here to say which, because a caller who could choose
+        could report a handshake that only had permission behind it.
+
+        `source_activity_id` is optional evidence — the message the claim rests on. It must be
+        an activity linked to this contact, so a completion cannot cite a conversation that is
+        not about the person being introduced.
+
+        Either party may record it: the colleague who made the introduction knows first, and
+        so does the rep who watched it land.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntroRequestCompleteInput' }
+      responses:
+        '200':
+          description: The outcome is recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntroRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /intro-requests/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [People]
+      operationId: cancelIntroRequest
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Withdraw an ask you made.
+      description: |
+        The requester withdraws their own ask; the introducer declines instead. Withdrawing
+        frees the route, so the same colleague can be asked about the same contact again.
+
+        An ask that was made is a thing that happened, so this closes it rather than erasing
+        it — the row stays, and the history keeps it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntroRequestCancelInput' }
+      responses:
+        '200':
+          description: The ask is withdrawn.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntroRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /people/{id}/profile-fields:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23484,6 +23652,247 @@ components:
           type: [integer, 'null']
           description: Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp.
 
+    IntroRequest:
+      type: object
+      description: |
+        One rep's ask that a colleague open a door, and how it was answered.
+
+        The three pieces of copy are three different messages and never one field. `internal_reason`
+        is why the requester wants the introduction, `value_for_target` is what is in it for the
+        contact, and `forwardable_note` is the only one written to be read BY the contact — the
+        colleague pastes it, so it carries its own authorship on `note_generated_by`.
+
+        `status` is the whole state of the thing, and the timestamps say when each step happened.
+        A name-drop is never an introduction: `name_dropped_at` and `introduced_at` are separate
+        fields for separate events, and no ask ever carries both.
+      required:
+        - id
+        - person_id
+        - requester_user_id
+        - introducer_user_id
+        - route_type
+        - internal_reason
+        - status
+        - name_drop_allowed
+        - fallback_policy
+        - note_generated_by
+        - note_ai_generated
+        - requested_at
+        - due_at
+        - version
+      properties:
+        id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        requester_user_id: { type: string, format: uuid }
+        requester_display_name: { type: string }
+        introducer_user_id: { type: string, format: uuid }
+        introducer_display_name: { type: string }
+        route_type:
+          $ref: '#/components/schemas/PersonGraphRouteType'
+        through_person_id:
+          type: string
+          format: uuid
+          description: Set when the ask goes via someone else at the contact's company.
+        through_display_name: { type: string }
+        internal_reason:
+          type: string
+          description: Why the requester is asking. Read by the colleague, never by the contact.
+        value_for_target:
+          type: string
+          description: What is in it for the contact, in the requester's words.
+        forwardable_note:
+          type: string
+          description: >-
+            The prospect-facing copy the colleague can paste. The only one of the three a
+            person outside the company ever reads.
+        note_generated_by:
+          $ref: '#/components/schemas/IntroNoteOrigin'
+        note_ai_generated:
+          type: boolean
+          description: >-
+            Whether a model wrote any of the note. Kept beside `note_generated_by` because it
+            survives an edit: a human who tidies model copy has still sent model copy.
+        name_drop_allowed:
+          type: boolean
+          description: Whether the requester asked for permission to mention the colleague's name.
+        fallback_policy:
+          $ref: '#/components/schemas/IntroFallbackPolicy'
+        status:
+          $ref: '#/components/schemas/IntroRequestStatus'
+        decision_reason:
+          type: string
+          description: The colleague's words when they declined or suggested somebody else.
+        suggested_user_id:
+          type: string
+          format: uuid
+          description: Set on `suggest_other` — the colleague to ask instead.
+        suggested_display_name: { type: string }
+        source_activity_id:
+          type: string
+          format: uuid
+          description: The message an `introduced`, `name_dropped` or `replied` claim rests on, where there is one.
+        requested_at: { type: string, format: date-time }
+        due_at:
+          type: string
+          format: date-time
+          description: When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on.
+        decided_at: { type: [string, 'null'], format: date-time }
+        introduced_at: { type: [string, 'null'], format: date-time }
+        name_dropped_at: { type: [string, 'null'], format: date-time }
+        replied_at: { type: [string, 'null'], format: date-time }
+        version:
+          type: integer
+          description: >-
+            The row's version, sent back on every write. Two tabs open on one ask, one
+            accepting and one declining, must not both win.
+
+    IntroRequestStatus:
+      type: string
+      description: |
+        Where the ask stands.
+
+        `requested` is waiting on the colleague. The four answers are `accepted`,
+        `name_drop_approved`, `suggest_other` and `declined`. The outcomes are `introduced`
+        (the handshake happened), `name_dropped` (the name was used, which is a different
+        event), `replied` (the contact answered — observed from captured activity, never
+        asserted), `expired` (nobody answered in time) and `cancelled` (the requester
+        withdrew it).
+      enum:
+        - requested
+        - accepted
+        - name_drop_approved
+        - suggest_other
+        - declined
+        - introduced
+        - name_dropped
+        - replied
+        - expired
+        - cancelled
+      # Pinned: `Accepted`, `Declined` and `Expired` are identifiers far too generic
+      # for a package every contract type shares.
+      x-enum-varnames:
+        - IntroRequestStatusRequested
+        - IntroRequestStatusAccepted
+        - IntroRequestStatusNameDropApproved
+        - IntroRequestStatusSuggestOther
+        - IntroRequestStatusDeclined
+        - IntroRequestStatusIntroduced
+        - IntroRequestStatusNameDropped
+        - IntroRequestStatusReplied
+        - IntroRequestStatusExpired
+        - IntroRequestStatusCancelled
+
+    IntroNoteOrigin:
+      type: string
+      description: >-
+        Who wrote the forwardable note. `deterministic` is the product's own template, which
+        is what a client gets when no model is configured — a stated floor rather than a
+        failure.
+      enum: [human, model, deterministic]
+      x-enum-varnames: [IntroNoteOriginHuman, IntroNoteOriginModel, IntroNoteOriginDeterministic]
+
+    IntroFallbackPolicy:
+      type: string
+      description: >-
+        What the requester wants to happen if the colleague says no. Stored rather than held
+        in the drawer, so the answer survives the tab that gave it.
+      enum: [name_drop, next_route, none]
+      x-enum-varnames: [IntroFallbackPolicyNameDrop, IntroFallbackPolicyNextRoute, IntroFallbackPolicyNone]
+
+    IntroRequestListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/IntroRequest' }
+
+    IntroRequestInput:
+      type: object
+      description: >-
+        The ask. There is no requester field: that is the authenticated person, so one rep
+        cannot put an ask in another's name.
+      required: [introducer_user_id, route_type, internal_reason]
+      properties:
+        introducer_user_id:
+          type: string
+          format: uuid
+          description: The colleague being asked.
+        route_type:
+          $ref: '#/components/schemas/PersonGraphRouteType'
+        through_person_id:
+          type: string
+          format: uuid
+          description: >-
+            Required for `through_contact` and refused for `direct` — a route that names an
+            intermediary and one that does not are different routes, and either half alone
+            describes one nobody can act on.
+        internal_reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Why this is worth asking. An ask without one is a favour with no case behind it.
+        value_for_target:
+          type: string
+          maxLength: 2000
+        forwardable_note:
+          type: string
+          maxLength: 4000
+        note_generated_by:
+          $ref: '#/components/schemas/IntroNoteOrigin'
+        note_ai_generated: { type: boolean }
+        name_drop_allowed: { type: boolean }
+        fallback_policy:
+          $ref: '#/components/schemas/IntroFallbackPolicy'
+
+    IntroRequestDecisionInput:
+      type: object
+      required: [decision, version]
+      properties:
+        decision:
+          type: string
+          description: >-
+            The colleague's answer. Only these four: the outcomes are recorded by completing
+            the ask, not by declaring them here.
+          enum: [accepted, name_drop_approved, suggest_other, declined]
+          x-enum-varnames:
+            - IntroDecisionAccepted
+            - IntroDecisionNameDropApproved
+            - IntroDecisionSuggestOther
+            - IntroDecisionDeclined
+        reason:
+          type: string
+          maxLength: 2000
+          description: The colleague's words. Shown to the requester as given.
+        suggested_user_id:
+          type: string
+          format: uuid
+          description: Required for `suggest_other` — suggesting somebody else without naming them is not an answer.
+        version:
+          type: integer
+          description: The version the caller read. A stale one answers `409` rather than overwriting an answer already given.
+
+    IntroRequestCompleteInput:
+      type: object
+      required: [version]
+      properties:
+        source_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            The message this claim rests on. Must be linked to the contact being introduced,
+            so a completion cannot cite a conversation that is not about them.
+        version: { type: integer }
+
+    IntroRequestCancelInput:
+      type: object
+      required: [version]
+      properties:
+        reason:
+          type: string
+          maxLength: 2000
+        version: { type: integer }
+
     PersonMoment:
       type: object
       description: |
@@ -27927,7 +28336,7 @@ components:
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
-         knowledge_corpus, knowledge_document]
+         knowledge_corpus, knowledge_document, introduction]
 
     RbacAction:
       type: string

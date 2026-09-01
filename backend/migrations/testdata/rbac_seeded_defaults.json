@@ -115,6 +115,12 @@
         "read": true,
         "update": true
       },
+      "introduction": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "knowledge_corpus": {
         "create": true,
         "delete": true,
@@ -365,6 +371,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "introduction": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
       },
       "knowledge_corpus": {
         "create": false,
@@ -617,6 +629,12 @@
         "read": true,
         "update": false
       },
+      "introduction": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "knowledge_corpus": {
         "create": false,
         "delete": false,
@@ -868,6 +886,12 @@
         "read": true,
         "update": true
       },
+      "introduction": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "knowledge_corpus": {
         "create": true,
         "delete": true,
@@ -1114,6 +1138,12 @@
         "update": false
       },
       "integrations": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "introduction": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1369,6 +1399,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "introduction": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
       },
       "knowledge_corpus": {
         "create": false,

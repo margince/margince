@@ -5563,6 +5563,114 @@ func (e InstallationSetupStepStep) Valid() bool {
 	}
 }
 
+// Defines values for IntroFallbackPolicy.
+const (
+	IntroFallbackPolicyNameDrop  IntroFallbackPolicy = "name_drop"
+	IntroFallbackPolicyNextRoute IntroFallbackPolicy = "next_route"
+	IntroFallbackPolicyNone      IntroFallbackPolicy = "none"
+)
+
+// Valid indicates whether the value is a known member of the IntroFallbackPolicy enum.
+func (e IntroFallbackPolicy) Valid() bool {
+	switch e {
+	case IntroFallbackPolicyNameDrop:
+		return true
+	case IntroFallbackPolicyNextRoute:
+		return true
+	case IntroFallbackPolicyNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntroNoteOrigin.
+const (
+	IntroNoteOriginDeterministic IntroNoteOrigin = "deterministic"
+	IntroNoteOriginHuman         IntroNoteOrigin = "human"
+	IntroNoteOriginModel         IntroNoteOrigin = "model"
+)
+
+// Valid indicates whether the value is a known member of the IntroNoteOrigin enum.
+func (e IntroNoteOrigin) Valid() bool {
+	switch e {
+	case IntroNoteOriginDeterministic:
+		return true
+	case IntroNoteOriginHuman:
+		return true
+	case IntroNoteOriginModel:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntroRequestDecisionInputDecision.
+const (
+	IntroDecisionAccepted         IntroRequestDecisionInputDecision = "accepted"
+	IntroDecisionDeclined         IntroRequestDecisionInputDecision = "declined"
+	IntroDecisionNameDropApproved IntroRequestDecisionInputDecision = "name_drop_approved"
+	IntroDecisionSuggestOther     IntroRequestDecisionInputDecision = "suggest_other"
+)
+
+// Valid indicates whether the value is a known member of the IntroRequestDecisionInputDecision enum.
+func (e IntroRequestDecisionInputDecision) Valid() bool {
+	switch e {
+	case IntroDecisionAccepted:
+		return true
+	case IntroDecisionDeclined:
+		return true
+	case IntroDecisionNameDropApproved:
+		return true
+	case IntroDecisionSuggestOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntroRequestStatus.
+const (
+	IntroRequestStatusAccepted         IntroRequestStatus = "accepted"
+	IntroRequestStatusCancelled        IntroRequestStatus = "cancelled"
+	IntroRequestStatusDeclined         IntroRequestStatus = "declined"
+	IntroRequestStatusExpired          IntroRequestStatus = "expired"
+	IntroRequestStatusIntroduced       IntroRequestStatus = "introduced"
+	IntroRequestStatusNameDropApproved IntroRequestStatus = "name_drop_approved"
+	IntroRequestStatusNameDropped      IntroRequestStatus = "name_dropped"
+	IntroRequestStatusReplied          IntroRequestStatus = "replied"
+	IntroRequestStatusRequested        IntroRequestStatus = "requested"
+	IntroRequestStatusSuggestOther     IntroRequestStatus = "suggest_other"
+)
+
+// Valid indicates whether the value is a known member of the IntroRequestStatus enum.
+func (e IntroRequestStatus) Valid() bool {
+	switch e {
+	case IntroRequestStatusAccepted:
+		return true
+	case IntroRequestStatusCancelled:
+		return true
+	case IntroRequestStatusDeclined:
+		return true
+	case IntroRequestStatusExpired:
+		return true
+	case IntroRequestStatusIntroduced:
+		return true
+	case IntroRequestStatusNameDropApproved:
+		return true
+	case IntroRequestStatusNameDropped:
+		return true
+	case IntroRequestStatusReplied:
+		return true
+	case IntroRequestStatusRequested:
+		return true
+	case IntroRequestStatusSuggestOther:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InviteUserRequestRole.
 const (
 	InviteUserRequestRoleAdmin      InviteUserRequestRole = "admin"
@@ -9867,16 +9975,16 @@ func (e SignalEvidenceSourceType) Valid() bool {
 
 // Defines values for SignalIntroPathNextMoveKind.
 const (
-	DraftToContact SignalIntroPathNextMoveKind = "draft_to_contact"
-	IntroRequest   SignalIntroPathNextMoveKind = "intro_request"
+	SignalIntroPathNextMoveKindDraftToContact SignalIntroPathNextMoveKind = "draft_to_contact"
+	SignalIntroPathNextMoveKindIntroRequest   SignalIntroPathNextMoveKind = "intro_request"
 )
 
 // Valid indicates whether the value is a known member of the SignalIntroPathNextMoveKind enum.
 func (e SignalIntroPathNextMoveKind) Valid() bool {
 	switch e {
-	case DraftToContact:
+	case SignalIntroPathNextMoveKindDraftToContact:
 		return true
-	case IntroRequest:
+	case SignalIntroPathNextMoveKindIntroRequest:
 		return true
 	default:
 		return false
@@ -20032,6 +20140,161 @@ type IntegrationsSettings struct {
 	// contact's country is not a fact this product holds.
 	AutomaticLookup bool `json:"automatic_lookup"`
 }
+
+// IntroFallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
+type IntroFallbackPolicy string
+
+// IntroNoteOrigin Who wrote the forwardable note. `deterministic` is the product's own template, which is what a client gets when no model is configured — a stated floor rather than a failure.
+type IntroNoteOrigin string
+
+// IntroRequest One rep's ask that a colleague open a door, and how it was answered.
+//
+// The three pieces of copy are three different messages and never one field. `internal_reason`
+// is why the requester wants the introduction, `value_for_target` is what is in it for the
+// contact, and `forwardable_note` is the only one written to be read BY the contact — the
+// colleague pastes it, so it carries its own authorship on `note_generated_by`.
+//
+// `status` is the whole state of the thing, and the timestamps say when each step happened.
+// A name-drop is never an introduction: `name_dropped_at` and `introduced_at` are separate
+// fields for separate events, and no ask ever carries both.
+type IntroRequest struct {
+	DecidedAt *time.Time `json:"decided_at,omitempty"`
+
+	// DecisionReason The colleague's words when they declined or suggested somebody else.
+	DecisionReason *string `json:"decision_reason,omitempty"`
+
+	// DueAt When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on.
+	DueAt time.Time `json:"due_at"`
+
+	// FallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
+	FallbackPolicy IntroFallbackPolicy `json:"fallback_policy"`
+
+	// ForwardableNote The prospect-facing copy the colleague can paste. The only one of the three a person outside the company ever reads.
+	ForwardableNote *string            `json:"forwardable_note,omitempty"`
+	Id              openapi_types.UUID `json:"id"`
+
+	// InternalReason Why the requester is asking. Read by the colleague, never by the contact.
+	InternalReason        string             `json:"internal_reason"`
+	IntroducedAt          *time.Time         `json:"introduced_at,omitempty"`
+	IntroducerDisplayName *string            `json:"introducer_display_name,omitempty"`
+	IntroducerUserId      openapi_types.UUID `json:"introducer_user_id"`
+
+	// NameDropAllowed Whether the requester asked for permission to mention the colleague's name.
+	NameDropAllowed bool       `json:"name_drop_allowed"`
+	NameDroppedAt   *time.Time `json:"name_dropped_at,omitempty"`
+
+	// NoteAiGenerated Whether a model wrote any of the note. Kept beside `note_generated_by` because it survives an edit: a human who tidies model copy has still sent model copy.
+	NoteAiGenerated bool `json:"note_ai_generated"`
+
+	// NoteGeneratedBy Who wrote the forwardable note. `deterministic` is the product's own template, which is what a client gets when no model is configured — a stated floor rather than a failure.
+	NoteGeneratedBy      IntroNoteOrigin    `json:"note_generated_by"`
+	PersonId             openapi_types.UUID `json:"person_id"`
+	RepliedAt            *time.Time         `json:"replied_at,omitempty"`
+	RequestedAt          time.Time          `json:"requested_at"`
+	RequesterDisplayName *string            `json:"requester_display_name,omitempty"`
+	RequesterUserId      openapi_types.UUID `json:"requester_user_id"`
+
+	// RouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
+	RouteType PersonGraphRouteType `json:"route_type"`
+
+	// SourceActivityId The message an `introduced`, `name_dropped` or `replied` claim rests on, where there is one.
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+
+	// Status Where the ask stands.
+	//
+	// `requested` is waiting on the colleague. The four answers are `accepted`,
+	// `name_drop_approved`, `suggest_other` and `declined`. The outcomes are `introduced`
+	// (the handshake happened), `name_dropped` (the name was used, which is a different
+	// event), `replied` (the contact answered — observed from captured activity, never
+	// asserted), `expired` (nobody answered in time) and `cancelled` (the requester
+	// withdrew it).
+	Status               IntroRequestStatus `json:"status"`
+	SuggestedDisplayName *string            `json:"suggested_display_name,omitempty"`
+
+	// SuggestedUserId Set on `suggest_other` — the colleague to ask instead.
+	SuggestedUserId    *openapi_types.UUID `json:"suggested_user_id,omitempty"`
+	ThroughDisplayName *string             `json:"through_display_name,omitempty"`
+
+	// ThroughPersonId Set when the ask goes via someone else at the contact's company.
+	ThroughPersonId *openapi_types.UUID `json:"through_person_id,omitempty"`
+
+	// ValueForTarget What is in it for the contact, in the requester's words.
+	ValueForTarget *string `json:"value_for_target,omitempty"`
+
+	// Version The row's version, sent back on every write. Two tabs open on one ask, one accepting and one declining, must not both win.
+	Version int `json:"version"`
+}
+
+// IntroRequestCancelInput defines model for IntroRequestCancelInput.
+type IntroRequestCancelInput struct {
+	Reason  *string `json:"reason,omitempty"`
+	Version int     `json:"version"`
+}
+
+// IntroRequestCompleteInput defines model for IntroRequestCompleteInput.
+type IntroRequestCompleteInput struct {
+	// SourceActivityId The message this claim rests on. Must be linked to the contact being introduced, so a completion cannot cite a conversation that is not about them.
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+	Version          int                 `json:"version"`
+}
+
+// IntroRequestDecisionInput defines model for IntroRequestDecisionInput.
+type IntroRequestDecisionInput struct {
+	// Decision The colleague's answer. Only these four: the outcomes are recorded by completing the ask, not by declaring them here.
+	Decision IntroRequestDecisionInputDecision `json:"decision"`
+
+	// Reason The colleague's words. Shown to the requester as given.
+	Reason *string `json:"reason,omitempty"`
+
+	// SuggestedUserId Required for `suggest_other` — suggesting somebody else without naming them is not an answer.
+	SuggestedUserId *openapi_types.UUID `json:"suggested_user_id,omitempty"`
+
+	// Version The version the caller read. A stale one answers `409` rather than overwriting an answer already given.
+	Version int `json:"version"`
+}
+
+// IntroRequestDecisionInputDecision The colleague's answer. Only these four: the outcomes are recorded by completing the ask, not by declaring them here.
+type IntroRequestDecisionInputDecision string
+
+// IntroRequestInput The ask. There is no requester field: that is the authenticated person, so one rep cannot put an ask in another's name.
+type IntroRequestInput struct {
+	// FallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
+	FallbackPolicy  *IntroFallbackPolicy `json:"fallback_policy,omitempty"`
+	ForwardableNote *string              `json:"forwardable_note,omitempty"`
+
+	// InternalReason Why this is worth asking. An ask without one is a favour with no case behind it.
+	InternalReason string `json:"internal_reason"`
+
+	// IntroducerUserId The colleague being asked.
+	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
+	NameDropAllowed  *bool              `json:"name_drop_allowed,omitempty"`
+	NoteAiGenerated  *bool              `json:"note_ai_generated,omitempty"`
+
+	// NoteGeneratedBy Who wrote the forwardable note. `deterministic` is the product's own template, which is what a client gets when no model is configured — a stated floor rather than a failure.
+	NoteGeneratedBy *IntroNoteOrigin `json:"note_generated_by,omitempty"`
+
+	// RouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
+	RouteType PersonGraphRouteType `json:"route_type"`
+
+	// ThroughPersonId Required for `through_contact` and refused for `direct` — a route that names an intermediary and one that does not are different routes, and either half alone describes one nobody can act on.
+	ThroughPersonId *openapi_types.UUID `json:"through_person_id,omitempty"`
+	ValueForTarget  *string             `json:"value_for_target,omitempty"`
+}
+
+// IntroRequestListResponse defines model for IntroRequestListResponse.
+type IntroRequestListResponse struct {
+	Data []IntroRequest `json:"data"`
+}
+
+// IntroRequestStatus Where the ask stands.
+//
+// `requested` is waiting on the colleague. The four answers are `accepted`,
+// `name_drop_approved`, `suggest_other` and `declined`. The outcomes are `introduced`
+// (the handshake happened), `name_dropped` (the name was used, which is a different
+// event), `replied` (the contact answered — observed from captured activity, never
+// asserted), `expired` (nobody answered in time) and `cancelled` (the requester
+// withdrew it).
+type IntroRequestStatus string
 
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.
 type InviteDealRoomParticipantRequest struct {
@@ -33430,6 +33693,15 @@ type UpdateInstallationSettingsJSONRequestBody = UpdateInstallationSettingsReque
 // UpdateIntegrationsSettingsJSONRequestBody defines body for UpdateIntegrationsSettings for application/json ContentType.
 type UpdateIntegrationsSettingsJSONRequestBody = UpdateIntegrationsSettingsRequest
 
+// CancelIntroRequestJSONRequestBody defines body for CancelIntroRequest for application/json ContentType.
+type CancelIntroRequestJSONRequestBody = IntroRequestCancelInput
+
+// CompleteIntroRequestJSONRequestBody defines body for CompleteIntroRequest for application/json ContentType.
+type CompleteIntroRequestJSONRequestBody = IntroRequestCompleteInput
+
+// DecideIntroRequestJSONRequestBody defines body for DecideIntroRequest for application/json ContentType.
+type DecideIntroRequestJSONRequestBody = IntroRequestDecisionInput
+
 // CreateCorpusJSONRequestBody defines body for CreateCorpus for application/json ContentType.
 type CreateCorpusJSONRequestBody CreateCorpusJSONBody
 
@@ -33600,6 +33872,9 @@ type DraftPersonEmailJSONRequestBody DraftPersonEmailJSONBody
 
 // CreatePersonEnrichmentRunJSONRequestBody defines body for CreatePersonEnrichmentRun for application/json ContentType.
 type CreatePersonEnrichmentRunJSONRequestBody = CreatePersonEnrichmentRunRequest
+
+// CreateIntroRequestJSONRequestBody defines body for CreateIntroRequest for application/json ContentType.
+type CreateIntroRequestJSONRequestBody = IntroRequestInput
 
 // MergePersonJSONRequestBody defines body for MergePerson for application/json ContentType.
 type MergePersonJSONRequestBody MergePersonJSONBody
@@ -42123,6 +42398,15 @@ type ServerInterface interface {
 	// Update the installation's provider-lookup posture (admin/ops).
 	// (PATCH /integrations/settings)
 	UpdateIntegrationsSettings(w http.ResponseWriter, r *http.Request)
+	// Withdraw an ask you made.
+	// (POST /intro-requests/{id}/cancel)
+	CancelIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that the introduction happened, or that the name was used.
+	// (POST /intro-requests/{id}/complete)
+	CompleteIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Answer an ask made of you.
+	// (POST /intro-requests/{id}/decision)
+	DecideIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
 	// The document corpora this workspace has defined.
 	// (GET /knowledge/corpora)
 	ListCorpora(w http.ResponseWriter, r *http.Request)
@@ -42591,6 +42875,12 @@ type ServerInterface interface {
 	// Who around this contact could open a door, and through whom.
 	// (GET /people/{id}/graph)
 	GetPersonGraph(w http.ResponseWriter, r *http.Request, id Id)
+	// The asks about this contact that the caller is party to.
+	// (GET /people/{id}/intro-requests)
+	ListIntroRequests(w http.ResponseWriter, r *http.Request, id Id)
+	// Ask a colleague to introduce you to this contact.
+	// (POST /people/{id}/intro-requests)
+	CreateIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
 	// Merge this person into a target (non-lossy).
 	// (POST /people/{id}/merge)
 	MergePerson(w http.ResponseWriter, r *http.Request, id Id, params MergePersonParams)
@@ -44394,6 +44684,24 @@ func (_ Unimplemented) UpdateIntegrationsSettings(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Withdraw an ask you made.
+// (POST /intro-requests/{id}/cancel)
+func (_ Unimplemented) CancelIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that the introduction happened, or that the name was used.
+// (POST /intro-requests/{id}/complete)
+func (_ Unimplemented) CompleteIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer an ask made of you.
+// (POST /intro-requests/{id}/decision)
+func (_ Unimplemented) DecideIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The document corpora this workspace has defined.
 // (GET /knowledge/corpora)
 func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request) {
@@ -45327,6 +45635,18 @@ func (_ Unimplemented) GetPersonEnrichmentRun(w http.ResponseWriter, r *http.Req
 // Who around this contact could open a door, and through whom.
 // (GET /people/{id}/graph)
 func (_ Unimplemented) GetPersonGraph(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The asks about this contact that the caller is party to.
+// (GET /people/{id}/intro-requests)
+func (_ Unimplemented) ListIntroRequests(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask a colleague to introduce you to this contact.
+// (POST /people/{id}/intro-requests)
+func (_ Unimplemented) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -55243,6 +55563,102 @@ func (siw *ServerInterfaceWrapper) UpdateIntegrationsSettings(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// CancelIntroRequest operation middleware
+func (siw *ServerInterfaceWrapper) CancelIntroRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteIntroRequest operation middleware
+func (siw *ServerInterfaceWrapper) CompleteIntroRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DecideIntroRequest operation middleware
+func (siw *ServerInterfaceWrapper) DecideIntroRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DecideIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListCorpora operation middleware
 func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Request) {
 
@@ -62329,6 +62745,70 @@ func (siw *ServerInterfaceWrapper) GetPersonGraph(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetPersonGraph(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIntroRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListIntroRequests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIntroRequests(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateIntroRequest operation middleware
+func (siw *ServerInterfaceWrapper) CreateIntroRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateIntroRequest(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -70465,6 +70945,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/integrations/settings", wrapper.UpdateIntegrationsSettings)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/intro-requests/{id}/cancel", wrapper.CancelIntroRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/intro-requests/{id}/complete", wrapper.CompleteIntroRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/intro-requests/{id}/decision", wrapper.DecideIntroRequest)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/corpora", wrapper.ListCorpora)
 	})
 	r.Group(func(r chi.Router) {
@@ -70931,6 +71420,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people/{id}/graph", wrapper.GetPersonGraph)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/people/{id}/intro-requests", wrapper.ListIntroRequests)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/intro-requests", wrapper.CreateIntroRequest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/merge", wrapper.MergePerson)

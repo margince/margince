@@ -5,6 +5,8 @@ package introductions
 
 import (
 	"errors"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -154,6 +156,40 @@ func TestOnlyTheFourAnswersAreDecisions(t *testing.T) {
 	for _, bad := range []string{"introduced", "replied", "expired", "cancelled", "", "ACCEPTED"} {
 		if _, valid := Decision(bad); valid {
 			t.Errorf("%q was accepted as a decision", bad)
+		}
+	}
+}
+
+// The set Open() describes is spelled twice: here, and as the WHERE clause of
+// the partial unique index that is the duplicate guard. A status added to one
+// and forgotten in the other is how an ask becomes undetectably duplicable, or
+// unexpirable — so the migration's own text is the assertion.
+func TestOpenMatchesTheDuplicateGuardIndex(t *testing.T) {
+	sql, err := os.ReadFile(
+		"../../../migrations/core/1788220000_an_introduction_is_asked_and_answered.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	guard := string(sql)
+	start := strings.Index(guard, "CREATE UNIQUE INDEX intro_request_open_route")
+	if start < 0 {
+		t.Fatal("the duplicate-guard index is gone from the migration")
+	}
+	clause := guard[start:]
+	if end := strings.Index(clause, ";"); end > 0 {
+		clause = clause[:end]
+	}
+
+	every := []Status{
+		StatusRequested, StatusAccepted, StatusNameDropApproved, StatusSuggestOther,
+		StatusDeclined, StatusIntroduced, StatusNameDropped, StatusReplied,
+		StatusExpired, StatusCancelled,
+	}
+	for _, s := range every {
+		named := strings.Contains(clause, "'"+string(s)+"'")
+		if named != Open(s) {
+			t.Errorf("%q: Open()=%v but the guard index names it=%v — the two have drifted",
+				s, Open(s), named)
 		}
 	}
 }

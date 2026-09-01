@@ -22,6 +22,8 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf } from "./common";
+import { IntroAsksCard } from "./introasks";
+import { IntroDrawer } from "./introdrawer";
 import { usePersonGraph } from "./persongraph";
 import { RoutesCard } from "./personroutes";
 import { changeSentence } from "./relationshipchange";
@@ -37,6 +39,7 @@ type RelationshipMoments = Pick<
 type Graph = components["schemas"]["PersonGraph"];
 type GraphNode = components["schemas"]["PersonGraphNode"];
 type GraphEdge = components["schemas"]["PersonGraphEdge"];
+type RouteCandidate = components["schemas"]["PersonGraphRouteCandidate"];
 
 // The ring's geometry, in the diagram's own coordinates. A square viewBox and
 // a fixed radius: the picture is deterministic, so the same contact draws the
@@ -121,6 +124,10 @@ export function PersonNetworkTab({
   const t = useT();
   const graph = usePersonGraph(personId);
   const [selected, setSelected] = useState<string | undefined>();
+  // The drawer lives here rather than on the page: the route it composes an ask
+  // against comes from this tab's own read, and lifting it would leave the
+  // route list and the drawer holding two ideas of which route is selected.
+  const [asking, setAsking] = useState<RouteCandidate | undefined>();
 
   if (graph.isPending) {
     return (
@@ -166,7 +173,25 @@ export function PersonNetworkTab({
 
   return (
     <div className="pn-stack">
-      <RoutesCard graph={data} />
+      <RoutesCard graph={data} onAsk={setAsking} />
+
+      {/* Above the ring and below the routes: an ask already in flight is the
+          answer to "who can reach them" for as long as it is open, so a reader
+          meets it before the alternatives it makes moot. */}
+      <IntroAsksCard personId={personId} personName={anchor?.label ?? ""} />
+
+      {/* Mounted only while a route is selected, so the drawer's fields start
+          empty for each ask rather than carrying the last one's words into a
+          different colleague's inbox. */}
+      {asking ? (
+        <IntroDrawer
+          personId={personId}
+          personName={anchor?.label ?? ""}
+          route={asking}
+          open
+          onClose={() => setAsking(undefined)}
+        />
+      ) : null}
 
       <Card
         title={t("person.network.ringTitle")}

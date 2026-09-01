@@ -112,6 +112,14 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// A won deal earned its partner a commission. Past tense like the rest;
 		// `decided` above already covers the approve/pay/void half.
 		"accrued": true,
+		// An introduction ran its course. `completed` rather than `introduced`
+		// because the two outcomes it covers are different events — a handshake
+		// and a lent name — and naming the type for one of them would leave the
+		// other with no way to be reported.
+		"completed": true,
+		// The contact answered. It is a verb of its own because nothing a person
+		// presses produces it: the fact is observed from captured activity.
+		"replied": true,
 	}
 
 	for _, typ := range Types() {

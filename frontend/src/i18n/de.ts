@@ -6467,6 +6467,65 @@ export const de = {
   "person.intro.whenYesterday": "letzter Kontakt gestern",
   "person.intro.whenDays": "letzter Kontakt vor {days} Tagen",
   "person.intro.whenNever": "kein Kontakt in letzter Zeit",
+  "person.intro.askTitle": "Um eine Vorstellung bei {name} bitten",
+  "person.intro.cancel": "Abbrechen",
+  "person.intro.askAction": "Vorstellung erbitten",
+  "person.intro.askFailed": "Die Anfrage konnte nicht gespeichert werden.",
+  "person.intro.reasonLabel": "Warum Sie fragen",
+  "person.intro.reasonHint":
+    "Das liest Ihre Kollegin, nicht der Kontakt. Sagen Sie, warum sich die Vorstellung lohnt.",
+  "person.intro.valueLabel": "Was der Kontakt davon hat",
+  "person.intro.valueHint":
+    "Der Grund, warum der Kontakt dieses Gespräch wollen würde.",
+  "person.intro.noteLabel": "Notiz zum Weiterleiten",
+  "person.intro.noteHint":
+    "Nur dieser Teil erreicht den Kontakt. Schreiben Sie ihn so, dass er unverändert weitergegeben werden kann.",
+  "person.intro.nameDropAsk": "Um Erlaubnis bitten, den Namen zu nennen",
+  "person.intro.fallbackLegend": "Falls abgelehnt wird",
+  "person.intro.fallbackNone": "Nichts weiter",
+  "person.intro.fallbackNoneHelp":
+    "Die Anfrage wird geschlossen und Sie entscheiden selbst, wie es weitergeht.",
+  "person.intro.fallbackNameDrop": "Stattdessen um Namensnennung bitten",
+  "person.intro.fallbackNameDropHelp":
+    "Sie würden sich selbst melden und die Kollegin erwähnen.",
+  "person.intro.fallbackNextRoute": "Den nächsten Weg versuchen",
+  "person.intro.fallbackNextRouteHelp":
+    "Weiter zur nächsten Kollegin auf der Liste.",
+  "person.intro.decideTitle": "Eine Vorstellung bei {name}",
+  "person.intro.decideLegend": "Ihre Antwort",
+  "person.intro.decideAction": "Antwort speichern",
+  "person.intro.decideFailed": "Die Antwort konnte nicht gespeichert werden.",
+  "person.intro.decideReasonLabel": "Möchten Sie etwas ergänzen",
+  "person.intro.decideReasonHint":
+    "Ihre Kollegin sieht das genau so, wie Sie es schreiben.",
+  "person.intro.noteByModel": "Von Margince verfasst",
+  "person.intro.nameDropRequested":
+    "Es wurde außerdem gefragt, ob Ihr Name genannt werden darf.",
+  "person.intro.answerAccept": "Ich stelle Sie vor",
+  "person.intro.answerAcceptHelp": "Sie übernehmen die Vorstellung selbst.",
+  "person.intro.answerNameDrop": "Sie dürfen meinen Namen nennen",
+  "person.intro.answerNameDropHelp":
+    "Die Kollegin meldet sich selbst und erwähnt Sie. Das ist keine Vorstellung und wird auch nirgends als eine erfasst.",
+  "person.intro.answerSuggest": "Jemand anderen fragen",
+  "person.intro.answerSuggestHelp":
+    "Nennen Sie die Person, die besser helfen kann.",
+  "person.intro.answerDecline": "Diesmal nicht",
+  "person.intro.answerDeclineHelp":
+    "Die Anfrage wird geschlossen. Sagen Sie gern, warum.",
+  "person.intro.asksTitle": "Vorstellungen",
+  "person.intro.asksSub":
+    "Die Anfragen, an denen Sie beteiligt sind, neueste zuerst.",
+  "person.intro.answerAction": "Antworten",
+  "person.intro.stateRequested": "Wartet auf Ihre Kollegin",
+  "person.intro.stateAccepted": "Sie werden vorgestellt",
+  "person.intro.stateNameDropApproved": "Sie dürfen den Namen nennen",
+  "person.intro.stateSuggestOther": "Es wurde jemand anderes vorgeschlagen",
+  "person.intro.stateDeclined": "Abgelehnt",
+  "person.intro.stateIntroduced": "Vorgestellt",
+  "person.intro.stateNameDropped": "Name genannt",
+  "person.intro.stateReplied": "Es kam eine Antwort",
+  "person.intro.stateExpired": "Keine Antwort in der Frist",
+  "person.intro.stateCancelled": "Zurückgezogen",
   "person.intro.alreadyRequested": "Bereits angefragt",
   "person.intro.declined": "Früher abgelehnt",
   "person.intro.unavailable": "Nicht verfügbar",

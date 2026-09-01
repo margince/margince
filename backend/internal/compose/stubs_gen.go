@@ -911,6 +911,18 @@ func (stubs) UpdateIntegrationsSettings(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "UpdateIntegrationsSettings")
 }
 
+func (stubs) CancelIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "CancelIntroRequest")
+}
+
+func (stubs) CompleteIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "CompleteIntroRequest")
+}
+
+func (stubs) DecideIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DecideIntroRequest")
+}
+
 func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListCorpora")
 }
@@ -1533,6 +1545,14 @@ func (stubs) GetPersonEnrichmentRun(w nethttp.ResponseWriter, r *nethttp.Request
 
 func (stubs) GetPersonGraph(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetPersonGraph")
+}
+
+func (stubs) ListIntroRequests(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListIntroRequests")
+}
+
+func (stubs) CreateIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "CreateIntroRequest")
 }
 
 func (stubs) MergePerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergePersonParams) {

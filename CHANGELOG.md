@@ -248,6 +248,24 @@ numbers appear here when releases start.
 
 ### Added
 
+- **An introduction is something the product records, not something a rep
+  remembers.** The Network tab already answered "who here can reach this
+  contact"; asking them was a conversation that happened elsewhere and came
+  back as a memory. `intro_request` records the ask, the colleague's bounded
+  answer and what came of it — five endpoints, a requester's composer, and a
+  decision surface of the colleague's own.
+
+  The lifecycle is built so it cannot overstate an outcome. Approving a
+  name-drop permits a mention and nothing more, and no path turns it into a
+  handshake: the ask completes as `name_dropped`, and WHICH outcome that is
+  gets read from the state the ask was in rather than from anything the caller
+  sends. The domain row, the event and the audit after-image all say the same
+  word, because a dispute about whether an introduction happened is settled
+  from the trail.
+
+  `replied` is unreachable by any person. The contact answering is observed
+  from captured activity, so no button produces it.
+
 - **A standing overnight grant says when the agent has outgrown it.** A grant
   mints the scopes the agent needed at the moment the rep answered; when the
   agent later gains a tool needing a wider scope, every already-minted passport

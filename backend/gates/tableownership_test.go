@@ -320,6 +320,7 @@ var tableOwners = map[string]string{
 	// automation (the deterministic trigger-and-action catalog)
 	"workflow_run":            "internal/modules/automation",
 	"notice":                  "internal/modules/notices",
+	"intro_request":           "internal/modules/introductions",
 	"automation_effect_claim": "internal/modules/automation",
 	"automation":              "internal/modules/automation",
 	// signals (the warm-room signal spine + its append-only resolution log)

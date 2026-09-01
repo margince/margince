@@ -69,6 +69,66 @@ func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventIntroRequestClosedReason.
+const (
+	IntroRequestClosedCancelled PublicEventIntroRequestClosedReason = "cancelled"
+	IntroRequestClosedExpired   PublicEventIntroRequestClosedReason = "expired"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventIntroRequestClosedReason enum.
+func (e PublicEventIntroRequestClosedReason) Valid() bool {
+	switch e {
+	case IntroRequestClosedCancelled:
+		return true
+	case IntroRequestClosedExpired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventIntroRequestCompletedOutcome.
+const (
+	IntroRequestCompletedIntroduced  PublicEventIntroRequestCompletedOutcome = "introduced"
+	IntroRequestCompletedNameDropped PublicEventIntroRequestCompletedOutcome = "name_dropped"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventIntroRequestCompletedOutcome enum.
+func (e PublicEventIntroRequestCompletedOutcome) Valid() bool {
+	switch e {
+	case IntroRequestCompletedIntroduced:
+		return true
+	case IntroRequestCompletedNameDropped:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventIntroRequestDecidedDecision.
+const (
+	IntroRequestDecidedAccepted         PublicEventIntroRequestDecidedDecision = "accepted"
+	IntroRequestDecidedDeclined         PublicEventIntroRequestDecidedDecision = "declined"
+	IntroRequestDecidedNameDropApproved PublicEventIntroRequestDecidedDecision = "name_drop_approved"
+	IntroRequestDecidedSuggestOther     PublicEventIntroRequestDecidedDecision = "suggest_other"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventIntroRequestDecidedDecision enum.
+func (e PublicEventIntroRequestDecidedDecision) Valid() bool {
+	switch e {
+	case IntroRequestDecidedAccepted:
+		return true
+	case IntroRequestDecidedDeclined:
+		return true
+	case IntroRequestDecidedNameDropApproved:
+		return true
+	case IntroRequestDecidedSuggestOther:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventRetentionRestrictedAction.
 const (
 	Pin      PublicEventRetentionRestrictedAction = "pin"
@@ -163,6 +223,11 @@ const (
 	EngagementReply                       SubscribableEventType = "engagement.reply"
 	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
 	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
+	IntroRequestClosed                    SubscribableEventType = "intro_request.closed"
+	IntroRequestCompleted                 SubscribableEventType = "intro_request.completed"
+	IntroRequestCreated                   SubscribableEventType = "intro_request.created"
+	IntroRequestDecided                   SubscribableEventType = "intro_request.decided"
+	IntroRequestReplied                   SubscribableEventType = "intro_request.replied"
 	LeadCreated                           SubscribableEventType = "lead.created"
 	LeadDemoted                           SubscribableEventType = "lead.demoted"
 	LeadDisqualified                      SubscribableEventType = "lead.disqualified"
@@ -310,6 +375,16 @@ func (e SubscribableEventType) Valid() bool {
 	case IncumbentConnected:
 		return true
 	case IncumbentDisconnected:
+		return true
+	case IntroRequestClosed:
+		return true
+	case IntroRequestCompleted:
+		return true
+	case IntroRequestCreated:
+		return true
+	case IntroRequestDecided:
+		return true
+	case IntroRequestReplied:
 		return true
 	case LeadCreated:
 		return true
@@ -999,6 +1074,52 @@ type PublicEventIncumbentDisconnected struct {
 
 	// Status The connection's status after this change (revoked).
 	Status string `json:"status"`
+}
+
+// PublicEventIntroRequestClosed Payload for intro_request.closed — the ask ended without a handshake: withdrawn by the requester, or run out of time. `reason` says which, because a rep withdrawing and a queue timing out call for different follow-ups.
+type PublicEventIntroRequestClosed struct {
+	IntroRequestId openapi_types.UUID                  `json:"intro_request_id"`
+	PersonId       openapi_types.UUID                  `json:"person_id"`
+	Reason         PublicEventIntroRequestClosedReason `json:"reason"`
+}
+
+// PublicEventIntroRequestClosedReason defines model for PublicEventIntroRequestClosed.Reason.
+type PublicEventIntroRequestClosedReason string
+
+// PublicEventIntroRequestCompleted Payload for intro_request.completed — the handshake happened, or the rep used the name they were lent. `outcome` keeps the two apart: an introduction and a name-drop are different events, and a consumer that collapsed them would report doors opened that nobody opened.
+type PublicEventIntroRequestCompleted struct {
+	IntroRequestId openapi_types.UUID                      `json:"intro_request_id"`
+	Outcome        PublicEventIntroRequestCompletedOutcome `json:"outcome"`
+	PersonId       openapi_types.UUID                      `json:"person_id"`
+}
+
+// PublicEventIntroRequestCompletedOutcome defines model for PublicEventIntroRequestCompleted.Outcome.
+type PublicEventIntroRequestCompletedOutcome string
+
+// PublicEventIntroRequestCreated Payload for intro_request.created — a rep asked a colleague to open a door to this contact (introductions/store.go's Create). The entity is the CONTACT, because that is what the ask is about and what a consumer ranking a person's open work reads it against. The prose stays on the row: the internal reason and the forwardable note have different audiences, and neither belongs on a bus.
+type PublicEventIntroRequestCreated struct {
+	IntroRequestId   openapi_types.UUID `json:"intro_request_id"`
+	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
+	PersonId         openapi_types.UUID `json:"person_id"`
+	RequesterUserId  openapi_types.UUID `json:"requester_user_id"`
+}
+
+// PublicEventIntroRequestDecided Payload for intro_request.decided — the colleague gave one of the four bounded answers. `decision` carries which, because a consumer that had to re-read the row to tell an acceptance from a refusal would be deciding on state that may already have moved.
+type PublicEventIntroRequestDecided struct {
+	Decision         PublicEventIntroRequestDecidedDecision `json:"decision"`
+	IntroRequestId   openapi_types.UUID                     `json:"intro_request_id"`
+	IntroducerUserId openapi_types.UUID                     `json:"introducer_user_id"`
+	PersonId         openapi_types.UUID                     `json:"person_id"`
+}
+
+// PublicEventIntroRequestDecidedDecision defines model for PublicEventIntroRequestDecided.Decision.
+type PublicEventIntroRequestDecidedDecision string
+
+// PublicEventIntroRequestReplied Payload for intro_request.replied — the contact answered, observed from captured activity rather than asserted by a person. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
+type PublicEventIntroRequestReplied struct {
+	IntroRequestId   openapi_types.UUID  `json:"intro_request_id"`
+	PersonId         openapi_types.UUID  `json:"person_id"`
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 }
 
 // PublicEventLeadCreated Payload for lead.created — a lead was created. Two emit sites: a direct create (people/lead.go) that sets no fields, and the capture auto-create engine (capture/sink.go) that names its originating source system; source_system is therefore optional.
@@ -1951,6 +2072,26 @@ func (PublicEventIncumbentDisconnected) EventType() string { return "incumbent.d
 
 func (PublicEventIncumbentDisconnected) EntityType() string { return "incumbent_connection" }
 
+func (PublicEventIntroRequestClosed) EventType() string { return "intro_request.closed" }
+
+func (PublicEventIntroRequestClosed) EntityType() string { return "person" }
+
+func (PublicEventIntroRequestCompleted) EventType() string { return "intro_request.completed" }
+
+func (PublicEventIntroRequestCompleted) EntityType() string { return "person" }
+
+func (PublicEventIntroRequestCreated) EventType() string { return "intro_request.created" }
+
+func (PublicEventIntroRequestCreated) EntityType() string { return "person" }
+
+func (PublicEventIntroRequestDecided) EventType() string { return "intro_request.decided" }
+
+func (PublicEventIntroRequestDecided) EntityType() string { return "person" }
+
+func (PublicEventIntroRequestReplied) EventType() string { return "intro_request.replied" }
+
+func (PublicEventIntroRequestReplied) EntityType() string { return "person" }
+
 func (PublicEventLeadCreated) EventType() string { return "lead.created" }
 
 func (PublicEventLeadCreated) EntityType() string { return "lead" }
@@ -2242,6 +2383,11 @@ var PublicEventVersions = map[string]int{
 	"engagement.reply":                          1,
 	"incumbent.connected":                       1,
 	"incumbent.disconnected":                    1,
+	"intro_request.closed":                      1,
+	"intro_request.completed":                   1,
+	"intro_request.created":                     1,
+	"intro_request.decided":                     1,
+	"intro_request.replied":                     1,
 	"lead.created":                              1,
 	"lead.demoted":                              1,
 	"lead.disqualified":                         1,
