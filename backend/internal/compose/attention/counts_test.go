@@ -167,7 +167,88 @@ func TestCountsAreOrderedTheSameWayTwice(t *testing.T) {
 // requires categoryOfSource to have said the same thing. A source that changes
 // lane fails here rather than reporting its truncation against the wrong cut.
 func TestTheSourceMapAgreesWithTheClassifiers(t *testing.T) {
-	lanes := []struct {
+	for _, l := range everyLane() {
+		rows := classifyDay(l.day, rankInstant)
+		if len(rows) != 1 {
+			t.Fatalf("%s: the lane classified %d rows, and the fixture holds one", l.source, len(rows))
+		}
+		classified := rows[0].item.Category
+		mapped := categoryOfSource(crmcontracts.WorklistItemSource(l.source))
+		if classified != mapped {
+			t.Fatalf("%s: the classifier files it under %q and the map says %q — a truncation of this source would be reported against the wrong cut",
+				l.source, classified, mapped)
+		}
+	}
+}
+
+// THE HIDDEN-BACKLOG GUARDRAIL: no category holds work while reporting none.
+//
+// The concept names this as a metric whose target is zero incidents, and a
+// metric with a target of zero is a test rather than a number somebody reads
+// once a quarter. It is also the failure this whole accounting exists to
+// prevent: a rep told "no decisions" over a pile of them stops believing the
+// page, and nothing on the screen says the figure was short.
+//
+// Over the same lane corpus the agreement test uses, so a source added
+// tomorrow is covered by being added THERE — one fixture list, two obligations.
+func TestNoCategoryHoldsWorkWhileReportingNone(t *testing.T) {
+	for _, l := range everyLane() {
+		rows := classifyDay(l.day, rankInstant)
+		counts := countsOf(rows, rows, map[crmcontracts.WorklistItemSource]bool{})
+
+		category := rows[0].item.Category
+		for _, count := range counts {
+			if crmcontracts.WorklistItemCategory(count.Category) != category {
+				continue
+			}
+			if count.Considered == 0 {
+				t.Fatalf("%s: category %q holds work and reports none — the page says it is empty",
+					l.source, category)
+			}
+			goto next
+		}
+		t.Fatalf("%s: category %q holds work and is absent from counts entirely",
+			l.source, category)
+	next:
+	}
+}
+
+// A CATEGORY CUT FROM THE PAGE STILL REPORTS WHAT IT HELD.
+//
+// The cut is the ordinary case — twenty-five rows of a larger day — and a
+// category that lost every row to it is exactly when a reader most needs to be
+// told the work is there. Reporting nothing then is the hidden backlog by
+// another route: not a wrong number, an absent one.
+func TestACategoryCutFromThePageStillReportsWhatItHeld(t *testing.T) {
+	for _, l := range everyLane() {
+		rows := classifyDay(l.day, rankInstant)
+		// Considered everything, shown nothing.
+		counts := countsOf(rows, nil, map[crmcontracts.WorklistItemSource]bool{})
+
+		if len(counts) == 0 {
+			t.Fatalf("%s: a page that drew nothing reported no categories at all", l.source)
+		}
+		for _, count := range counts {
+			if count.Considered == 0 {
+				t.Fatalf("%s: category %q reports nothing considered over rows it held",
+					l.source, count.Category)
+			}
+			if count.Shown != 0 {
+				t.Fatalf("%s: category %q claims %d rows on a page that drew none",
+					l.source, count.Category, count.Shown)
+			}
+		}
+	}
+}
+
+// everyLane is one day per source the queue can produce, each holding exactly
+// one row. Shared by every test that needs to reach all of them, so a new
+// source is added once and inherits every obligation.
+func everyLane() []struct {
+	source crmcontracts.AttentionItemSource
+	day    crmcontracts.Attention
+} {
+	return []struct {
 		source crmcontracts.AttentionItemSource
 		day    crmcontracts.Attention
 	}{
@@ -198,19 +279,6 @@ func TestTheSourceMapAgreesWithTheClassifiers(t *testing.T) {
 		{"automation_run", crmcontracts.Attention{AsOf: rankInstant, AutomationHealth: lane(
 			item("x", "automation_run"),
 		)}},
-	}
-
-	for _, l := range lanes {
-		rows := classifyDay(l.day, rankInstant)
-		if len(rows) != 1 {
-			t.Fatalf("%s: the lane classified %d rows, and the fixture holds one", l.source, len(rows))
-		}
-		classified := rows[0].item.Category
-		mapped := categoryOfSource(crmcontracts.WorklistItemSource(l.source))
-		if classified != mapped {
-			t.Fatalf("%s: the classifier files it under %q and the map says %q — a truncation of this source would be reported against the wrong cut",
-				l.source, classified, mapped)
-		}
 	}
 }
 
