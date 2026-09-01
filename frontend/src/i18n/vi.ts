@@ -7285,7 +7285,7 @@ export const vi = {
   "worklist.partial": "{sources}, nên đây chưa phải cả ngày.",
   "worklist.overdue": "Quá hạn",
   "worklist.pane.title": "Về bản ghi này",
-  "worklist.pane.open": "Xem việc này về ai",
+  "worklist.pane.openRow": "Xem mục {position}, {title}, về ai",
   "worklist.pane.loading": "Đang đọc bản ghi…",
   "worklist.pane.nothing": "Chưa ghi nhận gì.",
   "worklist.pane.lastInbound": "Họ viết lần cuối",

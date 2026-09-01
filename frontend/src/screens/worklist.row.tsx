@@ -87,7 +87,14 @@ export function WorklistRow({
         type="button"
         className="worklist-rank-select"
         aria-pressed={selected}
-        aria-label={t("worklist.pane.open")}
+        // Names the ROW, not the verb. Every rank button carrying the same
+        // label made them indistinguishable to anybody navigating by name, and
+        // overrode the visible digit — which is the one thing that told them
+        // apart on screen.
+        aria-label={t("worklist.pane.openRow", {
+          position: formatNumber(position, locale),
+          title,
+        })}
         onClick={onSelect}
       >
         {/* The rank is the page's central claim, so it is readable rather than

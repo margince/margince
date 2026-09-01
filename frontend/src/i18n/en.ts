@@ -7431,7 +7431,7 @@ export const en = {
   "worklist.partial": "{sources}, so this is not the whole day.",
   "worklist.overdue": "Overdue",
   "worklist.pane.title": "About this record",
-  "worklist.pane.open": "Show what this is about",
+  "worklist.pane.openRow": "Show what {position}, {title}, is about",
   "worklist.pane.loading": "Reading the record…",
   "worklist.pane.nothing": "Nothing recorded yet.",
   "worklist.pane.lastInbound": "They last wrote",

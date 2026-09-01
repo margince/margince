@@ -7361,7 +7361,7 @@ export const de = {
   "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
   "worklist.overdue": "Überfällig",
   "worklist.pane.title": "Zu diesem Datensatz",
-  "worklist.pane.open": "Zeigen, worum es geht",
+  "worklist.pane.openRow": "Zeigen, worum es bei {position}, {title}, geht",
   "worklist.pane.loading": "Datensatz wird gelesen…",
   "worklist.pane.nothing": "Noch nichts erfasst.",
   "worklist.pane.lastInbound": "Zuletzt geschrieben",

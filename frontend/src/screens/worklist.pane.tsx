@@ -37,6 +37,16 @@ export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
   return <PersonContext id={subject.id} label={subject.label} />;
 }
 
+// Whether this row HAS a pane, asked before one is rendered.
+//
+// A component returning null is still an element, and an element handed to
+// PageZones still gets its aside column and its landmark. The caller has to be
+// able to ask the question without rendering the answer, so the rule lives
+// here — beside the component that obeys it — rather than in the screen.
+export function hasPane(item: WorklistItem | undefined): boolean {
+  return item?.subject?.type === "person";
+}
+
 // One person's context: who they are, and what else is open with them.
 function PersonContext({
   id,

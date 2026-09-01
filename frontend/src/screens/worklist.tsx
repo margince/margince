@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -15,7 +16,7 @@ import {
 } from "./worklist.copy";
 import { FocusCard, focusOf } from "./worklist.focus";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
-import { WorklistPane } from "./worklist.pane";
+import { hasPane, WorklistPane } from "./worklist.pane";
 import {
   useWorklist,
   type Worklist,
@@ -228,16 +229,25 @@ function WorklistBody({
             : t("worklist.clear")}
         </p>
       ) : (
-        // The queue, and beside it what the SELECTED row is about. PageZones
-        // leaves the aside out of the DOM entirely when nothing is selected,
-        // so a reader who has not chosen a row gets the full-width list they
-        // had before rather than an empty column.
-        <PageZones
-          shape="aside"
-          mainClassName="worklist-main"
-          aside={selected && <WorklistPane item={selected} />}
-          asideLabel={t("worklist.pane.title")}
-          main={
+        // The queue, and beside it what the SELECTED row is about.
+        //
+        // PageZones is used only where there IS a pane. Its aside shape
+        // reserves a 7fr/3fr grid whatever the aside contains, so wrapping an
+        // unselected page would leave the queue at seventy per cent width with
+        // an empty third beside it — a column that reads as a pane which
+        // failed to load.
+        //
+        // hasPane is asked BEFORE the element is made: a component returning
+        // null is still an element, and an element still gets the aside column
+        // and its landmark. The rule lives beside the component that obeys it.
+        <PageZonesWhenPaned
+          pane={
+            selected && hasPane(selected) ? (
+              <WorklistPane item={selected} />
+            ) : null
+          }
+          label={t("worklist.pane.title")}
+          queue={
             <Panel title={t("worklist.queue")}>
               <ol className="worklist-list">
                 {day.queue.map((item, index) => (
@@ -276,6 +286,30 @@ function WorklistBody({
   );
 }
 
+// The queue, with a pane beside it only where there is one to draw.
+//
+// A shape decision rather than a component: PageZones reserves its aside
+// column unconditionally, and a page with nothing selected should read exactly
+// as it did before selection existed.
+function PageZonesWhenPaned({
+  queue,
+  pane,
+  label,
+}: Readonly<{ queue: ReactNode; pane: ReactNode; label: string }>) {
+  if (!pane) {
+    return <>{queue}</>;
+  }
+  return (
+    <PageZones
+      shape="aside"
+      mainClassName="worklist-main"
+      aside={pane}
+      asideLabel={label}
+      main={queue}
+    />
+  );
+}
+
 // The Worklist screen.
 export function WorklistScreen() {
   const t = useT();
@@ -292,6 +326,16 @@ export function WorklistScreen() {
   // would make the address describe a fraction of what the reader is looking
   // at. Moving them all there is its own change.
   const [selectedId, setSelectedId] = useState("");
+  // Changing a dial drops the selection. A row chosen under one question is
+  // not a row the reader chose under the next one, and keeping the id means a
+  // row that comes back — a filter switched away and back, a snooze that lifts
+  // — re-opens its pane with nobody having asked it to.
+  const answerWith =
+    <T,>(set: (next: T) => void) =>
+    (next: T) => {
+      setSelectedId("");
+      set(next);
+    };
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const state = day.isPending ? "loading" : day.isError ? "failed" : "ready";
   return (
@@ -321,9 +365,9 @@ export function WorklistScreen() {
             filter={filter}
             owner={owner}
             selectedId={selectedId}
-            onScope={setScope}
-            onFilter={setFilter}
-            onOwner={setOwner}
+            onScope={answerWith(setScope)}
+            onFilter={answerWith(setFilter)}
+            onOwner={answerWith(setOwner)}
             onSelect={setSelectedId}
           />
         )}

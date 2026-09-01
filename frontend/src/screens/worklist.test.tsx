@@ -711,6 +711,14 @@ describe("the one thing to do next", () => {
             source: "deal_at_risk",
             category: "deals_at_risk",
             level: 3,
+            // The record the verb goes to. Without it the row has no address
+            // at all, and the card is correctly withheld — which is a
+            // different case, tested below.
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-0000000000cc",
+              label: "Northstar",
+            },
           }),
         ],
         summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
@@ -764,6 +772,30 @@ describe("the one thing to do next", () => {
     await screen.findByText("Something happened");
     expect(screen.queryByText("Do this next")).toBeNull();
   });
+  it("promotes no card when the row has nowhere for its verb to go", async () => {
+    stub(
+      day({
+        // A task filed under nothing: no subject, so rowHref falls through
+        // SOURCE_QUEUE and finds no address. The server named a verb, and the
+        // page has nowhere to send it.
+        queue: [
+          row({
+            id: "unfiled",
+            title: "Something to do",
+            band: "keep_momentum",
+            primary_action: "complete",
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("Something to do");
+    // A card with a headline and no way to act is worse than no card: it
+    // occupies the place a reader looks for their next step.
+    expect(screen.queryByText("Do this next")).toBeNull();
+  });
 });
 
 describe("what the selected row is about", () => {
@@ -812,7 +844,7 @@ describe("what the selected row is about", () => {
     renderWorklist();
 
     const open = await screen.findByRole("button", {
-      name: "Show what this is about",
+      name: /^Show what/,
     });
     await userEvent.click(open);
     // The pane names the record and answers the question the row cannot: how
@@ -820,9 +852,7 @@ describe("what the selected row is about", () => {
     await screen.findByText("They last wrote");
     expect(screen.getByText("We last wrote")).toBeTruthy();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Show what this is about" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
     await waitFor(() => {
       expect(screen.queryByText("They last wrote")).toBeNull();
     });
@@ -850,16 +880,14 @@ describe("what the selected row is about", () => {
     renderWorklist();
 
     const open = await screen.findByRole("button", {
-      name: "Show what this is about",
+      name: /^Show what/,
     });
     await userEvent.click(open);
 
     // Selected, and deliberately nothing beside it: a deal row carries its own
     // amount, close date and owner, so a pane would be a second spelling.
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Show what this is about" }),
-      ).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^Show what/ })).toBeTruthy();
     });
     expect(screen.queryByText("They last wrote")).toBeNull();
   });
@@ -896,7 +924,7 @@ describe("what the selected row is about", () => {
     renderWorklist();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Show what this is about" }),
+      await screen.findByRole("button", { name: /^Show what/ }),
     );
     await screen.findByText("They last wrote");
 
@@ -909,6 +937,37 @@ describe("what the selected row is about", () => {
     await userEvent.click(screen.getByRole("button", { name: /Decisions/ }));
     await waitFor(() => {
       expect(screen.queryByText("They last wrote")).toBeNull();
+    });
+  });
+  it("draws no aside landmark for a row that has no pane", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "one",
+            title: "Northstar renewal",
+            source: "deal_at_risk",
+            category: "deals_at_risk",
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-0000000000bb",
+              label: "Northstar",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    const { container } = renderWorklist();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Show what/ }),
+    );
+    // A deal row has no pane. An empty <aside> would still be announced as a
+    // landmark and still take its third of the grid, which reads as a pane
+    // that failed rather than as one that was never meant to be there.
+    await waitFor(() => {
+      expect(container.querySelectorAll("aside")).toHaveLength(0);
     });
   });
 });

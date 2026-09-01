@@ -97,7 +97,15 @@ export function FocusCard({ item }: Readonly<{ item: WorklistItem }>) {
 // over a duplicate-merge suggestion would be telling a rep something false
 // about their morning.
 function worthFocusing(item: WorklistItem): boolean {
-  return item.band !== "review" && item.primary_action !== undefined;
+  if (item.band === "review" || item.primary_action === undefined) {
+    return false;
+  }
+  // And somewhere for the verb to GO. A row filed under no record — a task
+  // nobody linked to anything — has no address at all: rowHref falls through
+  // the subject and the source-queue map and finds none. The card would then
+  // be a headline with no way to act, occupying the one place a reader looks
+  // for their next step.
+  return rowHref(item) !== undefined || moveHref(item) !== undefined;
 }
 
 // Whether the page should draw a card at all, asked of the whole queue so the
