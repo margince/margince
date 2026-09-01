@@ -428,7 +428,12 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 // "I'll send you the whitepaper" without one, and the card used to fall past
 // every rung to "nothing is owed" while that task sat directly beneath it.
 func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
-	now := time.Now()
+	// The package's own fixed instant, not the wall clock. This test files a
+	// task due two hours out and asserts the card says "Due today.", so run
+	// after 22:00 UTC it crossed midnight and the assertion read "in 1 days" —
+	// reddening every lane that runs the unit suite, on the evening of whoever
+	// happened to push. `deriveMoment` already takes `now` as an argument;
+	// nothing here needed a real one.
 	page := &crmcontracts.Person360{
 		NextSteps: &struct {
 			Data []crmcontracts.Activity `json:"data"`
