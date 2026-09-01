@@ -5574,6 +5574,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the installation's own company mark with an uploaded image.
+         * @description Multipart upload. The image is re-encoded to the same square PNG a resolved mark is
+         *     normalized to, so what is served from `logo_url` is always this origin's own bytes
+         *     and never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
+         *     anything that will not decode is refused as 415.
+         *
+         *     The upload is a HUMAN write and takes precedence: while it stands, a website read
+         *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
+         *     record returns to its monogram and the next read may resolve a mark again.
+         */
+        post: operations["uploadCompanyLogo"];
+        /**
+         * Take the installation's own company mark off the record.
+         * @description The record goes back to its deterministic monogram and the stored object is
+         *     collected. It also gives the field back: a person's mark is what holds a website
+         *     read off, so a company with no mark can be given one by the next read.
+         *
+         *     Removing a mark the installation never had is not an error — the outcome the
+         *     caller asked for is the outcome they get.
+         */
+        delete: operations["deleteCompanyLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company/context/capabilities": {
         parameters: {
             query?: never;
@@ -36035,6 +36071,95 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    uploadCompanyLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The company, carrying the `logo_url` the upload now answers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfile"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No company saved yet — there is no record to give a mark to. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+            /** @description The upload is not an image this server can decode and re-encode. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The deployment has no object store configured, so no logo can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteCompanyLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The company, with no `logo_url`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfile"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No company saved yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getCompanyContextCapabilities: {

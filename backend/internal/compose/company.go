@@ -23,6 +23,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -58,7 +59,11 @@ const (
 )
 
 type companyHandlers struct {
-	store   *people.Store
+	store *people.Store
+	// Where an uploaded company mark's bytes live. Nil in a role that stores no
+	// objects, which is what makes the upload route answer 501 rather than
+	// accepting an image nothing could serve back.
+	blob    blobstore.Store
 	rollout string
 }
 

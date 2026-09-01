@@ -113,7 +113,7 @@ func (s *Store) SetOrganizationLogo(ctx context.Context, id ids.OrganizationID, 
 		}
 		written = true
 		supersededKey = supersededObject(previous, objectKey)
-		return recordLogoWrite(ctx, tx, id, previousOrigin, originURL, by)
+		return recordLogoWrite(ctx, tx, id, resolvedLogoWrite(previousOrigin, originURL, by))
 	})
 	if err != nil {
 		return false, nil, err
@@ -315,7 +315,8 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids
 	// draft: provenance is written once and never re-derived, and a machine mark
 	// recorded under a person's name would make the human-precedence guard
 	// refuse every later resolve for a logo nobody chose.
-	if err := recordLogoWrite(ctx, tx, orgID, previousOrigin, *originURL, companySiteReadCapturedBy); err != nil {
+	if err := recordLogoWrite(ctx, tx, orgID,
+		resolvedLogoWrite(previousOrigin, *originURL, companySiteReadCapturedBy)); err != nil {
 		return nil, err
 	}
 	return unadopted, nil
@@ -388,16 +389,24 @@ func (s *Store) LogoHeldByHuman(ctx context.Context, id ids.OrganizationID) (boo
 	return held, err
 }
 
-// logoHeldByHuman reports whether a person set this organization's logo. It
-// reads the same field_provenance layer the provenance display reads, so
-// "a human owns this field" has one answer in the product, not two.
+// logoHeldByHuman reports whether a person's own mark is on this organization
+// right now. It reads the same field_provenance layer the provenance display
+// reads, so "a human owns this field" has one answer in the product, not two.
+//
+// What holds a read off is a mark a person chose, not the fact that a person
+// once touched the field: someone who REMOVES a logo has asked for the record
+// to have none, and leaving their removal standing as a hold would mean the
+// company could never be given a face again by any later read. So the row's own
+// state is part of the question — an empty field is held by nobody.
 func logoHeldByHuman(ctx context.Context, tx pgx.Tx, id ids.OrganizationID) (bool, error) {
 	var human bool
 	err := tx.QueryRow(ctx, `
-		SELECT captured_by LIKE 'human:%'
-		FROM field_provenance
-		WHERE object_type = 'organization' AND object_id = $1 AND field_name = $2
-		ORDER BY captured_at DESC, id DESC
+		SELECT p.captured_by LIKE 'human:%'
+		FROM field_provenance p
+		WHERE p.object_type = 'organization' AND p.object_id = $1 AND p.field_name = $2
+		  AND EXISTS (SELECT 1 FROM organization o
+		               WHERE o.id = $1 AND o.logo_object_key IS NOT NULL)
+		ORDER BY p.captured_at DESC, p.id DESC
 		LIMIT 1`, id, logoFieldName).Scan(&human)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil // no logo provenance yet — nobody holds the field

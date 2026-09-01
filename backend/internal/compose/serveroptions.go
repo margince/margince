@@ -184,6 +184,11 @@ func WithBlobstore(store blobstore.Store) Option {
 		if s.siteReadHandlers.engine != nil {
 			s.siteReadHandlers.engine.blob = store
 		}
+		// A company mark a person uploads is object bytes like any other. A role
+		// with no store answers 501 on that route rather than accepting an image
+		// it cannot keep — the same refusal the endpoint that serves the bytes
+		// already gives.
+		s.companyHandlers.blob = store
 	}
 }
 
