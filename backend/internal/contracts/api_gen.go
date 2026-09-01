@@ -14420,6 +14420,14 @@ type AiEmbeddingsBinding struct {
 	Provider string `json:"provider"`
 }
 
+// AiHealth defines model for AiHealth.
+type AiHealth struct {
+	Rungs []AiRungHealth `json:"rungs"`
+
+	// WindowHours How far back the counts reach, so a reader knows what "no calls" covers.
+	WindowHours int `json:"window_hours"`
+}
+
 // AiModelRate One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
 type AiModelRate struct {
 	CacheReadPerMtok  string             `json:"cache_read_per_mtok"`
@@ -14559,6 +14567,35 @@ type AiRunSummary struct {
 
 // AiRunSummaryCurrency defines model for AiRunSummary.Currency.
 type AiRunSummaryCurrency string
+
+// AiRungHealth One model tier and what it has been doing.
+type AiRungHealth struct {
+	// Calls Terminal attempts in the window.
+	Calls int `json:"calls"`
+
+	// Failures How many of them carried an error.
+	Failures int `json:"failures"`
+
+	// Healthy The tier answered at least once in the window without every attempt failing. Decided
+	// here rather than left to each client: two clients deciding what an all-failed rung
+	// means would be two answers, and one surface would call an outage while the other did
+	// not.
+	Healthy bool `json:"healthy"`
+
+	// LastCallAt When this tier last answered anything at all.
+	LastCallAt *time.Time `json:"last_call_at,omitempty"`
+
+	// LastSentinel The most recent error this tier reported, absent when it reported none. It is the
+	// first clue an operator has: a budget refusal and an unreachable model are both "not
+	// answering" and want different fixes.
+	LastSentinel *string `json:"last_sentinel,omitempty"`
+
+	// MedianLatencyMs The window's middle latency, which tells a slow lane from a dead one.
+	MedianLatencyMs int `json:"median_latency_ms"`
+
+	// Tier The rung's name — `local_small`, `cloud_large` and the rest.
+	Tier string `json:"tier"`
+}
 
 // AiTierBinding defines model for AiTierBinding.
 type AiTierBinding struct {
@@ -19658,6 +19695,55 @@ type HealthDimension struct {
 
 // HealthDimensionRating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 type HealthDimensionRating string
+
+// HeldThread One thread your mailbox is withholding, and what is known about why.
+type HeldThread struct {
+	// Attempts How many times a verdict has been asked for. This is the outage signal: a pending row
+	// whose attempts stop climbing is a model that stopped answering.
+	Attempts int `json:"attempts"`
+
+	// HasMessage The message this thread began with is still readable by you. False where it was erased
+	// while the verdict stood — which the ledger deliberately survives, because losing the
+	// verdict would re-open a thread a classifier already held — and false where its content
+	// is withheld from you.
+	//
+	// Separate from `subject` because absence has two causes that read differently: no
+	// message to name, versus a message somebody sent with a blank subject line. It also
+	// decides whether releasing is offered at all: the release works on your own messages on
+	// the thread, so with none left there is nothing to share.
+	HasMessage bool `json:"has_message"`
+
+	// Kind What the classifier concluded the thread is ABOUT — legal, personnel,
+	// financial_corporate, personal, security_incident, explicitly_confidential. Absent while
+	// pending, because nothing has concluded anything yet.
+	Kind *string `json:"kind,omitempty"`
+
+	// OccurredAt When that message arrived. Absent for the same reason `subject` can be.
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// Pending No verdict has landed yet. Stated as its own field rather than left to a client
+	// comparing `status`, because it decides the order these arrive in and a reader that
+	// derived it differently would sort them differently.
+	Pending bool `json:"pending"`
+
+	// Status The ledger's own word: `pending` while no verdict has landed, `held` or `unsure` once
+	// one has, `held_by_owner` where you said so yourself.
+	Status string `json:"status"`
+
+	// Subject The subject of the message that opened the thread, so one held thread reads differently
+	// from another. Absent when there is no message to read one from, and absent when the
+	// message carries no subject — `has_message` tells the two apart.
+	Subject *string `json:"subject,omitempty"`
+
+	// ThreadKey The thread this holds, and the key `POST /activities/threads/{thread_key}/audience`
+	// takes to release it.
+	ThreadKey string `json:"thread_key"`
+}
+
+// HeldThreadListResponse defines model for HeldThreadListResponse.
+type HeldThreadListResponse struct {
+	Data []HeldThread `json:"data"`
+}
 
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
@@ -41959,6 +42045,9 @@ type ServerInterface interface {
 	// Record a human's verdict on a claim the system derived — the correction the next re-derivation must respect.
 	// (POST /ai/feedback)
 	RecordAIFeedback(w http.ResponseWriter, r *http.Request)
+	// Whether the model lanes are answering.
+	// (GET /ai/health)
+	GetAiHealth(w http.ResponseWriter, r *http.Request)
 	// Authenticated AI configuration posture for transparent human-facing workspaces.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
@@ -42166,6 +42255,9 @@ type ServerInterface interface {
 	// Destroy the mail one of your own rules matched.
 	// (POST /capture/exclusions/{id}/purge)
 	PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams)
+	// What your mailbox is holding right now.
+	// (GET /capture/held-threads)
+	ListHeldThreads(w http.ResponseWriter, r *http.Request)
 	// The caller's own other email addresses.
 	// (GET /capture/owner-identities)
 	ListCaptureOwnerIdentities(w http.ResponseWriter, r *http.Request)
@@ -43666,6 +43758,12 @@ func (_ Unimplemented) RecordAIFeedback(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Whether the model lanes are answering.
+// (GET /ai/health)
+func (_ Unimplemented) GetAiHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Authenticated AI configuration posture for transparent human-facing workspaces.
 // (GET /ai/profile)
 func (_ Unimplemented) GetAiProfile(w http.ResponseWriter, r *http.Request) {
@@ -44077,6 +44175,12 @@ func (_ Unimplemented) DeleteCaptureExclusion(w http.ResponseWriter, r *http.Req
 // Destroy the mail one of your own rules matched.
 // (POST /capture/exclusions/{id}/purge)
 func (_ Unimplemented) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What your mailbox is holding right now.
+// (GET /capture/held-threads)
+func (_ Unimplemented) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -48116,6 +48220,26 @@ func (siw *ServerInterfaceWrapper) RecordAIFeedback(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetAiHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetAiHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAiProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.Request) {
 
@@ -50493,6 +50617,26 @@ func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PurgeCaptureExclusion(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListHeldThreads operation middleware
+func (siw *ServerInterfaceWrapper) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListHeldThreads(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -70569,6 +70713,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai/feedback", wrapper.RecordAIFeedback)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/health", wrapper.GetAiHealth)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/profile", wrapper.GetAiProfile)
 	})
 	r.Group(func(r chi.Router) {
@@ -70774,6 +70921,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/capture/exclusions/{id}/purge", wrapper.PurgeCaptureExclusion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/held-threads", wrapper.ListHeldThreads)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/owner-identities", wrapper.ListCaptureOwnerIdentities)

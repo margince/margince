@@ -5804,6 +5804,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/held-threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What your mailbox is holding right now.
+         * @description The threads your mailbox is withholding from your colleagues, and why. Pending rows first,
+         *     because during a classifier outage those are the ones nobody has decided — a thread whose
+         *     `attempts` stop climbing is a model that stopped answering rather than a thread that is
+         *     merely slow.
+         *
+         *     Release one with `POST /activities/threads/{thread_key}/audience`, which is the same door a
+         *     record's timeline uses. This endpoint only answers the question that page cannot: what am I
+         *     holding, across every contact at once.
+         *
+         *     A thread the classifier cleared is not here, because it is not held. Everything else is,
+         *     `unsure` included: a thread the model could not judge withholds exactly like one it judged
+         *     legal, and an owner who is not shown it cannot release it.
+         *
+         *     Your own mailbox and nobody else's. What a person is holding is the most private thing this
+         *     module knows — the list names threads judged legal, personnel or personal — so there is no
+         *     id here that reaches a colleague's list and no admin view of one.
+         */
+        get: operations["listHeldThreads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/senders": {
         parameters: {
             query?: never;
@@ -6900,6 +6935,40 @@ export interface paths {
          *     rest of the capture posture.
          */
         get: operations["listConsumerMailBaseline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the model lanes are answering.
+         * @description One row per model tier for the last hour: how many terminal attempts it made, how many
+         *     failed, the most recent error it reported, and its median latency.
+         *
+         *     This exists because an outage is otherwise invisible. Under the capture posture a thread
+         *     stays held whether the classifier judged it confidential or never answered at all, so a
+         *     working-and-cautious classifier and a dead one look identical from every other surface —
+         *     and nobody notices until somebody asks why a thread never opened.
+         *
+         *     Read from `ai_call`, which already records every attempt. Nothing is written for this: a
+         *     health surface with its own bookkeeping would be a second account of what happened, free
+         *     to disagree with the first. Terminal attempts only, so a failure a retry rescued does not
+         *     report a lane as failing while every caller of it got an answer.
+         *
+         *     An hour, because the question is whether it is answering NOW — a day-long window would
+         *     call a lane that died forty minutes ago healthy on the strength of this morning.
+         */
+        get: operations["getAiHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12724,6 +12793,62 @@ export interface components {
             /** Format: date-time */
             created_at?: string;
         };
+        HeldThreadListResponse: {
+            data: components["schemas"]["HeldThread"][];
+        };
+        /** @description One thread your mailbox is withholding, and what is known about why. */
+        HeldThread: {
+            /**
+             * @description The thread this holds, and the key `POST /activities/threads/{thread_key}/audience`
+             *     takes to release it.
+             */
+            thread_key: string;
+            /**
+             * @description The ledger's own word: `pending` while no verdict has landed, `held` or `unsure` once
+             *     one has, `held_by_owner` where you said so yourself.
+             */
+            status: string;
+            /**
+             * @description No verdict has landed yet. Stated as its own field rather than left to a client
+             *     comparing `status`, because it decides the order these arrive in and a reader that
+             *     derived it differently would sort them differently.
+             */
+            pending: boolean;
+            /**
+             * @description What the classifier concluded the thread is ABOUT — legal, personnel,
+             *     financial_corporate, personal, security_incident, explicitly_confidential. Absent while
+             *     pending, because nothing has concluded anything yet.
+             */
+            kind?: string;
+            /**
+             * @description The message this thread began with is still readable by you. False where it was erased
+             *     while the verdict stood — which the ledger deliberately survives, because losing the
+             *     verdict would re-open a thread a classifier already held — and false where its content
+             *     is withheld from you.
+             *
+             *     Separate from `subject` because absence has two causes that read differently: no
+             *     message to name, versus a message somebody sent with a blank subject line. It also
+             *     decides whether releasing is offered at all: the release works on your own messages on
+             *     the thread, so with none left there is nothing to share.
+             */
+            has_message: boolean;
+            /**
+             * @description The subject of the message that opened the thread, so one held thread reads differently
+             *     from another. Absent when there is no message to read one from, and absent when the
+             *     message carries no subject — `has_message` tells the two apart.
+             */
+            subject?: string;
+            /**
+             * Format: date-time
+             * @description When that message arrived. Absent for the same reason `subject` can be.
+             */
+            occurred_at?: string;
+            /**
+             * @description How many times a verdict has been asked for. This is the outage signal: a pending row
+             *     whose attempts stop climbing is a model that stopped answering.
+             */
+            attempts: number;
+        };
         CaptureSenderListResponse: {
             data: components["schemas"]["CaptureSenderDecision"][];
         };
@@ -13220,6 +13345,40 @@ export interface components {
              * @description Required for merge: the surviving record — must be one of the pair.
              */
             winner_id?: string | null;
+        };
+        AiHealth: {
+            /** @description How far back the counts reach, so a reader knows what "no calls" covers. */
+            window_hours: number;
+            rungs: components["schemas"]["AiRungHealth"][];
+        };
+        /** @description One model tier and what it has been doing. */
+        AiRungHealth: {
+            /** @description The rung's name — `local_small`, `cloud_large` and the rest. */
+            tier: string;
+            /**
+             * @description The tier answered at least once in the window without every attempt failing. Decided
+             *     here rather than left to each client: two clients deciding what an all-failed rung
+             *     means would be two answers, and one surface would call an outage while the other did
+             *     not.
+             */
+            healthy: boolean;
+            /** @description Terminal attempts in the window. */
+            calls: number;
+            /** @description How many of them carried an error. */
+            failures: number;
+            /**
+             * @description The most recent error this tier reported, absent when it reported none. It is the
+             *     first clue an operator has: a budget refusal and an unreachable model are both "not
+             *     answering" and want different fixes.
+             */
+            last_sentinel?: string;
+            /**
+             * Format: date-time
+             * @description When this tier last answered anything at all.
+             */
+            last_call_at?: string;
+            /** @description The window's middle latency, which tells a slow lane from a dead one. */
+            median_latency_ms: number;
         };
         /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call. */
         AiUsage: {
@@ -35912,6 +36071,28 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listHeldThreads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's held threads, pending first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HeldThreadListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listCaptureSenders: {
         parameters: {
             query?: never;
@@ -37147,6 +37328,28 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAiHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One row per tier that made a terminal attempt in the window. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     getAiUsage: {

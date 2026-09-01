@@ -1106,6 +1106,7 @@ public.capture_thread_verdict.thread_key text NOT NULL gen=- def=-
 public.capture_thread_verdict.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_thread_verdict.user_id uuid NOT NULL gen=- def=-
 public.capture_thread_verdict_due_idx CREATE INDEX capture_thread_verdict_due_idx ON public.capture_thread_verdict USING btree (next_attempt_at) WHERE ((status = 'pending'::text) AND (next_attempt_at IS NOT NULL))
+public.capture_thread_verdict_held_by_seat_idx CREATE INDEX capture_thread_verdict_held_by_seat_idx ON public.capture_thread_verdict USING btree (user_id, status) WHERE (status <> ALL (ARRAY['cleared'::text, 'shared_by_owner'::text]))
 public.capture_thread_verdict_pkey CREATE UNIQUE INDEX capture_thread_verdict_pkey ON public.capture_thread_verdict USING btree (id)
 public.capture_thread_verdict_thread_user_key CREATE UNIQUE INDEX capture_thread_verdict_thread_user_key ON public.capture_thread_verdict USING btree (thread_key, user_id)
 public.capture_trace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

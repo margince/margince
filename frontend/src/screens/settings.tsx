@@ -81,6 +81,7 @@ import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
 import { AiCallsCard } from "./aicalls";
@@ -116,6 +117,7 @@ import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
 import { GoogleAppCard } from "./google-app";
+import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
@@ -413,6 +415,12 @@ function ConnectionsTab() {
           The posture rows above say what may be read; this says what was
           decided, which is the half a reader audits. */}
       <CaptureSendersCard />
+      {/* And what those decisions are currently WITHHOLDING. The senders card
+          above says what was decided about each correspondent; this says which
+          threads are held back from the team right now, which is the question
+          an outage makes urgent — every new thread lands pending and stays
+          there until the classifier answers again. */}
+      <HeldThreadsCard />
       {/* Directly under the mailboxes, because it is the same decision seen
           from the other side: those cards say what Margince may READ, this one
           says whether it may act on it overnight while nobody is watching. The
@@ -958,6 +966,13 @@ function AiSettingsTab() {
           can call it at all. A binding whose vendor holds no key fails closed,
           and this is where a reader finds out why. */}
       <AiProviderKeysCard />
+      {/* And whether the lanes those two cards configure are actually
+          ANSWERING. It sits here rather than under the spend cards because it
+          completes the binding's own story: which vendor serves a tier, whether
+          we hold a key for it, whether it replied. Under the capture posture
+          the last one is the expensive gap — mail stays held whether the
+          classifier judged it or never ran. */}
+      <AiHealthCard />
       <AutomationsAdmin />
       <AiUsageCard />
       <ModelCostsCard />

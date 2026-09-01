@@ -135,6 +135,10 @@ func (stubs) RecordAIFeedback(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RecordAIFeedback")
 }
 
+func (stubs) GetAiHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiHealth")
+}
+
 func (stubs) GetAiProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiProfile")
 }
@@ -409,6 +413,10 @@ func (stubs) DeleteCaptureExclusion(w nethttp.ResponseWriter, r *nethttp.Request
 
 func (stubs) PurgeCaptureExclusion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PurgeCaptureExclusionParams) {
 	httperr.NotImplemented(w, r, "PurgeCaptureExclusion")
+}
+
+func (stubs) ListHeldThreads(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListHeldThreads")
 }
 
 func (stubs) ListCaptureOwnerIdentities(w nethttp.ResponseWriter, r *nethttp.Request) {
