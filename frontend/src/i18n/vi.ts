@@ -6197,6 +6197,8 @@ export const vi = {
   "autonomy.title": "Những gì tự xử lý",
   "autonomy.sub":
     "Những chỉnh sửa nhỏ bạn vẫn xác nhận bằng tay. Bật một mục lên và nó sẽ được áp dụng ngay khi xuất hiện, kèm thay đổi và nút Hoàn tác chờ sẵn trong ngày của bạn.",
+  "autonomy.noneDecidedYet":
+    "Bạn chưa quyết định mục nào trong số này. Những gì xuất hiện trong danh sách này phụ thuộc vào các bản ghi bạn sở hữu và công việc nhóm bạn chuyển đến, nên khi không có cả hai thì danh sách vẫn trống. Các công tắc vẫn quyết định điều gì xảy ra khi có việc đến.",
   "autonomy.noRecord": "Bạn chưa quyết định mục nào thuộc loại này.",
   "autonomy.record":
     "Đến nay: {clean} chấp nhận như đề xuất, {edited} sau khi sửa, {rejected} đã từ chối.",
