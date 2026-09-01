@@ -17038,10 +17038,10 @@ export interface components {
          */
         PersonMomentDestination: {
             /**
-             * @description `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet.
+             * @description `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
              * @enum {string}
              */
-            surface: "composer" | "meeting_brief" | "research" | "record" | "task";
+            surface: "composer" | "meeting_brief" | "research" | "record" | "task" | "activity_log";
             /** @enum {string|null} */
             entity_type?: "person" | "organization" | "deal" | "activity" | null;
             /** Format: uuid */
