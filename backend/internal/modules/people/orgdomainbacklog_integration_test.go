@@ -1,0 +1,92 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package people
+
+// Typing a company in attaches the people already on its domain.
+//
+// They accumulate while nobody has a company for the domain: capture creates
+// each person and deliberately leaves the employer undecided, so by the time a
+// human enters the company its whole roster is sitting there attached to
+// nothing. The domain-triage verdict already wired that backlog; the human path
+// did not, and it is the path a rep actually uses.
+//
+// What it cost is visible on the account page rather than in an error: the
+// company shows one contact — whichever sender writes next and gets an edge from
+// their own ensure — and the health card says one person carries the whole
+// relationship about a company with forty.
+
+import (
+	"context"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// employerOf answers which organization a person's live employment edge names.
+func (e *dedupeEnv) employerOf(ctx context.Context, t *testing.T, person ids.PersonID) *ids.UUID {
+	t.Helper()
+	var org *ids.UUID
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT organization_id FROM relationship
+			 WHERE person_id = $1 AND kind = 'employment'
+			   AND `+EmploymentIsCurrentSQL("ended_at")+`
+			   AND archived_at IS NULL
+			 LIMIT 1`, person).Scan(&org)
+	}); err != nil {
+		if err.Error() == "no rows in result set" {
+			return nil
+		}
+		t.Fatal(err)
+	}
+	return org
+}
+
+func TestCreatingACompanyAttachesThePeopleAlreadyOnItsDomain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	// Two people arrive by capture while the domain has no company. Each ensure
+	// creates the person and opens the organization question rather than
+	// inventing a company from the domain label.
+	first, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "ann@backlog.test", "Ann Backlog", "backlog.test"))
+	if err != nil {
+		t.Fatalf("ensure first: %v", err)
+	}
+	second, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "bo@backlog.test", "Bo Backlog", "backlog.test"))
+	if err != nil {
+		t.Fatalf("ensure second: %v", err)
+	}
+	if e.employerOf(ctx, t, first.PersonID) != nil {
+		t.Fatal("a person was attached to a company before one existed; the test proves nothing")
+	}
+
+	// Now a human types the company in, naming the domain.
+	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "Backlog GmbH",
+		Domains:     []OrgDomainInput{{Domain: "backlog.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the company: %v", err)
+	}
+
+	for _, person := range []struct {
+		name string
+		id   ids.PersonID
+	}{{"first", first.PersonID}, {"second", second.PersonID}} {
+		employer := e.employerOf(ctx, t, person.id)
+		if employer == nil {
+			t.Errorf("%s contact has no employer after the company was created — "+
+				"the account shows one contact and the health card blames the relationship on one person", person.name)
+			continue
+		}
+		if *employer != ids.UUID(org.Id) {
+			t.Errorf("%s contact works at %s, want the company just created %s", person.name, *employer, org.Id)
+		}
+	}
+}

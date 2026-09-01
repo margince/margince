@@ -276,6 +276,23 @@ func reconcileOrgDomains(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, o
 		if err := insertOrgDomains(ctx, tx, orgID, "manual", by, adds); err != nil {
 			return nil, err
 		}
+		// The people already on each new domain get their employment edge now.
+		//
+		// They accumulated while nobody had a company for the domain: capture
+		// creates the person and deliberately leaves the employer undecided, so
+		// by the time a human records the company its whole roster is sitting
+		// there attached to nothing. Without this the account shows one contact
+		// — whichever sender writes next — and the health card blames the whole
+		// relationship on one person.
+		//
+		// The same plant the domain-triage verdict runs, so the human path and
+		// the machine path wire the same backlog. It never reassigns anybody a
+		// human already placed.
+		for _, d := range adds {
+			if _, err := plantDomainEmployment(ctx, tx, d.Domain, orgID); err != nil {
+				return nil, fmt.Errorf("attach the domain's people to the organization: %w", err)
+			}
+		}
 	}
 	if primary != "" && primary != currentPrimary {
 		if _, err := tx.Exec(ctx,
