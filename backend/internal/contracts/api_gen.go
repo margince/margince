@@ -12206,6 +12206,7 @@ const (
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
 	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
+	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the WorklistReachSource enum.
@@ -12250,6 +12251,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceSyncHealth:
 		return true
 	case WorklistReachSourceTask:
+		return true
+	case WorklistReachSourceUndelivered:
 		return true
 	default:
 		return false
