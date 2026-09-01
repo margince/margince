@@ -9,6 +9,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func (h Handlers) UpdateActivity(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UpdateActivityParams) {
@@ -157,4 +158,104 @@ func (h Handlers) SetActivityAudience(w http.ResponseWriter, r *http.Request, id
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, activity)
+}
+
+// SetActivityDisposition puts a waiting message down.
+//
+// The three judgements route to two stores because they bind differently:
+// `not_sales` settles the thread for everybody, while `snooze` and `not_mine`
+// are the caller's own. The transport keeps that split rather than flattening
+// it into one write with a scope flag, so a reader of this function can see
+// which decisions reach past the person making them.
+func (h Handlers) SetActivityDisposition(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.SetActivityDispositionRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// A moment belongs to a snooze and to nothing else. Accepting one on a
+	// judgement that does not expire would leave the rep believing their
+	// not-mine lifts on Thursday, and nothing would ever tell them otherwise;
+	// a snooze without one would never lift, which is not a snooze.
+	wantsMoment := req.Disposition == crmcontracts.SetActivityDispositionRequestDispositionSnooze
+	if wantsMoment != (req.SnoozedUntil != nil) {
+		httperr.Write(w, r, momentMismatch(wantsMoment))
+		return
+	}
+	activityID := pathID[ids.ActivityKind](id)
+	var err error
+	switch req.Disposition {
+	case crmcontracts.SetActivityDispositionRequestDispositionNotSales:
+		err = h.store.SetThreadNotSales(r.Context(), activityID)
+	case crmcontracts.SetActivityDispositionRequestDispositionNotMine:
+		err = h.store.SetMessageNotMine(r.Context(), activityID)
+	case crmcontracts.SetActivityDispositionRequestDispositionSnooze:
+		err = h.store.SnoozeMessage(r.Context(), activityID, *req.SnoozedUntil)
+	default:
+		// An unknown or absent disposition. Without this the switch matches
+		// nothing, err stays nil, and the caller is told 204 — that their
+		// judgement was recorded — for a request no store ever saw.
+		err = &values.ParseError{
+			Field: "disposition", Code: "unknown_disposition",
+			Message: "a disposition is one of the values the contract lists",
+		}
+	}
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// fieldSnoozedUntil is the contract's spelling of when a snooze lifts. Both
+// refusals below point at it, and a caller matching on the field name cannot
+// tell a typo from a different field.
+const fieldSnoozedUntil = "snoozed_until"
+
+// momentMismatch names which way the moment was wrong, because "invalid" would
+// leave a client guessing whether to add one or drop one.
+func momentMismatch(wanted bool) error {
+	if wanted {
+		return &values.ParseError{
+			Field: fieldSnoozedUntil, Code: "snooze_needs_a_moment",
+			Message: "a snooze names when it lifts",
+		}
+	}
+	return &values.ParseError{
+		Field: fieldSnoozedUntil, Code: "moment_not_applicable",
+		Message: "only a snooze names a moment; this judgement does not expire",
+	}
+}
+
+// ClearActivityDisposition picks a message back up.
+func (h Handlers) ClearActivityDisposition(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ClearActivityDispositionParams,
+) {
+	activityID := pathID[ids.ActivityKind](id)
+	// The default is the caller's own set-aside. Withdrawing the thread's
+	// not-sales judgement is a different reach and has to be asked for by name,
+	// so an undo button cannot re-admit a thread a colleague ruled out.
+	scope := crmcontracts.ClearActivityDispositionParamsScopeMine
+	if params.Scope != nil {
+		scope = *params.Scope
+	}
+	var err error
+	switch scope {
+	case crmcontracts.ClearActivityDispositionParamsScopeMine:
+		err = h.store.ClearMessageDisposition(r.Context(), activityID)
+	case crmcontracts.ClearActivityDispositionParamsScopeThread:
+		err = h.store.ClearThreadNotSales(r.Context(), activityID)
+	default:
+		// A scope the contract does not list. Treating it as `mine` would
+		// answer 204 to somebody who asked to withdraw the THREAD's judgement
+		// and quietly do something narrower.
+		err = &values.ParseError{
+			Field: "scope", Code: "unknown_scope",
+			Message: "a scope is mine or thread",
+		}
+	}
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

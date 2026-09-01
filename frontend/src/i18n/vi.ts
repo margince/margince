@@ -7277,6 +7277,17 @@ export const vi = {
     "Không có gì đang chờ trong các nguồn đã trả lời.",
   "worklist.partial": "{sources}, nên đây chưa phải cả ngày.",
   "worklist.overdue": "Quá hạn",
+  "worklist.disposition.verb.snooze": "Để sau",
+  "worklist.disposition.verb.not_mine": "Không phải của tôi",
+  "worklist.disposition.verb.not_sales": "Không phải khách hàng",
+  "worklist.disposition.done.snooze": "Ngày mai sẽ trở lại danh sách của bạn.",
+  "worklist.disposition.done.not_mine":
+    "Đã rời danh sách của bạn. Người phụ trách vẫn thấy nó.",
+  "worklist.disposition.done.not_sales": "Đã rời danh sách của mọi người.",
+  "worklist.disposition.undo": "Hoàn tác",
+  "worklist.disposition.undoFailed":
+    "Không thể hoàn tác. Tin nhắn vẫn nằm ngoài danh sách của bạn.",
+  "worklist.disposition.failed": "Không thể cất mục này đi.",
   "worklist.scope.label": "Công việc của ai",
   "worklist.scope.mine": "Của tôi",
   "worklist.scope.unassigned": "Chưa có người phụ trách",

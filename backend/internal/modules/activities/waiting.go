@@ -253,6 +253,47 @@ const waitingRepliesSQL = `
 	            AND newer.archived_at IS NULL
 	            AND newer.occurred_at <= $%[1]d
 	            AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
+	   -- Judged NOT a sales conversation, by anybody. A property of the THREAD,
+	   -- so it holds for every reader AND for every later reply: one rep
+	   -- recognizing the procurement newsletter settles what the conversation
+	   -- is, and the next issue of it must not arrive as fresh work.
+	   --
+	   -- Matched on the same triple the reply anti-joins below use. Keying the
+	   -- judgement on one activity id instead let the next inbound revive the
+	   -- thread, because that message is a different row.
+	   --
+	   -- Before the cap, like every rule above it.
+	   AND NOT EXISTS (
+	         SELECT 1 FROM activity_sales_state judged
+	          WHERE judged.thread_key = a.thread_key
+	            AND judged.kind = a.kind
+	            AND judged.channel_provider = coalesce(a.channel_provider, ''))
+	   -- Set aside by THIS reader, and only this reader.
+	   --
+	   -- Judged against the row's CURRENT state rather than against what it was
+	   -- at asOf: there is no set_at comparison here, so a judgement made after
+	   -- the instant this page was read at still hides its row. In production
+	   -- asOf is now() at the top of the same assembly, so the window is
+	   -- milliseconds wide and hiding a message somebody just set aside is the
+	   -- answer a reader wants. A caller replaying a HISTORICAL instant would
+	   -- get today's judgements over that day's messages, and nothing does.
+	   --
+	   -- A snooze lifts on its own moment, so the row comes back when it is due
+	   -- rather than waiting for somebody to remember it.
+	   --
+	   -- not_mine carries no moment and does not lift at all. Ending it when the
+	   -- linked record changes hands would be the kinder rule, and it is not
+	   -- implemented: a message reaches its owner through a person, an
+	   -- organization, a deal or a lead, so the re-arm is a consumer over four
+	   -- ownership events rather than a clause here. Until that exists the
+	   -- judgement stands until its reader withdraws it, and the contract says
+	   -- so rather than promising the re-arm.
+	   AND NOT EXISTS (
+	         SELECT 1 FROM activity_reader_state mine
+	          WHERE mine.activity_id = a.id
+	            AND mine.reader_id = $%[10]d
+	            AND (mine.state = 'not_mine'
+	              OR (mine.state = 'snoozed' AND mine.snoozed_until > $%[1]d)))
 	 GROUP BY a.id, a.subject, a.occurred_at
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
@@ -316,13 +357,21 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		if linkVisible == "" {
 			linkVisible = scopeUnbounded
 		}
+		// WHOSE set-asides apply. The reader comes from the principal rather
+		// than from a parameter, so one person's snooze cannot be asked for on
+		// another's behalf. A caller with no person behind it — a system pass
+		// reading the same query — matches no reader_state row and therefore
+		// has nothing hidden from it, which is the honest answer: a background
+		// job has set nothing aside.
+		reader := arg(readerOrNobody(ctx))
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap,
 				waitingHorizonDays,
 				liveRecord(openDealPredicate, "d"),
 				liveRecord(workingLeadPredicate, "ld"),
 				liveRecord(openDealPredicate, "openDeal"),
-				liveRecord(openDealPredicate, "fd")), args...)
+				liveRecord(openDealPredicate, "fd"),
+				reader), args...)
 		if err != nil {
 			return err
 		}

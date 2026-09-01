@@ -7423,6 +7423,17 @@ export const en = {
     "Nothing is waiting among the sources that answered.",
   "worklist.partial": "{sources}, so this is not the whole day.",
   "worklist.overdue": "Overdue",
+  "worklist.disposition.verb.snooze": "Later",
+  "worklist.disposition.verb.not_mine": "Not mine",
+  "worklist.disposition.verb.not_sales": "Not a customer",
+  "worklist.disposition.done.snooze": "Back on your list tomorrow.",
+  "worklist.disposition.done.not_mine":
+    "Off your list. Whoever owns it still sees it.",
+  "worklist.disposition.done.not_sales": "Off everyone's list.",
+  "worklist.disposition.undo": "Undo",
+  "worklist.disposition.undoFailed":
+    "That could not be undone. The message is still off your list.",
+  "worklist.disposition.failed": "That could not be put down.",
   "worklist.scope.label": "Whose work",
   "worklist.scope.mine": "Mine",
   "worklist.scope.unassigned": "Unassigned",

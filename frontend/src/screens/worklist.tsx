@@ -20,6 +20,7 @@ import {
   rowHref,
   sourceUnavailableText,
 } from "./worklist.copy";
+import { DispositionVerbs } from "./worklist.dispositions";
 import { CoachControl, OwnerPicker, ReassignControl } from "./worklist.manager";
 import {
   useApproval,
@@ -137,6 +138,11 @@ function WorklistRow({
       ) : (
         <RowVerbs item={item} href={href} move={moveHref(item)} />
       )}
+      {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
+          from `dispositions` rather than inferred from `source`: which rows a
+          rep may judge is a server rule, and a client keeping its own copy
+          draws a verb that 404s or hides one the rep is entitled to. */}
+      <DispositionVerbs item={item} />
       {/* Only a task carries an assignee, so only a task can be handed on. A
           group row stands for a pile and names no single activity to move. */}
       {owner !== "" && item.source === "task" && !item.batch && (
