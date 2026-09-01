@@ -12214,6 +12214,39 @@ func (e CapturedByKind) Valid() bool {
 	}
 }
 
+// Defines values for PersonProfileFieldKey.
+const (
+	PersonProfileFieldKeyAddress  PersonProfileFieldKey = "address"
+	PersonProfileFieldKeyLinkedin PersonProfileFieldKey = "linkedin"
+	PersonProfileFieldKeyOrgName  PersonProfileFieldKey = "org_name"
+	PersonProfileFieldKeyPhone    PersonProfileFieldKey = "phone"
+	PersonProfileFieldKeyRole     PersonProfileFieldKey = "role"
+	PersonProfileFieldKeyTitle    PersonProfileFieldKey = "title"
+	PersonProfileFieldKeyWebsite  PersonProfileFieldKey = "website"
+)
+
+// Valid indicates whether the value is a known member of the PersonProfileFieldKey enum.
+func (e PersonProfileFieldKey) Valid() bool {
+	switch e {
+	case PersonProfileFieldKeyAddress:
+		return true
+	case PersonProfileFieldKeyLinkedin:
+		return true
+	case PersonProfileFieldKeyOrgName:
+		return true
+	case PersonProfileFieldKeyPhone:
+		return true
+	case PersonProfileFieldKeyRole:
+		return true
+	case PersonProfileFieldKeyTitle:
+		return true
+	case PersonProfileFieldKeyWebsite:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProfileFieldKey.
 const (
 	ProfileFieldKeyBuyingCenter      ProfileFieldKey = "buying_center"
@@ -13317,22 +13350,22 @@ func (e ListProjectsParamsPhase) Valid() bool {
 
 // Defines values for SubmitConfirmDetailsJSONBodyCorrectionsField.
 const (
-	Email    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
-	FullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
-	Phone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
-	Title    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
 )
 
 // Valid indicates whether the value is a known member of the SubmitConfirmDetailsJSONBodyCorrectionsField enum.
 func (e SubmitConfirmDetailsJSONBodyCorrectionsField) Valid() bool {
 	switch e {
-	case Email:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail:
 		return true
-	case FullName:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName:
 		return true
-	case Phone:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone:
 		return true
-	case Title:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle:
 		return true
 	default:
 		return false
@@ -28983,6 +29016,9 @@ type IncludeArchived = bool
 // Limit defines model for Limit.
 type Limit = int
 
+// PersonProfileFieldKey defines model for PersonProfileFieldKey.
+type PersonProfileFieldKey string
+
 // ProfileFieldKey defines model for ProfileFieldKey.
 type ProfileFieldKey string
 
@@ -42923,6 +42959,9 @@ type ServerInterface interface {
 	// The evidence sidecar for this person's enriched fields — each value with the verbatim snippet it was read from.
 	// (GET /people/{id}/profile-fields)
 	GetPersonProfileFields(w http.ResponseWriter, r *http.Request, id Id)
+	// Put back the value a newer statement replaced.
+	// (POST /people/{id}/profile-fields/{field}/restore)
+	RestorePersonProfileField(w http.ResponseWriter, r *http.Request, id Id, field PersonProfileFieldKey)
 	// Ask the connected provider what is publicly known about this person.
 	// (POST /people/{id}/research)
 	RunPersonResearch(w http.ResponseWriter, r *http.Request, id Id)
@@ -45701,6 +45740,12 @@ func (_ Unimplemented) GetPersonNetwork(w http.ResponseWriter, r *http.Request, 
 // The evidence sidecar for this person's enriched fields — each value with the verbatim snippet it was read from.
 // (GET /people/{id}/profile-fields)
 func (_ Unimplemented) GetPersonProfileFields(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back the value a newer statement replaced.
+// (POST /people/{id}/profile-fields/{field}/restore)
+func (_ Unimplemented) RestorePersonProfileField(w http.ResponseWriter, r *http.Request, id Id, field PersonProfileFieldKey) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63023,6 +63068,47 @@ func (siw *ServerInterfaceWrapper) GetPersonProfileFields(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// RestorePersonProfileField operation middleware
+func (siw *ServerInterfaceWrapper) RestorePersonProfileField(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "field" -------------
+	var field PersonProfileFieldKey
+
+	err = runtime.BindStyledParameterWithOptions("simple", "field", chi.URLParam(r, "field"), &field, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestorePersonProfileField(w, r, id, field)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RunPersonResearch operation middleware
 func (siw *ServerInterfaceWrapper) RunPersonResearch(w http.ResponseWriter, r *http.Request) {
 
@@ -71481,6 +71567,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people/{id}/profile-fields", wrapper.GetPersonProfileFields)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/profile-fields/{field}/restore", wrapper.RestorePersonProfileField)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/research", wrapper.RunPersonResearch)

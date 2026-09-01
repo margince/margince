@@ -12,7 +12,8 @@ package people
 // human click writes.
 //
 // Three outcomes per card, and the third is the one that matters. An exact
-// match fills only what is empty; no match creates; and a card that merely
+// match applies what the card states by recency, the way a signature does; no
+// match creates; and a card that merely
 // LOOKS like somebody is returned for a human to judge rather than merged.
 // Guessing there is how one person becomes two records, or two people become
 // one, and neither is recoverable by the reader who imported the file.
@@ -36,14 +37,21 @@ import (
 // vcardSource is the provenance every row this import writes carries.
 const vcardSource = "vcard_import"
 
+// vcardFieldStated marks a field this import answered. The image says WHICH
+// field moved and never what it moved to: audit_log is append-only, and this
+// path writes a phone number and a postal address off a file somebody handed
+// over.
+const vcardFieldStated = "stated"
+
 // VCardOutcome is what became of one card.
 type VCardOutcome string
 
 const (
 	// VCardCreated means nobody matched, so the card became a person.
 	VCardCreated VCardOutcome = "created"
-	// VCardUpdated means an exact match, filled only where it was empty. A value a
-	// human typed is never overwritten by a card.
+	// VCardUpdated means an exact match, updated by recency: a card is the
+	// contact stating their own details, so what it says replaces what the
+	// record holds and the replaced value is kept for one click of undo.
 	VCardUpdated VCardOutcome = "updated"
 	// VCardNeedsReview means something close enough to be the same person and not
 	// close enough to be sure. The card is not written; the candidate is
@@ -308,29 +316,32 @@ func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*id
 }
 
 // fillFromVCard writes the card's stated fields onto a person who already
-// exists, filling only what is empty.
+// exists, by the same recency rule the signature pass obeys.
 //
-// Modelled on ApplySitePersonFields, and for the same reason: a human's own
-// entry outranks anything a machine read or a file stated, so a value already
-// on the record stays. What differs is that the human pressed the button, so
-// this writes rather than staging.
+// A card is the contact stating their own details, exactly as a signature is,
+// so it goes through the writer they now share. It used to fill only blanks and
+// only three fields, which meant a handed-over card could not correct a number
+// that had changed — and whether a stale value got fixed depended on whether
+// the details arrived by mail or on paper.
+//
+// The card's own date is when it was handed over, which is now: unlike a mail,
+// a .vcf carries no timestamp of its own, and the moment a human chose to
+// import it is the most honest thing available. That also makes a card the
+// newest statement on the record, which is the right answer — somebody is
+// holding it and typing it in.
 func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, personID ids.PersonID, entry VCardEntry) error {
-	fields := SitePersonFields{
-		Name:        strings.TrimSpace(entry.FullName),
-		Role:        strings.TrimSpace(entry.Title),
-		LinkedinURL: strings.TrimSpace(entry.URL),
-		// The card itself is the evidence, and there is no page to quote: the
-		// snippet is what the card stated, which is what an Art. 15 answer has
-		// to be able to show.
-		EvidenceSnippet: vcardEvidence(entry),
-		SourceURL:       vcardSource,
-	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	sourceRef := vcardSource
-	applied, previous, values, err := fillSitePersonFields(ctx, tx, personID, sourceRef, by, vcardSource, fields)
+	// The card itself is the evidence, and there is no page to quote: the
+	// snippet is what the card stated, which is what an Art. 15 answer has to
+	// be able to show.
+	evidence := vcardEvidence(entry)
+	applied, err := applyObservedCard(ctx, tx, personID, observedCard{
+		Entry: entry, Evidence: evidence, SourceRef: vcardSource,
+		Source: vcardSource, CapturedBy: by,
+	})
 	if err != nil {
 		return err
 	}
@@ -340,6 +351,17 @@ func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, personID ids.Perso
 		// report a write that did not happen.
 		return nil
 	}
+	// Named, not quoted, on both sides. This writes a phone number and a
+	// postal address off a file somebody handed over, and audit_log is
+	// append-only — a value placed in an image outlives the erasure that
+	// clears the record it describes.
+	previous := map[string]any{}
+	values := map[string]any{}
+	for _, f := range applied {
+		previous[f] = nil
+		values[f] = vcardFieldStated
+	}
+	sourceRef := vcardSource
 	// The source travels in EVIDENCE rather than in the after-image: an
 	// after-image key projects as a field change in the record's own history,
 	// and "source" is not a field of a person.

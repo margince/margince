@@ -6363,6 +6363,7 @@ export const vi = {
   "person.enriched.field.address": "Địa chỉ",
   "person.enriched.field.website": "Trang web",
   "person.enriched.readFrom": "Đọc từ {source} vào {when}",
+  "person.enriched.undo": "Hoàn tác",
   "person.enriched.replaced": "Đã thay “{was}”, giá trị cũ hơn.",
   "person.enriched.correctedByYou": "Bạn đã sửa",
   "person.enriched.confirmed": "Đã xác nhận",

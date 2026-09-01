@@ -1104,6 +1104,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/profile-fields/{field}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The profile field's key — the same closed vocabulary `PersonProfileField.field` carries. */
+                field: components["parameters"]["PersonProfileFieldKey"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back the value a newer statement replaced.
+         * @description Undo for one enriched field. A signature or a business card stating something newer
+         *     replaces what the record holds and keeps the replaced value in `superseded_value`;
+         *     this puts that value back and clears the buffer.
+         *
+         *     Human-only, and deliberately: the machine is what wrote the replacement, so an agent
+         *     undoing it would be one authority arguing with itself.
+         *
+         *     **Refused when the record has moved on.** The restore applies only while the field
+         *     still holds exactly what was written — the same "is this still ours" test the
+         *     provider-claim revert makes. A field somebody has since corrected by hand, or that a
+         *     later statement has replaced again, answers 409 rather than reaching past their
+         *     answer to an older one.
+         *
+         *     Answers 404 when the field has nothing to restore, which is the honest reply to an
+         *     undo of something that never happened.
+         */
+        post: operations["restorePersonProfileField"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/strength": {
         parameters: {
             query?: never;
@@ -25861,6 +25900,8 @@ export interface components {
     parameters: {
         /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
         BriefProjectId: string;
+        /** @description The profile field's key — the same closed vocabulary `PersonProfileField.field` carries. */
+        PersonProfileFieldKey: "title" | "phone" | "role" | "linkedin" | "org_name" | "address" | "website";
         /** @description The profile field's key — the same closed vocabulary `CompanyProfileField.field` carries. */
         ProfileFieldKey: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
         /**
@@ -27510,6 +27551,35 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    restorePersonProfileField: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The profile field's key — the same closed vocabulary `PersonProfileField.field` carries. */
+                field: components["parameters"]["PersonProfileFieldKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The field as it stands after the restore. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonProfileField"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
         };
     };
     getPersonStrength: {

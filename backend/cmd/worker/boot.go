@@ -157,6 +157,11 @@ func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	if err := startOrgAutoEnrichTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
 		return lanes, err
 	}
+	// The same shape for captured mail: a contact who wrote this morning has
+	// their signature read now rather than tonight.
+	if err := startCaptureEnrichTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
+		return lanes, err
+	}
 
 	announceGeocoding(cfg.geocodeBaseURL, stdout)
 
