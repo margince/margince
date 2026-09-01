@@ -3,7 +3,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { beginModelCall, endModelCall } from "../api/model-inflight";
+import {
+  beginModelCall,
+  endModelCall,
+  modelCallsInFlight,
+} from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { useAiActivity } from "./ai-activity";
 import { displayedKinds, lineFor } from "./ai-activity-lines";
@@ -99,6 +103,12 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  // The in-flight count is module state every case in this file shares. A case
+  // that fails between its begin and its end would otherwise hand the next case
+  // an agent already asking, and the failure would name the wrong test.
+  while (modelCallsInFlight() > 0) {
+    endModelCall();
+  }
   // The listener-registry case spies on document itself, which would otherwise
   // outlive its test.
   vi.restoreAllMocks();
@@ -361,6 +371,44 @@ describe("the reader's own ask", () => {
     });
     await advance(0);
     expect(reads).toHaveLength(3);
+  });
+
+  // The floor is for a call the feed never caught up with. Once the feed
+  // carries the settled run, the idle line names it, and a bare "working" held
+  // over that line would be the presentation contradicting the record.
+  it("yields the linger the moment the feed carries the settled run", async () => {
+    let settled = false;
+    const { result } = mount(() =>
+      jsonResponse(
+        settled
+          ? {
+              as_of: "2026-08-21T05:00:01Z",
+              running: [],
+              recent: [
+                {
+                  ...A_RUN,
+                  kind: "draft_reply",
+                  state: "done",
+                  finished_at: "2026-08-21T05:00:01Z",
+                },
+              ],
+            }
+          : activity([]),
+      ),
+    );
+    await advance(0);
+    await act(async () => {
+      beginModelCall();
+    });
+    await advance(0);
+
+    settled = true;
+    await act(async () => {
+      endModelCall();
+    });
+    // The end-edge read answers, and that is enough: no 900ms wait.
+    await advance(0);
+    expect(result.current.asking).toBe(false);
   });
 
   it("polls fast while an ask is open and the feed still reports nothing", async () => {

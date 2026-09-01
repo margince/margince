@@ -70,7 +70,6 @@ export function useAiActivity(): AiActivity {
   const client = useQueryClient();
   const [visible, setVisible] = useState(() => !document.hidden);
   const open = useModelCallsInFlight();
-  const asking = useLingeringAsk(open);
 
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -118,8 +117,10 @@ export function useAiActivity(): AiActivity {
     // short window in which this tab knows the agent is working and the feed
     // does not yet, and resting at the idle cadence through that window is how
     // a run that lasted five seconds was read at thirty-second resolution.
+    // The raw count and not the lingering flag: the linger is presentation,
+    // and the cadence follows the fact.
     refetchInterval: (q) =>
-      asking || (q.state.data?.running ?? NOTHING).length > 0
+      open > 0 || (q.state.data?.running ?? NOTHING).length > 0
         ? POLL_LIVE_MS
         : POLL_IDLE_MS,
   });
@@ -165,9 +166,11 @@ export function useAiActivity(): AiActivity {
   // whole section throws instead of reporting nothing.
   const answered = query.data;
   const running = answered?.running ?? NOTHING;
+  const recent = answered?.recent ?? NOTHING;
+  const asking = useLingeringAsk(open, recent[0]?.id);
   return {
     running,
-    recent: answered?.recent ?? NOTHING,
+    recent,
     // STALLED is not working. The server derives that state for an occurrence
     // whose own source says it should have finished by now, and the chrome that
     // reads `working` pulses to say the AI is busy — so counting a stalled item
@@ -185,11 +188,25 @@ export function useAiActivity(): AiActivity {
  * lives here rather than in the store so the count stays honest for anybody
  * else who reads it: a store that lied about what was in flight to make a light
  * look right would hand its next consumer a fact that is not one.
+ *
+ * The floor is for a call the feed never caught up with. `newestSettled` is
+ * the feed's newest settled occurrence; a DIFFERENT one arriving while the ask
+ * lingers is the feed naming the work that just finished, and the linger
+ * yields to it at once — holding a bare "working" over a line that already
+ * says what was done would be the presentation contradicting the record.
  */
-function useLingeringAsk(open: number): boolean {
+function useLingeringAsk(
+  open: number,
+  newestSettled: string | undefined,
+): boolean {
   const [lingering, setLingering] = useState(false);
+  // What the feed's newest settled occurrence was when the ask left. Null
+  // while no ask is being held, so a settlement from some other run does not
+  // count as this one's.
+  const settledAtAsk = useRef<{ id: string | undefined } | null>(null);
   useEffect(() => {
     if (open > 0) {
+      settledAtAsk.current ??= { id: newestSettled };
       setLingering(true);
       return undefined;
     }
@@ -197,6 +214,11 @@ function useLingeringAsk(open: number): boolean {
       // Nothing is being held over, so there is nothing to stop holding. The
       // guard is what keeps a rail that has never seen an ask from arming a
       // timer on every mount, which is a page that never goes quiet.
+      settledAtAsk.current = null;
+      return undefined;
+    }
+    if (settledAtAsk.current && settledAtAsk.current.id !== newestSettled) {
+      setLingering(false);
       return undefined;
     }
     const timer = setTimeout(() => {
@@ -205,6 +227,6 @@ function useLingeringAsk(open: number): boolean {
     return () => {
       clearTimeout(timer);
     };
-  }, [open, lingering]);
+  }, [open, lingering, newestSettled]);
   return open > 0 || lingering;
 }

@@ -140,7 +140,10 @@ const GATEWAY_STATUSES = new Set([502, 503, 504]);
 // pressed the button really is waiting on the agent for that whole time.
 //
 // Suffixes, so one entry covers a route the contract spells for a person, an
-// organization and an activity alike. A route that ENQUEUES model work rather
+// organization and an activity alike. The COUNT reads them for POST only: the
+// dossier and the growth-fit reading are also READ at these paths, and a panel
+// fetching the last reading is the reader's own click, not the agent at work.
+// A route that ENQUEUES model work rather
 // than waiting for it does not belong here in either reader's sense: it answers
 // at once, so there is no long request for a proxy to cut and nothing for this
 // tab to wait on, and its occurrence reaches the chrome the way every
@@ -162,6 +165,7 @@ const MODEL_ROUTE_SUFFIXES = [
   "/enrich",
   "/growth-fit",
   "/regenerate",
+  "/research",
 ];
 
 /**
@@ -207,6 +211,14 @@ function callsAModel(url: string): boolean {
   return MODEL_ROUTE_SUFFIXES.some((suffix) => path.endsWith(suffix));
 }
 
+// Whether THIS request is the agent at work: a POST to a model route. The
+// reads that share those paths are the reader's own, and the gateway reader
+// above keeps its wider view — a cut connection on either is still a request
+// the server did not finish.
+function asksAModel(request: Request): boolean {
+  return request.method === "POST" && callsAModel(request.url);
+}
+
 export const api = createClient<paths>({
   // same-origin absolute base + the /v1 mount: contract paths are
   // unprefixed, the server serves them under /v1 (same as curl :8080/v1/me)
@@ -221,7 +233,7 @@ export const api = createClient<paths>({
     if (language && !request.headers.has("Accept-Language")) {
       request.headers.set("Accept-Language", language);
     }
-    if (!callsAModel(request.url)) {
+    if (!asksAModel(request)) {
       return fetchWithDeadline(request);
     }
     // The chrome learns the agent is working HERE, where it is already known,

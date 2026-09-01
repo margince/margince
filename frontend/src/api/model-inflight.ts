@@ -20,8 +20,12 @@ import { useSyncExternalStore } from "react";
  * everything the rail SAYS still comes from the feed.
  *
  * The same shape as `agent-edge-signal.ts`: one module-level value, a publish
- * that only notifies on a real change, and a snapshot whose identity is stable
- * between changes so `useSyncExternalStore` does not re-render forever.
+ * on every change, and a snapshot whose identity is stable between changes so
+ * `useSyncExternalStore` does not re-render forever. EVERY change, not only the
+ * crossings of zero: the rail reads the count as a boolean, but the feed is
+ * refetched on each edge of a call, and two calls overlapping would otherwise
+ * have their inner edges — the second leaving, the first answering — pass
+ * without a read.
  */
 
 let open = 0;
@@ -36,9 +40,7 @@ function notify(): void {
 /** A request to a model route has left. */
 export function beginModelCall(): void {
   open += 1;
-  if (open === 1) {
-    notify();
-  }
+  notify();
 }
 
 /**
@@ -56,9 +58,7 @@ export function endModelCall(): void {
     return;
   }
   open -= 1;
-  if (open === 0) {
-    notify();
-  }
+  notify();
 }
 
 /** The current count, for a consumer that is not a component. */

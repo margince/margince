@@ -19,7 +19,11 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode, RefObject } from "react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { beginModelCall, endModelCall } from "../api/model-inflight";
+import {
+  beginModelCall,
+  endModelCall,
+  modelCallsInFlight,
+} from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { clearAgentEdge, currentAgentEdge } from "./agent-edge-signal";
@@ -325,6 +329,12 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  // The in-flight count is module state, reset here the way clearAgentEdge
+  // resets its sibling signal: a case failing between begin and end would
+  // otherwise start every later case in this file at "working".
+  while (modelCallsInFlight() > 0) {
+    endModelCall();
+  }
   // The frame case spies on Element.prototype.getBoundingClientRect, which every
   // later case in this file shares. Restored here rather than there: a spy left
   // on a prototype is the kind of leak whose failure names a case that is fine.

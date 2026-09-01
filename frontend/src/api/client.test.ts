@@ -235,15 +235,18 @@ describe("the api client's model-call count", () => {
   // delivered one. Counted down on every ending, or the orb would stay lit for
   // the rest of the session on one 422.
   it("stops counting a model route that was refused", async () => {
+    // Seen rising as well as settling: a route that was never counted also
+    // ends at zero, and that is the invisible failure this file exists for.
+    const seen: number[] = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ code: "validation_error" }), {
-            status: 422,
-            headers: { "Content-Type": "application/problem+json" },
-          }),
-      ),
+      vi.fn(async () => {
+        seen.push(modelCallsInFlight());
+        return new Response(JSON.stringify({ code: "validation_error" }), {
+          status: 422,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }),
     );
 
     await api.POST("/people/{id}/draft-email", {
@@ -251,7 +254,31 @@ describe("the api client's model-call count", () => {
       body: {},
     });
 
+    expect(seen).toEqual([1]);
     expect(modelCallsInFlight()).toBe(0);
+  });
+
+  // The dossier and the growth-fit reading are READ at the same paths they are
+  // asked for. A panel loading the last reading is the reader's own click, and
+  // counting it lit the orb for a fetch the agent had nothing to do with.
+  it("does not count a read at a model route's path", async () => {
+    const seen: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        seen.push(modelCallsInFlight());
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    await api.GET("/organizations/{id}/dossier", {
+      params: { path: { id: "01a0-4cd2" } },
+    });
+
+    expect(seen).toEqual([0]);
   });
 
   // An ordinary read is the reader's own click, not the agent's work. The rail
