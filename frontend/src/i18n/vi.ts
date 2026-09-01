@@ -184,6 +184,8 @@ export const vi = {
   "shell.aside.show": "Hiện cột ngữ cảnh",
   "shell.skipToContent": "Bỏ qua tới nội dung",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "Trang chủ {company}, vận hành bởi Margince",
+  "shell.poweredBy": "Vận hành bởi Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Tìm kiếm mọi thứ…",
   "shell.breadcrumbAria": "Đường dẫn",

@@ -170,11 +170,15 @@ type Company struct {
 	OrganizationSource     string
 	OrganizationCapturedBy string
 	Website                *string
-	Fields                 map[string]string
-	ProfileFields          []CompanyProfileField
-	Facts                  []CompanyFact
-	MinimumComplete        bool
-	UpdatedAt              time.Time
+	// The bucket path of the mark a confirmed website read bound to the anchor
+	// record, nil when none resolved. It never reaches the wire — LogoURL turns
+	// it into the endpoint that streams the bytes.
+	LogoObjectKey   *string
+	Fields          map[string]string
+	ProfileFields   []CompanyProfileField
+	Facts           []CompanyFact
+	MinimumComplete bool
+	UpdatedAt       time.Time
 }
 
 // SaveCompanyInput is one submission of the company form. A nil field was not
@@ -434,13 +438,13 @@ func createAnchorOrganization(ctx context.Context, tx pgx.Tx, displayName, by st
 func readCompany(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (Company, error) {
 	out := Company{OrganizationID: orgID, Fields: map[string]string{}}
 	if err := tx.QueryRow(ctx,
-		`SELECT o.display_name, o.source, o.captured_by, o.updated_at, d.domain
+		`SELECT o.display_name, o.source, o.captured_by, o.updated_at, o.logo_object_key, d.domain
 		   FROM organization o
 		   LEFT JOIN organization_domain d
 		     ON d.organization_id = o.id AND d.is_primary AND d.archived_at IS NULL
 		  WHERE o.id = $1`,
 		orgID).Scan(&out.DisplayName, &out.OrganizationSource, &out.OrganizationCapturedBy,
-		&out.UpdatedAt, &out.Website); err != nil {
+		&out.UpdatedAt, &out.LogoObjectKey, &out.Website); err != nil {
 		return Company{}, fmt.Errorf("read company: %w", err)
 	}
 

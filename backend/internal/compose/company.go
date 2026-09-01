@@ -245,7 +245,12 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 		OrganizationId: openapi_types.UUID(c.OrganizationID.UUID),
 		DisplayName:    c.DisplayName,
 		Website:        c.Website,
-		UpdatedAt:      &c.UpdatedAt,
+		// The module's own spelling of the logo endpoint, not a second one: the
+		// shell draws the installation's mark from this profile and the record
+		// screens draw it from Organization.logo_url, and a company with two
+		// faces is a company nobody recognises.
+		LogoUrl:   people.LogoURL(c.OrganizationID.UUID, c.LogoObjectKey),
+		UpdatedAt: &c.UpdatedAt,
 	}
 	profileFields := make([]crmcontracts.CompanyProfileField, 0, len(c.ProfileFields))
 	for _, field := range c.ProfileFields {

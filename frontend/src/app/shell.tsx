@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import type { components } from "../api/schema";
-import { Button, Modal } from "../design-system/atoms";
+import { Avatar, Button, Modal } from "../design-system/atoms";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settings";
@@ -102,19 +102,48 @@ function BrandBlock() {
   // rather than observing ["company"] again: a second observer on that entry
   // re-triggers the gate's fetch and walks the app back through its splash.
   // The gate guarantees the profile is present before the shell mounts.
-  // Absent, the block shows the product name only — a company name is never
-  // invented to fill the line.
   const installation =
-    useQueryClient().getQueryData<CompanyProfile | null>(["company"])
-      ?.display_name || undefined;
+    useQueryClient().getQueryData<CompanyProfile | null>(["company"]) ??
+    undefined;
+  // Whose product this is, above whose product it runs on. The reader works
+  // for the company named here and not for us, so the company is the heading
+  // and the product is the line under it.
+  //
+  // Absent profile — the shell mounted before onboarding described anybody —
+  // the block falls back to the product's own mark and name. A company name is
+  // never invented to fill the line.
+  if (!installation) {
+    return (
+      <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
+        <span className="ws-chip">
+          <Logomark />
+        </span>
+        <span className="ws-name">
+          <b>{t("shell.logoAria")}</b>
+        </span>
+      </a>
+    );
+  }
   return (
-    <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
-      <span className="ws-chip">
-        <Logomark />
-      </span>
+    <a
+      className="ws"
+      href="#/home"
+      aria-label={t("shell.companyLogoAria", {
+        company: installation.display_name,
+      })}
+    >
+      {/* The mark the onboarding website read resolved from the company's own
+          site. Avatar draws its deterministic monogram underneath, so a company
+          whose site declared no icon still has a face rather than a gap. */}
+      <Avatar
+        identity={installation.organization_id}
+        name={installation.display_name}
+        src={installation.logo_url}
+        shape="organization"
+      />
       <span className="ws-name">
-        <b>{t("shell.logoAria")}</b>
-        {installation && <span className="ws-org">{installation}</span>}
+        <b>{installation.display_name}</b>
+        <span className="ws-org">{t("shell.poweredBy")}</span>
       </span>
     </a>
   );

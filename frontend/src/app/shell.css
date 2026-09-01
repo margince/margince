@@ -441,6 +441,16 @@
   min-width: 0;
   overflow: hidden;
 }
+/* The company's own mark stands in the same slot the product's does, at the
+   same size: the collapsed rail centres a 32px box on the rows' glyph axis, and
+   a chip that changed size with the profile would move the whole brand block
+   the moment onboarding finished. */
+.rail .ws .avatar {
+  width: 32px;
+  height: 32px;
+  font-size: var(--fs-body);
+  border-radius: 9px; /* ds:ignore matches the product chip's own corner in this slot */
+}
 .rail .ws-chip {
   width: 32px;
   height: 32px;

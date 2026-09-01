@@ -178,6 +178,8 @@ export const de = {
   "shell.aside.show": "Kontextspalte einblenden",
   "shell.skipToContent": "Zum Inhalt springen",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "{company} Startseite, betrieben mit Margince",
+  "shell.poweredBy": "Betrieben mit Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Alles durchsuchen…",
   "shell.breadcrumbAria": "Navigationspfad",

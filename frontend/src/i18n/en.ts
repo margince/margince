@@ -185,6 +185,8 @@ export const en = {
   "shell.aside.show": "Show the context panel",
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "{company} home, powered by Margince",
+  "shell.poweredBy": "Powered by Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",

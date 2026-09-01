@@ -22023,6 +22023,14 @@ export interface components {
             display_name: string;
             /** @description The company's own domain (acme.com) — stored as its primary domain, the same handle a read-back resolves organizations by. A full URL is accepted on write and reduced to its domain. */
             website?: string | null;
+            /**
+             * @description Where to fetch the installation's own resolved logo (A55) — the same
+             *     `getOrganizationLogo` path `Organization.logo_url` carries for the anchor record,
+             *     cookie-authenticated and same-origin. It is what the website read of onboarding
+             *     resolved from the company's own site. ABSENT entirely (not null) when no logo
+             *     resolved, which is never an error: a client draws the deterministic monogram then.
+             */
+            readonly logo_url?: string | null;
             /** @description The registered legal entity, when it differs from display_name. */
             legal_name?: string | null;
             /** @description The registered address as one formatted line. */

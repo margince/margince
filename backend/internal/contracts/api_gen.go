@@ -16990,6 +16990,13 @@ type CompanyProfile struct {
 	// LegalName The registered legal entity, when it differs from display_name.
 	LegalName *string `json:"legal_name,omitempty"`
 
+	// LogoUrl Where to fetch the installation's own resolved logo (A55) — the same
+	// `getOrganizationLogo` path `Organization.logo_url` carries for the anchor record,
+	// cookie-authenticated and same-origin. It is what the website read of onboarding
+	// resolved from the company's own site. ABSENT entirely (not null) when no logo
+	// resolved, which is never an error: a client draws the deterministic monogram then.
+	LogoUrl *string `json:"logo_url,omitempty"`
+
 	// MinimumComplete True when display_name, offer_summary and icp are confirmed.
 	MinimumComplete *bool `json:"minimum_complete,omitempty"`
 
