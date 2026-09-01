@@ -1518,6 +1518,8 @@ export const en = {
   "timeline.kind.message": "Message",
   "timeline.kind.change": "Record",
   "timeline.withheld": "Content for participants only",
+  "compose.deadRecipients":
+    "Mail to {addresses} is bouncing — the last delivery was refused and nothing has arrived since. Send anyway, or use another address.",
   "compose.threadShare": "Share thread",
   "compose.threadKeepPrivate": "Keep private",
   "compose.threadStillHeld":

@@ -21,6 +21,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Calendar, type ISODay, isoDay } from "../design-system/calendar";
+import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -57,6 +58,7 @@ import {
 } from "./common";
 import { useOrganization360 } from "./company360";
 import { useConsentPurposes } from "./consent";
+import { usePerson360 } from "./person360";
 import {
   stripEveryKeyTag,
   stripSubjectTag,
@@ -1554,6 +1556,7 @@ function MailOnlyFields({
   onSubjectChange,
   rejectionInFlight,
   answering,
+  deadRecipients,
 }: Readonly<{
   intent: string;
   onIntentChange: (next: string) => void;
@@ -1574,6 +1577,8 @@ function MailOnlyFields({
   /** What this message answers, in the reader's own words. Null while the
    * lookup is unsettled — an unanswered read is not "no earlier message". */
   answering: string | null;
+  /** The recipients on this draft that are known not to arrive. */
+  deadRecipients: readonly string[];
 }>) {
   const t = useT();
   const offer = (
@@ -1619,6 +1624,16 @@ function MailOnlyFields({
           onChange={onCcChange}
         />
       </MailRow>
+      {/* Under the addresses, because it is about the ones standing there —
+          and a warning rather than a refusal: the rep may know something the
+          ledger does not, and a bounce is a fact about the past. */}
+      {deadRecipients.length > 0 && (
+        <Callout tone="warn" live="status">
+          {t("compose.deadRecipients", {
+            addresses: deadRecipients.join(", "),
+          })}
+        </Callout>
+      )}
       <MailRow label={t("compose.subject")}>
         <TextInput
           aria-label={t("compose.subject")}
@@ -2514,6 +2529,13 @@ export function ComposeModal({
   // conversation and has no field to pick a moment in).
   const scheduling = !isChannelReply && sendAt !== "";
   const scheduled = momentOf(sendAt);
+  // The person this mail is TO, however the composer came to know them: a
+  // channel reply is handed one, a person page names it as the record the
+  // composer was opened from, and a company draft picks a recipient in the
+  // account context. A deal timeline names none, and warns about nothing.
+  const recipientPerson =
+    personId ?? (entityType === "person" ? entityId : undefined);
+  const deadRecipients = useDeadRecipients(recipientPerson, [...to, ...cc]);
   return (
     <>
       <ScheduleDialog
@@ -2612,6 +2634,7 @@ export function ComposeModal({
               subject={subject}
               onSubjectChange={setSubject}
               rejectionInFlight={rejectionInFlight}
+              deadRecipients={deadRecipients}
             />
           )}
           <Textarea
@@ -2699,6 +2722,37 @@ export function ComposeModal({
       </ConfirmModal>
     </>
   );
+}
+
+// WHICH OF THESE ADDRESSES IS KNOWN NOT TO ARRIVE. The person page badges an
+// address whose latest delivery hard-bounced with nothing clean since, and the
+// composer is where that matters: the mark was visible only on a page the rep
+// is not looking at while they write.
+//
+// Read off the 360 under the SAME key the person page fetches under, so opening
+// the composer from that page costs no request at all and the two surfaces
+// cannot disagree about which address is dead. A composer that never learned a
+// person — a deal timeline has no single one — asks for nothing and warns about
+// nothing.
+//
+// The section carries its own grant. A caller who may not read the send ledger
+// gets it omitted rather than empty, and this then marks nothing: an unanswered
+// read is not "the address is fine", and a warning invented from an absence
+// would be a claim about correspondence the reader may not see.
+//
+// Free-typed addresses with no person context stay unwarned on purpose (#3160):
+// deriving deadness for an arbitrary string needs an endpoint of its own.
+function useDeadRecipients(
+  personId: string | undefined,
+  recipients: readonly string[],
+) {
+  const view = usePerson360(personId as string, personId != null);
+  const dead = view.data?.dead_addresses;
+  if (personId == null || dead == null || dead.length === 0) return [];
+  // Addresses compare case-insensitively — a rep who types Anna@… must be
+  // warned about anna@…, and the ledger stores what the provider reported.
+  const marked = new Set(dead.map((address) => address.toLowerCase()));
+  return recipients.filter((address) => marked.has(address.toLowerCase()));
 }
 
 // A channel reply can only land on a live, unblocked identity, and the
