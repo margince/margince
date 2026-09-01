@@ -245,10 +245,10 @@ func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersio
 // relinkAdmittedRow is the transactional half both doors share: the target
 // probe, then the guarded row write. The admission stays outside it so the
 // single door can refuse a malformed request before it opens a transaction.
-func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (bool, error) {
+func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (wrote, held bool, err error) {
 	// The relink target is a client-supplied reference (H1).
 	if err := auth.EnsureLinkTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
-		return false, err
+		return false, false, err
 	}
 	return relinkActivityRow(ctx, tx, id, in, column)
 }

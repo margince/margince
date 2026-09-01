@@ -75,11 +75,17 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 	}
 	var out crmcontracts.Activity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := relinkAdmittedRow(ctx, tx, id, in, column); err != nil {
+		_, held, err := relinkAdmittedRow(ctx, tx, id, in, column)
+		if err != nil {
 			return err
 		}
+		// held, not a bare storekit.LiveOnly: a no-op relink (the target was
+		// already linked) never reaches relinkActivityRow's own write, so a
+		// held row's row lock is the only thing that proved it exists — a
+		// LiveOnly read here would answer not-found for a replay that, on a
+		// live row, correctly answers with the row unchanged.
 		var err2 error
-		out, err2 = readActivity(ctx, tx, id, storekit.LiveOnly)
+		out, err2 = readActivityForWrite(ctx, tx, id, held)
 		return err2
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -100,7 +106,8 @@ func RelinkActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Re
 	if err != nil {
 		return false, err
 	}
-	return relinkAdmittedRow(ctx, tx, id, in, column)
+	wrote, _, err := relinkAdmittedRow(ctx, tx, id, in, column)
+	return wrote, err
 }
 
 // LockActivityLive takes the row lock on one live activity for the rest of the
@@ -138,13 +145,15 @@ func admitRelink(ctx context.Context, in RelinkActivityInput) (string, error) {
 
 // relinkActivityRow is the guarded write for ONE activity, inside the caller's
 // transaction, after the caller has probed the destination record. It answers
-// whether a link was actually written: replaying the same association is a
-// no-op, and a no-op writes no audit noise.
+// whether a link was actually written — replaying the same association is a
+// no-op, and a no-op writes no audit noise — and whether the row is held, so
+// a caller reading it back afterward (RelinkActivity's own final read) knows
+// which archived filter still finds a no-op's row.
 //
 // The write check is per row on purpose. Customer identity is workspace-
 // readable, so the write arm (auth.EnsureActivityWritable) is what keeps a
 // colleague's correspondence theirs — and in a batch every row is somebody's.
-func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (bool, error) {
+func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (wrote, held bool, err error) {
 	// THE LOCK COMES FIRST, before the authority check and before the version
 	// compare, because both are answers about the row and both are only true
 	// while it holds still. Checked first and locked after, an ownership change
@@ -154,27 +163,27 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	// It is taken for every relink rather than only a pinned one: the write
 	// below updates this row, so the lock is acquired either way — this decides
 	// WHEN, and the two checks above are the reason it is now.
-	held, err := lockActivityForWrite(ctx, tx, id.UUID)
+	held, err = lockActivityForWrite(ctx, tx, id.UUID)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
-		return false, err
+		return false, held, err
 	}
 	if err := relinkMeetsItsPin(ctx, tx, id, in.IfVersion, held); err != nil {
-		return false, err
+		return false, held, err
 	}
 	var displaced []ids.UUID
 	if in.ReplaceExistingOfType {
 		var err error
 		displaced, err = deleteVisibleLinksOfType(ctx, tx, id, in.EntityType, column)
 		if err != nil {
-			return false, err
+			return false, held, err
 		}
 	}
 	if in.EntityType == linkEntityPerson && in.ReplaceExistingOfType && len(displaced) > 0 {
 		if err := repointDisplacedParticipants(ctx, tx, id, in.EntityID, displaced); err != nil {
-			return false, err
+			return false, held, err
 		}
 	}
 	tag, err := tx.Exec(ctx, storekit.SQLf(`
@@ -183,11 +192,19 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 		ON CONFLICT (activity_id, entity_type, `+linkIDCoalesce+`) DO NOTHING`, column),
 		id, in.EntityType, in.EntityID)
 	if err != nil {
-		return false, err
+		return false, held, err
 	}
 	if tag.RowsAffected() == 0 {
-		return false, nil
+		return false, held, nil
 	}
+	return true, held, finalizeRelinkedActivity(ctx, tx, id, in)
+}
+
+// finalizeRelinkedActivity is the bookkeeping relinkActivityRow's own write
+// earns once the link itself is written: the version bump a staged approval
+// re-checks, the project correspondence stamp, and the audit row + outbox
+// event — split out so the guard chain above it reads as one shape.
+func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
 	// Touch the activity ROW itself, not just its link table: a staged
 	// approval pins activity.version (versionTables includes objectActivity),
 	// and that pin is the only defense between an approved "send this body on
@@ -198,22 +215,22 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	// trigger (set_updated_at_bump_version, 0008_activity.up.sql) does the
 	// actual bump; this only has to be a genuine UPDATE of the row.
 	if _, err := tx.Exec(ctx, `UPDATE activity SET updated_at = now() WHERE id = $1`, id); err != nil {
-		return false, err
+		return err
 	}
 	// Filing under a project is what qualifies the correspondence (D5), so
 	// the stamp commits with the link that earned it.
 	if in.EntityType == linkEntityProject {
 		if err := StampCorrespondenceForProject(ctx, tx, id, in.EntityID); err != nil {
-			return false, err
+			return err
 		}
 	}
 	auditID, err := storekit.Audit(ctx, tx, "activity_relink", "activity", id.UUID, nil, map[string]any{
 		"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType,
 	})
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
+	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
 		ChangedFields: relinkedChangedFields(in.EntityType, in.EntityID),
 	})
 }
@@ -319,7 +336,7 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 			return err
 		}
 		for _, id := range members {
-			written, err := relinkActivityRow(ctx, tx, id, in, column)
+			written, _, err := relinkActivityRow(ctx, tx, id, in, column)
 			switch {
 			case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
 				continue
@@ -381,7 +398,7 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 				continue
 			}
 			seen[raw] = struct{}{}
-			written, err := relinkActivityRow(ctx, tx, ids.From[ids.ActivityKind](raw), in, column)
+			written, _, err := relinkActivityRow(ctx, tx, ids.From[ids.ActivityKind](raw), in, column)
 			if err != nil {
 				return err
 			}

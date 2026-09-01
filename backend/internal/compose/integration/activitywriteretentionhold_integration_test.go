@@ -90,6 +90,38 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 	assert423("UpdateActivity with a stale If-Version", err)
 }
 
+// TestARelinkAlreadyPresentOnAHeldRowStillReadsBack is the no-op edge
+// relinkActivityRow's own ON CONFLICT DO NOTHING creates: replaying a link
+// the held row already carries never reaches the guarded UPDATE (nothing
+// changed, so nothing to touch), leaving RelinkActivity's own final read as
+// the only thing standing between success and a false not-found. That read
+// used to hardcode storekit.LiveOnly, so an authorized caller replaying an
+// association their held row already has was told the row did not exist —
+// the "held" case relinkActivityRow itself distinguishes throughout is
+// discarded past the return, this test's real subject.
+func TestARelinkAlreadyPresentOnAHeldRowStillReadsBack(t *testing.T) {
+	e := Setup(t)
+	f := seedRestrictionFixture(t, e)
+	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+		t.Fatalf("erasing the subject: %v", err)
+	}
+	held := ids.From[ids.ActivityKind](f.email)
+
+	// The deal, not f.person: ErasePerson archives the subject themselves
+	// (a link to an archived record is its own refusal, unrelated to what
+	// this test is about), while the won deal SeedWonDealLinkedTo already
+	// filed the email under stays live — a genuinely no-op relink target.
+	out, err := e.Activities.RelinkActivity(e.Admin(), held, activities.RelinkActivityInput{
+		EntityType: "deal", EntityID: f.deal,
+	})
+	if err != nil {
+		t.Fatalf("replaying a relink a held row already carries answered %v, want success (a no-op)", err)
+	}
+	if ids.UUID(out.Id) != f.email {
+		t.Errorf("relink no-op read back activity %v, want %v", out.Id, f.email)
+	}
+}
+
 // TestSetAudienceOnAHeldCapturedRowAnswers423NotCapturedAudienceError proves
 // the retention refusal outranks the captured-audience one: a row can be
 // BOTH held and captured (imported by a mailbox, which is what
