@@ -10,6 +10,7 @@ package integrations
 // cost table they are computed from.
 
 import (
+	"maps"
 	"testing"
 	"time"
 
@@ -185,14 +186,35 @@ func TestAPricedCategoryCarriesItsPrerequisitesPrice(t *testing.T) {
 			t.Errorf("%q names prerequisite %q, catalog entry says %q",
 				category, prerequisite, paired.Requires)
 		}
-		// Pool by pool, because a pair spanning two pools is the case here:
-		// summing to one total would pass a price that charged the mobile
-		// pool twice and the email pool not at all.
-		for pool, n := range desc.CostTable[prerequisite] {
-			if paired.Cost[string(pool)] < n {
-				t.Errorf("%q costs %v, which does not cover its prerequisite %q at %d in pool %q — the button would quote less than the press spends",
-					category, paired.Cost, prerequisite, n, pool)
+		// The exact price of the pair, pool by pool.
+		//
+		// Pool by pool because a pair spanning two pools is the case here: one
+		// summed total would pass a price that charged the mobile pool twice
+		// and the email pool not at all.
+		//
+		// Exact rather than "at least the prerequisite's share": a floor is
+		// satisfied by 1 >= 1 the moment a pair shares a pool with its
+		// prerequisite, so a catalog that had dropped one half's cost would
+		// still pass while the button quoted half what the press spends. No
+		// shipped pair shares a pool today, which is exactly why the weaker
+		// check looked green — the first pair that does would be the one it
+		// could not see.
+		want := map[string]int{}
+		for _, priced := range []provider.Category{category, prerequisite} {
+			for pool, n := range desc.CostTable[priced] {
+				want[string(pool)] += n
 			}
+		}
+		// catalogOf drops a pool costing nothing, so the expectation must too
+		// or every comparison fails on a zero neither side charges.
+		for pool, n := range want {
+			if n == 0 {
+				delete(want, pool)
+			}
+		}
+		if !maps.Equal(paired.Cost, want) {
+			t.Errorf("%q costs %v, want %v — its own price plus prerequisite %q's, which is what one press spends",
+				category, paired.Cost, want, prerequisite)
 		}
 	}
 }
