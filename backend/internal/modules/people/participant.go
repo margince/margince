@@ -39,7 +39,7 @@ import (
 // a replayed capture already promoted its row on the first pass. None of those
 // is an error, and none should fail an ensure that has otherwise succeeded.
 func namePersonAmongParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, personID ids.PersonID) error {
-	_, err := promoteParticipantsToPerson(ctx, tx, &activityID, personID)
+	_, err := promoteParticipantsToPerson(ctx, tx, &activityID, personID, nil)
 	return err
 }
 
@@ -48,9 +48,11 @@ func namePersonAmongParticipants(ctx context.Context, tx pgx.Tx, activityID ids.
 // nil. ONE statement rather than two, because the capture path and the cohort
 // repair are the same promotion asked at different scopes — two spellings would
 // drift on the guards below, and each of those is why the write is safe.
+// batch bounds a cohort-wide pass; nil means unbounded, which is what the
+// single-activity pin uses because one activity's rows are already bounded.
 func promoteParticipantsToPerson(
-	ctx context.Context, tx pgx.Tx, activityID *ids.ActivityID, personID ids.PersonID,
-) (int64, error) {
+	ctx context.Context, tx pgx.Tx, activityID *ids.ActivityID, personID ids.PersonID, batch *int,
+) ([]ids.UUID, error) {
 	var pin *ids.UUID
 	if activityID != nil {
 		id := activityID.UUID
@@ -72,7 +74,7 @@ func promoteParticipantsToPerson(
 	// Live addresses only. An abandoned alias names a party who is no longer
 	// reachable there, and naming a person by it claims a correspondence the
 	// address no longer carries.
-	tag, err := tx.Exec(ctx, `
+	rows, err := tx.Query(ctx, `
 		UPDATE activity_participant ap
 		   SET person_id = $2
 		 WHERE ($1::uuid IS NULL OR ap.activity_id = $1)
@@ -87,10 +89,30 @@ func promoteParticipantsToPerson(
 		       SELECT 1 FROM activity_participant other
 		        WHERE other.activity_id = ap.activity_id
 		          AND other.role = ap.role
-		          AND other.person_id = $2)`,
-		pin, personID)
+		          AND other.person_id = $2)
+		   AND ($3::int IS NULL OR ap.id IN (
+		       SELECT sub.id FROM activity_participant sub
+		        WHERE ($1::uuid IS NULL OR sub.activity_id = $1)
+		          AND sub.person_id IS NULL AND sub.user_id IS NULL
+		          AND sub.address IS NOT NULL
+		        ORDER BY sub.id
+		        LIMIT $3))
+		RETURNING ap.activity_id`,
+		pin, personID, batch)
 	if err != nil {
-		return 0, fmt.Errorf("people: naming the person among an activity's participants: %w", err)
+		return nil, fmt.Errorf("people: naming the person among an activity's participants: %w", err)
 	}
-	return tag.RowsAffected(), nil
+	defer rows.Close()
+	var touched []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("people: naming the person among an activity's participants: %w", err)
+		}
+		touched = append(touched, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("people: naming the person among an activity's participants: %w", err)
+	}
+	return touched, nil
 }

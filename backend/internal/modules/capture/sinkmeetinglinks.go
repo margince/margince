@@ -122,14 +122,20 @@ func (s *Sink) linkResolvedMeetingParticipants(
 func meetingParticipantsWithPeople(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 ) ([]ids.PersonID, error) {
+	// The redirect is followed BEFORE liveness is judged, and the liveness test
+	// is on the record the redirect lands on. A merge archives the source and
+	// points it at the survivor in one write, so testing the source's own
+	// archived_at would drop an attendee whose record simply moved — the meeting
+	// would silently lose a link to a person the workspace still has.
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT coalesce(p.merged_into_id, p.id) AS person_id,
+		SELECT survivor.id AS person_id,
 		       bool_or(ap.role = 'organizer') AS organized
 		  FROM activity_participant ap
 		  JOIN person p ON p.id = ap.person_id
+		  JOIN person survivor ON survivor.id = coalesce(p.merged_into_id, p.id)
 		 WHERE ap.activity_id = $1 AND ap.person_id IS NOT NULL
-		   AND p.archived_at IS NULL
-		 GROUP BY 1
+		   AND survivor.archived_at IS NULL
+		 GROUP BY survivor.id
 		 ORDER BY organized DESC, person_id`, activityID)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading a meeting's resolved attendees: %w", err)

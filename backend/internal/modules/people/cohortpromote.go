@@ -38,6 +38,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// cohortRepairBatch bounds ONE pass, in messages of each kind.
+//
+// The repair runs on the verdict's own user-facing transaction as well as on the
+// consumer, and a contact whose address matches years of correspondence would
+// otherwise write every link and publish every event in one go — a transaction
+// nobody sized, holding locks while it does it. The bound makes the cost of a
+// pass knowable instead.
+//
+// A cohort larger than this is not lost: what the pass leaves behind still
+// matches its own selection, so the next person event repairs the next batch,
+// and the nightly reconcile is what guarantees the tail is reached without
+// waiting for one. The number is deliberately generous — an ordinary contact's
+// whole history is far below it, so the batching is invisible in every case but
+// the pathological one.
+const cohortRepairBatch = 500
+
 // CohortPromotion is what one repair pass did, so a caller counts honestly
 // rather than reporting the work it attempted.
 type CohortPromotion struct {
@@ -64,15 +80,16 @@ func (s *Store) PromotePersonCohortTx(
 		personID).Scan(&canonical); err != nil {
 		return CohortPromotion{}, fmt.Errorf("people: resolving the person a cohort belongs to: %w", err)
 	}
+	batch := cohortRepairBatch
 	linked, err := linkCapturedCohort(ctx, tx, canonical)
 	if err != nil {
 		return CohortPromotion{}, err
 	}
-	promoted, err := promoteParticipantsToPerson(ctx, tx, nil, canonical)
+	promoted, err := promoteParticipantsToPerson(ctx, tx, nil, canonical, &batch)
 	if err != nil {
 		return CohortPromotion{}, err
 	}
-	if len(linked) == 0 && promoted == 0 {
+	if len(linked) == 0 && len(promoted) == 0 {
 		// Nothing moved. A repair that found nothing is not an event in this
 		// person's history, and auditing every replayed person.updated would
 		// bury the passes that did change something.
@@ -85,7 +102,7 @@ func (s *Store) PromotePersonCohortTx(
 	// before-image to judge — the subject is the person whose cohort moved, not
 	// any one of the messages.
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", entityPerson, canonical.UUID,
-		map[string]any{"cohort_linked": len(linked), "cohort_promoted": promoted})
+		map[string]any{"cohort_linked": len(linked), "cohort_promoted": len(promoted)})
 	if err != nil {
 		return CohortPromotion{}, fmt.Errorf("people: auditing a cohort repair: %w", err)
 	}
@@ -94,7 +111,7 @@ func (s *Store) PromotePersonCohortTx(
 	// stayed silent would leave "who knows this contact" answering from the
 	// state before the mail arrived on their record — correct only until the
 	// next unrelated write happened to refold it.
-	for _, activity := range linked {
+	for _, activity := range changedActivities(linked, promoted) {
 		if err := storekit.EmitEvent(ctx, tx, auditID, activity, crmcontracts.PublicEventActivityUpdated{
 			ChangedFields: crmcontracts.PublicEventActivityChangedFields{
 				Relinked: &crmcontracts.PublicEventActivityRelinkedRef{
@@ -106,7 +123,33 @@ func (s *Store) PromotePersonCohortTx(
 			return CohortPromotion{}, fmt.Errorf("people: publishing a cohort repair: %w", err)
 		}
 	}
-	return CohortPromotion{Linked: int64(len(linked)), Promoted: promoted}, nil
+	return CohortPromotion{Linked: int64(len(linked)), Promoted: int64(len(promoted))}, nil
+}
+
+// changedActivities folds the two halves of a pass into the messages to publish,
+// dropping a repeat. An activity commonly appears in both — the same message
+// gains its link and has its participant row named in one go — and it needs one
+// event either way, because the graph refolds the whole activity rather than one
+// row of it.
+//
+// A participant-only promotion counts. The interaction graph folds its edges
+// from participant rows, so a message whose link already existed and whose
+// participant row just learned the person is precisely a message whose edges
+// are now wrong, and staying silent about it leaves "who knows this contact"
+// answering from before.
+func changedActivities(linked, promoted []ids.UUID) []ids.UUID {
+	seen := make(map[ids.UUID]struct{}, len(linked)+len(promoted))
+	out := make([]ids.UUID, 0, len(linked)+len(promoted))
+	for _, group := range [][]ids.UUID{linked, promoted} {
+		for _, id := range group {
+			if _, already := seen[id]; already {
+				continue
+			}
+			seen[id] = struct{}{}
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 // linkCapturedCohort attaches every captured message from any of the person's
@@ -144,8 +187,10 @@ func linkCapturedCohort(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (
 		   AND NOT EXISTS (
 		       SELECT 1 FROM activity_link l
 		        WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
+		 ORDER BY a.occurred_at DESC, a.id
+		 LIMIT $2
 		ON CONFLICT DO NOTHING
-		RETURNING activity_id`, personID)
+		RETURNING activity_id`, personID, cohortRepairBatch)
 	if err != nil {
 		return nil, fmt.Errorf("people: linking a person's captured cohort: %w", err)
 	}
