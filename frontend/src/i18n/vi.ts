@@ -6332,6 +6332,8 @@ export const vi = {
   "webhooks.deliveries.status.delivered": "Đã gửi",
   "webhooks.deliveries.status.retrying": "Đang thử lại",
   "webhooks.deliveries.status.dead_lettered": "Đã bỏ vào hàng lỗi",
+  "webhooks.deliveries.status.visibility_revoked":
+    "Đã dừng — không còn hiển thị",
   "webhooks.deliveries.replay": "Gửi lại",
   "webhooks.deliveries.replayConfirm.title": "Gửi lại lượt này?",
   "webhooks.deliveries.replayConfirm.body":

@@ -780,6 +780,22 @@ func TestWebhookRetryThenDeadLetterThenReplay(t *testing.T) {
 	if status := we.Call(t, "POST", "/v1/webhook-subscriptions/"+subID+"/deliveries/"+deliveryID+"/replay", nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("http replay → %d, want 200", status)
 	}
+	// 200 alone is not evidence the replay ran. The api role's deliverer is
+	// built by a different constructor from the one this suite injects, and a
+	// replay that refused before attempting anything — a missing principal
+	// resolver is the way that happens, since the visibility re-check needs one
+	// — returns the unchanged delivery with exactly this status code. So assert
+	// the ROW moved: the guarded client cannot reach a loopback receiver, so the
+	// attempt fails, but a delivery that was attempted is no longer
+	// dead_lettered.
+	we.Call(t, "GET", "/v1/webhook-subscriptions/"+subID+"/deliveries", nil, nil, &deliveries)
+	if len(deliveries.Data) != 1 {
+		t.Fatalf("delivery list after the http replay: %+v", deliveries.Data)
+	}
+	if deliveries.Data[0].Status == "dead_lettered" {
+		t.Error("the http replay answered 200 and left the delivery dead_lettered, so it " +
+			"recorded a replay it never attempted")
+	}
 
 	// Replay the parked delivery through the engine. A system principal
 	// satisfies the gate and the workspace is bound; the direct-engine call

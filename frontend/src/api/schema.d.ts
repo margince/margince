@@ -12223,7 +12223,7 @@ export interface components {
             event_id: string;
             event_type: string;
             /** @enum {string} */
-            status: "pending" | "delivered" | "retrying" | "dead_lettered";
+            status: "pending" | "delivered" | "retrying" | "dead_lettered" | "visibility_revoked";
             attempts: number;
             last_status_code?: number | null;
             last_error?: string | null;

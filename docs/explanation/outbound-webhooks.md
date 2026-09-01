@@ -252,6 +252,10 @@ replayed after the bus stream has trimmed the source event.
                           └──attempt fails, budget spent──▶ dead_lettered   (6 attempts)
                                                                 │
                                                           replay (human) ──▶ pending (fresh budget)
+
+ retrying ──┐                          the retry sweep and the human replay both re-ask
+ dead_lettered ──┴──▶ visibility_revoked   whether the owner may still see the subject
+                                           (terminal; no replay, and no writer overwrites it)
 ```
 
 - **Budget & backoff** (`delivery.go`): 6 total attempts; the gap after `n` failures is exponential
@@ -355,9 +359,21 @@ explicitly — a subscriber selecting one of these types is not wrong, just earl
 **Two identities, kept straight.** A delivery runs under a synthesized `PrincipalSystem` context (the
 delivery worker acts as the system over the whole workspace, not as any human) — that's the
 *attribution*. But the fan-out is *authorized* against the **owner's** live RBAC — that's the security
-subject. Once a delivery is enqueued it carries its frozen payload through retry and replay without
-re-checking: those re-send an already-authorized delivery to the owner's own endpoint, they are not a
-fresh fan-out.
+subject.
+
+**And the authorization is re-asked, not carried.** The payload is frozen once enqueued; the answer to
+"may this owner read this record" is not. A delivery parked on a failing endpoint comes due minutes or
+hours later, so both the retry sweep and an operator's replay resolve the owner's RBAC again from the
+subject the row records (`entity_type` / `entity_id`, written at enqueue) and refuse a delivery whose
+record has since left that owner's sight. A refused delivery lands in the fifth status,
+`visibility_revoked` — terminal, and deliberately not `dead_lettered`, which is the store an operator
+replays *from*. A row enqueued before those columns existed has no identifiable subject, so it cannot be
+re-checked and is refused rather than sent.
+
+The re-check runs before the attempt, not around it, so a narrowing that commits during the outbound
+POST still ships that one delivery. Closing that window means holding a lock across a network call to a
+third party, which trades a bounded one-delivery exposure for an unbounded stall of the delivery table;
+the next event on the same record re-fans-out under the new audience either way.
 
 ## 6. The two runtime lanes and where they run
 

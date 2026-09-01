@@ -18471,7 +18471,7 @@ components:
         subscription_id: { type: string, format: uuid }
         event_id: { type: string, format: uuid }
         event_type: { type: string }
-        status: { type: string, enum: [pending, delivered, retrying, dead_lettered] }
+        status: { type: string, enum: [pending, delivered, retrying, dead_lettered, visibility_revoked] }
         attempts: { type: integer }
         last_status_code: { type: [integer, 'null'] }
         last_error: { type: [string, 'null'] }
