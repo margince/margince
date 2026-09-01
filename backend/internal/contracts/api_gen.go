@@ -7909,6 +7909,72 @@ func (e PersonGraphNodeType) Valid() bool {
 	}
 }
 
+// Defines values for PersonGraphRouteAvailability.
+const (
+	PersonGraphRouteAvailabilityAlreadyRequested PersonGraphRouteAvailability = "already_requested"
+	PersonGraphRouteAvailabilityAvailable        PersonGraphRouteAvailability = "available"
+	PersonGraphRouteAvailabilityDeclined         PersonGraphRouteAvailability = "declined"
+	PersonGraphRouteAvailabilityUnavailable      PersonGraphRouteAvailability = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the PersonGraphRouteAvailability enum.
+func (e PersonGraphRouteAvailability) Valid() bool {
+	switch e {
+	case PersonGraphRouteAvailabilityAlreadyRequested:
+		return true
+	case PersonGraphRouteAvailabilityAvailable:
+		return true
+	case PersonGraphRouteAvailabilityDeclined:
+		return true
+	case PersonGraphRouteAvailabilityUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PersonGraphRouteCandidateStrengthBucket.
+const (
+	PersonGraphRouteCandidateStrengthBucketModerate PersonGraphRouteCandidateStrengthBucket = "moderate"
+	PersonGraphRouteCandidateStrengthBucketNone     PersonGraphRouteCandidateStrengthBucket = "none"
+	PersonGraphRouteCandidateStrengthBucketStrong   PersonGraphRouteCandidateStrengthBucket = "strong"
+	PersonGraphRouteCandidateStrengthBucketWeak     PersonGraphRouteCandidateStrengthBucket = "weak"
+)
+
+// Valid indicates whether the value is a known member of the PersonGraphRouteCandidateStrengthBucket enum.
+func (e PersonGraphRouteCandidateStrengthBucket) Valid() bool {
+	switch e {
+	case PersonGraphRouteCandidateStrengthBucketModerate:
+		return true
+	case PersonGraphRouteCandidateStrengthBucketNone:
+		return true
+	case PersonGraphRouteCandidateStrengthBucketStrong:
+		return true
+	case PersonGraphRouteCandidateStrengthBucketWeak:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PersonGraphRouteType.
+const (
+	PersonGraphRouteTypeDirect         PersonGraphRouteType = "direct"
+	PersonGraphRouteTypeThroughContact PersonGraphRouteType = "through_contact"
+)
+
+// Valid indicates whether the value is a known member of the PersonGraphRouteType enum.
+func (e PersonGraphRouteType) Valid() bool {
+	switch e {
+	case PersonGraphRouteTypeDirect:
+		return true
+	case PersonGraphRouteTypeThroughContact:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PersonMomentConfidence.
 const (
 	PersonMomentConfidenceHigh         PersonMomentConfidence = "high"
@@ -12990,22 +13056,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -23904,6 +23970,9 @@ type PersonGraph struct {
 	// strongest direct relationship if one exists, otherwise the strongest relationship any
 	// colleague has with someone else at the same company.
 	Route *PersonGraphRoute `json:"route,omitempty"`
+
+	// Routes Every way in worth offering, best first, so a reader can take the second one when the first is unavailable. `route` is `routes[0]` — the singular field is the same recommendation and stays for callers that only ever wanted the one.
+	Routes *[]PersonGraphRouteCandidate `json:"routes,omitempty"`
 }
 
 // PersonGraphGroupsOmitted defines model for PersonGraph.GroupsOmitted.
@@ -23980,6 +24049,59 @@ type PersonGraphRoute struct {
 	// Why The proof line, written from the counts — "6 two-way exchanges · replied 2 days ago".
 	Why string `json:"why"`
 }
+
+// PersonGraphRouteAvailability Whether a route can be asked for now. `already_requested` means an open ask exists, `declined` that this colleague has refused this contact before, and `unavailable` that the seat can no longer carry it.
+type PersonGraphRouteAvailability string
+
+// PersonGraphRouteCandidate One way in, with the facts behind it and whether it can be asked for today.
+//
+// The list is ordered the same way the single `route` is chosen: a direct relationship
+// beats an indirect one however warm the indirect one looks, and within a kind the
+// two-way relationships come first. Only a COLLEAGUE can carry an introduction, so a
+// candidate always starts at a live seat — a pair of external contacts who correspond
+// is an edge in this graph but never a route out of it.
+type PersonGraphRouteCandidate struct {
+	// Availability Whether a route can be asked for now. `already_requested` means an open ask exists, `declined` that this colleague has refused this contact before, and `unavailable` that the seat can no longer carry it.
+	Availability PersonGraphRouteAvailability `json:"availability"`
+
+	// Evidence The counts behind a route, as facts rather than a sentence. The prose is written by the client, because this server speaks one language and the product speaks three.
+	Evidence PersonGraphRouteEvidence `json:"evidence"`
+
+	// Receipts The messages behind a `direct` candidate, each individually visibility-checked. Absent on an indirect candidate for the reason the edge itself carries no rows: the counts are disclosable where the correspondence is not.
+	Receipts *[]PersonGraphReceipt `json:"receipts,omitempty"`
+
+	// RouteId Stable within this response, for selecting a route in a client. `direct:<user>` or `through:<user>:<person>`. A write names the parts it means rather than parsing this back apart.
+	RouteId string `json:"route_id"`
+
+	// RouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
+	RouteType          PersonGraphRouteType                     `json:"route_type"`
+	StrengthBucket     *PersonGraphRouteCandidateStrengthBucket `json:"strength_bucket,omitempty"`
+	ThroughDisplayName *string                                  `json:"through_display_name,omitempty"`
+
+	// ThroughPersonId Set when the route goes via someone else at the contact's company.
+	ThroughPersonId *openapi_types.UUID `json:"through_person_id,omitempty"`
+	ViaDisplayName  string              `json:"via_display_name"`
+	ViaUserId       openapi_types.UUID  `json:"via_user_id"`
+}
+
+// PersonGraphRouteCandidateStrengthBucket defines model for PersonGraphRouteCandidate.StrengthBucket.
+type PersonGraphRouteCandidateStrengthBucket string
+
+// PersonGraphRouteEvidence The counts behind a route, as facts rather than a sentence. The prose is written by the client, because this server speaks one language and the product speaks three.
+type PersonGraphRouteEvidence struct {
+	// DaysSinceLast Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp.
+	DaysSinceLast   *int       `json:"days_since_last,omitempty"`
+	Inbound90d      *int       `json:"inbound_90d,omitempty"`
+	Interactions90d int        `json:"interactions_90d"`
+	LastAt          *time.Time `json:"last_at,omitempty"`
+	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+
+	// TwoWay Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
+	TwoWay bool `json:"two_way"`
+}
+
+// PersonGraphRouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
+type PersonGraphRouteType string
 
 // PersonListResponse defines model for PersonListResponse.
 type PersonListResponse struct {

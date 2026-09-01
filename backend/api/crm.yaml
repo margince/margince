@@ -20837,6 +20837,18 @@ components:
         outcome:
           type: string
           enum: [created, updated, needs_review, skipped]
+          # Pins the generated Go constant names. Unpinned, the generator names
+          # these bare whenever nothing else in api_gen.go happens to claim the
+          # word — and `Created` is already declared by publicevents_gen.go in
+          # this same package, so the package stops compiling the moment an
+          # unrelated schema shifts that coincidence.
+          x-enum-varnames:
+            [
+              VCardImportResultOutcomeCreated,
+              VCardImportResultOutcomeUpdated,
+              VCardImportResultOutcomeNeedsReview,
+              VCardImportResultOutcomeSkipped,
+            ]
           description: |
             `created` — nobody matched, so the card became a person, their company and the edge
             between them. `updated` — an exact match, filled only where the record was empty.
@@ -23239,6 +23251,13 @@ components:
           items: { $ref: '#/components/schemas/PersonGraphEdge' }
         route:
           $ref: '#/components/schemas/PersonGraphRoute'
+        routes:
+          type: array
+          description: >-
+            Every way in worth offering, best first, so a reader can take the second one when
+            the first is unavailable. `route` is `routes[0]` — the singular field is the same
+            recommendation and stays for callers that only ever wanted the one.
+          items: { $ref: '#/components/schemas/PersonGraphRouteCandidate' }
         groups_omitted:
           type: array
           description: Groups withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -23339,6 +23358,85 @@ components:
         why:
           type: string
           description: The proof line, written from the counts — "6 two-way exchanges · replied 2 days ago".
+
+    PersonGraphRouteCandidate:
+      type: object
+      description: |
+        One way in, with the facts behind it and whether it can be asked for today.
+
+        The list is ordered the same way the single `route` is chosen: a direct relationship
+        beats an indirect one however warm the indirect one looks, and within a kind the
+        two-way relationships come first. Only a COLLEAGUE can carry an introduction, so a
+        candidate always starts at a live seat — a pair of external contacts who correspond
+        is an edge in this graph but never a route out of it.
+      required: [route_id, route_type, via_user_id, via_display_name, evidence, availability]
+      properties:
+        route_id:
+          type: string
+          description: >-
+            Stable within this response, for selecting a route in a client. `direct:<user>` or
+            `through:<user>:<person>`. A write names the parts it means rather than parsing
+            this back apart.
+        route_type:
+          $ref: '#/components/schemas/PersonGraphRouteType'
+        via_user_id: { type: string, format: uuid }
+        via_display_name: { type: string }
+        through_person_id:
+          type: string
+          format: uuid
+          description: Set when the route goes via someone else at the contact's company.
+        through_display_name: { type: string }
+        strength_bucket:
+          type: string
+          enum: [none, weak, moderate, strong]
+        evidence:
+          $ref: '#/components/schemas/PersonGraphRouteEvidence'
+        receipts:
+          type: array
+          maxItems: 3
+          description: >-
+            The messages behind a `direct` candidate, each individually visibility-checked.
+            Absent on an indirect candidate for the reason the edge itself carries no rows:
+            the counts are disclosable where the correspondence is not.
+          items: { $ref: '#/components/schemas/PersonGraphReceipt' }
+        availability:
+          $ref: '#/components/schemas/PersonGraphRouteAvailability'
+
+    PersonGraphRouteType:
+      type: string
+      description: >-
+        `direct` is a colleague who corresponds with the contact themselves. `through_contact`
+        goes via someone else at the contact's company.
+      enum: [direct, through_contact]
+      # Pinned for the reason the file's other enums are: unpinned, `Direct` is
+      # an identifier far too generic for a package every contract type shares.
+      x-enum-varnames: [PersonGraphRouteTypeDirect, PersonGraphRouteTypeThroughContact]
+
+    PersonGraphRouteAvailability:
+      type: string
+      description: >-
+        Whether a route can be asked for now. `already_requested` means an open ask exists,
+        `declined` that this colleague has refused this contact before, and `unavailable`
+        that the seat can no longer carry it.
+      enum: [available, already_requested, declined, unavailable]
+
+    PersonGraphRouteEvidence:
+      type: object
+      description: >-
+        The counts behind a route, as facts rather than a sentence. The prose is written by
+        the client, because this server speaks one language and the product speaks three.
+      required: [interactions_90d, two_way]
+      properties:
+        interactions_90d: { type: integer }
+        inbound_90d: { type: integer }
+        outbound_90d: { type: integer }
+        two_way:
+          type: boolean
+          description: Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
+        last_at: { type: [string, 'null'], format: date-time }
+        days_since_last:
+          type: [integer, 'null']
+          description: Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp.
 
     PersonMoment:
       type: object

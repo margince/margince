@@ -106,6 +106,7 @@ components:
   webhooks:    { in: internal/modules/webhooks }
   comms:       { in: internal/modules/comms }
   notices:     { in: internal/modules/notices }
+  introductions: { in: internal/modules/introductions }
   compose:     { in: [internal/compose, internal/compose/**] }
   migrations:  { in: migrations }
   cmd:         { in: cmd/** }
@@ -238,8 +239,11 @@ deps:
   notices:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
+  introductions:
+    mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, quotas, overlay, migration, webhooks, comms, notices, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, platform, migrations, projects]
+    mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, quotas, overlay, migration, webhooks, comms, notices, introductions, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -299,5 +303,5 @@ deps:
     mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, people]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, quotas, overlay, migration, webhooks, comms, notices, finance, integrations, agreements, commissions, contracts, dealrooms, platform, migrations, projects]
+    mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, quotas, overlay, migration, webhooks, comms, notices, introductions, finance, integrations, agreements, commissions, contracts, dealrooms, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

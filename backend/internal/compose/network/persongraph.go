@@ -37,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -135,7 +134,9 @@ func (h Reads) buildPersonGraph(
 	dropped.Peer = &peerDropped
 
 	out.DroppedCount = &dropped
-	out.Route = chooseRoute(out, now)
+	routes := chooseRoutes(out, now)
+	out.Routes = &routes
+	out.Route = chooseRoute(routes)
 	return nil
 }
 
@@ -282,75 +283,37 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, personID ids.UUID) ([]
 // direct relationship beats an indirect one however warm the indirect one
 // looks, because "she already knows you" is a different kind of claim from
 // "he knows someone at her company".
-func chooseRoute(out *crmcontracts.PersonGraph, now time.Time) *crmcontracts.PersonGraphRoute {
-	anchor := ""
-	labels := map[string]string{}
-	groups := map[string]crmcontracts.PersonGraphNodeGroup{}
-	users := map[string]*openapi_types.UUID{}
-	people := map[string]*openapi_types.UUID{}
-	for i := range out.Nodes {
-		n := &out.Nodes[i]
-		labels[n.Id] = n.Label
-		groups[n.Id] = n.Group
-		users[n.Id] = n.UserId
-		people[n.Id] = n.PersonId
-		if n.Group == crmcontracts.PersonGraphNodeGroupAnchor {
-			anchor = n.Id
-		}
-	}
-
-	var best *crmcontracts.PersonGraphEdge
-	bestDirect := false
-	for i := range out.Edges {
-		e := &out.Edges[i]
-		direct := e.To == anchor
-		switch {
-		case best == nil:
-		case direct && !bestDirect:
-		case direct == bestDirect && edgeRank(*e) > edgeRank(*best):
-		default:
-			continue
-		}
-		best, bestDirect = e, direct
-	}
-	if best == nil {
+//
+// It reads the head of the candidate list rather than ranking the edges a
+// second time. Two rankings over one set of facts are two answers to one
+// question, and the day they disagree the card recommends one colleague and
+// lists a different one first.
+func chooseRoute(candidates []crmcontracts.PersonGraphRouteCandidate) *crmcontracts.PersonGraphRoute {
+	if len(candidates) == 0 {
 		return nil
 	}
-	viaID := users[best.From]
-	if viaID == nil {
-		return nil
-	}
+	best := candidates[0]
 	route := crmcontracts.PersonGraphRoute{
-		ViaUserId:      *viaID,
-		ViaDisplayName: labels[best.From],
-		Why:            proofLine(*best, now),
+		ViaUserId:      best.ViaUserId,
+		ViaDisplayName: best.ViaDisplayName,
+		Why:            proofLineFor(best.Evidence),
 	}
-	if !bestDirect {
-		route.ThroughPersonId = people[best.To]
-		through := labels[best.To]
-		route.ThroughDisplayName = &through
+	if best.RouteType == crmcontracts.PersonGraphRouteTypeThroughContact {
+		route.ThroughPersonId = best.ThroughPersonId
+		route.ThroughDisplayName = best.ThroughDisplayName
 	}
 	return &route
 }
 
-// edgeRank orders candidate routes. Two-way exchange first, because a
-// relationship that answers is worth more than one that only sends; volume
-// breaks the tie.
-func edgeRank(e crmcontracts.PersonGraphEdge) int {
-	twoWay := 0
-	if e.Inbound90d != nil && *e.Inbound90d > 0 && e.Outbound90d != nil && *e.Outbound90d > 0 {
-		twoWay = 1000
-	}
-	return twoWay + e.Interactions90d
-}
-
-// proofLine writes the route's evidence from the counts — the sentence a rep
-// reads before deciding whether to ask.
-func proofLine(e crmcontracts.PersonGraphEdge, now time.Time) string {
+// proofLineFor writes the route's evidence as a sentence.
+//
+// English, and the contract says so: `why` is the fallback for a caller that
+// has not adopted the structured `evidence`, which is what the product renders
+// in the reader's own language. A new surface reads the facts, not this.
+func proofLineFor(ev crmcontracts.PersonGraphRouteEvidence) string {
 	when := "no recent contact"
-	if e.LastAt != nil {
-		days := elapsed.Days(*e.LastAt, now)
-		switch days {
+	if ev.DaysSinceLast != nil {
+		switch days := *ev.DaysSinceLast; days {
 		case 0:
 			when = "last contact today"
 		case 1:
@@ -359,10 +322,10 @@ func proofLine(e crmcontracts.PersonGraphEdge, now time.Time) string {
 			when = fmt.Sprintf("last contact %d days ago", days)
 		}
 	}
-	if e.Inbound90d != nil && *e.Inbound90d > 0 && e.Outbound90d != nil && *e.Outbound90d > 0 {
-		return fmt.Sprintf("%s in 90 days · %s", plural(e.Interactions90d, "two-way exchange"), when)
+	if ev.TwoWay {
+		return fmt.Sprintf("%s in 90 days · %s", plural(ev.Interactions90d, "two-way exchange"), when)
 	}
-	return fmt.Sprintf("%s in 90 days, one-sided · %s", plural(e.Interactions90d, "interaction"), when)
+	return fmt.Sprintf("%s in 90 days, one-sided · %s", plural(ev.Interactions90d, "interaction"), when)
 }
 
 // plural writes a count and its noun. The proof line is read by a person

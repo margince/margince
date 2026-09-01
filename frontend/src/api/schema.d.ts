@@ -16152,6 +16152,8 @@ export interface components {
             /** @description Who has actually corresponded with whom. An edge exists only where interactions do. */
             edges: components["schemas"]["PersonGraphEdge"][];
             route?: components["schemas"]["PersonGraphRoute"];
+            /** @description Every way in worth offering, best first, so a reader can take the second one when the first is unavailable. `route` is `routes[0]` — the singular field is the same recommendation and stays for callers that only ever wanted the one. */
+            routes?: components["schemas"]["PersonGraphRouteCandidate"][];
             /** @description Groups withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             groups_omitted: ("direct" | "account")[];
             /** @description How many nodes each group lost to its cap, stated rather than silently truncated. `account` is the true remainder. `direct` counts from a bounded fetch (100), so on a contact more than a hundred colleagues have corresponded with it understates — a shape far outside what this card is for, and making it exact would cost every ordinary read. */
@@ -16229,6 +16231,57 @@ export interface components {
             through_display_name?: string;
             /** @description The proof line, written from the counts — "6 two-way exchanges · replied 2 days ago". */
             why: string;
+        };
+        /**
+         * @description One way in, with the facts behind it and whether it can be asked for today.
+         *
+         *     The list is ordered the same way the single `route` is chosen: a direct relationship
+         *     beats an indirect one however warm the indirect one looks, and within a kind the
+         *     two-way relationships come first. Only a COLLEAGUE can carry an introduction, so a
+         *     candidate always starts at a live seat — a pair of external contacts who correspond
+         *     is an edge in this graph but never a route out of it.
+         */
+        PersonGraphRouteCandidate: {
+            /** @description Stable within this response, for selecting a route in a client. `direct:<user>` or `through:<user>:<person>`. A write names the parts it means rather than parsing this back apart. */
+            route_id: string;
+            route_type: components["schemas"]["PersonGraphRouteType"];
+            /** Format: uuid */
+            via_user_id: string;
+            via_display_name: string;
+            /**
+             * Format: uuid
+             * @description Set when the route goes via someone else at the contact's company.
+             */
+            through_person_id?: string;
+            through_display_name?: string;
+            /** @enum {string} */
+            strength_bucket?: "none" | "weak" | "moderate" | "strong";
+            evidence: components["schemas"]["PersonGraphRouteEvidence"];
+            /** @description The messages behind a `direct` candidate, each individually visibility-checked. Absent on an indirect candidate for the reason the edge itself carries no rows: the counts are disclosable where the correspondence is not. */
+            receipts?: components["schemas"]["PersonGraphReceipt"][];
+            availability: components["schemas"]["PersonGraphRouteAvailability"];
+        };
+        /**
+         * @description `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
+         * @enum {string}
+         */
+        PersonGraphRouteType: "direct" | "through_contact";
+        /**
+         * @description Whether a route can be asked for now. `already_requested` means an open ask exists, `declined` that this colleague has refused this contact before, and `unavailable` that the seat can no longer carry it.
+         * @enum {string}
+         */
+        PersonGraphRouteAvailability: "available" | "already_requested" | "declined" | "unavailable";
+        /** @description The counts behind a route, as facts rather than a sentence. The prose is written by the client, because this server speaks one language and the product speaks three. */
+        PersonGraphRouteEvidence: {
+            interactions_90d: number;
+            inbound_90d?: number;
+            outbound_90d?: number;
+            /** @description Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list. */
+            two_way: boolean;
+            /** Format: date-time */
+            last_at?: string | null;
+            /** @description Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp. */
+            days_since_last?: number | null;
         };
         /**
          * @description One reason this contact is worth attention now, with the evidence behind it.
