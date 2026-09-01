@@ -66,12 +66,121 @@ func NewRegistry(adapters ...provider.Adapter) (*Registry, error) {
 				return nil, fmt.Errorf("integrations: provider %q declares category %q with no cost entry: price it, or declare it free with an empty one", d.Name, category)
 			}
 		}
+		if err := pricesOnlyDeclaredPools(d); err != nil {
+			return nil, err
+		}
+		if err := matchesOnKnownIdentifiers(d); err != nil {
+			return nil, err
+		}
+		if err := prerequisitesAreFlat(d); err != nil {
+			return nil, err
+		}
 		if d.EgressHost == "" {
 			return nil, fmt.Errorf("integrations: provider %q declared no egress host", d.Name)
 		}
 		r.adapters[d.Name] = a
 	}
 	return r, nil
+}
+
+// pricesOnlyDeclaredPools refuses an adapter whose cost table names a pool it
+// never declared.
+//
+// The reservation is keyed by the pools CostTable produces and the settlement
+// is keyed by the pools the adapter reports having spent. Nothing makes those
+// two vocabularies agree, and a mismatch is silent in the direction that costs
+// money: reconcile finds no figure for a held pool and, on per-successful-result
+// billing, releases it — so the customer's monthly ceiling is credited back a
+// charge the vendor kept, and later runs spend it twice.
+//
+// CreditPools is the adapter's own statement of what it bills in, so it is the
+// declaration to hold both sides to. Checked at registration, where an author
+// finds out immediately rather than through a ledger that quietly drifts.
+func pricesOnlyDeclaredPools(d provider.Descriptor) error {
+	declared := make(map[provider.Pool]bool, len(d.CreditPools))
+	for _, pool := range d.CreditPools {
+		declared[pool] = true
+	}
+	for category, cost := range d.CostTable {
+		for pool := range cost {
+			if !declared[pool] {
+				return fmt.Errorf(
+					"integrations: provider %q prices category %q in pool %q, which it does not declare in CreditPools: "+
+						"a hold taken in an undeclared pool cannot be matched to what the vendor reports spending, and "+
+						"settles as a refund of a charge they kept",
+					d.Name, category, pool)
+			}
+		}
+	}
+	return nil
+}
+
+// matchesOnKnownIdentifiers refuses an adapter whose match rules name a field
+// PersonIdentifiers does not carry.
+//
+// This is the one way the mechanism fails quietly. An unknown field is never
+// present, so a rule carrying a typo can never be satisfied — and a rule that
+// can never be satisfied refuses every subject, which reads as "this provider
+// can look nobody up" and silences the lane completely. Checked at
+// registration, where the author sees the name they mistyped.
+//
+// A rule naming nothing at all goes through the same door: it would likewise
+// match nobody.
+func matchesOnKnownIdentifiers(d provider.Descriptor) error {
+	known := make(map[provider.IdentifierField]bool, len(provider.IdentifierFields()))
+	for _, f := range provider.IdentifierFields() {
+		known[f] = true
+	}
+	for i, rule := range d.MatchRules {
+		if len(rule.AllOf) == 0 && len(rule.AnyOf) == 0 {
+			return fmt.Errorf(
+				"integrations: provider %q declares match rule %d naming no identifier at all: "+
+					"such a rule matches nobody, so every subject would be skipped as unlookupable",
+				d.Name, i)
+		}
+		for _, f := range append(append([]provider.IdentifierField{}, rule.AllOf...), rule.AnyOf...) {
+			if !known[f] {
+				return fmt.Errorf(
+					"integrations: provider %q declares match rule %d on identifier %q, which is not one a person carries: "+
+						"an unknown field is never present, so the rule matches nobody and the lane goes silent",
+					d.Name, i, f)
+			}
+		}
+	}
+	return nil
+}
+
+// prerequisitesAreFlat refuses a descriptor whose RequiresAnswerTo forms a
+// chain or a cycle.
+//
+// Everything that reads this map walks ONE hop: the price of a purchase, the
+// set a button sends, the check that refuses a lone request, the free-set
+// derivation. That is deliberate — no adapter needs more, and a single hop is
+// what a reader can hold. But one hop over a chain is silently wrong in the
+// direction that costs money: with A needing B and B needing C, A's button
+// quotes and sends A+B, and the server then refuses it for missing C. A cycle
+// is worse and simply meaningless — no ordering satisfies "answer first" in
+// both directions.
+//
+// Refused where the author can see it rather than depth-walked. Supporting
+// chains would mean four call sites learning to walk, each with its own
+// termination, to serve a descriptor nobody has written. When one is written,
+// this is the error that says so.
+func prerequisitesAreFlat(d provider.Descriptor) error {
+	for category, prerequisite := range d.RequiresAnswerTo {
+		if category == prerequisite {
+			return fmt.Errorf(
+				"integrations: provider %q declares category %q as its own prerequisite, which no request can satisfy",
+				d.Name, category)
+		}
+		if next, chained := d.RequiresAnswerTo[prerequisite]; chained {
+			return fmt.Errorf(
+				"integrations: provider %q declares %q needing %q, which itself needs %q: every reader of this "+
+					"map walks one hop, so the chain would be priced and requested short and refused by the server",
+				d.Name, category, prerequisite, next)
+		}
+	}
+	return nil
 }
 
 // Names returns the registered providers in a stable order, so a settings

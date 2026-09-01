@@ -129,7 +129,7 @@ func testMatchIdentity(c oidcClaims) error {
 	return nil
 }
 
-func newTestVerifier(rig *oidcTestRig) *googleOIDCVerifier {
+func newTestVerifier(rig *oidcTestRig) *oidcTokenVerifier {
 	return newGoogleOIDCVerifier(rig.jwksURL(), testMatchIdentity).
 		withHTTPClient(rig.srv.Client()).
 		withClock(func() time.Time { return rig.base })

@@ -588,10 +588,15 @@ func TestUserDeactivatedWireSnapshot(t *testing.T) {
 }
 
 // TestUserReactivatedWireSnapshot pins user.reactivated's wire shape.
+//
+// Sampled with `status` set, because it is required and enumerated: a zero
+// value would pin an empty string onto the wire, which is not one of the values
+// the contract admits and which a validating consumer would reject.
 func TestUserReactivatedWireSnapshot(t *testing.T) {
 	sample := crmcontracts.PublicEventUserReactivated{
 		UserId: identitySnapshotUserID,
 		By:     identitySnapshotActorID,
+		Status: crmcontracts.Active,
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }

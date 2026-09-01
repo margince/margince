@@ -33,3 +33,30 @@ func LiveMemberSQL(alias string) string {
 	}
 	return storekit.SQLf("%sstatus = 'active' AND %sarchived_at IS NULL", prefix, prefix)
 }
+
+// ActivatableMemberSQL is the set that may still BECOME active: an invited seat
+// that has never been entered, and an active one.
+//
+// It is NOT a second spelling of LiveMemberSQL and never answers "may this
+// person act". Every read that gates access asks that question and takes
+// LiveMemberSQL, which excludes an invited member on purpose: they have no
+// password and no linked identity, so they sign in nowhere.
+//
+// It exists for the set-password pair, which must reach exactly the member
+// LiveMemberSQL excludes. Redeeming an invitation IS the act of leaving
+// 'invited', so redemption has to admit them; and issuance has to admit
+// whomever redemption will, because a link minted for someone redemption
+// refuses is dead on arrival, while a link refused to someone redemption would
+// accept strands an expired invitation with no route back — that member has no
+// password, so the forgot-password flow refuses them too.
+//
+// The archived half is carried for the same reason LiveMemberSQL carries it:
+// archiving and deactivating are independent, so one half alone goes on
+// offering a member the installation has already withdrawn.
+func ActivatableMemberSQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return storekit.SQLf("%sstatus IN ('invited', 'active') AND %sarchived_at IS NULL", prefix, prefix)
+}

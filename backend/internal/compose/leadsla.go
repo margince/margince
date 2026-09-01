@@ -114,8 +114,19 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 	// to address the notice to, and inventing one would misdeliver it.
 	if payload.EscalationTarget != nil {
 		target := ids.From[ids.UserKind](ids.UUID(*payload.EscalationTarget))
-		if _, err := w.notices.Create(ctx, target, noticeKindLeadSLA, subject,
-			"A lead's first response is overdue; its escalation task is on your list."); err != nil {
+		// THE SAME KEY THE TASK USES. The bus is at-least-once and Apply is
+		// documented idempotent on its own key, so the notice needs what the
+		// task has always had: a natural key that makes the second delivery a
+		// no-op. Without it one breach put two identical lines on one person's
+		// Worklist while the task beside them stayed single, which reads as
+		// the notice being right and the task being lost.
+		if _, err := w.notices.Create(ctx, notices.NewNotice{
+			Recipient: target,
+			Kind:      noticeKindLeadSLA,
+			Subject:   subject,
+			Body:      "A lead's first response is overdue; its escalation task is on your list.",
+			DedupeKey: leadSLATaskSource + ":" + sourceID,
+		}); err != nil {
 			return workflow.RunResult{}, fmt.Errorf("record sla escalation notice: %w", err)
 		}
 	}

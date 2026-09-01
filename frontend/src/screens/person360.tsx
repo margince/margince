@@ -29,9 +29,14 @@ type Colleague = components["schemas"]["PersonNetworkColleague"];
  * usePerson360 is the person page's ONE read. It replaces the seven
  * per-card queries the screen used to fire, so every section describes the
  * same moment rather than a stack of independently-timed round trips.
+ *
+ * `enabled` is for the callers that are not the page: a surface that only
+ * sometimes knows a person asks under the SAME key, so it reads the page's
+ * cache where there is one and opens no request at all where there is not.
  */
-export function usePerson360(id: string) {
+export function usePerson360(id: string, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: ["person360", id],
     queryFn: async () => {
       const { data, error } = await api.GET("/people/{id}/360", {

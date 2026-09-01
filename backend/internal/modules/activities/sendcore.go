@@ -83,7 +83,8 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	if err != nil {
 		return PreparedSend{}, err
 	}
-	if err := s.refuseUnsendable(ctx, in, gate, stager); err != nil {
+	provider, err := s.refuseUnsendable(ctx, in, gate, stager)
+	if err != nil {
 		return PreparedSend{}, err
 	}
 
@@ -106,7 +107,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 
 	// Deliverability is derived here, after the gates, so both transports
 	// get it and neither can send marketing mail without it.
-	derived, err := s.deliverability(ctx, signed, in.Recipients, in.ConsentPurpose)
+	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, in.ConsentPurpose)
 	if err != nil {
 		return PreparedSend{}, err
 	}
@@ -163,6 +164,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 			listUnsubscribe: derived.listUnsubscribe,
 			to:              toRecipients(in.Recipients, in.Cc, in.Bcc),
 			links:           links,
+			provider:        provider,
 		},
 	}, nil
 }

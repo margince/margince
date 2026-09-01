@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -323,29 +324,21 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The human LENDS one of their own passports rather than granting scopes ad
-	// hoc, so the code carries exactly that passport's authority — the client's
-	// request is not a second ceiling. mintLentAuthorizationCode is the whole
-	// decision in one transaction: it states why the passport is re-resolved here
-	// instead of taken from the form, and why that re-check and the code write
-	// cannot be two transactions.
-	code, lendable, err := h.svc.mintLentAuthorizationCode(
-		r.Context(), id, r.PostForm.Get("passport_id"), req)
-	if err != nil {
-		httperr.Write(w, r, err)
+	// The human GRANTS the scopes they ticked. The client's own request is not
+	// a second ceiling: every mainstream MCP client sends no scope parameter at
+	// all, so intersecting with it would make every real connection read-only
+	// whatever the human chose.
+	code, err := h.svc.mintConsentedAuthorizationCode(
+		r.Context(), id, r.PostForm.Get("scopes"), req)
+	if errors.Is(err, apperrors.ErrInvalidArgument) {
+		// Not something the human's next click fixes: this server rendered
+		// five checkboxes over a closed vocabulary, so a scope list it will
+		// not accept did not come from that screen.
+		refuseToConsentScreen(w, r, url.Values(r.PostForm), consentErrorInvalid)
 		return
 	}
-	if !lendable {
-		// Nothing was minted and nothing about the pending authorization changed:
-		// the human is one selection away from a working consent. So the armed pair
-		// SURVIVES — the cookie stays, the nonce goes back with the request — and
-		// the screen re-reads the live list and asks again with a form it can
-		// actually submit. Stripping the nonce here would leave a selector whose
-		// only button the nonce check must refuse: the revoked-in-another-tab case
-		// answered with a dead end. The value handed back is the one the screen
-		// submitted, which the check above proved equal to the cookie.
-		retryAtConsentScreen(w, r, url.Values(r.PostForm),
-			r.PostForm.Get(consentScreenParamNonce), consentErrorUnlendable)
+	if err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	clearConsentCookie(w)
@@ -376,12 +369,12 @@ const scopeOfflineAccess = "offline_access"
 // returned scopes never include it: it buys the connection's lifetime, and a
 // scope list is read as record authority wherever it travels.
 //
-// The scopes themselves grant nothing. A consent hands over the passport the
-// human lent — the lent passport's own scopes are what the code records
-// (lockLentPassport, oauth_consent.go), and the consent screen offers passports
-// without consulting the request — so what survives of this list is the string
-// the screen posts back (formScope, oauth_consentscreen.go), which carries the
-// offline marker home.
+// The scopes themselves grant nothing. The consent screen offers a fixed
+// vocabulary without consulting this list at all (offlineRequested,
+// oauth_consent.go) — what the human ticks there is what the code records
+// (parseConsentedScopes, oauth_consentcommit.go) — so what survives of this
+// list is the string the screen posts back (formScope, oauth_consentscreen.go),
+// which carries the offline marker home.
 func parseOAuthScopes(raw string) (scopes []string, offline bool, err error) {
 	if strings.TrimSpace(raw) == "" {
 		return []string{string(principal.ScopeRead)}, false, nil

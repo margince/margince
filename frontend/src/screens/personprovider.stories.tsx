@@ -185,6 +185,42 @@ export const InProgress: Story = {
 };
 
 /**
+ * A lookup running under a connection whose LAST call failed — the state a
+ * reader is most likely to be pressing from, because the failure message tells
+ * them to press it.
+ *
+ * The section reports the connection's condition ahead of the run, which is
+ * right for a page at rest and wrong here: it named a failure from hours ago
+ * over a lookup that was working. The header now says what is happening and the
+ * line above the values says who is being asked.
+ */
+export const RunningOnAnImpairedConnection: Story = {
+  render: section(
+    profile({
+      state: "provider_error",
+      latest_run: {
+        ...completedProviderRun,
+        state: "in_progress",
+        applied: false,
+      },
+    }),
+  ),
+};
+
+/**
+ * Bought, and the values have not reached the record yet. The apply commits
+ * AFTER the run completes, so a page that stopped watching at `completed`
+ * refreshed one step before the thing being waited for existed.
+ */
+export const CompletedButNotYetApplied: Story = {
+  render: section(
+    profile({
+      latest_run: { ...completedProviderRun, applied: false },
+    }),
+  ),
+};
+
+/**
  * The credential the provider was bought through has expired. An operator
  * fault rather than a data one, so it says which — a generic failure here would
  * send somebody looking at the person instead of at the connection.

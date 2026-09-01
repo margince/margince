@@ -46,6 +46,14 @@ const (
 	WebhooksProduct = "margince-webhooks"
 	WebhooksHeader  = WebhooksProduct + "/" + version
 
+	// SelfCheckProduct identifies this installation asking whether its own
+	// configured public address answers. The request goes to the operator's
+	// own ingress, and it is the one call where a name in their log saves
+	// them from investigating an unexplained hit on their health endpoint
+	// every minute.
+	SelfCheckProduct = "margince-selfcheck"
+	SelfCheckHeader  = SelfCheckProduct + "/" + version
+
 	// ClientMetadataProduct identifies the fetch of a client's own metadata
 	// document during OAuth consent. That request goes to a URL the CALLER
 	// supplied, which makes it the one outbound call where the operator on the

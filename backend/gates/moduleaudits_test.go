@@ -73,7 +73,11 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// name: user_record_view, suggestion_dismissal, person_moment_dismissal,
 	// org_brief, person_brief, deal_status_card, org_dossier and org_growth_fit all
 	// key on user_id.
-	"internal/compose/org360":      "user_record_view and suggestion_dismissal are per-reader: one person's last-seen cursor and one person's dismissals",
+	// org360 is deliberately absent from this list. Its per-reader tables
+	// (user_record_view, suggestion_dismissal) still need no history for the
+	// reason above, but the package now writes a real audit row — the evidence
+	// each agent-read buying role rests on — so it satisfies the gate outright
+	// and a waiver here would be a claim about it that is no longer true.
 	"internal/compose/person360":   "person_moment_dismissal, the same per-reader shape",
 	"internal/compose/orgbrief":    "org_brief is an assembly generated for one reader and never served to another",
 	"internal/compose/personbrief": "person_brief, the same",

@@ -718,14 +718,7 @@ describe("onboarding gate", () => {
             JSON.stringify({
               client_name: "Acme Client",
               offline: false,
-              passports: [
-                {
-                  id: "p1",
-                  label: "Everyday agent",
-                  scopes: ["read"],
-                  expires_at: "2027-01-01T00:00:00Z",
-                },
-              ],
+              scopes: ["read"],
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );

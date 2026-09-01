@@ -304,10 +304,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
   {
-    file: "screens/oauthconsent.test.tsx",
-    why: "The date-boundary case that started this rule: asserts the expiry does NOT read on a fixed zone's calendar, which needs that zone named to compare against.",
-  },
-  {
     file: "screens/personfiles.test.tsx",
     why: "Installation-settings fixture backing the person-files read.",
   },

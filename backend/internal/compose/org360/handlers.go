@@ -29,11 +29,110 @@ type OverlayMode func(ctx context.Context) (bool, error)
 type Handlers struct {
 	svc     *Service
 	overlay OverlayMode
+	// roleLane is the propose-roles model lane, or nil in a process role that
+	// wired none. Held here rather than on the Service because it is the only
+	// part of this composite that calls a model at all: every other section is
+	// a read, and giving the whole service a lane would suggest otherwise.
+	roleLane Completer
+	// introLane writes the ask to a colleague, or nil in a role that wired
+	// none — in which case the endpoint answers from its template rather than
+	// refusing, because an introduction request is a sentence a template can
+	// write honestly.
+	introLane Completer
 }
 
 // NewHandlers binds the transport to a ready service.
 func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
 	return Handlers{svc: svc, overlay: overlay}
+}
+
+// WithRoleLane binds the model lane that reads buying roles.
+//
+// Optional by design: without it ProposeDealRoles answers 501, which is the
+// honest answer for a role there is no non-guessing way to read.
+func (h Handlers) WithRoleLane(lane Completer) Handlers {
+	h.roleLane = lane
+	return h
+}
+
+// WithIntroLane binds the model lane that phrases an introduction request.
+func (h Handlers) WithIntroLane(lane Completer) Handlers {
+	h.introLane = lane
+	return h
+}
+
+// DraftIntroRequest implements POST /organizations/{id}/intro-request-draft.
+func (h Handlers) DraftIntroRequest(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var body crmcontracts.DraftIntroRequestJSONRequestBody
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	if !h.nativeOnly(w, r) {
+		return
+	}
+	req, err := introRequestFrom(body)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	draft, err := h.svc.IntroRequestDraft(r.Context(), h.introLane,
+		ids.From[ids.OrganizationKind](ids.UUID(id)), req)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, draft)
+}
+
+// introRequestFrom is the wire mapping, and the one place an omitted id is
+// refused by name.
+//
+// Its own function because the refusal is the point: a required id the caller
+// never sent decodes to the zero UUID with no error, reaches a lookup, matches
+// nothing, and comes back as "that contact is not on this account" — a refusal
+// about a record the caller never named and cannot connect to anything they
+// did send.
+func introRequestFrom(body crmcontracts.DraftIntroRequestJSONRequestBody) (IntroRequest, error) {
+	for field, id := range map[string]ids.UUID{
+		"person_id":   ids.UUID(body.PersonId),
+		"via_user_id": ids.UUID(body.ViaUserId),
+	} {
+		if err := httperr.RequireBodyID(field, id); err != nil {
+			return IntroRequest{}, err
+		}
+	}
+	req := IntroRequest{
+		PersonID:  ids.From[ids.PersonKind](ids.UUID(body.PersonId)),
+		ViaUserID: ids.From[ids.UserKind](ids.UUID(body.ViaUserId)),
+	}
+	// A null deal_id means "the account in general" and is an ordinary case. A
+	// present-but-zero one is a client bug, and answering "that deal is not
+	// open" about the nil UUID would hide it behind a plausible refusal.
+	if body.DealId != nil {
+		if err := httperr.RequireBodyID("deal_id", ids.UUID(*body.DealId)); err != nil {
+			return IntroRequest{}, err
+		}
+		deal := ids.From[ids.DealKind](ids.UUID(*body.DealId))
+		req.DealID = &deal
+	}
+	return req, nil
+}
+
+// ProposeDealRoles implements POST /deals/{id}/role-proposals.
+func (h Handlers) ProposeDealRoles(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if !h.nativeOnly(w, r) {
+		return
+	}
+	if h.roleLane == nil {
+		httperr.NotImplemented(w, r, "ProposeDealRoles (no model path configured)")
+		return
+	}
+	out, err := h.svc.ProposeRoles(r.Context(), h.roleLane, ids.From[ids.DealKind](ids.UUID(id)))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // GetOrganization360 implements GET /organizations/{id}/360.
@@ -65,6 +164,19 @@ func (h Handlers) GetOrganizationGraph(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, graph)
+}
+
+// GetOrganizationCoverage implements GET /organizations/{id}/coverage.
+func (h Handlers) GetOrganizationCoverage(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if !h.nativeOnly(w, r) {
+		return
+	}
+	coverage, err := h.svc.Coverage(r.Context(), ids.From[ids.OrganizationKind](ids.UUID(id)))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, coverage)
 }
 
 // ListOrganizationContacts implements GET /organizations/{id}/contacts.

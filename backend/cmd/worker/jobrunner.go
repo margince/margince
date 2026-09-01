@@ -44,6 +44,22 @@ func gmailWatchConfig(cfg workerConfig, gmailWired bool) compose.GmailWatchConfi
 	return w
 }
 
+// graphWatchConfig builds the Microsoft Graph subscription-maintenance config.
+//
+// Gated on the notification URL alone, where the Gmail twin also asks whether
+// the deployment composed the Google app. Deliberately weaker: a Microsoft app
+// may arrive at runtime from the stored setting, so the environment cannot
+// answer whether this installation has one — and a deployment with no Outlook
+// connections has no due rows for the pass to find, which is the same nothing
+// the stricter gate would produce.
+func graphWatchConfig(cfg workerConfig) compose.GraphWatchConfig {
+	return compose.GraphWatchConfig{
+		NotificationURL: cfg.graphNotifyURL,
+		Interval:        cfg.graphWatchInterval,
+		RenewWithin:     cfg.graphWatchRenew,
+	}
+}
+
 // startJobRunner boots the River periodic jobs: River
 // gives leader election (one run cluster-wide, so worker replicas never
 // double-sweep the close-date and reconcile passes), retries, and graceful
@@ -112,7 +128,8 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 	if err := runner.Start(ctx); err != nil {
 		return nil, err
 	}
-	_, _ = fmt.Fprintln(stdout, jobRunnerBanner(cfg, watchCfg, modelPath, vault, lanes.runner))
+	_, _ = fmt.Fprintln(stdout, jobRunnerBanner(cfg, watchCfg,
+		compose.GraphWatchWillRun(captureReg, graphWatchConfig(cfg)), modelPath, vault, lanes.runner))
 	return func() { stopJobRunner(ctx, runner, logger) }, nil
 }
 
@@ -227,6 +244,9 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		ProviderRuns:  compose.ProviderRunsConfig{Registry: lanes.providers, Vault: vault},
 		GmailRegistry: captureReg,
 		GmailWatch:    watchCfg,
+		// Built here rather than threaded in beside watchCfg: it reads only cfg,
+		// which this function already holds.
+		GraphWatch: graphWatchConfig(cfg),
 		// The Telegram ingest worker builds its Sink from this — the same
 		// suppression-list config every other capture path shares.
 		CaptureConfig: cfg.captureConfig,
@@ -238,11 +258,12 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		ChannelVault: vault,
 		// The classify + enrich passes run only where a model is
 		// configured; without one both are absent by omission.
-		ClassifyBrain:      modelPath.CaptureClassify,
-		VerdictBrain:       modelPath.CaptureCounterpartyVerdict,
-		EnrichBrain:        modelPath.Enrich,
-		SignalExtractBrain: modelPath.SignalExtract,
-		WeeklyReviewBrain:  modelPath.WeeklyReview,
+		ClassifyBrain:        modelPath.CaptureClassify,
+		VerdictBrain:         modelPath.CaptureCounterpartyVerdict,
+		ConfidentialityBrain: modelPath.CaptureConfidentialityVerdict,
+		EnrichBrain:          modelPath.Enrich,
+		SignalExtractBrain:   modelPath.SignalExtract,
+		WeeklyReviewBrain:    modelPath.WeeklyReview,
 		// The retrospective's outbound channel, resolved in main from the same
 		// deployment file cmd/api reads. Zero mails nothing.
 		WeeklyMail:             weeklyMail,

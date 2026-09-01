@@ -1,51 +1,45 @@
 # Connect a mailbox for capture
 
-Connect a mailbox so Margince captures its mail onto the timeline — creating people, organizations, and
-activities through the one dedupe chokepoint. This guide is **UI-first**: you drive it from the app,
-with the equivalent `curl` shown alongside for scripting and verification. It covers the three paths you
-can drive from the **UI** — **Gmail over OAuth** (a standing connection with background sync + backfill),
-**IMAP with an app-password** (also a standing connection, and the way to reach a **Gmail** or
-**Outlook / Microsoft 365** mailbox without registering an OAuth app), and **Graph OAuth** for Outlook /
-Microsoft 365 (a standing connection, Path C) — plus **Google Calendar (`gcal`)**, a separate standing connection you add
-alongside Gmail from the same Settings surface (Path D). For the mental model — the connector seam, the
-one Sink, the three ingestion modes, credential custody — read
+Connect a mailbox so Margince captures its mail onto the timeline — creating people, organizations and
+activities through the one dedupe chokepoint. **UI-first**, with the equivalent `curl` alongside for
+scripting. Every connection below is standing, and each path has its own section: **Gmail over OAuth**
+(A), **IMAP with an app-password** (B, the way to reach a Gmail or Outlook mailbox with no OAuth app),
+**Graph OAuth** for Outlook / Microsoft 365 (C), and the **calendars** (D). For the mental model, read
 [explanation/capture-connectors.md](../explanation/capture-connectors.md) first.
 
-> **Single-organization installation.** One installation serves one organization; the
-> server resolves it itself, so no request selects a tenant — the `curl`s below carry only the session
-> cookie. ("Workspace" still names the internal tenant identity `WithWorkspaceTx` binds the
-> transaction to.)
+> **Single-organization installation.** One installation serves one organization and the server resolves
+> it itself, so no request selects a tenant — the `curl`s below carry only the session cookie.
+> ("Workspace" still names the internal tenant identity `WithWorkspaceTx` binds the transaction to.)
 
 ## Where the UI lives
 
 Two entry points, both hitting the same API:
 
-- **Settings → Integrations** (`ConnectorsCard`) — the standing-connection roster: each live connection
-  with a status badge (`connected` / `reauth_required` / `error`) and last-synced time, a **reconnect**
-  action for a `reauth_required` OAuth connection, and a confirm-gated **disconnect**. Below the roster
-  (or in its place, when nothing is connected yet) sits an always-present **"Add a connection"**
-  affordance offering whichever of **Gmail**, **Google Calendar**, **Microsoft 365**, and **IMAP** aren't
-  already connected. Picking an OAuth provider (Gmail / Calendar / Microsoft) redirects straight to that
-  provider's consent screen from Settings — no detour through onboarding; picking IMAP opens the inline
-  connect form right there. If a provider's backend app isn't configured, the button click surfaces
-  **"{provider} isn't configured in this deployment"** instead of a raw error.
-- **Onboarding → connect step** — the same connect step, reached on a fresh install (or via the
-  `onboarding / connect` command): chips for **Google**, **Microsoft**, and **IMAP** (Google Calendar has
-  no onboarding chip — add it from Settings). All three chips are live; Microsoft opens the same Graph
-  OAuth redirect Settings does.
+- **Settings → Integrations** (`ConnectorsCard`) — the standing-connection roster: a status badge
+  (`connected` / `reauth_required` / `error`), last-synced time, a **reconnect** for a
+  `reauth_required` OAuth connection, and a confirm-gated **disconnect**. Below it an always-present
+  **"Add a connection"** offers whichever providers aren't connected yet: an OAuth pick redirects to
+  that provider's consent screen, IMAP opens the inline form, and a provider whose backend app isn't
+  configured answers **"{provider} isn't configured in this deployment"** rather than a raw error.
+- **Onboarding → connect step** — the same step on a fresh install (or via `onboarding / connect`):
+  live chips for **Google**, **Microsoft** and **IMAP**; neither calendar has one.
 
-> **Restart after backend config.** The api is a compiled binary — changing an OAuth env var (below)
-> needs `make dev` again to take effect; Vite hot-reloads the SPA but not the Go api.
+> **Restart after backend config.** The api is a compiled binary, so changing an OAuth env var needs
+> `make dev` again; Vite hot-reloads the SPA but not the Go api.
 
 ## Which path do I want?
 
-| Provider | Path | Credential custody | Background sync + backfill | What you need |
-|---|---|---|---|---|
-| **Gmail** | OAuth standing connection | refresh token sealed in the vault, destroyed on disconnect | Yes (+ Pub/Sub push) | a Google OAuth app + the vault key |
-| **Gmail** | IMAP standing connection | app-password sealed in the vault, destroyed on disconnect | Sync only (poll-only, no backfill) | a Google **app-password** + the vault key |
-| **Outlook / M365** | IMAP standing connection | app-password sealed in the vault, destroyed on disconnect | Sync only (poll-only, no backfill) | an Outlook **app-password** + the vault key |
-| **Outlook / M365** | Graph OAuth standing connection | refresh token sealed in the vault, destroyed on disconnect | Sync + backfill (poll-only) | a Microsoft Entra app + the vault key |
-| **Google Calendar** | `gcal` OAuth standing connection (separate from Gmail) | refresh token sealed in the vault, destroyed on disconnect | Sync only (poll-only, no backfill) | the same Google app as Gmail, with the calendar scope + redirect URI added |
+**Custody is the same on every row**: the credential — refresh token or app-password — is
+sealed in the vault, never written to the connection row, and **destroyed on disconnect**.
+
+| Provider | Path | Background sync + backfill | What you need |
+|---|---|---|---|
+| **Gmail** | OAuth standing connection | Yes (+ Pub/Sub push) | a Google OAuth app + the vault key |
+| **Gmail** | IMAP standing connection | Sync only (poll-only, no backfill) | a Google **app-password** + the vault key |
+| **Outlook / M365** | IMAP standing connection | Sync only (poll-only, no backfill) | an Outlook **app-password** + the vault key |
+| **Outlook / M365** | Graph OAuth standing connection | Sync + backfill (+ push) | a Microsoft Entra app + the vault key |
+| **Outlook / M365 calendar** | Graph OAuth standing connection | Rolling window (90d back / 1y ahead), no manual backfill | the *same* Entra app + `Calendars.Read`, its own consent |
+| **Google Calendar** | `gcal` OAuth standing connection (separate from Gmail) | Sync only (poll-only, no backfill) | the same Google app as Gmail, with the calendar scope + redirect URI added |
 
 Start with **IMAP** if you just want to see capture work against a real mailbox from the UI — it needs no
 OAuth app registration, only the vault key every connect path requires. Use **Gmail OAuth** to exercise
@@ -234,9 +228,7 @@ mailbox is easiest). This is a security guard, not a bug.
 
 ## Path C — Outlook / Microsoft 365 over Graph (standing connection)
 
-Graph is the richer Outlook path — a standing connection with delta-cursor sync and backfill — but it is
-**poll-only** (no push subscription built yet). The shape mirrors Path A, and it now has the same
-first-connect UI: an onboarding **Microsoft** chip and a Settings **Add a connection** button.
+Graph is the richer Outlook path — delta-cursor sync, backfill and push — and mirrors Path A's shape.
 
 ### C1. Prerequisites (operator config)
 
@@ -245,18 +237,30 @@ export MARGINCE_GRAPH_CLIENT_ID="<entra-app-id>"
 export MARGINCE_GRAPH_CLIENT_SECRET="<entra-app-secret>"
 export MARGINCE_GRAPH_TENANT="common"   # or a specific tenant id
 # plus the same MARGINCE_CONNECTOR_STATE_KEY / MARGINCE_KEYVAULT_ROOT_KEY / MARGINCE_PUBLIC_BASE_URL as A1
+# Optional push (else poll-only) — the SAME secret on both roles: api mounts the route, worker registers against it
+# export MARGINCE_GRAPH_PUSH_TOKEN="<secret>"; export MARGINCE_GRAPH_NOTIFICATION_URL="https://<api>/webhooks/graph?token=<secret>"
 ```
 
-Register a Microsoft Entra (Azure AD) app with delegated scopes `offline_access User.Read Mail.Read` and
-a redirect URI of `<api-base>/v1/connectors/graph/callback`, then `make dev` to pick up the env.
+Register a Microsoft Entra (Azure AD) app with delegated permissions `offline_access User.Read
+Mail.Read Mail.Send` and a redirect URI of `<api-base>/v1/connectors/graph/callback`, then `make dev`
+to pick up the env. `Mail.Send` rides the same consent because Microsoft will not add a permission to
+an existing refresh token — a mailbox connected without it captures normally and refuses every send
+by name until it is reconnected.
 
 ### C2. Connect from the UI
 
 1. Either click the **Microsoft** chip on the onboarding connect step, or go to **Settings →
    Integrations** and click **Microsoft** in the **Add a connection** footer (or empty state).
-2. The page redirects to Microsoft — sign in and consent to `offline_access User.Read Mail.Read`.
+2. The page redirects to Microsoft — sign in and consent to `offline_access User.Read Mail.Read
+   Mail.Send`. Consenting without `Mail.Send` gives a capture-only mailbox that refuses every send
+   until it is reconnected: Microsoft will not add a permission to a refresh token it already issued.
 3. Microsoft returns you to the app; **Settings → Integrations** shows a `graph` row with a **connected**
    badge, reconnect/disconnect actions, and the backfill panel.
+
+For the **Outlook calendar**, add `Calendars.Read` to the same app and a second redirect URI,
+`<api-base>/v1/connectors/graphcal/callback`, then start it from **Settings → Integrations**. Separate
+connection, own consent, own refresh token — connecting one never brings the other. It captures a
+rolling window (90 days back through a year ahead, reopened monthly), with no manual backfill.
 
 <details><summary>Same thing via <code>curl</code></summary>
 
@@ -338,12 +342,9 @@ curl -X POST http://localhost:8080/v1/connectors/gcal/connect \
 
 ## Current UI gaps
 
-The connect UI is now live for all five connectors. Gmail, Google Calendar, Graph, and IMAP each have a
-first-connect affordance from **Settings → Integrations**, and Gmail, Microsoft, and IMAP have one from
-**onboarding** too (Google Calendar is Settings-only — there's no onboarding chip for it). The fifth is
-**Telegram**, which sits in its own Settings card rather than the *Add a connection* footer — a bot is a
-workspace-wide binding, not one human's grant ([connect-telegram.md](connect-telegram.md)). The roster and
-backfill panel, though, don't apply everywhere: IMAP and Google Calendar have no backfill, so both sync
-forward from connect time only (see the [Calendar section](#d2-connect-from-the-ui) above). See
-[explanation/capture-connectors.md → Honest limitations](../explanation/capture-connectors.md#honest-limitations)
-for what's still scoped out of the pipeline overall.
+Every mail and calendar connector has a first-connect affordance in **Settings → Integrations**; only
+Gmail, Microsoft and IMAP also have an onboarding chip, so neither calendar does. **Telegram** sits in
+its own Settings card — a bot is a workspace-wide binding, not one human's grant
+([connect-telegram.md](connect-telegram.md)). Neither calendar has a manual backfill, and IMAP syncs
+forward from connect time only. What is still scoped out:
+[capture-connectors.md → Honest limitations](../explanation/capture-connectors.md#honest-limitations).

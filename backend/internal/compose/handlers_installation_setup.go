@@ -44,9 +44,9 @@ type installationSetupHandlers struct {
 	//
 	// It is part of the answer because it is part of what the connect transport
 	// resolves: the stored app wins, and the environment is the fallback. An
-	// installation that has always exported the pair has a working Gmail
-	// integration, and reporting its setup step unconfigured would block it at a
-	// gate over a credential it already has.
+	// installation that exports the pair has a working Gmail integration, so
+	// reporting its step unconfigured would tell an operator to go and store an
+	// app the process already resolves.
 	//
 	// The two are not two sources of truth for STORAGE — the setting is the only
 	// place a write lands. They are one honest reading of a two-source
@@ -91,20 +91,27 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	}
 
 	// ORDER IS THE CONTRACT. `steps` is declared as "every setup step, in the
-	// order a reader should complete them", and onboarding walks it in the order
-	// it arrives: AI models, then the Google app. That is not cosmetic — a
-	// person who has bound no model cannot be shown a cold start, and the Gmail
-	// step is the one they can skip past without the product being unusable. A
-	// client sorting these itself would be re-deciding a sequence the server
-	// already owns, so the sequence is pinned by
+	// order a reader should complete them", and a client walks it in the order
+	// it arrives. A client sorting these itself would be re-deciding a sequence
+	// the server owns, so the sequence is pinned by
 	// TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem.
 	//
-	// Both blocking, which is this installation's policy and the reason the
-	// field exists rather than being implied: a client that assumed "every step
-	// blocks" would have to be changed the day one of them stops.
+	// ONLY THE MODEL BINDING BLOCKS, pinned by
+	// TestOnlyTheModelBindingBlocksFirstRun. Without one the product cannot
+	// perform the cold-start read that first run is, so there is nothing to let
+	// a reader through to. A Google app buys mailbox capture and nothing else:
+	// an installation signing in with passwords and no external provider is
+	// fully usable without one.
+	//
+	// The app is configured from settings, where the card carries the redirect
+	// URIs Google's console asks for. The step stays in the report because that
+	// is what `blocking` is for: reporting it and calling it optional is the
+	// answer. Dropping it would leave an installation that has no app and one
+	// that has a working Gmail integration reporting the same thing to a reader
+	// asking what is left to do.
 	steps := []crmcontracts.InstallationSetupStep{
 		{Step: crmcontracts.InstallationSetupStepStepAiModels, Configured: aiReady, Blocking: true},
-		{Step: crmcontracts.InstallationSetupStepStepGoogleApp, Configured: googleReady, Blocking: true},
+		{Step: crmcontracts.InstallationSetupStepStepGoogleApp, Configured: googleReady, Blocking: false},
 	}
 	complete := true
 	for _, s := range steps {
@@ -162,8 +169,7 @@ func (h installationSetupHandlers) aiConfigured(ctx context.Context) (bool, erro
 // The environment's copy counts, in the same precedence the connect transport
 // applies — see envGoogleApp. A nil store is a role that composed no vault, and
 // then only the environment can answer: it reads as unconfigured rather than
-// erroring, because a reader on that installation genuinely cannot complete this
-// step and the gate has to say so rather than fail.
+// erroring, so the report can still name the step outstanding.
 func (h installationSetupHandlers) googleConfigured(ctx context.Context) (bool, error) {
 	if h.envGoogleApp {
 		return true, nil

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
@@ -83,8 +84,8 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 //
 // Held by: TestTheRoleVocabularyIsSpelledOnce (rolevocabulary_test.go)
 const (
-	roleChampion      = "champion"
-	roleEconomicBuyer = "economic_buyer"
+	roleChampion      = dealrole.Champion
+	roleEconomicBuyer = dealrole.EconomicBuyer
 	roleDecisionMaker = "decision_maker"
 	roleInfluencer    = "influencer"
 )

@@ -36,7 +36,7 @@ const passportTokenPrefix = "mgp_"
 
 // The after-image keys a credential write records. Every credential this module
 // audits — the passport mint below, the OAuth grant a consent produces
-// (oauth_grant.go), the lend the consent POST records (oauth_lend.go) — draws its
+// (oauth_grant.go), the consent itself (oauth_consentcommit.go) — draws its
 // keys from here, because reading the credential trail means reading one field
 // name across all three.
 //
@@ -348,8 +348,10 @@ func (a AgentIdentity) Principal() principal.Principal {
 
 // liveClientPredicate is the ONE spelling of "this client is still a client",
 // carried by EVERY statement that reads oauth_client: authentication (the rule
-// below) and issuance alike (the consent form, the consent POST and the code
-// exchange, in oauth.go and oauth_token.go). Disable and soft-delete are the
+// below), issuance (the consent form, the consent POST and the code exchange,
+// in oauth.go and oauth_token.go), and the lock the code exchange takes before
+// it commits a grant (lockClientRegistration, oauth_grant.go). Disable and
+// soft-delete are the
 // operator's off switch, and a switch that only stops calls — while consent and
 // issuance carry on beneath it — spends a human's approval on a client an admin
 // already killed. The client table is aliased c in each of those statements so

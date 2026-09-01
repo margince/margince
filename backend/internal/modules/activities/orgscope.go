@@ -21,12 +21,13 @@ import (
 // OrgLinkedActivityExists is the ONE spelling of "this activity reaches the
 // account", for a query that aliases activity as a.
 //
-// A message or a task belongs to a company through any of three links — its own,
-// its deal's, or the contact it is about — and every reader of the account's
-// timeline needs the same walk: the timeline list itself, the company view's
-// next-steps section, and the two suggestion reads. Spelling it once is what
-// keeps them from drifting apart: a fourth link added to the model reaches every
-// reader, or none of them.
+// A message, a task or a meeting belongs to a company through any of four
+// arms — its own link, its deal's, the contact it is about, or the employer of
+// somebody who was on it — and every reader of the account's timeline needs the
+// same walk: the timeline list itself, the company view's next-steps section,
+// and the two suggestion reads. Spelling it once is what keeps them from
+// drifting apart: an arm added to the model reaches every reader, or none of
+// them.
 //
 // It lives in this module rather than next to the company view because a module
 // may not import compose, and the timeline list is a reader too — the drift this
@@ -80,19 +81,48 @@ const orgArms = `FROM activity_link l
 		    LEFT JOIN relationship r ON r.person_id = l.person_id AND r.kind = 'employment'
 		      AND r.ended_at IS NULL AND r.archived_at IS NULL`
 
+// participantEmployerArm is the READER's fourth arm: the employer of somebody
+// who is on the event as a participant rather than as a link.
+//
+// The three arms above all start from activity_link, and a meeting may not
+// carry a direct organization link at all — a company is not somebody you can
+// meet. So a meeting whose only person is on the invitation reaches no company
+// through them, and the account whose contact sat in the room sees an empty
+// afternoon. search.employerSubjects already walks BOTH person sources for the
+// context prep; this is the same pair for the reach walk, and the two agreeing
+// is the point.
+//
+// Anchored on the activity rather than folded into orgArms, because orgArms is
+// shared with OrgReachSet and this arm deliberately is not — the ruling, and
+// why, is on OrgReachSet.
+//
+// CURRENT employment, exactly as the link arm reads it: a former colleague's
+// company is one they left.
+//
+// The alias is emp rather than r: the row-scope clause a caller composes
+// alongside this one is recognized by its "r." tokens, and a second
+// relationship in scope under that name reads as the first.
+const participantEmployerArm = `EXISTS (
+		    SELECT 1 FROM activity_participant ap
+		      JOIN relationship emp ON emp.person_id = ap.person_id AND emp.kind = 'employment'
+		        AND emp.ended_at IS NULL AND emp.archived_at IS NULL
+		    WHERE ap.activity_id = a.id AND emp.organization_id = %s)`
+
 // activityReachesOrg is the walk as a PREDICATE, for a query that aliases
 // activity as a. operand is what each arm compares its organization id against
 // — a single bind, or ANY(array).
 //
 // It stays an EXISTS rather than a join against OrgReachSet: EXISTS stops at
 // the first arm that matches, and every one of this function's callers is a
-// hot read.
+// hot read. The participant arm is a second EXISTS beside the first for the
+// same reason — it is probed only when the three links found nothing.
 func activityReachesOrg(operand string) string {
-	return sprintf(`EXISTS (
+	linked := sprintf(`EXISTS (
 		    SELECT 1 %s
 		    WHERE l.activity_id = a.id
 		      AND (l.organization_id = %[2]s OR d.organization_id = %[2]s OR r.organization_id = %[2]s))`,
 		orgArms, operand)
+	return "(" + linked + "\n\t\t    OR " + sprintf(participantEmployerArm, operand) + ")"
 }
 
 // OrgReachSet is the same walk as a SET: the body of a derived table producing
@@ -101,7 +131,19 @@ func activityReachesOrg(operand string) string {
 // The predicate above answers "does this activity reach account X" and takes
 // the account as a bind. A producer scanning the whole workspace has the
 // opposite question — it holds an activity and needs the accounts — so it
-// cannot use the predicate at all. Both are the same three arms.
+// cannot use the predicate at all.
+//
+// THREE ARMS, NOT THE PREDICATE'S FOUR. The predicate also reaches through a
+// participant's employer; this set does not, and the difference is the point
+// rather than a lag. This set is what a SIGNAL is filed through, and the note
+// below already draws the line it sits on: a timeline showing something is
+// arguably being helpful, a signal filed against that account is a claim
+// nobody made. Somebody Cc'd on a message is weaker evidence than somebody the
+// message was filed against, and filing against every Cc'd person's employer
+// would put claims on accounts that were never in the conversation.
+//
+// TestTheReachSetDoesNotFileThroughParticipants holds the split, so collapsing
+// it is a decision somebody makes rather than a line they add.
 //
 // DISTINCT collapses an activity that reaches one account through several arms
 // (its own link and its deal's, say) to one row, so a caller counting messages
@@ -217,18 +259,34 @@ func openTaskAssigneeClause(assignee *ids.UserID, arg func(any) int) string {
 }
 
 // ownQueueClause narrows to the open tasks one person is answerable for:
-// assigned to them, or assigned to NOBODY.
+// assigned to them, and to nobody else.
 //
-// The unassigned arm is the difference from openTaskAssigneeClause, and it is
-// the point. A rep who writes themselves a task without filling in an assignee
-// still owns it, and a "my work" queue that dropped it would hide the reader's
-// own to-do from them — worse than carrying one row too many.
+// It used to admit unassigned tasks too, on the ground that a rep who writes
+// themselves a task without filling in an assignee still owns it. That reading
+// was true of the case it named and wrong about every other: an automation
+// mints a follow-up with no assignee, and "or nobody" put that one task on
+// every colleague's queue at once — a manager opening "mine" found a rep's
+// lead work waiting for them, which is the report this rule comes from.
+//
+// The self-written task is kept where it belongs by owning it at the point of
+// writing instead (taskAssignee, activity.go), so this clause can mean exactly
+// what it says. Work that genuinely belongs to nobody is answered by
+// unassignedQueueClause, which is a queue somebody chooses to open rather than
+// one that arrives in everybody's.
 func ownQueueClause(reader *ids.UserID, arg func(any) int) string {
 	if reader == nil {
 		return ""
 	}
-	return sprintf("(a.assignee_id = $%d OR a.assignee_id IS NULL) AND a.kind = 'task' AND NOT a.is_done",
-		arg(*reader))
+	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*reader))
+}
+
+// unassignedQueueClause is the open tasks nobody answers for.
+//
+// Its own scope rather than a corner of somebody's queue: unowned work is real
+// and has to be visible, but it is picked up deliberately. Arriving unbidden in
+// every reader's "mine" is what taught reps that the queue was not theirs.
+func unassignedQueueClause() string {
+	return "a.assignee_id IS NULL AND a.kind = 'task' AND NOT a.is_done"
 }
 
 // listActivitiesFilter builds the timeline query's join, WHERE terms and
@@ -274,6 +332,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	}
 	if clause := ownQueueClause(in.OwnQueueOf, arg); clause != "" {
 		where = append(where, clause)
+	}
+	if in.UnassignedQueue {
+		where = append(where, unassignedQueueClause())
 	}
 	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
 		where = append(where, clause)

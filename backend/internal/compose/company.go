@@ -258,12 +258,13 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 	}
 	facts := make([]crmcontracts.OrganizationFact, 0, len(c.Facts))
 	for _, fact := range c.Facts {
+		version := crmcontracts.RowVersion(fact.Version)
 		facts = append(facts, crmcontracts.OrganizationFact{
 			Category: crmcontracts.OrganizationFactCategory(fact.Category),
 			Field:    crmcontracts.OrganizationFactField(fact.Field), Value: fact.Value, ValueKey: fact.ValueKey,
 			Source: crmcontracts.OrganizationFactSource(fact.Source), CapturedBy: &fact.CapturedBy,
 			EvidenceSnippet: nonEmptyString(fact.EvidenceSnippet), SourceUrl: nonEmptyString(fact.SourceURL),
-			Confidence: &fact.Confidence, UpdatedAt: fact.UpdatedAt,
+			Confidence: &fact.Confidence, UpdatedAt: fact.UpdatedAt, Version: &version,
 		})
 	}
 	out.Fields = &profileFields

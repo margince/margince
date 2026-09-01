@@ -360,3 +360,93 @@ func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
 		t.Errorf("the select list does not end with the audience arm: %q", columns)
 	}
 }
+
+// withheldRow answers the scan the way a row the caller may DISCOVER but not
+// read comes back: every column filled as the database has it, and
+// content_available false. It fills the content columns deliberately — the
+// question is what `record` does with a reason that IS set, not what happens
+// when the database had none.
+type withheldRow struct {
+	t     *testing.T
+	names []string
+}
+
+func (r *withheldRow) Scan(dest ...any) error {
+	r.t.Helper()
+	for i, d := range dest {
+		switch d := d.(type) {
+		case *string:
+			*d = "set"
+		case **string:
+			v := "set"
+			*d = &v
+		case *bool:
+			// content_available is the projection's last column and the only
+			// one this row answers false: that is the whole condition under
+			// test.
+			*d = i != len(dest)-1
+		case *int64:
+			*d = 1
+		case *int32:
+			*d = 1
+		case *time.Time:
+			*d = epoch
+		case **time.Time:
+			v := epoch
+			*d = &v
+		case *ids.ActivityID:
+			*d = ids.ActivityID{}
+		case **ids.UserID:
+			*d = nil
+		}
+	}
+	return nil
+}
+
+// A withheld row says WHAT it is — kind, date, direction — and nothing about
+// what it is ABOUT. `audience_reason` is on the second list: the reason a
+// message is held describes its subject matter ("personnel", "legal",
+// "security_incident"), so a colleague who may not read a held message must
+// not learn why it is held either. The contract states this
+// (crm.yaml: "absent whenever content_state is withheld"), and the field is
+// optional on the wire, so nothing downstream fails when it leaks — which is
+// why it is asserted here.
+func TestAWithheldRowCarriesNoAudienceReason(t *testing.T) {
+	t.Parallel()
+	names := make([]string, len(activityProjection))
+	for i, c := range activityProjection {
+		names[i] = c.sql
+	}
+	got, err := scanActivity(&withheldRow{t: t, names: names})
+	if err != nil {
+		t.Fatalf("scanActivity: %v", err)
+	}
+	if got.ContentState == nil || *got.ContentState != crmcontracts.ActivityContentStateWithheld {
+		t.Fatalf("the row did not come back withheld (content_state %v) — the assertions "+
+			"below would then be reading an available row", got.ContentState)
+	}
+	// Named one at a time rather than as a loop over a list: each of these is
+	// a separate promise the contract makes about a withheld row, and a
+	// failure should say which one broke.
+	if got.AudienceReason != nil {
+		t.Errorf("a withheld row carried audience_reason %q — the reason describes what the "+
+			"message is about, so it is withheld with the content", *got.AudienceReason)
+	}
+	if got.Subject != nil {
+		t.Errorf("a withheld row carried a subject")
+	}
+	if got.Body != nil {
+		t.Errorf("a withheld row carried a body")
+	}
+	if got.ThreadKey != nil {
+		t.Errorf("a withheld row carried a thread key — it identifies the message at the provider")
+	}
+	// The markers a discoverable row keeps. Asserted so the test cannot pass by
+	// blanking everything, which would withhold the row's existence too.
+	if got.Audience == nil {
+		t.Error("a withheld row lost its audience — the caller may know a row is limited")
+	}
+	if got.Kind == "" {
+		t.Error("a withheld row lost its kind — a discoverable row still says what it is")
+	}
+}

@@ -53,10 +53,13 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	// leave every other subject's record untouched — for retention that is the
 	// storage-limitation failure the pass exists to prevent, and for the rest it
 	// would make a hygiene pass silently partial.
-	"internal/modules/privacy:anonymizePerson": "the retention engine anonymizes a person in place because their retention clock expired, under a policy that names the table. The subject is chosen by age; there is no caller asking for this row and no authority to test beyond the policy itself",
-	"internal/modules/privacy:anonymizeLead":   "the lead half of the same retention pass, chosen the same way",
-	"internal/modules/privacy:archiveDeal":     "the deal half of the same retention pass: a deal past its window is archived because of when it closed, not because somebody asked",
-	"internal/modules/deals:SweepWorkspace":    "the close-date hygiene pass reads every open deal in the workspace and corrects or stages the ones whose expected close has gone stale. It runs as the workspace's own system principal with no human behind it, and narrowing it to one seat's rows would leave every other rep's forecast uncorrected while the sweep reported success",
+	"internal/modules/privacy:AnonymisePeople":         "an owner destroying the contacts their own mailbox is the only reason the CRM knows. A row-writability probe would ask the wrong question: the record IS workspace-visible — that is the defect being undone — so the probe would pass for any seat and prove nothing. What confines this is the SELECTION, in capture.SelectPurgeablePeopleTx, which admits a person only when every live address matches the caller's own rule, no deal links them, and no other seat imported their mail. The caller is checked for being a person at the entry point above",
+	"internal/modules/privacy:anonymiseOnePerson":      "the per-person half of AnonymisePeople, on its own transaction; the same reasoning and the same selection govern it",
+	"internal/modules/privacy:anonymizePerson":         "the retention engine anonymizes a person in place because their retention clock expired, under a policy that names the table. The subject is chosen by age; there is no caller asking for this row and no authority to test beyond the policy itself",
+	"internal/modules/privacy:anonymizeLead":           "the lead half of the same retention pass, chosen the same way",
+	"internal/modules/privacy:archiveDeal":             "the deal half of the same retention pass: a deal past its window is archived because of when it closed, not because somebody asked",
+	"internal/modules/people:promoteIfWorkspaceScoped": "a row probe here would refuse the write it exists to make. The row is owner-scoped, which platform/auth reads as capture privacy — invisible to every principal but its owner, an admin included — so EnsureWritable answers no for exactly the rows this promotes. What decides the promotion is not the caller's authority over the row but the verdict that judged its sender a business counterparty, and the surrounding ensurePerson already takes auth.Require(person, create) for the caller who may mint one at all. The write is one-directional and idempotent: it moves owner to workspace and never back",
+	"internal/modules/deals:SweepWorkspace":            "the close-date hygiene pass reads every open deal in the workspace and corrects or stages the ones whose expected close has gone stale. It runs as the workspace's own system principal with no human behind it, and narrowing it to one seat's rows would leave every other rep's forecast uncorrected while the sweep reported success",
 
 	// The shared fill, probed by BOTH of its callers rather than by itself.
 	// ApplySitePersonFields takes EnsureWritableLive and SKIPS an out-of-scope
@@ -65,7 +68,6 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	// are different because the surfaces are — a site read must not abort a
 	// whole page over one employee, and an import must not silently omit a
 	// card — and a probe inside the shared writer could only give one of them.
-	"internal/modules/people:fillSitePersonFields": "the fill both the site read and the vCard import share, reached only past each caller's own auth.EnsureWritableLive on the matched person. The probe is in the callers because what a refusal MEANS differs between them: the site read skips to staging, the import reports the card as skipped. A probe here would have to pick one of those answers for both",
 
 	// Capture. A colleague's mail must reach the record it is about, which is
 	// the case the access model deliberately keeps open: Rep B emailing Rep A's

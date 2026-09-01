@@ -46,10 +46,11 @@ export function PipelineLadder({
   payloadsEnabled,
 }: Readonly<{
   stages: readonly Rung[];
-  // The deployment's payload posture. False means NO rung carries a sender or
-  // a subject because the operator did not turn payload capture on — which is
-  // a different statement from a rung that simply has none, and the ladder says
-  // which once rather than repeating it per rung.
+  // The deployment's payload posture, on unless the deployment file turns it
+  // off. False means NO rung carries a sender or a subject because the operator
+  // turned payload capture off — which is a different statement from a rung
+  // that simply has none, and the ladder says which once rather than repeating
+  // it per rung.
   payloadsEnabled: boolean;
 }>) {
   const t = useT();

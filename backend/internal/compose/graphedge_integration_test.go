@@ -271,6 +271,45 @@ func TestAnEdgeThatLostItsEvidenceIsDeleted(t *testing.T) {
 	}
 }
 
+// A RELINK is the case the activity's own rows cannot describe. Repointing a
+// participant to another contact removes the row that named the old one, so
+// resolving the affected pairs from the rows alone leaves the old colleague
+// still credited with a conversation that is no longer theirs — until the
+// nightly rebuild, which is a week of recommending an introduction nobody can
+// make.
+func TestARelinkDropsTheEdgeToTheContactTheActivityLeft(t *testing.T) {
+	v := edgeEnv{integration.Setup(t)}
+	now := time.Now().UTC()
+	was := v.person(t, "Dana Mistaken")
+	corrected := v.person(t, "Nils Actually")
+	a1 := v.interaction(t, v.e.Rep1, was, now.AddDate(0, 0, -1), "inbound", "from")
+	v.recompute(t, a1)
+
+	if len(v.edgesFor(t, was)) != 1 {
+		t.Fatal("the edge was not created in the first place")
+	}
+
+	// The relink itself: the participant row is repointed, and the event that
+	// follows names only the activity. Nothing anywhere still says the message
+	// was ever about the first contact.
+	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity_participant SET person_id = $3 WHERE activity_id = $1 AND person_id = $2`,
+			a1, was, corrected)
+		return err
+	}); err != nil {
+		t.Fatalf("relinking the participant: %v", err)
+	}
+	v.recompute(t, a1)
+
+	if edges := v.edgesFor(t, was); len(edges) != 0 {
+		t.Errorf("the edge to the contact the activity LEFT survived the relink: %+v", edges)
+	}
+	if edges := v.edgesFor(t, corrected); len(edges) != 1 {
+		t.Errorf("the contact the activity was relinked TO has %d edges, want 1: %+v", len(edges), edges)
+	}
+}
+
 func TestTheNightlyRebuildAgreesWithTheIncrementalPath(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()

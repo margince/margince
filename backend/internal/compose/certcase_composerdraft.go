@@ -27,6 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/persondraft"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -114,7 +115,10 @@ type personDraftCase struct{ in persondraft.Input }
 // product sends rather than a copy of it assembled here.
 func (c *personDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	recorder := &composerRecorder{completer: completer}
-	draft, _, err := persondraft.Write(ctx, recorder, c.in)
+	// No voice profile: a certification case measures the prompt this site
+	// sends every user, and a profile is one user's own writing rather than a
+	// property of the site.
+	draft, _, err := persondraft.Write(ctx, recorder, c.in, draftvoice.Context{})
 	return composerTrace(personDraftSite, recorder, draft.Body, err)
 }
 
@@ -133,7 +137,7 @@ type accountDraftCase struct{ in accountdraft.Input }
 
 func (c *accountDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	recorder := &composerRecorder{completer: completer}
-	draft, _, err := accountdraft.Write(ctx, recorder, c.in)
+	draft, _, err := accountdraft.Write(ctx, recorder, c.in, draftvoice.Context{})
 	return composerTrace(accountDraftSite, recorder, draft.Body, err)
 }
 

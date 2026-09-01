@@ -78,6 +78,12 @@ type VatCheck struct {
 	RegisteredName     string
 	RegisteredAddress  string
 	CheckedAt          time.Time
+	// RecordedAt is when THIS INSTALLATION wrote the row, on its own clock.
+	// Separate from CheckedAt because VIES answers with a date and no time, so
+	// two consultations on one day carry the same CheckedAt: anything asking
+	// "has a new answer landed" has to read this one or it never sees a
+	// same-day re-check.
+	RecordedAt time.Time
 }
 
 // ErrVatCheckNotRecorded says this company's VAT ID has never been consulted.
@@ -426,13 +432,15 @@ func upsertVatCheckTx(ctx context.Context, tx pgx.Tx, check VatCheck, capturedBy
 func readVatCheckTx(ctx context.Context, tx pgx.Tx, org ids.OrganizationID) (VatCheck, error) {
 	const read = `
 		SELECT vat_number, status, COALESCE(consultation_number, ''),
-		       COALESCE(registered_name, ''), COALESCE(registered_address, ''), checked_at
+		       COALESCE(registered_name, ''), COALESCE(registered_address, ''),
+		       checked_at, updated_at
 		  FROM organization_vat_check
 		 WHERE organization_id = $1`
 	found := VatCheck{OrganizationID: org}
 	var status string
 	err := tx.QueryRow(ctx, read, org.UUID).Scan(&found.Number, &status,
-		&found.ConsultationNumber, &found.RegisteredName, &found.RegisteredAddress, &found.CheckedAt)
+		&found.ConsultationNumber, &found.RegisteredName, &found.RegisteredAddress,
+		&found.CheckedAt, &found.RecordedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return VatCheck{}, ErrVatCheckNotRecorded
 	}

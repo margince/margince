@@ -79,3 +79,21 @@ func SubstanceFor(lang textlang.Lang) Substance {
 func Fill(template, value string) string {
 	return strings.Replace(template, "%s", value, 1)
 }
+
+// FillPositional replaces each "%s" in template with the value at its
+// position, and never re-reads a substituted value.
+//
+// Fill is the single-verb version of this and carries the same guarantee; this is what a line with three of them needs. Neither uses
+// fmt.Sprintf, because a template assembled from record text has no business
+// being read as a format string at all.
+func FillPositional(template string, values ...string) string {
+	parts := strings.Split(template, "%s")
+	var out strings.Builder
+	for i, part := range parts {
+		out.WriteString(part)
+		if i < len(parts)-1 && i < len(values) {
+			out.WriteString(values[i])
+		}
+	}
+	return out.String()
+}

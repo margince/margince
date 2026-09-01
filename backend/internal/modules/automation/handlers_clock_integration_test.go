@@ -46,8 +46,8 @@ func (p *fakeCreateTaskProvider) Create(_ context.Context, in datasource.CreateI
 	return datasource.EntityRef{Type: in.EntityType, ID: ids.NewV7()}, nil
 }
 
-func (p *fakeCreateTaskProvider) Read(context.Context, datasource.EntityRef) (datasource.Record, error) {
-	panic("fakeCreateTaskProvider: Read not stubbed for this test")
+func (p *fakeCreateTaskProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
+	return ownerlessRecord(ref), nil
 }
 
 func (p *fakeCreateTaskProvider) Search(context.Context, datasource.SearchQuery) (datasource.SearchResult, error) {

@@ -145,6 +145,7 @@ export const ACTIVITY_LINE: Readonly<
   },
   brief_ranking: SYSTEM_SWEEP,
   capture_classify: SYSTEM_SWEEP,
+  capture_confidentiality_verdict: SYSTEM_SWEEP,
   capture_counterparty_verdict: SYSTEM_SWEEP,
   enrich: notDisplayed(
     "it reaches nobody, and it would not be worth showing if it did — recording only the first half is what made this read like a gap somebody should close. Reachability: the one production site is the signature-enrichment pass, which runs under a system principal with no on_behalf_of, so ResolveActor scopes every occurrence to the workspace with a NULL actor_user_id while the personal feed selects on actor_user_id. Worth: it could not be per-person even if it were reachable. The pass mints ONE correlation id for the whole run (api/jobs.yaml capture_enrich, up to 100 candidates in series), and the occurrence key is correlation+task, so every candidate collapses into ONE row — a per-person subject would make that single row flap from one person to the next rather than narrate any of them. What a reader actually wants from this pass is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the person record. The ticker's own `enrich` key names DIFFERENT work (a provider run on a person, and the organization page's Enrich card, which runs cold_start rather than this task), which is what makes this one easy to mistake for visible",
@@ -154,6 +155,7 @@ export const ACTIVITY_LINE: Readonly<
   site_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
   site_fact_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
   site_triage: SITE_READ_WATCHED_WHERE_IT_RUNS,
+  propose_roles: SYSTEM_SWEEP,
   transcript_propose: SYSTEM_SWEEP,
   voice_build: SYSTEM_SWEEP,
 
@@ -177,30 +179,9 @@ export const ACTIVITY_LINE: Readonly<
  * They live beside the lines rather than in them: the map above is the (kind,
  * state) table its test holds to exactly, and a heading in it would be a key no
  * state could reach.
- *
- * `settled` names the section the terminal states are read under. It is not
- * decoration: `done`, `degraded` and `failed` — and with them every
- * `degrade_reason` and `summary`, both written only alongside a terminal status
- * — reach a reader through that section and nowhere else, because the read puts
- * a settled run in `recent` and never in `running`.
  */
-export const PANEL_HEADING: Readonly<
-  Record<"running" | "settled", MessageKey>
-> = {
+export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
   running: "agent.panel.runningNow",
-  settled: "agent.panel.finishedToday",
-};
-
-/**
- * A label drawn on ONE run's own detail line, not a section heading.
- *
- * Kept out of `PANEL_HEADING`: that map's contract is a heading that names no
- * single run, and `stopped` sits inline next to one run's `degrade_reason` in
- * `RunSection` — it is closer kin to `ACTIVITY_LINE` than to a section title,
- * so it gets its own export rather than stretching the heading map's meaning.
- */
-export const RUN_DETAIL_LABEL: Readonly<Record<"stopped", MessageKey>> = {
-  stopped: "agent.panel.stoppedEarly",
 };
 
 /**

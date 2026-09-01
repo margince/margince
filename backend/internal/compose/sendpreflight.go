@@ -85,11 +85,18 @@ var _ activities.SendAuthority = mailboxAuthority{}
 // at CALL time rather than snapshotting it, so the two places that install the
 // pre-flight need no ordering rule against the option that records the fact.
 //
-// A provider with no field is not configured, which is also the only honest
-// answer: comms.SendScopeFor gives a send scope to gmail alone, so no other
-// provider reaches this at all.
+// A provider with no arm is not configured, which is also the only honest
+// answer: comms.SendScopeFor gives a send scope to the mail providers alone, so
+// no other provider reaches this at all.
 func (s *Server) mailAppConfigured(provider string) bool {
-	return provider == providerGmail && s.gmailAppConfigured
+	switch provider {
+	case providerGmail:
+		return s.gmailAppConfigured
+	case providerGraph:
+		return s.graphAppConfigured
+	default:
+		return false
+	}
 }
 
 // installSendPreflight installs the pre-flight over whichever capture registry
@@ -101,6 +108,36 @@ func installSendPreflight(s *Server, pool *pgxpool.Pool) {
 		grants:            s.connectorHandlers.registry,
 		mailAppConfigured: s.mailAppConfigured,
 	})(s, pool)
+}
+
+// SendableMailProvider names the mailbox this user's next send goes out
+// through: the first mail provider they hold a transmitting grant for.
+//
+// DERIVED from comms' own census rather than from a list here, so a vendor
+// added there is one this can already choose — and asked through SendCapable,
+// so "can this user send through it" is the same question in both directions
+// rather than two that could disagree.
+//
+// FIRST, in the census's own order, and that order is alphabetical rather than
+// meaningful. It matters only to somebody holding two sendable mailboxes at
+// once, which nothing in the product asks them to do and no surface lets them
+// choose between; until one does, a stable answer beats an arbitrary-looking
+// one that changes between sends. A rep with one mailbox — every rep today —
+// gets theirs.
+//
+// Empty means none of them can transmit, which the caller turns into the
+// refusal naming what to fix.
+func (m mailboxAuthority) SendableMailProvider(ctx context.Context) (string, error) {
+	for _, provider := range comms.MailSendProviders() {
+		capable, err := m.SendCapable(ctx, provider)
+		if err != nil {
+			return "", err
+		}
+		if capable {
+			return provider, nil
+		}
+	}
+	return "", nil
 }
 
 func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (bool, error) {

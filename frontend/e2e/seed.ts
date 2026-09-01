@@ -422,6 +422,35 @@ export const aiProviderKeys = {
   ],
 };
 
+// Whether the model lanes are answering (the AI settings health card). Two
+// rungs rather than none: an empty `rungs` draws the "nobody called anything"
+// empty state, and the table — the part with the latency, the failure count and
+// the sentinel — would then never be rendered by any sweep that visits this
+// page. One healthy lane and one that is failing, so both badges are painted
+// and the axe pass measures the tones it actually ships.
+export const aiHealth = {
+  window_hours: 1,
+  rungs: [
+    {
+      tier: "cheap_cloud",
+      healthy: true,
+      calls: 412,
+      failures: 3,
+      last_call_at: "2026-07-13T09:41:00Z",
+      median_latency_ms: 640,
+    },
+    {
+      tier: "premium",
+      healthy: false,
+      calls: 7,
+      failures: 7,
+      last_sentinel: "provider_quota",
+      last_call_at: "2026-07-13T09:12:00Z",
+      median_latency_ms: 2_180,
+    },
+  ],
+};
+
 export const aiUsage = {
   days: [
     {
@@ -918,6 +947,65 @@ export async function mockApi(
   // vanishing the row or reporting 404 — a 404 means no connection was ever
   // inserted, a different state than "disconnected".
   let connection = { ...overlayConnection };
+  // The mailbox-privacy fixtures, per page for the same reason as the rest:
+  // a posture change, a sender overrule and a hold all have to be readable
+  // back within one test.
+  const captureSettings: Record<string, boolean> = {
+    auto_enrich: true,
+    mail_sharing: true,
+    shared_posture_allowed: false,
+    signature_enrich: true,
+  };
+  const captureConnections = [
+    {
+      id: "conn-gmail",
+      provider: "gmail",
+      status: "connected",
+      account_label: "admin@demo.test",
+      scopes: [],
+      mail_posture: "classified",
+      backfill: { state: "none" },
+    },
+  ];
+  // One of each shape the Senders table draws: an admitted kind, a refused
+  // one, and a personal sender — the three rows that differ on screen.
+  const captureSenders: {
+    address: string;
+    kind?: string;
+    status?: string;
+    decision?: string;
+    overruled_kind?: string;
+    overruled: boolean;
+    record_exists: boolean;
+  }[] = [
+    {
+      address: "jana@commercetools.com",
+      kind: "person",
+      status: "real",
+      overruled: false,
+      record_exists: true,
+    },
+    {
+      address: "news@substack.com",
+      kind: "newsletter",
+      status: "noise",
+      overruled: false,
+      record_exists: false,
+    },
+    {
+      address: "anne@hotmail.com",
+      kind: "personal",
+      status: "noise",
+      overruled: false,
+      record_exists: false,
+    },
+  ];
+  const counterpartyHolds: {
+    id: string;
+    kind: string;
+    value: string;
+    created_at: string;
+  }[] = [];
   // per-page mapping state so a map/unmap actually MOVES something. A generic
   // 200 would let the card report a successful write and then reload the
   // untouched fixture — the workflow would pass having done nothing, which is
@@ -984,6 +1072,30 @@ export async function mockApi(
         system_of_record: { mode: sorMode },
       });
     }
+    if (path === "/installation/google-app" && method === "GET") {
+      // Answered explicitly: the catch-all would hand back a list envelope, and
+      // the Google-app card would then read a source and a redirect list off a
+      // body that carries neither — taking the whole settings screen down.
+      //
+      // `environment` because it is the state the card was rewritten for: an app
+      // the deployment supplies rather than one stored here, which the surface
+      // used to report as no app at all.
+      return json({
+        configured: true,
+        client_id: "000000000000-brandt.apps.googleusercontent.com",
+        source: "environment",
+        redirect_uris: [
+          {
+            purpose: "sign_in",
+            url: "https://api.brandt.example/v1/auth/oidc/google/callback",
+          },
+          {
+            purpose: "mailbox_connect",
+            url: "https://api.brandt.example/v1/connectors/google/callback",
+          },
+        ],
+      });
+    }
     if (path === "/installation/settings" && method === "GET") {
       // The authenticated shell holds its first paint on this read, because
       // `installation.timezone` is the clock every record date is rendered in
@@ -1000,6 +1112,12 @@ export async function mockApi(
         base_language: "de",
         base_currency_locked: false,
         max_upload_bytes: 25_000_000,
+        // Two providers, one of each state, so the sign-in methods card renders
+        // both an offered and a withheld row rather than only the empty case.
+        sign_in_providers: [
+          { key: "google", label: "Google", enabled: true },
+          { key: "microsoft", label: "Microsoft", enabled: false },
+        ],
       });
     }
     // The two anonymous reads the unauthenticated surface makes. Both answer
@@ -1679,25 +1797,49 @@ export async function mockApi(
     if (path === "/approvals") {
       return json(page([approval]));
     }
-    // The day's surface. One staged decision, so the focus lane has something
-    // to draw and the approve path has something to answer — the same approval
-    // the queue serves, because two fixtures for one row is how a screen comes
-    // to pass a test against a decision the product never staged.
-    if (path === "/attention" && method === "GET") {
+    // The day's surface: one ranked queue. The staged decision is the same
+    // approval the approvals queue serves, because two fixtures for one row is
+    // how a screen comes to pass a test against a decision the product never
+    // staged.
+    if (path === "/worklist" && method === "GET") {
       return json({
         as_of: "2026-07-05T06:00:00Z",
-        needs_you: [
+        scope: "mine",
+        scope_options: ["mine"],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+        sources_unavailable: [],
+        // Both accountings, because the server sends both. A fixture that omits
+        // them models a response the product never produces, and a spec driving
+        // it passes against a page no reader can reach.
+        reach: [
+          {
+            source: "approval",
+            considered: 1,
+            shown: 1,
+            more_available: false,
+          },
+        ],
+        counts: [
+          {
+            category: "decisions",
+            considered: 1,
+            shown: 1,
+            more_available: false,
+          },
+        ],
+        queue: [
           {
             id: approval.id,
             source: "approval",
+            category: "decisions",
+            level: 6,
+            consequence: "data_drifts",
             kind: approval.kind,
             title: approval.summary,
+            because: [{ kind: "routine" }],
             actions: ["decide"],
           },
         ],
-        planned: [],
-        done_for_you: [],
-        counts: { needs_you: 1, planned: 0 },
       });
     }
     // The decision lane reads the ONE approval it is showing, whole.
@@ -2064,6 +2206,9 @@ export async function mockApi(
     if (path === "/installation/license") {
       return json(installationLicense);
     }
+    if (path === "/ai/health") {
+      return json(aiHealth);
+    }
     if (path === "/ai/usage") {
       return json(aiUsage);
     }
@@ -2075,6 +2220,89 @@ export async function mockApi(
     }
     if (path === "/admin/job-health") {
       return json(jobHealth);
+    }
+    // The mailbox-privacy surfaces. Held per page so a spec that flips a
+    // setting or overrules a sender reads back what it wrote: a mock that
+    // answered a fixed fixture would let a write "succeed" and then show the
+    // untouched value, which passes while doing nothing.
+    if (path === "/capture/settings") {
+      if (method === "PATCH") {
+        Object.assign(captureSettings, route.request().postDataJSON());
+      }
+      return json(captureSettings);
+    }
+    if (path === "/capture/senders") {
+      return json({ data: captureSenders });
+    }
+    if (path.startsWith("/capture/senders/") && path.endsWith("/decision")) {
+      const address = decodeURIComponent(
+        path.slice("/capture/senders/".length, -"/decision".length),
+      );
+      const row = captureSenders.find((s) => s.address === address);
+      if (!row) {
+        return route.fulfill({ status: 404 });
+      }
+      if (method === "DELETE") {
+        row.decision = undefined;
+        row.overruled = false;
+        return route.fulfill({ status: 204 });
+      }
+      row.decision = route.request().postDataJSON()?.decision;
+      row.overruled_kind = row.kind;
+      row.overruled = true;
+      return json(row);
+    }
+    if (path === "/capture/counterparty-holds") {
+      if (method === "POST") {
+        const body = route.request().postDataJSON();
+        const hold = {
+          id: `hold-${counterpartyHolds.length + 1}`,
+          kind: body.kind,
+          value: body.value,
+          created_at: "2026-08-01T09:00:00Z",
+        };
+        counterpartyHolds.push(hold);
+        return json(hold, 201);
+      }
+      return json({ data: counterpartyHolds });
+    }
+    if (path.startsWith("/capture/counterparty-holds/")) {
+      const id = path.slice("/capture/counterparty-holds/".length);
+      const at = counterpartyHolds.findIndex((h) => h.id === id);
+      if (at === -1) {
+        return route.fulfill({ status: 404 });
+      }
+      counterpartyHolds.splice(at, 1);
+      return route.fulfill({ status: 204 });
+    }
+    if (path.startsWith("/connectors/") && path.endsWith("/mail-posture")) {
+      const provider = path.slice(
+        "/connectors/".length,
+        -"/mail-posture".length,
+      );
+      const conn = captureConnections.find((c) => c.provider === provider);
+      const posture = route.request().postDataJSON()?.posture;
+      if (!conn) {
+        return route.fulfill({ status: 404 });
+      }
+      // The server's own refusal, which is what the option's disabled state
+      // and the row's second sentence are both about. A mock that accepted it
+      // would let a spec prove the opt-in works while it does not.
+      if (posture === "shared" && !captureSettings.shared_posture_allowed) {
+        return json(
+          {
+            title: "Unprocessable Entity",
+            code: "validation_error",
+            detail: "this workspace does not allow a shared mailbox",
+          },
+          422,
+        );
+      }
+      conn.mail_posture = posture;
+      return json(conn);
+    }
+    if (path === "/connectors") {
+      return json({ data: captureConnections });
     }
     if (path === "/agent-tools") {
       return json({

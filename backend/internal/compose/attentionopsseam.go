@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 )
@@ -94,6 +95,7 @@ func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit in
 	for _, run := range troubled {
 		item := attention.TroubledRun{
 			ID:         run.ID,
+			Kind:       run.Kind,
 			State:      run.State,
 			OccurredAt: run.OccurredAt,
 		}
@@ -130,6 +132,29 @@ func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limi
 	return out, nil
 }
 
+// attentionUndelivered binds the undelivered lane to the comms store's own
+// per-user read of the stamp the dispatcher's park leaves; the person-only
+// refusal lives there.
+type attentionUndelivered struct{ store *comms.Store }
+
+func (u attentionUndelivered) ParkedSends(ctx context.Context, since time.Time, limit int) ([]attention.ParkedSend, error) {
+	parked, err := u.store.ParkedSendsFor(ctx, since, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.ParkedSend, 0, len(parked))
+	for _, send := range parked {
+		out = append(out, attention.ParkedSend{
+			ID:       send.ID,
+			Subject:  send.Subject,
+			Reason:   send.Reason,
+			ParkedAt: send.ParkedAt,
+			PersonID: send.PersonID,
+		})
+	}
+	return out, nil
+}
+
 // attentionAutomations binds the rule-health lane to the automation store's
 // own cross-instance read; the automation-read gate lives there.
 type attentionAutomations struct{ store *automation.AutomationStore }
@@ -142,10 +167,11 @@ func (a attentionAutomations) TroubledRuns(ctx context.Context, since time.Time,
 	out := make([]attention.TroubledAutomationRun, 0, len(troubled))
 	for _, run := range troubled {
 		item := attention.TroubledAutomationRun{
-			ID:         run.ID,
-			Name:       run.Name,
-			Outcome:    run.Outcome,
-			OccurredAt: run.CreatedAt,
+			ID:           run.ID,
+			AutomationID: run.AutomationID,
+			Name:         run.Name,
+			Outcome:      run.Outcome,
+			OccurredAt:   run.CreatedAt,
 		}
 		if run.Reason != nil {
 			item.Reason = *run.Reason
@@ -171,6 +197,38 @@ func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.Un
 			Subject:   notice.Subject,
 			Body:      notice.Body,
 			CreatedAt: notice.CreatedAt,
+		})
+	}
+	return out, nil
+}
+
+// attentionIntroductions binds the introductions lane to the store's own
+// per-user read.
+//
+// Per-user for the reason attentionNotices is: an ask names one colleague, so
+// the store refuses a caller with no human behind it and the lane renders that
+// as withheld. Nothing here widens, and there is no scope argument to pass —
+// the read takes none.
+type attentionIntroductions struct{ store *introductions.Store }
+
+func (a attentionIntroductions) Pending(
+	ctx context.Context, limit int,
+) ([]attention.PendingIntroduction, error) {
+	asks, err := a.store.AwaitingMyAnswer(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.PendingIntroduction, 0, len(asks))
+	for _, ask := range asks {
+		out = append(out, attention.PendingIntroduction{
+			ID:       ask.ID,
+			PersonID: ask.PersonID,
+			// The requester's own words, carried rather than summarised: the
+			// colleague is deciding whether to spend their relationship, and a
+			// paraphrase is not what they would be agreeing to.
+			Reason:      ask.InternalReason,
+			RequestedAt: ask.RequestedAt,
+			DueAt:       ask.DueAt,
 		})
 	}
 	return out, nil

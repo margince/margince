@@ -129,6 +129,37 @@ function better(a: OrganizationFact, b: OrganizationFact): boolean {
  * fields, because product/service/capability are three ways of saying the one
  * thing (see OFFERING_RANK); elsewhere the field is part of the identity.
  */
+// listFacts groups and orders EVERY stored row, collapsing nothing.
+//
+// It is groupFacts' sibling, and the difference is the whole point. groupFacts
+// answers "what does this company say", where three spellings of one offering
+// are one answer and showing all three is noise. listFacts answers "what rows
+// does this record hold", which is the question a surface that can DELETE a row
+// has to be asking: the collapse drops the losing duplicates entirely, so a
+// reader who removes the winner watches a row they never saw take its place,
+// having deleted something and apparently changed nothing.
+//
+// Category ordering and the within-category sort are shared, because those are
+// about reading rather than about identity.
+export function listFacts(
+  facts: readonly OrganizationFact[],
+  t: Translator,
+  locale: Locale,
+): FactGroup[] {
+  const groups = new Map<FactCategory, OrganizationFact[]>();
+  for (const fact of facts) {
+    groups.set(fact.category, [...(groups.get(fact.category) ?? []), fact]);
+  }
+  return CATEGORY_ORDER.filter((category) => groups.has(category)).map(
+    (category) => ({
+      category,
+      facts: [...(groups.get(category) ?? [])].sort((a, b) =>
+        order(a, b, t, locale),
+      ),
+    }),
+  );
+}
+
 export function groupFacts(
   facts: readonly OrganizationFact[],
   t: Translator,

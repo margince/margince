@@ -88,7 +88,8 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		if err := refusePersonUnderLegalHold(ctx, tx, subject); err != nil {
 			return err
 		}
-		emails, identities, err := subjectIdentifiers(ctx, tx, subject)
+		keys, err := subjectIdentifiers(ctx, tx, subject)
+		emails, identities := keys.emails, keys.identities
 		if err != nil {
 			return err
 		}
@@ -172,7 +173,7 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		if err := e.eraseAttachments(ctx, tx, reason, causePersonErasure, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
 			return err
 		}
-		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, emails, identities)
+		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, keys.displayName, emails, identities)
 		if err != nil {
 			return err
 		}
@@ -207,21 +208,39 @@ func refusePersonUnderLegalHold(ctx context.Context, tx pgx.Tx, personID ids.Per
 	return nil
 }
 
-// subjectIdentifiers collects the addresses and channel accounts the cascade
-// suppresses and purges by. Read BEFORE anything is wiped — the suppression
-// list needs their hashes, and afterwards nothing holds them.
-func subjectIdentifiers(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]string, []channelIdentity, error) {
+// subjectKeys is everything the cascade recognises the subject BY, read in one
+// place because they share one deadline: every purge below matches on one of
+// these, and a key read after the statement that wipes it matches nothing while
+// the rows it was meant to reach stay named.
+type subjectKeys struct {
+	emails      []string
+	identities  []channelIdentity
+	displayName string
+}
+
+// subjectIdentifiers collects the addresses, channel accounts and name the
+// cascade suppresses and purges by. Read BEFORE anything is wiped — the
+// suppression list needs the hashes, the channel trace lane needs the name, and
+// afterwards nothing holds either.
+func subjectIdentifiers(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (subjectKeys, error) {
 	emails, err := collectStrings(ctx, tx,
 		`SELECT email FROM person_email WHERE person_id = $1`, personID)
 	if err != nil {
-		return nil, nil, err
+		return subjectKeys{}, err
 	}
 	// Same reason: read before eraseChannelIdentities deletes the table.
 	identities, err := personChannelIdentities(ctx, tx, personID)
 	if err != nil {
-		return nil, nil, err
+		return subjectKeys{}, err
 	}
-	return emails, identities, nil
+	// And the name, before anonymizeSubjectRows replaces it with a placeholder:
+	// the capture trace names a CHANNEL counterparty by their display name,
+	// because there is no address to write.
+	displayName, err := subjectDisplayName(ctx, tx, personID)
+	if err != nil {
+		return subjectKeys{}, err
+	}
+	return subjectKeys{emails: emails, identities: identities, displayName: displayName}, nil
 }
 
 // purgeRedactedActivityTraces finishes off the activities the timeline redaction

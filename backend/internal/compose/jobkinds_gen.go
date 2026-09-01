@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "b7f838c9a2c45adc1d1592e4fed24493cd81202fad971af93e20bd34dfd4b804"
+const jobContractHash = "b3ca6c28bcfe1f1769cbf17311159a17711b6899f40d4fb10e7a0ec4df9ea854"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -39,6 +39,8 @@ type declaredJobArgs interface {
 		CaptureBackfillArgs |
 		CaptureClassifyArgs |
 		CaptureClassifyWorkspaceArgs |
+		ConfidentialityVerdictArgs |
+		ConfidentialityVerdictWorkspaceArgs |
 		CounterpartyVerdictArgs |
 		CounterpartyVerdictWorkspaceArgs |
 		CaptureDigestArgs |
@@ -70,9 +72,14 @@ type declaredJobArgs interface {
 		GmailWatchRenewArgs |
 		GraphEdgeReconcileArgs |
 		GraphEdgeWorkspaceArgs |
+		GraphWatchArgs |
+		GraphWatchRenewArgs |
 		IdempotencyRetentionArgs |
 		IdempotencyRetentionWorkspaceArgs |
+		IntroExpiryArgs |
 		KnowledgeIngestArgs |
+		LinkReconcileArgs |
+		LinkReconcileWorkspaceArgs |
 		LinkedInRematchArgs |
 		LinkedInRematchWorkspaceArgs |
 		OrgNamePromotionArgs |
@@ -99,6 +106,7 @@ type declaredJobArgs interface {
 		TimeScanArgs |
 		TimeScanWorkspaceArgs |
 		TranscriptProposeArgs |
+		VCardIngestArgs |
 		VoiceBuildArgs |
 		VoiceBuildRetryArgs |
 		WebhookRetryArgs |
@@ -139,6 +147,7 @@ var (
 	_ jobs.FleetWide = BriefGenerateArgs{}
 	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
 	_ jobs.FleetWide = CaptureClassifyArgs{}
+	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
 	_ jobs.FleetWide = CaptureDigestArgs{}
 	_ jobs.FleetWide = CaptureEnrichArgs{}
@@ -150,7 +159,9 @@ var (
 	_ jobs.FleetWide = GmailSyncArgs{}
 	_ jobs.FleetWide = GmailWatchArgs{}
 	_ jobs.FleetWide = GraphEdgeReconcileArgs{}
+	_ jobs.FleetWide = GraphWatchArgs{}
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
+	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
 	_ jobs.FleetWide = OrgNamePromotionArgs{}
 	_ jobs.FleetWide = OverlayReconcileArgs{}
@@ -172,6 +183,7 @@ var (
 	_ jobs.WorkspaceScoped = CaptureAutoEnrichWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureClassifyWorkspaceArgs{}
+	_ jobs.WorkspaceScoped = ConfidentialityVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CounterpartyVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureDigestWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureEnrichWorkspaceArgs{}
@@ -189,8 +201,10 @@ var (
 	_ jobs.WorkspaceScoped = GeocodeOrganizationArgs{}
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = GraphEdgeWorkspaceArgs{}
+	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = IdempotencyRetentionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
+	_ jobs.WorkspaceScoped = LinkReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = LinkedInRematchWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OrgNamePromotionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayReconcileWorkspaceArgs{}
@@ -206,6 +220,7 @@ var (
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}
 	_ jobs.WorkspaceScoped = TimeScanWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
+	_ jobs.WorkspaceScoped = VCardIngestArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}
 	_ jobs.WorkspaceScoped = WeeklyReviewGenerateWorkspaceArgs{}
 )

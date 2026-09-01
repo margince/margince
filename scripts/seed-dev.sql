@@ -282,4 +282,60 @@ BEGIN
   RAISE NOTICE 'seed-dev.sql: offline_demo finance connection + customer links seeded; the sweep fills the ledger';
 END $$;
 
+-- 4. The one piece of Worklist work no endpoint can write: a customer waiting.
+--
+-- A waiting row is the newest inbound of a thread with no later outbound, and
+-- "thread" means thread_key — which the create endpoint refuses on purpose. A
+-- client naming its own thread could silence an unrelated conversation, so
+-- capture stamps it and nothing else may. That leaves this fixture with no API
+-- to go through, which is what this file is for.
+--
+-- Everything else the Worklist shows is seeded through the real endpoints in
+-- seed-dev.sh, where it belongs.
+--
+-- Dated relative to now, so a seed run next month still demonstrates a two-day
+-- wait rather than a stale one past the freshness horizon.
+DO $$
+DECLARE
+  person_row uuid;
+  activity_row uuid;
+  capturer text;
+BEGIN
+  SELECT id INTO person_row FROM person
+   WHERE full_name = 'Alice Müller' AND archived_at IS NULL
+   ORDER BY created_at LIMIT 1;
+  IF person_row IS NULL THEN
+    RAISE NOTICE 'seed-dev.sql: no Alice Müller yet — run the API seed first; skipping the waiting customer';
+    RETURN;
+  END IF;
+  -- Idempotent on the thread key, like every other block here.
+  IF EXISTS (SELECT 1 FROM activity WHERE thread_key = 'seed-retrofit-pricing') THEN
+    RAISE NOTICE 'seed-dev.sql: the waiting customer is already seeded';
+    RETURN;
+  END IF;
+  SELECT 'human:' || id INTO capturer FROM app_user
+   WHERE email = 'admin@demo.test' LIMIT 1;
+
+  activity_row := uuidv7();
+  INSERT INTO activity (id, kind, direction, subject, body, occurred_at, is_done,
+                        source, captured_by, version, created_at, updated_at,
+                        counterparty_outbound_attested, thread_key, audience)
+  VALUES (activity_row, 'email', 'inbound',
+          'Re: pricing for the retrofit',
+          'Could you confirm the implementation cost before Friday?',
+          now() - interval '2 days', false, 'system',
+          coalesce(capturer, 'system:seed'), 1, now(), now(), false,
+          'seed-retrofit-pricing', 'workspace');
+  -- Filed under a person, which is what makes it SALES mail rather than a rep's
+  -- own correspondence: the lane requires a link to a record the workspace
+  -- sells to.
+  INSERT INTO activity_link (activity_id, entity_type, person_id)
+  VALUES (activity_row, 'person', person_row);
+  -- Who wrote, so the lane can tell a person from a notification service.
+  INSERT INTO activity_participant (activity_id, role, address, person_id)
+  VALUES (activity_row, 'from', 'alice@demo.test', person_row);
+
+  RAISE NOTICE 'seed-dev.sql: a customer is waiting on the Worklist';
+END $$;
+
 COMMIT;

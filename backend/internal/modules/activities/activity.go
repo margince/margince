@@ -136,6 +136,34 @@ func (s *Store) logActivityAndReadTranscript(
 	return out, created, s.readTranscriptOnLanding(ctx, tx, out, created)
 }
 
+// taskAssignee decides who a new task belongs to.
+//
+// A task somebody writes for themselves and does not assign is THEIRS. The
+// column used to keep the NULL and the "my work" queue compensated by treating
+// every unassigned task as the reader's own, which put each automation-created
+// follow-up on every colleague's queue at once — the lead was owned, the task
+// it minted was not, and "mine" quietly meant "mine plus everybody's".
+//
+// Owning it at the point of writing is the half of that fix which keeps the
+// self-written task where its author expects it, so the queue can go back to
+// meaning exactly what it says.
+//
+// Only for a HUMAN creating a TASK. A system principal writing on nobody's
+// behalf leaves the column NULL, which is what routes automation work to the
+// unassigned queue instead of to whoever the workflow ran as; and a caller who
+// named an assignee is obeyed.
+func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
+	if in.AssigneeID != nil || in.Kind != "task" {
+		return in.AssigneeID
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+		return nil
+	}
+	owner := ids.From[ids.UserKind](actor.UserID)
+	return &owner
+}
+
 // logActivityInTx is LogActivity's transactional body, shared by the
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
@@ -148,6 +176,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if in.OccurredAt != nil {
 		occurredAt = in.OccurredAt.UTC()
 	}
+	assignee := taskAssignee(ctx, in)
 
 	replay, err := replayedActivity(ctx, tx, in)
 	if err != nil {
@@ -167,7 +196,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
 		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, occurredAt, in.Direction, in.MeetingStatus,
-		in.DueAt, in.RemindAt, in.AssigneeID, in.HostUserID, in.SourceSystem, in.SourceID, in.Source, by,
+		in.DueAt, in.RemindAt, assignee, in.HostUserID, in.SourceSystem, in.SourceID, in.Source, by,
 		in.ThreadKey, in.CounterpartyEmail, in.CounterpartyOutboundAttested)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {

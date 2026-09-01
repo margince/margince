@@ -91,7 +91,7 @@ const CORE_SCREENS = [
   // screen most able to be WIDE: a clause is a row of three controls, and a
   // second level of nesting indents it again.
   "filters",
-  "today",
+  "worklist",
   "reports",
   "settings",
   // The automations editor is configuration on the AI settings page now, not a
@@ -539,11 +539,22 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
 // draws the staged proposal through the same ApprovalRow the retired Decisions
 // screen used, so the verb a person presses is unchanged and this asserts it
 // where a person now finds it.
-test("AC-inbox: approve and reject act on the staged row", async ({ page }) => {
-  await page.goto("/#/today");
-  await expect(page.getByText("E-Mail senden", { exact: true })).toBeVisible();
-  await expect(page.getByText("Automatisiert durch runner")).toBeVisible();
-  await page.getByRole("button", { name: "Übernehmen" }).click();
+test("AC-inbox: the staged decision is on the day's queue", async ({
+  page,
+}) => {
+  await page.goto("/#/worklist");
+  // The queue shows the decision by the sentence the SERVER composed for it,
+  // not by its kind: the old lane drew "E-Mail senden" from the kind label,
+  // and a queue that has to rank things across producers names each one by
+  // what it actually is. Answering it stays the approvals surface's own job,
+  // so the verbs are asserted where they live rather than here.
+  // The sentence appears twice on purpose: once as the row, and once on the
+  // card the row opens to answer it. That the decision is ANSWERABLE here is
+  // the claim worth making, so this asserts the verb rather than the text.
+  await expect(
+    page.getByText(/Send the follow-up to Anna Weber/).first(),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Übernehmen" })).toBeVisible();
 });
 
 test("AC-book: the booking page renders rail-less with live slots", async ({
@@ -1138,14 +1149,13 @@ test.describe("§3.8: 390px mobile", () => {
     });
   }
 
-  test("S-E11.2: the approval queue is usable on mobile — approve works at 390px", async ({
+  test("S-E11.2: the day's queue is readable on mobile at 390px", async ({
     page,
   }) => {
-    await page.goto("/#/today");
+    await page.goto("/#/worklist");
     await expect(
-      page.getByText("E-Mail senden", { exact: true }),
+      page.getByText(/Send the follow-up to Anna Weber/).first(),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Übernehmen" }).click();
   });
 
   // The bar's centre cell and the panel it opens, neither of which exists above

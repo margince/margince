@@ -95,9 +95,11 @@ func transmittedBody(t *testing.T, c *consentEnv) string {
 	return body
 }
 
-// unsubscribeLinkIn lifts the one-click URL out of the visible footer the
-// send appended, and tokenFromLink lifts the preference token out of it:
-// `https://base/v1/public/preferences/TOKEN/unsubscribe?…`.
+// unsubscribeLinkIn lifts the visible unsubscribe link out of the footer
+// the send appended, and tokenFromLink lifts the preference token out of
+// it: `https://base/#/unsubscribe/TOKEN/PURPOSE?lang=xx`. The visible link
+// is a PAGE — the machine endpoint that used to be here is POST-only and
+// answers a human click with 405.
 func unsubscribeLinkIn(t *testing.T, body string) string {
 	t.Helper()
 	for _, line := range strings.Split(body, "\n") {
@@ -115,9 +117,13 @@ func tokenFromLink(t *testing.T, link string) string {
 	if err != nil {
 		t.Fatalf("parsing the unsubscribe link %q: %v", link, err)
 	}
-	parts := strings.Split(strings.TrimPrefix(u.Path, "/v1/public/preferences/"), "/")
+	// The token lives in the FRAGMENT: the visible links are hash routes,
+	// which is also what keeps the token out of ordinary web-server access
+	// logs until the page deliberately calls the API with it.
+	route := strings.SplitN(u.Fragment, "?", 2)[0]
+	parts := strings.Split(strings.TrimPrefix(route, "/unsubscribe/"), "/")
 	if len(parts) < 2 || parts[0] == "" {
-		t.Fatalf("unsubscribe link has no token: %q", u.Path)
+		t.Fatalf("unsubscribe link has no token: %q", u.Fragment)
 	}
 	return parts[0]
 }
@@ -162,8 +168,8 @@ func sendAndAssertUnsubscribeLink(t *testing.T, c *consentEnv) string {
 		t.Fatalf("marketing send → %d, want 202", status)
 	}
 	link := unsubscribeLinkIn(t, transmittedBody(t, c))
-	if !strings.HasPrefix(link, "https://mail.example.test/v1/public/preferences/") || !strings.Contains(link, "purpose=newsletter") {
-		t.Fatalf("unsubscribe link = %q, want a one-click URL on the configured base", link)
+	if !strings.HasPrefix(link, "https://mail.example.test/#/unsubscribe/") || !strings.Contains(link, "/newsletter") {
+		t.Fatalf("unsubscribe link = %q, want the human unsubscribe page on the configured base", link)
 	}
 	token := tokenFromLink(t, link)
 
@@ -374,8 +380,8 @@ func TestPreferenceTokenNeverReachesTheRecordedActivity(t *testing.T) {
 	// What the record KEEPS: the footer's shape and the purpose it pointed
 	// at, so a reader still sees the send carried a working one-click link.
 	// Only the credential is gone.
-	if !strings.Contains(recorded, "https://mail.example.test/v1/public/preferences/") ||
-		!strings.Contains(recorded, "purpose=newsletter") {
+	if !strings.Contains(recorded, "https://mail.example.test/#/unsubscribe/") ||
+		!strings.Contains(recorded, "/newsletter") {
 		t.Fatalf("the recorded body lost the unsubscribe footer entirely:\n%s", recorded)
 	}
 	// And the redacted link is inert: it is not a token the public edge honors.

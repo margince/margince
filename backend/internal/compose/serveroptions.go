@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -144,6 +145,13 @@ func WithBlobstore(store blobstore.Store) Option {
 		// A buyer's document download reads the same store the seller's
 		// attachment upload wrote to.
 		s.dealroomsHandlers = s.WithDocumentStore(store)
+		// The purge destroys attachment BLOBS along with the rows that name
+		// them, so it is built here rather than at assembly: a role that stores
+		// no objects has no purge, which is honest — destroying the rows and
+		// leaving the files would report mail as gone while its attachments sat
+		// in the bucket.
+		s.purger = NewCapturePurger(pool,
+			NewRetentionServiceFor(InstallationDB(pool), store, slog.Default()))
 		// Captured mail carries files too. Recorded as the STORE, which the sink
 		// turns into a writer when it is built: a keeper assigned here would be
 		// dropped by a WithCaptureConfig that runs afterwards and assigns the
@@ -211,7 +219,13 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// The Google app rides the same reasoning: its client SECRET is sealed,
 		// so the surface exists only where there is somewhere to seal it.
 		googleApp := capture.NewGoogleAppStore(NewSettingsStore(pool), vault, s.log)
-		s.googleAppHandlers = googleAppHandlers{store: googleApp}
+		// The FIELD this option owns, not the whole struct. Replacing the struct
+		// would zero the environment client id and the redirect URIs that
+		// WithGmailCapture and WithGoogleSignIn set, leaving the operator a card
+		// reporting no app and no URLs to register — and it would do so only on
+		// the option orders where keyvault happens to run last, which nothing
+		// holds.
+		s.googleAppHandlers.store = googleApp
 		// And the connect transport resolves the STORED app per request, so an
 		// app set through Settings works without restarting the api. The worker
 		// resolves it the same way for the sync poll's token refresh, which is
@@ -236,6 +250,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 				registry:          NewCaptureRegistry(pool, vault, s.captureConfig),
 				authority:         identity.NewService(pool),
 				googleCredentials: s.googleAppResolver,
+				publicOrigin:      s.originStatus,
 			}
 		}
 		// The overlay incumbent connection lifecycle needs the same
@@ -390,6 +405,11 @@ func WithPublicBaseURL(base string) Option {
 		// So does the confirm-details link, which opens one person's own record
 		// to whoever holds it.
 		s.consentHandlers = s.WithConfirmLinkBase(base)
+		// Reported to an operator, never enforced: the boot and send guards
+		// are what refuse an unusable origin, and a readiness check here
+		// would deadlock a rollout on its own ingress.
+		s.originProbe = newPublicOriginProbe(base, newOriginProbeClient(), time.Now)
+		s.publicOrigin = s.originStatus
 		s.rebuildToolRegistry(pool)
 	}
 }

@@ -42,6 +42,15 @@ func (c *countingRegister) Check(_ context.Context, number string) (vatcheck.Res
 	return vatcheck.Result{Status: vatcheck.StatusValid, ConsultationNumber: "WAPIAAAA"}, nil
 }
 
+// A value that is not VAT-ID shaped is settled before any request: the client
+// refuses it rather than spending somebody else's service on it.
+type refusingRegister struct{ asked int }
+
+func (r *refusingRegister) Check(_ context.Context, _ string) (vatcheck.Result, error) {
+	r.asked++
+	return vatcheck.Result{}, vatcheck.ErrMalformedNumber
+}
+
 // vatRecheckEnv is one workspace holding a company whose VAT number has already
 // been consulted — the state in which the automatic rule declines.
 type vatRecheckEnv struct {
@@ -101,6 +110,42 @@ func (v *vatRecheckEnv) work(t *testing.T, requested bool) {
 	})
 	if err != nil {
 		t.Fatalf("working the consultation (requested=%v): %v", requested, err)
+	}
+}
+
+// A number that cannot be a VAT ID reads as INVALID, not as the register having
+// declined.
+//
+// It was recorded as unanswered on the reasoning that no request was made, so
+// the register said nothing — true, and the wrong fact to put in front of a
+// reader. Somebody looking at their own typo was told a public service had
+// failed them, and the thing they had to fix was on their own screen.
+func TestANumberThatIsNotAVatIdIsInvalid(t *testing.T) {
+	v := setupVatRecheck(t)
+	register := &refusingRegister{}
+	v.worker = newVatCheckWorker(v.Pool, register, func() time.Time {
+		return time.Date(2026, 8, 31, 9, 0, 0, 0, time.UTC)
+	})
+	ctx := v.Admin()
+	// Stated by a person, through the real writer — the shape a rep produces
+	// when they mistype into the field.
+	malformed := "122323235sdf"
+	if _, err := v.People.UpdateOrganizationProfileField(ctx, v.orgID, "register_vat",
+		people.ProfileFieldWriteInput{Value: &malformed}); err != nil {
+		t.Fatalf("state the malformed number: %v", err)
+	}
+
+	v.work(t, true)
+
+	if register.asked != 1 {
+		t.Fatalf("the client was consulted %d time(s), want 1 — it is what judges the shape", register.asked)
+	}
+	stored, err := v.People.VatCheckFor(ctx, v.orgID)
+	if err != nil {
+		t.Fatalf("read the recorded answer: %v", err)
+	}
+	if stored.Status != people.VatCheckInvalid {
+		t.Errorf("status = %q, want invalid — a reader fixes their own number either way", stored.Status)
 	}
 }
 

@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/geocode"
@@ -40,6 +39,12 @@ import (
 // completed: a completed sweep must NOT block the next scheduled run (the
 // default ByState includes completed, which for a 24h cadence would stop the
 // job firing until the completed row is cleaned out).
+//
+// A SNOOZED JOB IS COVERED BY `scheduled`, and there is no state of its own to
+// add: River has eight, and snoozing is `JobSnooze` putting the row back as
+// scheduled for later. Naming a sixth would not compile, and a reader coming to
+// add one should know the case is already held rather than go looking for the
+// constant.
 var activeSweepStates = []rivertype.JobState{
 	rivertype.JobStateAvailable,
 	rivertype.JobStatePending,
@@ -131,6 +136,13 @@ type JobRunnerConfig struct {
 	// and capture stays on the poll. It is the SECOND field of that pass's
 	// conjunction — a registry alone does not wire it.
 	GmailWatch GmailWatchConfig
+	// GraphWatch carries the Microsoft Graph subscription-renewal pass's cadence
+	// and the notification URL a subscription is registered against. An empty
+	// NotificationURL is a deployment that never opted into Outlook push: the
+	// pass registers nothing and Outlook capture stays on the poll. It is the
+	// SECOND field of that pass's conjunction — a registry alone does not wire
+	// it.
+	GraphWatch GraphWatchConfig
 	// ChannelVault is the custodian of a channel connection's sealed bot token.
 	// Nil means this role registers no Telegram poller at all: a poll cannot
 	// authenticate without the token, so a dispatcher wired without a vault
@@ -161,6 +173,10 @@ type JobRunnerConfig struct {
 	// deferred rather than being created on sight. An installation without a
 	// model keeps the old junk OUT, it does not fall back to letting it in.
 	VerdictBrain completer
+	// ConfidentialityBrain is the thread-confidentiality lane. Nil = no AI
+	// bound, and the engine then holds every thread rather than failing: a
+	// deployment without a local model gets privacy, not an error.
+	ConfidentialityBrain completer
 	// SignalExtractBrain is the signal-extract lane the hourly signal pass
 	// reads settled conversations with. Nil = no AI configured, and the
 	// consequence is stated rather than hidden: the deterministic
@@ -352,6 +368,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addDatabaseOnlySweepJobs(reg, pool, log)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addGmailCaptureJobs(reg, pool, cfg, log)
+	addGraphWatchJobs(reg, cfg, log)
 	addOverlayJobs(reg, pool, cfg, log)
 
 	periodic := slices.Concat(
@@ -387,11 +404,13 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, AIActivityReconcileArgs{}),
 		periodicFor(cfg, AIActivityRetentionArgs{}),
 		periodicFor(cfg, ApprovalExpiryArgs{}),
+		periodicFor(cfg, IntroExpiryArgs{}),
 		periodicFor(cfg, ApprovalAutoApplyArgs{}),
 		periodicFor(cfg, CaptureAutoEnrichSweepArgs{}),
 		periodicFor(cfg, CaptureClassifyArgs{}),
 		periodicFor(cfg, CaptureEnrichArgs{}),
 		periodicFor(cfg, CounterpartyVerdictArgs{}),
+		periodicFor(cfg, ConfidentialityVerdictArgs{}),
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
 		periodicFor(cfg, OrgNamePromotionArgs{}),
 		periodicFor(cfg, CaptureDigestArgs{}),
@@ -399,6 +418,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, WeeklyReviewGenerateArgs{}),
 		periodicFor(cfg, GmailSyncArgs{}),
 		periodicFor(cfg, GmailWatchArgs{}),
+		periodicFor(cfg, GraphWatchArgs{}),
 		periodicFor(cfg, OverlayReconcileArgs{}),
 	)
 
@@ -442,41 +462,16 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 	// (jobs_embedreindex.go).
 	addEmbedReindexJobs(reg, pool, cfg.Embedder)
 	addKnowledgeIngestJobs(reg, pool, cfg.Blobstore, cfg.Embedder, log)
+	// The mailed-card import, registered unconditionally: a .vcf is parsed and
+	// not inferred, so there is no model lane for it to be missing. Its trigger
+	// starts unconditionally too, and the two must agree — River discards a job
+	// whose kind no worker claims, so a trigger without this registration would
+	// drop every mailed card silently.
+	addDeclaredWorker[VCardIngestArgs](reg, newVCardIngestWorker(pool, cfg.Blobstore, log))
 	// Both refreshes read a source the deployment configures. An unconfigured
 	// one — a nil brain, an empty url, no pricing sources — leaves the worker
 	// registered and its producer proposing nothing, which is the honest
 	// answer to "refresh from sources" when there are none.
 	addDeclaredWorker[FxRateRefreshArgs](reg, newFxRefreshWorker(pool, cfg.FxExtractBrain, cfg.FxSourceURL, cfg.FxBootstrapCurrencies, log))
 	addDeclaredWorker[AiModelRateRefreshArgs](reg, newModelCostRefreshWorker(pool, cfg.RateExtractBrain, cfg.ModelPricingSources, cfg.BoundModelIDs, log))
-}
-
-// addDatabaseOnlySweepJobs registers the periodic passes that need nothing but
-// the database: the deals close-date hygiene, the follow-up reconcile, the
-// automation clock scan, and the idempotency-key retention sweep.
-//
-// It takes no JobRunnerConfig, and that is the group rather than an economy of
-// arguments — there is no lane, credential or registry any of these could be
-// gated on, so every role that runs jobs runs all four. Each is a dispatcher
-// plus a workspace worker: only the dispatcher is ticked (the schedules in
-// wireJobs), and the workspace worker is enqueued by it, never scheduled.
-func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
-	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool})
-	addDeclaredWorker[CloseDateWorkspaceArgs](reg, &closeDateWorkspaceWorker{corrector: NewCloseDateCorrector(pool, log)})
-	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool})
-	addDeclaredWorker[FollowUpWorkspaceArgs](reg, &followUpWorkspaceWorker{reconciler: NewFollowUpReconciler(pool, log)})
-	addDeclaredWorker[TimeScanArgs](reg, &timeScanWorker{pool: pool})
-	addDeclaredWorker[TimeScanWorkspaceArgs](reg, &timeScanWorkspaceWorker{pool: pool, log: log})
-	addDeclaredWorker[IdempotencyRetentionArgs](reg, &idempotencyRetentionWorker{pool: pool})
-	addDeclaredWorker[IdempotencyRetentionWorkspaceArgs](reg, &idempotencyRetentionWorkspaceWorker{sweeper: NewIdempotencyRetentionSweeper(pool, log)})
-	addDeclaredWorker[AgentTaskRetentionArgs](reg, &agentTaskRetentionWorker{
-		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: identity.NewService(pool),
-	})
-	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
-		pool: pool, identity: identity.NewService(pool), log: log,
-	})
-	addDeclaredWorker[ApprovalAutoApplyArgs](reg, &approvalAutoApplyWorker{
-		pool: pool, identity: identity.NewService(pool), log: log,
-	})
-	addAIActivitySweepJobs(reg, pool, log)
-	addBriefGenerateJobs(reg, pool, log)
 }

@@ -27,6 +27,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -255,7 +257,7 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 		return nil, err
 	}
 	out := make([]attention.WaitingCustomer, 0, len(rows))
-	for _, row := range rows {
+	for _, row := range keepWaitingCustomers(rows) {
 		out = append(out, attention.WaitingCustomer{
 			ActivityID:     row.ActivityID,
 			Subject:        row.Subject,
@@ -263,9 +265,50 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 			PersonID:       row.PersonID,
 			OrganizationID: row.OrganizationID,
 			DealID:         row.DealID,
+			HasOpenDeal:    row.HasOpenDeal,
 		})
 	}
 	return out, nil
+}
+
+// keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
+//
+// Two rules, both learned from the live page.
+//
+// A machine is not a customer. Judged by capture's own address rule rather than
+// a second one spelled here: an e-signature notification, a shared-folder
+// notice and a booking confirmation opened a rep's day, and a queue that asks
+// somebody to answer a no-reply address teaches them to stop reading it.
+//
+// One subject FROM ONE SENDER is one row. A notification service sends the same
+// request on several threads, and two rows reading identically are two
+// obligations to somebody scanning the page.
+//
+// Keyed on sender AND subject, never subject alone: two customers both writing
+// "Re: proposal" are two people waiting, and folding them would drop the second
+// one silently — the worst failure this queue has, because nothing on the page
+// would say a customer had been hidden.
+//
+// An UNTITLED message is never folded, because several untitled waits are
+// several customers and collapsing them would hide all but one behind an empty
+// string.
+func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingReply {
+	kept := make([]activities.WaitingReply, 0, len(rows))
+	seen := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		if capture.IsMachineAddress(row.Sender) {
+			continue
+		}
+		if row.Subject != "" {
+			key := row.Sender + "\x00" + row.Subject
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+		}
+		kept = append(kept, row)
+	}
+	return kept
 }
 
 // attentionMeetings reads today's remaining meetings through the activities
@@ -319,12 +362,111 @@ func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
 	return row.MeetingStatus == nil || *row.MeetingStatus == crmcontracts.ActivityMeetingStatusBooked
 }
 
-// subjectOfMeeting is the line a meeting shows. Unlike a task, a meeting may
-// honestly have no subject — a calendar event with a blank title is a real
-// thing a provider hands over — so the fallback is a routine case here.
+// subjectOfMeeting is the line a meeting shows, or NOTHING.
+//
+// A calendar event with a blank title is a real thing a provider hands over,
+// and the empty answer is the honest one: the product ships three languages, so
+// a placeholder composed here reaches a German reader in English — and
+// "(untitled meeting)" is a parenthetical stand-in rather than a sentence
+// anybody wrote. The client writes "A meeting" in the reader's own words.
 func subjectOfMeeting(row crmcontracts.Activity) string {
-	if row.Subject != nil && *row.Subject != "" {
+	if row.Subject != nil {
 		return *row.Subject
 	}
-	return "(untitled meeting)"
+	return ""
+}
+
+// attentionDealFacts reads deal figures through the deals store, under the
+// reader's own grants: a deal they may not see is absent from the answer and
+// the row simply states less about it.
+type attentionDealFacts struct{ store *deals.Store }
+
+func (f attentionDealFacts) Figures(
+	ctx context.Context, dealIDs []ids.UUID,
+) (map[ids.UUID]attention.DealFigures, error) {
+	found, err := f.store.Figures(ctx, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[ids.UUID]attention.DealFigures, len(found))
+	for id, figures := range found {
+		out[id] = attention.DealFigures{
+			StageID:           figures.StageID,
+			OwnerID:           figures.OwnerID,
+			AmountMinor:       figures.AmountMinor,
+			Currency:          figures.Currency,
+			ExpectedCloseDate: figures.ExpectedCloseDate,
+		}
+	}
+	return out, nil
+}
+
+// attentionTasks reads open tasks through the activities store. A task is an
+// activity of kind `task`, so this is the same read the task queue makes.
+type attentionTasks struct{ store *activities.Store }
+
+func (t attentionTasks) OpenForViewer(
+	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+) ([]attention.Task, error) {
+	// The store answers "open and due by then" itself, so the limit bounds the
+	// rows that QUALIFY. This used to read ten times the lane and narrow
+	// afterwards, which put the bound on the wrong set: a pile of completed
+	// tasks filled the scan, the overdue promise underneath never reached the
+	// reader, and the day rendered clear while the work was still there.
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until, Limit: &limit}
+	// Narrowed in the QUERY, so the store's own bound applies to the rows that
+	// qualify. Filtering the answer instead would let a colleague's twelve
+	// tasks fill the page and hide the reader's own overdue one behind them.
+	switch scope {
+	case attention.TasksMine:
+		actor, ok := principal.Actor(ctx)
+		if !ok || actor.UserID.IsZero() {
+			// No human, no "own work" to answer for. Reading every task and
+			// calling the result theirs is the widening this narrowing exists
+			// to prevent.
+			return nil, nil
+		}
+		// Exactly theirs. A task they wrote themselves carries their name from
+		// the moment it is written, so this needs no unassigned arm — and the
+		// arm it used to have is what put an automation's follow-up on every
+		// colleague's queue.
+		assignee := ids.From[ids.UserKind](actor.UserID)
+		in.OwnQueueOf = &assignee
+	case attention.TasksUnassigned:
+		in.UnassignedQueue = true
+	case attention.TasksOwnedBy:
+		// One named person's open work. The scope resolver already refused a
+		// reader whose tier does not reach past themselves, and the store's own
+		// row-scope gate still applies underneath — this narrows, never widens.
+		named := ids.From[ids.UserKind](owner)
+		in.OwnQueueOf = &named
+	case attention.TasksVisible:
+		// Every open task the reader may see; the row-scope gate in the store
+		// is the only narrowing.
+	}
+	rows, _, err := t.store.ListActivities(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	open := make([]attention.Task, 0, len(rows))
+	for _, row := range rows {
+		// The filter above answers only dated rows, so this skip is unreachable
+		// today. It is here because the alternative to a skip is a nil deref
+		// that panics the WHOLE day's page, and the guarantee lives in a WHERE
+		// clause one package away — too far for the next reader of this loop to
+		// see it.
+		if row.DueAt == nil {
+			continue
+		}
+		due := *row.DueAt
+		linkType, linkID := primaryLink(row)
+		open = append(open, attention.Task{
+			ID:       ids.UUID(row.Id),
+			Subject:  subjectOfActivity(row),
+			DueAt:    &due,
+			LinkType: linkType,
+			LinkID:   linkID,
+		})
+	}
+	return open, nil
 }

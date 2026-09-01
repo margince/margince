@@ -77,7 +77,14 @@ export const LOCALES = ["en", "de", "vi"] as const satisfies readonly Locale[];
 
 export const DEFAULT_LOCALE: Locale = "en";
 
-function isLocale(value: string): value is Locale {
+/**
+ * Whether a string names a language this product speaks.
+ *
+ * Exported for the public pages: an email's `?lang=` is text a link
+ * carried, so it is validated here rather than trusted, and the same
+ * predicate that admits a stored pick admits that one.
+ */
+export function isLocale(value: string): value is Locale {
   return LOCALES.some((locale) => locale === value);
 }
 
@@ -190,7 +197,10 @@ type BaseOfOtherKey<K> = K extends `${infer Base}_other` ? Base : never;
 export type PluralBase = BaseOfPluralKey<MessageKey> &
   BaseOfOtherKey<MessageKey>;
 
-function isMessageKey(value: string): value is MessageKey {
+// Exported for a caller that composes a candidate key from a value the
+// catalogue may not carry (e.g. a scope token) and needs to fall back to the
+// raw value rather than render whatever `translate` does with a miss.
+export function isMessageKey(value: string): value is MessageKey {
   return value in en;
 }
 

@@ -158,7 +158,7 @@ var subjectActivityEmbeddingsDelete = `
 // (erasure_channels.go, kept apart for file length). Embeddings of
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
-func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, identities []channelIdentity) (rawPurged, aiPayloadsPurged int64, err error) {
+func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, personID ids.PersonID, displayName string, emails []string, identities []channelIdentity) (rawPurged, aiPayloadsPurged int64, err error) {
 	for _, email := range emails {
 		tag, execErr := tx.Exec(ctx,
 			`DELETE FROM raw_capture WHERE payload::text ILIKE '%' || $1 || '%' ESCAPE '\'`,
@@ -200,6 +200,12 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, personID ids.PersonID, e
 		return 0, 0, err
 	}
 	rawPurged += channelRawPurged
+	// The trace's OTHER lane. The loop above matches an address; a counterparty
+	// the pipeline knew by a provider account is named there by their display
+	// name instead, which no address can reach.
+	if _, err := purgeChannelCaptureTrace(ctx, tx, displayName, identities); err != nil {
+		return 0, 0, err
+	}
 	if _, err := tx.Exec(ctx, subjectActivityEmbeddingsDelete, personID); err != nil {
 		return 0, 0, err
 	}

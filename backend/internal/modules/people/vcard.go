@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 )
 
 // VCardEntry is one card, reduced to what a person record holds. Every field is
@@ -39,6 +40,10 @@ type VCardEntry struct {
 	Phones       []VCardChannel
 	URL          string
 	Address      string
+	// Revised is what the card's REV property states: when this card was last
+	// changed. Nil where it states none, and the import then dates the card
+	// from its own clock.
+	Revised *time.Time
 }
 
 // VCardChannel is one address or number with the kind the card gave it.
@@ -102,14 +107,38 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 		name, params, value := splitVCardLine(line)
 		switch strings.ToUpper(name) {
 		case "BEGIN":
-			if strings.EqualFold(value, "VCARD") {
-				current = &VCardEntry{}
+			// A DELIMITER NAMING SOMETHING ELSE is not a line to read past.
+			// `BEGIN:VCALENDAR` in a .vcf is a file holding something this
+			// parser does not read, and skipping the marker while reading the
+			// properties under it files a calendar's fields onto a person —
+			// or, where there is no open card, drops them in silence and
+			// answers 200. The structure has to be one this reader can account
+			// for, or it is refused whole.
+			if !strings.EqualFold(value, "VCARD") {
+				return nil, fmt.Errorf("people: this file begins a %q, which is not a vCard", value)
 			}
+			// A CARD THAT NEVER ENDED, one card short of the end of the file.
+			// Starting the next one over it dropped the unterminated card and
+			// everything on it, silently — three cards in, two rows out, HTTP
+			// 200, and the missing person is the one who never gets followed
+			// up. It is the same malformation the end-of-file case refuses, and
+			// it refuses the same way.
+			if current != nil {
+				return nil, fmt.Errorf("people: a vCard begins before the one before it ended")
+			}
+			current = &VCardEntry{}
 		case "END":
-			if current != nil && strings.EqualFold(value, "VCARD") {
-				out = append(out, *current)
-				current = nil
+			if !strings.EqualFold(value, "VCARD") {
+				return nil, fmt.Errorf("people: this file ends a %q, which is not a vCard", value)
 			}
+			// And an END with nothing open. Ignoring it reads a file whose
+			// structure this parser cannot account for as one it can, which is
+			// the same silence one line along.
+			if current == nil {
+				return nil, fmt.Errorf("people: a vCard ends without having begun")
+			}
+			out = append(out, *current)
+			current = nil
 		default:
 			if current != nil {
 				applyVCardProperty(current, strings.ToUpper(name), params, value)
@@ -246,7 +275,57 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 		if entry.Address == "" {
 			entry.Address = addressFromStructured(params, raw)
 		}
+	case "REV":
+		if entry.Revised == nil {
+			entry.Revised = parseVCardRevision(value)
+		}
 	}
+}
+
+// parseVCardRevision reads REV, the card's own statement of when it was last
+// revised, and nil when it states none or states one this reader cannot parse.
+//
+// It matters because a card carries no other date, and the import needs one:
+// dating a card from the moment the request ran makes a re-upload of the same
+// file a NEWER statement than everything since, so a retry can put back a
+// detail a signature had already corrected. REV is what the card itself says,
+// so importing the same file twice states the same thing twice.
+//
+// RFC 6350 writes REV as an ISO 8601 basic-format timestamp; the extended
+// format and a bare date appear in real files, so all three are read. A card
+// whose REV cannot be read falls back to the import's own clock, which is the
+// behaviour every card had before this.
+func parseVCardRevision(value string) *time.Time {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return nil
+	}
+	// Zoned forms FIRST, and the hour-only offset among them: RFC 6350 admits
+	// -05 as well as -0500, and a card carrying one would otherwise fall
+	// through to the zoneless layouts, be read as UTC, and claim a time hours
+	// from what it says.
+	for _, layout := range []string{
+		"20060102T150405Z0700", "20060102T150405Z07:00", "20060102T150405Z07",
+		time.RFC3339, "2006-01-02T15:04:05Z07", "2006-01-02T15:04:05Z0700",
+	} {
+		if at, err := time.Parse(layout, v); err == nil {
+			return &at
+		}
+	}
+	// Zoneless forms are read as UTC, which is a GUESS — the card states a wall
+	// clock and not an instant. It is the safe direction to guess in: UTC is at
+	// or behind every zone east of it, so a card read this way can be older
+	// than it is and lose a comparison it should have won, never newer and win
+	// one it should have lost. A card that loses is a detail not corrected; a
+	// card that wrongly wins overwrites a statement made after it.
+	for _, layout := range []string{
+		"20060102T150405", "2006-01-02T15:04:05", "20060102", "2006-01-02",
+	} {
+		if at, err := time.Parse(layout, v); err == nil {
+			return &at
+		}
+	}
+	return nil
 }
 
 // decodeVCardValue undoes the two encodings a real-world card carries: the
@@ -355,80 +434,4 @@ func addressFromStructured(params []string, raw string) string {
 		}
 	}
 	return strings.Join(kept, ", ")
-}
-
-// The vCard type names this reader recognizes. A card may carry anything here
-// (INTERNET, PREF, X-custom); what it does NOT carry is this product's own
-// vocabulary, so an unrecognized type folds onto `other` rather than being
-// guessed at work.
-const (
-	vcardTypeHome    = "home"
-	vcardTypeWork    = "work"
-	vcardTypeCell    = "cell"
-	vcardTypeMobile  = "mobile"
-	channelKindOther = "other"
-)
-
-func emailKindFrom(params []string) string {
-	switch typeParam(params) {
-	case vcardTypeHome:
-		return "personal"
-	case vcardTypeWork, "":
-		// A business card states a working address unless it says otherwise.
-		return emailTypeWork
-	default:
-		return channelKindOther
-	}
-}
-
-func phoneKindFrom(params []string) string {
-	switch typeParam(params) {
-	case vcardTypeCell, vcardTypeMobile:
-		return vcardTypeMobile
-	case vcardTypeHome:
-		return vcardTypeHome
-	case vcardTypeWork, "":
-		return phoneTypeWork
-	default:
-		return channelKindOther
-	}
-}
-
-// typeParam reads the first TYPE value, lowercased. A card may list several
-// (TYPE=work,voice,pref); the first is the one that names the kind.
-func typeParam(params []string) string {
-	for _, p := range params {
-		upper := strings.ToUpper(p)
-		if !strings.HasPrefix(upper, "TYPE=") {
-			// vCard 2.1 writes a bare type ("TEL;WORK:..."), with no TYPE=.
-			if bare := strings.Trim(strings.ToLower(p), `"`); isKnownVCardType(bare) {
-				return bare
-			}
-			continue
-		}
-		values := strings.Split(p[len("TYPE="):], ",")
-		if len(values) > 0 {
-			first := strings.Trim(strings.ToLower(strings.TrimSpace(values[0])), `"`)
-			// PREF says which is primary, not what kind it is: read past it,
-			// and when it is the ONLY value the card has named no kind — which
-			// is absence, not an unknown kind, so the caller's default applies.
-			if first == "pref" {
-				if len(values) == 1 {
-					continue
-				}
-				return strings.Trim(strings.ToLower(strings.TrimSpace(values[1])), `"`)
-			}
-			return first
-		}
-	}
-	return ""
-}
-
-func isKnownVCardType(v string) bool {
-	switch v {
-	case vcardTypeWork, vcardTypeHome, vcardTypeCell, vcardTypeMobile, "fax", "voice":
-		return true
-	default:
-		return false
-	}
 }

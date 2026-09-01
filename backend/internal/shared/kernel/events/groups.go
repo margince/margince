@@ -60,6 +60,12 @@ func Groups() []Group {
 		// account appearing, because employer resolution is what most ghosts
 		// are waiting on.
 		{Name: "cg:linkedin-match", Streams: forEntities(personStreamEntity, organizationStreamEntity)},
+
+		// Its own group rather than a second handler on cg:person-auto-enrich:
+		// this repair attaches mail the workspace already holds to a record it
+		// already has, and must keep flowing when an enrichment that calls out
+		// to a model is slow or wedged.
+		{Name: "cg:cohort-promote", Streams: forEntities(personStreamEntity)},
 		// Turning a won deal into what its partner earned. Its own group
 		// because accrual is money: a projection rebuild or an embedding
 		// backlog must never be able to stall it, and a failure to accrue must
@@ -67,6 +73,19 @@ func Groups() []Group {
 		// where deal.stage_changed carries both the win and the reopen that
 		// reverses one.
 		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity)},
+		// Closing an introduction the contact answered. Its own group because
+		// the evidence is perishable in one direction: `replied` may only be
+		// reached from a captured message, so a lane wedged behind an
+		// enrichment backlog leaves every introduction reading as unanswered,
+		// which is what a refusal looks like to the rep who asked.
+		//
+		// BOTH streams. activity.captured is the reply arriving; the person
+		// stream is the repair, because capture promotes an address to a
+		// contact in a transaction AFTER the one that wrote the message. A
+		// message captured before its sender was a person names nobody the
+		// activity arm can act on, and without the person event that reply
+		// would be lost permanently while the ask read unanswered.
+		{Name: "cg:intro-advance", Streams: forEntities(activityStreamEntity, personStreamEntity)},
 		// What happened in a Deal Room, written onto the deal's timeline. Its own
 		// group because a room's traffic is live and conversational while the
 		// projections above are batchy: a backlog of embeddings must not delay the
@@ -99,6 +118,20 @@ func Groups() []Group {
 		// other entity's event can make one due that this stream's events do
 		// not already announce.
 		{Name: "cg:org-auto-enrich", Streams: forEntities(organizationStreamEntity)},
+		// Mail landing queues the signature-enrich pass, so a contact who wrote
+		// this morning is read now rather than tonight. Its own group rather
+		// than a second handler on an existing activity consumer: this one
+		// queues a MODEL-backed pass, and a group whose retries spend the
+		// customer's token budget must not share a cursor with a projection
+		// that is cheap to replay.
+		{Name: "cg:capture-enrich", Streams: forEntities(activityStreamEntity)},
+		// A card attached to captured mail imports itself. Its own group beside
+		// the one above rather than a second handler on it, because the two do
+		// not fail alike: that one queues a MODEL-backed pass and this one
+		// PARSES a file, so a deployment with no model runs this and not that,
+		// and one cursor between them would tie the deterministic half to the
+		// budgeted half's retries.
+		{Name: "cg:vcard-ingest", Streams: forEntities(activityStreamEntity)},
 		// Automatic enrichment from a LICENSED provider (ADR-0101/PI-EVT-1).
 		// Its own group rather than a second handler on the pass above,
 		// because the two differ in what a failure costs: that one reads a

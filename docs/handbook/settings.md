@@ -49,12 +49,13 @@ version exists and "Rebuild Voice DNA" after.
 Where you mint and revoke **passports** — the credentials that let an AI agent
 work as you.
 
-Every member gets this page, ungated. A passport is lent by a person, so making
-it administrator-only would mean only administrators could lend one.
+Every member gets this page, ungated. A passport is minted by a person for
+their own use, so making it administrator-only would mean only administrators
+could mint one.
 
 You also see the governed tool list and connected agents here. Disconnecting an
 agent ends the whole connection, not one credential: "the agent loses access on
-its next call and cannot renew. Reconnecting means lending a passport again."
+its next call and cannot renew. Reconnecting means approving access again."
 
 See [What the AI does](what-the-ai-does.md#passports-how-an-agent-is-connected).
 
@@ -70,11 +71,22 @@ Full detail in [Capture](capture.md#what-you-can-connect).
 
 ## Capture activity
 
-"What happened to your messages in the last 24 hours." Your own by default, with
-a switch for shared channels.
+Two things on one page: the senders you keep out, and what the last 24 hours of
+your mail turned into.
 
-Use this when a message you expected did not show up. It tells you which step it
-stopped at and why, in plain words.
+**Keep out of capture.** Addresses and domains whose messages never enter the
+CRM. Rules you set bind only your own mailboxes; the organization's rules bind
+everyone (and only an administrator may add or remove one of those). Takes
+effect from the next message; what is already captured stays.
+
+**Outcomes.** Five counters for the window — captured, dropped as internal, no
+contact created, sent for a verdict, derivation failed. Click one to narrow the
+list under it.
+
+**Messages**, behind a disclosure, is the per-message log: which step a single
+message stopped at and why. Open it when a message you expected did not show up.
+Most installations record no sender and no subject for these rows, which the
+page says once above them; that is the default and not a misconfiguration.
 
 ---
 
@@ -154,10 +166,6 @@ any mailbox.
 
 **Consumer mail domains.** Which domains count as personal mailboxes. "Mail from
 a consumer mailbox still creates the person — it just never creates a company."
-
-**Keep out of capture.** Addresses and domains whose messages never enter the
-CRM. Rules you set bind only your own mailboxes; the organization's rules bind
-everyone. Takes effect from the next message; what is already captured stays.
 
 **Refused domains.** Which domains this installation refuses a company, and what
 decided each one — a model verdict, a heuristic, or a person. "Letting a domain

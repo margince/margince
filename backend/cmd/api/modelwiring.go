@@ -167,6 +167,14 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// drafting task, a different input shape.
 		compose.WithPersonDraft(modelPath.DraftReply),
 		compose.WithDealStatusWriter(modelPath.DealHealth, routingVersion),
+		compose.WithRoleProposals(modelPath.ProposeRoles),
+		// The ask to a colleague rides the drafting lane: it is the same task
+		// with a different reader, which is what a site is for.
+		compose.WithIntroRequestDraft(modelPath.DraftReply),
+		// And the note that colleague forwards, on the same lane. The register
+		// differs — this one is read by a customer — but the task is drafting,
+		// which is what the lane is.
+		compose.WithIntroNoteDraft(modelPath.DraftReply),
 	}
 }
 

@@ -29,8 +29,13 @@ const SETTINGS_EDITOR: GrantSpec = { capture_settings: ["update"] };
 
 // backendFor answers /me with the given grants and /capture/settings with the
 // given posture, capturing any PATCH body so the wire shape is assertable.
-function backendFor(allow: GrantSpec, mailSharing = true) {
+function backendFor(
+  allow: GrantSpec,
+  mailSharing = true,
+  sharedAllowed = false,
+) {
   let sharingState = mailSharing;
+  let sharedState = sharedAllowed;
   let capturedPatch: unknown = null;
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -42,10 +47,21 @@ function backendFor(allow: GrantSpec, mailSharing = true) {
       if (req.url.includes("/capture/settings")) {
         if (req.method === "PATCH") {
           capturedPatch = await req.json();
-          sharingState = (capturedPatch as { mail_sharing: boolean })
-            .mail_sharing;
+          // The card saves its two settings apart, so a PATCH carries one of
+          // them and leaves the other where it was.
+          const body = capturedPatch as {
+            mail_sharing?: boolean;
+            shared_posture_allowed?: boolean;
+          };
+          sharingState = body.mail_sharing ?? sharingState;
+          sharedState = body.shared_posture_allowed ?? sharedState;
         }
-        return jsonResponse({ auto_enrich: true, mail_sharing: sharingState });
+        return jsonResponse({
+          auto_enrich: true,
+          mail_sharing: sharingState,
+          shared_posture_allowed: sharedState,
+          signature_enrich: true,
+        });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
@@ -112,6 +128,33 @@ describe("MailSharingCard", () => {
     );
   });
 
+  it("saves the shared-posture opt-in on its own, with the works-council warning", async () => {
+    const backend = backendFor(SETTINGS_EDITOR, true, false);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<MailSharingCard />);
+
+    const toggle = await waitFor(() =>
+      screen.getByTestId<HTMLButtonElement>("shared-posture-allowed-toggle"),
+    );
+    // Off by default, and the warning belongs to ON: it is the permissive
+    // answer on this row, unlike the sharing switch above it.
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(screen.queryByText(/works-council/)).toBeNull();
+
+    await user.click(toggle);
+    expect(await screen.findByText(/works-council/)).toBeTruthy();
+
+    await user.click(screen.getAllByRole("button", { name: "Save" })[0]);
+    // The PATCH carries ONLY this setting: saving the opt-in must not also
+    // rewrite the workspace sharing posture the reader did not touch.
+    await waitFor(() =>
+      expect(backend.getCapturedPatch()).toEqual({
+        shared_posture_allowed: true,
+      }),
+    );
+  });
+
   it("disables the switch for a role without capture_settings update", async () => {
     vi.stubGlobal("fetch", backendFor({}, true).fetchMock);
     render(<MailSharingCard />);
@@ -120,6 +163,10 @@ describe("MailSharingCard", () => {
       screen.getByTestId<HTMLButtonElement>("mail-sharing-toggle"),
     );
     expect(toggle.disabled).toBe(true);
-    expect(screen.getByText(/Only an admin or ops/)).toBeTruthy();
+    // Both switches on this card carry the same refusal now, so the count is
+    // what the assertion can state: the sentence reaches the reader for the row
+    // under test, and matching one of two identical strings by text alone would
+    // not say which.
+    expect(screen.getAllByText(/Only an admin or ops/)).toHaveLength(2);
   });
 });

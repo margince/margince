@@ -203,14 +203,23 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 
 	result, err := w.checker.Check(wsCtx, number)
 	if errors.Is(err, vatcheck.ErrMalformedNumber) {
-		// The page stated something that is not a VAT ID. No request was made,
-		// so the register said NOTHING — recording `invalid` here would be
-		// indistinguishable from a negative answer it never gave. It is
-		// recorded as unanswered, which is what actually happened.
+		// The stated value is not a VAT ID, so no request was made — and the
+		// answer a reader needs is INVALID.
+		//
+		// It was recorded as unanswered on the reasoning that the register said
+		// nothing, which is true and is the wrong fact to surface: the reader
+		// met "Register did not answer" beside their own typo and was told a
+		// public service had failed them. Whether a number is fake or merely
+		// misspelled changes nothing they would do about it.
+		//
+		// Nothing else records unanswered. A register that declines is snoozed
+		// or retried rather than written (below), so this branch was the only
+		// producer of that status and the distinction it protected was never
+		// visible to anybody.
 		return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
 			OrganizationID: orgID,
 			Number:         number,
-			Status:         people.VatCheckUnavailable,
+			Status:         people.VatCheckInvalid,
 			CheckedAt:      w.clock(),
 		}))
 	}

@@ -351,7 +351,7 @@ export function HomeScreen() {
         stalled={quietReading}
         onGoToDecisions={() => goToSection("home-decisions")}
         onGoToToday={() => goToSection("home-today")}
-        onGoToDuplicates={() => navigate({ screen: "today" })}
+        onGoToDuplicates={() => navigate({ screen: "worklist" })}
         onGoToWatch={() => goToSection("home-watch")}
       />
       <HomeReadingsStrip

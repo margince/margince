@@ -21,6 +21,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Calendar, type ISODay, isoDay } from "../design-system/calendar";
+import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -57,6 +58,7 @@ import {
 } from "./common";
 import { useOrganization360 } from "./company360";
 import { useConsentPurposes } from "./consent";
+import { usePerson360 } from "./person360";
 import {
   stripEveryKeyTag,
   stripSubjectTag,
@@ -1554,6 +1556,7 @@ function MailOnlyFields({
   onSubjectChange,
   rejectionInFlight,
   answering,
+  deadRecipients,
 }: Readonly<{
   intent: string;
   onIntentChange: (next: string) => void;
@@ -1574,6 +1577,8 @@ function MailOnlyFields({
   /** What this message answers, in the reader's own words. Null while the
    * lookup is unsettled — an unanswered read is not "no earlier message". */
   answering: string | null;
+  /** The recipients on this draft that are known not to arrive. */
+  deadRecipients: readonly string[];
 }>) {
   const t = useT();
   const offer = (
@@ -1619,6 +1624,16 @@ function MailOnlyFields({
           onChange={onCcChange}
         />
       </MailRow>
+      {/* Under the addresses, because it is about the ones standing there —
+          and a warning rather than a refusal: the rep may know something the
+          ledger does not, and a bounce is a fact about the past. */}
+      {deadRecipients.length > 0 && (
+        <Callout tone="warn" live="status">
+          {t("compose.deadRecipients", {
+            addresses: deadRecipients.join(", "),
+          })}
+        </Callout>
+      )}
       <MailRow label={t("compose.subject")}>
         <TextInput
           aria-label={t("compose.subject")}
@@ -2514,6 +2529,26 @@ export function ComposeModal({
   // conversation and has no field to pick a moment in).
   const scheduling = !isChannelReply && sendAt !== "";
   const scheduled = momentOf(sendAt);
+  // The person this mail is TO, however the composer came to know them: a
+  // person page names it as the record the composer was opened from, and a
+  // company draft PICKS one in the account context — which is the flow with the
+  // most reason to warn, since the rep is choosing between the account's
+  // contacts rather than answering somebody who already wrote. A deal timeline
+  // names none, and warns about nothing.
+  //
+  // The chosen recipient wins where there is one: on an account draft the
+  // record the composer was opened from is the organization, and the person is
+  // whoever the reader just picked.
+  //
+  // Nothing at all for a channel reply. MailOnlyFields is not rendered for one
+  // — its recipient is resolved server-side and there are no address fields to
+  // warn under — so asking would spend a composite read on an answer with
+  // nowhere to go.
+  const recipientPerson = isChannelReply
+    ? undefined
+    : ((account.recipientId || undefined) ??
+      (entityType === "person" ? entityId : undefined));
+  const deadRecipients = useDeadRecipients(recipientPerson, [...to, ...cc]);
   return (
     <>
       <ScheduleDialog
@@ -2612,6 +2647,7 @@ export function ComposeModal({
               subject={subject}
               onSubjectChange={setSubject}
               rejectionInFlight={rejectionInFlight}
+              deadRecipients={deadRecipients}
             />
           )}
           <Textarea
@@ -2699,6 +2735,47 @@ export function ComposeModal({
       </ConfirmModal>
     </>
   );
+}
+
+// WHICH OF THESE ADDRESSES IS KNOWN NOT TO ARRIVE. The person page badges an
+// address whose latest delivery hard-bounced with nothing clean since, and the
+// composer is where that matters: the mark was visible only on a page the rep
+// is not looking at while they write.
+//
+// Read off the 360 under the SAME key the person page fetches under, so opening
+// the composer from that page costs no request at all and the two surfaces
+// cannot disagree about which address is dead. A composer that never learned a
+// person — a deal timeline has no single one — asks for nothing and warns about
+// nothing.
+//
+// The section carries its own grant. A caller who may not read the send ledger
+// gets it omitted rather than empty, and this then marks nothing: an unanswered
+// read is not "the address is fine", and a warning invented from an absence
+// would be a claim about correspondence the reader may not see.
+//
+// Free-typed addresses with no person context stay unwarned on purpose (#3160):
+// deriving deadness for an arbitrary string needs an endpoint of its own.
+function useDeadRecipients(
+  personId: string | undefined,
+  recipients: readonly string[],
+) {
+  const view = usePerson360(personId as string, personId != null);
+  const dead = view.data?.dead_addresses;
+  if (personId == null || dead == null || dead.length === 0) return [];
+  // Addresses compare case-insensitively — a rep who types Anna@… must be
+  // warned about anna@…, and the ledger stores what the provider reported.
+  const marked = new Set(dead.map((address) => address.toLowerCase()));
+  // ONE MENTION PER ADDRESS. To and Cc are asked about together, and a rep who
+  // has the same address in both would otherwise read it named twice in a
+  // sentence about one thing being wrong with it.
+  const named = new Map<string, string>();
+  for (const address of recipients) {
+    const key = address.toLowerCase();
+    if (marked.has(key) && !named.has(key)) {
+      named.set(key, address);
+    }
+  }
+  return [...named.values()];
 }
 
 // A channel reply can only land on a live, unblocked identity, and the
@@ -2844,11 +2921,32 @@ export function TimelineActions({
       <Button small onClick={() => setRelink(true)}>
         {t("compose.relink")}
       </Button>
-      <AudienceAction
-        activity={activity}
-        entityType={entityType}
-        entityId={entityId}
-      />
+      {/* Captured mail's audience is derived, never a direct write, and
+          ThreadAudienceAction's own endpoint refuses a thread_key with no
+          capture_import row behind it (capture/threadverdict.go). A hand-typed
+          REPLY carries a thread_key too — outboundmessage.go stamps every send
+          with the RFC822 thread it answers, imported or not — so thread_key
+          alone would route a rep's own threaded reply to the one control that
+          404s on it. `audience_reason` is no better a signal: it is null on an
+          untouched captured row (the wrong per-message dialog offered first)
+          and non-null on a narrowed hand-typed one, whose missing
+          capture_import row makes ThreadAudienceAction disappear for good.
+          captured_by's own prefix is what actually says "capture wrote this"
+          — `connector:<name>:<uuid>`, never `human:<uuid>` or `agent:<id>` —
+          so it is the one signal correct in every direction. */}
+      {(activity.captured_by ?? "").startsWith("connector:") ? (
+        <ThreadAudienceAction
+          activity={activity}
+          entityType={entityType}
+          entityId={entityId}
+        />
+      ) : (
+        <AudienceAction
+          activity={activity}
+          entityType={entityType}
+          entityId={entityId}
+        />
+      )}
       {relink && (
         <RelinkModal
           activityId={activity.id}
@@ -2873,6 +2971,97 @@ const AUDIENCE_CHOICES: readonly ActivityAudience[] = [
   "workspace",
   "participants",
 ];
+
+// Why a captured message is held, in the reader's words. A reason the server
+// learned to give and this map has not falls back to nothing rather than to the
+// raw token: a badge reading `financial_corporate` beside a customer's mail is
+// worse than no badge at all.
+const audienceReasonLabel: Record<string, MessageKey> = {
+  posture: "compose.reason.posture",
+  workspace_floor: "compose.reason.workspaceFloor",
+  no_record: "compose.reason.noRecord",
+  pending_verdict: "compose.reason.pendingVerdict",
+  manual: "compose.reason.manual",
+};
+
+// ThreadAudienceAction shares or keeps back a whole THREAD, for a message that
+// came from a mailbox.
+//
+// Captured mail does not take the per-message dialog: its audience is derived
+// from what every importing mailbox asks for, so a direct write is refused
+// (`audience_is_derived`) and pointed here. The unit is the thread rather than
+// the message because that is what a person decides about — nobody shares the
+// third reply and keeps the fourth.
+//
+// The decision releases only the CALLER's hold. A thread two colleagues
+// imported opens when both allow it, so the outcome reports how many other
+// seats still hold it — a count and never a name, because whose mail a person
+// keeps private is itself private.
+function ThreadAudienceAction({
+  activity,
+  entityType,
+  entityId,
+}: Readonly<{
+  activity: Activity;
+  entityType: RelinkKind;
+  entityId: string;
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [held, setHeld] = useState<number | null>(null);
+  const shared = activity.audience === "workspace";
+  const threadKey = activity.thread_key;
+  const mutation = useMutation({
+    // The decision arrives as a variable, so the press belongs to the render
+    // the reader saw (frontend/AGENTS.md, mutation-variable-coverage).
+    mutationFn: async (share: boolean) => {
+      if (!threadKey) {
+        return null;
+      }
+      const { data, error } = await api.POST(
+        "/activities/threads/{thread_key}/audience",
+        { params: { path: { thread_key: threadKey } }, body: { share } },
+      );
+      if (error) throwProblem(error);
+      return data;
+    },
+    onSuccess: (outcome) => {
+      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      // A share that did not open the thread means somebody else still holds
+      // it. Saying so is the difference between a control that looks broken
+      // and one that reports what actually happened.
+      setHeld(outcome && !outcome.shared ? outcome.held_by_others : null);
+    },
+  });
+  // Withheld content carries no reason either, so there is nothing to draw and
+  // no standing to change it.
+  if (activity.content_state === "withheld" || !threadKey) {
+    return null;
+  }
+  const reasonKey = audienceReasonLabel[activity.audience_reason ?? ""];
+  return (
+    <>
+      {!shared && reasonKey && <Badge tone="warn">{t(reasonKey)}</Badge>}
+      <Button
+        small
+        pending={mutation.isPending}
+        onClick={() => {
+          setHeld(null);
+          mutation.mutate(!shared);
+        }}
+      >
+        {shared ? t("compose.threadKeepPrivate") : t("compose.threadShare")}
+      </Button>
+      {held !== null && (
+        <span className="t-caption">
+          {t("compose.threadStillHeld").replace("{count}", String(held))}
+        </span>
+      )}
+    </>
+  );
+}
 
 // AudienceAction limits (or re-opens) who may read ONE message's content. Per
 // message on purpose: a thread is not a unit of trust, and the contact stays

@@ -277,6 +277,7 @@ func vatCheckWire(check VatCheck) crmcontracts.OrganizationVatCheck {
 		RegisteredName:     absentWhenEmpty(check.RegisteredName),
 		RegisteredAddress:  absentWhenEmpty(check.RegisteredAddress),
 		CheckedAt:          check.CheckedAt,
+		RecordedAt:         &check.RecordedAt,
 	}
 }
 

@@ -17,6 +17,8 @@ package privacy
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -152,6 +154,80 @@ func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channel
 // possible match there would be a substring search for the same bare numeric
 // id across every AI call in the workspace, not one provider's captures —
 // strictly the over-deletion risk this function exists to avoid, only wider.
+// purgeChannelCaptureTrace deletes the subject's rows from the 24-hour capture
+// trace for a counterparty the pipeline knew by a provider ACCOUNT rather than
+// by an address.
+//
+// The email lane in erasuretimeline.go cannot reach these. It matches
+// `counterparty` against an address, and a channel trace writes the person's
+// DISPLAY NAME into that column instead (capture/trace.go, traceChannelPayload)
+// — so a subject who only ever wrote from Telegram had every trace row survive
+// an erasure that reported success.
+//
+// This was invisible while capture.trace_payloads defaulted off, because the
+// column it leaves behind was never written. Turning the default on is what
+// made a dormant gap a live one.
+//
+// Matched on the NAME and scoped to the provider, because the trace stores no
+// account id: `source_system` is the provider and `counterparty` is the name,
+// and there is no third column to join on. Crude for the same reason the lanes
+// around it are crude — over-deleting a diagnostic row that expires within the
+// day is recoverable, under-deleting personal data is not — and bounded by the
+// provider so an erasure cannot reach a same-named person on another transport.
+//
+// A subject with no name and no channel identity matches nothing, which is the
+// correct amount of work: there is no column left that could name them.
+// subjectDisplayName reads the name the channel trace wrote, BEFORE the
+// cascade's anonymize step replaces it with a placeholder.
+//
+// Gathered at the top of ErasePerson beside the subject's emails and channel
+// identities, for exactly the reason those are: every purge below that line
+// matches on an identifier, and an identifier read after it has been wiped
+// matches nothing while the rows it was meant to reach stay named.
+func subjectDisplayName(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (string, error) {
+	var name string
+	if err := tx.QueryRow(ctx,
+		`SELECT full_name FROM person WHERE id = $1`, personID).Scan(&name); err != nil {
+		return "", fmt.Errorf("privacy: reading the subject's name for the channel trace purge: %w", err)
+	}
+	return name, nil
+}
+
+func purgeChannelCaptureTrace(ctx context.Context, tx pgx.Tx, fullName string, identities []channelIdentity) (int64, error) {
+	// The name arrives as an ARGUMENT rather than being read here, and that is
+	// the whole correctness of this lane: anonymizeSubjectRows has already
+	// overwritten person.full_name by the time the purge runs, so a SELECT here
+	// would match the placeholder, delete nothing, and leave every row naming
+	// the person — reporting success. subjectDisplayName reads it before the
+	// first destructive statement, beside the emails and identities the rest of
+	// the cascade is given the same way.
+	fullName = strings.TrimSpace(fullName)
+	if len(identities) == 0 || fullName == "" {
+		return 0, nil
+	}
+	var purged int64
+	// One statement per provider the subject is known on, so a name that also
+	// belongs to somebody else on a DIFFERENT transport is untouched.
+	seen := map[string]bool{}
+	for _, identity := range identities {
+		if seen[identity.Provider] {
+			continue
+		}
+		seen[identity.Provider] = true
+		tag, err := tx.Exec(ctx, `
+			DELETE FROM capture_trace
+			 WHERE source_system = $1
+			   AND (counterparty = $2
+			        OR subject ILIKE '%' || $3 || '%' ESCAPE '\')`,
+			identity.Provider, fullName, storekit.EscapeLike(fullName))
+		if err != nil {
+			return 0, fmt.Errorf("privacy: purging the channel capture trace: %w", err)
+		}
+		purged += tag.RowsAffected()
+	}
+	return purged, nil
+}
+
 func purgeChannelRawCapture(ctx context.Context, tx pgx.Tx, identities []channelIdentity) (int64, error) {
 	var purged int64
 	for _, identity := range identities {

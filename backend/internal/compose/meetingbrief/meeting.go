@@ -190,7 +190,20 @@ const meetingQuery = `
 	                    JOIN activity_participant pp ON pp.activity_id = pa.id
 	                    WHERE pp.person_id = p.id AND pa.archived_at IS NULL
 	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at
+	                      AND pa.audience = 'workspace'
 	                      AND %[4]s
+	                      -- Workspace-visible messages only. A brief is read by
+	                      -- colleagues who were not on the mail, and a last-touch
+	                      -- that moved when a held message arrived would tell
+	                      -- them it arrived — the timestamp is the disclosure,
+	                      -- without a word of the message.
+	                      --
+	                      -- Spelled here rather than through auth.AudienceWorkspaceOnly
+	                      -- because this statement is assembled with positional
+	                      -- format verbs and a concatenated fragment would land
+	                      -- inside one; the rule is the same and
+	                      -- TestEveryAggregateAsksTheAudience holds the pair.
+	                      --
 	                      -- Scoped with the rest of the brief. This is the number
 	                      -- a reader trusts most, and it is the one that leaks:
 	                      -- narrow the deal and leave this alone and the brief

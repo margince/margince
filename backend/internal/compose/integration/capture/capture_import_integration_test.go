@@ -16,6 +16,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -37,10 +38,15 @@ import (
 // It builds its own registry and connector rather than reusing the env's: the
 // env's connection belongs to Rep1, and the whole point here is a message
 // arriving through somebody else's grant.
+// secondSeatAddress is the second connected mailbox's own address. A real
+// second mailbox has one; the shared fake claims the workspace owner's, which
+// would make every seat look like a recipient of every message.
+const secondSeatAddress = "colleague@myco.example"
+
 func secondMailbox(t *testing.T, e *integration.SearchEnv, user ids.UUID) func(t *testing.T, raws ...[]byte) {
 	t.Helper()
 	seedCaptureRoleFor(t, e, user)
-	conn := &mailBatchConnector{}
+	conn := &mailBatchConnector{accountLabel: secondSeatAddress}
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
 	registry.Register(conn)
 	grantCtx := humanWithScopes(e, user, []principal.Scope{principal.ScopeRead})
@@ -181,6 +187,13 @@ func customerMail(msgID string) []byte {
 	return email("anna@acme.example", "Anna Acme", captureOwner, msgID, "")
 }
 
+// customerMailToBoth is one message a customer addressed to BOTH seats — the
+// shape that genuinely reaches two mailboxes and is stored once. Each seat's
+// own address on it is what proves their provider delivered it to them.
+func customerMailToBoth(msgID string) []byte {
+	return email("anna@acme.example", "Anna Acme", captureOwner+", "+secondSeatAddress, msgID, "")
+}
+
 func TestASecondImportingMailboxIsRecordedOnAMessageStoredOnce(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
@@ -189,8 +202,8 @@ func TestASecondImportingMailboxIsRecordedOnAMessageStoredOnce(t *testing.T) {
 	// The same Message-ID through both mailboxes. The second sync hits the
 	// incumbent and writes no activity — which is exactly when the second seat
 	// used to vanish from the record entirely.
-	sync(t, customerMail("shared-1@acme.example"))
-	syncSecond(t, customerMail("shared-1@acme.example"))
+	sync(t, customerMailToBoth("shared-1@acme.example"))
+	syncSecond(t, customerMailToBoth("shared-1@acme.example"))
 
 	activityID := oneActivityID(t, e)
 	importers := importRowsOf(t, e, activityID)
@@ -222,14 +235,15 @@ func TestTheStrictestImportingMailboxDecidesTheAudience(t *testing.T) {
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
 
-	sync(t, customerMail("strict-1@acme.example"))
-	syncSecond(t, customerMail("strict-1@acme.example"))
+	sync(t, customerMailToBoth("strict-1@acme.example"))
+	syncSecond(t, customerMailToBoth("strict-1@acme.example"))
 	activityID := oneActivityID(t, e)
 
-	// Both mailboxes open: the message is workspace-readable and says nothing
-	// about why, because nothing narrowed it.
-	if got, reason := audienceOf(t, e, activityID); got != "workspace" || reason != "" {
-		t.Fatalf("with both mailboxes open want workspace with no reason, got %q / %q", got, reason)
+	// Both mailboxes are `classified` by default, so the message starts held
+	// and says which rule holds it. Opening it takes a verdict on each seat's
+	// own import row, which is what the rest of this test walks through.
+	if got, reason := audienceOf(t, e, activityID); got != "participants" || reason != "posture" {
+		t.Fatalf("two classified mailboxes should hold the message, got %q / %q", got, reason)
 	}
 
 	// One seat's mailbox holds it. One held contributor is enough.
@@ -272,7 +286,7 @@ func TestTheAudienceIsTheSameWhicheverMailboxSyncsFirst(t *testing.T) {
 			e, sync := env.e, env.sync
 			syncSecond := secondMailbox(t, e, e.Rep3)
 
-			msg := customerMail("order-1@acme.example")
+			msg := customerMailToBoth("order-1@acme.example")
 			if order.holderFirst {
 				sync(t, msg)
 				syncSecond(t, msg)
@@ -308,8 +322,11 @@ func TestARecomputeThatChangesNothingWritesNoAuditRowAndEmitsNoEvent(t *testing.
 		t.Fatalf("a no-change recompute wrote %v, want %v", after, before)
 	}
 
-	// A real change writes exactly one of each.
-	setImportDecision(t, e, activityID, e.Rep1, "held", "")
+	// A real change writes exactly one of each. The message is already held by
+	// the mailbox's own posture, so the change that MOVES it is a verdict
+	// clearing the thread — setting the posture again would write nothing, which
+	// is the case above rather than this one.
+	setImportDecision(t, e, activityID, e.Rep1, "classified", "cleared")
 	recompute(t, e, activityID)
 	after := auditAndOutboxCounts(t, e, activityID)
 	if after.audit != before.audit+1 || after.outbox != before.outbox+1 {
@@ -432,6 +449,24 @@ func TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay(t *testing.T) {
 	}
 
 	setMailSharing(t, e, true)
+
+	// The two reasons a per-message decision writes. Both are stamped by the
+	// sink and read by the derivation, and a drift on either side un-holds the
+	// mail they exist to keep back.
+	allowSharedPosture(t, e)
+	setPosture(t, env, e.Rep1, capturemod.PostureShared)
+	holdCounterparty(t, e, e.Rep1, capturemod.HoldKindDomain, "mirrorlegal.example")
+	sync(t, customerMailFrom("partner@mirrorlegal.example", "mirror-hold@mirrorlegal.example"))
+	if _, reason := audienceOf(t, e, activityIDOf(t, e, "mirror-hold@mirrorlegal.example")); reason != activities.ReasonCounterparty {
+		t.Fatalf("the sink stamps a counterparty hold %q; activities reads %q", reason, activities.ReasonCounterparty)
+	}
+
+	sync(t, emailWithSubject("anwalt@other.example", "Dr. Legal", captureOwner,
+		"mirror-marker@other.example", "[Vertraulich] Vertrag"))
+	if _, reason := audienceOf(t, e, activityIDOf(t, e, "mirror-marker@other.example")); reason != activities.ReasonConfidentialMarker {
+		t.Fatalf("the sink stamps a confidential marker %q; activities reads %q", reason, activities.ReasonConfidentialMarker)
+	}
+
 	sync(t, email("dse@eu.docusign.net", "DocuSign EU", captureOwner, "mirror-linkless@docusign.net", ""))
 	var linkLess ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -478,10 +513,23 @@ func TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail(t *testing.T) {
 		}
 	}
 
+	// A DECLARED DOMAIN buys nothing either. A seat declares one with no proof
+	// of control, so if a domain counted as delivery evidence, claiming a
+	// colleague's domain and then forging a Message-ID would walk straight
+	// through this gate.
+	declareIdentity(t, e, e.Rep3, capturemod.IdentityKindDomain, "claimed.example")
+	syncOther(t, email("stranger@elsewhere.example", "Stranger", "victim@claimed.example",
+		"forge-target@acme.example", ""))
+	for _, u := range importRowsOf(t, e, activityID) {
+		if u == e.Rep3 {
+			t.Fatal("a self-declared domain bought an import row on a colleague's held message")
+		}
+	}
+
 	// And the admit case, which is what proves the refusal above is a rule
 	// rather than a gate that refuses everyone: a seat who IS on the message
 	// gets their import row from the same code path.
-	sync(t, customerMail("forge-admit@acme.example"))
+	sync(t, customerMailToBoth("forge-admit@acme.example"))
 	var admitted ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
@@ -489,7 +537,7 @@ func TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the admit-case activity: %v", err)
 	}
-	syncOther(t, customerMail("forge-admit@acme.example"))
+	syncOther(t, customerMailToBoth("forge-admit@acme.example"))
 	var second bool
 	for _, u := range importRowsOf(t, e, admitted) {
 		if u == e.Rep3 {
@@ -504,6 +552,13 @@ func TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail(t *testing.T) {
 func TestTheWorkspaceMailSharingFloorSurvivesTheDerivation(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
+
+	// A SHARED mailbox, so the floor is the only thing that can hold this
+	// message. Without that the mailbox's own default (classified) holds it
+	// anyway, and the test passes whether the floor works or not — which it did
+	// until postures existed.
+	allowSharedPosture(t, e)
+	setPosture(t, env, e.Rep1, capturemod.PostureShared)
 
 	// Mail sharing OFF: the sink births every new email held to its
 	// participants. That is a workspace decision, and no import row records it
@@ -540,72 +595,29 @@ func setMailSharing(t *testing.T, e *integration.SearchEnv, on bool) {
 		},
 	})
 	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
-	if _, err := store.Update(ctx, nil, &on, nil); err != nil {
+	if _, err := store.Update(ctx, capturemod.SettingsPatch{MailSharing: &on}); err != nil {
 		t.Fatalf("setting mail sharing to %v: %v", on, err)
 	}
 }
 
-func TestAHumanDecisionOutlivesEveryLaterSync(t *testing.T) {
+// A captured row refuses the direct write #3388 retired, and a manual
+// WIDENING already on the row — the shape a pre-#3388 database can still
+// carry — does not outrank the workspace floor on the next recompute. Both
+// halves of manualDecisionStands' asymmetry need a fixture now: narrowing is
+// covered by TestARowNarrowedBeforeThisFeatureIsNotPublishedByTheFirstRecompute,
+// and this is the other one — SetAudience itself cannot build it any more, so
+// the row is shaped by hand the same way that test's backfillReasons does.
+func TestACapturedRowRefusesTheDirectWriteAndAManualWideningDoesNotStand(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
-
-	// A message the workspace floor held, which a person then deliberately
-	// opened. Nothing about the floor changed — it is still off — so a
-	// derivation that only asked "what do the contributors want" would hold the
-	// message again on the next sync of any mailbox that has it, silently
-	// undoing what the person did.
 	setMailSharing(t, e, false)
-	sync(t, customerMail("manual-1@acme.example"))
+	sync(t, customerMail("manual-widen-1@acme.example"))
 	activityID := oneActivityID(t, e)
 	if got, reason := audienceOf(t, e, activityID); got != "participants" || reason != "workspace_floor" {
 		t.Fatalf("the fixture needs a floor-held message, got %q / %q", got, reason)
 	}
 
-	openByHand(t, e, activityID, "workspace")
-	if got, reason := audienceOf(t, e, activityID); got != "workspace" || reason != "manual" {
-		t.Fatalf("a human opening a message should mark it manual, got %q / %q", got, reason)
-	}
-
-	recompute(t, e, activityID)
-	if got, _ := audienceOf(t, e, activityID); got != "workspace" {
-		t.Fatalf("a derivation re-narrowed a message a person opened, got %q", got)
-	}
-
-	// A human OPENING a message does not veto a later hold. Write authority over
-	// an activity is broader than membership of it, so a colleague merely cc'd
-	// on a link-less message can open it — and treating that as permanent would
-	// let one click outrank the mailbox owner's own posture.
-	setImportDecision(t, e, activityID, e.Rep1, "held", "")
-	recompute(t, e, activityID)
-	if got, _ := audienceOf(t, e, activityID); got != "participants" {
-		t.Fatalf("a human's widening vetoed the mailbox owner's own hold, got %q", got)
-	}
-
-	// The other direction: a person narrowing an open message is not widened
-	// back by contributors who all say workspace.
-	sync(t, customerMail("manual-2@acme.example"))
-	var second ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT id FROM activity WHERE source_id = $1`, "manual-2@acme.example").Scan(&second)
-	}); err != nil {
-		t.Fatalf("reading the second activity: %v", err)
-	}
-	openByHand(t, e, second, "participants")
-	setImportDecision(t, e, second, e.Rep1, "shared", "cleared")
-	recompute(t, e, second)
-	if got, _ := audienceOf(t, e, second); got != "participants" {
-		t.Fatalf("a derivation widened a message a person narrowed, got %q", got)
-	}
-}
-
-// openByHand is one human's audience decision, through the real store, so the
-// fixture exercises the writer the product ships.
-func openByHand(t *testing.T, e *integration.SearchEnv, activityID ids.UUID, audience string) {
-	t.Helper()
-	// The mailbox owner's own seat, with the activity grants an audience write
-	// takes. Not e.Admin(): the audience is a decision about correspondence a
-	// person has write authority over, and the fixture must exercise that.
+	store := activities.NewStore(e.DB())
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -616,10 +628,28 @@ func openByHand(t *testing.T, e *integration.SearchEnv, activityID ids.UUID, aud
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	store := activities.NewStore(e.DB())
-	if _, err := store.SetAudience(ctx, ids.From[ids.ActivityKind](activityID),
-		activities.SetAudienceInput{Audience: audience}); err != nil {
-		t.Fatalf("setting the audience to %s by hand: %v", audience, err)
+	_, err := store.SetAudience(ctx, ids.From[ids.ActivityKind](activityID),
+		activities.SetAudienceInput{Audience: "workspace"})
+	var captured *activities.CapturedAudienceError
+	if !errors.As(err, &captured) {
+		t.Fatalf("SetAudience on a captured row returned %v, want a *CapturedAudienceError", err)
+	}
+
+	// The row this refusal exists to protect: a widening already recorded as
+	// `manual`, the only shape a database migrated from before #3388 can still
+	// carry. Written directly, since the store above no longer will.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET audience = 'workspace', audience_reason = 'manual' WHERE id = $1`,
+			activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("shaping the legacy widened row: %v", err)
+	}
+
+	recompute(t, e, activityID)
+	if got, _ := audienceOf(t, e, activityID); got != "participants" {
+		t.Fatalf("a legacy manual widening outranked the workspace floor, got %q", got)
 	}
 }
 
@@ -728,4 +758,17 @@ func backfillReasons(t *testing.T, e *integration.SearchEnv) {
 	}); err != nil {
 		t.Fatalf("running the reason backfill: %v", err)
 	}
+}
+
+// activityIDOf answers the activity a given Message-ID landed as.
+func activityIDOf(t *testing.T, e *integration.SearchEnv, sourceID string) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT id FROM activity WHERE source_id = $1`, sourceID).Scan(&id)
+	}); err != nil {
+		t.Fatalf("reading the activity for %s: %v", sourceID, err)
+	}
+	return id
 }

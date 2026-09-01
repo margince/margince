@@ -371,6 +371,39 @@ kinds:
       judging stage leases and commits in claims of eight, so a cut-off pass
       keeps every verdict it paid for.
 
+  capture_confidentiality_verdict:
+    role: dispatcher
+    go_type: ConfidentialityVerdictArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 10m
+    fans_out_to: capture_confidentiality_verdict_workspace
+    fan_out_unit: workspace
+    reason: >-
+      Ten minutes, faster than the sender verdict's hour, because this decides
+      whether mail a colleague is waiting on is readable at all. Under the
+      classified posture every captured message is born held, so the interval
+      is how long an ordinary thread stays invisible to the team; an hour of
+      that reads as the product being broken. An empty pass is one cheap probe
+      against the ledger's due-index.
+
+  capture_confidentiality_verdict_workspace:
+    role: worker
+    go_type: ConfidentialityVerdictWorkspaceArgs
+    queue: ai_capture
+    timeout: 20m
+    max_attempts: 3
+    opts_owner: fan_out
+    args:
+      Workspace: id
+    reason: >-
+      Up to confidentialityCatchUpCap (40) threads judged one model call each,
+      leased and committed in claims of eight, so a cut-off pass keeps every
+      verdict it paid for. Then one database-only stage that retires the
+      threads which spent every attempt, which must run after judging so a
+      thread exhausted this tick is retired in the same pass.
+
   capture_trace_sweep:
     role: dispatcher
     go_type: CaptureTraceSweepArgs
@@ -705,6 +738,22 @@ kinds:
       Workspace: id
       DocumentID: id
 
+  vcard_ingest:
+    role: worker
+    go_type: VCardIngestArgs
+    queue: ai_capture
+    timeout:
+      value: 5m
+      reason: >-
+        Parsing a handful of small text files and writing at most five people.
+        No model call and no network read is in it, so anything past this is a
+        stuck database handle rather than a large card.
+    opts_owner: caller
+    cadence: on_demand
+    args:
+      Workspace: id
+      Activity: id
+
   embed_reindex:
     role: worker
     go_type: EmbedReindexArgs
@@ -827,6 +876,38 @@ kinds:
       One users.watch call against Gmail for one connection, and the write that
       advances watch_expires_at behind it.
 
+  graph_watch_renew:
+    role: dispatcher
+    go_type: GraphWatchArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: {operator: GraphWatch.Interval, schedule_when_positive: GraphWatch.Interval}
+    registration: {when: [GmailRegistry, GraphWatch.NotificationURL], absent: registers_nothing}
+    fans_out_to: graph_watch_renew_connection
+    fan_out_unit: connection
+    reason: >-
+      A Microsoft Graph subscription lapses in under three days, where a Gmail
+      watch lasts seven — so this pass exists on its own cadence rather than
+      riding the Gmail one, and the registration takes the notification URL as
+      its second condition because a subscription against no URL notifies
+      nobody.
+
+  graph_watch_renew_connection:
+    role: worker
+    go_type: GraphWatchRenewArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: fan_out
+    registration: {when: [GmailRegistry, GraphWatch.NotificationURL], absent: registers_nothing}
+    args:
+      Workspace: id
+      ConnectionID: id
+    reason: >-
+      One subscription create-or-renew against Microsoft Graph for one
+      connection, and the write that advances watch_expires_at behind it.
+
   graph_edge_reconcile:
     role: dispatcher
     go_type: GraphEdgeReconcileArgs
@@ -881,6 +962,35 @@ kinds:
       One attempt, not three: the retry is the next tick, five minutes away, and
       every row this pass did not reach is still due then. A backing-off row
       would only suppress that tick.
+
+  # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
+  # an installation-wide table, so there is nothing to fan out over.
+  intro_expiry:
+    role: worker
+    go_type: IntroExpiryArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      An unanswered introduction blocks two things at once, and only one of them
+      is a stale row. The rep waits on a colleague who has moved on, because a
+      silence that never closes never becomes an answer. And the open-route
+      index is a partial unique index, so an ask that cannot leave an open
+      status holds that (contact, colleague) pair permanently — the duplicate
+      guard becomes a refusal the rep can never clear, on the one route the page
+      recommends.
+
+      An hour, not five minutes: an introduction's window is days, so the lag
+      between a deadline passing and the ask closing is measured against that
+      rather than against somebody watching an inbox. A tick that finds nothing
+      costs one indexed query, which is what most ticks do — asks expire in ones
+      and twos rather than in floods.
+
+      One attempt, not three: the retry is the next tick, and every ask this
+      pass did not reach is still due then. A backing-off row would only
+      suppress that tick.
 
   approval_auto_apply:
     role: worker
@@ -1126,6 +1236,36 @@ kinds:
       One record read from the incumbent and one ingest — the smallest outbound
       unit in the overlay lane. A signal is an optimization and the poller heals
       whatever it misses, so a slow one is dropped rather than waited on.
+
+  link_reconcile:
+    role: dispatcher
+    go_type: LinkReconcileArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 24h
+    fans_out_to: link_reconcile_workspace
+    fan_out_unit: workspace
+    reason: >-
+      Nightly. The cohort-promote consumer already repairs an ordering as it
+      happens, so this is the backstop for the deliveries it did not get — a
+      consumer down while a backfill ran, and every message captured before that
+      consumer existed. Daily because the damage is invisible on every surface
+      until it is repaired: a company page simply reports a contact went quiet.
+
+  link_reconcile_workspace:
+    role: worker
+    go_type: LinkReconcileWorkspaceArgs
+    queue: default
+    timeout: 10m
+    max_attempts: 3
+    opts_owner: fan_out
+    args:
+      Workspace: id
+    reason: >-
+      linkReconcilePeoplePerTick (200) contacts, each one bounded repair
+      transaction of its own so a lock or a concurrent merge costs that contact
+      and not the pass. A caught-up workspace costs one query and writes nothing.
 
   participant_backfill:
     role: dispatcher

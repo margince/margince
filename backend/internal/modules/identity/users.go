@@ -25,9 +25,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// userStatusActive is the app_user.status an invited/reactivated member holds;
-// userAuditKeyStatus is the audit before/after image key for that column.
+// The app_user.status values this module writes, and the audit before/after
+// image key for that column.
+//
+// userStatusInvited is a seat that exists and has never been entered: it holds a
+// licensed seat and appears in the roster, but carries no password and no linked
+// identity, so it signs in nowhere. Redeeming the invitation is what makes it
+// active, and active is the only status that may sign in — which is why
+// LiveMemberSQL excludes invited and ActivatableMemberSQL admits it.
 const (
+	userStatusInvited     = "invited"
 	userStatusActive      = "active"
 	userStatusDeactivated = "deactivated"
 	userAuditKeyStatus    = "status"
@@ -57,91 +64,6 @@ var (
 	// the status while letting the handler say which of the two happened.
 	errUnknownRole = fmt.Errorf("%w: no role with this key is defined", apperrors.ErrNotFound)
 )
-
-// InviteUserInput carries the admin-supplied details for a new member. No
-// password is set here — the invite issues a single-use set-password token.
-type InviteUserInput struct {
-	Email       string
-	DisplayName string
-	Role        string
-	// TeamIDs are the teams the member joins on arrival, in the same
-	// transaction as the seat and the role.
-	TeamIDs []ids.UUID
-}
-
-// InviteUser provisions a new active member with the one target system role and
-// no password, mints a single-use set-password token, and returns the raw token
-// so the caller can deliver the invite link. Admin-only. The whole thing — the
-// user row, the role grant, the token, the audit row and the user.invited event
-// — commits in ONE transaction. A duplicate email answers ErrConflict.
-func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserInput) (ids.UserID, string, error) {
-	if !actor.hasRole(roleAdmin) {
-		return ids.UserID{}, "", apperrors.ErrPermissionDenied
-	}
-	teams, err := validTeamIDs(in.TeamIDs)
-	if err != nil {
-		return ids.UserID{}, "", err
-	}
-	in.TeamIDs = teams
-	raw, tokenHash, err := mintSessionToken()
-	if err != nil {
-		return ids.UserID{}, "", err
-	}
-	ctx = actorCtx(ctx, actor)
-	var newUserID ids.UserID
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// An invited member is a full seat — the insert below takes the column's
-		// default and there is no read-seat invite — so every invite is one more
-		// seat against the licensed ceiling, and it is refused here rather than
-		// after the member exists.
-		if err := s.refuseWhenNoSeatIsLeft(ctx, tx); err != nil {
-			return err
-		}
-		var roleID ids.UUID
-		roleErr := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, in.Role).Scan(&roleID)
-		if errors.Is(roleErr, pgx.ErrNoRows) {
-			return errUnknownRole
-		}
-		if roleErr != nil {
-			return roleErr
-		}
-		insErr := tx.QueryRow(ctx,
-			`INSERT INTO app_user (email, password_hash, display_name, status)
-			 VALUES (lower($1), NULL, $2, 'active') RETURNING id`,
-			in.Email, in.DisplayName).Scan(&newUserID)
-		if storekit.IsUniqueViolation(insErr) {
-			return errEmailTaken
-		}
-		if insErr != nil {
-			return insErr
-		}
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
-			roleID, newUserID); err != nil {
-			return err
-		}
-		if err := joinTeamsTx(ctx, tx, newUserID.UUID, in.TeamIDs); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at)
-			 VALUES ($1, 'password_reset', $2, now() + $3::interval)`,
-			newUserID, tokenHash, inviteTokenTTL.String()); err != nil {
-			return err
-		}
-		auditID, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID,
-			nil, map[string]any{"email": in.Email, "role": in.Role, "team_ids": in.TeamIDs, userAuditKeyStatus: userStatusActive})
-		if err != nil {
-			return err
-		}
-		return storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
-			userInvitedPayload(newUserID, in.Role, actor.UserID, in.TeamIDs))
-	})
-	if err != nil {
-		return ids.UserID{}, "", err
-	}
-	return newUserID, raw, nil
-}
 
 // ReactivateUser returns a deactivated member to 'active' so they may sign in
 // again; existing sessions stay revoked and are re-minted on the next login.
@@ -180,25 +102,53 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 				return err
 			}
 		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE app_user SET status = 'active' WHERE id = $1`, userID); err != nil {
+		// Back to INVITED when they never set a password, not to active. A member
+		// deactivated before redeeming their invitation still cannot sign in, so
+		// returning them to active would restate in the roster the very
+		// falsehood this status exists to remove.
+		//
+		// Their original invitation link is NOT still live: deactivation
+		// consumed every unused set-password token on the way through
+		// (endCredentialAuthority). The route back in is an admin issuing a new
+		// link, which is why issuance admits an invited member at all —
+		// self-service reset refuses them, having no password to reset.
+		//
+		// EXCEPT the agent seat, which carries a NULL password_hash by
+		// construction and is never invited to anything: it holds no credential
+		// because it does not sign in, and its authority comes from the passport
+		// granting it. Sending it to 'invited' would leave extension dispatch
+		// unable to find the seat it requires, on a row nobody could redeem.
+		// RETURNING carries the NEW status, which is what the audit image below
+		// needs, so the branch is decided once in SQL rather than recomputed in
+		// Go from a column this function would otherwise have to re-read.
+		var restored string
+		if err := tx.QueryRow(ctx,
+			`UPDATE app_user
+			    SET status = CASE WHEN password_hash IS NULL AND NOT is_agent
+			                      THEN 'invited' ELSE 'active' END
+			 WHERE id = $1 RETURNING status`, userID).Scan(&restored); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "user", userID.UUID,
-			map[string]any{userAuditKeyStatus: status}, map[string]any{userAuditKeyStatus: userStatusActive})
+			map[string]any{userAuditKeyStatus: status}, map[string]any{userAuditKeyStatus: restored})
 		if err != nil {
 			return err
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, userID.UUID,
-			userReactivatedPayload(userID, actor.UserID))
+			userReactivatedPayload(userID, actor.UserID, restored))
 	})
 }
 
 // userReactivatedPayload builds user.reactivated's typed payload.
-func userReactivatedPayload(userID ids.UserID, by ids.UserID) crmcontracts.PublicEventUserReactivated {
+//
+// The status travels because it is not always 'active': a member deactivated
+// before redeeming their invitation comes back 'invited', and a subscriber that
+// assumed otherwise would record somebody as able to sign in who cannot.
+func userReactivatedPayload(userID, by ids.UserID, status string) crmcontracts.PublicEventUserReactivated {
 	return crmcontracts.PublicEventUserReactivated{
 		UserId: openapi_types.UUID(userID.UUID),
 		By:     openapi_types.UUID(by.UUID),
+		Status: crmcontracts.UserReactivatedStatus(status),
 	}
 }
 
@@ -323,11 +273,11 @@ func (s *Service) revokeBorrowedAuthority(ctx context.Context, tx pgx.Tx, userID
 // sliding its 90-day window forward — so a stolen session that planted a
 // connection here would keep it after the credential that planted it is
 // gone. The cascade also takes the grant → refresh → passport lock order
-// (oauth_grant.go), and a bulk passport UPDATE ahead of it would take a
+// (oauth_grantrevocation.go), and a bulk passport UPDATE ahead of it would take a
 // passport lock first and deadlock against a rotation racing this call.
 //
 // The consent nobody redeemed yet ends next. An authorization code carries
-// the lent scopes and the human's id, and redemption re-checks only that the
+// the consented scopes and the human's id, and redemption re-checks only that the
 // human is live — so a code minted in the minutes before this call would
 // still exchange for a passport afterward, on a consent given under
 // authority that no longer exists. That is the same restoration the grant

@@ -6,16 +6,18 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 /**
  * The Google OAuth app a mailbox connection is made through.
  *
- * This file owns the endpoint's hooks and onboarding's first-run step borrows
- * them, rather than each writing its own: how long a client SECRET lives in a
- * mutation's `variables` is not a rule worth having two answers to, and the
- * onboarding screen is the one most likely to be written in a hurry.
+ * The ONLY form that writes it, and the only place first run sends an operator
+ * for it: the app is optional, and a second form would be one that cannot show
+ * the redirect URIs below — the half an operator has to paste into Google's
+ * console. So how long a client SECRET lives in a mutation's `variables` has
+ * one answer here rather than two answers to compare.
  *
  * The secret is never read back. `GET` answers whether one is stored and the
  * client id, which is not a secret — it travels in every authorization redirect,
@@ -54,8 +56,8 @@ export function useSetGoogleApp() {
       }
     },
     onSuccess: async () => {
-      // Both: the card's own view, and the first-run report that gates
-      // onboarding on this very step.
+      // Both: the card's own view, and the setup report, which names this
+      // step as outstanding whether or not it blocks anything.
       await queryClient.invalidateQueries({
         queryKey: ["installation-google-app"],
       });
@@ -80,6 +82,92 @@ function useRemoveGoogleApp() {
       await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
     },
   });
+}
+
+// purposeLabel names one callback's flow. A lookup rather than a computed
+// message key, because the catalog is a closed union: a template key would type
+// as any string and a purpose the contract adds later would reach a reader as a
+// raw key rather than as words.
+function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
+  switch (purpose) {
+    case "sign_in":
+      return t("googleApp.redirect.sign_in");
+    case "mailbox_connect":
+      return t("googleApp.redirect.mailbox_connect");
+    default:
+      return purpose;
+  }
+}
+
+// RedirectUris lists the callback URLs an operator must register on their OAuth
+// client, one per purpose this deployment actually serves.
+//
+// The URLs come from the response and are never built here. They have one job —
+// to be byte-identical to what Google receives — and a second spelling in the
+// client is exactly how the two come apart. The backend derives them from the
+// functions that send them, held by a fitness test in both directions.
+//
+// An empty list renders nothing rather than an empty heading: a deployment that
+// serves no Google flow has nothing to register, and a bare heading would read
+// as a list that failed to load.
+function RedirectUris({
+  uris,
+}: Readonly<{
+  uris: readonly { purpose: string; url: string }[] | undefined;
+}>) {
+  const t = useT();
+  const [copied, setCopied] = useState("");
+  // Absent and empty are the same answer here — nothing to register — and the
+  // field is contract-required, but a body that lost one hands over `undefined`
+  // anyway. This card shares a screen with the installation's own settings, so
+  // reading a length off nothing would take that whole page down over a list
+  // the reader could not have acted on.
+  if (!uris || uris.length === 0) {
+    return null;
+  }
+  return (
+    <div className="stack-sm">
+      <p className="t-label">{t("googleApp.redirectTitle")}</p>
+      <p className="t-caption">{t("googleApp.redirectSub")}</p>
+      <SettingList>
+        {uris.map((uri) => {
+          const purpose = purposeLabel(uri.purpose, t);
+          return (
+            <SettingRow
+              key={uri.purpose}
+              label={purpose}
+              value={<code className="t-mono">{uri.url}</code>}
+              control={
+                <Button
+                  small
+                  onClick={() => {
+                    // The object itself is guarded, not just the promise: the
+                    // Clipboard API is absent outside a secure context, so on a
+                    // plain-HTTP deployment this THROWS rather than rejecting and
+                    // the rejection handler never runs. A denied permission is
+                    // the rejecting case. Either way the URL stays on screen to
+                    // copy by hand, so the honest failure is to stop claiming it
+                    // was copied.
+                    if (!navigator.clipboard) {
+                      return;
+                    }
+                    navigator.clipboard.writeText(uri.url).then(
+                      () => setCopied(uri.purpose),
+                      () => setCopied(""),
+                    );
+                  }}
+                >
+                  {copied === uri.purpose
+                    ? t("googleApp.redirectCopied")
+                    : t("googleApp.redirectCopy", { purpose })}
+                </Button>
+              }
+            />
+          );
+        })}
+      </SettingList>
+    </div>
+  );
 }
 
 export function GoogleAppCard() {
@@ -111,15 +199,27 @@ export function GoogleAppCard() {
               {failure && (
                 <Callout tone="danger">{problemMessageOf(failure, t)}</Callout>
               )}
+              {/* Three states, because there are three answers. `configured`
+                  alone could not tell "nothing anywhere" from "the deployment
+                  supplies one", and the card said the former in both — telling
+                  an operator Gmail could not be connected on installations
+                  where it demonstrably could. */}
               <p className="t-body">
-                {status.configured
-                  ? t("googleApp.configured", { clientId: status.client_id })
-                  : t("googleApp.absent")}
+                {status.source === "stored" &&
+                  t("googleApp.configured", { clientId: status.client_id })}
+                {status.source === "environment" &&
+                  t("googleApp.fromEnvironment", {
+                    clientId: status.client_id,
+                  })}
+                {status.source === "none" && t("googleApp.absent")}
               </p>
+              <RedirectUris uris={status.redirect_uris} />
               <Field
-                label={t("firstRun.google.clientId")}
+                label={t("googleApp.clientId")}
                 hint={
-                  status.configured ? t("googleApp.replaceHint") : undefined
+                  status.source === "stored"
+                    ? t("googleApp.replaceHint")
+                    : undefined
                 }
               >
                 {(control) => (
@@ -129,12 +229,12 @@ export function GoogleAppCard() {
                     value={clientId}
                     autoComplete="off"
                     disabled={!canManage || busy}
-                    placeholder={t("firstRun.google.clientIdPlaceholder")}
+                    placeholder={t("googleApp.clientIdPlaceholder")}
                     onChange={(e) => setClientId(e.target.value)}
                   />
                 )}
               </Field>
-              <Field label={t("firstRun.google.clientSecret")}>
+              <Field label={t("googleApp.clientSecret")}>
                 {(control) => (
                   <TextInput
                     {...control}
@@ -170,11 +270,11 @@ export function GoogleAppCard() {
                     );
                   }}
                 >
-                  {status.configured
+                  {status.source === "stored"
                     ? t("googleApp.replace")
                     : t("googleApp.store")}
                 </Button>
-                {status.configured && (
+                {status.source === "stored" && (
                   <Button
                     variant="danger"
                     pending={remove.isPending}

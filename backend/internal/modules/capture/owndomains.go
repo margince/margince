@@ -288,6 +288,26 @@ func foldAddress(address string) string {
 
 // Covers reports whether this address is one the seat declared as their own,
 // exactly or by one of their domains.
+// CoversAddressExactly is Covers restricted to the addresses a seat holds, with
+// no domain arm.
+//
+// The two answer different questions. Covers asks "is this me", which a domain
+// claim legitimately settles for filing. This asks "did this reach MY mailbox",
+// which a domain claim cannot: a seat declares a domain with no proof of control
+// (ValidExclusionValue checks syntax, nothing else), so a domain arm here would
+// let anybody claim `acme.com` and then treat any message naming an acme.com
+// address as delivered to them. An exact address is different in kind — it is
+// either the mailbox the provider attested at grant, or one the seat declared
+// about themselves, and neither names a colleague.
+func (s SelfSet) CoversAddressExactly(address string) bool {
+	folded := foldAddress(address)
+	if folded == "" {
+		return false
+	}
+	_, ok := s.addresses[folded]
+	return ok
+}
+
 func (s SelfSet) Covers(address string) bool {
 	folded := foldAddress(address)
 	if folded == "" {

@@ -228,7 +228,7 @@ func TestProfileFallsBackToUPN(t *testing.T) {
 
 func TestDeltaInitWalksPagesFiltersTombstonesAndReturnsDeltaLink(t *testing.T) {
 	_, api := newTestClients(t)
-	ids, delta, err := api.DeltaInit(context.Background(), "access-2", time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC))
+	ids, delta, err := api.DeltaInit(context.Background(), "access-2", folderInbox, time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("DeltaInit: %v", err)
 	}
@@ -472,6 +472,36 @@ func TestListAfterRefusesAMessageWithNoParentFolder(t *testing.T) {
 	_, _, err := NewAPI(srv.Client(), srv.URL).ListAfter(context.Background(), "access-2", time.Time{}, "", 100)
 	if !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("ListAfter on a folder-less message = %v, want ErrUnreachable", err)
+	}
+}
+
+// A BODY PAST THE BUDGET IS REFUSED, not decoded from its prefix.
+//
+// io.ReadAll over a LimitReader answers exactly the cap with no error, so a
+// longer body arrived as a prefix — and a prefix that happens to parse is the
+// dangerous shape: a subscription listing missing its tail reads as a mailbox
+// with no subscription, and the renewal then creates a second one delivering
+// the same notification.
+//
+// The fixture is a valid document whose first maxResponseBytes bytes are ALSO a
+// valid document, which is what makes the truncation invisible without this.
+func TestAResponsePastTheBudgetIsRefusedRatherThanDecodedFromItsPrefix(t *testing.T) {
+	// A COMPLETE OBJECT FOLLOWED BY WHITESPACE, which is the fixture that can
+	// tell the two readings apart. Padding inside a string value would leave the
+	// prefix ending mid-string, and THAT fails to decode either way — the case
+	// would pass against the very reading it is meant to catch. Trailing
+	// whitespace is legal JSON, so both the whole body and every prefix past the
+	// closing brace decode cleanly, and only refusing the oversize body reports
+	// anything at all.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"m1"}` + strings.Repeat(" ", maxResponseBytes)))
+	}))
+	t.Cleanup(srv.Close)
+
+	_, err := NewAPI(srv.Client(), srv.URL).SentFolderID(context.Background(), "access-2")
+	if !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("a body past the budget = %v, want ErrUnreachable — a prefix that parses is not the answer", err)
 	}
 }
 

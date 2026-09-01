@@ -19,6 +19,8 @@ package privacy
 import (
 	"context"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,7 +39,11 @@ type sarIdentifierEnv struct {
 	// db is pinned to the workspace this fixture created: the handle is where
 	// "which tenant am I" lives now (ADR-0091 §9 step 3), and this env builds
 	// its workspace by raw SQL rather than through the installation resolver.
-	db     *database.DB
+	db *database.DB
+	// owner is the migration-role connection the fixture seeded through, kept
+	// so a test can add to the subject's history or read the live table
+	// definition. Held open for the test's lifetime by the cleanup below.
+	owner  *pgx.Conn
 	person ids.PersonID
 }
 
@@ -102,6 +108,7 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 	return &sarIdentifierEnv{
 		ctx:    exportContext(ws, user),
 		db:     database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)),
+		owner:  owner,
 		person: person,
 	}
 }
@@ -110,6 +117,11 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 // kind. The two values in a pair differ because the live-row uniqueness indexes
 // are partial on archived_at IS NULL — reusing one value would leave the export
 // unable to say which row it named.
+//
+// Every value is scoped to the subject through ident(). The dedupe indexes on
+// these tables are workspace-wide, not per-person, so a fixed literal binds the
+// fixture to being the only one in the database — the second test to seed a
+// subject fails on the first test's address rather than on anything it asserts.
 func seedIdentifierPairs(ctx context.Context, t *testing.T, owner *pgx.Conn, person ids.PersonID) {
 	t.Helper()
 	for _, insert := range []struct {
@@ -119,18 +131,18 @@ func seedIdentifierPairs(ctx context.Context, t *testing.T, owner *pgx.Conn, per
 		{
 			`INSERT INTO person_email (person_id, email, source, captured_by, archived_at)
 		  VALUES ($1, $2, 'manual', 'user:test', NULL), ($1, $3, 'manual', 'user:test', $4)`,
-			liveEmail, retiredEmail,
+			ident(person, liveEmail), ident(person, retiredEmail),
 		},
 		{
 			`INSERT INTO person_phone (person_id, phone, source, captured_by, archived_at)
 		  VALUES ($1, $2, 'manual', 'user:test', NULL), ($1, $3, 'manual', 'user:test', $4)`,
-			livePhone, retiredPhone,
+			ident(person, livePhone), ident(person, retiredPhone),
 		},
 		{
 			`INSERT INTO person_channel_identity (person_id, provider, channel_user_id, username, source, captured_by, archived_at)
 		  VALUES ($1, 'telegram', $2, 'sara', 'connector:telegram', 'connector:telegram', NULL),
 		         ($1, 'telegram', $3, 'sara_old', 'connector:telegram', 'connector:telegram', $4)`,
-			liveAccount, retiredAccount,
+			ident(person, liveAccount), ident(person, retiredAccount),
 		},
 	} {
 		if _, err := owner.Exec(ctx, insert.statement, person, insert.live, insert.retired, retiredAt); err != nil {
@@ -157,7 +169,8 @@ func exportContext(ws, user ids.UUID) context.Context {
 	})
 }
 
-// The subject's identifiers, one live and one retired per kind.
+// The subject's identifiers, one live and one retired per kind. These are the
+// SHAPES; ident() below binds each to a particular subject.
 const (
 	liveEmail      = "sara.live@sar.test"
 	retiredEmail   = "sara.retired@sar.test"
@@ -166,6 +179,36 @@ const (
 	liveAccount    = "770000001"
 	retiredAccount = "770000002"
 )
+
+// ident scopes one identifier to one subject, keeping the shape each column
+// expects: an address stays an address and a number stays digits, because the
+// dedupe indexes and the column checks are real constraints on these tables.
+//
+// The discriminator is the subject's own id, so two fixtures in one database
+// can hold "the same" identifier without colliding on the workspace-wide
+// dedupe indexes. The shape's OWN trailing digits are kept and the
+// discriminator goes in the middle — dropping them would fold a fixture's live
+// and retired values onto one string, and the pair exists precisely to be
+// told apart.
+func ident(person ids.PersonID, shape string) string {
+	// The TAIL of the id, not its head. These are UUIDv7s, whose leading hex
+	// is a millisecond clock — two fixtures built in the same millisecond
+	// share that prefix and would collide on exactly the index this exists to
+	// avoid. The tail is the random half.
+	full := person.String()
+	tag := full[len(full)-8:]
+	if local, domain, ok := strings.Cut(shape, "@"); ok {
+		return local + "+" + tag + "@" + domain
+	}
+	var digits strings.Builder
+	for _, r := range tag {
+		digits.WriteString(strconv.Itoa(int(r) % 10))
+	}
+	// Keep the last four of the shape, which is where liveX and retiredX
+	// differ, and splice the subject's digits in front of them.
+	keep := len(shape) - 4
+	return shape[:keep] + digits.String() + shape[keep:]
+}
 
 // TestTheSARExportDistinguishesARetiredBindingFromALiveOne walks all three
 // identifier sections, because the obligation is the same in each: the section
@@ -185,9 +228,9 @@ func TestTheSARExportDistinguishesARetiredBindingFromALiveOne(t *testing.T) {
 		live    string
 		retired string
 	}{
-		{"emails", pkg.Emails, "email", liveEmail, retiredEmail},
-		{"phones", pkg.Phones, "phone", livePhone, retiredPhone},
-		{"channel identities", pkg.ChannelIdentities, "channel_user_id", liveAccount, retiredAccount},
+		{"emails", pkg.Emails, "email", ident(e.person, liveEmail), ident(e.person, retiredEmail)},
+		{"phones", pkg.Phones, "phone", ident(e.person, livePhone), ident(e.person, retiredPhone)},
+		{"channel identities", pkg.ChannelIdentities, "channel_user_id", ident(e.person, liveAccount), ident(e.person, retiredAccount)},
 	} {
 		t.Run(section.name, func(t *testing.T) {
 			byIdentifier := map[string]map[string]any{}

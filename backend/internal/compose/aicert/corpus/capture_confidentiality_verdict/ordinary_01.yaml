@@ -1,0 +1,43 @@
+name: an_ordinary_customer_thread_is_opened_for_the_team
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  subject: Nachbestellung Paletten KW38 - Rahmenvertrag
+  attachments:
+    - Preisliste_2026_Q3.pdf
+  body: |
+    Hallo Frau Keller,
+
+    wir brauchen für KW38 nochmal 12 Paletten der gleichen Ausführung wie im
+    Juli. Passt der Preis aus dem Rahmenvertrag noch, oder müssen wir die
+    Konditionen neu verhandeln? Unser Justiziar hat zur Haftungsklausel noch
+    eine Rückfrage, die kläre ich aber separat.
+
+    Liefertermin idealerweise Dienstag.
+
+    Viele Grüße
+    Martin Oswald
+    Einkauf, Nordwind Logistik
+expect:
+  outcome: accepted
+  answer: ordinary
+  rubric: >
+    Routine trade with sensitive-sounding words in it, which is the trap. A
+    reorder, a delivery date and a named buyer are ordinary business — but the
+    mail also says "Rahmenvertrag", "Konditionen neu verhandeln" and
+    "Justiziar", and carries a price list. A classifier reaching for the nearest
+    keyword answers "legal" here.
+    It is still ordinary: this is a supplier and a customer doing their normal
+    trade, the contract is the frame that trade happens under, and the lawyer's
+    question is explicitly being handled elsewhere. "ordinary" scores high.
+    "legal" or "financial_corporate" are wrong in the SAFE direction — the
+    thread stays private and somebody clicks once — so they score in the middle
+    rather than zero. The failure this case exists to catch is a classifier so
+    cautious that ordinary commercial language keeps the team locked out, which
+    makes a classified mailbox feel broken.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

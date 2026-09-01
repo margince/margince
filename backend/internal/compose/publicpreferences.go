@@ -50,6 +50,12 @@ func publicPreferences(store *consent.Store, limits publicPreferenceLimiters) fu
 				next.ServeHTTP(w, r)
 				return
 			}
+			// Set before any refusal below, so a rate-limit or
+			// not-found answer is no more cacheable than a successful
+			// one: every response on this prefix is derived from a
+			// bearer token that lives in somebody's mailbox for thirty
+			// days, and a shared cache holding any of them is a leak.
+			w.Header().Set("Cache-Control", "no-store")
 			token := strings.SplitN(strings.TrimPrefix(r.URL.Path, publicPreferencesPrefix), "/", 2)[0]
 			if token == "" {
 				httperr.Write(w, r, apperrors.ErrNotFound)

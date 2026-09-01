@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "b7f838c9a2c45adc1d1592e4fed24493cd81202fad971af93e20bd34dfd4b804"
+const JobContractHash = "b3ca6c28bcfe1f1769cbf17311159a17711b6899f40d4fb10e7a0ec4df9ea854"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -163,6 +163,27 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsFanOut,
 		Registration: Registration{When: []string{"ClassifyBrain"}},
 		Args:         []ArgField{{Name: "Workspace"}},
+	},
+	"capture_confidentiality_verdict": {
+		Kind:       "capture_confidentiality_verdict",
+		GoType:     "ConfidentialityVerdictArgs",
+		Role:       Dispatcher,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "capture_confidentiality_verdict_workspace",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 10 * time.Minute},
+	},
+	"capture_confidentiality_verdict_workspace": {
+		Kind:        "capture_confidentiality_verdict_workspace",
+		GoType:      "ConfidentialityVerdictWorkspaceArgs",
+		Role:        Worker,
+		Queue:       "ai_capture",
+		Timeout:     TimeoutPolicy{Fixed: 20 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "Workspace"}},
 	},
 	"capture_counterparty_verdict": {
 		Kind:       "capture_counterparty_verdict",
@@ -498,6 +519,29 @@ var specs = map[string]Spec{
 		OptsOwner:   OptsFanOut,
 		Args:        []ArgField{{Name: "Workspace"}},
 	},
+	"graph_watch_renew": {
+		Kind:         "graph_watch_renew",
+		GoType:       "GraphWatchArgs",
+		Role:         Dispatcher,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit:   FanOutConnection,
+		FanOutTo:     "graph_watch_renew_connection",
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{OperatorField: "GraphWatch.Interval", ScheduleWhenPositive: "GraphWatch.Interval"},
+		Registration: Registration{When: []string{"GmailRegistry", "GraphWatch.NotificationURL"}},
+	},
+	"graph_watch_renew_connection": {
+		Kind:         "graph_watch_renew_connection",
+		GoType:       "GraphWatchRenewArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts:  3,
+		OptsOwner:    OptsFanOut,
+		Registration: Registration{When: []string{"GmailRegistry", "GraphWatch.NotificationURL"}},
+		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Workspace"}},
+	},
 	"idempotency_retention": {
 		Kind:       "idempotency_retention",
 		GoType:     "IdempotencyRetentionArgs",
@@ -519,6 +563,16 @@ var specs = map[string]Spec{
 		OptsOwner:   OptsFanOut,
 		Args:        []ArgField{{Name: "Workspace"}},
 	},
+	"intro_expiry": {
+		Kind:        "intro_expiry",
+		GoType:      "IntroExpiryArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts: 1,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 1 * time.Hour},
+	},
 	"knowledge_ingest": {
 		Kind:      "knowledge_ingest",
 		GoType:    "KnowledgeIngestArgs",
@@ -528,6 +582,27 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{OnDemand: true},
 		Args:      []ArgField{{Name: "DocumentID"}, {Name: "Workspace"}},
+	},
+	"link_reconcile": {
+		Kind:       "link_reconcile",
+		GoType:     "LinkReconcileArgs",
+		Role:       Dispatcher,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "link_reconcile_workspace",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 24 * time.Hour},
+	},
+	"link_reconcile_workspace": {
+		Kind:        "link_reconcile_workspace",
+		GoType:      "LinkReconcileWorkspaceArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 10 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "Workspace"}},
 	},
 	"linkedin_rematch": {
 		Kind:       "linkedin_rematch",
@@ -805,6 +880,16 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"TranscriptProposeBrain"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "ActivityID"}, {Name: "RequestedBy"}, {Name: "TranscriptReadID"}, {Name: "Workspace"}},
+	},
+	"vcard_ingest": {
+		Kind:      "vcard_ingest",
+		GoType:    "VCardIngestArgs",
+		Role:      Worker,
+		Queue:     "ai_capture",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{OnDemand: true},
+		Args:      []ArgField{{Name: "Activity"}, {Name: "Workspace"}},
 	},
 	"voice_build": {
 		Kind:         "voice_build",

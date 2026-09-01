@@ -105,15 +105,13 @@ describe("the pipeline ladder", () => {
       rung({ stage: "internal_drop", order: 40, status: "done" }),
       rung({ stage: "tier_ladder", order: 60, status: "done" }),
     ]);
-    expect(
-      screen.getAllByText(/did not turn payload capture on/i),
-    ).toHaveLength(1);
+    expect(screen.getAllByText(/turned payload capture off/i)).toHaveLength(1);
   });
 
   it("says nothing about the posture when the operator turned it on", () => {
     show([rung({ stage: "tier_ladder", order: 60, status: "done" })], true);
     expect(
-      screen.queryByText(/did not turn payload capture on/i),
+      screen.queryByText(/turned payload capture off/i),
     ).not.toBeInTheDocument();
   });
 

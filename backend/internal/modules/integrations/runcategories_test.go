@@ -12,6 +12,7 @@ package integrations
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -157,5 +158,143 @@ func TestAFallbackCannotBeBoughtWithoutTheCategoryItFollows(t *testing.T) {
 	// the one outcome this must not allow.
 	if !errors.Is(err, ErrCategoryNotPermitted) {
 		t.Errorf("err = %v, want the fallback refused without its trigger", err)
+	}
+}
+
+// A category the provider only looks up when something else came back cannot
+// be bought on its own.
+//
+// The defect this pins is the one a customer actually hit. Surfe's adapter
+// always sends skipMobileEnrichmentIfNoEmailFound, so a request naming mobile
+// alone makes the vendor hunt for an email nobody bought, fail, and skip the
+// number. The run returns COMPLETED with no claims: no refusal, no error, a
+// successful run — and the page reports the contact as found while the mobile
+// field stays empty. Two of these were bought for one contact on consecutive
+// days and neither could ever have produced a number.
+func TestACategoryNeedingAnAnswerFirstCannotBeBoughtAlone(t *testing.T) {
+	desc := pricedDescriptor()
+	desc.RequiresAnswerTo = map[provider.Category]provider.Category{
+		"mobile": "professional_email",
+	}
+	conn := connectionBuying("professional_email", "mobile")
+
+	_, err := runCategories(desc, conn, provider.QueueInput{
+		Trigger:    provider.TriggerManual,
+		Categories: []provider.Category{"mobile"},
+	})
+
+	if !errors.Is(err, ErrCategoryNotPermitted) {
+		t.Fatalf("err = %v, want mobile refused without the email it depends on", err)
+	}
+	// The message has to name BOTH halves: a reader told only that mobile was
+	// refused cannot tell what to add.
+	if msg := err.Error(); !strings.Contains(msg, "mobile") || !strings.Contains(msg, "professional_email") {
+		t.Errorf("the refusal does not name both categories, so nobody can act on it: %v", err)
+	}
+}
+
+// The same pair bought TOGETHER goes through. Without this case the rule above
+// passes against a guard that refuses mobile outright, which would take the
+// working purchase away with the broken one.
+func TestTheDependentPairIsBoughtTogether(t *testing.T) {
+	desc := pricedDescriptor()
+	desc.RequiresAnswerTo = map[provider.Category]provider.Category{
+		"mobile": "professional_email",
+	}
+	conn := connectionBuying("professional_email", "mobile")
+
+	got, err := runCategories(desc, conn, provider.QueueInput{
+		Trigger:    provider.TriggerManual,
+		Categories: []provider.Category{"professional_email", "mobile"},
+	})
+	if err != nil {
+		t.Fatalf("naming both categories was refused: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("got %v, want both categories — the run must ask for the pair it priced", got)
+	}
+}
+
+// A provider declaring no prerequisite is unaffected. The rule reads the
+// descriptor, so an adapter that never fills the map keeps today's behaviour
+// rather than acquiring a constraint its vendor does not have.
+func TestAProviderWithoutPrerequisitesBuysWhatItLikes(t *testing.T) {
+	desc := pricedDescriptor()
+	conn := connectionBuying("mobile")
+
+	got, err := runCategories(desc, conn, provider.QueueInput{
+		Trigger:    provider.TriggerManual,
+		Categories: []provider.Category{"mobile"},
+	})
+	if err != nil {
+		t.Fatalf("a provider declaring no prerequisite refused a lone category: %v", err)
+	}
+	if len(got) != 1 {
+		t.Errorf("got %v, want just the one category asked for", got)
+	}
+}
+
+// A run naming NO categories takes the connection's selection — and that
+// selection has to survive the same rules, because an admin ticking boxes on a
+// settings card is not asked to know which the provider only issues alongside
+// another.
+//
+// The defect: the guard above sat behind an early return for the empty request,
+// so a connection selecting only the mobile queued exactly the broken
+// mobile-only run through the API's own documented default.
+func TestTheConnectionsOwnSelectionIsNarrowedToWhatCanBeAsked(t *testing.T) {
+	desc := pricedDescriptor()
+	desc.RequiresAnswerTo = map[provider.Category]provider.Category{
+		"mobile": "professional_email",
+	}
+	// The admin ticked the mobile and the free ones, and left the work email
+	// off — a configuration nothing forbids.
+	conn := connectionBuying("linkedin_profile", "mobile")
+
+	got, err := runCategories(desc, conn, provider.QueueInput{Trigger: provider.TriggerManual})
+	if err != nil {
+		t.Fatalf("a plain lookup was refused over a category nobody typed: %v", err)
+	}
+	for _, c := range got {
+		if c == "mobile" {
+			t.Errorf("got %v — the mobile is still asked for without the email it needs, which is the "+
+				"request that comes back completed and empty", got)
+		}
+	}
+	if len(got) != 1 || got[0] != "linkedin_profile" {
+		t.Errorf("got %v, want just linkedin_profile: what the provider CAN answer must survive", got)
+	}
+}
+
+// Dropping must not empty the request. A connection whose every selection
+// depends on something it does not select is refused, because a request naming
+// no categories is one the provider answers with a refusal — and that flips the
+// connection's status, breaking every later lookup over one configuration.
+func TestAConnectionWhoseWholeSelectionIsUnaskableIsRefused(t *testing.T) {
+	desc := pricedDescriptor()
+	desc.RequiresAnswerTo = map[provider.Category]provider.Category{
+		"mobile": "professional_email",
+	}
+	conn := connectionBuying("mobile")
+
+	_, err := runCategories(desc, conn, provider.QueueInput{Trigger: provider.TriggerManual})
+	if !errors.Is(err, ErrCategoryNotPermitted) {
+		t.Fatalf("err = %v, want a refusal: dispatching the empty remainder sends a request naming no "+
+			"categories, and the refusal that comes back marks the connection broken", err)
+	}
+}
+
+// A selection with no dependencies at all is returned untouched, so the
+// narrowing above cannot quietly shrink an ordinary connection.
+func TestAnUnencumberedSelectionIsReturnedWhole(t *testing.T) {
+	desc := pricedDescriptor()
+	conn := connectionBuying("linkedin_profile", "professional_email", "mobile")
+
+	got, err := runCategories(desc, conn, provider.QueueInput{Trigger: provider.TriggerManual})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Errorf("got %v, want all three — a provider declaring no prerequisites loses nothing", got)
 	}
 }

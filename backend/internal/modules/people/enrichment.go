@@ -201,11 +201,16 @@ func DuplicateCluster(ctx context.Context, tx pgx.Tx, personID string) ([]string
 	return out, nil
 }
 
-// SubjectIdentifiers resolves the closed set of facts that may leave the
-// installation for one subject (PI-PARAM-11). Nothing else about them can:
-// the provider port names these five fields and the adapter sends what it is
-// given.
-func SubjectIdentifiers(ctx context.Context, tx pgx.Tx, personID string) (provider.PersonIdentifiers, error) {
+// SubjectNameOnly resolves the name half of the same answer, for a caller that
+// may read a person but not their employment edge. The employer is a
+// relationship read and carries its own grant; a caller without it gets what
+// it may see rather than a refusal, because the name alone is still a partial
+// answer to "could a provider match this contact".
+//
+// Split out rather than copied so the full_name fallback below has one
+// spelling: two would drift, and the drift a reader would see is one surface
+// finding a contact by name and another not.
+func SubjectNameOnly(ctx context.Context, tx pgx.Tx, personID string) (provider.PersonIdentifiers, error) {
 	var id provider.PersonIdentifiers
 	var first, last *string
 	var full string
@@ -220,6 +225,18 @@ func SubjectIdentifiers(ctx context.Context, tx pgx.Tx, personID string) (provid
 	id.FirstName, id.LastName = derefOr(first), derefOr(last)
 	if id.FirstName == "" && id.LastName == "" {
 		id.FirstName, id.LastName = splitFullName(full)
+	}
+	return id, nil
+}
+
+// SubjectIdentifiers resolves the closed set of facts that may leave the
+// installation for one subject (PI-PARAM-11). Nothing else about them can:
+// the provider port names these five fields and the adapter sends what it is
+// given.
+func SubjectIdentifiers(ctx context.Context, tx pgx.Tx, personID string) (provider.PersonIdentifiers, error) {
+	id, err := SubjectNameOnly(ctx, tx, personID)
+	if err != nil {
+		return provider.PersonIdentifiers{}, err
 	}
 
 	// The employer, and its primary domain if one is on file. A domain

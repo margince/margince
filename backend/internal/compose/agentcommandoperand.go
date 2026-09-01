@@ -77,6 +77,28 @@ func updateFactCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ [
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func createFactCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewCreateFactCall(deps.records, agents.CreateFactCommand{ID: id}), nil
+}
+
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func deleteFactCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	factKey, err := pathOperand(r, "factKey")
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewDeleteFactCall(deps.records, agents.DeleteFactCommand{ID: id, FactKey: factKey}), nil
+}
+
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
 func confirmProfileFieldCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
 	id, err := routedID(r)
 	if err != nil {

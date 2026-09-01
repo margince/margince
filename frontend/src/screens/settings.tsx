@@ -45,7 +45,6 @@ import { isEntityKind } from "../app/entity";
 import { unitsForSecretScope } from "../app/extensions";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
 import { useRecordZone } from "../app/recordzone";
-import { ResumeConnectBanner } from "../app/resumeconnectbanner";
 import { navigateReplacing, type Route } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
@@ -64,7 +63,11 @@ import {
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelPlate } from "../design-system/panel";
-import { PassportSelect, ScopeChips } from "../design-system/passportselect";
+import {
+  PassportSelect,
+  ScopeChips,
+  scopeChipLabel,
+} from "../design-system/passportselect";
 import { FieldGuard, RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -81,6 +84,7 @@ import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
 import { AiCallsCard } from "./aicalls";
@@ -90,7 +94,7 @@ import { AutomationsAdmin } from "./automations";
 import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
 import { CaptureActivityTab } from "./capture-activity";
-import { CaptureExclusionsCard } from "./capture-exclusions";
+import { CaptureSendersCard } from "./capture-senders";
 import { CaptureSettingsCard } from "./capture-settings";
 import {
   LoadMoreButton,
@@ -116,6 +120,7 @@ import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
 import { GoogleAppCard } from "./google-app";
+import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
@@ -142,6 +147,7 @@ import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
+import { SignInMethodsCard } from "./sign-in-methods";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
@@ -280,7 +286,26 @@ export function tabContent(id: SettingsTabId): ReactNode {
     case "agents":
       return <AgentsTab />;
     case "general":
-      return <GeneralTab />;
+      // The installation's own facts, then the money, then the company profile
+      // the AI reads. The currency pair stays ADJACENT and nothing is allowed
+      // between them: the base currency is declared in the second card of
+      // InstallationSettingsCard and every rate below converts to it, and
+      // before they were merged the lock reason was explained on one tab while
+      // the consequence landed on another.
+      //
+      // The Google app goes LAST for that reason, not because it matters least.
+      // It is here at all because the same OAuth client now serves sign-in as
+      // well as mailbox connection, so filing it under Capture said it belonged
+      // to one of the two.
+      return (
+        <>
+          <InstallationSettingsCard />
+          <FxRatesCard />
+          <CompanyContextCard />
+          <SignInMethodsCard />
+          <GoogleAppCard />
+        </>
+      );
     case "extensions":
       // Its own entry rather than a third card under Users & teams: that page
       // answers who holds which role, and this one answers what an installed
@@ -310,13 +335,6 @@ export function tabContent(id: SettingsTabId): ReactNode {
     case "capture":
       return (
         <>
-          {/* First, because everything below presupposes it: the Google app
-              every mailbox on this installation is connected THROUGH. One app
-              per installation, supplied by whoever operates it, so it belongs
-              to the operator rather than to the rep whose mailbox rides it —
-              which is why it is here and not beside a person's own
-              connections. */}
-          <GoogleAppCard />
           {/* Which domains are OURS, then what to do with mail from the rest,
               then which of the rest are consumer mailboxes — the posture, then
               the two judgements that read it. Before this they sat on two
@@ -325,9 +343,6 @@ export function tabContent(id: SettingsTabId): ReactNode {
           <OwnDomainsCard />
           <CaptureSettingsCard />
           <ConsumerMailDomainsCard />
-          {/* What the reader themselves, and the workspace, keep out entirely:
-              addresses and domains the sink drops before storing anything. */}
-          <CaptureExclusionsCard />
           {/* Last, because it is the OUTCOME of the three above rather than a
               fourth rule: which domains ended up refused a company, and whether
               a machine or a person decided it. An operator hunting a company
@@ -398,6 +413,17 @@ function ConnectionsTab() {
           connection below. */}
       <MailSharingCard />
       <ConnectorsCard />
+      {/* Under the mailboxes, because it is what those mailboxes DID: every
+          address they brought in, and what the classifier concluded about each.
+          The posture rows above say what may be read; this says what was
+          decided, which is the half a reader audits. */}
+      <CaptureSendersCard />
+      {/* And what those decisions are currently WITHHOLDING. The senders card
+          above says what was decided about each correspondent; this says which
+          threads are held back from the team right now, which is the question
+          an outage makes urgent — every new thread lands pending and stays
+          there until the classifier answers again. */}
+      <HeldThreadsCard />
       {/* Directly under the mailboxes, because it is the same decision seen
           from the other side: those cards say what Margince may READ, this one
           says whether it may act on it overnight while nobody is watching. The
@@ -444,25 +470,6 @@ function IntegrationsTab() {
           Connections page. Which page a unit lands on is its manifest's
           decision, never this file's. */}
       <ExtensionUnitsCard scope="workspace" />
-    </>
-  );
-}
-
-// The organization, once: the installation's own settings, the currency table,
-// and the company profile the AI reads.
-//
-// The currency pair is ADJACENT, which is the whole reason these were merged: the
-// base currency is declared in the second card of InstallationSettingsCard and
-// every rate below converts to it, and before the merge the lock reason was
-// explained on one tab while the consequence landed on another. The company
-// profile stood between them until now, so the claim of adjacency was made by a
-// comment and not by the page.
-function GeneralTab() {
-  return (
-    <>
-      <InstallationSettingsCard />
-      <FxRatesCard />
-      <CompanyContextCard />
     </>
   );
 }
@@ -916,7 +923,6 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // all of them, so there is nothing here to branch on.
   return (
     <div className="wrap">
-      <ResumeConnectBanner />
       {/* Unsaved drafts in here are held by the guard above the routed screen
           (App.tsx), not by this screen. A guard installed HERE could only see
           moves between settings entries: it unmounts with the screen, so a draft
@@ -962,6 +968,13 @@ function AiSettingsTab() {
           can call it at all. A binding whose vendor holds no key fails closed,
           and this is where a reader finds out why. */}
       <AiProviderKeysCard />
+      {/* And whether the lanes those two cards configure are actually
+          ANSWERING. It sits here rather than under the spend cards because it
+          completes the binding's own story: which vendor serves a tier, whether
+          we hold a key for it, whether it replied. Under the capture posture
+          the last one is the expensive gap — mail stays held whether the
+          classifier judged it or never ran. */}
+      <AiHealthCard />
       <AutomationsAdmin />
       <AiUsageCard />
       <ModelCostsCard />
@@ -972,8 +985,9 @@ function AiSettingsTab() {
 
 // This person's own agent authority: what an agent may do unattended, the
 // credentials they have minted, the clients holding one, and the governed tools
-// those credentials reach. Every seat gets it, ungated — a passport is lent by
-// the human, so an admin-only surface here would mean only admins could lend.
+// those credentials reach. Every seat gets it, ungated — a connection's
+// authority comes from the human's own consent, so an admin-only surface here
+// would mean only admins could connect a client.
 function AgentsTab() {
   return (
     <>
@@ -984,7 +998,8 @@ function AgentsTab() {
           tiers the tools below are governed by, so it now reads after them. */}
       <PassportCard />
       {/* Directly after the passports, because it is the second half of one
-          story: mint a passport, then lend it to a client that connects. */}
+          story: mint a passport for unattended use, or consent to a client
+          that connects with its own fresh credential instead. */}
       <ConnectedAgentsCard />
       <AgentToolsCard />
       <AutonomyCard />
@@ -1292,10 +1307,11 @@ function LanguageSettingRow() {
 
 const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
 
-// The scope's wire token is what the server reads; a person choosing what to lend
-// an agent needs the sentence. Composed rather than switched, and annotated so an
-// added scope is a missing-key compile error rather than a checkbox that quietly
-// labels itself `enrich` in every language.
+// The scope's wire token is what the server reads; a person choosing what
+// authority to hand their agent needs the sentence. Composed rather than
+// switched, and annotated so an added scope is a missing-key compile error
+// rather than a checkbox that quietly labels itself `enrich` in every
+// language.
 function scopeLabelKey(scope: (typeof PASSPORT_SCOPES)[number]): MessageKey {
   return `passport.scope.${scope}`;
 }
@@ -1460,8 +1476,9 @@ function PassportCard() {
     >
       <PanelBody>
         {/* The card's prose, and BOTH sentences of it, above the rows: what a
-            passport is, and what lending one does. The lending line used to be
-            a `panel-foot` band under the list, which gave one card three
+            passport is, and how it differs from a connection's own credential.
+            The second sentence used to be a `panel-foot` band under the list,
+            which gave one card three
             different intervals — a body, a row list, and a ruled band — where
             its neighbours have two. Every card on this page now reads the same
             way: title, prose, rows. No `form-stack` either: the paragraph's own
@@ -1719,7 +1736,9 @@ function PassportRow({
                 mint) — masked reads as "withheld", not absent. */}
             <span className="t-label">{t("settings.token")}</span>
             <FieldGuard mode="masked" />
-            <ScopeChips scopes={passport.scopes} />
+            <ScopeChips
+              labels={passport.scopes.map((scope) => scopeChipLabel(t, scope))}
+            />
           </span>
         }
         control={
@@ -1776,21 +1795,32 @@ function AgentToolsCard() {
       return data;
     },
   });
-  // Live, and the human's OWN to lend. A connection's credential is neither:
-  // the server refuses to lend a grant-bound passport (identity's
-  // lendablePassportPredicate), so offering one here would name a choice the
-  // consent screen cannot honour — and would put a raw DCR client id back in
-  // front of a reader the rest of this change just took it away from.
-  const lendable = (passports.data?.data ?? []).filter(
+  // Live, and minted by the human themselves. A connection's credential is
+  // neither: it is minted fresh by the token exchange from whatever the human
+  // ticked on the consent screen, so it was never a standalone passport a
+  // human picked from a list — offering one here would offer a choice that
+  // doesn't exist, and would put a raw DCR client id back in front of a reader
+  // the rest of this change just took it away from.
+  const mintedPassports = (passports.data?.data ?? []).filter(
     (p) => p.revoked_at == null && p.connection == null,
+  );
+  // Whether this human has ever minted one — a REVOKED one still counts, so
+  // the row a human just revoked does not yank the selector out from under
+  // them (the test below pins that transition). A connection's credential
+  // never counts, revoked or not: a human who only ever connected agents,
+  // never minted, has no selector to show.
+  const everMintedAPassport = (passports.data?.data ?? []).some(
+    (p) => p.connection == null,
   );
   // The filter follows the selector: a passport revoked while it was the
   // chosen scope drops out of the options, and the <select> then shows "all
   // passports" — so the inventory must read as unfiltered too, rather than
   // stay quietly scoped to a credential no longer on offer.
-  const scopeId = lendable.some((p) => p.id === passportId) ? passportId : "";
+  const scopeId = mintedPassports.some((p) => p.id === passportId)
+    ? passportId
+    : "";
   const grantedScopes = new Set(
-    lendable.find((p) => p.id === scopeId)?.scopes ?? [],
+    mintedPassports.find((p) => p.id === scopeId)?.scopes ?? [],
   );
 
   return (
@@ -1807,12 +1837,12 @@ function AgentToolsCard() {
               with nothing behind it. `PassportSelect` carries its own accessible
               name ("All passports"), the way `Switch` does, so the row hands it
               no ARIA of its own. */}
-          {passports.data && passports.data.data.length > 0 && (
+          {everMintedAPassport && (
             <SettingRow
               label={t("tools.scopeLabel")}
               control={
                 <PassportSelect
-                  options={lendable.map((p) => ({
+                  options={mintedPassports.map((p) => ({
                     id: p.id,
                     label: t("tools.scopedTo", { label: p.label }),
                     scopes: p.scopes,

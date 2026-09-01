@@ -291,6 +291,167 @@ func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
 	}
 }
 
+// THE WINDOW ONE PAGE VIEW LONG. The case above is the one that survives
+// forever — a verdict demonstrably older than the value. This is the one that
+// lasts as long as somebody has a page open, and the ordering gets it exactly
+// backwards: the page renders the value written at T1, something writes T2
+// while it is open, the correction is submitted at T3, and T3 > T2 says the
+// verdict is current. It is current about a sentence nobody is holding.
+//
+// The verdict names what the client RENDERED, so the comparison is an equality
+// and the clocks stop mattering.
+func TestACorrectionIsAboutTheValueTheReaderHadInFrontOfThem(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO person_profile_field (id, person_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	svc := personRoomService(e)
+	personID := ids.From[ids.PersonKind](mine)
+
+	rendered, err := svc.ProfileFields(rep, personID)
+	if err != nil {
+		t.Fatalf("ProfileFields: %v", err)
+	}
+	if len(rendered) != 1 || rendered[0].ClaimKey == nil {
+		t.Fatalf("the seeded field did not read back with a claim key: %+v", rendered)
+	}
+
+	// The page is open on that value. Something replaces it — and the reader,
+	// still looking at the old one, corrects it AFTERWARDS.
+	if _, err := owner.Exec(context.Background(), `UPDATE person_profile_field
+		   SET value = 'Geschaeftsfuehrerin', source = 'research_accept', captured_by = 'user:rep1'
+		 WHERE person_id = $1 AND field = 'title'`, mine); err != nil {
+		t.Fatalf("writing the newer value: %v", err)
+	}
+
+	corrected := "Head of Business Development"
+	openedOn := rendered[0].CapturedAt
+	if err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "person", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *rendered[0].ClaimKey, Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+		ValueShown: &rendered[0].Value, ValueCapturedAt: &openedOn,
+	}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+
+	after, err := svc.ProfileFields(rep, personID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the correction: %v", err)
+	}
+	// The verdict is NEWER than the value it is read against, so the ordering
+	// would serve it. It names an older one.
+	if after[0].Value != "Geschaeftsfuehrerin" {
+		t.Errorf("value = %q, want the stored answer — a correction of the sentence the reader was looking at "+
+			"was applied to the one that replaced it while their page was open", after[0].Value)
+	}
+	if after[0].Verdict != nil {
+		t.Errorf("verdict marker = %q on a value the human never saw — the page says they decided about an answer "+
+			"that arrived after their page rendered", *after[0].Verdict)
+	}
+
+	// And a verdict that names the value ON SCREEN NOW does apply, or the case
+	// above passes just as happily against a comparison that refuses
+	// everything — which is the failure this whole ruling would become.
+	//
+	// Recorded against the stamp the read just handed back, which is what the
+	// client does: the reader reloaded, saw the newer answer, and corrected
+	// THAT one.
+	onScreen := after[0].CapturedAt
+	if err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "person", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *rendered[0].ClaimKey, Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+		ValueShown: &after[0].Value, ValueCapturedAt: &onScreen,
+	}); err != nil {
+		t.Fatalf("Record against the value now on screen: %v", err)
+	}
+	current, err := svc.ProfileFields(rep, personID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the second correction: %v", err)
+	}
+	if current[0].Value != corrected {
+		t.Errorf("value = %q, want the human's correction — a verdict was dropped from the very value it names",
+			current[0].Value)
+	}
+}
+
+// A CORRECTION TYPED AGAINST A VALUE THAT HAS MOVED ON DOES NOT DESTROY THE
+// VERDICT ABOUT THE ONE THAT STANDS.
+//
+// Two readers, one claim. The first sees the new value and records a verdict
+// about it. The second still has the old page open and submits afterwards —
+// later in wall-clock time, about an older sentence. One row per claim means
+// the second write would replace the first, and the first reader's decision
+// would be gone: not merely unapplied, but overwritten by a verdict about a
+// value nobody is looking at.
+//
+// Both stamps are the server's own, so they rank. The stale one is refused.
+func TestAStaleCorrectionDoesNotOverwriteTheVerdictAboutTheValueThatStands(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO person_profile_field (id, person_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	svc := personRoomService(e)
+	personID := ids.From[ids.PersonKind](mine)
+	store := ai.NewFeedbackStore(e.DB())
+
+	stale, err := svc.ProfileFields(rep, personID)
+	if err != nil {
+		t.Fatalf("ProfileFields: %v", err)
+	}
+
+	// The value moves while that page is open.
+	if _, err := owner.Exec(context.Background(), `UPDATE person_profile_field
+		   SET value = 'Geschaeftsfuehrerin', source = 'research_accept', captured_by = 'user:rep1'
+		 WHERE person_id = $1 AND field = 'title'`, mine); err != nil {
+		t.Fatalf("writing the newer value: %v", err)
+	}
+	current, err := svc.ProfileFields(rep, personID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the write: %v", err)
+	}
+
+	// A colleague reads the NEW value and confirms it.
+	if err := store.Record(rep, ai.RecordInput{
+		SubjectType: "person", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *current[0].ClaimKey, Verdict: ai.VerdictConfirmed,
+		ValueShown: &current[0].Value, ValueCapturedAt: &current[0].CapturedAt,
+	}); err != nil {
+		t.Fatalf("recording the verdict about the value that stands: %v", err)
+	}
+
+	// The first reader submits from their stale page, afterwards.
+	corrected := "Head of Business Development"
+	err = store.Record(rep, ai.RecordInput{
+		SubjectType: "person", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *stale[0].ClaimKey, Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+		ValueShown: &stale[0].Value, ValueCapturedAt: &stale[0].CapturedAt,
+	})
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("the stale correction was accepted (%v) — it replaces the row, and the verdict a "+
+			"colleague recorded about the value on screen is gone", err)
+	}
+
+	after, err := svc.ProfileFields(rep, personID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the stale submission: %v", err)
+	}
+	if after[0].Verdict == nil || *after[0].Verdict != crmcontracts.PersonProfileFieldVerdict(ai.VerdictConfirmed) {
+		t.Errorf("verdict = %v, want the confirmation of the value that stands — a submission about a "+
+			"sentence nobody is looking at took it with it", after[0].Verdict)
+	}
+	if after[0].Value != "Geschaeftsfuehrerin" {
+		t.Errorf("value = %q, want the stored answer — the stale correction was applied", after[0].Value)
+	}
+}
+
 // The write is gated on the SUBJECT's own grant. A caller who may read a
 // contact but not edit them cannot overrule what the system says about them.
 func TestCorrectionLedgerRefusesAWriteWithoutTheSubjectsUpdateGrant(t *testing.T) {

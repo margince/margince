@@ -1,0 +1,86 @@
+/* The VAT mark: one glyph beside the stated number, opening to the receipt.
+
+   It sits INSIDE a field value rather than in a row of its own, which is the
+   whole point — the check belongs where the number is. So the trigger takes the
+   line's own type size and no control chrome: a bordered button here would read
+   as a second field. */
+
+.vatmark {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: var(--space-1);
+}
+
+.vatmark-glyph {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* The glyph is sized against the text it sits beside, not against lucide's own
+   24px default — a mark inside a value that out-measures the value reads as a
+   control the row has grown rather than a note on what it says. */
+.vatmark-glyph svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* One meaning per colour, and the tones are the status family's own: a verdict
+   ABOUT the number. `none` is the register having answered nothing yet, which
+   is a fact about the lookup and not about the company — so it takes the
+   secondary ink every other unset value in this panel takes. */
+.vatmark-glyph[data-tone="success"] {
+  color: var(--success);
+}
+
+.vatmark-glyph[data-tone="danger"] {
+  color: var(--danger);
+}
+
+.vatmark-glyph[data-tone="none"] {
+  color: var(--textSecondary);
+}
+
+.vatmark-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 15rem;
+}
+
+.vatmark-receipt > div {
+  margin-bottom: var(--space-2);
+}
+
+.vatmark-receipt dt {
+  color: var(--textSecondary);
+  margin-bottom: var(--space-1);
+}
+
+/* The receipt is a reference somebody copies into a tax filing, so it breaks
+   rather than overflowing the panel. */
+.vatmark-receipt dd code {
+  overflow-wrap: anywhere;
+}
+
+.vatmark-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The number moved after the check. Not a warning tone: nothing is wrong, the
+   receipt simply answers for a number the record no longer states. */
+.vatmark-stale {
+  color: var(--textSecondary);
+}
+
+/* The read failed. A button rather than the popover's trigger, because there is
+   no receipt to open — the only thing offered is asking again — and it carries
+   no chrome for the same reason the trigger does not: it sits inside a value. */
+.vatmark-retry {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}

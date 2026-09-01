@@ -1,0 +1,567 @@
+/** @vitest-environment jsdom */
+import "@testing-library/jest-dom/vitest";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { act } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
+import { LocaleProvider } from "../i18n";
+import { VatMark } from "./companyvatmark";
+
+// What this mark must get right is not the layout but the DISTINCTIONS: a
+// verdict is readable without opening anything, a receipt is what proves the
+// check to a tax authority, and a register that did not answer says nothing
+// about the company. Collapsing any of those is what would mislead somebody
+// filing a return.
+//
+// It replaced a card two tabs away behind a collapsed section, so the case that
+// matters most is the one the old surface could not serve: the verdict beside
+// the number, with no click.
+
+const ORG_ID = "00000000-0000-7000-8000-0000000000a1";
+const NUMBER = "DE811907980";
+
+const CHECKED = {
+  organization_id: ORG_ID,
+  vat_number: NUMBER,
+  status: "valid",
+  consultation_number: "WAPIAAAAXk3rN2p9",
+  registered_name: "Muster Handels GmbH",
+  checked_at: "2026-08-14T09:12:00Z",
+  recorded_at: "2026-08-14T09:12:31Z",
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// Every call the mark made, so a test can assert the METHOD and the PATH rather
+// than that something happened.
+function stubFetch(answer: (request: Request) => Promise<Response>) {
+  const calls: { method: string; pathname: string }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      calls.push({
+        method: request.method,
+        pathname: new URL(request.url).pathname,
+      });
+      return answer(request);
+    }),
+  );
+  return calls;
+}
+
+// The card's own read, plus the grant read the ask button gates on. Without a
+// /me answer every viewer reads as unable to write, and the button would be
+// absent for the correct reason — which is how a test passes proving nothing.
+function answerWith(body: unknown, status = 200) {
+  return stubFetch(async (request) =>
+    new URL(request.url).pathname.endsWith("/me")
+      ? jsonResponse(meFixture({ allow: { organization: ["read", "update"] } }))
+      : jsonResponse(body, status),
+  );
+}
+
+function render(ui: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+function mark(stated = NUMBER) {
+  return <VatMark orgId={ORG_ID} stated={stated} />;
+}
+
+describe("the VAT mark beside the number", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    // One test drives the poll on a fake clock. Restored here rather than at
+    // the end of that test, so a failure inside it cannot leave every later
+    // test running against a clock nobody advances.
+    vi.useRealTimers();
+  });
+
+  it("says the verdict without anything being opened", async () => {
+    answerWith(CHECKED);
+
+    render(mark());
+
+    // The reason this replaced a card on another tab: a rep looking at the
+    // number sees whether it holds up, in the same glance.
+    expect(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    ).toBeInTheDocument();
+  });
+
+  it("names an invalid number as the finding it is", async () => {
+    // A copied imprint states somebody else's VAT ID. That is what this exists
+    // to surface, and it must not need a click.
+    answerWith({ ...CHECKED, status: "invalid", consultation_number: null });
+
+    render(mark());
+
+    expect(
+      await screen.findByRole("button", { name: "VAT ID: Not valid" }),
+    ).toBeInTheDocument();
+  });
+
+  it("reads a legacy unavailable row as not valid", async () => {
+    // Nothing writes that status now, but a row an older build left behind
+    // still says it. Three states is what a reader can act on — the number
+    // holds up, it does not, or nobody asked — and a fourth word would only
+    // ask them to work out which of the three it meant.
+    answerWith({ ...CHECKED, status: "unavailable" });
+
+    render(mark());
+
+    expect(
+      await screen.findByRole("button", { name: "VAT ID: Not valid" }),
+    ).toBeInTheDocument();
+  });
+
+  it("says a company nobody has consulted is unchecked", async () => {
+    answerWith({}, 404);
+
+    render(mark());
+
+    // Not a verdict. "We have not asked" and "we asked and were told no" are
+    // different facts, and the mark must not spend the second on the first.
+    expect(
+      await screen.findByRole("button", {
+        name: "VAT ID: not checked with the register yet",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens to the receipt that proves the check", async () => {
+    const user = userEvent.setup();
+    answerWith(CHECKED);
+    render(mark());
+
+    await user.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+
+    // The consultation number is the half a tax authority accepts; the
+    // registered name is what exposes a number belonging to another company.
+    expect(await screen.findByText("WAPIAAAAXk3rN2p9")).toBeVisible();
+    expect(screen.getByText("Muster Handels GmbH")).toBeVisible();
+  });
+
+  it("asks the register when a person presses the button", async () => {
+    const user = userEvent.setup();
+    const calls = answerWith(CHECKED);
+    render(mark());
+
+    await user.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Check again" }),
+    );
+
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (one) =>
+            one.method === "POST" &&
+            one.pathname === `/v1/organizations/${ORG_ID}/vat-check`,
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("does not report a refused request as asked", async () => {
+    const user = userEvent.setup();
+    // 403 with NO BODY, the shape that matters: openapi-fetch has nothing to
+    // parse, so `error` comes back falsy and a handler checking it alone
+    // reports a refusal as success.
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        return new Response(null, { status: 403 });
+      }
+      return jsonResponse(CHECKED);
+    });
+    render(mark());
+
+    await user.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Check again" }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/the answer appears here once it replies/),
+      ).toBeNull();
+    });
+  });
+
+  it("says so when the number moved after the check", async () => {
+    const user = userEvent.setup();
+    answerWith(CHECKED);
+
+    // The row above this mark is editable, so a receipt can end up beside a
+    // number nobody ever consulted. A verdict alone would then be a lie about
+    // the number the reader is looking at.
+    render(mark("DE999999999"));
+
+    await user.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+
+    expect(
+      await screen.findByText(/number on this record has changed/),
+    ).toBeVisible();
+  });
+
+  it("offers no ask to a reader who cannot change the company", async () => {
+    const user = userEvent.setup();
+    stubFetch(async (request) =>
+      new URL(request.url).pathname.endsWith("/me")
+        ? jsonResponse(meFixture({ allow: { organization: ["read"] } }))
+        : jsonResponse(CHECKED),
+    );
+    render(mark());
+
+    await user.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+
+    // The verdict is theirs to read — withholding the ask is not withholding
+    // the record.
+    expect(await screen.findByText("WAPIAAAAXk3rN2p9")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Check/ })).toBeNull();
+  });
+
+  it("says the register's own word for a verdict this build cannot name", async () => {
+    // A server newer than this tab, which is the ordinary state during a
+    // deploy. A consultation HAPPENED, so announcing it as "not checked yet"
+    // would tell the reader the opposite of the truth at the only moment they
+    // are looking.
+    answerWith({ ...CHECKED, status: "pending_review" });
+
+    render(mark());
+
+    expect(
+      await screen.findByRole("button", { name: "VAT ID: pending_review" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "VAT ID: not checked with the register yet",
+      }),
+    ).toBeNull();
+  });
+
+  it("offers a retry when the check cannot be read", async () => {
+    // Silence would hide a stored verdict behind nothing. "We could not ask"
+    // and "nobody has asked" are different facts, and only one of them is the
+    // reader's to fix.
+    answerWith({ title: "boom" }, 500);
+
+    render(mark());
+
+    expect(
+      await screen.findByRole("button", {
+        name: /the check could not be read just now/,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not cry moved over a number typed with spaces", async () => {
+    const user = userEvent.setup();
+    answerWith(CHECKED);
+
+    // The server normalises case and separators before it consults, so this is
+    // the same VAT ID. Reported as moved, it would send a reader to spend a
+    // consultation re-asking about a number that did not change.
+    render(mark("de 811 907 980"));
+
+    await user.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+
+    expect(screen.queryByText(/number on this record has changed/)).toBeNull();
+  });
+
+  it("shows the answer once the register replies, without a reload", async () => {
+    // The whole reason the invalidate does not fire on the 202: the worker has
+    // not asked the register yet, so re-reading then caches the OLD verdict as
+    // though it were the answer to this request.
+    // Fake from the start: the poll schedules its setTimeout during the click,
+    // so timers installed afterwards would be advancing a clock the poll never
+    // registered with. `shouldAdvanceTime` keeps the promises React Query
+    // settles between ticks resolving.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let verdict = "invalid";
+    const gets: string[] = [];
+    stubFetch(async (request) => {
+      if (request.method === "GET" && request.url.includes("vat-check")) {
+        gets.push(verdict);
+      }
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        // The register answers out of band, between the 202 and the next look.
+        verdict = "valid";
+        return new Response(null, { status: 202 });
+      }
+      return jsonResponse({ ...CHECKED, status: verdict });
+    });
+    render(mark());
+
+    // fireEvent rather than userEvent, and fake timers installed only AFTER
+    // the interactions: userEvent drives its own waits on timers, so the two
+    // together deadlock — it waits for a clock the test is holding still.
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Not valid" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
+    await screen.findByText(/the answer appears here once it replies/);
+
+    // The timers have to be fake BEFORE the poll schedules itself, or the
+    // setTimeout it registers belongs to the real clock and advancing a fake
+    // one moves nothing. Installed with `shouldAdvanceTime` so the promises
+    // React Query settles between ticks still resolve.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    ).toBeInTheDocument();
+    // Two reads: the one that drew the first verdict, and the one the poll made
+    // after the register replied. A single read would mean the answer only
+    // arrived because something else remounted the mark.
+    expect(gets).toEqual(["invalid", "valid"]);
+  });
+
+  it("refuses a second press while the register is still being asked", async () => {
+    // The window the reader actually meets: the POST answers 202 in
+    // milliseconds and the register replies seconds later, so a button that
+    // cleared on the 202 was live again for the whole wait. A second press
+    // queues a second consultation, or meets the five-minute floor and shows a
+    // rate-limit refusal for a check that is already running.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        return new Response(null, { status: 202 });
+      }
+      // The register never replies, which is what holds the wait open.
+      return jsonResponse(CHECKED);
+    });
+    render(mark());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    fireEvent.click(ask);
+    await screen.findByText(/the answer appears here once it replies/);
+
+    // Pressed four more times while the answer is outstanding.
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(posts).toHaveLength(1);
+    // Refused by being BUSY, not by being disabled: focus stays where the
+    // reader put it, which is what aria-disabled is for.
+    expect(ask).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("takes a press again once the register has answered", async () => {
+    // The other half, and the one that stops the fix being a control nobody can
+    // use twice: the wait ends when the answer lands, not when the poll runs
+    // out of attempts.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // The verdict does not change; `answered` is what the register replying
+    // moves, and it is the only thing this test varies.
+    let answered = false;
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        answered = true;
+        return new Response(null, { status: 202 });
+      }
+      return jsonResponse({
+        ...CHECKED,
+        // The VERDICT is held constant on purpose: an implementation that
+        // cleared the wait on any change to the answer would pass while reading
+        // the wrong field. Only recorded_at moves — which is also the honest
+        // case, since re-checking usually confirms what the register said last
+        // time.
+        status: "invalid",
+        // The date MOVES with the answer, which is the signal the wait reads.
+        // checked_at deliberately does NOT move: VIES answers with a date and
+        // no time, so a same-day re-check carries the one it already had. Only
+        // recorded_at moves, and a wait reading the wrong field would hang here
+        // exactly as it would in front of a reader.
+        checked_at: CHECKED.checked_at,
+        recorded_at: answered ? "2026-08-14T09:20:00Z" : CHECKED.recorded_at,
+      });
+    });
+    render(mark());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Not valid" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    // The answer landed, so the button is pressable again — well before the
+    // poll's own last attempt fifteen seconds out.
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    expect(ask).not.toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(ask);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(posts).toHaveLength(2);
+  });
+
+  it("still refuses after the panel is closed and reopened", async () => {
+    // Popover unmounts its children on close, and its own comment says nothing
+    // inside is meant to hold state a reader expects to find again. A wait held
+    // in there died with the panel, so reopening offered an enabled button for
+    // a consultation still running on the server — the duplicate press this
+    // whole change refuses.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        return new Response(null, { status: 202 });
+      }
+      // The register never replies, so the wait is still outstanding.
+      return jsonResponse(CHECKED);
+    });
+    render(mark());
+
+    const glyph = await screen.findByRole("button", { name: "VAT ID: Valid" });
+    fireEvent.click(glyph);
+    fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+
+    // Shut the panel and open it again.
+    fireEvent.click(glyph);
+    fireEvent.click(glyph);
+
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    expect(ask).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(ask);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(posts).toHaveLength(1);
+  });
+
+  it("sends one consultation for two clicks in the same frame", async () => {
+    // The button's busy state is computed from a LATER render, so two clicks
+    // inside one frame both passed it. The guard on the press reads the value
+    // this render already holds.
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        return new Response(null, { status: 202 });
+      }
+      return jsonResponse(CHECKED);
+    });
+    render(mark());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    // No await between them: this is the double-click a reader actually makes.
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    await screen.findByText(/the answer appears here once it replies/);
+
+    expect(posts).toHaveLength(1);
+  });
+
+  it("draws nothing while the read is in flight", () => {
+    stubFetch(
+      () =>
+        new Promise(() => {
+          // Never settles: the state between mount and the first answer.
+        }),
+    );
+
+    render(mark());
+
+    // A glyph that appeared a beat later, under the eye of somebody reading the
+    // number, is worse than one that arrives with the row.
+    expect(screen.queryByRole("button", { name: /VAT ID:/ })).toBeNull();
+  });
+});

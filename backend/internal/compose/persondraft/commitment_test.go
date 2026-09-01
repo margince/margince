@@ -10,6 +10,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -276,7 +277,7 @@ func TestTheSnippetTravelsInsideTheFence(t *testing.T) {
 	in.Recipient = RecipientIn{ID: "p1", FirstName: "Marek"}
 	in.Envelope = envelopeAt(textlang.German, convstate.BandFresh)
 
-	req, err := groundedRequest(in)
+	req, err := buildRequest(in, draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}

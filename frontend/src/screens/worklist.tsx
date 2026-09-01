@@ -1,20 +1,22 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
-import { Badge, SegmentedControl } from "../design-system/atoms";
+import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Eyebrow } from "../design-system/eyebrow";
 import { FilterPills } from "../design-system/filterpills";
-import { Panel, PanelRow } from "../design-system/panel";
+import { PageZones } from "../design-system/pagezones";
+import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import {
-  comparisonText,
-  consequenceText,
-  itemTitle,
-  reasonText,
+  completenessText,
+  pillCount,
   sourceUnavailableText,
-  subjectHref,
 } from "./worklist.copy";
+import { FocusCard, focusOf } from "./worklist.focus";
+import { CoachControl, OwnerPicker } from "./worklist.manager";
+import { hasPane, WorklistPane } from "./worklist.pane";
 import {
   useWorklist,
   type Worklist,
@@ -22,6 +24,7 @@ import {
   type WorklistItem,
   type WorklistScope,
 } from "./worklist.queries";
+import { WorklistRow } from "./worklist.row";
 import "./worklist.css";
 
 // The Worklist: one ranked list, not fourteen lanes.
@@ -46,157 +49,67 @@ const FILTERS: readonly WorklistFilter[] = [
   "system",
 ];
 
+// Which narrowing actually CONTAINS this group's members.
+//
+// Every group used to send the reader to `decisions`, which excludes system
+// rows — so pressing Review on a broken automation filtered its own failures
+// out of view and drew an empty page. A verb that hides what it promises to
+// show is worse than no verb.
+function reviewFilter(item: WorklistItem): WorklistFilter {
+  return item.category === "system" ? "system" : "decisions";
+}
+
+// Whether this row opens its band — the first banded row, or the first after a
+// row of a DIFFERENT band.
+//
+// A row with no band opens nothing: an older server that does not send one
+// leaves the page ungrouped rather than drawing a heading it cannot name.
+//
+// The comparison skips BACK over unbanded rows rather than looking only at the
+// row immediately above. `band` is optional in the contract, so a queue may mix
+// banded and unbanded rows — and comparing against an unbanded neighbour would
+// read every banded row after one as opening its band again, drawing "Now"
+// twice over one contiguous run.
+function opensBand(queue: readonly WorklistItem[], index: number): boolean {
+  const band = queue[index]?.band;
+  if (!band) {
+    return false;
+  }
+  for (let before = index - 1; before >= 0; before--) {
+    const earlier = queue[before]?.band;
+    if (earlier) {
+      return earlier !== band;
+    }
+  }
+  return true;
+}
+
 // One row.
 //
 // The rank number leads because the whole promise of the page is an order; the
 // reason line under the title is what makes that order checkable rather than
 // something to trust.
-function WorklistRow({
-  item,
-  position,
-}: Readonly<{ item: WorklistItem; position: number }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  const href = subjectHref(item);
-  const title = itemTitle(item, t);
-  const because = item.because
-    .map((reason) => reasonText(reason, t, locale, zone))
-    .filter((phrase): phrase is string => phrase !== null)
-    .join(" · ");
-  const above = comparisonText(item.above_next, t, locale, zone);
-  const consequence = consequenceText(item, t);
-  return (
-    <PanelRow className="worklist-row">
-      {/* The rank is the page's central claim, so it is readable rather than
-          decorative: the list element carries the order for a screen reader and
-          the number states it for everybody else. */}
-      <span className="t-caption worklist-rank">
-        {formatNumber(position, locale)}
-      </span>
-      <div className="worklist-row-text">
-        <p className="t-body worklist-row-title">
-          {href ? (
-            <a className="entity-link" href={href}>
-              {title}
-            </a>
-          ) : (
-            title
-          )}
-          <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
-          {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
-        </p>
-        {because && <p className="t-caption worklist-row-because">{because}</p>}
-        {/* What it costs to do nothing. The question a queue exists to answer,
-            and the one the lane feed had no field for. */}
-        {consequence && (
-          <p className="t-caption worklist-row-consequence">{consequence}</p>
-        )}
-        {/* Why this row beat the one below it. Absent on the last row, which
-            has nothing below it to beat. */}
-        {above && <p className="t-caption worklist-row-above">{above}</p>}
-      </div>
-      <RowVerbs item={item} href={href} />
-    </PanelRow>
-  );
-}
-
-// What this row offers, as the item itself declares it.
-//
-// Every verb is a LINK to the surface that owns it rather than a mutation from
-// here: this queue adds no authority of its own, so deciding an approval goes
-// to the decision surface and merging a pair to the dedupe queue, exactly as
-// they do from any other door. Rendering a button that acted here would be a
-// second place for those rules to live.
-//
-// A verb whose destination this page cannot name draws nothing. A control that
-// looks pressable and goes nowhere is worse than no control.
-function RowVerbs({
-  item,
-  href,
-}: Readonly<{ item: WorklistItem; href: string | undefined }>) {
-  const t = useT();
-  const verbs = item.actions.flatMap((action) => {
-    const route = VERB_DESTINATION[action];
-    if (!route) {
-      // A verb this build cannot route draws nothing. A control that looks
-      // pressable and goes nowhere is worse than no control.
-      return [];
-    }
-    const destination = route(href);
-    return destination ? [{ action, destination }] : [];
-  });
-  if (verbs.length === 0) {
-    return null;
-  }
-  return (
-    <div className="worklist-row-verbs">
-      {verbs.map(({ action, destination }) => (
-        <a key={action} className="worklist-row-verb" href={destination}>
-          {VERB_LABEL[action](t)}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-// Where each verb lives. A total map over the ones this page can route, so a
-// verb the contract adds either gets a destination here or is not drawn —
-// never a button that does nothing.
-const VERB_DESTINATION: Partial<
-  Record<
-    WorklistItem["actions"][number],
-    (href: string | undefined) => string | undefined
-  >
-> = {
-  // The decision surfaces own their own verbs; this sends the reader to them.
-  decide: () => "#/today",
-  merge: () => "#/today",
-  // Everything else is the record the row is about.
-  open: (href) => href,
-  complete: (href) => href,
-  snooze: (href) => href,
-  acknowledge: (href) => href,
-};
-
-// What each routable verb is called. Spelled as a map of functions rather than
-// a composed key, so a verb the contract adds without copy here does not
-// compile — which is the only way this cannot reach a reader as a raw word.
-const VERB_LABEL: Record<
-  WorklistItem["actions"][number],
-  (t: ReturnType<typeof useT>) => string
-> = {
-  decide: (t) => t("worklist.verb.decide"),
-  merge: (t) => t("worklist.verb.merge"),
-  open: (t) => t("worklist.verb.open"),
-  complete: (t) => t("worklist.verb.complete"),
-  snooze: (t) => t("worklist.verb.snooze"),
-  acknowledge: (t) => t("worklist.verb.acknowledge"),
-  // The briefing queue's three verbs. Named here because the map is total over
-  // the contract's actions — they route nowhere from this page yet, so
-  // VERB_DESTINATION does not carry them and no control is drawn.
-  act: (t) => t("worklist.verb.open"),
-  dismiss: (t) => t("worklist.verb.open"),
-  set_aside: (t) => t("worklist.verb.open"),
-};
-
-// The day's figures, and the dials that narrow them.
 function WorklistHeader({
   day,
   scope,
   filter,
   onScope,
   onFilter,
+  owner,
+  onOwner,
 }: Readonly<{
   day: Worklist;
   scope: WorklistScope;
   filter: WorklistFilter;
+  owner: string;
   onScope: (next: WorklistScope) => void;
   onFilter: (next: WorklistFilter) => void;
+  onOwner: (next: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const scopes = day.scope_options;
+  const completeness = completenessText(day, filter, t, locale);
   return (
     <div className="worklist-header">
       <p className="t-h2 worklist-lead">
@@ -208,7 +121,7 @@ function WorklistHeader({
       </p>
       {/* Drawn only when there is a choice: a rep who can see only their own
           work is never offered a switch that would refuse when pressed. */}
-      {scopes.length > 1 && (
+      {scopes.length > 1 && owner === "" && (
         <SegmentedControl
           options={scopes}
           value={scope}
@@ -216,20 +129,35 @@ function WorklistHeader({
           label={t("worklist.scope.label")}
           labels={{
             mine: t("worklist.scope.mine"),
+            unassigned: t("worklist.scope.unassigned"),
             team: t("worklist.scope.team"),
             all: t("worklist.scope.all"),
           }}
         />
       )}
+      {/* Whose queue. Offered on the same tier the server admits a named owner
+          on — `team` in the options means this reader reaches past themselves —
+          so the control and the refusal cannot disagree. It replaces the scope
+          switch rather than sitting beside it: a named owner outranks the scope
+          word, and the pair is a 422. */}
+      {scopes.includes("team") && (
+        <OwnerPicker owner={owner} onOwner={onOwner} />
+      )}
       <FilterPills
         pills={FILTERS.map((value) => ({
           value,
           label: t(`worklist.filter.${value}` as const),
+          count: pillCount(day, value),
         }))}
         value={filter}
         onChange={onFilter}
         label={t("worklist.filter.label")}
       />
+      {/* What the page is NOT showing. Drawn only when there is a difference to
+          report: on a day the queue carries whole, "12 of 12" is noise. */}
+      {completeness !== null && (
+        <p className="t-meta worklist-completeness">{completeness}</p>
+      )}
     </div>
   );
 }
@@ -239,26 +167,44 @@ function WorklistBody({
   day,
   scope,
   filter,
+  owner,
+  selectedId,
   onScope,
   onFilter,
+  onOwner,
+  onSelect,
 }: Readonly<{
   day: Worklist;
   scope: WorklistScope;
   filter: WorklistFilter;
+  owner: string;
+  selectedId: string;
   onScope: (next: WorklistScope) => void;
   onFilter: (next: WorklistFilter) => void;
+  onOwner: (next: string) => void;
+  onSelect: (next: string) => void;
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
+  const focus = focusOf(day.queue);
+  // The row the pane is about. Resolved from the id rather than held as the
+  // item itself: a refetch replaces every row object, and a held one would go
+  // on describing a version of the day that is no longer on screen.
+  const selected = day.queue.find((item) => item.id === selectedId);
   return (
     <>
       <WorklistHeader
         day={day}
         scope={scope}
         filter={filter}
+        owner={owner}
         onScope={onScope}
         onFilter={onFilter}
+        onOwner={onOwner}
       />
+      {/* The verbs a lead has over somebody else's day. Drawn only on a named
+          person's queue: on the reader's own there is nobody to coach. */}
+      {owner !== "" && <CoachControl owner={owner} />}
       {/* A day cannot read as clear while something that would have filled it
           was never read. This is the surface speaking about ITSELF, which is
           what Callout is for. */}
@@ -271,6 +217,10 @@ function WorklistBody({
           })}
         </Callout>
       )}
+      {/* The one thing to do next, said rather than implied. The row stays in
+          the queue below: removing it would make the rank numbers lie and the
+          counts disagree with the page. */}
+      {focus && <FocusCard item={focus} />}
       {day.queue.length === 0 ? (
         // One line, not a panel. No card is drawn to report a zero.
         <p className="t-body worklist-clear">
@@ -279,17 +229,84 @@ function WorklistBody({
             : t("worklist.clear")}
         </p>
       ) : (
-        <Panel title={t("worklist.queue")}>
-          <ol className="worklist-list">
-            {day.queue.map((item, index) => (
-              <li key={`${item.source}-${item.id}`}>
-                <WorklistRow item={item} position={index + 1} />
-              </li>
-            ))}
-          </ol>
-        </Panel>
+        // The queue, and beside it what the SELECTED row is about.
+        //
+        // PageZones is used only where there IS a pane. Its aside shape
+        // reserves a 7fr/3fr grid whatever the aside contains, so wrapping an
+        // unselected page would leave the queue at seventy per cent width with
+        // an empty third beside it — a column that reads as a pane which
+        // failed to load.
+        //
+        // hasPane is asked BEFORE the element is made: a component returning
+        // null is still an element, and an element still gets the aside column
+        // and its landmark. The rule lives beside the component that obeys it.
+        <PageZonesWhenPaned
+          pane={
+            selected && hasPane(selected) ? (
+              <WorklistPane item={selected} />
+            ) : null
+          }
+          label={t("worklist.pane.title")}
+          queue={
+            <Panel title={t("worklist.queue")}>
+              <ol className="worklist-list">
+                {day.queue.map((item, index) => (
+                  <li key={`${item.source}-${item.id}`}>
+                    {/* The heading, drawn where the band CHANGES. The server sends
+                    the queue already sorted so each band is one contiguous run,
+                    so a change is a boundary and never a second visit — which
+                    is what lets a heading be drawn from the row rather than by
+                    grouping the list into buckets the order would then fight. */}
+                    {opensBand(day.queue, index) && (
+                      <Eyebrow as="h3" className="worklist-band">
+                        {t(
+                          `worklist.band.${item.band ?? "keep_momentum"}` as const,
+                        )}
+                      </Eyebrow>
+                    )}
+                    <WorklistRow
+                      item={item}
+                      position={index + 1}
+                      owner={owner}
+                      asOf={day.as_of}
+                      selected={selectedId === item.id}
+                      onSelect={() =>
+                        onSelect(selectedId === item.id ? "" : item.id)
+                      }
+                      onReview={() => onFilter(reviewFilter(item))}
+                    />
+                  </li>
+                ))}
+              </ol>
+            </Panel>
+          }
+        />
       )}
     </>
+  );
+}
+
+// The queue, with a pane beside it only where there is one to draw.
+//
+// A shape decision rather than a component: PageZones reserves its aside
+// column unconditionally, and a page with nothing selected should read exactly
+// as it did before selection existed.
+function PageZonesWhenPaned({
+  queue,
+  pane,
+  label,
+}: Readonly<{ queue: ReactNode; pane: ReactNode; label: string }>) {
+  if (!pane) {
+    return <>{queue}</>;
+  }
+  return (
+    <PageZones
+      shape="aside"
+      mainClassName="worklist-main"
+      aside={pane}
+      asideLabel={label}
+      main={queue}
+    />
   );
 }
 
@@ -301,12 +318,40 @@ export function WorklistScreen() {
   // than the reader asked on their next visit.
   const [scope, setScope] = useState<WorklistScope>("mine");
   const [filter, setFilter] = useState<WorklistFilter>("all");
-  const day = useWorklist(scope, filter);
+  // Whose queue, when it is not the reader's own. Empty means their own day,
+  // which is what every seat sees and the only thing most seats may ask for.
+  const [owner, setOwner] = useState("");
+  // Which row the context pane is about. Local state, not the address: the
+  // page's other dials are state too, and putting one of the four in the URL
+  // would make the address describe a fraction of what the reader is looking
+  // at. Moving them all there is its own change.
+  const [selectedId, setSelectedId] = useState("");
+  // Changing a dial drops the selection. A row chosen under one question is
+  // not a row the reader chose under the next one, and keeping the id means a
+  // row that comes back — a filter switched away and back, a snooze that lifts
+  // — re-opens its pane with nobody having asked it to.
+  const answerWith =
+    <T,>(set: (next: T) => void) =>
+    (next: T) => {
+      setSelectedId("");
+      set(next);
+    };
+  const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const state = day.isPending ? "loading" : day.isError ? "failed" : "ready";
   return (
     <div className="wrap worklist">
       {/* No label: the shell already heads this page, and a second "Worklist"
           would be announced twice and nest an h3 above the queue's own h2. */}
+      {/* The way BACK, drawn OUTSIDE the surface state.
+          A named owner this reader may not open answers 403, so the day fails
+          to load and the body — the owner picker with it — never renders.
+          Without this the reader is stranded on a page whose only control is
+          gone, and reloading is the way out. */}
+      {owner !== "" && state === "failed" && (
+        <Button onClick={() => setOwner("")}>
+          {t("worklist.owner.backToMine")}
+        </Button>
+      )}
       <SurfaceState
         state={state}
         emptyLabel={t("worklist.clear")}
@@ -318,8 +363,12 @@ export function WorklistScreen() {
             day={day.data}
             scope={scope}
             filter={filter}
-            onScope={setScope}
-            onFilter={setFilter}
+            owner={owner}
+            selectedId={selectedId}
+            onScope={answerWith(setScope)}
+            onFilter={answerWith(setFilter)}
+            onOwner={answerWith(setOwner)}
+            onSelect={setSelectedId}
           />
         )}
       </SurfaceState>

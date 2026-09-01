@@ -2,7 +2,7 @@
 
 `internal/modules/capture` (interfaces.md §1, capture.md CAP-*) is Margince's **inbound**
 integration surface: a *connector* talks to an external provider (Gmail, an IMAP mailbox, Microsoft
-365 / Outlook via Graph, Google Calendar), normalizes each provider record onto the clean relational
+365 / Outlook mail and calendar via Graph, Google Calendar), normalizes each provider record onto the clean relational
 core, and hands it to the **one** `connector.Sink` the capture module owns. It is the mirror image of
 [outbound-webhooks.md](outbound-webhooks.md): that is the governed *egress* surface, this is the
 governed *ingress* one.
@@ -63,8 +63,8 @@ Every integration implements `connector.Connector`
 Two **optional** seams a connector implements only when its provider supports them — the registry
 type-asserts and skips a connector that doesn't:
 
-- **`Watcher`** — a renewable push subscription (Gmail's 7-day Pub/Sub watch). A provider with no
-  renewable push simply is not a `Watcher`.
+- **`Watcher`** — a renewable push subscription (Gmail's 7-day Pub/Sub watch, Graph's under-3-day
+  change-notification subscription). A provider with no renewable push simply is not a `Watcher`.
 - **`Backfiller`** — bounded date-backward enumeration of a mailbox (`EstimateBackfill` +
   `BackfillPage`). A provider that can't page backward is not a `Backfiller`, and the backfill engine
   refuses honestly rather than pretending.
@@ -122,10 +122,12 @@ A connector's records reach the CRM through one of four paths, all converging on
    never kills a connection — the sidecar backs off (`2m·2^n`, capped `4h`, ±20% jitter), degrades to a
    daily probe after 20 consecutive failures, and heals on one success. The error taxonomy
    (`rate_limited | unreachable | auth | history_gone | internal`) surfaces as `last_sync_error_class`.
-3. **Push — Gmail only.** With a Pub/Sub topic configured, Gmail delivers change notifications to `POST
-   /webhooks/gmail` (a shared-secret token + Google OIDC when set); the handler zeroes the mailbox's
+3. **Push — the two mail vendors.** With a Pub/Sub topic configured, Gmail delivers change
+   notifications to `POST /webhooks/gmail` (a shared-secret token + Google OIDC when set); with a
+   notification URL configured, Graph delivers them to `POST /webhooks/graph` (the token alone —
+   Microsoft signs nothing on a change notification). Either handler zeroes the mailbox's
    `next_sync_at` and enqueues an immediate sync. Push is a *latency* optimization over the poll, not a
-   separate write path.
+   separate write path, and no calendar connector implements it on either vendor.
 
 4. **Channel long poll — Telegram only.** A messaging channel is not one human's mailbox: an admin
    binds one bot for the whole workspace, and the installation *pulls*. Telegram's two ingress modes
@@ -143,11 +145,11 @@ token; they never fight, and the capture key makes any overlap a no-op.
 
 ## Connecting — the OAuth flow
 
-The standing connectors (`gmail`/`gcal`/`graph`) share one handshake (`capture/oauthflow`). Only the
+The standing connectors (`gmail`/`gcal`/`graph`/`graphcal`) share one handshake (`capture/oauthflow`). Only the
 connect step is worth a picture — everything after is the sync above:
 
 ```text
-1. POST /connectors/{gmail|gcal|graph}/connect      (human session)
+1. POST /connectors/{gmail|gcal|graph|graphcal}/connect  (human session)
       → sign state (HMAC key, TTL 10m) + set CSRF cookie
       → return authorize_url  ──▶  user consents at the provider
 
@@ -165,18 +167,15 @@ refresh token (see below).
 
 ## The connectors
 
-All five register in `internal/compose/capture.go`; every one produces `activity` on the way in, and
-two of them can also transmit. The differences that matter:
-
-| | **Gmail** | **IMAP** | **Graph** (Outlook) | **Calendar** (gcal) | **Telegram** |
-|---|---|---|---|---|---|
-| Auth | OAuth `gmail.readonly` + `gmail.send` | IMAPS app-password | OAuth `Mail.Read` | OAuth `calendar.readonly` | BotFather bot token |
-| Connection | standing, per human | standing, per human | standing, per human | standing, per human | standing, **per workspace** (an admin binds one bot) |
-| Cursor | `historyId` | UID watermark | `deltaLink` | `syncToken` | `getUpdates` offset |
-| Push | Pub/Sub 7-day | — (poll) | — (poll) | — (poll) | — (long poll, exclusive per bot) |
-| Backfill | ✔ | — | ✔ | — | — (the Bot API has no history endpoint) |
-| Send | ✔ (`EmailSender`) | — | — | — | ✔ (`MessageSender`) |
-| Connect UI | onboarding + Settings | onboarding + Settings | onboarding + Settings | Settings only | Settings only (its own card) |
+| | **Gmail** | **IMAP** | **Graph** (Outlook mail) | **Calendar** (gcal) | **Graph calendar** (graphcal) | **Telegram** |
+|---|---|---|---|---|---|---|
+| Auth | OAuth `gmail.readonly` + `gmail.send` | IMAPS app-password | OAuth `Mail.Read` + `Mail.Send` | OAuth `calendar.readonly` | OAuth `Calendars.Read` | BotFather bot token |
+| Connection | standing, per human | standing, per human | standing, per human | standing, per human | standing, per human | standing, **per workspace** (an admin binds one bot) |
+| Cursor | `historyId` | UID watermark | `deltaLink` | `syncToken` | `deltaLink` | `getUpdates` offset |
+| Push | Pub/Sub 7-day | — (poll) | subscription, <3-day | — (poll) | — (poll) | — (long poll, exclusive per bot) |
+| Backfill | ✔ | — | ✔ | — | — (the window IS the sync) | — (the Bot API has no history endpoint) |
+| Send | ✔ (`EmailSender`) | — | ✔ (`EmailSender`) | — | — | ✔ (`MessageSender`) |
+| Connect UI | onboarding + Settings | onboarding + Settings | onboarding + Settings | Settings only | Settings only | Settings only (its own card) |
 
 ### Gmail — standing OAuth, push-capable, send-capable
 
@@ -217,21 +216,45 @@ inline form is reachable from both the onboarding **IMAP** chip and the Settings
 footer; it answers with the connected row, not a capture tally — the connect returns before any mail is
 read.
 
-### Microsoft Graph — standing OAuth, poll-only
+### Microsoft Graph — standing OAuth, push-capable, send-capable
 
-OAuth2 to the Microsoft identity platform with delegated scopes `offline_access User.Read Mail.Read`
-(tenant defaults to `common`). Incremental sync walks a **delta query** from a `deltaLink`; a stale link
-(`ErrDeltaGone`, HTTP 410) re-anchors to a bounded 7-day window. It is a `Backfiller` but **not** a
-`Watcher` — there is no change-notification subscription built, so Outlook latency is the poll interval,
-not a push p95. **To run:** a Microsoft Entra (Azure AD) app + tenant + the vault key. **UI:** a
+OAuth2 to the Microsoft identity platform with delegated permissions `offline_access User.Read
+Mail.Read Mail.Send` (tenant defaults to `common`) — mail read for capture and send for the governed
+outbound path, on **one consent**, because Microsoft will not add a permission to an existing refresh
+token. A mailbox connected before the send permission landed captures normally and refuses every send
+by name until it is reconnected. Incremental sync walks a **delta query** from a `deltaLink`; a stale
+link (`ErrDeltaGone`, HTTP 410) re-anchors to a bounded 7-day window. It implements `Backfiller`,
+`EmailSender` and `Watcher`: the watch is a **change-notification subscription** on `/me/messages`,
+renewed by the worker every `6h`, `24h` ahead of its deadline. That deadline is under **three days**
+where Gmail's watch lasts seven, which is why the two passes carry different defaults rather than one.
+
+The subscription is addressed by an id Microsoft mints. Rather than storing it, a renewal round ASKS —
+Microsoft lists the subscriptions this app holds for this user, and the one pointing at our notification
+URL is ours, so a subscription left by an earlier deployment is adopted rather than duplicated. A
+notification's `resource` names a directory object id this system never stored, so the subscription
+carries the mailbox owner's address in `clientState`, which Microsoft echoes verbatim; the webhook
+routes on that and authenticates on the operator token in the URL. Microsoft signs nothing on a change
+notification, so that token is the only admission factor — the same posture Gmail's push has when a
+deployment configures no OIDC push identity. Microsoft will not create a subscription until the URL
+echoes a `validationToken` it POSTs there first, and that handshake runs **after** the token check, so
+the endpoint is never an echo oracle.
+
+Sending submits the whole RFC822 message to `/me/sendMail`, rendered by the **shared** wire builder
+(`capture/mailwire`) that Gmail's send uses — one answer to what a multipart/alternative puts first and
+where base64 folds. Microsoft acknowledges without naming a message id, so the sent copy is resolved
+afterwards by filtering Sent Items on `internetMessageId`; that same filter is the at-least-once retry
+guard, and unlike Gmail's (which searches for an identity Gmail has already discarded) it reads the
+message's own property. It still does not close the window — Exchange may rewrite the identity on
+submission depending on tenant configuration. **Microsoft carries less than Gmail**: the MIME submit
+ceiling is 4 MB of base64, so `Carriage` declares ~3 MiB per file where Gmail declares 25 MiB, and an
+over-large message parks with an honest reason instead of drawing an opaque refusal. **To run:** a Microsoft Entra (Azure AD) app + tenant + the vault key; a notification URL is optional (without it, capture runs on the poll). **UI:** a
 first-connect affordance from both the onboarding **Microsoft** chip and the Settings **Add a connection**
-footer; the roster manages an existing connection. Note Microsoft **rotates
-the refresh token on every redemption** and Margince does not yet persist the rotated value: the stored
-original typically keeps working up to Microsoft's default **90-day inactive lifetime** for a confidential
-client (an actively-syncing mailbox stays inside it), **but it can be revoked or expire earlier** (a
-password change, an admin revoke, a conditional-access policy). When it stops working, the sync/connect
-path surfaces `reauth_required` and the user must **reconnect** — there is no silent recovery until the
-credential-update seam lands.
+footer; the roster manages an existing connection. Microsoft **rotates the refresh token on every redemption**, and the replacement is now persisted: the
+connector reports it through `CredentialRotator` and the registry re-seals it into the vault on each
+sync (see *Honest limitations*). The stored original would otherwise have aged out on Microsoft's
+**90-day inactive lifetime** for a confidential client. A grant can still be ended from Microsoft's side
+— a password change, an admin revoke, a conditional-access policy — and then the sync/connect path
+surfaces `reauth_required` and the user must **reconnect**.
 
 ### Google Calendar (gcal) — standing OAuth, poll-only
 
@@ -243,16 +266,42 @@ the calendar scope enabled and a `/connectors/gcal/callback` redirect URI added,
 Settings **Add a connection** starts it (no onboarding chip for Calendar — Gmail, Microsoft, and IMAP are
 the three onboarding chips); the roster manages an existing connection.
 
+### Microsoft 365 calendar (graphcal) — standing OAuth, poll-only
+
+OAuth2 to the Microsoft identity platform with `offline_access User.Read Calendars.Read`. It **reuses
+the same Entra app as the Outlook mailbox**, but as its *own* authorization requesting the calendar
+permission alone — so a person can bring their calendar without their mail, and disconnecting either
+leaves the other standing (exactly the boundary the Gmail/Calendar pair keeps). Incremental sync walks
+a **calendarView delta** from a `deltaLink`; a stale link (`ErrDeltaGone`, HTTP 410) re-anchors.
+
+The window is 90 days back and a year ahead, and it is what the standing connection *watches* rather
+than merely a first pull's bound — Graph's `calendarView` delta reports only events starting inside the
+range it was opened against. That range does **not** move on its own, and a valid `deltaLink` is
+resumed forever, so the connector dates its window in the cursor and **reopens it every 30 days**:
+without that, a meeting booked past the forward edge would never be reported and nothing would say so.
+There is no separate `Backfiller` — the backwards half of the window already is one, which is also why
+a calendar has no manual backfill to run.
+
+No push. **To run:** the *same* Microsoft Entra app as Outlook mail, with `Calendars.Read` added and a
+`/connectors/graphcal/callback` redirect URI, + the vault key. **UI:** Settings **Add a connection**
+starts it (no onboarding chip for either calendar — Gmail, Microsoft and IMAP are the three onboarding
+chips); the roster manages an existing connection.
+
+The mapping rules — which meetings are worth logging, whether a booked room counts as a guest, which
+addresses reach the writer — are **shared with Google Calendar** (`capture/meetingmap`). Each
+connector owns only its vendor's decode.
+
 ## Where each piece runs
 
 Capture spans both process roles ([the four `cmd/<role>` binaries](architecture.md)):
 
 - **`api`** serves the *interactive* surface: `connect` (OAuth and IMAP alike), `callback`,
-  `disconnect`, `list`, backfill `preview`/`start`(enqueue)/`status`/`cancel`, the Gmail push webhook,
+  `disconnect`, `list`, backfill `preview`/`start`(enqueue)/`status`/`cancel`, the two mail push
+  webhooks,
   the morning `digest` read, the capture-settings toggle, and the consumer-mail domain list.
 - **`worker`** runs *every background pull* as leader-elected River periodic jobs: the sync dispatcher
-  (`30s`) → per-connection `SyncOnce`, the backfill engine (one page/tick), the Gmail watch-renewal scan
-  (`6h`), and the nightly capture suite (classify hourly, enrich + digest daily). The Surface-B agent
+  (`30s`) → per-connection `SyncOnce`, the backfill engine (one page/tick), each vendor's
+  watch-renewal scan (`6h`), and the nightly capture suite (classify hourly, enrich + digest daily). The Surface-B agent
   runner shares the worker process but is a *separate* scheduler — it does not run capture.
 
 Gmail/Graph OAuth needs its config on **both** roles (the api connects, the worker syncs). The full
@@ -286,18 +335,28 @@ which has no onboarding chip and so is Settings-only.
 
 The pipeline is live; these were scoped out, not missed:
 
-- **No onboarding chip for Calendar.** `gcal` is a fully wired OAuth connector (same
+- **No onboarding chip for either calendar.** `gcal` and `graphcal` are fully wired OAuth connectors (same
   `connect`/`callback`/`disconnect` + sync as Gmail/Graph); Settings' **Add a connection** footer starts
   one, but the onboarding connect step's three chips (Google, Microsoft, IMAP) don't include it — adding
   Calendar during first-run onboarding still means a trip to Settings afterward.
-- **Graph is poll-only.** The change-notification subscription (validationToken handshake, `clientState`,
-  ≤3-day renewal) is unbuilt, so Outlook latency is the poll interval. (Gmail has both halves — the
-  push-watch renewal sweep and the `/webhooks/gmail` consumer above — so a Gmail deployment with a
-  Pub/Sub topic configured is push-driven, with the poll behind it as the safety net.)
-- **Graph refresh-token rotation isn't persisted.** The stored token usually lasts up to Microsoft's
-  default 90-day inactive lifetime (a confidential client) but can be revoked or expire earlier; on
-  expiry the connection goes `reauth_required` and the user reconnects. Avoiding that reauth needs a
-  credential-update seam the `Connector` interface lacks.
+- **Outlook MAIL is push-driven; the Outlook calendar is not.** The mailbox has both halves — the
+  change-notification subscription (validationToken handshake, `clientState`, under-3-day renewal) and
+  the `/webhooks/graph` consumer — so a deployment with a notification URL configured runs on push with
+  the poll behind it as the safety net. `graphcal` implements no `Watcher`, so calendar latency is the
+  poll interval on both vendors.
+- **The Outlook calendar sees a bounded window.** 90 days back, a year ahead, reopened every 30 days so
+  forward-dated meetings enter it. History older than 90 days at connect time is never imported — there
+  is no calendar `Backfiller` on either vendor.
+- **Graph refresh-token rotation is persisted** (it was not, and the gap is closed). Microsoft issues a
+  NEW refresh token on every redemption; the old one stays valid for its own lifetime, but that lifetime
+  is a ceiling — 90 days idle for a confidential client, shorter after a password change, an admin revoke
+  or a conditional-access policy — so a connection that never stored the replacement aged out on a
+  schedule nobody set. `connector.CredentialRotator` is the optional seam (type-asserted like `Watcher`
+  and `EmailSender`, so the frozen `Connector` interface is unchanged); the registry binds a per-sync
+  sink that re-seals into the vault under the same generation fence the cursor commits under, and
+  retires the superseded blob only after the row naming its replacement commits. A re-seal that fails
+  costs one cycle's freshness, never the mail — the old credential is still valid, which is what makes
+  that the right way round. A connection can still reach `reauth_required` from a real revoke.
 - **IMAP has no backfill and no push.** It syncs forward from connect time on the poll; mail older than
   the connection is not imported, and there is no `Backfiller` to import it.
 - **No dedicated connector-health screen.** The digest's `connectors[]` health rows surface as a single
@@ -316,15 +375,20 @@ The pipeline is live; these were scoped out, not missed:
   `disconnected`/`reauth_required` park a row.
 - **Connecting is human-only.** An agent never self-connects a mailbox.
 - **The credential leaves the connection row entirely** — vault-sealed under `credential_ref`, IMAP's
-  app-password included, and destroyed on disconnect.
-- **All four connections are standing** and sync in the background; only Gmail/Graph backfill; only
-  Gmail pushes.
+  app-password included, and destroyed on disconnect. A provider that REPLACES it on use (Microsoft does,
+  on every redemption) reports the replacement through `CredentialRotator`, and the re-seal obeys the
+  same fence and the same destroy-the-old rule.
+- **Every connection is standing** and syncs in the background; only Gmail/Graph backfill, only
+  Gmail/Graph send, and only Gmail/Graph push.
+- **Mail and calendar are always separate connections**, on Google and Microsoft alike: one consent
+  each, so a person can bring one without the other and disconnect either.
 
 ## Where the code lives
 
 | | |
 |---|---|
 | The connector seam (Connector / Watcher / Backfiller / Sink / NormalizedRecord) | `internal/shared/ports/connector/connector.go` |
+| The credential-rotation seam (CredentialRotator / CredentialSink) | `internal/shared/ports/connector/rotation.go`, `internal/modules/capture/registry_rotation.go` |
 | The one Sink + write shape + idempotency | `internal/modules/capture/sink.go` |
 | The registry — scope intersection, Connect/Disconnect, SyncOnce, backfill, watch | `internal/modules/capture/registry.go`, `registry_connections.go`, `registry_watch.go`, `backfill.go` |
 | Sync-state sidecar (backoff, error taxonomy, degrade/heal) | `internal/modules/capture/syncstate.go` |
@@ -333,9 +397,12 @@ The pipeline is live; these were scoped out, not missed:
 | Counterparty / RFC822 mapping (direction, ThreadKey, skip rules) | `internal/modules/capture/mailmap/mailmap.go` |
 | Gmail connector (OAuth, history sync, Pub/Sub watch, backfill) | `internal/modules/capture/gmail/` |
 | IMAP connector (standing UID-watermark sync; netguard SSRF guard) | `internal/modules/capture/imap/` |
-| Graph connector (OAuth, delta sync, backfill) | `internal/modules/capture/graph/` |
+| Graph connector (OAuth, delta sync, backfill, send) | `internal/modules/capture/graph/` |
+| The shared outbound RFC822 renderer both mail senders use | `internal/modules/capture/mailwire/` |
 | Google Calendar connector (OAuth, syncToken) | `internal/modules/capture/gcal/` |
-| Shared OAuth handshake (authorize URL, code/refresh exchange) | `internal/modules/capture/oauthflow/oauthflow.go`, `capture/googleconn/` |
+| Microsoft 365 calendar connector (OAuth, calendarView delta) | `internal/modules/capture/graphcal/` |
+| The shared meeting rules both calendars compose | `internal/modules/capture/meetingmap/` |
+| Shared OAuth handshake (authorize URL, code/refresh exchange) | `internal/modules/capture/oauthflow/oauthflow.go`, `capture/googleconn/`, `capture/graphconn/` |
 | Connect surface + state signing + CSRF (api) | `internal/compose/connectors.go`, `connectors_imap.go` |
 | Backfill + digest HTTP surface | `internal/compose/backfilltransport.go` |
 | Gmail push webhook (token + OIDC) | `internal/compose/gmailpush.go`, `capture/push.go` |

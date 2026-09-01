@@ -64,10 +64,17 @@ func relinkPersonReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	// replaces one — and the conflict target NAMES the uniqueness it relies
 	// on, so a future constraint on this table cannot silently start swallowing
 	// a different collision here.
+	// observed_at and the superseded_* buffer travel WITH the row. Re-homing is
+	// not a new statement, and letting the column take its default would date a
+	// two-year-old signature as today — the merged copy would then outrank the
+	// contact's own later mail, and a dropped buffer leaves a replaced value
+	// nobody can put back.
 	if _, err = tx.Exec(ctx, `
 		INSERT INTO person_profile_field
-		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
-		SELECT $2, field, value, evidence_snippet, source_ref, confidence, source, captured_by
+		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by,
+		   observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
+		SELECT $2, field, value, evidence_snippet, source_ref, confidence, source, captured_by,
+		       observed_at, superseded_value, superseded_captured_by, superseded_observed_at
 		  FROM person_profile_field WHERE person_id = $1
 		ON CONFLICT (person_id, field) DO NOTHING`, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink enrichment fields: %w", err)
@@ -84,6 +91,9 @@ func relinkPersonReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	}
 	if counts.ActivityLinks, err = relinkLinkRows(ctx, tx, "person", sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink activity/list/tag rows: %w", err)
+	}
+	if err := relinkParticipantRows(ctx, tx, sourceID, targetID); err != nil {
+		return counts, fmt.Errorf("relink activity participants: %w", err)
 	}
 	if err := mergePersonSocial(ctx, tx, sourceID, targetID); err != nil {
 		return counts, fmt.Errorf("merge social rows: %w", err)
@@ -308,6 +318,45 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		`UPDATE provider_run SET person_id = $2 WHERE person_id = $1`,
 		sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("relink provider runs: %w", err)
+	}
+	return nil
+}
+
+// relinkParticipantRows moves who-was-in-it onto the survivor.
+//
+// activity_link says how a message is FILED and moves with the rest of the
+// satellites above; activity_participant says who was IN it, and it used to stay
+// behind. The result was a merge that looked complete and left the interaction
+// graph — "who on our team knows this contact" — crediting a record no read
+// returns, because every reader of those rows matches person_id exactly and none
+// walks merged_into_id.
+//
+// Delete before repoint, because uq_activity_participant spans
+// (activity, role, user, person, address): where BOTH halves of the merge sat on
+// one activity in the same role and with the same other arms, they are one party
+// recorded twice, so the source's row is dropped rather than collided into the
+// survivor's. Two rows differing by address are NOT that case — they are two
+// addresses of one party — and both repoint, which is what capture would have
+// written had the records been one all along.
+func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.PersonID) error {
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM activity_participant ap
+		 WHERE ap.person_id = $1
+		   AND EXISTS (
+		       SELECT 1 FROM activity_participant twin
+		        WHERE twin.activity_id = ap.activity_id
+		          AND twin.role = ap.role
+		          AND twin.person_id = $2
+		          AND coalesce(twin.user_id, '00000000-0000-0000-0000-000000000000')
+		            = coalesce(ap.user_id, '00000000-0000-0000-0000-000000000000')
+		          AND coalesce(twin.address, '') = coalesce(ap.address, ''))`,
+		sourceID, targetID); err != nil {
+		return fmt.Errorf("drop the duplicated participant rows: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE activity_participant SET person_id = $2 WHERE person_id = $1`,
+		sourceID, targetID); err != nil {
+		return fmt.Errorf("repoint the participant rows: %w", err)
 	}
 	return nil
 }

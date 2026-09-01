@@ -98,7 +98,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // person: decisions to answer, tasks to finish and duplicates to merge are
       // lanes inside it. It leads the group because it is what a reader opens
       // when the question is "what needs me?".
-      { screen: "today", labelKey: "nav.today", icon: Sun },
+      { screen: "worklist", labelKey: "nav.today", icon: Sun },
       // The board, not a bullseye: this route opens a column per stage with the
       // deals standing in them, and `Target` drew a goal — which is what a quota
       // surface would be. A reader scanning five glyphs on a phone bar with no
@@ -187,6 +187,8 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
   "book",
   "client",
   "preferences",
+  "unsubscribe",
+  "confirm",
   "room",
   "oauth-consent",
 ]);

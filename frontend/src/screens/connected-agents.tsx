@@ -9,7 +9,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { ScopeChips } from "../design-system/passportselect";
+import { ScopeChips, scopeChipLabel } from "../design-system/passportselect";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -20,10 +20,11 @@ import "./connected-agents.css";
 
 // The other half of the passport story, and the half nothing on this screen
 // used to tell. A human mints a passport; a client that connects over MCP is
-// then issued its OWN credential derived from the passport the human lent it.
-// Both are rows in GET /passports, and listing them together left a connection
-// showing under the raw DCR client id its label carries — a name nobody chose,
-// next to passports they did.
+// issued its OWN credential at token exchange, minted from the scopes the
+// human ticked on the consent screen rather than derived from any existing
+// passport. Both are rows in GET /passports, and listing them together left a
+// connection showing under the raw DCR client id its label carries — a name
+// nobody chose, next to passports they did.
 //
 // So the split is by `connection`, the server's own statement of which kind a
 // row is, never the `oauth:` label prefix: a label is display text, and a human
@@ -72,7 +73,8 @@ async function fetchConnectorState(): Promise<ConnectorState> {
 
 // One command per client, because "point your agent at the URL" is exactly the
 // instruction people cannot act on. All four reach the same place: the client
-// registers itself, and the consent screen asks which passport to lend.
+// registers itself, and the consent screen asks which of the five scopes to
+// grant.
 //
 // Antigravity is the odd one out only in shape — it has no add command, so its
 // step is the config file its docs name. The OAuth handshake is identical. That
@@ -335,19 +337,12 @@ function ConnectionFacts({
         className={state.ended ? "agents-facts agents-ended" : "agents-facts"}
       >
         <span>{t("agents.connectedOn", { date: connected })}</span>
-        {/* Omitted, never guessed: a connection made before the provenance was
-            recorded has no answer to give. */}
-        {passport.connection.lent_passport_label && (
-          <span>
-            {t("agents.lentFrom", {
-              label: passport.connection.lent_passport_label,
-            })}
-          </span>
-        )}
         {deadline && <span>{deadline}</span>}
       </span>
       <span className="agents-scopes">
-        <ScopeChips scopes={passport.scopes} />
+        <ScopeChips
+          labels={passport.scopes.map((scope) => scopeChipLabel(t, scope))}
+        />
       </span>
     </>
   );

@@ -1,0 +1,81 @@
+/* A seat the product read out of messages, not one a colleague typed.
+ *
+ * The indigo family means exactly one thing in this product: an agent decided
+ * it. Dashed while unconfirmed, because dashes going solid is what acceptance
+ * looks like everywhere else here. Text on the light fill takes --aiText, never
+ * --ai, which fails AA on its own family's ground. */
+.cp-seat-suggested {
+  border: 1.5px dashed var(--aiMed);
+  border-radius: var(--r-sm);
+  background: var(--aiLight);
+  padding: var(--space-2);
+}
+
+.cp-seat-mark {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  color: var(--aiText);
+}
+
+/* The switcher and the reading verb in one row.
+ *
+ * Wraps rather than compressing: at 390px the two do not fit side by side, and
+ * a button squeezed to an icon is a verb the reader can no longer read. */
+.cp-board-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+/* What the last reading did. A line, not a toast: the reader may be looking at
+ * the board rather than the button when it answers, and a message that has
+ * already faded cannot tell them why nothing changed. */
+.cp-write-note {
+  margin: 0 0 var(--space-2);
+  color: var(--textMeta);
+}
+
+/* The two verbs on an unconfirmed seat. */
+.cp-seat-verbs {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+/* The introduction request. A form the reader edits before taking it away, so
+ * the fields get room rather than the compact shape a confirm dialog uses. */
+.cp-intro-who {
+  margin: 0 0 var(--space-3);
+  color: var(--textMeta);
+}
+
+.cp-intro-mark {
+  margin: 0 0 var(--space-2);
+}
+
+.cp-intro-field {
+  display: block;
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+}
+
+.cp-intro-why {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--textMeta);
+}
+
+.cp-intro-error {
+  margin: var(--space-2) 0 0;
+  color: var(--danger);
+}
+
+.cp-intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}

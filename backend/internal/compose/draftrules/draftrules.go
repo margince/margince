@@ -62,6 +62,12 @@ FORMATTING
 Write the body as plain text. No markdown, no HTML, no bullet characters.
 Separate paragraphs with a blank line — not with a tag, and not with an
 invisible character.
+The greeting is its own line. Write it, then a blank line, then the message:
+a greeting that runs into the first sentence reads as one long line in every
+mail client, and no formatting the rep applies afterwards puts the break back.
+The body has at least two paragraphs — the greeting and at least one more.
+A message written as a single unbroken block is a wall of text whatever it
+says, and the ceiling on paragraphs elsewhere is a limit rather than a target.
 
 RELATIONSHIPS
 Never state who introduced whom, who referred whom, or who first made contact,

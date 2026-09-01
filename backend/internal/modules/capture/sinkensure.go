@@ -83,7 +83,8 @@ func (s *Sink) WithEnsurer(ensurer CounterpartyEnsurer, transactional *Transacti
 // mail activity: the deterministic gates first (internal domain → skip
 // everything; free-mail → person only), then the resolver seam. Runs after
 // the capture transaction committed, and NEVER fails the capture — a fault
-// lands in system_log for the nightly reconcile (the link-less connector
+// lands in system_log, and the link_reconcile sweep links the message if a
+// person for that address turns up by any route (the link-less connector
 // activity is the retry marker).
 func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, decision counterpartyDecision) {
 	if !decision.create {
@@ -211,7 +212,13 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
-	decision.create = corresponded
+	// Correspondence is evidence of intent toward an address, not evidence that
+	// a person is behind it. A mailbox owner books flights, files expenses and
+	// answers their own robots, so "the workspace wrote here" admitted an
+	// itinerary service and an expense tool as contacts. recordWorthy asks the
+	// second question T1 always assumed: is this an address a person could be
+	// reached at?
+	decision.create = corresponded && s.recordWorthy(cp)
 
 	// T2 transactional / ESP infrastructure, which T1 outranks.
 	suppressed, suppressReason, err := s.registrySuppresses(ctx, tx, rec, cp, row, corresponded)
@@ -219,9 +226,13 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		return counterpartyDecision{}, err
 	}
 	if suppressed {
-		// decision, not a zero value — and safe to carry because registrySuppresses
-		// can only suppress when !corresponded, so create is still false here.
-		// Nothing downstream may read create from a suppressed decision.
+		// A suppressed decision carries create=false explicitly rather than
+		// relying on registrySuppresses only ever suppressing an address T1 left
+		// alone. That was true and is easy to make false from the other file,
+		// and two readers act on the flag: ensureCounterparty would mint the
+		// record the suppression just refused, and limitLinkLessAudience would
+		// leave the message workspace-readable.
+		decision.create = false
 		return decision.traced(TraceSuppressed, suppressReason), nil
 	}
 
@@ -252,13 +263,19 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	}
 	decision.create = decision.create || alreadyKnown
 
-	// T3 free-mail (CAP-PARAM-5).
+	// T3 free-mail (CAP-PARAM-5). A consumer mailbox says what it is not — an
+	// organization — so the org is suppressed either way. What it does NOT say
+	// is whether the person behind it is a counterparty: a customer's private
+	// gmail and a founder's sister arrive identically, and minting on sight put
+	// nineteen of the latter in a shared CRM. So the address defers to the
+	// verdict instead of creating, and only a prior admission (alreadyKnown,
+	// above) or a verdict makes the record.
 	consumer, err := consumerMailSender(ctx, tx, cp.Domain)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
 	if consumer {
-		decision.create, decision.suppressOrg = true, true
+		decision.suppressOrg = true
 	}
 
 	if !decision.create {
@@ -269,23 +286,6 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		return decision.traced(TraceDeferred, deferReason), nil
 	}
 	return decision, nil
-}
-
-// consumerMailSender answers T3: is this sender a personal mailbox rather than
-// somebody at a company? gmail.com is not an organization whatever else is true
-// of it, so its domain already says what it is and it is not the ambiguous
-// class — the person is created and the company suppressed.
-//
-// The workspace's own additions and carve-outs are read on the CALLER's
-// transaction, not cached at composition time: an admin correcting a wrong
-// baseline entry means the very next message, and a cache would make them wait
-// without saying so.
-func consumerMailSender(ctx context.Context, tx pgx.Tx, domain string) (bool, error) {
-	consumerMail, err := MatcherTx(ctx, tx)
-	if err != nil {
-		return false, err
-	}
-	return consumerMail.IsConsumer(domain), nil
 }
 
 // deferAmbiguous is T4: a first-time sender nothing about this address yet calls
@@ -326,7 +326,7 @@ func (s *Sink) deferAmbiguous(ctx context.Context, tx pgx.Tx, rec connector.Norm
 // acts for a human, and with no owner nothing can honestly own the created rows.
 // The ACTIVITY still stands — refusing the derivation is the honest answer,
 // where failing the capture would throw away a message we successfully read — so
-// the fault is recorded for the nightly reconcile and creation is skipped.
+// the fault is recorded for the link_reconcile sweep and creation is skipped.
 func (s *Sink) derivationStart(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, cp connector.Counterparty, activityID ids.UUID) (dispositionRow, counterpartyDecision, bool, error) {
 	if s.ensurer == nil || cp.Email == "" {
 		return dispositionRow{}, counterpartyDecision{}, false, nil

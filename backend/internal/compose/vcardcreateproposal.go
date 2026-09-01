@@ -188,6 +188,21 @@ func vcardCreatePrecheck() approvals.ReleasePrecheck {
 		if strings.TrimSpace(proposal.Entry.FullName) == "" {
 			return errors.New("the card names nobody: a person needs a name before they can be created")
 		}
+		// The same question the create asks, asked while the row is still
+		// re-decidable. Without it a card carrying a number the writer refuses
+		// is approved, the create fails after the decision, and the decider
+		// learns about it from the did-not-run lane instead of from the
+		// decision they were making.
+		//
+		// PARSING only, and deliberately. The create also refuses an address
+		// another person already claims, and that refusal cannot be brought
+		// forward honestly: a claim can be taken between this check and the
+		// approval, so asking here would not prevent the post-commit failure —
+		// it would only make it rarer while reading like a guarantee. A parse
+		// failure is a property of the card itself and cannot change under it.
+		if err := people.ValidateVCardContacts(proposal.Entry); err != nil {
+			return fmt.Errorf("this card carries a contact detail that cannot be stored: %w", err)
+		}
 		return nil
 	}
 }

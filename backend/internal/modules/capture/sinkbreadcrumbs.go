@@ -52,7 +52,8 @@ func (s *Sink) logBreadcrumbTx(ctx context.Context, tx pgx.Tx, action string, re
 }
 
 // logEnsureFault records an auto-create failure in system_log — the
-// activity is already committed and stays; the nightly reconcile re-runs
+// activity is already committed and stays; the link_reconcile sweep links it
+// once a person exists for its address, rather than re-running
 // the resolver over link-less connector activities.
 func (s *Sink) logEnsureFault(ctx context.Context, rec connector.NormalizedRecord, cause error) {
 	detail := map[string]any{
@@ -73,7 +74,7 @@ func (s *Sink) logEnsureFault(ctx context.Context, rec connector.NormalizedRecor
 	})
 	if err != nil {
 		// The ledger itself failed — nothing left but the process log; the
-		// nightly reconcile still finds the link-less activity.
+		// link_reconcile sweep still finds the link-less activity.
 		slog.ErrorContext(ctx, "capture: recording ensure fault", "err", err, "cause", cause)
 	}
 }

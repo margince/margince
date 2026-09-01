@@ -4,6 +4,12 @@
 package deployconfig
 
 import (
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -18,8 +24,11 @@ func TestTracePayloadsIsReadFromTheFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if !cfg.Capture.TracePayloads {
-		t.Error("capture.trace_payloads: true did not reach Capture.TracePayloads")
+	if cfg.Capture.TracePayloadsSetting == nil || !*cfg.Capture.TracePayloadsSetting {
+		t.Error("capture.trace_payloads: true did not reach Capture.TracePayloadsSetting")
+	}
+	if !cfg.Capture.TracesPayloads() {
+		t.Error("TracesPayloads() = false for an explicit true")
 	}
 }
 
@@ -53,13 +62,135 @@ func TestCaptureWarnsOnlyAboutSettingsItNoLongerActsOn(t *testing.T) {
 	}
 }
 
-// The posture that retains colleagues' subjects is off unless an operator wrote
-// it down. A default that stored content would make the switch a formality.
-func TestTracePayloadsIsOffUnlessTheFileSaysOtherwise(t *testing.T) {
-	if (Capture{}).TracePayloads {
-		t.Error("TracePayloads on the zero block = true, want false")
+// The trace names senders unless an operator wrote otherwise. A default of off
+// makes the page a list of decisions naming nobody, which cannot answer the one
+// question it exists for: why a message did not arrive.
+func TestTracePayloadsIsOnUnlessTheFileTurnsItOff(t *testing.T) {
+	if !(Capture{}).TracesPayloads() {
+		t.Error("TracesPayloads() on the zero block = false, want true")
 	}
-	if w := (Capture{TracePayloads: true}).Warnings(); len(w) != 0 {
+	if w := (Capture{TracePayloadsSetting: ptr(true)}).Warnings(); len(w) != 0 {
 		t.Errorf("Warnings() = %v for a setting that acts, want none", w)
+	}
+}
+
+// The reason the field is a pointer, stated as a test: for a plain bool an
+// absent key and an explicit `false` are the same zero value, so a default of
+// on could not be turned off at all — the operator would write the key, boot,
+// and find the posture unchanged with nothing to tell them why.
+func TestAnExplicitFalseTurnsThePayloadsOff(t *testing.T) {
+	cfg, err := Load(writeTemp(t, "version: 1\ncapture:\n  trace_payloads: false\n"), runtimeenv.Production)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Capture.TracePayloadsSetting == nil {
+		t.Fatal("capture.trace_payloads: false did not reach the field at all")
+	}
+	if cfg.Capture.TracesPayloads() {
+		t.Error("TracesPayloads() = true after an explicit false")
+	}
+}
+
+// A file that never mentions the key is the operator saying nothing, which is
+// not the same as saying no.
+func TestASilentFileGetsTheDefault(t *testing.T) {
+	cfg, err := Load(writeTemp(t, "version: 1\n"), runtimeenv.Production)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Capture.TracePayloadsSetting != nil {
+		t.Errorf("TracePayloadsSetting = %v for a file that says nothing, want nil", *cfg.Capture.TracePayloadsSetting)
+	}
+	if !cfg.Capture.TracesPayloads() {
+		t.Error("TracesPayloads() = false for a file that says nothing, want true")
+	}
+}
+
+func ptr(b bool) *bool { return &b }
+
+// The claim above TracesPayloads — that the default lives in one place — is
+// only true while nothing else READS the pointer field.
+//
+// A second reader answers FALSE for the silent file the default exists for,
+// which is the one case a reader is least likely to check by hand: it compiles,
+// and it works on every installation that wrote the key.
+//
+// The gate looks for a REFERENCE to the field, not for a dereference of it.
+// That distinction is the whole strength of this arm: `*c.TracePayloads` is
+// only the most obvious spelling, and `p := c.TracePayloads; return *p` reaches
+// the same wrong answer through a local a pattern match never sees. Nothing
+// outside the resolver has any business naming the field at all, so naming it
+// is what the gate refuses, which leaves TracesPayloads as the way a reader
+// reaches the value.
+//
+// AST rather than text for the same reason: a match on source characters is
+// defeated by a line break, a rename, or a parenthesis, and this is a privacy
+// posture rather than a style rule.
+//
+// The field carries a name of its own — TracePayloadsSetting — so this walk
+// needs no guess about a receiver's type. compose.CaptureConfig.TracePayloads
+// is the resolved plain bool every consumer reads and is a DIFFERENT name, so
+// a syntax-only scan can tell the two apart exactly, which is the reason the
+// rename came with this gate.
+func TestOnlyTheResolverReadsTheTracePayloadsField(t *testing.T) {
+	root, err := filepath.Abs("../../..")
+	if err != nil {
+		t.Fatalf("resolving the backend root: %v", err)
+	}
+	// The resolver's own file, and this one. Both NAME the field because one
+	// applies the default and the other tests that it does; every other file
+	// in the tree has the resolver to call instead.
+	//
+	// By path, not by basename: `capture.go` and `capture_test.go` exist in
+	// several packages here, and excluding them by name would let a real
+	// offender in any of them pass unread.
+	allowed := map[string]bool{
+		filepath.Join(root, "internal", "platform", "deployconfig", "capture.go"):      true,
+		filepath.Join(root, "internal", "platform", "deployconfig", "capture_test.go"): true,
+	}
+
+	var offenders []string
+	walked := 0
+	fset := token.NewFileSet()
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || allowed[path] {
+			return nil
+		}
+		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		if parseErr != nil {
+			// A file this walk cannot parse is one it cannot clear either.
+			return fmt.Errorf("parsing %s: %w", path, parseErr)
+		}
+		walked++
+		ast.Inspect(file, func(n ast.Node) bool {
+			sel, ok := n.(*ast.SelectorExpr)
+			if !ok || sel.Sel == nil || sel.Sel.Name != "TracePayloadsSetting" {
+				return true
+			}
+			rel, relErr := filepath.Rel(root, path)
+			if relErr != nil {
+				rel = path
+			}
+			offenders = append(offenders, fmt.Sprintf("%s:%d", rel, fset.Position(sel.Pos()).Line))
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walking the backend tree: %v", err)
+	}
+	// A walk that read nothing passes exactly like a clean tree, which is the
+	// one way a census must never fail.
+	if walked < 100 {
+		t.Fatalf("the walk parsed %d Go files, which is too few to have covered the tree", walked)
+	}
+	for _, o := range offenders {
+		t.Errorf("%s names deployconfig.Capture.TracePayloadsSetting. Call TracesPayloads() instead: "+
+			"the field is a pointer whose nil means the operator said nothing, and every reader "+
+			"that resolves it for itself is a second place the default lives — one of which will "+
+			"answer false for a file that never set the key", o)
 	}
 }

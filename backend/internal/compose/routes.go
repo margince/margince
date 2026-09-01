@@ -266,6 +266,9 @@ func mountProviderPushWebhooks(mux *http.ServeMux, srv Server, log *slog.Logger)
 	if srv.gmailPush != nil {
 		mux.Handle("/webhooks/gmail", httpserver.Correlate(httpserver.AccessLog(log, srv.gmailPush)))
 	}
+	if srv.graphPush != nil {
+		mux.Handle("/webhooks/graph", httpserver.Correlate(httpserver.AccessLog(log, srv.graphPush)))
+	}
 	if srv.overlayWebhook != nil {
 		mux.Handle("/webhooks/hubspot", httpserver.Correlate(httpserver.AccessLog(log, srv.overlayWebhook)))
 	}

@@ -1,10 +1,18 @@
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
-import { formatDateTime, formatMoney, formatNumber } from "../format/format";
+import {
+  calendarDaysBetween,
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+} from "../format/format";
 import type { Locale, useT } from "../i18n";
+import { settingsAddress } from "./settings";
 import type {
   Worklist,
   WorklistComparison,
+  WorklistFilter,
   WorklistItem,
   WorklistReason,
   WorklistValue,
@@ -33,6 +41,48 @@ export function subjectHref(item: WorklistItem): string | undefined {
     return undefined;
   }
   return routeHash(ENTITY[subject.type].route(subject.id));
+}
+
+// Where a row goes when it names no record of its own.
+//
+// Most rows point at a record and reach it through the entity registry. A few
+// name a QUEUE instead — a data-subject request is worked on the privacy
+// screen and nowhere else — and without a destination those rows are a
+// sentence a reader cannot follow, on the one lane whose whole argument is a
+// legal clock somebody has to answer.
+//
+// A destination is not a verb: these rows still offer no action, because the
+// queue cannot perform one. It is the difference between telling somebody
+// where a room is and claiming to have opened the door.
+// Through settingsAddress, not a path spelled here: the settings registry
+// decides whether a tab sits under the admin segment, and a second spelling of
+// that decision would keep pointing at the old address the day it moves.
+const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
+  dsr: routeHash(settingsAddress("privacy")),
+};
+
+// The address a row's headline links to: its record where it has one, the
+// queue that owns it where it does not, and nothing at all for a row that is
+// neither — a system condition fixed on a settings screen the card does not
+// pretend to know.
+export function rowHref(item: WorklistItem): string | undefined {
+  return askHref(item) ?? subjectHref(item) ?? SOURCE_QUEUE[item.source];
+}
+
+// An introduction ask goes to the contact's NETWORK tab, not the contact.
+//
+// The ask is answered there and nowhere else, and the default tab is a page
+// that does not mention it. Landing a colleague on the contact's overview and
+// leaving them to find the right tab is the hand-off this queue exists to
+// remove — they came here because somebody is waiting on them.
+export function askHref(item: WorklistItem): string | undefined {
+  if (
+    item.source !== "introduction_request" ||
+    item.subject?.type !== "person"
+  ) {
+    return undefined;
+  }
+  return routeHash({ screen: "contacts", id: item.subject.id, id2: "network" });
 }
 
 // One comparator value, in the reader's notation.
@@ -107,8 +157,10 @@ const KNOWN_REASONS = {
   approved_and_failed: true,
   blocks_customer_work: true,
   routine: true,
+  repeated_failure: true,
   legal_deadline: true,
   meeting_soon: true,
+  stale: true,
 } as const;
 
 type KnownReason = keyof typeof KNOWN_REASONS;
@@ -168,6 +220,33 @@ function paired(
   return comparator in PAIRED_COMPARATORS;
 }
 
+// waitingDaysSideDays reads one side of a `waiting_days` tie-break as a raw
+// day count, or null when the value carries nothing to convert (it is the
+// ordinary bucketed `days` value, not the tie-break's exact-instant one).
+//
+// The bucketed comparator always sends a `days` value. When two items tie on
+// the bucket, the server's own tie-break falls back to the exact instant each
+// occurred (a `date` value) — the true signal that broke the tie — but the
+// heading above this line promises a day count either way. Converting that
+// instant to days-since-then here keeps the line honest with its own heading,
+// instead of printing two clock times under "how many days". Left as a raw
+// number rather than formatted text: the caller has to compare the two sides
+// before it can decide whether showing them is honest at all.
+// Floored at zero: `now` is the server's own snapshot instant (Worklist.as_of)
+// and every occurred_at it ranked against is one it already read as past, so a
+// negative count here means only that the two clocks disagree at the margin
+// (a leap second, a snapshot mid-write) — never a real reading of the future.
+// A negative count under "how many days" is the same dishonest line this
+// function exists to remove, just spelled with a minus sign.
+function waitingDaysSideDays(
+  value: WorklistValue | undefined,
+  now: Date,
+): number | null {
+  return value?.kind === "date" && value.date
+    ? Math.max(0, calendarDaysBetween(new Date(value.date), now))
+    : null;
+}
+
 // Why this row sits above the next one.
 //
 // The comparator that DECIDED, with both sides' values — so a reader can check
@@ -179,6 +258,7 @@ export function comparisonText(
   t: T,
   locale: Locale,
   zone: string,
+  now: Date = new Date(),
 ): string | null {
   if (
     !comparison ||
@@ -186,6 +266,25 @@ export function comparisonText(
     !knownComparator(comparison.comparator)
   ) {
     return null;
+  }
+  if (comparison.comparator === "waiting_days") {
+    const mineDays = waitingDaysSideDays(comparison.mine, now);
+    const theirsDays = waitingDaysSideDays(comparison.theirs, now);
+    if (mineDays !== null && theirsDays !== null) {
+      // Both sides are the tie-break's exact-instant fallback. If they round
+      // to the same day at this display granularity, the comparator decided
+      // on a difference this line cannot show — printing equal numbers would
+      // claim a tie that never happened, so it falls back to the bare
+      // sentence instead, the same call the backend's own same-minute guard
+      // already makes one level finer (rank.go's `sameMinute`).
+      if (mineDays === theirsDays) {
+        return t(`worklist.above.${comparison.comparator}` as const);
+      }
+      return t(`worklist.above.${comparison.comparator}.pair` as const, {
+        mine: formatNumber(mineDays, locale),
+        theirs: formatNumber(theirsDays, locale),
+      });
+    }
   }
   const mine = valueText(comparison.mine, locale, zone);
   const theirs = valueText(comparison.theirs, locale, zone);
@@ -206,15 +305,91 @@ export function consequenceText(item: WorklistItem, t: T): string | null {
   return t(`worklist.consequence.${item.consequence}` as const);
 }
 
+// The deal's own figures, in one line: what it is worth, and when it closes.
+//
+// The concept's sharpest example was a €160,100 deal reduced to "no contact for
+// 83 days". The money was on the wire the whole time; only the row discarded it.
+export function dealFactsText(
+  item: WorklistItem,
+  t: T,
+  locale: Locale,
+  zone: string,
+): string | null {
+  const deal = item.deal;
+  if (!deal) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (deal.amount_minor != null && deal.currency) {
+    parts.push(formatMoney(deal.amount_minor, deal.currency, locale));
+  }
+  if (deal.expected_close_date) {
+    parts.push(
+      t("worklist.deal.closes", {
+        date: formatDate(deal.expected_close_date, locale, zone),
+      }),
+    );
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+// Where the row's suggested step leads.
+//
+// The RECORD the thread belongs to, not the message: an activity is a timeline
+// entry with no page of its own — `app/entity.ts` says so in as many words —
+// so `#/activities/<id>` would be a control that goes nowhere.
+//
+// WHAT THIS IS NOT. It does not open a composer. The composer lives on the
+// record page behind its own button, and no route opens it, so a link labelled
+// "Draft the reply" would promise something the click does not do. The verb
+// therefore says where it goes — the reader lands on the record with the
+// message on its timeline, one press from the draft — and naming the step
+// honestly is worth more than a label that overstates it.
+//
+// Opening the composer from here needs a deep link the app does not have. That
+// is its own change, and the label moves back when it lands.
+export function moveHref(item: WorklistItem): string | undefined {
+  if (item.move?.action !== "draft_reply") {
+    return undefined;
+  }
+  return subjectHref(item);
+}
+
 // One item's headline.
 //
 // The server sends a sentence where it HAS one — an approval summary composed
 // at staging time, a deal's own name, a message's subject. Where it has none
 // the sentence would have to be invented, and the client writes it from the
 // source instead.
-export function itemTitle(item: WorklistItem, t: T): string {
+export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
+  // A group names itself by what it holds and how much: "43 likely automated
+  // senders" is the whole row, and a reader decides whether to open it from
+  // that sentence alone.
+  if (item.batch) {
+    // "200+" where the read stopped at its own bound. A floor printed as a
+    // total is a wrong number rather than a bounded one, and the reader has no
+    // way to tell the two apart.
+    const count = item.batch.at_least
+      ? `${formatNumber(item.batch.count, locale)}+`
+      : formatNumber(item.batch.count, locale);
+    // An incident names WHAT is broken; a hygiene group names its kind.
+    if (item.batch.key === "system_incident") {
+      return t("worklist.batch.system_incident", {
+        count,
+        cause: item.batch.cause ?? t("worklist.batch.unnamedCause"),
+      });
+    }
+    return t(`worklist.batch.${item.batch.key}` as const, { count });
+  }
   if (item.title) {
-    return item.title;
+    // A title that names no record, on a row that HAS one, gets the record's
+    // name beside it. Eight rows reading "Follow up with the new lead" cannot
+    // be told apart or put in order, and the lead's name is already on the row
+    // — it was only the sentence that discarded it.
+    const named = item.subject?.label;
+    return named && !item.title.includes(named)
+      ? `${item.title} · ${named}`
+      : item.title;
   }
   if (!knownSource(item.source)) {
     return t("worklist.untitled.generic");
@@ -256,12 +431,91 @@ const KNOWN_SOURCES = {
   capture_health: true,
   ai_work_health: true,
   bounce: true,
+  undelivered: true,
   automation_run: true,
   notice: true,
+  introduction_request: true,
+  // A group of routine decisions, which names no single record.
+  batch: true,
 } as const;
 
 function knownSource(
   source: WorklistItem["source"],
 ): source is keyof typeof KNOWN_SOURCES {
   return source in KNOWN_SOURCES;
+}
+
+// How much of one kind of work the page is carrying, for the pill that narrows
+// to it.
+//
+// A count is drawn only when it is EXACT. `FilterPills` treats an absent count
+// as "no number" rather than as a zero, and that is the honest answer for a
+// category read to its bound: the server knows a floor, not a total, and a
+// floor printed as a count is a wrong number rather than a missing one.
+//
+// The `all` pill counts every category, because "all" is not a category and has
+// no row of its own.
+export function pillCount(
+  day: Worklist,
+  filter: WorklistFilter,
+): number | undefined {
+  if (filter === "all") {
+    return day.counts.some((count) => count.more_available)
+      ? undefined
+      : day.counts.reduce((total, count) => total + count.considered, 0);
+  }
+  const found = day.counts.find((count) => count.category === filter);
+  if (!found || found.more_available) {
+    return undefined;
+  }
+  return found.considered;
+}
+
+// What the page is NOT showing, in one line.
+//
+// The queue is a cut, and before this the reader had no way to tell a finished
+// day from a truncated one — a full first page read as an empty backlog. The
+// line is drawn only when there IS a difference to report: on a day the page
+// carries whole, saying "12 of 12" is noise.
+//
+// It reads only the cut the reader is LOOKING at. `considered` is snapshotted
+// before the category narrowing, so on a filtered page the other categories keep
+// their full figures and contribute nothing shown — summing them all would
+// answer "5 of 35" on a page that is showing every one of the five things the
+// reader asked for, and conflate "you filtered this out" with "this did not
+// fit".
+//
+// Where a source was read to its bound the total is a floor, and the sentence
+// says a source has more rather than printing a number it cannot stand behind.
+export function completenessText(
+  day: Worklist,
+  filter: WorklistFilter,
+  t: T,
+  locale: Locale,
+): string | null {
+  const counted =
+    filter === "all"
+      ? day.counts
+      : day.counts.filter((count) => count.category === filter);
+  const shown = counted.reduce((total, count) => total + count.shown, 0);
+  const considered = counted.reduce(
+    (total, count) => total + count.considered,
+    0,
+  );
+  const bounded = counted.filter((count) => count.more_available).length;
+  if (shown >= considered && bounded === 0) {
+    return null;
+  }
+  if (bounded > 0) {
+    // No fraction: the figure it would divide by is a floor, and "200 of 200
+    // shown · 1 source has more" contradicts itself in one sentence.
+    return t("worklist.completeness.bounded", {
+      shown: formatNumber(shown, locale),
+      sources: formatNumber(bounded, locale),
+    });
+  }
+  return t("worklist.completeness", {
+    shown: formatNumber(shown, locale),
+    considered: formatNumber(considered, locale),
+  });
 }

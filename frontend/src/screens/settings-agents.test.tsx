@@ -337,6 +337,72 @@ describe("AgentToolsCard passport scoping", () => {
     expect(answer && within(answer).getByText("send")).toBeTruthy();
     expect(answer && within(answer).getByText("reaches out")).toBeTruthy();
   });
+
+  // A human who only ever connected an agent through the OAuth consent screen
+  // has never minted a passport of their own — the row the connection issued
+  // carries `connection`, so mintedPassports filters it out. The selector must
+  // not render for a filtered-to-nothing list: PassportSelect would offer only
+  // "All passports", a choice that is already the default and picks among
+  // nothing.
+  it("hides the passport selector for a human who has only ever connected agents", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/me")) {
+          return jsonResponse({
+            user: { email: "ada@acme.test" },
+            roles: ["admin"],
+            teams: [],
+          });
+        }
+        if (url.includes("/passports")) {
+          return jsonResponse({
+            data: [
+              {
+                id: "pp-connection",
+                label: "oauth:dcr-client-id",
+                scopes: ["read"],
+                created_at: "2026-07-01T08:00:00Z",
+                expires_at: "2036-08-01T08:00:00Z",
+                revoked_at: null,
+                connection: {
+                  client_id: "dcr-client-id",
+                  client_name: "Claude Code",
+                  connected_at: "2026-07-01T08:00:00Z",
+                  renewable: true,
+                },
+              },
+            ],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        if (url.includes("/agent-tools")) {
+          return jsonResponse({
+            data: [
+              {
+                name: "list_pipelines",
+                title: "List pipelines and their stages",
+                description:
+                  'Every pipeline with its live stages. (Governance: runs immediately; requires passport scope "read".)',
+                required_scope: null,
+                tier: "auto_execute",
+                egress: false,
+              },
+            ],
+          });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    render(<SettingsScreen route={settingsAddress("agents")} />);
+    await screen.findByText("list_pipelines");
+
+    expect(screen.queryByLabelText("All passports")).toBeNull();
+  });
 });
 
 // The tool console and the passport list share the ["passports"] read, so a

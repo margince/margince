@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -44,7 +45,31 @@ func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 		return audience
 	}
 
-	// The default: sharing ON, the captured email is workspace-readable.
+	// This test is about the WORKSPACE floor, so the mailbox is put in `shared`
+	// to isolate it. Without that the mailbox's own default (classified) holds
+	// every message anyway, the floor could be broken, and every assertion here
+	// would still pass.
+	sharedOn := true
+	settingsStore := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	optInCtx := principal.WithCorrelationID(
+		principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+			principal.Principal{
+				Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+				SeatType: principal.SeatFull,
+				Permissions: principal.Permissions{
+					Objects:  map[string]principal.ObjectGrant{"capture_settings": {Read: true, Update: true}},
+					RowScope: principal.RowScopeAll,
+				},
+			}), ids.NewV7())
+	if _, err := settingsStore.Update(optInCtx, capturemod.SettingsPatch{SharedPostureAllowed: &sharedOn}); err != nil {
+		t.Fatalf("allowing the shared posture: %v", err)
+	}
+	if _, err := registry.SetMailPosture(grantCtx, "graph", capturemod.PostureShared, false); err != nil {
+		t.Fatalf("putting the mailbox in shared: %v", err)
+	}
+
+	// Sharing ON, and this mailbox asks to be open: the captured email is
+	// workspace-readable.
 	if err := registry.SyncOnce(grantCtx, connID); err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +88,7 @@ func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 	})
 	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
 	off := false
-	if _, err := store.Update(adminCtx, nil, &off, nil); err != nil {
+	if _, err := store.Update(adminCtx, capturemod.SettingsPatch{MailSharing: &off}); err != nil {
 		t.Fatalf("switching mail sharing off: %v", err)
 	}
 

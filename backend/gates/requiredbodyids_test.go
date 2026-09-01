@@ -57,6 +57,8 @@ var probedRequiredIDBodies = map[string]bool{
 	"RecordConsentRequest":            true,
 	"IssueDoubleOptInJSONBody":        true,
 	"SetProjectStakeholderRequest":    true,
+	"DraftIntroRequestJSONBody":       true,
+	"DraftIntroNoteJSONBody":          true,
 	"SetProjectCompanyRequest":        true,
 	"CreateRecordGrantRequest":        true,
 	"MergePersonJSONBody":             true,
@@ -68,6 +70,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"DraftAccountEmailJSONBody":       true,
 	"AcceptExtractionRequest":         true,
 	"CreateDealRoomRequest":           true,
+	"RaiseNoticeRequest":              true,
 }
 
 // unguardedRequiredIDBodies is what is left, and both entries are WAIVERS rather
@@ -91,6 +94,15 @@ var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
 	// refuses it as a 422 naming the field. It cannot become a zero UUID reaching
 	// a lookup, which is the only hazard this gate is about.
 	"UploadAttachmentMultipartBody": "multipart; FormValue + ids.Parse already refuses an absent part as a 422",
+	// Not a request body either: the ask as it is SERVED. Every path that
+	// mentions it does so under `responses`, and the writes decode
+	// IntroRequestInput / IntroRequestDecisionInput / IntroRequestCompleteInput /
+	// IntroRequestCancelInput instead — none of which declares a required id the
+	// caller could omit. Its ids are the row's own, written by the store from the
+	// authenticated principal, so no absent key can become a zero UUID reaching a
+	// lookup. Waived for the reason DataSubjectRequest is: the name heuristic
+	// cannot tell a served entity from a body.
+	"IntroRequest": "not a request body — the ask as served; every reference is a response, and the writes decode the *Input types",
 })
 
 func TestEveryContractBodyWithARequiredIDIsAccountedFor(t *testing.T) {

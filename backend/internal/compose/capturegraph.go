@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
+	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -65,6 +66,24 @@ func newGraphOAuth(c GraphConfig) graph.OAuth {
 	})
 }
 
+// newGraphCalOAuth builds the Microsoft CALENDAR authorization on the same app.
+//
+// A separate authorization requesting the calendar permission alone, exactly as
+// the Google pair splits Gmail from Calendar: one consent each, so a person can
+// bring their calendar without their mail, and disconnecting either leaves the
+// other standing. The scopes are read from the graphcal package rather than
+// restated here, so the consent requests exactly the permissions that connector
+// declares.
+//
+//nolint:ireturn // returns the graphcal.OAuth seam by design (a fakeable interface)
+func newGraphCalOAuth(c GraphConfig) graphcal.OAuth {
+	return graphcal.NewOAuth(graphcal.OAuthConfig{
+		ClientID:     c.ClientID,
+		ClientSecret: c.ClientSecret,
+		Tenant:       c.Tenant,
+	})
+}
+
 // WithGraphCapture wires the Microsoft Graph half of the connector OAuth
 // transport (api role): it registers the graph connector on the connect
 // registry — building the registry, signer, and base URLs if WithGmailCapture
@@ -75,6 +94,12 @@ func newGraphOAuth(c GraphConfig) graph.OAuth {
 // after WithKeyvault, and after WithGmailCapture when both are configured.
 func WithGraphCapture(c GraphConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
+		// The send pre-flight's fact, recorded BEFORE the transport gate below
+		// and off canSync — the same split WithGmailCapture makes. An
+		// installation holding client credentials but no state key mounts no
+		// api-side connect transport and still sends perfectly well from the
+		// worker, so gating this on canConnect would report it unable to.
+		s.graphAppConfigured = c.canSync()
 		if !c.canConnect() || s.vault == nil {
 			return
 		}
@@ -86,7 +111,10 @@ func WithGraphCapture(c GraphConfig) Option {
 			s.apiBaseURL = c.APIBaseURL
 		}
 		s.connectorHandlers.registry.Register(graph.New(newGraphOAuth(c), graph.NewAPI(nil, "")))
+		s.connectorHandlers.registry.Register(graphcal.New(newGraphCalOAuth(c), graphcal.NewAPI(nil, "")))
 		s.graphOAuth = newGraphOAuth(c)
 		s.graphAPI = graph.NewAPI(nil, "")
+		s.graphCalOAuth = newGraphCalOAuth(c)
+		s.graphCalAPI = graphcal.NewAPI(nil, "")
 	}
 }

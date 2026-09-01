@@ -19,12 +19,15 @@ package compose
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -76,46 +79,18 @@ func (cfg GoogleSignInConfig) Enabled() bool {
 // MissingFields names what's absent — used by cmd/api/googlesignin.go for
 // the three-state boot-log line.
 func (cfg GoogleSignInConfig) MissingFields() []string {
-	var missing []string
-	if cfg.ClientID == "" {
-		missing = append(missing, "client id")
-	}
-	if cfg.ClientSecret == "" {
-		missing = append(missing, "client secret")
-	}
-	if len(cfg.StateKey) < minStateKeyLen {
-		missing = append(missing, "state key (>=32B)")
-	}
-	if cfg.RedirectBase == "" {
-		missing = append(missing, "redirect base URL")
-	}
-	if cfg.PostLoginURL == "" {
-		missing = append(missing, "post-login URL")
-	}
-	if cfg.FailureURL == "" {
-		missing = append(missing, "failure URL")
-	}
-	return missing
-}
-
-// googleSignInMatchIdentity is the login flow's matchIdentity: the token's
-// audience must be the shared Gmail-capture client this deployment
-// configured. email_verified is checked by identity's own callback handler,
-// not here — the Pub/Sub push caller (oidcverify.go's other user of
-// googleOIDCVerifier) has no such requirement, so it is not baked into the
-// shared matchIdentity contract.
-func googleSignInMatchIdentity(clientID string) func(oidcClaims) error {
-	return func(c oidcClaims) error {
-		if c.Aud != clientID {
-			return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
-		}
-		return nil
-	}
+	// A conversion, not a field-by-field copy: this config IS the shared shape —
+	// Google's sign-in asks for no vendor knob of its own, where Microsoft's adds
+	// a directory. Spelling the fields out again would be a second place for the
+	// two to drift.
+	return signInFields(cfg).missingSignInFields()
 }
 
 // googleOIDCVerifierAdapter satisfies identity.OIDCVerifier over the shared
-// compose-level googleOIDCVerifier (generalized in oidcverify.go).
-type googleOIDCVerifierAdapter struct{ v *googleOIDCVerifier }
+// compose-level oidcTokenVerifier (generalized in oidcverify.go). Google's own
+// adapter because it reads Google's own `email_verified` claim; Microsoft
+// issues no such claim and carries its own adapter (microsoftsignin.go).
+type googleOIDCVerifierAdapter struct{ v *oidcTokenVerifier }
 
 func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, err error) {
 	claims, err := a.v.Verify(ctx, idToken)
@@ -123,13 +98,6 @@ func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (
 		return "", "", false, err
 	}
 	return claims.Email, claims.Sub, claims.EmailVerified, nil
-}
-
-// googleTokenExchangerAdapter satisfies identity.OIDCExchanger.
-type googleTokenExchangerAdapter struct{ ex googleTokenExchanger }
-
-func (a googleTokenExchangerAdapter) Exchange(ctx context.Context, code, codeVerifier, redirectURI string) (string, error) {
-	return a.ex.Exchange(ctx, code, codeVerifier, redirectURI)
 }
 
 // loginStateSignerAdapter satisfies identity.OIDCStateSigner over
@@ -153,30 +121,108 @@ func (a loginStateSignerAdapter) Verify(token string) (provider, nonce, codeVeri
 // injects nothing, so oidc_providers stays [] and the routes 404 (identity's
 // own per-provider lookup).
 func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
+	return func(s *Server, pool *pgxpool.Pool) {
+		// The redirect URI is published BEFORE the completeness gate, and that
+		// ordering is the whole point of publishing it. An operator needs this
+		// value while they are creating the OAuth client — which is precisely
+		// when no client id exists yet — so withholding it until one is
+		// configured would hide it exactly when it is needed and leave them to
+		// guess the one string Google matches byte for byte.
+		//
+		// It is knowable without credentials because it is not derived from
+		// them: RedirectBase is this deployment's own externally-reachable
+		// origin. What an incomplete config withholds is the ROUTE, not the URL
+		// the route will answer on once the operator finishes.
+		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
+			s.redirectURIs = append(s.redirectURIs, crmcontracts.GoogleAppRedirectUri{
+				Purpose: crmcontracts.SignIn,
+				Url:     identity.SignInRedirectURI(base, googleProviderKey),
+			})
+		}
 		if !cfg.Enabled() {
 			return
 		}
-		providers := map[string]identity.OIDCProviderConfig{
-			googleProviderKey: {Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
-		}
-		verifier := googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, googleSignInMatchIdentity(cfg.ClientID))}
-		exchanger := googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}}
-		signer := loginStateSignerAdapter{s: newLoginStateSigner([]byte(cfg.StateKey))}
-
-		s.authHandlers = s.WithOIDCProviders(
-			providers,
-			map[string]identity.OIDCVerifier{googleProviderKey: verifier},
-			map[string]identity.OIDCExchanger{googleProviderKey: exchanger},
-			signer,
-			identity.OIDCRoutes{
-				RedirectBase: strings.TrimSuffix(cfg.RedirectBase, "/") + "/v1",
-				PostLoginURL: cfg.PostLoginURL,
-				FailureURL:   cfg.FailureURL,
-			},
-		)
-		s.authHandlers = s.WithOIDCCapabilitiesFn(func() []identity.OIDCProviderConfig {
-			return []identity.OIDCProviderConfig{{Key: googleProviderKey, Label: googleProviderLabel}}
-		})
+		registerSignInProvider(s, pool, signInProvider{
+			config:    identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
+			verifier:  googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, audienceIs(cfg.ClientID))},
+			exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}},
+		}, identity.OIDCRoutes{
+			RedirectBase: signInRedirectBase(cfg.RedirectBase),
+			PostLoginURL: cfg.PostLoginURL,
+			FailureURL:   cfg.FailureURL,
+		}, cfg.StateKey)
 	}
+}
+
+// enabledOidcProvidersReadActor names the read in the audit trail. A SYSTEM
+// actor because no human asked for this: a browser rendered a login screen, and
+// this is the configuration that decides what it may offer. The same shape as
+// the installation-setup and google-app reads, for the same reason.
+const enabledOidcProvidersReadActor = "system:enabled_oidc_providers_read"
+
+// enabledOidcProviders answers which providers may be used right now:
+// the deployment's configured set INTERSECTED with the admin's chosen list.
+//
+// The intersection, and never the setting alone, because an operator cannot
+// invent a client id and secret from a settings screen — the deployment is what
+// makes a provider possible and the setting only narrows it. Absent (nil) means
+// every configured provider, so an installation that upgrades into this setting
+// keeps the login screen it had.
+//
+// This is reached from an ANONYMOUS endpoint, so it resolves the installation
+// and reads as a system actor: the settings read takes an RBAC gate, and there
+// is no human on a login screen to satisfy it. It is only ever wired when the
+// deployment composed a provider at all, which is what keeps /auth/capabilities
+// off the database entirely on an installation that has none.
+func enabledOidcProviders(pool *pgxpool.Pool, svc *identity.Service, configured []identity.OIDCProviderConfig) func(context.Context) ([]identity.OIDCProviderConfig, error) {
+	return func(ctx context.Context) ([]identity.OIDCProviderConfig, error) {
+		// No pool means no settings store, so there is no admin policy to read
+		// and the deployment's list IS the whole answer — the same reading an
+		// absent setting gets below. Only a role composed without a database
+		// reaches this; every role that serves /v1 has one.
+		if pool == nil {
+			return configured, nil
+		}
+		wsID, err := svc.InstallationWorkspace(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("resolving the installation for the sign-in provider policy: %w", err)
+		}
+		readCtx := principal.WithCorrelationID(
+			principal.WithActor(principal.WithWorkspaceID(ctx, wsID.UUID), principal.Principal{
+				Type: principal.PrincipalSystem,
+				ID:   enabledOidcProvidersReadActor,
+			}), ids.NewV7(),
+		)
+		chosen, err := settings.Get(readCtx, NewSettingsStore(pool), identity.EnabledOidcProviders)
+		if err != nil {
+			return nil, fmt.Errorf("reading the enabled sign-in providers: %w", err)
+		}
+		return offeredProviders(configured, chosen), nil
+	}
+}
+
+// offeredProviders is the intersection itself, split from the read around it so
+// the rule can be examined without a database: what an admin chose can only
+// ever NARROW what the deployment composed, because a key nobody holds
+// credentials for enables nothing.
+//
+// A nil chosen list is "never chosen", which is every configured provider — an
+// installation that upgrades into this setting keeps the login screen it had.
+// An EMPTY list is a choice and means none, which is why the two cannot be
+// collapsed into a length check.
+func offeredProviders(configured []identity.OIDCProviderConfig, chosen []string) []identity.OIDCProviderConfig {
+	if chosen == nil {
+		return configured
+	}
+	allowed := make(map[string]bool, len(chosen))
+	for _, key := range chosen {
+		allowed[key] = true
+	}
+	enabled := make([]identity.OIDCProviderConfig, 0, len(configured))
+	for _, p := range configured {
+		if allowed[p.Key] {
+			enabled = append(enabled, p)
+		}
+	}
+	return enabled
 }

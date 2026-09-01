@@ -170,7 +170,7 @@ func TestDraftOutcomeJudgesTheApprovedBodyNotTheTransmittedFooter(t *testing.T) 
 	}
 
 	staged := stager.only(t)
-	if !strings.Contains(staged.Body, "/unsubscribe?purpose=marketing_email") {
+	if !strings.Contains(staged.Body, "/#/unsubscribe/"+testUnsubscribeTok+"/marketing_email") {
 		t.Fatalf("the transmitted body carries no footer, so this case proves nothing:\n%s", staged.Body)
 	}
 	if len(recorder.calls) != 1 {

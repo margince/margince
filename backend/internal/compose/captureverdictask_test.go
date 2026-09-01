@@ -112,7 +112,7 @@ func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 			// derived from the floor, never self-declared.
 			name:    "a verdict outside the closed set",
 			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.PendingStatusUnsure, Confidence: 0.9}},
-			wantMsg: "is not one of person|role_mailbox",
+			wantMsg: "is not one of " + strings.Join(verdictKindNames(), "|"),
 		},
 		{
 			name:    "confidence above one",

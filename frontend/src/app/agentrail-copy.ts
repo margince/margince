@@ -54,6 +54,7 @@ export const TASK_SAID: Readonly<Record<string, string>> = {
   site_triage: "Picked which pages to read",
   summarize: "Wrote a summary",
   transcript: "Processed a call transcript",
+  propose_roles: "Read the buying roles from their messages",
   transcript_propose: "Proposed next steps from a call",
   voice_build: "Learned your writing voice",
 };

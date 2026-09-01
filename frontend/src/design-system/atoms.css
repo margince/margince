@@ -859,6 +859,22 @@
   margin-top: var(--space-4);
 }
 
+/* A TABLE ROW'S VERBS: the buttons in a table's trailing cell.
+ *
+ * Not `.card-actions`, which is a CARD's trailing row and carries a top margin
+ * for the prose above it — inside a cell that margin pushes the buttons off
+ * their row's baseline, and the wrap it allows turns two short verbs into a
+ * two-line cell that doubles the height of every row in the table.
+ *
+ * So: no top margin, and no wrapping. A cell too narrow for its verbs scrolls
+ * with the rest of the table inside `TableScroll`, which is the answer this
+ * table already has for a column that does not fit. */
+.cell-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
 /* A card that stacks above the next one in a rail. */
 .card-stack {
   margin-bottom: var(--space-4);

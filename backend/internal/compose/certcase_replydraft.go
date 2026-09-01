@@ -48,6 +48,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -134,7 +135,7 @@ func (replyDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 	switch want {
 	case replyDraftRegisterPlain:
 	case replyDraftRegisterVoiced:
-		if !voice.ok {
+		if !voice.OK {
 			return nil, fmt.Errorf(
 				"%s: the scenario expects the %q register from a workspace with no Voice DNA state, "+
 					"and the plain variant is the only prompt that call can send",
@@ -190,22 +191,22 @@ func refuseUnsendableActivity(activity replyActivityData) error {
 // trusted, because drafting shows at most two verbatim examples and drops the
 // rest without saying so: a fixture whose examples do not survive that would
 // certify a block the product never assembles.
-func replyDraftVoiceState(artifact *replyDraftVoiceArtifact) (voiceContext, error) {
+func replyDraftVoiceState(artifact *replyDraftVoiceArtifact) (draftvoice.Context, error) {
 	if artifact == nil {
-		return voiceContext{}, nil
+		return draftvoice.Context{}, nil
 	}
 	if strings.TrimSpace(artifact.VoiceProfileMD) == "" {
-		return voiceContext{}, fmt.Errorf(
+		return draftvoice.Context{}, fmt.Errorf(
 			"%s: the fixture's profile carries no derived voice profile, and only a built one is ever active",
 			replyDraftSite)
 	}
 	profileJSON, err := replyDraftStoredJSON(replyDraftProfileArtifact{Exemplars: artifact.Exemplars})
 	if err != nil {
-		return voiceContext{}, fmt.Errorf("%s: the fixture's verbatim examples are not storable: %w", replyDraftSite, err)
+		return draftvoice.Context{}, fmt.Errorf("%s: the fixture's verbatim examples are not storable: %w", replyDraftSite, err)
 	}
 	statsJSON, err := replyDraftStoredJSON(artifact.Stats)
 	if err != nil {
-		return voiceContext{}, fmt.Errorf("%s: the fixture's style fingerprint is not storable: %w", replyDraftSite, err)
+		return draftvoice.Context{}, fmt.Errorf("%s: the fixture's style fingerprint is not storable: %w", replyDraftSite, err)
 	}
 	version := ai.VoiceProfileVersion{
 		ProfileVersion: artifact.ProfileVersion,
@@ -214,16 +215,16 @@ func replyDraftVoiceState(artifact *replyDraftVoiceArtifact) (voiceContext, erro
 		StatsJSON:      statsJSON,
 	}
 	if shown := ai.VersionExemplars(version); !slices.Equal(shown, artifact.Exemplars) {
-		return voiceContext{}, fmt.Errorf(
+		return draftvoice.Context{}, fmt.Errorf(
 			"%s: the fixture supplies %d verbatim examples and drafting shows %d",
 			replyDraftSite, len(artifact.Exemplars), len(shown))
 	}
-	return voiceContext{
+	return draftvoice.Context{
 		// The profile id keys the learning signal, never a prompt, so it is
 		// minted here for the same reason the anchor is.
-		profile: ai.VoiceProfile{ID: ids.NewV7(), PersonalityMD: artifact.PersonalityMD},
-		version: version,
-		ok:      true,
+		Profile: ai.VoiceProfile{ID: ids.NewV7(), PersonalityMD: artifact.PersonalityMD},
+		Version: version,
+		OK:      true,
 	}, nil
 }
 
@@ -252,7 +253,7 @@ func replyDraftStoredJSON[T any](value T) (map[string]any, error) {
 // voice state that selects which variant it is answered in.
 type replyDraftCase struct {
 	activity replyActivityData
-	voice    voiceContext
+	voice    draftvoice.Context
 	anchor   ids.UUID
 	expected string
 }
