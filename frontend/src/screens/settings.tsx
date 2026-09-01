@@ -1804,6 +1804,14 @@ function AgentToolsCard() {
   const mintedPassports = (passports.data?.data ?? []).filter(
     (p) => p.revoked_at == null && p.connection == null,
   );
+  // Whether this human has ever minted one — a REVOKED one still counts, so
+  // the row a human just revoked does not yank the selector out from under
+  // them (the test below pins that transition). A connection's credential
+  // never counts, revoked or not: a human who only ever connected agents,
+  // never minted, has no selector to show.
+  const everMintedAPassport = (passports.data?.data ?? []).some(
+    (p) => p.connection == null,
+  );
   // The filter follows the selector: a passport revoked while it was the
   // chosen scope drops out of the options, and the <select> then shows "all
   // passports" — so the inventory must read as unfiltered too, rather than
@@ -1829,7 +1837,7 @@ function AgentToolsCard() {
               with nothing behind it. `PassportSelect` carries its own accessible
               name ("All passports"), the way `Switch` does, so the row hands it
               no ARIA of its own. */}
-          {passports.data && passports.data.data.length > 0 && (
+          {everMintedAPassport && (
             <SettingRow
               label={t("tools.scopeLabel")}
               control={
