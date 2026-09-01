@@ -20,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -36,7 +35,7 @@ import (
 // a SAR built from it) that reports `real` for someone with no record would be
 // describing a person who does not exist.
 func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
-	created, err := createCounterpartyRecords(ctx, tx, e.people, e.activities, counterpartyCreation{
+	created, err := createCounterpartyRecords(ctx, tx, e.people, counterpartyCreation{
 		Email:       row.Email,
 		DisplayName: row.DisplayName,
 		Domain:      row.Domain,
@@ -67,7 +66,7 @@ func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx p
 // assembler is how the linking, the triage hand-off and the erasure check would
 // drift apart between them.
 func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
-	created, err := createCounterpartyRecords(ctx, tx, e.people, e.activities, counterpartyCreation{
+	created, err := createCounterpartyRecords(ctx, tx, e.people, counterpartyCreation{
 		Email:       row.Email,
 		DisplayName: row.DisplayName,
 		Domain:      row.Domain,
@@ -132,7 +131,7 @@ type counterpartyCreated struct {
 // (backend/internal/compose/captureverdictkinds_test.go), which fails when a
 // second verdict-side file calls EnsureCounterpartyTx.
 func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Store,
-	timeline *activities.Store, in counterpartyCreation,
+	in counterpartyCreation,
 ) (counterpartyCreated, error) {
 	res, err := store.EnsureCounterpartyTx(ctx, tx, people.EnsureCounterpartyInput{
 		Email:       in.Email,
@@ -153,7 +152,13 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Sto
 	// The ensure links the message that raised the question; the sender may have
 	// written more while it was open, and all of them belong on this person's
 	// timeline rather than only the first.
-	if err := timeline.LinkCapturedMailTx(ctx, tx, res.PersonID, in.Email); err != nil {
+	//
+	// Synchronously, on the verdict's own transaction, although the same repair
+	// also runs off the person event: this cohort is a commit-time promise the
+	// verdict makes, and a promise kept by a consumer is kept at some other time.
+	// The promotion is idempotent, so the consumer's later pass finds nothing
+	// left to do.
+	if _, err := store.PromotePersonCohortTx(ctx, tx, res.PersonID); err != nil {
 		return counterpartyCreated{}, err
 	}
 	out := counterpartyCreated{}

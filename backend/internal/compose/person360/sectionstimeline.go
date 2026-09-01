@@ -27,13 +27,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// personLinkedActivity is the reachability predicate the person timeline
-// uses: an activity linked to this person. It is the same link table the
-// entity-scoped activity list walks, so the 360's recent rows and the full
-// timeline agree about what belongs to this contact.
-const personLinkedActivity = `EXISTS (
+// personReachesActivity is the reachability predicate every person-360 section
+// uses: an activity this contact is ON.
+//
+// Two arms, because a person is on a message in two different ways. The LINK is
+// how the message is filed — what the entity-scoped activity list walks, so the
+// 360's recent rows and the full timeline agree about it. The PARTICIPANT row is
+// who was actually in the conversation, and it is the only record of a contact
+// who was CC'd or who attended a meeting: capture files a message under its
+// counterparty, so a thread a contact was copied on is filed under somebody else
+// and their own page never showed it.
+//
+// No deal arm, deliberately, although the ORG walk has one. A company's reach is
+// the company's business and a deal belongs to it; a person's page answers a
+// narrower question — what did I have with THIS human — and pulling in every
+// message on their employer's deals would put colleagues' threads they were
+// never on onto their record.
+//
+// The single %d bind is used by both arms, so every call site passes the person
+// position exactly once.
+const personReachesActivity = `(EXISTS (
 	SELECT 1 FROM activity_link l
-	WHERE l.activity_id = a.id AND l.person_id = $%d)`
+	WHERE l.activity_id = a.id AND l.person_id = $%[1]d)
+ OR EXISTS (
+	SELECT 1 FROM activity_participant ap
+	WHERE ap.activity_id = a.id AND ap.person_id = $%[1]d))`
 
 // activityScope renders the caller's activity CONTENT gate for the timeline
 // rows this section hands back, defaulting to the permissive clause when the
@@ -157,12 +175,14 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		SELECT a.id, a.kind, a.channel_provider, a.subject, a.body, a.direction,
 		       a.occurred_at, a.due_at, a.is_done, a.source, a.captured_by, a.created_at,
 		       a.thread_key, a.bulk_mail_attested, a.audience, a.audience_reason,
-		       a.version, (%s) AS content_available
+		       a.version, (%s) AS content_available,
+		       EXISTS (SELECT 1 FROM activity_link fl
+		                WHERE fl.activity_id = a.id AND fl.person_id = $%d) AS filed_here
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT %d`,
-		contentArm, fmt.Sprintf(personLinkedActivity, personPos), scope, projectScope(opts, arg), extra, sectionCap+1), args...)
+		contentArm, personPos, fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg), extra, sectionCap+1), args...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -173,12 +193,12 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		var id ids.UUID
 		var audience string
 		var version int64
-		var contentAvailable, bulkMailAttested bool
+		var contentAvailable, bulkMailAttested, filedHere bool
 		var threadKey, audienceReason *string
 		if err := rows.Scan(&id, &a.Kind, &a.ChannelProvider, &a.Subject, &a.Body,
 			&a.Direction, &a.OccurredAt, &a.DueAt, &a.IsDone, &a.Source, &a.CapturedBy,
 			&a.CreatedAt, &threadKey, &bulkMailAttested, &audience, &audienceReason,
-			&version, &contentAvailable); err != nil {
+			&version, &contentAvailable, &filedHere); err != nil {
 			return nil, false, err
 		}
 		a.Id = openapi_types.UUID(id)
@@ -205,13 +225,18 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 			a.Subject, a.Body, a.ThreadKey, a.AudienceReason = nil, nil, nil, nil
 		}
 		a.ContentState = &state
-		// The link is implied by the read — every row here is linked to this
-		// person — so the payload carries the id rather than re-reading
-		// activity_link for a fact the query already asserted.
-		a.Links = &[]crmcontracts.ActivityLink{{
-			EntityType: crmcontracts.ActivityLinkEntityTypePerson,
-			EntityId:   openapi_types.UUID(personID.UUID),
-		}}
+		// Links say how the message is FILED, and a row can reach this page
+		// without being filed here: a contact who was CC'd or who attended is on
+		// the message through their participant row, while the filing belongs to
+		// whoever capture named as its counterparty. Asserting a link for those
+		// would describe a row activity_link does not hold — and a client acting
+		// on it, to unfile the message, would act on nothing.
+		if filedHere {
+			a.Links = &[]crmcontracts.ActivityLink{{
+				EntityType: crmcontracts.ActivityLinkEntityTypePerson,
+				EntityId:   openapi_types.UUID(personID.UUID),
+			}}
+		}
 		out = append(out, a)
 	}
 	if err := rows.Err(); err != nil {
@@ -244,7 +269,7 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, personID ids.
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound')
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s`,
-		fmt.Sprintf(personLinkedActivity, personPos), scope, projectScope(opts, arg)), args...).
+		fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg)), args...).
 		Scan(&out.LastInboundAt, &out.LastOutboundAt)
 }
 
@@ -336,7 +361,7 @@ func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, personID
 		SELECT count(*)
 		FROM activity a
 		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
-		sincePos, fmt.Sprintf(personLinkedActivity, personPos), scope, projectScope(opts, arg)), args...).
+		sincePos, fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg)), args...).
 		Scan(&view.NewActivities); err != nil {
 		return fmt.Errorf("count new activities: %w", err)
 	}

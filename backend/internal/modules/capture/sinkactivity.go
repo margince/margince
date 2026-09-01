@@ -155,7 +155,18 @@ func (s *Sink) finishNewActivity(
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
-	if err := limitLinkLessAudience(ctx, tx, id, rec, decision); err != nil {
+	// A meeting names no counterparty, so the gate above created nothing and
+	// nothing has filed this row anywhere. The people who were in it are already
+	// resolved on the participant rows, so the links come from there — BEFORE
+	// the audience limiter, which decides what a link-less record is born as.
+	derivedLinks := 0
+	if fields.Kind == meetingKind {
+		derivedLinks, err = s.linkResolvedMeetingParticipants(ctx, tx, id, len(rec.Links))
+		if err != nil {
+			return counterpartyDecision{}, err
+		}
+	}
+	if err := limitLinkLessAudience(ctx, tx, id, rec, decision, derivedLinks); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// This mailbox's own record of having imported the message, and the

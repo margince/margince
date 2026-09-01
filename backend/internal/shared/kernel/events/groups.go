@@ -60,6 +60,12 @@ func Groups() []Group {
 		// account appearing, because employer resolution is what most ghosts
 		// are waiting on.
 		{Name: "cg:linkedin-match", Streams: forEntities(personStreamEntity, organizationStreamEntity)},
+
+		// Its own group rather than a second handler on cg:person-auto-enrich:
+		// this repair attaches mail the workspace already holds to a record it
+		// already has, and must keep flowing when an enrichment that calls out
+		// to a model is slow or wedged.
+		{Name: "cg:cohort-promote", Streams: forEntities(personStreamEntity)},
 		// Turning a won deal into what its partner earned. Its own group
 		// because accrual is money: a projection rebuild or an embedding
 		// backlog must never be able to stall it, and a failure to accrue must

@@ -368,6 +368,13 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	_, _ = fmt.Fprintln(stdout, "worker matching LinkedIn connections as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:linkedin-match", matcher.HandleEvent, logger, 0) })
 
+	// A person's captured mail finds them however late they arrive: the ensure
+	// links only the message it ran for, so every message captured before the
+	// person existed needs the cohort repair this consumer runs.
+	cohort := compose.NewCohortPromoteGen(pool, people.NewStore(compose.InstallationDB(pool)), logger)
+	_, _ = fmt.Fprintln(stdout, "worker repairing captured cohorts as contacts appear")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:cohort-promote", cohort.HandleEvent, logger, 0) })
+
 	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)

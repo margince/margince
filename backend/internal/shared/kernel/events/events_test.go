@@ -178,7 +178,11 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The LinkedIn ghost matcher (ADR-0078 §8b): a contact appearing is a
 		// chance to attach a ghost, and so is an account appearing — employer
 		// resolution is what most unmatched ghosts are waiting on.
-		"cg:linkedin-match":     {"gw:events:crm:organization", "gw:events:crm:person"},
+		"cg:linkedin-match": {"gw:events:crm:organization", "gw:events:crm:person"},
+		// The captured-cohort repair: a person's earlier mail is linked when the
+		// person appears or gains an address. Its own group so a slow enrichment
+		// cannot delay a record becoming complete.
+		"cg:cohort-promote":     {"gw:events:crm:person"},
 		"cg:person-auto-enrich": {"gw:events:crm:person"},
 		// The prompt half of captured-organization auto-enrich: an
 		// organization appearing or changing queues the workspace's enrich
@@ -213,7 +217,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the commission accrual, the AI-activity projection, and the Deal Room timeline", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, and the Deal Room timeline", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

@@ -145,7 +145,7 @@ func (s *Service) AssembleScoped(ctx context.Context, personID ids.PersonID, opt
 				return err
 			}
 			scope, err := activities.ReadProjectScope(ctx, tx, *opts.ProjectID, func(arg func(any) int) string {
-				return fmt.Sprintf(personLinkedActivity, arg(personID))
+				return fmt.Sprintf(personReachesActivity, arg(personID))
 			})
 			if err != nil {
 				return err
