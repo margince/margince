@@ -283,12 +283,27 @@ func TestTheWaitingQueryIsBoundedByTheReadInstant(t *testing.T) {
 // A thread is matched within one medium. Mail thread keys come from headers the
 // sender controls and share a namespace with channel keys, so comparing keys
 // alone lets a crafted References value silence an unrelated conversation.
+//
+// Asked as a PROPERTY of every thread match rather than as a count of two.
+// Counting pinned the query's shape at the moment the gate was written, so the
+// disposition anti-join — a third, correct medium match — failed it for being
+// new. What matters is that no comparison of thread keys stands alone.
 func TestTheWaitingQueryMatchesWithinOneMedium(t *testing.T) {
-	if strings.Count(waitingRepliesSQL, "kind = a.kind") != 2 {
-		t.Fatal("the waiting query matches threads across media")
+	matches := strings.Count(waitingRepliesSQL, "thread_key = a.thread_key")
+	if matches == 0 {
+		t.Fatal("no thread match found — this gate is reading the wrong query")
 	}
-	if strings.Count(waitingRepliesSQL, "channel_provider IS NOT DISTINCT FROM a.channel_provider") != 2 {
-		t.Fatal("the waiting query matches threads across channel providers")
+	if got := strings.Count(waitingRepliesSQL, "kind = a.kind"); got != matches {
+		t.Fatalf("%d thread match(es) but %d carry the medium: one matches across media", matches, got)
+	}
+	// The provider is compared two ways for one reason: the reply anti-joins
+	// NULL-match it, because two mail rows both having no provider is a genuine
+	// match; the disposition join coalesces it to '' instead, because a
+	// PRIMARY KEY cannot hold two NULLs as one row.
+	providers := strings.Count(waitingRepliesSQL, "channel_provider IS NOT DISTINCT FROM a.channel_provider") +
+		strings.Count(waitingRepliesSQL, "channel_provider = coalesce(a.channel_provider, '')")
+	if providers != matches {
+		t.Fatalf("%d thread match(es) but %d carry the provider: one matches across channels", matches, providers)
 	}
 }
 

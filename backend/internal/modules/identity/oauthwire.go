@@ -65,8 +65,9 @@ const (
 //
 // It is advertised because RFC 9728 §2 says a resource states its vocabulary,
 // and a scope a client cannot see is a scope it will never name. What it does
-// NOT do is bound a connection: the grant is the lent passport's own scopes, so
-// a client that names nothing here still receives everything the human lent.
+// NOT do is bound a connection: the grant is whatever the human ticks on the
+// consent screen, so a client that names nothing here still receives whatever
+// the human chose.
 var resourceScopesSupported = func() []string {
 	advertised := make([]string, 0, len(passportScopeVocabulary))
 	for _, scope := range passportScopeVocabulary {

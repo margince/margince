@@ -54,44 +54,26 @@ itself (DCR), and opens the consent screen. If nobody is signed in to Margince
 in that browser, the sign-in screen comes first and the consent screen follows
 it — the pending request survives the sign-in.
 
-The consent screen does not grant a client whatever it asked for. It asks the
-signed-in human to **lend one of their own existing agent passports**, and the
-connection gets that passport's scopes. There is a real Deny too: it sends the
-client `access_denied` instead of leaving it hanging.
+The consent screen does not grant a client whatever it asked for. It shows the
+signed-in human the fixed scope vocabulary — `read draft write send enrich` —
+all ticked by default, and lets them untick whichever they do not mean to
+grant before approving. There is a real Deny too: it sends the client
+`access_denied` instead of leaving it hanging.
 
-**A human with no passport yet cannot approve anything.** The screen shows a
-guide instead of an approve control — mint a passport in Settings (the
-"AI & autonomy" tab) and it brings you back to finish connecting. In practice
-this means **`claude mcp add` no longer completes unattended for a brand-new
-account**: it stops at the guide until a passport exists. See
-[mint-a-passport.md](mint-a-passport.md) to create one ahead of time.
+A human with no passport yet can still connect a client from a cold start —
+nothing needs to exist before the consent screen; approving it is what creates
+the connection's own credential.
 
-Once a passport is lent, the connection is bound to that passport's own seat
-and RBAC — an agent can never exceed the human who granted it.
+Once approved, the connection is bound to that credential's own seat and
+RBAC — an agent can never exceed the human who granted it.
 
 ## What a connection actually receives
 
-**The scopes of the passport you selected.** That is the whole rule. Lend a
-`read draft write send enrich` passport and the connection has all five; lend a
-`read` passport and it has one.
-
-What the client asked for on the authorize URL does not change this. Every
-mainstream client — Claude Code, Claude Desktop, Codex, VS Code — sends no
-`scope` parameter at all, so a rule that also capped the grant at the request
-would make every real connection read-only whatever you lent. Your choice of
-passport is the decision, so it is the answer.
-
-The client is still told what it got: the token response reports the granted
-scopes (RFC 6749 §5.1), so a client that asked for less than it received learns
-so rather than guessing.
-
-Two ways to see what a connection has, rather than assume:
-
-- **Before approving**, on the consent screen: the chips under the selected
-  passport are its scopes, and they are the grant.
-- **After connecting**, from the connection itself: `tools/list` returns only
-  the tools the granted scopes can invoke, so the tool list is the proof. A
-  connection that lists no write tool did not receive `write`.
+The connection receives exactly the scopes the human left ticked on the
+consent screen. What the client's own request asked for does not narrow that:
+every mainstream client — Claude Code, Claude Desktop, Codex, VS Code — sends
+no `scope` parameter at all, so a rule that capped the grant at the request
+would make every real connection read-only regardless of what was ticked.
 
 ## A passport as a REST credential
 
@@ -106,7 +88,7 @@ reasoning is that a passport acts as *you*: it carries your seat, your grants an
 your row scope, so it can only reach what you could already reach in the app, and
 a second confirmation from the same person adds ceremony rather than safety. The
 limits that still apply are your limits — RBAC, row scope, the seat ceiling, the
-passport's expiry, and the scopes you chose to lend when you minted it.
+passport's expiry, and the scopes you chose when you minted it.
 
 Two things do not follow that rule:
 
@@ -130,8 +112,8 @@ npx @modelcontextprotocol/inspector
 
 `tools/list` shows only what the connection's granted scopes could actually
 invoke, so the surface an inspector reports is the surface that client really
-has — and since the grant is the lent passport, that list is what the passport
-you chose can reach.
+has — and since the grant is whatever the human left ticked on the consent
+screen, that list is what those scopes can reach.
 
 ## Turn it off
 

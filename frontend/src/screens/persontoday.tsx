@@ -42,6 +42,7 @@ const MOMENT_RULE_LABEL = {
   job_change: "person.moment.rule.job_change",
   overdue_promise: "person.moment.rule.overdue_promise",
   gone_quiet: "person.moment.rule.gone_quiet",
+  open_promise: "person.moment.rule.open_promise",
   role_change: "person.moment.rule.role_change",
   public_signal: "person.moment.rule.public_signal",
   missing_next_step: "person.moment.rule.missing_next_step",

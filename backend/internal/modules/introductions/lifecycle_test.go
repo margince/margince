@@ -6,6 +6,7 @@ package introductions
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -182,12 +183,7 @@ func TestOpenMatchesTheDuplicateGuardIndex(t *testing.T) {
 		clause = clause[:end]
 	}
 
-	every := []Status{
-		StatusRequested, StatusAccepted, StatusNameDropApproved, StatusSuggestOther,
-		StatusDeclined, StatusIntroduced, StatusNameDropped, StatusReplied,
-		StatusExpired, StatusCancelled,
-	}
-	for _, s := range every {
+	for _, s := range everyStatus() {
 		named := strings.Contains(clause, "'"+string(s)+"'")
 		if named != Open(s) {
 			t.Errorf("%q: Open()=%v but the guard index names it=%v — the two have drifted",
@@ -311,5 +307,46 @@ func TestTheSweepReachesEveryOpenStatus(t *testing.T) {
 				"holding its route blocked with nothing reporting it",
 				i+1, named, expirable)
 		}
+	}
+}
+
+// The census names every status the type declares.
+//
+// everyStatus() is what the exhaustive checks iterate — the duplicate-guard
+// parity above, and the set RouteStates reports on. A status added to the
+// const block and forgotten here does not fail anything by itself: the checks
+// simply stop covering it, report PASS, and the gap is invisible. So this
+// derives the truth from the declarations rather than from a second list.
+func TestEveryStatusIsCensused(t *testing.T) {
+	// Every file in the package, not lifecycle.go alone: a status declared in
+	// a file this gate does not read is invisible to it, and invisible means
+	// PASS. The census would then be short and nothing would say so.
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("listing the package: %v", err)
+	}
+	declared := map[Status]bool{}
+	pattern := regexp.MustCompile(`Status[A-Za-z]+ Status = "([a-z_]+)"`)
+	for _, name := range files {
+		source, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("reading %s: %v", name, err)
+		}
+		for _, m := range pattern.FindAllSubmatch(source, -1) {
+			declared[Status(m[1])] = true
+		}
+	}
+	if len(declared) == 0 {
+		t.Fatal("no status constants found — this gate has stopped reading its subject")
+	}
+
+	censused := map[Status]bool{}
+	for _, s := range everyStatus() {
+		censused[s] = true
+	}
+	if !reflect.DeepEqual(censused, declared) {
+		t.Errorf("everyStatus() lists %v; the type declares %v — "+
+			"a status missing from the census is one every exhaustive check "+
+			"silently stops covering", censused, declared)
 	}
 }

@@ -40,6 +40,7 @@ var mapping = []struct {
 	code     string
 }{
 	{apperrors.ErrNotFound, http.StatusNotFound, "not_found"},
+	{apperrors.ErrInvalidArgument, http.StatusBadRequest, "invalid_argument"},
 	{apperrors.ErrVersionSkew, http.StatusConflict, "version_skew"},
 	{apperrors.ErrConflict, http.StatusConflict, "conflict"},
 	{apperrors.ErrPermissionDenied, http.StatusForbidden, "permission_denied"},

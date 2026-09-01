@@ -109,13 +109,12 @@ func TestGovernanceOperationsAreHumanOnly(t *testing.T) {
 		// The export is human-only for a different reason: it streams
 		// the whole estate, audit log included, in a single GET.
 		"downloadOverlayExport": true,
-		// The consent screen's read model answers with the granting
-		// human's whole lendable-passport inventory — ids, labels,
-		// scopes, expiries — the same credential class as
-		// GET /v1/passports (issuePassport's sibling read, pinned
-		// above). Lending authority is a decision only the human
-		// holding it may take, and anything that can enumerate the
-		// list can pick from it.
+		// The consent screen's read model answers with the fixed
+		// five-scope vocabulary the screen offers — no per-human data
+		// at all. It is still pinned human-only because consent is a
+		// decision only the human in their own seat may take
+		// (oauth_consent.go's GetConsentRequest): an agent must never
+		// read or drive a consent screen, whatever it answers with.
 		"getConsentRequest": true,
 	}
 	// And the pin the paragraph above depends on: a decision reaches this
