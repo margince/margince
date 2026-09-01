@@ -163,7 +163,9 @@ func TestTheRealBootstrapSeedsTheDocumentedMatrix(t *testing.T) {
 	if len(live) == 0 {
 		t.Fatal("the bootstrap wrote no system roles at all")
 	}
-	assertSameMatrix(t, seeded, live, "the real bootstrap")
+	// A fresh bootstrap runs no migration, so any marker on it was written by
+	// nothing — which is exactly what it should not be.
+	assertSameMatrix(t, seeded, live, "the real bootstrap", map[string]bool{})
 }
 
 // Every write a migration makes to role.permissions leaves an installation on
@@ -180,9 +182,9 @@ func TestTheRealBootstrapSeedsTheDocumentedMatrix(t *testing.T) {
 //     it back onto the matrix.
 //   - it writes some other path (`{row_scope}`, say) — the prior value is
 //     knowable only by reading the migration's own predicate, which this gate
-//     does not do. The weaker claim it can still make is that replaying against
-//     an already-correct installation moves nothing, which catches a write that
-//     fires unconditionally.
+//     does not do. The weaker claim it can still make is that the writes TAKEN
+//     TOGETHER land on the matrix, which catches a write that fires
+//     unconditionally and one whose predicate never matches.
 func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 	seeded := readSeededDefaults(t)
 	writes := rolePermissionMigrations(t)
@@ -201,36 +203,57 @@ func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 	ctx := context.Background()
 	bootstrapInstallation(t, e)
 
+	// IN ORDER, CUMULATIVELY, and compared once at the end.
+	//
+	// Each replay used to be judged alone, which held while every backfill
+	// converged on the same matrix. It stopped holding the moment one of them
+	// CHANGED the matrix: 1787449829 pins the seeded roles at own scope and
+	// 1788244324 moves the manager to team, so replaying the first by itself
+	// now lands on an answer that was right when it was written and is not the
+	// answer today. Neither migration is wrong; asking one of them in isolation
+	// is.
+	//
+	// So this asks what an installation actually experiences — every write, in
+	// version order, over the documents the baseline left — and requires the
+	// END of that to be the seeded matrix. A backfill that diverges is still
+	// caught, unless a LATER one happens to correct it, which is exactly the
+	// case the isolated reading called a failure and an installation calls
+	// Tuesday.
+	//
+	// The objects every write names are rewound first, together: an
+	// installation predating all of them held today's matrix minus all of them.
+	var rewound []string
 	for _, write := range writes {
-		t.Run(write.name, func(t *testing.T) {
-			rewindTo(ctx, t, e, write.objects)
-			for _, statement := range write.statements {
-				if _, err := e.Owner.Exec(ctx, statement); err != nil {
-					t.Fatalf("replaying a role.permissions write from %s: %v\n%s",
-						write.name, err, statement)
-				}
-			}
-			assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), write.name)
-			assertControlRoleUntouched(ctx, t, e.Owner, write.name)
-		})
+		rewound = append(rewound, write.objects...)
 	}
+	rewindTo(ctx, t, e, rewound)
+	for _, write := range writes {
+		for _, statement := range write.statements {
+			if _, err := e.Owner.Exec(ctx, statement); err != nil {
+				t.Fatalf("replaying a role.permissions write from %s: %v\n%s",
+					write.name, err, statement)
+			}
+		}
+	}
+	assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), "every backfill in order",
+		markerWrites(t, writes))
+	assertControlRoleUntouched(ctx, t, e.Owner, "every backfill in order")
 }
 
 // Every write COMPOSED, replayed in version order over the documents an
 // installation bootstrapped at the baseline actually held.
 //
-// The per-write arm above cannot make this claim. It rebuilds a pre-state per
-// migration, so write B is always replayed against a database that already
-// contains write A's result — an ordering dependency between two backfills has
-// nowhere to show itself, and an installation older than both is never the thing
-// under test.
+// The convergence arm above cannot make this claim. Its pre-state is derived
+// from the writes themselves — the objects they name, rewound out of today's
+// matrix — so an installation older than all of them is never the thing under
+// test, and neither is a document those writes never mention.
 //
 // It is also the arm that catches the ORIGINAL defect: an object added to the
-// policy with no backfill written for it. The per-write arm derives its pre-state
-// from the writes themselves, so an object no migration mentions is never absent
-// from the pre-state and its missing backfill is invisible. Here the pre-state
-// is derived from history, independently of what the migrations happen to say, so
-// the object is missing at the start and still missing at the end.
+// policy with no backfill written for it. An object no migration mentions is
+// never absent from a pre-state built out of what the migrations say, so its
+// missing backfill is invisible there. Here the pre-state is derived from
+// history, independently of what the migrations happen to say, so the object is
+// missing at the start and still missing at the end.
 //
 // Version order and not file order: dbmigrate sorts versions as STRINGS and
 // applies them in that order, and rolePermissionMigrations INHERITS that order
@@ -265,7 +288,7 @@ func TestTheBackfillsComposeFromTheOldestUpgradableInstallation(t *testing.T) {
 		}
 	}
 	const via = "the composed replay from the baseline era"
-	assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), via)
+	assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), via, markerWrites(t, writes))
 	assertControlRoleUntouched(ctx, t, e.Owner, via)
 }
 
@@ -314,7 +337,63 @@ func assertPreStateIsNotAlreadyTheAnswer(t *testing.T, before, after map[string]
 // Both directions: a role the database holds and the fixture does not is as much
 // a divergence as the reverse, and reporting only one of them is how half a
 // defect goes unnoticed.
-func assertSameMatrix(t *testing.T, want map[string]roleDocument, got map[string]json.RawMessage, via string) {
+// markerWrites is the set of version literals the replayed statements actually
+// WRITE into the provenance key, so a marker can be held to naming its writer.
+//
+// Not merely a version that was replayed: the down migration matches the marker
+// against the exact version it wrote, so a marker naming a DIFFERENT migration
+// — even a real one, even one that ran — leaves the rollback unable to tell a
+// scope it widened from one an operator chose, and the manager stays at team
+// scope through a rollback that was supposed to narrow it.
+//
+// The set holds what was WRITTEN rather than which migration wrote it, and the
+// two are only the same while every migration stamps its own version. So this
+// also fails a statement that stamps somebody else's: a marker is a rollback's
+// handle on its own work, and one that names a migration whose down will not
+// look for it is a widening nothing narrows back.
+//
+// Mentioning the key is not writing it. Detection is the jsonb PATH the write
+// addresses, which is why 1788244324's down — matching `permissions ->>
+// 'row_scope_set_by'` to find what to strip — and the prose above it are not
+// mistaken for writers. Naming a non-writer is precisely the false pass this
+// set exists to refuse, so it cannot be found by looking for the key anywhere
+// in the text.
+//
+// It reads the spelling the migrations use today. A write addressing the same key
+// another way — an ARRAY path, a jsonb concat — is not seen, and the marker it
+// leaves is then reported as naming a non-writer. That is the direction to fail
+// in: it costs a migration author one line here, where a lenient match costs a
+// rollback the ability to tell its own work from an operator's.
+func markerWrites(t *testing.T, writes []permissionWrite) map[string]bool {
+	t.Helper()
+	out := map[string]bool{}
+	for _, write := range writes {
+		version := strings.SplitN(write.name, "_", 2)[0]
+		for _, statement := range write.statements {
+			for _, match := range markerWritePattern.FindAllStringSubmatch(statement, -1) {
+				if match[1] != version {
+					t.Errorf("%s stamps %s into %s, rather than its own version. The down migration "+
+						"looks for the version it wrote, so a marker carrying another one is a "+
+						"widening its own rollback cannot find", write.name, match[1], rowScopeSetBy)
+				}
+				out[match[1]] = true
+			}
+		}
+	}
+	return out
+}
+
+// The jsonb path a write addresses, and the version literal it puts there:
+// `jsonb_set(permissions, '{row_scope_set_by}', '"1788244324"'::jsonb, true)`.
+var markerWritePattern = regexp.MustCompile(`'\{` + rowScopeSetBy + `\}'\s*,\s*'"([^"]*)"'`)
+
+// rowScopeSetBy is the provenance key. The comparison below reads it, and
+// markerWrites looks for the statement that writes it.
+const rowScopeSetBy = "row_scope_set_by"
+
+func assertSameMatrix(t *testing.T, want map[string]roleDocument, got map[string]json.RawMessage, via string,
+	stamped map[string]bool,
+) {
 	t.Helper()
 	for _, role := range sortedKeys(want) {
 		raw, ok := got[role]
@@ -331,7 +410,7 @@ func assertSameMatrix(t *testing.T, want map[string]roleDocument, got map[string
 		}
 		if !sameJSON(t, expected, raw) {
 			assertSameDocument(t, role, want[role], decodeRoleDocument(t, role, raw), via)
-			assertNoUnmodelledKeys(t, role, raw, via)
+			assertNoUnmodelledKeys(t, role, raw, via, stamped)
 		}
 	}
 	for _, role := range sortedKeys(got) {
@@ -359,7 +438,7 @@ func decodeRoleDocument(t *testing.T, role string, raw json.RawMessage) roleDocu
 // field_masks is the live case: policy.Document declares it, this file does not
 // model it, and it is a privacy control — so a replay that introduced or dropped
 // one has to be visible even though no per-field check covers it.
-func assertNoUnmodelledKeys(t *testing.T, role string, raw json.RawMessage, via string) {
+func assertNoUnmodelledKeys(t *testing.T, role string, raw json.RawMessage, via string, stamped map[string]bool) {
 	t.Helper()
 	var keys map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &keys); err != nil {
@@ -367,6 +446,31 @@ func assertNoUnmodelledKeys(t *testing.T, role string, raw json.RawMessage, via 
 	}
 	for key := range keys {
 		if key == "objects" || key == "row_scope" {
+			continue
+		}
+		// PROVENANCE, not permission — and JUDGED rather than waved through.
+		//
+		// row_scope_set_by records WHICH migration widened a seeded role, so
+		// the down migration can tell a scope it moved from one an operator
+		// chose themselves: matching on the value alone cannot, since both look
+		// identical afterwards and a rollback would narrow a setting it never
+		// made. It grants nothing and masks nothing, and a migrated
+		// installation carries it where a fresh one does not — so comparing it
+		// against the seeded document would report that difference as a
+		// PERMISSION difference, which is the one thing this file never says.
+		//
+		// What it must still not be is a free-text field nobody reads: a marker
+		// naming a version that does not exist is a rollback the down migration
+		// cannot reason about. So the value has to name one of the migrations
+		// actually replayed.
+		if key == rowScopeSetBy {
+			var version string
+			if err := json.Unmarshal(keys[key], &version); err != nil || !stamped[version] {
+				t.Errorf("%s: role %q was widened by %s, which is not the migration that WRITES that "+
+					"marker — the down migration matches it against the exact version it wrote, so a "+
+					"marker naming another one leaves a rollback unable to tell a scope it widened "+
+					"from one an operator chose", via, role, keys[key])
+			}
 			continue
 		}
 		t.Errorf("%s: role %q carries document key %q, which this comparison does not model: %s.\n"+
