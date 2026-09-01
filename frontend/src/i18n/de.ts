@@ -5377,7 +5377,7 @@ export const de = {
   "pipeline.sub":
     "Jeder Schritt der Erfassung, in der Reihenfolge, in der diese Nachricht sie durchlaufen hat.",
   "pipeline.payloadsOff":
-    "Zu keinem Schritt sind Absender oder Betreff gespeichert: diese Installation hat die Inhaltserfassung nicht aktiviert.",
+    "Zu keinem Schritt sind Absender oder Betreff gespeichert: diese Installation hat die Inhaltserfassung deaktiviert.",
   "pipeline.transport": "Übertragen über",
   "pipeline.unavailable":
     "die Verarbeitungsschritte dieser Nachricht konnten nicht gelesen werden",

@@ -56,7 +56,13 @@ type Capture struct {
 	// connector, the source system and the external id and nothing else
 	// (ADR-0082 §1). Nor does it reach ai_call_payload, which this pipeline's
 	// verdict task is pinned out of (`no_payload: true`, ADR-0074).
-	TracePayloads *bool `yaml:"trace_payloads"`
+	// Named apart from compose.CaptureConfig.TracePayloads, which is the plain
+	// bool holding the ALREADY-RESOLVED answer. Two fields of one name, one
+	// carrying three states and one carrying two, is how a reader picks the
+	// wrong one; the suffix says which end of the resolution this is, and lets
+	// TestOnlyTheResolverReadsTheTracePayloadsField name its subject exactly
+	// instead of guessing a receiver's type from its spelling.
+	TracePayloadsSetting *bool `yaml:"trace_payloads"`
 }
 
 // TracesPayloads answers the question the field spells as three states: an
@@ -68,7 +74,7 @@ type Capture struct {
 //
 // Held by: TestOnlyTheResolverDereferencesTracePayloads (capture_test.go)
 func (c Capture) TracesPayloads() bool {
-	return c.TracePayloads == nil || *c.TracePayloads
+	return c.TracePayloadsSetting == nil || *c.TracePayloadsSetting
 }
 
 // Warnings names the settings this block still accepts but no longer acts on,

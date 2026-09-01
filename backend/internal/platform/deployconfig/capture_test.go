@@ -7,10 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
@@ -23,8 +25,8 @@ func TestTracePayloadsIsReadFromTheFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.Capture.TracePayloads == nil || !*cfg.Capture.TracePayloads {
-		t.Error("capture.trace_payloads: true did not reach Capture.TracePayloads")
+	if cfg.Capture.TracePayloadsSetting == nil || !*cfg.Capture.TracePayloadsSetting {
+		t.Error("capture.trace_payloads: true did not reach Capture.TracePayloadsSetting")
 	}
 	if !cfg.Capture.TracesPayloads() {
 		t.Error("TracesPayloads() = false for an explicit true")
@@ -68,7 +70,7 @@ func TestTracePayloadsIsOnUnlessTheFileTurnsItOff(t *testing.T) {
 	if !(Capture{}).TracesPayloads() {
 		t.Error("TracesPayloads() on the zero block = false, want true")
 	}
-	if w := (Capture{TracePayloads: ptr(true)}).Warnings(); len(w) != 0 {
+	if w := (Capture{TracePayloadsSetting: ptr(true)}).Warnings(); len(w) != 0 {
 		t.Errorf("Warnings() = %v for a setting that acts, want none", w)
 	}
 }
@@ -82,7 +84,7 @@ func TestAnExplicitFalseTurnsThePayloadsOff(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.Capture.TracePayloads == nil {
+	if cfg.Capture.TracePayloadsSetting == nil {
 		t.Fatal("capture.trace_payloads: false did not reach the field at all")
 	}
 	if cfg.Capture.TracesPayloads() {
@@ -97,8 +99,8 @@ func TestASilentFileGetsTheDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.Capture.TracePayloads != nil {
-		t.Errorf("TracePayloads = %v for a file that says nothing, want nil", *cfg.Capture.TracePayloads)
+	if cfg.Capture.TracePayloadsSetting != nil {
+		t.Errorf("TracePayloadsSetting = %v for a file that says nothing, want nil", *cfg.Capture.TracePayloadsSetting)
 	}
 	if !cfg.Capture.TracesPayloads() {
 		t.Error("TracesPayloads() = false for a file that says nothing, want true")
@@ -108,61 +110,88 @@ func TestASilentFileGetsTheDefault(t *testing.T) {
 func ptr(b bool) *bool { return &b }
 
 // The claim above TracesPayloads — that the default lives in one place — is
-// only true while nothing else dereferences the pointer. A second reader that
-// wrote `*c.TracePayloads` would compile, work on every file that sets the key,
-// and answer FALSE for the silent file the default exists for: the one case a
-// reader is least likely to test by hand.
+// only true while nothing else READS the pointer field.
 //
-// So the gate is a scan, not an assertion about behaviour. It reads the tree
-// rather than this package, because the wrong reader is by definition somewhere
-// else.
-func TestOnlyTheResolverDereferencesTracePayloads(t *testing.T) {
+// A second reader answers FALSE for the silent file the default exists for,
+// which is the one case a reader is least likely to check by hand: it compiles,
+// and it works on every installation that wrote the key.
+//
+// The gate looks for a REFERENCE to the field, not for a dereference of it.
+// That distinction is the whole strength of this arm: `*c.TracePayloads` is
+// only the most obvious spelling, and `p := c.TracePayloads; return *p` reaches
+// the same wrong answer through a local a pattern match never sees. Nothing
+// outside the resolver has any business naming the field at all, so naming it
+// is what the gate refuses — and a reader can then reach the value only through
+// the one function that applies the default.
+//
+// AST rather than text for the same reason: a match on source characters is
+// defeated by a line break, a rename, or a parenthesis, and this is a privacy
+// posture rather than a style rule.
+//
+// The field carries a name of its own — TracePayloadsSetting — so this walk
+// needs no guess about a receiver's type. compose.CaptureConfig.TracePayloads
+// is the resolved plain bool every consumer reads and is a DIFFERENT name, so
+// a syntax-only scan can tell the two apart exactly, which is the reason the
+// rename came with this gate.
+func TestOnlyTheResolverReadsTheTracePayloadsField(t *testing.T) {
 	root, err := filepath.Abs("../../..")
 	if err != nil {
 		t.Fatalf("resolving the backend root: %v", err)
 	}
-	// The one file allowed to read the pointer at all: the resolver's own.
-	resolver := filepath.Join(root, "internal", "platform", "deployconfig", "capture.go")
-	deref := regexp.MustCompile(`\*[a-zA-Z_][a-zA-Z0-9_.]*\.TracePayloads\b`)
+	// The resolver's own file, and this one. Both NAME the field because one
+	// applies the default and the other tests that it does; every other file
+	// in the tree has the resolver to call instead.
+	//
+	// By path, not by basename: `capture.go` and `capture_test.go` exist in
+	// several packages here, and excluding them by name would let a real
+	// offender in any of them pass unread.
+	allowed := map[string]bool{
+		filepath.Join(root, "internal", "platform", "deployconfig", "capture.go"):      true,
+		filepath.Join(root, "internal", "platform", "deployconfig", "capture_test.go"): true,
+	}
 
 	var offenders []string
 	walked := 0
+	fset := token.NewFileSet()
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() || !strings.HasSuffix(path, ".go") {
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || allowed[path] {
 			return nil
 		}
-		// This file spells the pattern it hunts for, and the resolver is the
-		// answer rather than a violation of it.
-		if path == resolver || strings.HasSuffix(path, "capture_test.go") {
-			return nil
-		}
-		src, err := os.ReadFile(path)
-		if err != nil {
-			return err
+		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		if parseErr != nil {
+			// A file this walk cannot parse is one it cannot clear either.
+			return fmt.Errorf("parsing %s: %w", path, parseErr)
 		}
 		walked++
-		if loc := deref.FindString(string(src)); loc != "" {
+		ast.Inspect(file, func(n ast.Node) bool {
+			sel, ok := n.(*ast.SelectorExpr)
+			if !ok || sel.Sel == nil || sel.Sel.Name != "TracePayloadsSetting" {
+				return true
+			}
 			rel, relErr := filepath.Rel(root, path)
 			if relErr != nil {
 				rel = path
 			}
-			offenders = append(offenders, rel+": "+loc)
-		}
+			offenders = append(offenders, fmt.Sprintf("%s:%d", rel, fset.Position(sel.Pos()).Line))
+			return true
+		})
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("walking the backend tree: %v", err)
 	}
-	// A walk that read nothing passes exactly like a clean tree.
+	// A walk that read nothing passes exactly like a clean tree, which is the
+	// one way a census must never fail.
 	if walked < 100 {
-		t.Fatalf("the walk read %d Go files, which is too few to have covered the tree", walked)
+		t.Fatalf("the walk parsed %d Go files, which is too few to have covered the tree", walked)
 	}
 	for _, o := range offenders {
-		t.Errorf("%s dereferences TracePayloads directly. Call Capture.TracesPayloads() "+
-			"instead: a bare dereference answers false for a file that never set the key, "+
-			"which is the default this pointer exists to express", o)
+		t.Errorf("%s names deployconfig.Capture.TracePayloadsSetting. Call TracesPayloads() instead: "+
+			"the field is a pointer whose nil means the operator said nothing, and every reader "+
+			"that resolves it for itself is a second place the default lives — one of which will "+
+			"answer false for a file that never set the key", o)
 	}
 }

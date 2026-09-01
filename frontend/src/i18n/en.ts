@@ -5441,7 +5441,7 @@ export const en = {
   "pipeline.sub":
     "Every step of the capture pipeline, in the order this message met them.",
   "pipeline.payloadsOff":
-    "No sender or subject is stored for any step: this deployment did not turn payload capture on.",
+    "No sender or subject is stored for any step: this deployment turned payload capture off.",
   "pipeline.transport": "Carried by",
   "pipeline.unavailable": "this message's pipeline steps could not be read",
   "pipeline.status.done": "Done",

@@ -110,6 +110,14 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 			return err
 		}
 
+		// Read before the anonymize below overwrites it: the channel capture
+		// trace names its counterparty by DISPLAY NAME, and a name read after
+		// this line is the placeholder.
+		displayName, err := subjectDisplayName(ctx, tx, subject)
+		if err != nil {
+			return err
+		}
+
 		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails)
 		if err != nil {
 			return err
@@ -172,7 +180,7 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		if err := e.eraseAttachments(ctx, tx, reason, causePersonErasure, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
 			return err
 		}
-		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, emails, identities)
+		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, displayName, emails, identities)
 		if err != nil {
 			return err
 		}

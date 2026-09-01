@@ -212,9 +212,10 @@ func countTraced(outcome TraceOutcome) {
 // neither outlive nor precede the thing it describes: a rolled-back capture
 // leaves no explanation of a message that does not exist.
 //
-// payloads is the deployment's capture.trace_payloads posture. With it off —
-// the default — the content columns are left NULL rather than written and
-// masked later, because a column that is never populated cannot leak.
+// payloads is the deployment's capture.trace_payloads posture, on unless the
+// deployment file turns it off. Where an installation HAS turned it off, the
+// content columns are left NULL rather than written and masked later, because
+// a column that is never populated cannot leak.
 func Trace(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) error {
 	if err := in.validate(); err != nil {
 		return err
@@ -273,8 +274,9 @@ func Trace(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) error {
 // is exactly when it would happen — so it asks the same list, rather than
 // leaving the invariant to hold in one module and not the one beside it.
 //
-// The check costs a query per traced message, and only in payload mode, which
-// is an operator's opt-in diagnostic posture rather than the steady state.
+// The check costs a query per traced message, and only in payload mode — which
+// is now the steady state rather than an opt-in, so the cost is paid on every
+// traced message an ordinary installation writes.
 func tracePayload(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) (*string, *string, error) {
 	address := strings.ToLower(strings.TrimSpace(in.Counterparty))
 	// An unattributable row carries no content, whatever the posture.

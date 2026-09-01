@@ -5330,7 +5330,7 @@ export const vi = {
   "pipeline.sub":
     "Từng bước của luồng thu thập, theo đúng thứ tự tin nhắn này đi qua.",
   "pipeline.payloadsOff":
-    "Không bước nào lưu người gửi hay tiêu đề: bản triển khai này không bật việc lưu nội dung.",
+    "Không bước nào lưu người gửi hay tiêu đề: bản triển khai này đã tắt việc lưu nội dung.",
   "pipeline.transport": "Được chuyển qua",
   "pipeline.unavailable": "không đọc được các bước xử lý của tin nhắn này",
   "pipeline.status.done": "Xong",
