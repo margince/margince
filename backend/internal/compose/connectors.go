@@ -328,7 +328,11 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// client secret before anything has authenticated it, on a path with no rate
 	// limit. It also answers a browser redirect with a JSON error, where every
 	// other failure here lands the person back on a page that explains itself.
-	app, ok, err := h.oauthApp(ctx, string(provider))
+	// runCtx, not ctx: a stored app is per-workspace and this route is
+	// session-less, so the raw request context has no workspace to read it
+	// under. Under ctx the lookup finds nothing and falls back to the
+	// deployment's app, spending the code against the wrong client.
+	app, ok, err := h.oauthApp(runCtx, string(provider))
 	if err != nil || !ok {
 		if err != nil {
 			logConnectFailure(ctx, string(provider), err)
@@ -337,7 +341,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		return
 	}
 
-	auth, err := app.authenticate(ctx, *params.Code, h.callbackURL(string(provider)))
+	auth, err := app.authenticate(runCtx, *params.Code, h.callbackURL(string(provider)))
 	if err != nil {
 		logConnectFailure(ctx, string(provider), err)
 		http.Redirect(w, r, h.landingURL(connectFailureOutcome(string(provider), err), returnTo, string(provider)), http.StatusFound)

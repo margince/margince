@@ -176,8 +176,20 @@ func WithGraphCapture(c GraphConfig) Option {
 		if s.connectorHandlers.registry == nil {
 			s.connectorHandlers.registry = NewCaptureRegistry(pool, s.vault, s.captureConfig)
 			s.authority = identity.NewService(pool)
+		}
+		// Outside the branch above: the registry may already exist because
+		// Google's wiring ran first, and these three are what CONSENT needs
+		// rather than what the registry needs. Left unset, the Microsoft flow
+		// signs no state and builds its callback against an empty base — a
+		// consent URL that cannot come back — for the one installation shape
+		// this whole seam exists to serve.
+		if !s.signer.usable() {
 			s.signer = newStateSigner([]byte(c.StateKey))
+		}
+		if s.publicBaseURL == "" {
 			s.publicBaseURL = c.PublicBaseURL
+		}
+		if s.apiBaseURL == "" {
 			s.apiBaseURL = c.APIBaseURL
 		}
 		registerMicrosoftConnectors(s.connectorHandlers.registry, s.microsoftAppResolver, c, pool)

@@ -219,10 +219,16 @@ func refuseStrandingConnections(ctx context.Context, tx pgx.Tx, k appKind, curre
 	if current.ClientID == "" || current.ClientID == next.ClientID {
 		return nil
 	}
+	// 'error' counts as live, the same set sendableConnection and SyncOnce
+	// select on: an errored connection still holds the refresh token the old
+	// client issued, and the sweep still tries it. Counting only 'connected'
+	// would wave the change through for exactly the installation most likely to
+	// be making it — one whose mailboxes have started failing — and strand them
+	// with the misleading error they were already chasing.
 	var connected int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM capture_connection
-		 WHERE provider = ANY($1) AND status = 'connected' AND archived_at IS NULL`,
+		 WHERE provider = ANY($1) AND status IN ('connected','error') AND archived_at IS NULL`,
 		k.connectors).Scan(&connected); err != nil {
 		return fmt.Errorf("capture: counting the connections a %s app change would strand: %w", k.name, err)
 	}
