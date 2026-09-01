@@ -6497,9 +6497,6 @@ export const de = {
     "Einige Kolleginnen und Kollegen werden nicht angezeigt.",
   "person.graph.withheldAccount":
     "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
-  "person.graph.routeAlreadyAsked": "Bereits angefragt",
-  "person.graph.routeDeclined": "Zuvor abgelehnt",
-  "person.graph.routeUnavailable": "Nicht verfügbar",
   "person.intro.askFirstName": "{name} um eine Vorstellung bitten",
   "person.intro.leadEyebrow": "Empfohlener Weg",
   "person.intro.leadRouteBadge": "Starker Weg",
@@ -7363,6 +7360,17 @@ export const de = {
     "Unter den Quellen, die geantwortet haben, wartet nichts.",
   "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
   "worklist.overdue": "Überfällig",
+  "worklist.disposition.verb.snooze": "Später",
+  "worklist.disposition.verb.not_mine": "Nicht meins",
+  "worklist.disposition.verb.not_sales": "Kein Kunde",
+  "worklist.disposition.done.snooze": "Morgen wieder auf deiner Liste.",
+  "worklist.disposition.done.not_mine":
+    "Von deiner Liste. Wer zuständig ist, sieht es weiterhin.",
+  "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
+  "worklist.disposition.undo": "Rückgängig",
+  "worklist.disposition.undoFailed":
+    "Das konnte nicht rückgängig gemacht werden. Die Nachricht ist weiterhin von deiner Liste.",
+  "worklist.disposition.failed": "Das konnte nicht abgelegt werden.",
   "worklist.scope.label": "Wessen Arbeit",
   "worklist.scope.mine": "Meine",
   "worklist.scope.unassigned": "Ohne Zuständigkeit",

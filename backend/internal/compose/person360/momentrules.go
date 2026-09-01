@@ -432,14 +432,17 @@ func nearestOpenTask(page *crmcontracts.Person360) (crmcontracts.Activity, bool)
 }
 
 // openTaskSooner orders two open tasks: a dated one before an undated one,
-// then by due date, then by when it was filed.
+// then by due date, then by when it was filed. Two tasks due the same day
+// fall through to the filing order on purpose: the section lists newest
+// first, and without the fall-through the card switched to whichever task
+// was logged last rather than the one that has waited longest.
 func openTaskSooner(a, b *crmcontracts.Activity) bool {
 	switch {
-	case a.DueAt != nil && b.DueAt != nil:
+	case a.DueAt != nil && b.DueAt != nil && !a.DueAt.Equal(*b.DueAt):
 		return a.DueAt.Before(*b.DueAt)
-	case a.DueAt != nil:
+	case a.DueAt != nil && b.DueAt == nil:
 		return true
-	case b.DueAt != nil:
+	case a.DueAt == nil && b.DueAt != nil:
 		return false
 	default:
 		return a.OccurredAt.Before(b.OccurredAt)

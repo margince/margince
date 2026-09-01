@@ -25,7 +25,7 @@ import { IntroAsksCard } from "../introasks";
 import { IntroDrawer } from "../introdrawer";
 import { type IntroRequest, useIntroRequests } from "../introrequests";
 import { usePersonGraph } from "../persongraph";
-import { RoutesCard } from "../personroutes";
+import { availabilityLabel, RoutesCard } from "../personroutes";
 import { DecisionStrip } from "./decision";
 import { EdgeDetail } from "./edgedetail";
 import { LeadPanel } from "./leadpanel";
@@ -127,7 +127,7 @@ export function PersonNetworkTab({
             <LeadPanel
               route={read.lead}
               targetName={read.targetName}
-              blocked={blockedReason(read.lead, t)}
+              blocked={availabilityLabel(read.lead.availability, t)}
               onAsk={setAsking}
             />
           ) : null}
@@ -255,23 +255,6 @@ function readGraph(
     // covers a graph that reloads without the node for any other reason.
     focused: nodes.some((n) => n.id === focus) ? focus : null,
   };
-}
-
-// A route that cannot be asked for says why, and offers no button.
-function blockedReason(
-  route: RouteCandidate,
-  t: ReturnType<typeof useT>,
-): string | undefined {
-  switch (route.availability) {
-    case "already_requested":
-      return t("person.graph.routeAlreadyAsked");
-    case "declined":
-      return t("person.graph.routeDeclined");
-    case "unavailable":
-      return t("person.graph.routeUnavailable");
-    default:
-      return undefined;
-  }
 }
 
 const OPEN = new Set(["requested", "accepted", "name_drop_approved"]);

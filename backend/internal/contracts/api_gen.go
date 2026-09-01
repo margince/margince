@@ -9688,6 +9688,27 @@ func (e SetActivityAudienceRequestMembersSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for SetActivityDispositionRequestDisposition.
+const (
+	SetActivityDispositionRequestDispositionNotMine  SetActivityDispositionRequestDisposition = "not_mine"
+	SetActivityDispositionRequestDispositionNotSales SetActivityDispositionRequestDisposition = "not_sales"
+	SetActivityDispositionRequestDispositionSnooze   SetActivityDispositionRequestDisposition = "snooze"
+)
+
+// Valid indicates whether the value is a known member of the SetActivityDispositionRequestDisposition enum.
+func (e SetActivityDispositionRequestDisposition) Valid() bool {
+	switch e {
+	case SetActivityDispositionRequestDispositionNotMine:
+		return true
+	case SetActivityDispositionRequestDispositionNotSales:
+		return true
+	case SetActivityDispositionRequestDispositionSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetAiModelRateRequestLane.
 const (
 	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
@@ -11929,6 +11950,66 @@ func (e WorklistItemConsequence) Valid() bool {
 	}
 }
 
+// Defines values for WorklistItemDispositions.
+const (
+	WorklistItemDispositionsNotMine  WorklistItemDispositions = "not_mine"
+	WorklistItemDispositionsNotSales WorklistItemDispositions = "not_sales"
+	WorklistItemDispositionsSnooze   WorklistItemDispositions = "snooze"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemDispositions enum.
+func (e WorklistItemDispositions) Valid() bool {
+	switch e {
+	case WorklistItemDispositionsNotMine:
+		return true
+	case WorklistItemDispositionsNotSales:
+		return true
+	case WorklistItemDispositionsSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemPrimaryAction.
+const (
+	WorklistItemPrimaryActionAcknowledge WorklistItemPrimaryAction = "acknowledge"
+	WorklistItemPrimaryActionAct         WorklistItemPrimaryAction = "act"
+	WorklistItemPrimaryActionComplete    WorklistItemPrimaryAction = "complete"
+	WorklistItemPrimaryActionDecide      WorklistItemPrimaryAction = "decide"
+	WorklistItemPrimaryActionDismiss     WorklistItemPrimaryAction = "dismiss"
+	WorklistItemPrimaryActionMerge       WorklistItemPrimaryAction = "merge"
+	WorklistItemPrimaryActionOpen        WorklistItemPrimaryAction = "open"
+	WorklistItemPrimaryActionSetAside    WorklistItemPrimaryAction = "set_aside"
+	WorklistItemPrimaryActionSnooze      WorklistItemPrimaryAction = "snooze"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemPrimaryAction enum.
+func (e WorklistItemPrimaryAction) Valid() bool {
+	switch e {
+	case WorklistItemPrimaryActionAcknowledge:
+		return true
+	case WorklistItemPrimaryActionAct:
+		return true
+	case WorklistItemPrimaryActionComplete:
+		return true
+	case WorklistItemPrimaryActionDecide:
+		return true
+	case WorklistItemPrimaryActionDismiss:
+		return true
+	case WorklistItemPrimaryActionMerge:
+		return true
+	case WorklistItemPrimaryActionOpen:
+		return true
+	case WorklistItemPrimaryActionSetAside:
+		return true
+	case WorklistItemPrimaryActionSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistItemSource.
 const (
 	WorklistItemSourceAiWorkHealth        WorklistItemSource = "ai_work_health"
@@ -12439,6 +12520,24 @@ func (e ListActivitiesParamsEntityType) Valid() bool {
 	case ListActivitiesParamsEntityTypePerson:
 		return true
 	case ListActivitiesParamsEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClearActivityDispositionParamsScope.
+const (
+	ClearActivityDispositionParamsScopeMine   ClearActivityDispositionParamsScope = "mine"
+	ClearActivityDispositionParamsScopeThread ClearActivityDispositionParamsScope = "thread"
+)
+
+// Valid indicates whether the value is a known member of the ClearActivityDispositionParamsScope enum.
+func (e ClearActivityDispositionParamsScope) Valid() bool {
+	switch e {
+	case ClearActivityDispositionParamsScopeMine:
+		return true
+	case ClearActivityDispositionParamsScopeThread:
 		return true
 	default:
 		return false
@@ -13290,22 +13389,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -13767,31 +13866,31 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
-	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
-	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
-	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
-	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
+	All             GetWorklistParamsFilter = "all"
+	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	Decisions       GetWorklistParamsFilter = "decisions"
+	Meetings        GetWorklistParamsFilter = "meetings"
+	System          GetWorklistParamsFilter = "system"
+	Tasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case GetWorklistParamsFilterAll:
+	case All:
 		return true
-	case GetWorklistParamsFilterCustomerWaiting:
+	case CustomerWaiting:
 		return true
-	case GetWorklistParamsFilterDealsAtRisk:
+	case DealsAtRisk:
 		return true
-	case GetWorklistParamsFilterDecisions:
+	case Decisions:
 		return true
-	case GetWorklistParamsFilterMeetings:
+	case Meetings:
 		return true
-	case GetWorklistParamsFilterSystem:
+	case System:
 		return true
-	case GetWorklistParamsFilterTasks:
+	case Tasks:
 		return true
 	default:
 		return false
@@ -27091,6 +27190,25 @@ type SetActivityAudienceRequest struct {
 // SetActivityAudienceRequestMembersSubjectType defines model for SetActivityAudienceRequest.Members.SubjectType.
 type SetActivityAudienceRequestMembersSubjectType string
 
+// SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
+type SetActivityDispositionRequest struct {
+	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
+	// `not_mine` bind only the caller.
+	Disposition SetActivityDispositionRequestDisposition `json:"disposition"`
+
+	// SnoozedUntil When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
+	// with no moment would never lift, and a moment on `not_mine` would make a hand-off
+	// expire on a Thursday.
+	//
+	// A moment already past is refused rather than stored: it would write a row that hides
+	// nothing, and read to the rep as a snooze that did not take.
+	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
+}
+
+// SetActivityDispositionRequestDisposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
+// `not_mine` bind only the caller.
+type SetActivityDispositionRequestDisposition string
+
 // SetAiModelRateRequest defines model for SetAiModelRateRequest.
 type SetAiModelRateRequest struct {
 	// CacheReadPerMtok USD per 1M cache-read tokens.
@@ -29022,6 +29140,15 @@ type WorklistItem struct {
 	// Detail One supporting line.
 	Detail *string `json:"detail,omitempty"`
 
+	// Dispositions The ways this row can be PUT DOWN, as the server declares them. A client
+	// never infers this from `source`: which rows a rep may judge is a server
+	// rule, and a client guessing it draws a verb that 404s or hides one the rep
+	// is entitled to.
+	//
+	// Absent or empty means the row cannot be set aside — most sources answer
+	// through the surface that owns them and leave nothing to dispose of here.
+	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
+
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
@@ -29057,6 +29184,14 @@ type WorklistItem struct {
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
 
+	// PrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
+	// reader arriving at a row should not have to weigh three equally-drawn
+	// controls to find the step the ranking already implies.
+	//
+	// Absent when the row offers no single obvious step, which is a real state
+	// rather than a gap: a dedupe pair genuinely asks the reader to choose.
+	PrimaryAction *WorklistItemPrimaryAction `json:"primary_action,omitempty"`
+
 	// Score Rank within the level. Higher is first. Meaningless across levels.
 	Score *float32 `json:"score,omitempty"`
 
@@ -29084,6 +29219,17 @@ type WorklistItemCategory string
 // source, because one source has several honest answers: a deal past its close
 // date slips, one merely idle drifts.
 type WorklistItemConsequence string
+
+// WorklistItemDispositions defines model for WorklistItem.Dispositions.
+type WorklistItemDispositions string
+
+// WorklistItemPrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
+// reader arriving at a row should not have to weigh three equally-drawn
+// controls to find the step the ranking already implies.
+//
+// Absent when the row offers no single obvious step, which is a real state
+// rather than a gap: a dedupe pair genuinely asks the reader to choose.
+type WorklistItemPrimaryAction string
 
 // WorklistItemSource Which producer raised it, and therefore which endpoint its verbs go to.
 //
@@ -29525,6 +29671,17 @@ type SetActivityAudienceParams struct {
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
+
+// ClearActivityDispositionParams defines parameters for ClearActivityDisposition.
+type ClearActivityDispositionParams struct {
+	// Scope `mine` clears this reader's own snooze or not-mine. `thread` withdraws the
+	// workspace-wide not-sales judgement, which anybody who can read the message may do:
+	// the judgement was never one person's property.
+	Scope *ClearActivityDispositionParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+}
+
+// ClearActivityDispositionParamsScope defines parameters for ClearActivityDisposition.
+type ClearActivityDispositionParamsScope string
 
 // DraftEmailJSONBody defines parameters for DraftEmail.
 type DraftEmailJSONBody struct {
@@ -33806,6 +33963,9 @@ type UpdateActivityJSONRequestBody = UpdateActivityRequest
 
 // SetActivityAudienceJSONRequestBody defines body for SetActivityAudience for application/json ContentType.
 type SetActivityAudienceJSONRequestBody = SetActivityAudienceRequest
+
+// SetActivityDispositionJSONRequestBody defines body for SetActivityDisposition for application/json ContentType.
+type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
 // DraftEmailJSONRequestBody defines body for DraftEmail for application/json ContentType.
 type DraftEmailJSONRequestBody DraftEmailJSONBody
@@ -42131,6 +42291,12 @@ type ServerInterface interface {
 	// Limit (or re-open) who may read this activity's content.
 	// (PATCH /activities/{id}/audience)
 	SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams)
+	// Pick the message back up — the undo behind every set-aside verb.
+	// (DELETE /activities/{id}/disposition)
+	ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams)
+	// Put a waiting message down, so the Worklist stops offering it.
+	// (PUT /activities/{id}/disposition)
+	SetActivityDisposition(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft a reply/follow-up email for context (the `draft_email` MCP verb).
 	// (POST /activities/{id}/draft-email)
 	DraftEmail(w http.ResponseWriter, r *http.Request, id Id)
@@ -43790,6 +43956,18 @@ func (_ Unimplemented) UpdateActivity(w http.ResponseWriter, r *http.Request, id
 // Limit (or re-open) who may read this activity's content.
 // (PATCH /activities/{id}/audience)
 func (_ Unimplemented) SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Pick the message back up — the undo behind every set-aside verb.
+// (DELETE /activities/{id}/disposition)
+func (_ Unimplemented) ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a waiting message down, so the Worklist stops offering it.
+// (PUT /activities/{id}/disposition)
+func (_ Unimplemented) SetActivityDisposition(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47611,6 +47789,86 @@ func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetActivityAudience(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClearActivityDisposition operation middleware
+func (siw *ServerInterfaceWrapper) ClearActivityDisposition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ClearActivityDispositionParams
+
+	// ------------- Optional query parameter "scope" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope", r.URL.Query(), &params.Scope, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearActivityDisposition(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetActivityDisposition operation middleware
+func (siw *ServerInterfaceWrapper) SetActivityDisposition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetActivityDisposition(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -70869,6 +71127,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activities/{id}/audience", wrapper.SetActivityAudience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/activities/{id}/disposition", wrapper.ClearActivityDisposition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/activities/{id}/disposition", wrapper.SetActivityDisposition)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/draft-email", wrapper.DraftEmail)

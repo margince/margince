@@ -277,6 +277,16 @@ var catalog = map[string]struct {
 	"activity.captured": {activityStreamEntity, 1},
 	"activity.updated":  {activityStreamEntity, 1},
 	"activity.archived": {activityStreamEntity, 1},
+	// Somebody decided what to do about a waiting message and the Worklist
+	// stopped offering it. `disposition_recorded` rather than `disposition_set`
+	// because the catalog's verbs are past tense, and a compound one puts the
+	// object first — the shape `password_link_issued` already takes.
+	//
+	// Its own type rather than an activity.updated: the
+	// message did not change, only what one person (or the workspace) decided
+	// about it, and a consumer counting edits to correspondence must not read a
+	// rep clearing their queue as the customer's mail being rewritten.
+	"activity.disposition_recorded": {activityStreamEntity, 1},
 	// §5.11: a thread-matched inbound is an activity-family fact, emitted
 	// by capture alongside activity.captured (EVT-SEM-14 — idempotent per
 	// reply; a duplicate inbound for the same reply does not re-emit).
