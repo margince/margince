@@ -23,11 +23,11 @@ import (
 // queues the workspace's signature pass now, instead of leaving a contact who
 // wrote this morning to be read tonight.
 //
-// Registered whatever the model lane holds, unlike the enrich WORKERS. The
-// consumer only queues a job, and a queued pass with no worker registered
-// simply waits — whereas gating the consumer on the brain would mean an
-// installation that later wires one starts prompt enrichment only after a
-// restart nobody connected to the change.
+// Started only where the enrich lane exists, which the caller decides. River
+// DISCARDS a job whose kind no worker claims rather than holding it, and a
+// discarded row is outside the uniqueness states that collapse a burst — so an
+// installation with no model lane would turn every inbound mail into its own
+// discarded job rather than into a queue that waits for a worker.
 //
 // The runner is insert-only: the consumer queues the pass, and this worker's
 // River side works it like any sweep-scheduled one. A failed inserter fails

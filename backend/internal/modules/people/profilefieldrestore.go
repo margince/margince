@@ -32,13 +32,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// restoredBy answers who the restored value belongs to: its original author
-// when the row recorded one, else the reader putting it back.
-func restoredBy(original *string, restorer string) string {
+// restoredEvidence is the receipt a restored value carries: the value itself,
+// and who had set it before it was replaced.
+//
+// The evidence column is NOT NULL and means "the text this value was read
+// from". A restore reads it from the record's own history rather than from a
+// signature or a page, so that is what it says — a quote borrowed from the
+// replacement would be a receipt for the wrong value.
+func restoredEvidence(value string, original *string) string {
 	if original != nil && *original != "" {
-		return *original
+		return fmt.Sprintf("Restored %q, set by %s before a later statement replaced it.", value, *original)
 	}
-	return restorer
+	return fmt.Sprintf("Restored %q, replaced by a later statement.", value)
 }
 
 // restoreSource marks a value a human put back, distinct from the pass that
@@ -94,6 +99,33 @@ func (s *Store) RestoreProfileField(ctx context.Context, personID ids.PersonID, 
 		// mirrored field, so it has to agree too — a title somebody retyped
 		// leaves the sidecar untouched, and restoring on the sidecar alone
 		// would put the old value back under their answer.
+		// A human's CORRECTION blocks the undo, and it has to be asked for
+		// separately: a correction is recorded in the ai_feedback ledger and
+		// touches neither the column nor this row, so the CAS below cannot see
+		// one. Restoring over it would put back a value the reader looked at
+		// and rejected — and would move this row's updated_at, which is the
+		// date their verdict is judged against, retiring the correction as
+		// well as overruling it.
+		//
+		// Matched on the ledger's own key, which is a hash of the claim path:
+		// spelling the path here rather than taking the hash apart is what
+		// keeps the two sides agreeing, and ai.ProfileFieldClaimPath is the one
+		// spelling. The store cannot import that module, so the caller-facing
+		// half lives in the handler's package and this asks the table directly.
+		var corrected bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM ai_feedback
+				 WHERE subject_type = 'person' AND subject_id = $1
+				   AND claim_kind = 'profile_field' AND verdict = 'corrected'
+				   AND claim_key = encode(sha256(('profile_field:' || $2)::bytea), 'hex'))`,
+			personID, field).Scan(&corrected); err != nil {
+			return fmt.Errorf("people: looking for a correction on %s: %w", field, err)
+		}
+		if corrected {
+			return apperrors.ErrConflict
+		}
+
 		// The comparison is IN the statement, not before it: reading the column
 		// and then writing it leaves a window in which somebody types their own
 		// answer and this overwrites it. RowsAffected is the CAS — zero means
@@ -116,13 +148,22 @@ func (s *Store) RestoreProfileField(ctx context.Context, personID ids.PersonID, 
 		// choosing this value over the one that replaced it. Its clause also
 		// clears the undo buffer, which is what stops the same undo being
 		// offered a second time and undoing itself.
+		// The evidence is REPLACED, not inherited. The snippet on the row
+		// belongs to the value being undone — restoring "CFO" while keeping
+		// the card's "VP Finance" quote would print a receipt for a value the
+		// record no longer holds, and this table's whole promise is that a
+		// value can be shown the text it was read from. The same for
+		// confidence: nothing measured the restored value, and a score carried
+		// over from the replacement would say a model had.
 		landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
-			Field: field, Value: superseded, EvidenceSnippet: evidence, SourceRef: sourceRef,
-			// Attributed to whoever set the value being put back, falling back
-			// to the person doing the restoring when the row never recorded
-			// one. Stamping the restorer would rewrite authorship: they chose
-			// to keep somebody else's answer, they did not author it.
-			Source: restoreSource, CapturedBy: restoredBy(supersededBy, by), Confidence: confidence,
+			Field: field, Value: superseded,
+			EvidenceSnippet: restoredEvidence(superseded, supersededBy),
+			SourceRef:       sourceRef,
+			// captured_by is the authenticated restorer, like every other
+			// mutation's. Who ORIGINALLY said this is a fact about the past and
+			// belongs in the evidence line, not in the provenance stamp of a
+			// row this person just wrote.
+			Source: restoreSource, CapturedBy: by,
 		}, replaceOnAcceptance)
 		if err != nil {
 			return err
@@ -148,8 +189,7 @@ func (s *Store) RestoreProfileField(ctx context.Context, personID ids.PersonID, 
 }
 
 // RestorePersonProfileField implements POST /people/{id}/profile-fields/{field}/restore.
-func (h Handlers) RestorePersonProfileField(w http.ResponseWriter, r *http.Request,
-	id crmcontracts.Id, field crmcontracts.PersonProfileFieldKey) {
+func (h Handlers) RestorePersonProfileField(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, field crmcontracts.PersonProfileFieldKey) {
 	// No body. The field's own read overlays a human's verdict onto the stored
 	// value (person360's readProfileFields), and answering with the row this
 	// write just made would serve the value UNDER that overlay — the one

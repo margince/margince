@@ -281,12 +281,17 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 	// different situations that would otherwise both end in an insert: a
 	// re-delivered old mail would file its number beside the current one, and
 	// the record would carry two work numbers with no way to tell which rings.
+	// STRICTLY newer, not "at least as new". A business card states two work
+	// numbers as one statement and they share its date; > would let the first
+	// one written reject the second as already superseded, and the card would
+	// silently import half its numbers. A tie is two numbers the person gave
+	// together, which is a person with two numbers.
 	var newerStands bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM person_phone
 			WHERE person_id = $1 AND phone_type = $2 AND archived_at IS NULL
-			  AND observed_at >= $3)`,
+			  AND observed_at > $3)`,
 		personID, phoneType, observedAt).Scan(&newerStands); err != nil {
 		return observedSkipped, fmt.Errorf("people: looking for a number stated later: %w", err)
 	}
@@ -434,10 +439,15 @@ type cardField struct{ name, value string }
 // cardFields reads a card into that vocabulary, dropping what it does not
 // state.
 //
+// TITLE fills `title` and NOT `role`. They are different claims — a title is
+// what somebody is called, a role is what they do in a deal — and person360
+// attaches role evidence to the employment role, so a card saying "VP Finance"
+// would make an unrelated role like "Decision maker" display with that as its
+// evidence.
+//
 // URL is split rather than filed as linkedin, which is what the old import did
 // to every card: a company website landed under a person's LinkedIn profile and
-// the page then showed it as one. Host, not guesswork — a linkedin.com URL is a
-// profile and anything else is a website.
+// the page then showed it as one. Host, not guesswork.
 func cardFields(entry VCardEntry) []cardField {
 	out := make([]cardField, 0, 5)
 	add := func(name, value string) {
@@ -446,7 +456,6 @@ func cardFields(entry VCardEntry) []cardField {
 		}
 	}
 	add(fieldTitle, entry.Title)
-	add(fieldRole, entry.Title)
 	add(fieldOrgName, entry.Organization)
 	add(fieldAddress, entry.Address)
 	if u := strings.TrimSpace(entry.URL); u != "" {
@@ -461,16 +470,21 @@ func cardFields(entry VCardEntry) []cardField {
 
 // isLinkedinURL reports whether a URL names a LinkedIn profile, by host rather
 // than by substring: a website whose path merely mentions linkedin is not one.
+//
+// Subdomains count, because LinkedIn's own localized profile links carry them —
+// de.linkedin.com and www.linkedin.com are the same site, and a reader who
+// pasted either meant their profile. Hostname() rather than Host, so an
+// explicit port does not turn a profile into a website.
 func isLinkedinURL(raw string) bool {
 	parsed, err := url.Parse(raw)
 	if err != nil {
 		return false
 	}
-	host := strings.ToLower(parsed.Host)
+	host := strings.ToLower(parsed.Hostname())
 	if host == "" {
 		// A bare "linkedin.com/in/x" with no scheme parses as a path.
 		host, _, _ = strings.Cut(strings.ToLower(raw), "/")
+		host, _, _ = strings.Cut(host, ":")
 	}
-	host = strings.TrimPrefix(host, "www.")
-	return host == "linkedin.com"
+	return host == "linkedin.com" || strings.HasSuffix(host, ".linkedin.com")
 }

@@ -105,6 +105,13 @@ func Groups() []Group {
 		// other entity's event can make one due that this stream's events do
 		// not already announce.
 		{Name: "cg:org-auto-enrich", Streams: forEntities(organizationStreamEntity)},
+		// Mail landing queues the signature-enrich pass, so a contact who wrote
+		// this morning is read now rather than tonight. Its own group rather
+		// than a second handler on an existing activity consumer: this one
+		// queues a MODEL-backed pass, and a group whose retries spend the
+		// customer's token budget must not share a cursor with a projection
+		// that is cheap to replay.
+		{Name: "cg:capture-enrich", Streams: forEntities(activityStreamEntity)},
 		// Automatic enrichment from a LICENSED provider (ADR-0101/PI-EVT-1).
 		// Its own group rather than a second handler on the pass above,
 		// because the two differ in what a failure costs: that one reads a

@@ -15,6 +15,8 @@ package people
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"strings"
 	"testing"
@@ -330,5 +332,32 @@ func TestRestoringAFieldPutsBackWhatWasReplacedAndRefusesWhenTheRecordMovedOn(t 
 	}
 	if moved.Title == nil || *moved.Title != "Typed Since" {
 		t.Errorf("title = %v, want the typed answer untouched by a refused undo", moved.Title)
+	}
+}
+
+// The restore's correction check spells the claim path in SQL, because the
+// store may not import the module that owns the ledger. Two spellings of a
+// HASHED key is the defect that already shipped once here: nothing mismatches
+// visibly, the guard simply never fires and every correction is overwritten.
+//
+// So the SQL hash is checked against a key built the way the ledger builds
+// one. Change either side alone and this fails.
+func TestTheRestoreMatchesTheLedgersOwnClaimKey(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	for _, field := range []string{fieldTitle, fieldRole, fieldWebsite} {
+		want := sha256.Sum256([]byte("profile_field:" + field))
+		var got string
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx,
+				`SELECT encode(sha256(('profile_field:' || $1)::bytea), 'hex')`, field).Scan(&got)
+		}); err != nil {
+			t.Fatalf("hashing %s in SQL: %v", field, err)
+		}
+		if got != hex.EncodeToString(want[:]) {
+			t.Errorf("%s: SQL claim key %s, ledger builds %s — the restore's correction "+
+				"check would match nothing and silently overwrite every correction",
+				field, got, hex.EncodeToString(want[:]))
+		}
 	}
 }

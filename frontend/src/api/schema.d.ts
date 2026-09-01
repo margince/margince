@@ -445,9 +445,12 @@ export interface paths {
          *     an automatic read proposes and a human click writes.
          *
          *     Three outcomes per card, reported in the order the file listed them. An exact email
-         *     match fills only the fields the record leaves empty, so a value a human typed is never
-         *     replaced by a card. No match creates the person, the company the card names, and the
-         *     employment edge between them. A card that merely RESEMBLES somebody is written nowhere
+         *     match applies what the card states by RECENCY: a card handed over now is the contact's
+         *     own newer statement, so it replaces what the record holds — a value somebody typed
+         *     included — and the replaced value is kept in `superseded_value` for
+         *     `POST /people/{id}/profile-fields/{field}/restore`. A field a human CORRECTED through
+         *     `POST /ai/feedback` is the exception and stands. No match creates the person, the
+         *     company the card names, and the employment edge between them. A card that merely RESEMBLES somebody is written nowhere
          *     and returned as `needs_review` with the candidate it resembles: guessing there is how
          *     one person becomes two records, and neither direction is recoverable by the reader who
          *     imported the file.

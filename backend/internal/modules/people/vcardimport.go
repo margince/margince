@@ -227,8 +227,14 @@ func personFromVCard(entry VCardEntry) CreatePersonInput {
 	if title := strings.TrimSpace(entry.Title); title != "" {
 		person.Title = &title
 	}
-	if url := strings.TrimSpace(entry.URL); url != "" {
-		person.Social = map[string]any{profileURLField: url}
+	// Only a LinkedIn URL goes in the social slot, whose key IS "linkedin". A
+	// card's URL is usually the company site, and filing that here showed a
+	// company's home page as the person's LinkedIn profile. The website lands
+	// on the profile-field sidecar instead, by the same split the update path
+	// makes — one rule, so which outcome a card gets cannot change what it
+	// means.
+	if u := strings.TrimSpace(entry.URL); u != "" && isLinkedinURL(u) {
+		person.Social = map[string]any{profileURLField: u}
 	}
 	// The card's postal address, as the one line it was reduced to. Parsing a
 	// field and then dropping it is the quieter defect: a reader who sees an
