@@ -92,10 +92,10 @@ const systemIntroAdvanceActor = "system:intro-advance"
 // `human:<id>` and never matches.
 //
 // Built from principal.PrincipalConnector rather than typed as a literal, so
-// the prefix cannot drift from the vocabulary it describes: renaming that
-// constant breaks this expression at compile time instead of silently making
-// the clause match nothing — a clause matching nothing here is a lane that
-// closes no introductions and reports no fault.
+// renaming that constant breaks this expression at compile time. A hand-typed
+// literal would instead go on compiling while matching nothing, and a clause
+// matching nothing here is a lane that closes no introductions and reports no
+// fault.
 const connectorCapturedPrefix = string(principal.PrincipalConnector) + ":"
 
 // IntroAdvance closes introductions the contact has answered.

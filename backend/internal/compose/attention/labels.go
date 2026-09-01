@@ -25,9 +25,10 @@ import (
 // the thirteenth was the one that noticed.
 //
 // Reflection is worth its cost here for the same reason a fitness function is
-// worth one: the obligation is "every lane", and the only spelling of "every"
-// that cannot drift is the type itself. Both shapes are read — a required lane
-// is a slice, an optional one a pointer to one, and a nil optional is skipped
+// worth one: the obligation is "every lane on the payload", and reading it off
+// the payload type is what makes a new lane arrive already covered rather than
+// covered once somebody remembers. Both shapes are read — a required lane is a
+// slice, an optional one a pointer to one, and a nil optional is skipped
 // exactly as the hand-written loop skipped it.
 func everyItemLane(out *crmcontracts.Attention) []*[]crmcontracts.AttentionItem {
 	var lanes []*[]crmcontracts.AttentionItem
