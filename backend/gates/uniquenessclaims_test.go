@@ -460,15 +460,15 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // a row falling, so the two kinds of progress are told apart by which number
 // moved and whether the tree moved with it.
 var shapeCensus = map[string]int{
-	"cannot-drift":   156,
-	"once":           155,
-	"one-of-a-kind":  154,
+	"cannot-drift":   172,
+	"once":           178,
+	"one-of-a-kind":  180,
 	"is-every-named": 91,
-	"only-noun":      16,
-	"no-second":      10,
-	"never-twice":    6,
+	"only-noun":      12,
+	"no-second":      11,
+	"never-twice":    7,
 	"is-every":       4,
-	"one-truth":      3,
+	"one-truth":      2,
 }
 
 // registeredDebt is the number of unheld claims this tree carries, tracked
@@ -845,6 +845,121 @@ func TestTheBindingIsReadOffTheCommentRatherThanGuessedAt(t *testing.T) {
 	} {
 		if heldBy.MatchString(bad) {
 			t.Errorf("%q was read as a binding and must not be", bad)
+		}
+	}
+}
+
+// A claim is the same claim however the comment was wrapped — asserted through
+// the DETECTOR, on real Go source.
+//
+// The shapes spell their phrases with literal spaces, and a doc comment keeps
+// the newlines it was wrapped at. Unflattened, "the one spelling" is a claim
+// the register holds and the identical claim broken across two lines is not —
+// so reflowing a paragraph, which changes no meaning, takes a live claim out
+// of the register with nothing failing to say so. That is under-recognition,
+// the one direction a census must not break.
+//
+// It goes through findClaims rather than through the flattening helper because
+// a test that calls the helper itself passes whether or not the detector still
+// uses it. What has to hold is that a WRAPPED comment in a file reaches the
+// register.
+//
+// And the paragraph case is here for the opposite error: a blank line
+// separates two sentences, and running them together manufactures a claim
+// nobody wrote, which puts innocent prose in a closed register.
+func TestTheDetectorReadsAClaimTheCommentWrapped(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	source := `package fixture
+
+// wrappedClaim is the one
+// spelling of that shape, so nothing else may name it.
+const wrappedClaim = "a"
+
+// splitAcrossParagraphs ends a paragraph with the one
+//
+// writer of this row is somebody else entirely.
+const splitAcrossParagraphs = "b"
+`
+	if err := os.WriteFile(filepath.Join(dir, "fixture.go"), []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	claims, err := findClaims(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for _, c := range claims {
+		seen[c.decl] = true
+	}
+
+	if !seen["const wrappedClaim"] {
+		t.Error("a claim broken across two lines did not reach the detector — reflowing a " +
+			"paragraph would take it out of the register with nothing failing to say so")
+	}
+	if seen["const splitAcrossParagraphs"] {
+		t.Error("two paragraphs were run together into a claim nobody wrote — a blank line " +
+			"separates sentences and joining them puts innocent prose in a closed register")
+	}
+}
+
+// Every shape is blind to a wrap somewhere, and flattening is what covers it.
+//
+// Per shape rather than the one fixture above, so a shape widened tomorrow has
+// to answer here too. Every wrap point is tried rather than one chosen by
+// hand: a shape is blind if ANY break defeats it, and picking a single space
+// can land on one the pattern happens to tolerate — the derived shape spells
+// its first gap `\s+` and its second as a literal space, so a case broken at
+// the first would have reported it safe.
+func TestEveryShapeIsBlindToSomeWrapTheDetectorFlattens(t *testing.T) {
+	t.Parallel()
+	claims := map[string]string{
+		"one-of-a-kind": "This is the one spelling of that shape.",
+		"only-noun":     "It is the only reader of this column.",
+		"cannot-drift":  "The two cannot drift apart.",
+		"once":          "The column is spelled once, here.",
+		"no-second":     "There is no second writer of this row.",
+		"one-truth":     "This is the single source of truth for the tier.",
+		"is-every":      "These are EVERY tier the router admits.",
+		"never-twice":   "The value is never duplicated.",
+		namedShape:      "Flush is every Flush there is.",
+	}
+	for shape, sentence := range claims {
+		pattern := claimShapes[shape]
+		if shape == namedShape {
+			pattern = namedExhaustiveness("func Flush")
+		}
+		if pattern == nil {
+			t.Errorf("shape %q has no pattern to test", shape)
+			continue
+		}
+		phrase := pattern.FindString(sentence)
+		if phrase == "" {
+			t.Errorf("shape %q does not read its own case as a claim, so the case proves nothing:\n\t%s",
+				shape, sentence)
+			continue
+		}
+		blind := 0
+		for at, char := range phrase {
+			if char != ' ' {
+				continue
+			}
+			wrapped := strings.Replace(sentence, phrase,
+				phrase[:at]+"\n"+phrase[at+1:], 1)
+			if pattern.FindString(wrapped) == "" {
+				blind++
+			}
+		}
+		if blind == 0 {
+			t.Errorf("shape %q survives every wrap of %q, so it shows nothing about what flattening buys — pick a phrase the shape spells with a literal space",
+				shape, phrase)
+		}
+	}
+	for _, shape := range append(sortedShapes(), namedShape) {
+		if _, ok := claims[shape]; !ok {
+			t.Errorf("shape %q has no wrapped case — it could go blind to a reflowed claim "+
+				"and this arm would stay green", shape)
 		}
 	}
 }

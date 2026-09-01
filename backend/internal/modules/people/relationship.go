@@ -165,7 +165,7 @@ func ensureRelationshipAnchorWritable(
 // an anchor whatever the kind, and stating it per-kind is what let
 // project_stakeholder through the same door this paragraph closed.
 var relationshipKinds = map[string]bool{
-	employmentKind: true, "deal_stakeholder": true, "project_stakeholder": true,
+	employmentKind: true, "deal_stakeholder": true, ProjectStakeholderKind: true,
 	"partner_of": true, "referred_by": true, "co_sell_with": true,
 	worksWithKind: true,
 }
