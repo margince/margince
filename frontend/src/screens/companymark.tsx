@@ -102,7 +102,7 @@ export function CompanyMark({
         {canEdit && (
           <div className="company-mark-actions">
             <Button
-              variant="secondary"
+              small
               onClick={() => setPicking((open) => !open)}
               disabled={busy}
             >
@@ -112,6 +112,7 @@ export function CompanyMark({
             </Button>
             {profile.logo_url && (
               <Button
+                small
                 variant="ghost"
                 onClick={() => remove.mutate()}
                 disabled={busy}
