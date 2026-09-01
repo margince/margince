@@ -18,10 +18,13 @@ import (
 
 func TestRedactionKeepsGovernanceAndDropsContent(t *testing.T) {
 	for _, tc := range []struct {
-		name     string
-		image    string
-		wantKeys []string
-		gone     []string
+		name string
+		// entityType selects the key set. Empty means "activity", so the cases
+		// that predate the collateral types read exactly as they did.
+		entityType string
+		image      string
+		wantKeys   []string
+		gone       []string
 	}{{
 		// The audience change's own audit row. Written by SetAudience, and the
 		// reason this test exists: withholding it tells a compliance reader
@@ -86,9 +89,77 @@ func TestRedactionKeepsGovernanceAndDropsContent(t *testing.T) {
 		image:    `{"audience":"selected","some_new_field":"whatever this is"}`,
 		wantKeys: []string{"audience", "content_state"},
 		gone:     []string{"some_new_field"},
+	}, {
+		// The leak this closes. capturedfiles.go stores an email attachment
+		// under its user-supplied filename, and that name is the thing a
+		// termination letter or a diagnosis gives away on its own.
+		name:       "an attachment filename is dropped while the file's shape survives",
+		entityType: "attachment",
+		image:      `{"entity_type":"activity","entity_id":"a-uuid","filename":"Kuendigung.pdf","byte_size":8241,"category":"email_attachment"}`,
+		wantKeys:   []string{"entity_type", "entity_id", "byte_size", "category", "content_state"},
+		gone:       []string{"filename"},
+	}, {
+		// A human-authored document title names the file's content as surely as
+		// the filename does.
+		name:       "a document title is dropped like a filename",
+		entityType: "attachment",
+		image:      `{"title":"Aufhebungsvertrag Entwurf","pinned":true}`,
+		wantKeys:   []string{"pinned", "content_state"},
+		gone:       []string{"title"},
+	}, {
+		// The direction that matters as much as the leak: withholding this
+		// image WHOLE would destroy "who asked to read this file", which is the
+		// governance record a compliance reader came for. Both keys survive and
+		// nothing is marked withheld.
+		name:       "an extraction request survives whole so the governance record is not destroyed",
+		entityType: "attachment_extraction",
+		image:      `{"attachment_id":"a-uuid","requested_by":"human:b-uuid"}`,
+		wantKeys:   []string{"attachment_id", "requested_by"},
+	}, {
+		// line_count measures the transcript, so it is content by the same
+		// argument that drops a subject: it tells a reader outside the audience
+		// how long the held conversation was. It also survives the transcript's
+		// own erasure — the purge deletes the routing row without a tombstone,
+		// so the route resolves NULL and this same redactor runs again.
+		name:       "a transcript read keeps who read it and loses how long it was",
+		entityType: "transcript_read",
+		image:      `{"activity_id":"a-uuid","requested_by":"human:b-uuid","status":"done","line_count":412}`,
+		wantKeys:   []string{"activity_id", "requested_by", "status", "content_state"},
+		gone:       []string{"line_count"},
+	}, {
+		name:       "a finished extraction keeps its job progress",
+		entityType: "attachment_extraction",
+		image:      `{"status":"done","grounded":4}`,
+		wantKeys:   []string{"status", "grounded"},
+	}, {
+		name:       "a hidden deal document keeps which deal and which way",
+		entityType: "attachment",
+		image:      `{"deal_id":"a-uuid","hidden_from_deal":true}`,
+		wantKeys:   []string{"deal_id", "hidden_from_deal"},
+	}, {
+		// scheduledsend.go writes the message's own subject line onto this
+		// image, so the send is a content carrier exactly like the activity.
+		name:       "a scheduled send loses its subject and keeps its schedule",
+		entityType: "scheduled_send",
+		image:      `{"scheduled_at":"2026-03-01T09:00:00Z","scheduled_tz":"Europe/Berlin","subject":"Re: Aufhebungsvertrag"}`,
+		wantKeys:   []string{"scheduled_at", "scheduled_tz", "content_state"},
+		gone:       []string{"subject"},
+	}, {
+		// Fail closed at the TYPE level, not just the key level: a governed type
+		// nobody gave keys to withholds everything rather than falling through
+		// to a permissive default.
+		name:       "an entity type with no key set withholds every key",
+		entityType: "some_new_collateral",
+		image:      `{"attachment_id":"a-uuid","requested_by":"human:b-uuid"}`,
+		wantKeys:   []string{"content_state"},
+		gone:       []string{"attachment_id", "requested_by"},
 	}} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := redactAuditImage([]byte(tc.image))
+			entityType := tc.entityType
+			if entityType == "" {
+				entityType = "activity"
+			}
+			got := redactAuditImage([]byte(tc.image), governanceKeysFor(entityType))
 			var fields map[string]json.RawMessage
 			if err := json.Unmarshal(got, &fields); err != nil {
 				t.Fatalf("redacted image is not an object: %s (%v)", got, err)
@@ -120,10 +191,10 @@ func TestRedactionLeavesAnAbsentImageAbsent(t *testing.T) {
 	// A row that carried no image must not gain a marker: "nothing was
 	// recorded" and "you may not see what was recorded" are the two answers a
 	// compliance reader is trying to tell apart.
-	if got := redactAuditImage(nil); got != nil {
+	if got := redactAuditImage(nil, auditImageGovernanceKeys); got != nil {
 		t.Errorf("a nil image became %s; it must stay absent", got)
 	}
-	if got := redactAuditImage([]byte{}); len(got) != 0 {
+	if got := redactAuditImage([]byte{}, auditImageGovernanceKeys); len(got) != 0 {
 		t.Errorf("an empty image became %s; it must stay absent", got)
 	}
 }
@@ -132,7 +203,7 @@ func TestRedactionWithholdsAnImageItCannotParse(t *testing.T) {
 	// A scalar or array image cannot be partially redacted. Passing it through
 	// would be the disclosure, so the unreadable case withholds.
 	for _, image := range []string{`"a bare string"`, `[1,2,3]`, `{not json`} {
-		got := string(redactAuditImage([]byte(image)))
+		got := string(redactAuditImage([]byte(image), auditImageGovernanceKeys))
 		if got == image {
 			t.Errorf("an unparseable image %s was passed through unredacted", image)
 		}

@@ -17,6 +17,7 @@ import { useCanWrite } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
+import { useUrlParams } from "../app/urlstate";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
@@ -232,6 +233,7 @@ export function PersonPageV2({
   // Which drawer is open, if any. One at a time: two surfaces over the same
   // record would each claim to be the thing the reader is doing.
   const [drawer, setDrawer] = useState<Drawer>(null);
+  const [briefedMeeting, openBrief] = useBriefedMeeting();
   // What the action that opened the composer wanted written. A rung knows WHY
   // it fired and says so in its prefill; before this the client dropped that
   // on the floor and opened the same empty composer as the generic button, so
@@ -315,10 +317,8 @@ export function PersonPageV2({
         // it briefs. An action naming its own activity is honoured over the
         // page's, because a moment about a different meeting must not open a
         // brief about this one.
-        setDrawer(
-          meetingDrawer(
-            destination.entity_id ?? view.data.next_meeting?.activity_id,
-          ),
+        openBrief(
+          destination.entity_id ?? view.data.next_meeting?.activity_id ?? null,
         );
         return;
       case "record":
@@ -452,7 +452,7 @@ export function PersonPageV2({
           tab={tab}
           personId={id}
           view={view.data}
-          onBriefMeeting={(activityId) => setDrawer(meetingDrawer(activityId))}
+          onBriefMeeting={openBrief}
         />
         <PersonComposer
           personId={id}
@@ -475,9 +475,9 @@ export function PersonPageV2({
           onClose={() => setDrawer(null)}
         />
         <PersonMeetingBrief
-          activityId={briefingMeeting(drawer)}
-          open={briefingMeeting(drawer) !== null}
-          onClose={() => setDrawer(null)}
+          activityId={briefedMeeting}
+          open={briefedMeeting !== null}
+          onClose={() => openBrief(null)}
           projects={liveProjects(view.data.projects)}
         />
         {/* Mounted only while open, so the form starts fresh each time and the
@@ -503,25 +503,45 @@ export function PersonPageV2({
 // reachable only for the soonest meeting and only while the prep moment was
 // live — every other meeting on the record had a brief the backend would
 // happily assemble and no way to ask for it.
-type Drawer =
-  | "composer"
-  | "mail"
-  | "research"
-  | "activity_log"
-  | { kind: "meeting"; activityId: string }
-  | null;
+type Drawer = "composer" | "mail" | "research" | "activity_log" | null;
 
-// The brief the prep moment opens is the one for the next meeting; a timeline
-// row names its own. Both go through here so the drawer has one shape.
-function meetingDrawer(activityId: string | null | undefined): Drawer {
-  return activityId ? { kind: "meeting", activityId } : null;
-}
+// The query key naming which meeting is being briefed. One spelling, because
+// another screen composes this address and this one reads it; two would be a
+// link that opens nothing.
+export const BRIEF_PARAM = "prep";
 
-// Which meeting the open drawer is briefing, or null when it is not the brief.
-function briefingMeeting(drawer: Drawer): string | null {
-  return typeof drawer === "object" && drawer?.kind === "meeting"
-    ? drawer.activityId
-    : null;
+/**
+ * Which meeting the address says to brief, and how to change it.
+ *
+ * The meeting brief is the one drawer on this page with an ADDRESS, because it
+ * is the one another screen sends a reader to. The other three are opened by
+ * pressing something here, and a thing you can only open by pressing it needs
+ * no name.
+ *
+ * DERIVED from the query rather than seeded from it, and the difference shows
+ * on Back: a drawer held in useState stays open when the reader navigates back
+ * out of it, because nothing tells it the address changed. Deriving makes Back
+ * close it, which is what a reader pressing Back means.
+ *
+ * A hook rather than four lines in the page because the page is at its
+ * complexity ceiling — the lint says so — and this is one idea a reader should
+ * be able to take in on its own.
+ */
+function useBriefedMeeting(): [
+  string | null,
+  (activityId: string | null) => void,
+] {
+  const [params, setParams] = useUrlParams();
+  const setBriefed = (activityId: string | null) => {
+    const out = new Map(params);
+    if (activityId) {
+      out.set(BRIEF_PARAM, activityId);
+    } else {
+      out.delete(BRIEF_PARAM);
+    }
+    setParams(out);
+  };
+  return [params.get(BRIEF_PARAM) ?? null, setBriefed];
 }
 
 // The header's second line: what this person does, and where. The company is a
