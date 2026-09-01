@@ -1,0 +1,68 @@
+name: a_chased_cold_pitch_is_still_spam
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Robin Marsh
+  email: robin.marsh@harborfin.example
+  subject: "Re: Investors for Sunhold"
+  body: |
+    Hi - the institutional investors, private credit funds and family offices
+    we work with are still deploying into growth equity, private credit and
+    structured capital, and Sunhold is exactly what they have asked us to find.
+
+    A quick chat covers who is active right now and what they typically put to
+    work. If this is a priority for Sunhold, happy to set something up.
+
+    Best,
+    Robin Marsh, Harbor Fin Partners
+    Just say the word and I'll leave it there.
+
+    On Tue, Jun 30, 2026 4:10:14 PM Robin Marsh <robin.marsh@harborfin.example> wrote:
+
+    > Not sure if this sits on your desk, no worries at all. Who should I talk
+    > to about this on your end?
+    >
+    > All the best,
+    > Robin Marsh
+    > Harbor Fin Partners
+    >
+    > On Mon, Jun 29, 2026 4:03:11 PM Robin Marsh <robin.marsh@harborfin.example> wrote:
+    >
+    >> Hello,
+    >>
+    >> We have been mandated to identify companies in your sector for
+    >> institutional partners allocating USD 5 to 100M across growth equity and
+    >> structured capital.
+    >>
+    >> Sunhold came up as a match. Our senior team has advised on over USD 247B
+    >> in deals.
+    >>
+    >> Open to a brief conversation next week?
+    >>
+    >> Best,
+    >> Robin Marsh
+    >> Harbor Fin Partners
+expect:
+  outcome: accepted
+  answer: spam
+  rubric: >
+    The case that defeats the cheap reading of the direction-of-offer rule.
+    spam_01 is a first contact and looks like one. This one carries "Re:" in the
+    subject and two levels of quoted history, so on surface markers it reads as
+    a live conversation — and the rule's own examples name a reply in a thread
+    as evidence of agreed work.
+    What the thread actually shows is one sender writing three times to silence:
+    an opening pitch, a chase asking who to talk to, and a third mail offering to
+    stop. Nobody from this business ever answered. A quoted history is only
+    evidence of a relationship when the OTHER side is in it, and here every
+    quoted block is the same sender.
+    A kind of "spam" scores high. "newsletter" is a near miss: less precise, but
+    it resolves to noise too, so no record is made either way. "person" scores
+    zero — it is the answer that shipped a junk contact, and the reason a
+    self-chased thread must not be read as a conversation.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

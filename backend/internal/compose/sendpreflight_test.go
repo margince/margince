@@ -22,8 +22,11 @@ import (
 
 type stubGrants struct {
 	granted []string
-	err     error
-	calls   int
+	// grantedFor answers per provider, for the cases about choosing between two
+	// mailboxes. nil falls back to `granted` for all of them.
+	grantedFor map[string][]string
+	err        error
+	calls      int
 	// channelBound is what the WORKSPACE lookup answers, and channelCalls counts
 	// it separately: the two lookups read different tables, and a pre-flight
 	// that asked the wrong one is exactly the defect that refused every channel
@@ -33,8 +36,14 @@ type stubGrants struct {
 	channelCalls int
 }
 
-func (s *stubGrants) GrantedScopesFor(context.Context, ids.UserID, string) ([]string, error) {
+func (s *stubGrants) GrantedScopesFor(_ context.Context, _ ids.UserID, provider string) ([]string, error) {
 	s.calls++
+	// Per provider when the case says so, which is what a choice BETWEEN
+	// mailboxes needs; `granted` answers for every provider otherwise, which is
+	// what every single-mailbox case wants.
+	if s.grantedFor != nil {
+		return s.grantedFor[provider], s.err
+	}
 	return s.granted, s.err
 }
 
@@ -239,5 +248,78 @@ func TestSendCapableAsksTheUnitRatherThanTheWorkspaceBotTable(t *testing.T) {
 				t.Errorf("the workspace bot table was read %d time(s) for a unit transport; a unit never writes it, and asking it is what refused every unit reply", grants.channelCalls)
 			}
 		})
+	}
+}
+
+// Which mailbox a send goes out through — the question this pre-flight was
+// extended to answer, and the one a hard-coded provider got wrong for every rep
+// whose only mailbox is the other vendor.
+func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testing.T) {
+	human := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
+	})
+	// The scope each vendor's send rides, read from comms rather than spelled
+	// here: a test naming its own would go on passing after the real one moved.
+	sendable := func(providers ...string) map[string][]string {
+		out := map[string][]string{}
+		for _, p := range providers {
+			scope, _ := comms.SendScopeFor(p)
+			out[p] = []string{scope}
+		}
+		return out
+	}
+	mail := comms.MailSendProviders()
+	if len(mail) < 2 {
+		t.Fatalf("comms names %d mail provider(s); this test is about choosing between them", len(mail))
+	}
+	first, second := mail[0], mail[len(mail)-1]
+
+	for name, tc := range map[string]struct {
+		grantedFor map[string][]string
+		want       string
+	}{
+		// A rep whose only mailbox is the SECOND vendor is the case a constant
+		// refused: it named the first and reported them unable to send.
+		"only the second vendor": {sendable(second), second},
+		"only the first vendor":  {sendable(first), first},
+		// Holding both is not something any surface asks for, and the answer is
+		// the census's own order — stable beats arbitrary-looking.
+		"both":    {sendable(mail...), first},
+		"neither": {map[string][]string{}, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			authority := mailboxAuthority{
+				grants:            &stubGrants{grantedFor: tc.grantedFor},
+				mailAppConfigured: func(string) bool { return true },
+			}
+			got, err := authority.SendableMailProvider(human)
+			if err != nil {
+				t.Fatalf("SendableMailProvider: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("SendableMailProvider = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// A lookup fault is not "this user cannot send": answering empty would refuse
+// the send by name over a database blip, sending a rep to reconnect a mailbox
+// that was never the problem.
+func TestSendableMailProviderReportsALookupFaultRatherThanNoMailbox(t *testing.T) {
+	human := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
+	})
+	wantErr := errors.New("the grant table is unreachable")
+	authority := mailboxAuthority{
+		grants:            &stubGrants{err: wantErr},
+		mailAppConfigured: func(string) bool { return true },
+	}
+	got, err := authority.SendableMailProvider(human)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("SendableMailProvider error = %v, want the lookup fault", err)
+	}
+	if got != "" {
+		t.Errorf("SendableMailProvider = %q on a fault, want none", got)
 	}
 }

@@ -31,6 +31,23 @@ type SendAuthority interface {
 	// SendCapable reports whether a send through provider, by the principal on
 	// ctx, has a credential behind it that can transmit — not merely read.
 	SendCapable(ctx context.Context, provider string) (bool, error)
+
+	// SendableMailProvider names the mail provider this user's next send should
+	// go out through, or "" when none of their mailboxes can transmit.
+	//
+	// It exists because a MAIL send has no `from` argument — the contract takes
+	// recipients and a body, never a mailbox — so something has to choose, and
+	// for as long as Gmail was the only mail provider that could send, a
+	// constant was an honest answer. It stopped being one the day Outlook could:
+	// a rep whose only mailbox is Microsoft was refused by a pre-flight asking
+	// about a Google connection they never made.
+	//
+	// The answer is one provider and it is used TWICE — the delivery's provider
+	// and the activity's source_system — which is why this returns rather than
+	// being asked twice. The provider files its own copy of every sent message
+	// back into the mailbox, and that copy is only recognised as this activity
+	// when the natural key it carries is the one the send wrote.
+	SendableMailProvider(ctx context.Context) (string, error)
 }
 
 // MailboxNotSendCapableError refuses a MAIL send this installation already knows

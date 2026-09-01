@@ -2904,12 +2904,12 @@ export const vi = {
   "ai.tierAutoExecute": "Đọc và soạn nháp chạy ngay.",
   "ai.tierAutoExecuteDetail":
     "Tra cứu, tóm tắt, bản nháp — thấy được, đảo ngược được, có ghi nhật ký.",
-  "ai.tierConfirmationRequired": "Ghi và gửi thì chờ bạn.",
+  "ai.tierConfirmationRequired": "Các thay đổi nhạy cảm chờ bạn.",
   "ai.tierConfirmationRequiredDetail":
-    "Lượt gửi ra ngoài và thay đổi bản ghi được xếp vào hộp phê duyệt trước.",
+    "Trường tùy chỉnh mới, đăng ký webhook và làm giàu dữ liệu trả phí được xếp vào hộp phê duyệt trước. Hầu hết thay đổi bản ghi và tin nhắn gửi đi chạy ngay, trong phạm vi quyền bạn đã cấp.",
   "ai.connect": "Kết nối một Agent",
   "ai.connectDetail":
-    "Hãy tạo một passport trong Cài đặt rồi trỏ bất kỳ Agent hỗ trợ MCP nào vào tổ chức của bạn. Agent chỉ đọc được những gì bạn thấy được.",
+    "Trỏ bất kỳ Agent hỗ trợ MCP nào vào tổ chức của bạn và cho phép quyền truy cập mà nó yêu cầu. Không cần chuẩn bị gì trước.",
   "ai.paletteHint": "Hỏi từ bất cứ đâu bằng",
 
   "settings.accountCard": "Tài khoản của bạn",
@@ -2952,7 +2952,7 @@ export const vi = {
   "passport.select": "Passport",
   "passport.noneOption": "Không dùng passport",
   "settings.passportsLendHint":
-    "Đây là những passport của bạn để cho mượn. Kết nối một client MCP, nó sẽ hỏi bạn trao passport nào — kết nối đó sau đó mang đúng các phạm vi của passport ấy.",
+    "Thông tin xác thực bạn đã tạo cho script và tích hợp. Kết nối một client MCP không dùng những passport này — nó tạo kết nối riêng của nó, liệt kê bên dưới.",
   "settings.passportLabel": "Tên Agent",
   "settings.mint": "Tạo passport",
   "settings.minting": "Đang tạo…",
@@ -3047,15 +3047,12 @@ export const vi = {
   "agent.activity.offerDraft.stalled":
     "Việc soạn báo giá của bạn kéo dài bất thường. Có thể nó đã dừng.",
   "agent.panel.runningNow": "Đang chạy",
-  "agent.panel.finishedToday": "Đã xong hôm nay",
-  "agent.panel.stoppedEarly": "Vì sao nó dừng",
 
   "agents.connected": "Agent đã kết nối",
   "agents.connectedSub":
-    "Các client MCP giữ thông tin xác thực của riêng mình, sinh ra từ một passport bạn cho mượn",
+    "Các client MCP giữ thông tin xác thực của riêng mình, với đúng quyền bạn đã tick khi cấp quyền",
   "agents.noneConnected": "Chưa có Agent nào kết nối.",
   "agents.connectedOn": "kết nối {date}",
-  "agents.lentFrom": "cho mượn từ “{label}”",
   "agents.disconnect": "Ngắt kết nối",
   "agents.disconnectOpen": "Ngắt kết nối",
   "agents.disconnectNamed": "Ngắt kết nối {client}",
@@ -3067,10 +3064,10 @@ export const vi = {
   "agents.revokeGrantOpen": "Kết thúc kết nối",
   "agents.revokeGrantNamed": "Kết thúc kết nối tới {client}",
   "agents.disconnectConfirm":
-    "Việc này kết thúc toàn bộ kết nối, không chỉ một thông tin xác thực: Agent mất quyền truy cập ở lần gọi kế tiếp và không gia hạn được. Muốn kết nối lại thì phải cho mượn passport lần nữa.",
+    "Việc này kết thúc toàn bộ kết nối, không chỉ một thông tin xác thực: Agent mất quyền truy cập ở lần gọi kế tiếp và không gia hạn được. Muốn kết nối lại thì phải cấp quyền truy cập lần nữa.",
   "agents.connectHow": "Kết nối một Agent",
   "agents.connectSteps":
-    "Hãy tạo một passport ở trên, rồi chạy một trong các lệnh sau. Client sẽ tự đăng ký và đưa bạn quay lại đây để chọn passport cho mượn.",
+    "Hãy chạy một trong các lệnh sau. Client sẽ tự đăng ký và đưa bạn quay lại đây để chọn quyền truy cập mà nó được phép có.",
   "agents.connectAntigravityPath":
     "Antigravity không có lệnh add — hãy đặt khối đó vào ~/.gemini/config/mcp_config.json.",
   "agents.connectorOff": "Connector MCP đang tắt trên bản cài đặt này.",
@@ -5725,9 +5722,11 @@ export const vi = {
   "users.noTeamsYet": "Chưa có nhóm.",
   "users.teamNobodyToAdd": "Chưa có người dùng nào để thêm.",
   "users.teamMembersLabel": "Ai ở trong nhóm này",
+  "users.teamMembersAdminOnly": "Chỉ quản trị viên mới xem được thành viên.",
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
     "Nhóm có tên để bạn chia sẻ bản ghi. Chỉ thuộc một nhóm thì chưa có quyền gì thêm — khách hàng, liên hệ, lead và deal ở đây ai cũng đọc được.",
+  "users.teamsAdminOnly": "Chỉ quản trị viên mới có thể quản lý nhóm.",
   "users.deactivated": "Đã vô hiệu hóa {name}",
   "users.reactivated": "Đã kích hoạt lại {name}",
   "users.roleSaved": "Đã đổi vai trò cho {name}",
@@ -6198,6 +6197,8 @@ export const vi = {
   "autonomy.title": "Những gì tự xử lý",
   "autonomy.sub":
     "Những chỉnh sửa nhỏ bạn vẫn xác nhận bằng tay. Bật một mục lên và nó sẽ được áp dụng ngay khi xuất hiện, kèm thay đổi và nút Hoàn tác chờ sẵn trong ngày của bạn.",
+  "autonomy.noneDecidedYet":
+    "Bạn chưa quyết định mục nào trong số này. Những gì xuất hiện trong danh sách này phụ thuộc vào các bản ghi bạn sở hữu và công việc nhóm bạn chuyển đến, nên khi không có cả hai thì danh sách vẫn trống. Các công tắc vẫn quyết định điều gì xảy ra khi có việc đến.",
   "autonomy.noRecord": "Bạn chưa quyết định mục nào thuộc loại này.",
   "autonomy.record":
     "Đến nay: {clean} chấp nhận như đề xuất, {edited} sau khi sửa, {rejected} đã từ chối.",
@@ -6358,27 +6359,24 @@ export const vi = {
 
   "consent.title": "Cho phép truy cập",
   "consent.asks":
-    "{client} muốn hành động trong Margince với danh nghĩa của bạn.",
+    "{client} sẽ có thể hành động trong Margince với danh nghĩa của bạn, với quyền truy cập được đánh dấu bên dưới.",
   "consent.redirectsTo": "Margince sẽ gửi ủy quyền trở lại {host}.",
   "consent.redirectsToLoopback":
     "Đó là địa chỉ trên chính máy này, và kết nối này không thể chứng minh chương trình nào đang lắng nghe ở đó.",
-  "consent.lend": "Cho nó mượn một passport Agent của bạn",
-  "consent.grantedNote":
-    "Kết nối này nhận đúng những phạm vi hiển thị ở đây — đúng những gì passport này mang.",
+  "consent.scopeNote.read": "xem những gì bạn xem được",
+  "consent.scopeNote.draft": "soạn tin nhắn để bạn xem lại",
+  "consent.scopeNote.write": "tạo, sửa và lưu trữ hồ sơ với danh nghĩa của bạn",
+  "consent.scopeNote.send":
+    "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
+  "consent.scopeNote.enrich":
+    "tiêu tốn tín dụng làm giàu dữ liệu — mỗi lần mua vẫn hỏi bạn trước",
+  "consent.ceiling":
+    "Không bao giờ vượt quá quyền của chính bạn. Bạn có thể ngắt kết nối bất cứ lúc nào tại Cài đặt → Tác nhân.",
+  "consent.pickOne": "Chọn ít nhất một, hoặc từ chối.",
   "consent.offline":
     "Nó sẽ giữ kết nối mà không hỏi lại, tự gia hạn quyền truy cập cho đến khi bạn thu hồi.",
   "consent.approve": "Cho phép",
   "consent.deny": "Từ chối truy cập",
-  "consent.emptyTitle": "Bạn cần có một passport Agent trước đã",
-  "consent.emptyBody":
-    "Passport là quyền hạn bạn cho một Agent mượn — nó không bao giờ vượt quá quyền của chính bạn, và bạn thu hồi được bất cứ lúc nào. Hãy tạo một passport, chúng tôi sẽ đưa bạn quay lại đây để hoàn tất kết nối {client}.",
-  "consent.emptyCta": "Tạo một passport",
-  "consent.expires": "hết hạn {date}",
-  "consent.resumeTitle": "Hoàn tất kết nối {client}",
-  "consent.resumeBody":
-    "Bạn tới đây để tạo một passport cho {client}. Có rồi thì tiếp tục từ chỗ đang dở.",
-  "consent.resume": "Tiếp tục kết nối",
-  "consent.resumeDismiss": "Huỷ kết nối này",
   "consent.reentering": "Đang kết nối lại…",
   "consent.backToApp": "Quay lại Margince",
   "consent.staleTitle": "Yêu cầu này đã hết hạn",
@@ -6386,13 +6384,9 @@ export const vi = {
   // client's name is not available to name here.
   "consent.staleBody":
     "Yêu cầu kết nối không còn hiệu lực. Hãy quay lại ứng dụng bạn đang kết nối và bắt đầu lại — tải lại trang này không giúp được gì.",
-  "consent.unlendableTitle": "Passport đó không cho mượn được nữa",
-  "consent.unlendableBody":
-    "Passport bạn chọn cho {client} đã bị thu hồi, đã hết hạn, hoặc đang gắn với một kết nối khác. Hãy chọn passport khác bên dưới.",
   "consent.invalidTitle": "Không hoàn tất được yêu cầu kết nối này",
   "consent.invalidBody":
     "Bản cài đặt này sẽ không cho phép yêu cầu ở dạng hiện tại — có thể ứng dụng không còn được đăng ký ở đây. Hãy quay lại ứng dụng bạn đang kết nối và bắt đầu lại.",
-  "consent.unnamedPassport": "Passport chưa đặt tên ({id})",
   "person.thin.title": "Những gì đã biết đến giờ",
   "person.thin.known":
     "Đã có {what} của {name}, nhưng chưa ai bên mình ghi nhận trao đổi với họ.",
@@ -6440,9 +6434,6 @@ export const vi = {
   "person.graph.withheldDirect": "Một số đồng nghiệp không được hiển thị.",
   "person.graph.withheldAccount":
     "Một số người liên hệ tại công ty này không được hiển thị.",
-  "person.graph.routeAlreadyAsked": "Đã nhờ rồi",
-  "person.graph.routeDeclined": "Đã từ chối trước đó",
-  "person.graph.routeUnavailable": "Không khả dụng",
   "person.intro.askFirstName": "Nhờ {name} giới thiệu",
   "person.intro.leadEyebrow": "Hướng được đề xuất",
   "person.intro.leadRouteBadge": "Hướng mạnh",
@@ -6554,6 +6545,11 @@ export const vi = {
   "person.intro.asksTitle": "Lời giới thiệu",
   "person.intro.asksSub": "Những lời nhờ bạn có tham gia, mới nhất trước.",
   "person.intro.answerAction": "Trả lời",
+  "person.intro.completeIntroducedAction": "Đánh dấu đã giới thiệu",
+  "person.intro.completeNameDroppedAction": "Đánh dấu đã dùng tên",
+  "person.intro.completeFailed": "Không thể ghi lại kết quả.",
+  "person.intro.withdrawAction": "Rút lại",
+  "person.intro.withdrawFailed": "Không thể rút lại lời nhờ.",
   "person.intro.stateRequested": "Đang chờ đồng nghiệp",
   "person.intro.stateAccepted": "Họ sẽ giới thiệu bạn",
   "person.intro.stateNameDropApproved": "Bạn có thể nhắc tên họ",
@@ -6660,6 +6656,8 @@ export const vi = {
   "person.action.meetings": "Xem lịch hẹn",
   "person.action.addTask": "Thêm việc",
   "person.action.research": "Nghiên cứu",
+  "person.action.logRefused":
+    "Bạn không có quyền ghi nhận hoạt động cho hồ sơ này.",
 
   "person.strip.lastInbound": "Nhận gần nhất",
   "person.strip.lastOutbound": "Gửi gần nhất",
@@ -6683,6 +6681,7 @@ export const vi = {
   "person.moment.rule.job_change": "Đã đổi việc",
   "person.moment.rule.overdue_promise": "Lời hứa quá hạn",
   "person.moment.rule.gone_quiet": "Đã im lặng",
+  "person.moment.rule.open_promise": "Lời hứa còn mở",
   "person.moment.rule.role_change": "Đã đổi vai trò",
   "person.moment.rule.public_signal": "Nói công khai",
   "person.moment.rule.missing_next_step": "Chưa có lịch",
@@ -7285,6 +7284,38 @@ export const vi = {
     "Không có gì đang chờ trong các nguồn đã trả lời.",
   "worklist.partial": "{sources}, nên đây chưa phải cả ngày.",
   "worklist.overdue": "Quá hạn",
+  "worklist.pane.title": "Về bản ghi này",
+  "worklist.pane.openRow": "Xem mục {position}, {title}, về ai",
+  "worklist.pane.loading": "Đang đọc bản ghi…",
+  "worklist.pane.nothing": "Chưa ghi nhận gì.",
+  "worklist.pane.lastInbound": "Họ viết lần cuối",
+  "worklist.pane.lastOutbound": "Chúng ta viết lần cuối",
+  "worklist.pane.never": "Chưa bao giờ",
+  "worklist.focus.title": "Làm việc này tiếp theo",
+  "worklist.focus.verb.decide": "Quyết định",
+  "worklist.focus.verb.merge": "Xem cặp trùng",
+  "worklist.focus.verb.complete": "Hoàn thành",
+  "worklist.focus.verb.act": "Xử lý",
+  "worklist.focus.verb.acknowledge": "Đã biết",
+  "worklist.focus.verb.open": "Mở",
+  "worklist.focus.verb.snooze": "Mở",
+  "worklist.focus.verb.dismiss": "Mở",
+  "worklist.focus.verb.set_aside": "Mở",
+  "worklist.band.now": "Bây giờ",
+  "worklist.band.build_pipeline": "Xây dựng pipeline",
+  "worklist.band.keep_momentum": "Giữ đà",
+  "worklist.band.review": "Rà soát",
+  "worklist.disposition.verb.snooze": "Để sau",
+  "worklist.disposition.verb.not_mine": "Không phải của tôi",
+  "worklist.disposition.verb.not_sales": "Không phải khách hàng",
+  "worklist.disposition.done.snooze": "Ngày mai sẽ trở lại danh sách của bạn.",
+  "worklist.disposition.done.not_mine":
+    "Đã rời danh sách của bạn. Người phụ trách vẫn thấy nó.",
+  "worklist.disposition.done.not_sales": "Đã rời danh sách của mọi người.",
+  "worklist.disposition.undo": "Hoàn tác",
+  "worklist.disposition.undoFailed":
+    "Không thể hoàn tác. Tin nhắn vẫn nằm ngoài danh sách của bạn.",
+  "worklist.disposition.failed": "Không thể cất mục này đi.",
   "worklist.scope.label": "Công việc của ai",
   "worklist.scope.mine": "Của tôi",
   "worklist.scope.unassigned": "Chưa có người phụ trách",

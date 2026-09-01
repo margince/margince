@@ -36,7 +36,15 @@ const SendScope = "https://www.googleapis.com/auth/gmail.send"
 // Reconnecting is the fix, so the caller parks rather than retries.
 var ErrSendScopeMissing = fmt.Errorf("gmail: this connection was not granted the send scope: %w", connector.ErrAuthRejected)
 
-var _ connector.EmailSender = (*Connector)(nil)
+var (
+	_ connector.EmailSender = (*Connector)(nil)
+	// Asserted as well as implemented, the way the Outlook connector does.
+	// CarriageOf reaches Carriage through a type assertion, so a rename here
+	// would stop this connector declaring carriage at all — and a message with
+	// files staged against a connector that carries nothing PARKS. The compiler
+	// is the only thing that can notice.
+	_ connector.AttachmentCarrier = (*Connector)(nil)
+)
 
 // maxSendableFiles is the most files this connector will put in one message.
 //

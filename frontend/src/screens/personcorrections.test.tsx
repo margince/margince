@@ -83,13 +83,21 @@ function renderFields(fields: ProfileField[]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  // The tree is built by a helper so a rerender can hand back the SAME client
+  // and the same element shape: a fresh provider remounts the card, which
+  // throws away the editor state a test about surviving a rerender is about.
+  const tree = (shown: ProfileField[]) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <EnrichedFields personId="p-1" view={view(fields)} />
+        <EnrichedFields personId="p-1" view={view(shown)} />
       </LocaleProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const rendered = render(tree(fields));
+  return {
+    ...rendered,
+    show: (next: ProfileField[]) => rendered.rerender(tree(next)),
+  };
 }
 
 afterEach(() => {
@@ -175,5 +183,56 @@ describe("what the editor opens on", () => {
     // they chose to keep.
     expect(screen.getByDisplayValue("Head of Procurement")).toBeTruthy();
     expect(screen.queryByDisplayValue("Typed by mistake")).toBeNull();
+  });
+
+  // WHAT THE EDITOR OPENED ON is what the correction is about, even when the
+  // field moves underneath it.
+  //
+  // The reader starts typing, a re-capture or a colleague's edit lands, and the
+  // component re-renders with a new value and a new stamp. Reading either off
+  // `field` at submit time names a sentence the reader never saw — and the
+  // server, told that is what they were looking at, applies their correction
+  // to it.
+  it("submits the value it opened on when the field changes underneath", async () => {
+    const user = userEvent.setup();
+    stubMe(MAY_CORRECT);
+    const { show } = renderFields([field({})]);
+
+    await user.click(await screen.findByRole("button", { name: "Correct" }));
+    const input = screen.getByRole("textbox", { name: "Title" });
+    await user.clear(input);
+    await user.type(input, "Head of Purchasing");
+
+    // The field moves while the editor is open.
+    show([
+      field({
+        value: "Chief Procurement Officer",
+        captured_at: "2026-08-19T10:00:00Z",
+      }),
+    ]);
+
+    // The body is read off whichever shape the client used — a Request, or a
+    // url with an init — so the assertion is about what was SENT rather than
+    // about how the fetch was called.
+    let sent = "";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.method === "POST") {
+          sent = await req.text();
+        }
+        return new Response(null, { status: 204 });
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Save the correction" }),
+    );
+
+    await waitFor(() => expect(sent).not.toBe(""));
+    const body = JSON.parse(sent);
+    expect(body.value_shown).toBe("Head of Procurement");
+    expect(body.value_captured_at).toBe("2026-08-01T08:00:00Z");
   });
 });

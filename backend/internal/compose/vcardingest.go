@@ -133,33 +133,16 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 	if err != nil || len(entries) == 0 {
 		return err
 	}
-	// Liveness again, immediately before the write and after the object-store
-	// reads, because the first check cannot cover this.
+	// The message goes WITH the cards, and the import re-reads it inside each
+	// card's own write transaction.
 	//
-	// The lock liveCardKeys takes is released when its transaction commits, and
-	// ImportVCards opens a transaction PER CARD afterwards — so a narrowing that
-	// commits in between would find the cards already read and land them anyway.
-	// The blob reads sit in that gap, which makes it a network round trip per
-	// attachment rather than an instant.
-	//
-	// This re-read does not close the window either: the write still happens in
-	// a later transaction. What it does is shrink it from "a whole object-store
-	// walk" to "one statement", and refuse the case that actually happens — a
-	// human restricting a message while the job is fetching its attachments.
-	// Closing it completely means re-reading the source inside each card's own
-	// write transaction, which is a change to people.ImportVCards rather than to
-	// this caller; issue #3510 carries it.
-	live, err := w.sourceStillOpen(actorCtx, args.Activity)
-	if err != nil {
-		return err
-	}
-	if !live {
-		w.log.InfoContext(ctx, "a mailed card was not imported: its message was narrowed while the cards were being read",
-			"activity", args.Activity)
-		return nil
-	}
+	// That is the only place the check can hold. liveCardKeys locks the message
+	// while it lists the attachments and releases it when that transaction
+	// commits; the object-store fetches, and then a transaction per card, all
+	// happen after. A check here — before the writes, however close to them —
+	// would leave exactly the gap it looks like it closes.
 	store := people.NewStore(InstallationDB(w.pool))
-	results, err := store.ImportVCards(actorCtx, entries)
+	results, err := store.ImportVCardsFromMessage(actorCtx, entries, args.Activity)
 	if err != nil {
 		return err
 	}
@@ -328,27 +311,6 @@ func (w *vcardIngestWorker) readCards(ctx context.Context, activity ids.UUID) ([
 		entries = append(entries, parsed...)
 	}
 	return entries, nil
-}
-
-// sourceStillOpen answers whether the message may still be read for its cards.
-//
-// One statement, so the callers that need the answer at different moments ask it
-// the same way rather than each spelling the predicate. A message that is GONE
-// answers false: erased or never written, both mean nothing to import.
-func (w *vcardIngestWorker) sourceStillOpen(ctx context.Context, activity ids.UUID) (bool, error) {
-	var open bool
-	err := w.pool.QueryRow(ctx, `
-		SELECT audience = 'workspace'
-		       AND restricted_at IS NULL
-		       AND archived_at IS NULL
-		  FROM activity WHERE id = $1`, activity).Scan(&open)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("compose: reading the card's source message: %w", err)
-	}
-	return open, nil
 }
 
 // liveCardKeys reads the message's card attachments while holding the message

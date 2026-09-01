@@ -167,7 +167,152 @@ func TestCountsAreOrderedTheSameWayTwice(t *testing.T) {
 // requires categoryOfSource to have said the same thing. A source that changes
 // lane fails here rather than reporting its truncation against the wrong cut.
 func TestTheSourceMapAgreesWithTheClassifiers(t *testing.T) {
-	lanes := []struct {
+	for _, l := range everyLane() {
+		rows := classifyDay(l.day, rankInstant)
+		if len(rows) != 1 {
+			t.Fatalf("%s: the lane classified %d rows, and the fixture holds one", l.source, len(rows))
+		}
+		classified := rows[0].item.Category
+		mapped := categoryOfSource(crmcontracts.WorklistItemSource(l.source))
+		if classified != mapped {
+			t.Fatalf("%s: the classifier files it under %q and the map says %q — a truncation of this source would be reported against the wrong cut",
+				l.source, classified, mapped)
+		}
+	}
+}
+
+// EVERY SOURCE THE CONTRACT DECLARES REACHES THE GUARDRAILS BELOW.
+//
+// everyLane is a hand-written list, and a hand-written census is one that can
+// fail short: it reads a smaller tree, reports PASS, and no assertion notices.
+// Eleven of the contract's twenty sources were in it when this was written, and
+// the nine missing ones included customer_waiting and dedupe_candidate — the
+// two categories a reader is most likely to be lied to about.
+//
+// So the LIST is checked against the contract's own enum. A source added there
+// and not here fails this, and the two guardrails below then cover it by
+// arriving in everyLane at all.
+func TestEverySourceTheContractDeclaresHasALane(t *testing.T) {
+	covered := map[crmcontracts.WorklistItemSource]bool{}
+	for _, l := range everyLane() {
+		covered[crmcontracts.WorklistItemSource(l.source)] = true
+	}
+	for _, source := range everyWorklistSource() {
+		if notADayLane[source] {
+			continue
+		}
+		if !covered[source] {
+			t.Errorf("source %q has no lane, so no guardrail below reaches it — "+
+				"add one to everyLane", source)
+		}
+	}
+}
+
+// notADayLane are the sources classifyDay cannot produce, and why.
+//
+// Each is covered somewhere else or is not a producer at all. Listed rather
+// than skipped silently, so a source added to this set is a decision somebody
+// wrote down.
+var notADayLane = map[crmcontracts.WorklistItemSource]bool{
+	// A GROUP of rows rather than a producer: foldRoutineDecisions makes one
+	// from rows that already have their own lanes, and its category is its
+	// members'.
+	crmcontracts.WorklistItemSourceBatch: true,
+	// Read from its own store rather than from the assembled day: worklist.go
+	// classifies the waiting lane separately, so no Attention field carries
+	// it. Its own suite (waitinglane_integration_test.go) drives it end to end.
+	crmcontracts.WorklistItemSourceCustomerWaiting: true,
+}
+
+// everyWorklistSource is the contract's own source list, derived from the
+// generated Valid() rather than retyped: a list here would be the third copy of
+// a vocabulary that already exists twice.
+func everyWorklistSource() []crmcontracts.WorklistItemSource {
+	all := []crmcontracts.WorklistItemSource{
+		"approval", "dedupe_candidate", "task", "brief_item", "conversation_claim",
+		"customer_waiting", "deal_at_risk", "meeting", "relationship_decay",
+		"failed_approval", "dsr", "sync_health", "capture_health", "ai_work_health",
+		"bounce", "undelivered", "automation_run", "notice", "introduction_request",
+		"batch",
+	}
+	// Held against the generated enum: a value the contract drops fails here
+	// rather than leaving a lane nothing produces.
+	for _, source := range all {
+		if !source.Valid() {
+			panic("worklist source " + string(source) + " is not in the contract")
+		}
+	}
+	return all
+}
+
+// THE HIDDEN-BACKLOG GUARDRAIL: no category holds work while reporting none.
+//
+// The concept names this as a metric whose target is zero incidents, and a
+// metric with a target of zero is a test rather than a number somebody reads
+// once a quarter. It is also the failure this whole accounting exists to
+// prevent: a rep told "no decisions" over a pile of them stops believing the
+// page, and nothing on the screen says the figure was short.
+//
+// Over the same lane corpus the agreement test uses, so a source added
+// tomorrow is covered by being added THERE — one fixture list, two obligations.
+func TestNoCategoryHoldsWorkWhileReportingNone(t *testing.T) {
+	for _, l := range everyLane() {
+		rows := classifyDay(l.day, rankInstant)
+		counts := countsOf(rows, rows, map[crmcontracts.WorklistItemSource]bool{})
+
+		category := rows[0].item.Category
+		for _, count := range counts {
+			if crmcontracts.WorklistItemCategory(count.Category) != category {
+				continue
+			}
+			if count.Considered == 0 {
+				t.Fatalf("%s: category %q holds work and reports none — the page says it is empty",
+					l.source, category)
+			}
+			goto next
+		}
+		t.Fatalf("%s: category %q holds work and is absent from counts entirely",
+			l.source, category)
+	next:
+	}
+}
+
+// A CATEGORY CUT FROM THE PAGE STILL REPORTS WHAT IT HELD.
+//
+// The cut is the ordinary case — twenty-five rows of a larger day — and a
+// category that lost every row to it is exactly when a reader most needs to be
+// told the work is there. Reporting nothing then is the hidden backlog by
+// another route: not a wrong number, an absent one.
+func TestACategoryCutFromThePageStillReportsWhatItHeld(t *testing.T) {
+	for _, l := range everyLane() {
+		rows := classifyDay(l.day, rankInstant)
+		// Considered everything, shown nothing.
+		counts := countsOf(rows, nil, map[crmcontracts.WorklistItemSource]bool{})
+
+		if len(counts) == 0 {
+			t.Fatalf("%s: a page that drew nothing reported no categories at all", l.source)
+		}
+		for _, count := range counts {
+			if count.Considered == 0 {
+				t.Fatalf("%s: category %q reports nothing considered over rows it held",
+					l.source, count.Category)
+			}
+			if count.Shown != 0 {
+				t.Fatalf("%s: category %q claims %d rows on a page that drew none",
+					l.source, count.Category, count.Shown)
+			}
+		}
+	}
+}
+
+// everyLane is one day per source the queue can produce, each holding exactly
+// one row. Shared by every test that needs to reach all of them, so a new
+// source is added once and inherits every obligation.
+func everyLane() []struct {
+	source crmcontracts.AttentionItemSource
+	day    crmcontracts.Attention
+} {
+	return []struct {
 		source crmcontracts.AttentionItemSource
 		day    crmcontracts.Attention
 	}{
@@ -198,19 +343,27 @@ func TestTheSourceMapAgreesWithTheClassifiers(t *testing.T) {
 		{"automation_run", crmcontracts.Attention{AsOf: rankInstant, AutomationHealth: lane(
 			item("x", "automation_run"),
 		)}},
-	}
-
-	for _, l := range lanes {
-		rows := classifyDay(l.day, rankInstant)
-		if len(rows) != 1 {
-			t.Fatalf("%s: the lane classified %d rows, and the fixture holds one", l.source, len(rows))
-		}
-		classified := rows[0].item.Category
-		mapped := categoryOfSource(crmcontracts.WorklistItemSource(l.source))
-		if classified != mapped {
-			t.Fatalf("%s: the classifier files it under %q and the map says %q — a truncation of this source would be reported against the wrong cut",
-				l.source, classified, mapped)
-		}
+		{"dedupe_candidate", crmcontracts.Attention{AsOf: rankInstant, NeedsYou: []crmcontracts.AttentionItem{
+			item("x", "dedupe_candidate"),
+		}}},
+		{"brief_item", crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{
+			item("x", "brief_item"),
+		}}},
+		{"sync_health", crmcontracts.Attention{AsOf: rankInstant, SyncHealth: lane(
+			item("x", "sync_health"),
+		)}},
+		{"capture_health", crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: lane(
+			item("x", "capture_health"),
+		)}},
+		{"ai_work_health", crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: lane(
+			item("x", "ai_work_health"),
+		)}},
+		{"undelivered", crmcontracts.Attention{AsOf: rankInstant, Undelivered: lane(
+			item("x", "undelivered"),
+		)}},
+		{"introduction_request", crmcontracts.Attention{AsOf: rankInstant, Introductions: lane(
+			item("x", "introduction_request"),
+		)}},
 	}
 }
 

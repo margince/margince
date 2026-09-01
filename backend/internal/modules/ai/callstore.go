@@ -299,6 +299,21 @@ func classifyError(err error) string {
 		return "budget_unavailable"
 	case errors.Is(err, errRequestFailed):
 		return "request_failed"
+	// A REFUSAL IS NOT A FAILURE TO ANSWER, and the three are ordered widest
+	// last because a quota and a throttle both wrap a refusal.
+	//
+	// An operator reads this trace to decide what to do. "provider_error" says
+	// try again or rebind; an exhausted account says top up, and a burst limit
+	// says wait. Folding all three into one bucket sends somebody to a console
+	// where nothing is wrong — which is the same misdiagnosis the voice screen
+	// carried until the two sentinels were split out, and this is the surface
+	// used to diagnose model health everywhere else.
+	case errors.Is(err, ErrProviderQuota):
+		return "provider_quota"
+	case errors.Is(err, ErrProviderThrottled):
+		return "provider_throttled"
+	case errors.Is(err, errProviderRefused):
+		return "provider_refused"
 	default:
 		return "provider_error"
 	}

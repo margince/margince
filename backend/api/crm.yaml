@@ -623,11 +623,13 @@ paths:
         only. Pairs with the mint (`POST`) and revoke (`DELETE /passports/{id}`) below.
 
         Two kinds of row arrive together and `connection` is what tells them apart: a passport the
-        human minted (`connection: null`) is a template they may lend on the consent screen, while a
-        connection's credential (`connection` present) is what an MCP client received *after* a lend.
-        A connection is listed **once**, not once per token rotation: every refresh revokes that
-        connection's passport and mints a replacement under the same grant, so only the newest
-        passport per grant is returned and its `connection.connected_at` is the grant's own age.
+        human minted (`connection: null`) is a standalone REST bearer credential, unrelated to any
+        MCP client connection, while a connection's credential (`connection` present) is minted fresh
+        by the OAuth token exchange from the scopes the human ticked on the consent screen — never a
+        passport a human picked from a list. A connection is listed **once**, not once per token
+        rotation: every refresh revokes that connection's passport and mints a replacement under the
+        same grant, so only the newest passport per grant is returned and its `connection.connected_at`
+        is the grant's own age.
       responses:
         '200':
           description: The caller's passports (metadata).
@@ -698,10 +700,10 @@ paths:
       summary: What the OAuth consent screen renders for one pending authorization.
       description: |
         Session-authenticated. Resolves the requesting client from the database and lists the
-        passports the signed-in human may lend to it: their own, unrevoked, unexpired, and not
-        already bound to a connection. What the client asked for excludes none of them, because
-        a lend grants the passport's own scopes. Human-only — an agent must never read or drive
-        a consent screen.
+        fixed five-scope vocabulary (read, draft, write, send, enrich) the consent screen offers,
+        every one of them ticked by default. What the client asked for excludes none of them: the
+        human's ticks — not the client's request — become the connection's authority. Human-only —
+        an agent must never read or drive a consent screen.
       parameters:
         - name: client_id
           in: query
@@ -712,8 +714,9 @@ paths:
           required: true
           description: |
             The space-delimited scopes the client requested. Only the offline_access marker in it
-            is read, and reported back as `offline`: the access scopes bound nothing, since a lend
-            grants the chosen passport's own.
+            is read, and reported back as `offline`: the access scopes bind nothing, since the
+            connection's authority is whatever the human ticks on the consent screen, not what the
+            client asked for.
           schema: { type: string }
       responses:
         '200':
@@ -1648,6 +1651,15 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The claim moved on while the verdict was being made: a verdict about the value
+            that stands was recorded from a page drawn later than this one. Nothing is
+            written. Re-read the record and decide again on what it says now — applying this
+            one would correct a sentence the human never saw.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /people/{id}/intro-requests:
@@ -4885,6 +4897,75 @@ paths:
         '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '423': { $ref: '#/components/responses/RetentionHeld' }
+
+  /activities/{id}/disposition:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Activities]
+      operationId: setActivityDisposition
+      x-agent-access: human-only
+      # Session cookie only: putting work down is a person's judgement about
+      # their own day, and an agent has no queue to clear.
+      security: [{ cookieAuth: [] }]
+      summary: Put a waiting message down, so the Worklist stops offering it.
+      description: |
+        The Worklist claims to be finite: work it and it empties. A message the rep has already
+        judged had no way to leave, so it returned every morning and the count above it stayed
+        wrong.
+
+        THREE JUDGEMENTS, TWO REACHES.
+
+        `not_sales` is a fact about the THREAD — recognizing the procurement newsletter settles
+        what the message is, for everybody. `snooze` and `not_mine` belong to the ONE READER who
+        set them: a rep putting a reply down until Thursday must not take it off the colleague who
+        owns the deal, and saying "not mine" is precisely saying somebody else must still see it.
+
+        A snooze names a moment still ahead and lifts on its own. `not_mine` names none and does
+        NOT lift by itself: it stands until the reader picks the message back up. Nothing watches
+        for the record changing hands, so a rep who hands work on and later inherits it again has
+        to undo their own judgement — which is the honest behaviour to publish, rather than a
+        re-arm no consumer performs.
+
+        Reading the message is the licence to judge it: an id the caller cannot read answers 404,
+        the same as one that does not exist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetActivityDispositionRequest' }
+      responses:
+        '204': { description: 'Put down. Setting the same disposition again is the same success.' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Activities]
+      operationId: clearActivityDisposition
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Pick the message back up — the undo behind every set-aside verb.
+      description: |
+        Clears what THIS reader set aside, and, with `scope=thread`, the workspace-wide `not_sales`
+        judgement. The two are separate because their reach is: a rep undoing their own snooze must
+        not also re-admit a thread a colleague ruled out.
+
+        Idempotent — picking up a message nobody set down is the same success, because the reader's
+        goal state already holds.
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema: { type: string, enum: [mine, thread], default: mine }
+          description: |
+            `mine` clears this reader's own snooze or not-mine. `thread` withdraws the
+            workspace-wide not-sales judgement, which anybody who can read the message may do:
+            the judgement was never one person's property.
+      responses:
+        '204': { description: 'Picked up, or was never put down.' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/meeting-brief:
     parameters:
@@ -19899,7 +19980,21 @@ components:
         latency_ms: { type: integer }
         cache_hit: { type: boolean }
         degraded: { type: boolean }
-        error_sentinel: { type: [string, 'null'], description: 'Stable failure code; null on success.' }
+        error_sentinel:
+          type: [string, 'null']
+          description: >-
+            Stable failure code; null on success. New codes are added as failure classes are
+            told apart, so read an unrecognized one as "some failure" rather than refusing it.
+
+            The three codes a 429 produces are worth naming, because they have different
+            remedies and an operator reads this to choose one. `provider_quota` — the account is
+            out of budget or over its quota, which a human tops up. `provider_throttled` — an
+            ordinary burst limit, which clears by itself. `provider_refused` — the provider
+            turned the call away and said nothing about why, so the model was never reached and
+            no claim is made about the cause. `provider_error` is the FALLBACK: a provider
+            failure naming none of those three. It covers a connection or TLS fault and a
+            non-429 server error as well as a call the model answered badly, so it says the
+            provider failed and nothing about how far the request got.
         has_payload: { type: boolean, description: 'A captured payload row exists for this call.' }
     AiCallAttempt:
       type: object
@@ -24419,7 +24514,7 @@ components:
         `job_change` fires only on a RECORDED employment change, and `public_signal` needs a
         connected data provider. A rule that cannot fire is absent from the page, not an empty
         card.
-      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
+      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
 
     PersonMomentEvidence:
       type: object
@@ -24475,8 +24570,9 @@ components:
           description: >-
             `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier.
             `research` — the deep-research drawer. `record` — another record page. `task` — the
-            task sheet.
-          enum: [composer, meeting_brief, research, record, task]
+            task sheet. `activity_log` — the log-activity form, for writing down a note or a
+            meeting that happened off-system.
+          enum: [composer, meeting_brief, research, record, task, activity_log]
         entity_type:
           type: [string, 'null']
           enum: [person, organization, deal, activity, null]
@@ -24520,6 +24616,37 @@ components:
           type: string
           maxLength: 2000
           description: Why, in the human's words. Optional and never shown to a model.
+        value_shown:
+          type: string
+          maxLength: 2000
+          description: >-
+            The value the client RENDERED — the sentence the human actually had in front of
+            them when they decided. Send back whatever the read handed you
+            (`PersonProfileField.value`).
+
+            This is what the verdict is ABOUT, and the reader compares it against the value it
+            is asked to apply the verdict to. A record whose value has moved on since the page
+            was drawn keeps the verdict on file and does not apply it, which is the point:
+            a correction to one sentence must not be applied to a different one.
+
+            Optional. Omitting it falls back to comparing WHEN the verdict was recorded
+            against when the value last changed — a proxy, and the answer every verdict
+            recorded before this field existed still gets.
+        value_captured_at:
+          type: string
+          format: date-time
+          description: >-
+            The `captured_at` of the value the client rendered. Send back whatever the read
+            handed you (`PersonProfileField.captured_at`), beside `value_shown`.
+
+            It RANKS two submissions about the same claim rather than deciding what either is
+            about. Both stamps are the server's own, so a page that rendered the newer value
+            carries the later one — and a correction typed against a value that has since
+            moved is refused with 409 rather than replacing the verdict a colleague recorded
+            about the value that stands.
+
+            Optional, and omitting it is not an error: a submission that carries no stamp is
+            not ranked against anything and simply lands.
 
     PersonRelationshipChange:
       type: object
@@ -26666,6 +26793,28 @@ components:
       type: string
       enum: [workspace, participants, selected]
       description: Who may read an activity's content — see Activity.audience.
+    SetActivityDispositionRequest:
+      type: object
+      additionalProperties: false
+      required: [disposition]
+      properties:
+        disposition:
+          type: string
+          enum: [snooze, not_mine, not_sales]
+          description: |
+            What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
+            `not_mine` bind only the caller.
+        snoozed_until:
+          type: string
+          format: date-time
+          description: |
+            When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
+            with no moment would never lift, and a moment on `not_mine` would make a hand-off
+            expire on a Thursday.
+
+            A moment already past is refused rather than stored: it would write a row that hides
+            nothing, and read to the rep as a snooze that did not take.
+
     SetActivityAudienceRequest:
       type: object
       required: [audience]
@@ -32935,36 +33084,25 @@ components:
         on_behalf_of: { type: string, format: uuid, description: The human whose RBAC bounds every call this passport makes. }
         expires_at:   { type: string, format: date-time }
 
-    ConsentPassportOption:
-      type: object
-      description: |
-        One passport the signed-in human may lend to the requesting client. `scopes` is both
-        what the passport carries and what a connection lending it receives: the client's
-        request does not narrow the grant, so there is no second, smaller set beside it.
-      required: [id, label, scopes, expires_at]
-      properties:
-        id: { type: string, format: uuid }
-        label: { type: string }
-        scopes:
-          type: array
-          items: { type: string, enum: [read, draft, write, send, enrich] }
-        expires_at: { type: string, format: date-time }
     ConsentRequest:
       type: object
       description: |
         What the consent screen renders. The client name is resolved from the database, never
-        from the request URL, so no caller can put words on a consent screen. The consent
-        nonce is NOT here: it reaches the screen in the redirect fragment, because the
-        consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
-      required: [client_name, offline, passports]
+        from the request URL, so no caller can put words on a consent screen. `scopes` is the
+        closed verb vocabulary the human chooses from — the ceiling, not a selection: every
+        one of them is offered ticked, and what the human posts back is the grant. The client's
+        own scope request does not narrow it; every mainstream MCP client sends none at all.
+        The consent nonce is NOT here: it reaches the screen in the redirect fragment, because
+        the consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
+      required: [client_name, offline, scopes]
       properties:
         client_name: { type: string }
         offline:
           type: boolean
           description: The client asked to stay connected without asking again (offline_access).
-        passports:
+        scopes:
           type: array
-          items: { $ref: '#/components/schemas/ConsentPassportOption' }
+          items: { type: string, enum: [read, draft, write, send, enrich] }
     PassportSummary:
       type: object
       description: Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token.
@@ -33016,17 +33154,6 @@ components:
             When the connection was established — the GRANT's age, not the current passport's. Token
             rotation replaces the passport every renewal; a date that moved with it would report a
             connection as newer than the consent that authorized it.
-        lent_passport_id:
-          type: [string, 'null']
-          format: uuid
-          description: |
-            The passport the human lent to create this connection. Null for a connection established
-            before that provenance was recorded, and null once the lent passport is deleted outright.
-            It is never re-checked: a lend survives the lent passport's revocation by design, so this
-            answers "where did this come from", never "may this still connect".
-        lent_passport_label:
-          type: [string, 'null']
-          description: The lent passport's label at read time, for display beside `lent_passport_id`.
 
     MorningBrief:
       type: object
@@ -33884,6 +34011,17 @@ components:
             pill counts, and what lets the page say how much it is not showing. Counted
             before any narrowing, so a filtered page still reports the categories it is
             not drawing.
+        bands:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistBand' }
+          description: |
+            The outcome headings, in the order a page draws them, each with how many of this
+            page's rows sit under it.
+
+            Every band appears, including one with no rows: "nothing needs you today" is
+            something to tell a reader, and a client inferring the headings from the rows it
+            received could not say it. The queue arrives sorted so each band's rows are
+            contiguous — a client draws a heading where the band changes.
 
     WorklistReach:
       type: object
@@ -33920,6 +34058,20 @@ components:
             page that stopped one short of more, and it says the cautious thing rather than
             claiming a source is complete when it is not. The client renders `considered` as
             "200+" rather than "200".
+
+    WorklistBand:
+      type: object
+      description: |
+        One outcome band and how much of it this page is showing — the headings a client draws,
+        in the order it draws them.
+
+        Sent even for a band with no rows on this page. A reader whose Now band is empty is being
+        told something ("nothing needs you today"), and a client that inferred the headings from
+        the rows it received could not say it.
+      required: [band, shown]
+      properties:
+        band: { type: string, enum: [now, build_pipeline, keep_momentum, review] }
+        shown: { type: integer, description: 'How many rows of this band are on the page.' }
 
     WorklistCount:
       type: object
@@ -34054,6 +34206,40 @@ components:
           type: array
           items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
+        band:
+          type: string
+          enum: [now, build_pipeline, keep_momentum, review]
+          description: |
+            The heading this row sits under, as an OUTCOME rather than a priority number.
+
+            `level` says what kind of work a row is; the band says what the reader is being asked
+            to do about it today. Seven levels make a correct ordering and poor headings — a reader
+            scanning for "what must happen now" should not have to know which levels mean that.
+
+            Derived from the level and the row's own subject, so it cannot disagree with the order:
+            the queue arrives already sorted, and every row of one band is contiguous. A client
+            draws a heading when the band changes and never re-sorts.
+        dispositions:
+          type: array
+          items: { type: string, enum: [snooze, not_mine, not_sales] }
+          description: |
+            The ways this row can be PUT DOWN, as the server declares them. A client
+            never infers this from `source`: which rows a rep may judge is a server
+            rule, and a client guessing it draws a verb that 404s or hides one the rep
+            is entitled to.
+
+            Absent or empty means the row cannot be set aside — most sources answer
+            through the surface that owns them and leave nothing to dispose of here.
+        primary_action:
+          type: string
+          enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge]
+          description: |
+            The one verb this row is FOR, out of `actions`. The queue is ranked, so the
+            reader arriving at a row should not have to weigh three equally-drawn
+            controls to find the step the ranking already implies.
+
+            Absent when the row offers no single obvious step, which is a real state
+            rather than a gap: a dedupe pair genuinely asks the reader to choose.
 
     WorklistReason:
       type: object
@@ -34081,8 +34267,16 @@ components:
       properties:
         comparator:
           type: string
-          enum: [pin, level, deadline, expected_revenue, waiting_days, relationship, order]
-          description: 'What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.'
+          enum: [pin, crowded, level, deadline, expected_revenue, waiting_days, relationship, order]
+          description: |
+            What decided it. `order` means every comparator tied and the ids broke it, which the
+            client renders as no reason at all.
+
+            `crowded` means the row below is one of many of its kind: past a lead group, further
+            rows of the same source sort under the other kinds of work so one noisy lane cannot own
+            the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+            otherwise bury the reader's one overdue task — which is why it can be the answer even
+            when the two rows share a level.
         mine: { $ref: '#/components/schemas/WorklistValue' }
         theirs: { $ref: '#/components/schemas/WorklistValue' }
 

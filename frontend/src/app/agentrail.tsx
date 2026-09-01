@@ -39,7 +39,7 @@ import {
 import { type DemoRun, useDemoRun } from "./agentrail-demo";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
-import { lineFor, PANEL_HEADING, RUN_DETAIL_LABEL } from "./ai-activity-lines";
+import { lineFor, PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { useAgentTierMap } from "./autonomy";
 import { useCan } from "./capability";
@@ -488,11 +488,6 @@ type AiActivityItem = components["schemas"]["AiActivityItem"];
  * has never heard of this run, and a surface that answers that with an invented
  * sentence is a surface a reader cannot trust about the runs it DOES name. When
  * that empties the section, the section is absent too.
- *
- * `degrade_reason` is server-authored operator vocabulary and untranslated, so
- * it lives here as detail under its own label and never inside the line: a raw
- * internal token in a localized sentence is the defect, whichever sentence it
- * is.
  */
 function RunSection({
   heading,
@@ -515,15 +510,6 @@ function RunSection({
         {said.map(({ item, line }) => (
           <li className="arbox arrun" key={item.id}>
             <span className="arrunline">{line}</span>
-            {item.degrade_reason ? (
-              <span className="arrundetail">
-                <i>{t(RUN_DETAIL_LABEL.stopped)}</i>
-                {item.degrade_reason}
-              </span>
-            ) : null}
-            {item.summary ? (
-              <span className="arrundetail">{item.summary}</span>
-            ) : null}
           </li>
         ))}
       </ul>
@@ -536,7 +522,6 @@ function AgentPanel({
   setState,
   line,
   running,
-  recent,
   signals,
   model,
   spend,
@@ -550,8 +535,6 @@ function AgentPanel({
   line: string;
   /** The scheduled runs the server reports as live. */
   running: readonly AiActivityItem[];
-  /** The runs that settled since local midnight, newest first. */
-  recent: readonly AiActivityItem[];
   signals: Signals;
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
   spend: Readonly<{
@@ -600,14 +583,12 @@ function AgentPanel({
         )}
       </header>
 
-      {/* Above the counts: a run happening this second outranks a queue that has
-          been waiting since yesterday, and what finished overnight outranks it
-          too — it is the work the reader slept through. Settled runs are read
-          HERE and nowhere else: the terminal states, and with them every
-          `degrade_reason` and `summary`, exist only on a run that has finished.
-          Either section is absent when its list is, rather than drawn empty. */}
+      {/* Above the counts: a run happening this second outranks a queue that
+          has been waiting since yesterday. Only live work is listed — a settled
+          run reaches the reader through the resting rotation on the card, not
+          as a list here. The section is absent when its list is, rather than
+          drawn empty. */}
       <RunSection heading={PANEL_HEADING.running} items={running} />
-      <RunSection heading={PANEL_HEADING.settled} items={recent} />
 
       {/* The one count somebody opens this panel to act on, as a tile rather
           than a row: a number in a list of rows reads as one more line of text.
@@ -1234,7 +1215,6 @@ export function AgentRail({
               demo={demo}
               line={line}
               running={server.running}
-              recent={server.recent}
               spend={spend}
             />
           </div>,
@@ -1249,11 +1229,10 @@ export function AgentRail({
         ref={trigger}
         aria-expanded={open}
         aria-label={open ? LABELS.collapse : LABELS.expand}
-        // Opening the panel is what acknowledges a broken run: the panel is
-        // where it is listed, in words, with whatever the source said about why
-        // it stopped, so opening it is the moment the reader has actually been
-        // told. Until then the orb holds the fault, however many hours it takes
-        // them to look.
+        // Opening the panel is what acknowledges a broken run: it is the
+        // reader turning to the agent's report, so it is the moment the fault
+        // stops needing to be held. Until then the orb holds it, however many
+        // hours it takes them to look.
         onClick={() => {
           if (!open) {
             acknowledge();

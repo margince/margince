@@ -112,11 +112,16 @@ export type OnboardingBackreadProps = Readonly<{
    *  backread's: the mailbox is connected on every path through this surface,
    *  so declining the history read still finishes with `false`. */
   onFinish: (skipped: boolean) => void;
+  /** Hold the start verb while a decision ABOUT this mailbox is still being
+   *  written — the posture, today. A read that begins first imports under the
+   *  answer the write was about to replace. */
+  disabled?: boolean;
 }>;
 
 export function OnboardingBackread({
   provider,
   initial,
+  disabled,
   onFinish,
 }: OnboardingBackreadProps) {
   const t = useT();
@@ -255,6 +260,7 @@ export function OnboardingBackread({
         }
         previewReady={previewSettled}
         starting={start.isPending}
+        held={disabled}
         startProblem={safeDetail(start.isError, start.error, t)}
         onStart={() => start.mutate(selected)}
         onFinish={onFinish}
@@ -284,6 +290,7 @@ function BackreadSetup({
   previewReady,
   starting,
   startProblem,
+  held,
   onStart,
   onFinish,
 }: Readonly<{
@@ -291,6 +298,10 @@ function BackreadSetup({
   onSelect: (pick: BackreadWindow) => void;
   preview: BackfillPreview | undefined;
   previewProblem: string | null;
+  /** A decision about this mailbox is still being written; the read must not
+   *  begin ahead of it. Separate from `starting`, which also drives the verb's
+   *  own copy — a button reading "starting…" when nothing started is a lie. */
+  held?: boolean;
   /** True once THIS selection's own preview has settled (found or failed).
    *  Start waits for it so a read can never fire against a scope the reader
    *  has not actually seen. */
@@ -324,7 +335,7 @@ function BackreadSetup({
       <div className="ob-backread-acts">
         <Button
           variant="primary"
-          disabled={starting || !previewReady}
+          disabled={starting || !previewReady || held}
           onClick={onStart}
         >
           {t("ob.backread.start")}
