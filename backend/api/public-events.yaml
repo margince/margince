@@ -92,6 +92,11 @@ components:
         - comms.delivery_bounced
         - notice.created
         - notice.read
+        - intro_request.created
+        - intro_request.decided
+        - intro_request.completed
+        - intro_request.replied
+        - intro_request.closed
         - consent.changed
         - email_signature.changed
         - user_locale.changed
@@ -1810,6 +1815,130 @@ components:
         kind:
           type: string
           description: The producing flow's own label (automation, lead_sla).
+      additionalProperties: false
+
+    PublicEventIntroRequestCreated:
+      type: object
+      x-event-type: intro_request.created
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.created — a rep asked a colleague to open a
+        door to this contact (introductions/store.go's Create). The entity is
+        the CONTACT, because that is what the ask is about and what a consumer
+        ranking a person's open work reads it against. The prose stays on the
+        row: the internal reason and the forwardable note have different
+        audiences, and neither belongs on a bus.
+      required:
+        - intro_request_id
+        - person_id
+        - requester_user_id
+        - introducer_user_id
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        requester_user_id: { type: string, format: uuid }
+        introducer_user_id: { type: string, format: uuid }
+      additionalProperties: false
+
+    PublicEventIntroRequestDecided:
+      type: object
+      x-event-type: intro_request.decided
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.decided — the colleague gave one of the four
+        bounded answers. `decision` carries which, because a consumer that had
+        to re-read the row to tell an acceptance from a refusal would be
+        deciding on state that may already have moved.
+      required:
+        - intro_request_id
+        - person_id
+        - introducer_user_id
+        - decision
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        introducer_user_id: { type: string, format: uuid }
+        decision:
+          type: string
+          enum: [accepted, name_drop_approved, suggest_other, declined]
+          x-enum-varnames:
+            [
+              IntroRequestDecidedAccepted,
+              IntroRequestDecidedNameDropApproved,
+              IntroRequestDecidedSuggestOther,
+              IntroRequestDecidedDeclined,
+            ]
+      additionalProperties: false
+
+    PublicEventIntroRequestCompleted:
+      type: object
+      x-event-type: intro_request.completed
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.completed — the handshake happened, or the
+        rep used the name they were lent. `outcome` keeps the two apart: an
+        introduction and a name-drop are different events, and a consumer that
+        collapsed them would report doors opened that nobody opened.
+      required:
+        - intro_request_id
+        - person_id
+        - outcome
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        outcome:
+          type: string
+          enum: [introduced, name_dropped]
+          x-enum-varnames:
+            [
+              IntroRequestCompletedIntroduced,
+              IntroRequestCompletedNameDropped,
+            ]
+      additionalProperties: false
+
+    PublicEventIntroRequestReplied:
+      type: object
+      x-event-type: intro_request.replied
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.replied — the contact answered, observed from
+        captured activity rather than asserted by a person. `source_activity_id`
+        is the evidence, so a reader can open the message the claim rests on.
+      required:
+        - intro_request_id
+        - person_id
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        source_activity_id: { type: string, format: uuid }
+      additionalProperties: false
+
+    PublicEventIntroRequestClosed:
+      type: object
+      x-event-type: intro_request.closed
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.closed — the ask ended without a handshake:
+        withdrawn by the requester, or run out of time. `reason` says which,
+        because a rep withdrawing and a queue timing out call for different
+        follow-ups.
+      required:
+        - intro_request_id
+        - person_id
+        - reason
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        reason:
+          type: string
+          enum: [cancelled, expired]
+          x-enum-varnames:
+            [IntroRequestClosedCancelled, IntroRequestClosedExpired]
       additionalProperties: false
 
     PublicEventNoticeRead:
