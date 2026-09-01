@@ -182,3 +182,44 @@ func TestAnAncientWaitNoLongerOutranksTodaysDeal(t *testing.T) {
 		t.Fatal("a 182-day unanswered thread still led the day over a deal at risk")
 	}
 }
+
+// The page states the bar a deal had to clear.
+//
+// Every "material" and "below material" reason is a verdict, and a verdict
+// whose threshold is withheld cannot be checked: a reader sees that a deal was
+// called big and has no way to ask compared to what. The contract has promised
+// this figure since the queue shipped.
+func TestTheSummaryStatesTheMaterialBar(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		AtRisk: lane(
+			item("small", "deal_at_risk", withDeal(10_000_00)),
+			item("big", "deal_at_risk", withDeal(200_000_00)),
+		),
+	}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, nil)
+
+	if out.Summary.MaterialThresholdMinor == nil {
+		t.Fatal("a day with priced deals stated no material bar, so every material reason on it is unverifiable")
+	}
+	// The LOWER median of the two, which is the smaller — the rule the bar's
+	// own doc states, asserted here so a change to it fails a test rather than
+	// silently moving what counts as a big deal.
+	if *out.Summary.MaterialThresholdMinor != 10_000_00 {
+		t.Fatalf("the bar was %d, wanted the lower median 1000000", *out.Summary.MaterialThresholdMinor)
+	}
+}
+
+// A pipeline with no priced deals states no bar rather than zero. Zero would
+// say every deal is material, which is the opposite of what an absent median
+// means.
+func TestADayWithNoPricedDealsStatesNoBar(t *testing.T) {
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: lane(item("unpriced", "deal_at_risk"))}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, nil)
+
+	if out.Summary.MaterialThresholdMinor != nil {
+		t.Fatalf("a pipeline with no prices stated a bar of %d", *out.Summary.MaterialThresholdMinor)
+	}
+}

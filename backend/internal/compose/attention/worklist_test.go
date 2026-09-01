@@ -151,7 +151,7 @@ func TestTheSummaryCountsTheSameItemsTheQueueCarries(t *testing.T) {
 	}
 
 	ordered := rankAll(classifyDay(day, rankInstant))
-	summary := summarize(ordered)
+	summary := summarize(ordered, materialBar{})
 
 	if summary.Total != len(ordered) {
 		t.Fatalf("summary totals %d over a queue of %d", summary.Total, len(ordered))
@@ -223,7 +223,7 @@ func TestADecisionsExpiryIsNotCountedAsWorkDue(t *testing.T) {
 		Planned: []crmcontracts.AttentionItem{item("real-task", "task", withDue(rankInstant.Add(-time.Hour)))},
 	}
 
-	summary := summarize(rankAll(classifyDay(day, rankInstant)))
+	summary := summarize(rankAll(classifyDay(day, rankInstant)), materialBarOf(day))
 
 	if summary.Due != 1 {
 		t.Fatalf("counted %d due, wanted only the task — a proposal's expiry is not the reader's deadline", summary.Due)
@@ -365,7 +365,7 @@ func TestOnlyAnArrivedDateCountsAsDue(t *testing.T) {
 		},
 	}
 
-	summary := summarize(rankAll(classifyDay(day, rankInstant)))
+	summary := summarize(rankAll(classifyDay(day, rankInstant)), materialBarOf(day))
 
 	if summary.Due != 1 {
 		t.Fatalf("counted %d due, wanted only the one whose date has passed", summary.Due)
