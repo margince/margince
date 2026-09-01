@@ -82,8 +82,13 @@ function stubSession(allow: GrantSpec = {}, about: RouteMap = {}) {
 }
 
 // The brand block reads the installation profile from the cache the onboarding
-// gate fills in the real app; a story seeds the same entry so the organization
-// line renders. Without it the block honestly shows the product name alone.
+// gate fills in the real app; a story seeds the same entry so the company heads
+// the rail the way it does for every reader of a live installation. Without it
+// the block honestly falls back to the product's own mark and name.
+//
+// No logo_url: Storybook serves no object store, and what a broken image would
+// draw here is the monogram anyway. The monogram IS the case worth framing —
+// the mark a company gets when its site declared no icon.
 function SeedInstallation({ children }: Readonly<{ children: ReactNode }>) {
   const client = useQueryClient();
   if (client.getQueryData(["company"]) === undefined) {
