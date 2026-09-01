@@ -13572,7 +13572,10 @@ export interface components {
             latency_ms: number;
             cache_hit: boolean;
             degraded: boolean;
-            /** @description Stable failure code; null on success. */
+            /**
+             * @description Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
+             *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause. `provider_error` is the FALLBACK: a provider failure naming none of those three. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
+             */
             error_sentinel?: string | null;
             /** @description A captured payload row exists for this call. */
             has_payload: boolean;
