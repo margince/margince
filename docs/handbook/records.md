@@ -263,9 +263,16 @@ A meeting carries a status: **booked, held, no-show, canceled.**
 filed against the wrong record, the fix is **Relink**, not delete.
 
 On top of visibility inherited from linked records, an activity carries an
-audience: everyone in the organization (the default), the participants, or a
-named few. That audience is not overridden by seniority — someone who can see
-every record still does not read a message they were not an audience for.
+audience: everyone in the organization, the participants, or a named few. That
+audience is not overridden by seniority — someone who can see every record still
+does not read a message they were not an audience for.
+
+Where the audience comes from depends on how the row arrived. A note or a call
+you log is shared with the organization unless you say otherwise. **A message
+captured from a mailbox is not**: its audience is derived from what each
+importing mailbox asks for, and a new mailbox holds its mail until a classifier
+judges the thread ordinary. You change a captured message's audience by sharing
+its thread, not by editing the row — the row refuses a direct edit and says so.
 
 ## Putting a change back
 
