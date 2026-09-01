@@ -24422,7 +24422,7 @@ components:
         `job_change` fires only on a RECORDED employment change, and `public_signal` needs a
         connected data provider. A rule that cannot fire is absent from the page, not an empty
         card.
-      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
+      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
 
     PersonMomentEvidence:
       type: object
