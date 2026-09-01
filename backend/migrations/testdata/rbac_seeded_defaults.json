@@ -768,7 +768,7 @@
         "update": false
       }
     },
-    "row_scope": "own"
+    "row_scope": "team"
   },
   "ops": {
     "objects": {

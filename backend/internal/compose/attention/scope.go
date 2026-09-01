@@ -100,7 +100,7 @@ func resolveScope(ctx context.Context, asked string) (string, error) {
 // modules that own them, exactly as they do under `team` and `all`, so what
 // this reaches is the shared record-bearing work assigned to that person. The
 // contract says so where the parameter is declared.
-func resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, error) {
+func (s *Service) resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, error) {
 	if asked.IsZero() {
 		return ids.UUID{}, nil
 	}
@@ -114,12 +114,31 @@ func resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, error) {
 	if owner == actor.UserID {
 		return owner, nil
 	}
-	// Somebody else's queue is a team-or-wider question. The tier is the whole
-	// test: whether that person is on the reader's team is a fact the row scope
-	// already decides for every record this read returns, and re-deriving it
-	// here would be a second answer to it.
+	// An unbounded reader reaches every row, so for them the tier IS the whole
+	// test and naming anyone is answerable.
+	//
+	// A TEAM-scoped reader is different, and the difference is not academic. Row
+	// scope narrows the deal-bearing rows correctly, but the task lane's gate is
+	// a link walk: auth.ActivityDiscoverClause coalesces the empty link set to
+	// TRUE, so a task carrying no record link is discoverable by anyone. Naming
+	// an out-of-team colleague would return exactly those rows, under a page
+	// headed with that colleague's name. So membership is asked here, where the
+	// question is "may I open this person's queue" rather than "may I read this
+	// row".
 	switch actor.Permissions.RowScope {
-	case principal.RowScopeTeam, principal.RowScopeAll:
+	case principal.RowScopeAll:
+		return owner, nil
+	case principal.RowScopeTeam:
+		if s.teammates == nil {
+			return ids.UUID{}, apperrors.ErrPermissionDenied
+		}
+		shares, err := s.teammates.SharesLiveTeamWithCaller(ctx, owner)
+		if err != nil {
+			return ids.UUID{}, err
+		}
+		if !shares {
+			return ids.UUID{}, apperrors.ErrPermissionDenied
+		}
 		return owner, nil
 	default:
 		return ids.UUID{}, apperrors.ErrPermissionDenied
