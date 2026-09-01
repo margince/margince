@@ -64,6 +64,23 @@ func setupProviderConsumer(t *testing.T, automaticLookup bool) *providerConsumer
 	e := Setup(t)
 	c := &providerConsumerEnv{env: e, enqueued: new(int), personID: seedSubject(t, e)}
 
+	// SOMETHING TO LOOK THEM UP BY. The provider can find a person by their
+	// LinkedIn profile, or by a full name plus an employer, and a subject
+	// satisfying neither is skipped as no_identifiers before any of this
+	// file's subject reaches the queue (#3454). The shared seedSubject writes
+	// a first name and nothing else, which is right for the erasure tests it
+	// was written for and leaves this one's subject unfindable — so the
+	// identifier is added HERE, where the fixture's own claim needs it.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO person_social (person_id, platform, handle)
+			VALUES ($1, 'linkedin', 'https://www.linkedin.com/in/selma-subject')`,
+			c.personID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	// One PRICED category and one FREE one, and both halves are load-bearing.
 	// An automatic run may take only what the provider gives away, so a
 	// connection selecting nothing free never queues anything — and the two
