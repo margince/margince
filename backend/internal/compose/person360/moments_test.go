@@ -400,7 +400,7 @@ func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
 // save without it. So the action a reader cannot complete is handed to them
 // blocked, with the reason, rather than as a live button that fails on save.
 func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
-	quiet := nothingNeededMoment(time.Now(), &crmcontracts.Person360{})
+	quiet := nothingNeededMoment(time.Date(2026, time.August, 21, 9, 0, 0, 0, time.UTC), &crmcontracts.Person360{})
 	if quiet.RecommendedAction.Kind != crmcontracts.PersonMomentActionKindLogActivity {
 		t.Fatalf("the quiet moment's action is %q, want log_activity — this test needs that rung", quiet.RecommendedAction.Kind)
 	}
@@ -428,7 +428,11 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 // "I'll send you the whitepaper" without one, and the card used to fall past
 // every rung to "nothing is owed" while that task sat directly beneath it.
 func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
-	now := time.Now()
+	// A pinned morning, not the wall clock. The case below files a task two
+	// hours from now and expects "Due today", which is only true while two
+	// hours from now IS today — read from the real clock, this test failed
+	// every evening after 22:00 UTC and passed again at midnight.
+	now := time.Date(2026, time.August, 21, 9, 0, 0, 0, time.UTC)
 	page := &crmcontracts.Person360{
 		NextSteps: &struct {
 			Data []crmcontracts.Activity `json:"data"`
