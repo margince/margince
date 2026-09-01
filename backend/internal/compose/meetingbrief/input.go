@@ -57,6 +57,16 @@ type Input struct {
 	// moved, when the meeting is about no deal, or when this reader may not
 	// see the part that moved.
 	DealMoves []DealMoveIn
+	// History is the room's whole readable correspondence within the last year,
+	// as metadata: what happened and when, not what it said. It is what the
+	// account arc is built from, and it is deliberately NOT in the prompt —
+	// `json:"-"` — because two hundred rows would spend the model's budget on
+	// what the arc has already condensed into five moments.
+	History []HistoryIn `json:"-"`
+	// Excerpts are the bodies of the few conversations the arc says matter,
+	// bounded and audience-gated. Also out of the sections prompt: the plan is
+	// what reads them.
+	Excerpts []ExcerptIn `json:"-"`
 	// RoomHidden says this reader holds no deal_room grant, so whatever the
 	// buyer did in the room is missing from DealMoves. Rendered as an omission
 	// rather than left silent: a brief that cannot see the room reads exactly

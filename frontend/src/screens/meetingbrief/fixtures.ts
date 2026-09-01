@@ -159,3 +159,68 @@ export const briefScoped: MeetingBrief = {
     key: "RETRO",
   },
 };
+
+// A brief carrying the deterministic preparation plan.
+//
+// `outline` rather than `prepared`: this plan has an objective, an arc and an
+// advance but no risk with a response and no ranked questions, which is exactly
+// what a deployment with no model lane produces. The drawer must add it ABOVE
+// the sections rather than in place of them, and this fixture is what proves it.
+export const briefWithPlan: MeetingBrief = {
+  ...briefReady,
+  plan: {
+    generated_by: "deterministic",
+    readiness: "outline",
+    meeting_type: { value: "commercial", confidence: "high" },
+    objective: {
+      sentence: {
+        text: "Leave with Anna's answer on: the depot-by-depot rollout plan.",
+        nature: "recommendation",
+        evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+      },
+      caveat: "Do not concede on price before the value is agreed.",
+    },
+    opening: {
+      text: "Open on what has changed since you last spoke, before proposing anything.",
+      nature: "recommendation",
+      evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+    },
+    likely_asks: [],
+    questions: [],
+    scenarios: [],
+    account_arc: [
+      {
+        from: "2026-04-02T09:00:00Z",
+        to: "2026-04-19T09:00:00Z",
+        title: "Depot survey",
+        summary: {
+          text: "2 Apr–19 Apr: 6 conversations, on Depot survey.",
+          evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+        },
+      },
+    ],
+    advance: {
+      minimum: {
+        text: "The remaining gap between our number and theirs, stated.",
+        nature: "recommendation",
+        evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+      },
+      best: {
+        text: "Agreed terms and a signature date.",
+        nature: "recommendation",
+        evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+      },
+      fallback: {
+        text: "What has to be true for them to sign, and by when.",
+        nature: "recommendation",
+        evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+      },
+    },
+    unknowns: [
+      {
+        kind: "decision_route_not_captured",
+        question: "Who else has to agree before this can go ahead?",
+      },
+    ],
+  },
+};

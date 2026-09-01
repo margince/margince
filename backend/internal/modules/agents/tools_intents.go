@@ -223,6 +223,14 @@ func noteBriefEvidence(ctx context.Context, written MeetingBriefResult) {
 			}
 		}
 	}
+	// The plan reaches records the sections never mention — the account arc
+	// walks a year of history to find the five moments that matter. Charging
+	// the sections alone would make the richest read the cheapest one, which is
+	// backwards for a bound that exists to cap how much of a workspace a single
+	// call can pull.
+	for _, cited := range written.Plan.Citations() {
+		noteEvidence(ctx, datasource.EntityType(cited.RecordType), cited.RecordID)
+	}
 }
 
 // writtenBrief is the eight-section brief, when this anchor has one.

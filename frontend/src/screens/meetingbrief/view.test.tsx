@@ -7,6 +7,7 @@ import {
   briefModel,
   briefOmitted,
   briefReady,
+  briefWithPlan,
   meetingFacts,
   preparedFor,
 } from "./fixtures";
@@ -130,6 +131,60 @@ describe("the prepared brief", () => {
         /do not have access to Deal Rooms/,
       ),
     ).toBeTruthy();
+  });
+});
+
+describe("the preparation plan", () => {
+  it("adds the plan above the sections rather than in place of them", () => {
+    mount({ kind: "ready", brief: briefWithPlan });
+    // The plan leads.
+    const headings = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((h) => h.textContent);
+    expect(headings[0]).toBe("The outcome to earn");
+    // And the sections a reader already had are still on the page, not buried:
+    // an outline plan that hid the risks would be a regression.
+    expect(headings).toContain("Risks and watch-outs");
+    expect(headings).toContain("Goal for this meeting");
+  });
+
+  it("renders nothing of the plan when the brief carries none", () => {
+    mount({ kind: "ready", brief: briefReady });
+    expect(screen.queryByText("The outcome to earn")).toBeNull();
+    expect(screen.queryByText("Close the meeting")).toBeNull();
+  });
+
+  it("states the three ways to close, in order", () => {
+    mount({ kind: "ready", brief: briefWithPlan });
+    const legs = screen
+      .getAllByRole("heading", { level: 4 })
+      .map((h) => h.textContent);
+    expect(legs).toEqual(
+      expect.arrayContaining(["Minimum advance", "Best advance", "Fallback"]),
+    );
+  });
+
+  it("shows what the record does not say", () => {
+    mount({ kind: "ready", brief: briefWithPlan });
+    expect(
+      screen.getByText("Who else has to agree before this can go ahead?"),
+    ).toBeTruthy();
+  });
+
+  it("keeps the indigo lead for a model and the accent for a composition", () => {
+    const { container } = render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: briefWithPlan }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+        />
+      </StoryProviders>,
+    );
+    // The plan says a composition wrote it, so the objective must not wear the
+    // band that means Margince did.
+    expect(container.querySelector(".panel-ai")).toBeNull();
   });
 });
 

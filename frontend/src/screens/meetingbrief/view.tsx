@@ -12,6 +12,7 @@ import { Button } from "../../design-system/atoms";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { BriefHeader, type MeetingFacts, type PreparedFor } from "./header";
+import { AccountArc, AdvancePanel, ObjectivePanel, Unknowns } from "./plan";
 import {
   Background,
   BodyPanels,
@@ -59,6 +60,7 @@ export function MeetingBriefView({
   onClose,
   scopeSlot,
   formatWhen,
+  formatDay,
 }: Readonly<{
   state: BriefViewState;
   meeting?: MeetingFacts;
@@ -70,6 +72,7 @@ export function MeetingBriefView({
   // knows what the reader chose.
   scopeSlot?: ReactNode;
   formatWhen?: (utcIso: string) => string;
+  formatDay?: (utcIso: string) => string;
 }>) {
   const t = useT();
   const brief = state.kind === "ready" ? state.brief : undefined;
@@ -109,9 +112,36 @@ export function MeetingBriefView({
             {brief && (
               <div className="mb-stack">
                 <GlanceLine brief={brief} onOpenRecord={onOpenRecord} />
+                {/* The plan leads when the server says it is a preparation.
+                    An `outline` is added ABOVE the sections rather than in
+                    place of them: a half-built plan that hid the risks and
+                    talking points a reader already had would be a regression
+                    wearing new panels. */}
+                {brief.plan && (
+                  <>
+                    <ObjectivePanel
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                    />
+                    <AccountArc
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                      formatDay={formatDay ?? ((iso) => iso.slice(0, 10))}
+                    />
+                  </>
+                )}
                 <GoalPanel brief={brief} onOpenRecord={onOpenRecord} />
                 <RiskCallout brief={brief} onOpenRecord={onOpenRecord} />
                 <BodyPanels brief={brief} onOpenRecord={onOpenRecord} />
+                {brief.plan && (
+                  <>
+                    <AdvancePanel
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                    />
+                    <Unknowns plan={brief.plan} />
+                  </>
+                )}
                 <Background brief={brief} onOpenRecord={onOpenRecord} />
               </div>
             )}

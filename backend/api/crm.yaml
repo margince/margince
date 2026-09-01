@@ -23918,6 +23918,12 @@ components:
             believing the buyer had done nothing. Empty when the reader could see
             everything the brief looks at.
           items: { $ref: '#/components/schemas/MeetingBriefOmission' }
+        plan:
+          $ref: '#/components/schemas/MeetingPlan'
+          description: >-
+            What to DO in the room, built over the same records as `sections`. Optional on the
+            wire so a client written before it keeps rendering the cited summary; the server
+            writes one on every read.
 
     MeetingBriefOmission:
       type: object
@@ -23930,6 +23936,236 @@ components:
         reason:
           type: string
           description: One sentence a reader can act on, naming what is missing and why.
+
+    MeetingPlan:
+      type: object
+      description: |
+        The preparation plan: what to DO in the room, as against `sections`, which is what is
+        KNOWN about it.
+
+        Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+        reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+        UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+        generated from the ABSENCE of a record, never from a writer leaving a field out, which
+        is the difference between "nobody captured the decision route" and "the model forgot to
+        mention it".
+
+        Assessments and recommendations cite records the caller can open, or they are dropped
+        whole — the same grounding rule every sentence in `sections` runs.
+      required:
+        [generated_by, readiness, meeting_type, likely_asks, questions, scenarios,
+         account_arc, advance, unknowns]
+      properties:
+        generated_by:
+          $ref: '#/components/schemas/WrittenBy'
+          description: >-
+            Which writer produced the plan. Independent of the brief's own: the plan can fall to
+            its deterministic floor while the sections were written by a model, and the reverse.
+        readiness:
+          $ref: '#/components/schemas/MeetingPlanReadiness'
+        meeting_type: { $ref: '#/components/schemas/MeetingPlanType' }
+        objective: { $ref: '#/components/schemas/MeetingPlanObjective' }
+        opening:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: The suggested opener. Always a `recommendation`.
+        top_risk: { $ref: '#/components/schemas/MeetingPlanRisk' }
+        likely_asks:
+          type: array
+          maxItems: 5
+          description: What the other side is likely to ask, each an assessment with the record behind it.
+          items: { $ref: '#/components/schemas/MeetingPlanAsk' }
+        questions:
+          type: array
+          maxItems: 5
+          description: What to ask them, ranked. Three is a plan a rep can hold; the cap is five.
+          items: { $ref: '#/components/schemas/MeetingPlanQuestion' }
+        scenarios:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/MeetingPlanScenario' }
+        account_arc:
+          type: array
+          maxItems: 5
+          description: >-
+            The moments that change TODAY's conversation, oldest first, built from the whole
+            history this caller may read rather than from the newest page of it.
+          items: { $ref: '#/components/schemas/MeetingPlanArcMoment' }
+        advance: { $ref: '#/components/schemas/MeetingPlanAdvance' }
+        unknowns:
+          type: array
+          description: >-
+            What the record does not say, each with the question that would close it. Derived
+            from absence, so an empty list means the record answered everything this plan asks
+            of it — not that nobody looked.
+          items: { $ref: '#/components/schemas/MeetingPlanUnknown' }
+
+    MeetingPlanReadiness:
+      type: string
+      enum: [outline, prepared]
+      x-enum-varnames: [MeetingPlanReadinessOutline, MeetingPlanReadinessPrepared]
+      description: |
+        How much of a preparation this plan actually is, so a surface can decide whether to lead
+        with it.
+
+        `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+        for. Useful, but not yet the thing a rep walks in holding.
+        `prepared` — it also carries the risk with its response, at least two likely asks and at
+        least three questions. A client leads with the plan at `prepared` and keeps the cited
+        summary in front at `outline`, so a half-built plan never displaces what already worked.
+
+    MeetingPlanTypeValue:
+      type: string
+      enum:
+        [relationship, first_discovery, followup_discovery, demo, commercial, decision,
+         delivery, renewal_risk, unknown]
+      x-enum-varnames:
+        [MeetingPlanTypeRelationship, MeetingPlanTypeFirstDiscovery,
+         MeetingPlanTypeFollowupDiscovery, MeetingPlanTypeDemo, MeetingPlanTypeCommercial,
+         MeetingPlanTypeDecision, MeetingPlanTypeDelivery, MeetingPlanTypeRenewalRisk,
+         MeetingPlanTypeUnknown]
+      description: >-
+        What kind of meeting this is, which decides what a good plan for it looks like. `unknown`
+        is a first-class answer rather than a failure: it means the records do not say what this
+        meeting is for, and the plan then opens by asking rather than by guessing.
+
+    MeetingPlanTier:
+      type: string
+      enum: [high, medium, low]
+      x-enum-varnames: [MeetingPlanTierHigh, MeetingPlanTierMedium, MeetingPlanTierLow]
+      description: >-
+        A three-step ordinal, for ranking. Never a probability: nothing here is measured finely
+        enough to print one, and a number would claim a precision the evidence does not have.
+
+    MeetingPlanType:
+      type: object
+      required: [value, confidence]
+      properties:
+        value: { $ref: '#/components/schemas/MeetingPlanTypeValue' }
+        confidence: { $ref: '#/components/schemas/MeetingPlanTier' }
+
+    MeetingPlanObjective:
+      type: object
+      description: The outcome to earn, and the reminder not to force it.
+      required: [sentence, caveat]
+      properties:
+        sentence:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: One cited `recommendation`.
+        caveat:
+          type: string
+          description: >-
+            The one-line "do not force this" reminder. Fixed product copy keyed to the meeting
+            type, not read from the records, which is why it carries no evidence of its own.
+
+    MeetingPlanRisk:
+      type: object
+      description: The one thing that can change this conversation, and what to do when it does.
+      required: [text, response_plan]
+      properties:
+        text:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: The risk, as an `assessment` citing the record it was read from.
+        response_plan: { $ref: '#/components/schemas/MeetingPlanResponse' }
+
+    MeetingPlanResponse:
+      type: object
+      description: >-
+        What to say, what to show, and what not to promise. Three sentences rather than a
+        paragraph, because a rep reads this while walking.
+      required: [say, show, avoid]
+      properties:
+        say: { type: string }
+        show: { type: string }
+        avoid: { type: string }
+
+    MeetingPlanAsk:
+      type: object
+      required: [question, basis, relevance, prepare]
+      properties:
+        question:
+          type: string
+          description: What they are likely to ask, in their own words where the record has them.
+        basis:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: Why we expect it — a `fact` or `assessment` citing the record.
+        relevance: { $ref: '#/components/schemas/MeetingPlanTier' }
+        prepare: { type: string, description: How to answer it. }
+
+    MeetingPlanQuestion:
+      type: object
+      description: >-
+        One question to ask, with why it matters here and what the answer sounds like. Evidence
+        is required: a question no record motivated is a question that would read the same on
+        any account, which is the failure this whole shape exists to prevent.
+      required: [ask, why, listen_for, evidence]
+      properties:
+        ask: { type: string }
+        why: { type: string }
+        listen_for: { type: string }
+        evidence:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/OrganizationBriefEvidence' }
+
+    MeetingPlanScenario:
+      type: object
+      description: What the meeting may turn into, and what to do if it does.
+      required: [label, play, evidence]
+      properties:
+        label: { type: string }
+        play: { type: string }
+        evidence:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/OrganizationBriefEvidence' }
+
+    MeetingPlanArcMoment:
+      type: object
+      description: >-
+        One stretch of the relationship that still bears on today. A moment, not a message: it
+        spans the conversations it was built from, and cites them.
+      required: [from, to, title, summary]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        title: { type: string }
+        summary:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: A `fact` citing the conversations the moment is made of.
+
+    MeetingPlanAdvance:
+      type: object
+      description: >-
+        How to close: the least that still counts, the most worth aiming at, and what to fall
+        back to. A meeting that ends with none of the three ended with nothing.
+      required: [minimum, best, fallback]
+      properties:
+        minimum: { $ref: '#/components/schemas/OrganizationBriefSentence' }
+        best: { $ref: '#/components/schemas/OrganizationBriefSentence' }
+        fallback: { $ref: '#/components/schemas/OrganizationBriefSentence' }
+
+    MeetingPlanUnknownKind:
+      type: string
+      enum:
+        [intent_not_captured, no_open_deal, decision_route_not_captured, no_prior_meeting,
+         no_commitments_captured, no_history, attendees_not_visible]
+      x-enum-varnames:
+        [MeetingPlanUnknownIntentNotCaptured, MeetingPlanUnknownNoOpenDeal,
+         MeetingPlanUnknownDecisionRouteNotCaptured, MeetingPlanUnknownNoPriorMeeting,
+         MeetingPlanUnknownNoCommitmentsCaptured, MeetingPlanUnknownNoHistory,
+         MeetingPlanUnknownAttendeesNotVisible]
+      description: >-
+        Which gap this is. A closed vocabulary so a surface can order and label them, and so a
+        writer cannot invent an eighth.
+
+    MeetingPlanUnknown:
+      type: object
+      required: [kind, question]
+      properties:
+        kind: { $ref: '#/components/schemas/MeetingPlanUnknownKind' }
+        question:
+          type: string
+          description: The question to ask in the room that would close this gap.
 
     MeetingBriefSection:
       type: object

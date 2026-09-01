@@ -19,18 +19,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
-	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/comms"
-	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,13 +32,21 @@ import (
 // assembles fresh on every call because a cached brief is the one thing a
 // pre-meeting read must not be. The only difference between the two surfaces
 // is who is asking.
-func meetingBriefReader(pool *pgxpool.Pool) agents.MeetingBriefReader {
-	peopleStore := people.NewStore(InstallationDB(pool))
-	view := person360.NewService(pool, peopleStore, deals.NewStore(InstallationDB(pool), DealsInstallation()), ProjectsStore(pool),
-		consent.NewStore(InstallationDB(pool)),
-		comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))),
-		ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
-	service := meetingbrief.NewService(pool, view, peopleStore, time.Now)
+//
+// It takes the SERVER's service rather than building a second one. This used to
+// construct its own person360 and its own meetingbrief.Service from the pool,
+// which was one engine in name only: WithMeetingBriefWriter binds the model
+// lane to the server's instance, so the human surface would have got model
+// prose while the agent surface silently kept the deterministic floor —
+// "one brief, both surfaces" is the rule this seam exists to hold, and two
+// services is how it would have been broken without anything failing.
+//
+// A nil service means this role wired no brief at all; the tool then degrades
+// to the assembled picture, which is what RegisterIntentTools already does.
+func meetingBriefReader(service *meetingbrief.Service) agents.MeetingBriefReader {
+	if service == nil {
+		return nil
+	}
 	return func(ctx context.Context, activityID ids.UUID) (agents.MeetingBriefResult, error) {
 		brief, filed, err := service.GetFiled(ctx, activityID)
 		if err != nil {
@@ -78,6 +77,7 @@ func agentMeetingBrief(brief crmcontracts.MeetingBrief) agents.MeetingBriefResul
 		}
 		out.Sections = append(out.Sections, part)
 	}
+	out.Plan = agentMeetingPlan(brief.Plan)
 	return out
 }
 

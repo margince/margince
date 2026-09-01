@@ -74,6 +74,7 @@ no code, no API, just the app.
 
 ### Reference — look it up
 - [modules.md](reference/modules.md) — the modules: what each owns, its tables, its HTTP surface.
+- [meeting-brief.md](reference/meeting-brief.md) — the pre-meeting brief and its preparation plan: the three invariants, what a caller is and is not shown, how a year of history becomes five moments, and why the plan and the sections have separate writers.
 - [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, egress, and overlay-mode behaviour.
 - [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.
 - [agent-tool-budget.md](reference/agent-tool-budget.md) — what each agent's tool menu costs in prompt tokens, agent by agent, against the published ceiling. Generated with its `.json` sibling, never hand-edited.

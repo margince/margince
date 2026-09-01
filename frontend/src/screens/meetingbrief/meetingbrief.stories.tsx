@@ -7,6 +7,7 @@ import {
   briefOmitted,
   briefReady,
   briefScoped,
+  briefWithPlan,
   meetingFacts,
   preparedFor,
 } from "./fixtures";
@@ -107,6 +108,23 @@ export const Scoped: Story = {
 // A meeting filed under none, with projects to choose from.
 export const Unscoped: Story = {
   render: () => drawer(() => jsonResponse(briefReady), { projects: PROJECTS }),
+};
+
+// The deterministic preparation plan, added above the sections rather than in
+// place of them: an `outline` plan is not yet worth leading with, and the cited
+// summary a reader already had stays in front of them.
+export const WithPlan: Story = {
+  render: () => drawer(() => jsonResponse(briefWithPlan)),
+};
+
+export const WithPlanDark: Story = {
+  render: () => drawer(() => jsonResponse(briefWithPlan)),
+  globals: { theme: "dark" },
+};
+
+export const WithPlanPhone: Story = {
+  render: () => drawer(() => jsonResponse(briefWithPlan)),
+  globals: { viewport: { value: "mobile1" } },
 };
 
 export const Dark: Story = {
