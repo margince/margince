@@ -32,6 +32,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,10 +41,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // routingSeedActor names the boot in the audit trail when a stored binding is
@@ -235,4 +238,45 @@ func singletonWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, erro
 		return ids.UUID{}, nil
 	}
 	return live[0], nil
+}
+
+// RoutingFromDeployConfig reads a deployment config file's declared tier→model
+// binding — `seeds.ai_routing` — and returns it as a validated RoutingConfig.
+//
+// It exists for the certification lane, which needs to certify the models a
+// deployment ACTUALLY binds rather than one an engineer typed. Nothing at
+// runtime reads a binding this way: a running installation's binding is a stored
+// setting (see this file's own note above), and `seeds.ai_routing` only seeds a
+// fresh install. So this is a read of what a fresh install WOULD get, which is
+// exactly the question `make e2e-ai ROUTING=` asks.
+//
+// The decode is routingSeedFrom's, not a second parser: an operator's file must
+// mean the same thing to the cert lane as it does to bootstrap, including the
+// alias and merge-key idioms routingSeedFrom resolves.
+//
+// A file that declares no binding is an error here, unlike at bootstrap where it
+// is the ordinary case. Bootstrap has a default to fall back on — bind nothing,
+// run the CRUD — and a certification run has none: there is no model to measure,
+// and returning an empty config would spend the run's setup before failing on
+// the first call.
+func RoutingFromDeployConfig(path string, env runtimeenv.Environment) (ai.RoutingConfig, error) {
+	// Stat first. deployconfig.Load TOLERATES an absent layer — that is right for
+	// an optional overlay and wrong here, where the path is the whole instruction:
+	// a typo would otherwise be reported as "declares no seeds.ai_routing", which
+	// sends an operator to edit a file that does not exist.
+	if _, err := os.Stat(path); err != nil {
+		return ai.RoutingConfig{}, fmt.Errorf("compose: reading the deployment config %s: %w", path, err)
+	}
+	cfg, err := deployconfig.Load(path, env)
+	if err != nil {
+		return ai.RoutingConfig{}, fmt.Errorf("compose: reading the deployment config %s: %w", path, err)
+	}
+	routing, declared, err := routingSeedFrom(cfg.Seeds.AIRouting)
+	if err != nil {
+		return ai.RoutingConfig{}, err
+	}
+	if !declared {
+		return ai.RoutingConfig{}, fmt.Errorf("compose: %s declares no seeds.ai_routing, so it names no model to certify — point ROUTING= at a config that binds one, or name a model outright with MODEL=", path)
+	}
+	return routing, nil
 }

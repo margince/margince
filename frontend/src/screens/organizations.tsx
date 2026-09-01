@@ -120,8 +120,8 @@ import {
   useListQuery,
   useOwnerChips,
 } from "./listquery";
+import { PersonMeetingBrief } from "./meetingbrief";
 import { PartnerTab } from "./partners";
-import { PersonMeetingBrief } from "./persondrawers";
 import {
   OverlayFallback,
   RecordReading,

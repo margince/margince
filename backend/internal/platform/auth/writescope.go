@@ -326,8 +326,45 @@ func writeAuthorityPredicateAs(p principal.Principal, table, alias string, arg f
 // this is the arm that keeps activity writes team-shaped. An unbounded human
 // edits every activity they can read, as they edit every record.
 func EnsureActivityWritable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if err := EnsureActivityContentVisibleLive(ctx, tx, id); err != nil {
-		return err
+	return EnsureActivityWritableIn(ctx, tx, id, true)
+}
+
+// EnsureActivityWritableIn is EnsureActivityWritable against a chosen row
+// liveness. live=false serves a caller that already resolved the row past
+// its own LiveOnly lock and confirmed it is held under a statutory
+// retention obligation (activities.lockActivityForWrite).
+//
+// It skips the content-visible gate's LIVENESS half rather than passing live
+// through to it: ActivityAvailableClause is `restricted_at IS NULL`
+// UNCONDITIONALLY — by design, a restricted row reads as gone to everyone
+// through that gate, live argument or not (ensureActivity's own doc). A
+// caller reaching this function with live=false already proved the row
+// exists by another means (the row lock, taken directly against the table),
+// so re-asking the liveness half would only reproduce the same false 404
+// this exists to remove. What it does NOT earn a skip from is the OTHER
+// half ActivityContentClause folds in for every non-system caller —
+// ActivityAudienceArm, the row's own participants/selected narrowing —
+// which the ownership check below cannot stand in for: ownership answers
+// "is this the caller's team's record", audience answers "did a human limit
+// who reads this ONE message", and a caller who owns a record is not
+// thereby a participant on every limited message under it. An unbounded
+// human is bound by this too — ActivityContentClause's own doc says only
+// the system principal reads the audience arm away, so Unbounded below must
+// not become a bypass a held row's write-authority check does not have to
+// answer for.
+func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live bool) error {
+	if live {
+		if err := ensureActivity(ctx, tx, id, ActivityContentClause, true); err != nil {
+			return err
+		}
+	} else {
+		included, err := activityAudienceIncludes(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if !included {
+			return apperrors.ErrNotFound
+		}
 	}
 	p, err := rbacActor(ctx)
 	if err != nil {
@@ -352,9 +389,33 @@ func EnsureActivityWritable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		return err
 	}
 	if !permitted {
+		if !live {
+			return apperrors.ErrNotFound
+		}
 		return apperrors.ErrPermissionDenied
 	}
 	return nil
+}
+
+// activityAudienceIncludes probes ONLY ActivityAudienceArm — no liveness, no
+// discoverability — for a caller in EnsureActivityWritableIn's live=false
+// branch, whose row existence and archived state were already settled by
+// its own lock. A row the caller cannot find at all answers false, not an
+// error: the same not-found the audience arm itself would give inside the
+// ordinary content-visible probe.
+func activityAudienceIncludes(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idPos := arg(id)
+	audience, err := ActivityAudienceArm(ctx, "a", arg)
+	if err != nil {
+		return false, err
+	}
+	var included bool
+	err = tx.QueryRow(ctx, fmt.Sprintf(
+		`SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $%d AND (%s))`, idPos, audience),
+		args...).Scan(&included)
+	return included, err
 }
 
 // linkTargetWritable is linkTargetVisible's write twin: one arm per

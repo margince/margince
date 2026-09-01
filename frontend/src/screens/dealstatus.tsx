@@ -10,7 +10,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { useDealSignals } from "./dealsignals";
-import { PersonMeetingBrief } from "./persondrawers";
+import { PersonMeetingBrief } from "./meetingbrief";
 import {
   CallCard,
   FoundMove,

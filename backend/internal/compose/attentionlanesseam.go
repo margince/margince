@@ -17,14 +17,12 @@ package compose
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -309,71 +307,6 @@ func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingRe
 		kept = append(kept, row)
 	}
 	return kept
-}
-
-// attentionMeetings reads today's remaining meetings through the activities
-// store — the same gated list every other activity surface reads.
-//
-// The WINDOW is applied in SQL, not here. An earlier cut read ten times the
-// lane and narrowed the time range in Go, which is lossy in the one direction
-// that hides itself: a day with more than the scan's worth of later activity
-// pushes a real meeting off the page, and the lane draws a free afternoon over
-// a booked one. ListActivitiesInput carries OccurredAfter/OccurredBefore and
-// the store applies both as predicates, so the bound is the day rather than a
-// guess about how busy the day might be.
-//
-// The STATUS filter stays in Go: the store has no dial for it, and the set it
-// removes is bounded by the window the database already applied.
-type attentionMeetings struct{ store *activities.Store }
-
-func (m attentionMeetings) Today(
-	ctx context.Context, from, until time.Time, limit int,
-) ([]attention.Meeting, error) {
-	kind := string(crmcontracts.ActivityKindMeeting)
-	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{
-		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until, Limit: &limit,
-	})
-	if err != nil {
-		return nil, err
-	}
-	ahead := make([]attention.Meeting, 0, len(rows))
-	for _, row := range rows {
-		if !meetingStillWorthPreparing(row) {
-			continue
-		}
-		ahead = append(ahead, attention.Meeting{
-			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
-		})
-	}
-	// Soonest first: the lane is a countdown, and the store returns activities
-	// newest-first, which is the opposite order for a day still ahead.
-	sort.SliceStable(ahead, func(i, j int) bool { return ahead[i].StartsAt.Before(ahead[j].StartsAt) })
-	return ahead, nil
-}
-
-// meetingStillWorthPreparing keeps the meetings a rep can still do something
-// about: booked, rather than held, cancelled or a no-show. The time window is
-// the database's to apply.
-//
-// A meeting with no status is treated as booked. Capture writes calendar events
-// without one, and dropping them would empty this lane on exactly the
-// installations whose calendars are connected.
-func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
-	return row.MeetingStatus == nil || *row.MeetingStatus == crmcontracts.ActivityMeetingStatusBooked
-}
-
-// subjectOfMeeting is the line a meeting shows, or NOTHING.
-//
-// A calendar event with a blank title is a real thing a provider hands over,
-// and the empty answer is the honest one: the product ships three languages, so
-// a placeholder composed here reaches a German reader in English — and
-// "(untitled meeting)" is a parenthetical stand-in rather than a sentence
-// anybody wrote. The client writes "A meeting" in the reader's own words.
-func subjectOfMeeting(row crmcontracts.Activity) string {
-	if row.Subject != nil {
-		return *row.Subject
-	}
-	return ""
 }
 
 // attentionDealFacts reads deal figures through the deals store, under the

@@ -4,6 +4,7 @@
 package person360
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -63,7 +64,7 @@ func TestTheLadderSelectsExactlyOneMoment(t *testing.T) {
 			SourceQuote:      "I'll get you the model by Friday",
 		}},
 	}
-	got := deriveMoment(now, page)
+	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.PersonMomentRuleMeetingPrep {
 		t.Fatalf("meeting prep outranks every rung below it, got %q", got.Rule)
 	}
@@ -78,7 +79,7 @@ func TestAMeetingBeyondSeventyTwoHoursDoesNotWin(t *testing.T) {
 		LastInboundAt:  &replied,
 		LastOutboundAt: ptr(at(40)),
 	}
-	got := deriveMoment(now, page)
+	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.PersonMomentRuleReEngaged {
 		t.Fatalf("a meeting four days out should not beat a fresh reply, got %q", got.Rule)
 	}
@@ -95,7 +96,7 @@ func TestAnAnsweredConversationIsNotGoneQuiet(t *testing.T) {
 			Colleagues []crmcontracts.PersonNetworkColleague `json:"colleagues"`
 		}{},
 	}
-	got := deriveMoment(now, page)
+	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule == crmcontracts.PersonMomentRuleGoneQuiet {
 		t.Fatal("they answered after our last message; silence is not the story")
 	}
@@ -109,7 +110,7 @@ func TestGoneQuietNamesTheRuleItFiredOn(t *testing.T) {
 		LastOutboundAt: ptr(at(9)),
 		LastInboundAt:  ptr(at(16)),
 	}
-	got := deriveMoment(now, page)
+	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.PersonMomentRuleGoneQuiet {
 		t.Fatalf("nine days unanswered past a seven-day rule is gone quiet, got %q", got.Rule)
 	}
@@ -196,11 +197,22 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 				Subject: ptr("Send the MCP whitepaper"), OccurredAt: at(1),
 			}}},
 		},
+		// The overdue rung reads BOTH sources; this page reaches it through the
+		// task list, the one above it through a claim.
+		"overdue task": {
+			NextSteps: &struct {
+				Data []crmcontracts.Activity `json:"data"`
+				Page crmcontracts.PageInfo   `json:"page"`
+			}{Data: []crmcontracts.Activity{{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+				Subject: ptr("Send the signed contract"), OccurredAt: at(72), DueAt: ptr(at(30)),
+			}}},
+		},
 		"nothing needed": {},
 	}
 	for name, page := range pages {
 		t.Run(name, func(t *testing.T) {
-			assertActionsAreHonest(t, deriveMoment(now, page))
+			assertActionsAreHonest(t, deriveMoment(readerCtx(), now, page))
 		})
 	}
 
@@ -215,7 +227,7 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 		fired := make(map[int]bool, len(momentLadder))
 		for _, page := range pages {
 			for i, rung := range momentLadder {
-				moment, ok := rung(now, page)
+				moment, ok := rung(readerCtx(), now, page)
 				if !ok {
 					continue
 				}
@@ -295,7 +307,7 @@ func TestAQuietRecordStillGetsAnAnswer(t *testing.T) {
 			Colleagues []crmcontracts.PersonNetworkColleague `json:"colleagues"`
 		}{Colleagues: []crmcontracts.PersonNetworkColleague{{}}},
 	}
-	got := deriveMoment(now, page)
+	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.PersonMomentRuleNothingNeeded {
 		t.Fatalf("a record with nothing pending gets the quiet success state, got %q", got.Rule)
 	}
@@ -305,7 +317,7 @@ func TestAQuietRecordStillGetsAnAnswer(t *testing.T) {
 // same as empty, and only one of them is a fact about the relationship.
 func TestAWithheldSectionDoesNotProduceAThinRelationshipClaim(t *testing.T) {
 	page := &crmcontracts.Person360{}
-	got := deriveMoment(now, page)
+	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule == crmcontracts.PersonMomentRuleThinRelationship {
 		t.Fatal("activities and network were withheld, not empty; the page must not call the relationship thin")
 	}
@@ -359,7 +371,7 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 	// An open deal with no visible schedule. Allowed to look, the page says
 	// nothing is scheduled; forbidden to look, it must not.
 	visible := &crmcontracts.Person360{Commercial: deal}
-	if got := deriveMoment(now, visible).Rule; got != crmcontracts.PersonMomentRuleMissingNextStep {
+	if got := deriveMoment(readerCtx(), time.Now(), visible).Rule; got != crmcontracts.PersonMomentRuleMissingNextStep {
 		t.Fatalf("with the schedule readable and empty, the gap IS the finding, got %q", got)
 	}
 
@@ -369,7 +381,7 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 			crmcontracts.Person360SectionsOmittedNextMeeting,
 		},
 	}
-	if got := deriveMoment(now, withheldSchedule).Rule; got == crmcontracts.PersonMomentRuleMissingNextStep {
+	if got := deriveMoment(readerCtx(), time.Now(), withheldSchedule).Rule; got == crmcontracts.PersonMomentRuleMissingNextStep {
 		t.Error("the schedule was withheld, so 'nothing is scheduled' is not something this page knows")
 	}
 }
@@ -377,12 +389,12 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 // And the quiet fall-through says so too, rather than reporting a withheld
 // timeline as a clean bill of health.
 func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
-	full := deriveMoment(now, &crmcontracts.Person360{})
+	full := deriveMoment(readerCtx(), time.Now(), &crmcontracts.Person360{})
 	if full.Rule != crmcontracts.PersonMomentRuleNothingNeeded {
 		t.Fatalf("an empty readable page is the quiet state, got %q", full.Rule)
 	}
 
-	partial := deriveMoment(now, &crmcontracts.Person360{
+	partial := deriveMoment(readerCtx(), time.Now(), &crmcontracts.Person360{
 		SectionsOmitted: []crmcontracts.Person360SectionsOmitted{
 			crmcontracts.Person360SectionsOmittedActivities,
 		},
@@ -400,13 +412,13 @@ func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
 // save without it. So the action a reader cannot complete is handed to them
 // blocked, with the reason, rather than as a live button that fails on save.
 func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
-	quiet := nothingNeededMoment(time.Now(), &crmcontracts.Person360{})
+	quiet := nothingNeededMoment(readerCtx(), time.Now(), &crmcontracts.Person360{})
 	if quiet.RecommendedAction.Kind != crmcontracts.PersonMomentActionKindLogActivity {
 		t.Fatalf("the quiet moment's action is %q, want log_activity — this test needs that rung", quiet.RecommendedAction.Kind)
 	}
 
 	reader := quiet
-	withholdLogActivity(as(map[string]principal.ObjectGrant{"person": {Read: true}}), &reader)
+	withholdLogActivity((as(map[string]principal.ObjectGrant{"person": {Read: true}})), &reader)
 	if reader.RecommendedAction.State != crmcontracts.PersonMomentActionStateBlocked {
 		t.Errorf("state = %q for a caller without activity.create, want blocked", reader.RecommendedAction.State)
 	}
@@ -418,7 +430,7 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 	}
 
 	writer := quiet
-	withholdLogActivity(as(map[string]principal.ObjectGrant{"person": {Read: true}, "activity": {Create: true}}), &writer)
+	withholdLogActivity((as(map[string]principal.ObjectGrant{"person": {Read: true}, "activity": {Create: true}})), &writer)
 	if writer.RecommendedAction.State != crmcontracts.PersonMomentActionStateAvailable || writer.RecommendedAction.Destination == nil {
 		t.Errorf("a caller holding activity.create got %q with destination %v, want the action untouched", writer.RecommendedAction.State, writer.RecommendedAction.Destination)
 	}
@@ -427,24 +439,32 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 // An open task with no date is still a promise. The transcript reader files
 // "I'll send you the whitepaper" without one, and the card used to fall past
 // every rung to "nothing is owed" while that task sat directly beneath it.
+//
+// The page arrives ordered by the next-steps read (byUrgency): soonest
+// deadline first, then oldest. The card speaks for the first row, so these
+// pages are built in that order rather than the timeline's.
 func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
-	now := time.Now()
+	// The package's fixed noon, not time.Now(): the "due later today" case
+	// below asks a CALENDAR-day question, so a real clock decides it by what
+	// hour the suite happens to run. Two hours past 22:00 is tomorrow, and the
+	// sentence flips to "Due in 1 days."
+	filed := now.Add(-48 * time.Hour)
 	page := &crmcontracts.Person360{
 		NextSteps: &struct {
 			Data []crmcontracts.Activity `json:"data"`
 			Page crmcontracts.PageInfo   `json:"page"`
 		}{Data: []crmcontracts.Activity{
+			{Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: ptr("Send the MCP whitepaper"), OccurredAt: filed},
 			{Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: ptr("Book the workshop room"), OccurredAt: now.Add(-2 * time.Hour)},
-			{Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: ptr("Send the MCP whitepaper"), OccurredAt: now.Add(-48 * time.Hour)},
 		}},
 	}
 
-	moment := deriveMoment(now, page)
+	moment := deriveMoment(readerCtx(), now, page)
 	if moment.Rule != crmcontracts.PersonMomentRuleOpenPromise {
 		t.Fatalf("rule = %q, want open_promise — an open task is owed, dated or not", moment.Rule)
 	}
 	if moment.Headline != "You owe them: Send the MCP whitepaper" {
-		t.Errorf("headline = %q, want the OLDEST undated task named", moment.Headline)
+		t.Errorf("headline = %q, want the section's first task named", moment.Headline)
 	}
 	if !strings.Contains(moment.WhyNow, "no date set") {
 		t.Errorf("why_now = %q, want it to say the promise carries no date", moment.WhyNow)
@@ -452,46 +472,247 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 	if got := (*moment.RecommendedAction.Destination.Prefill)["subject"]; got != "Send the MCP whitepaper" {
 		t.Errorf("composer subject = %q, want the promise itself", got)
 	}
-	if moment.FreshnessAt == nil || !moment.FreshnessAt.Equal(now.Add(-48*time.Hour)) {
+	if moment.FreshnessAt == nil || !moment.FreshnessAt.Equal(filed) {
 		t.Errorf("freshness = %v, want the day the promise was filed", moment.FreshnessAt)
 	}
 
 	// A task somebody specific holds is owed by that desk, not by whoever is
 	// reading the card.
-	assigned := page.NextSteps.Data[1]
-	assigned.AssigneeId = ptr(openapi_types.UUID(ids.NewV7()))
-	page.NextSteps.Data[1] = assigned
-	if got := deriveMoment(now, page).Headline; got != "Owed to them: Send the MCP whitepaper" {
+	page.NextSteps.Data[0].AssigneeId = ptr(openapi_types.UUID(ids.NewV7()))
+	if got := deriveMoment(readerCtx(), now, page).Headline; got != "Owed to them: Send the MCP whitepaper" {
 		t.Errorf("headline for an assigned task = %q, want it attributed to its holder", got)
 	}
-	page.NextSteps.Data[1].AssigneeId = nil
+	page.NextSteps.Data[0].AssigneeId = nil
 
-	// A dated task outranks an undated one, however old the undated one is.
-	dated := page.NextSteps.Data[0]
-	dated.DueAt = ptr(now.Add(72 * time.Hour))
-	page.NextSteps.Data[0] = dated
-	if got := deriveMoment(now, page).Headline; got != "You owe them: Book the workshop room" {
-		t.Errorf("with a dated task present, headline = %q, want the dated one", got)
-	}
-	// A task logged from the record page is due at the end of today, and the
-	// card says so in words rather than counting zero days.
+	// A task due later today reads as due today rather than counting zero days.
 	page.NextSteps.Data[0].DueAt = ptr(now.Add(2 * time.Hour))
-	if got := deriveMoment(now, page).WhyNow; got != "Due today." {
+	if got := deriveMoment(readerCtx(), now, page).WhyNow; got != "Due today." {
 		t.Errorf("why_now for a task due later today = %q, want \"Due today.\"", got)
-	}
-
-	// Two tasks due the same day: the one filed first has waited longest and
-	// keeps the card. The section lists newest first, so without this the
-	// card followed whichever task was logged last.
-	page.NextSteps.Data[1].DueAt = ptr(now.Add(2 * time.Hour))
-	if got := deriveMoment(now, page).Headline; got != "You owe them: Send the MCP whitepaper" {
-		t.Errorf("with two tasks due today, headline = %q, want the older one", got)
 	}
 
 	// Done tasks never reach the section, so a page whose section is empty is
 	// the quiet state — and only then may the card say nothing is owed.
 	page.NextSteps.Data = nil
-	if got := deriveMoment(now, page).Rule; got != crmcontracts.PersonMomentRuleNothingNeeded {
+	if got := deriveMoment(readerCtx(), now, page).Rule; got != crmcontracts.PersonMomentRuleNothingNeeded {
 		t.Errorf("with no open task, rule = %q, want nothing_needed", got)
+	}
+}
+
+// A promise past its date outranks a silence, and it must do so whichever
+// place the promise was written down. Ranking the task rung below gone_quiet
+// made the same lateness win from an email and lose from the task list, which
+// is a rule about where a fact was recorded rather than about what the reader
+// should do next.
+func TestAnOverdueTaskOutranksASilence(t *testing.T) {
+	quiet := func() *crmcontracts.Person360 {
+		return &crmcontracts.Person360{
+			LastOutboundAt: ptr(now.Add(-9 * 24 * time.Hour)),
+			LastInboundAt:  ptr(now.Add(-16 * 24 * time.Hour)),
+		}
+	}
+	task := func(due time.Time) []crmcontracts.Activity {
+		return []crmcontracts.Activity{{
+			Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+			Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour), DueAt: ptr(due),
+		}}
+	}
+
+	// The silence alone is the moment, so the two cases below are a change of
+	// rung rather than a page that only ever had one answer.
+	if got := deriveMoment(readerCtx(), now, quiet()).Rule; got != crmcontracts.PersonMomentRuleGoneQuiet {
+		t.Fatalf("with no task, rule = %q, want gone_quiet — this test needs the silence to fire", got)
+	}
+
+	late := quiet()
+	late.NextSteps = &struct {
+		Data []crmcontracts.Activity `json:"data"`
+		Page crmcontracts.PageInfo   `json:"page"`
+	}{Data: task(now.Add(-30 * time.Hour))}
+	moment := deriveMoment(readerCtx(), now, late)
+	if moment.Rule != crmcontracts.PersonMomentRuleOverduePromise {
+		t.Errorf("rule = %q, want overdue_promise — a promise we are late on outranks their silence, "+
+			"and one rung covers both places a promise is written down", moment.Rule)
+	}
+	if moment.Headline != "You owe them: Send the signed contract" {
+		t.Errorf("headline = %q, want the overdue promise named", moment.Headline)
+	}
+	if !strings.Contains(moment.WhyNow, "still open") {
+		t.Errorf("why_now = %q, want it to say the date has passed", moment.WhyNow)
+	}
+
+	// Not yet due, so the silence keeps the card and the promise waits below it.
+	ahead := quiet()
+	ahead.NextSteps = &struct {
+		Data []crmcontracts.Activity `json:"data"`
+		Page crmcontracts.PageInfo   `json:"page"`
+	}{Data: task(now.Add(48 * time.Hour))}
+	if got := deriveMoment(readerCtx(), now, ahead).Rule; got != crmcontracts.PersonMomentRuleGoneQuiet {
+		t.Errorf("rule = %q for a promise still ahead of its date, want gone_quiet", got)
+	}
+}
+
+// readerCtx is a human reading their own workspace: the seat every ladder
+// case below is judged from, since who the reader is decides whether an
+// assigned promise is theirs to deliver.
+func readerCtx() context.Context {
+	return as(map[string]principal.ObjectGrant{"person": {Read: true}, "activity": {Create: true}})
+}
+
+// A dismissal is keyed on the moment's fingerprint, so the fingerprint has to
+// change when the card does. Handing a colleague's task to the reader turns
+// "owed to them" into "you owe them"; sharing one fingerprint would let the
+// earlier dismissal suppress the new card, hiding the promise at the moment
+// it became the reader's to deliver.
+func TestReassigningAPromiseRearmsItsDismissal(t *testing.T) {
+	now := time.Now()
+	task := crmcontracts.Activity{
+		Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+		Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-24 * time.Hour),
+	}
+	page := &crmcontracts.Person360{
+		NextSteps: &struct {
+			Data []crmcontracts.Activity `json:"data"`
+			Page crmcontracts.PageInfo   `json:"page"`
+		}{Data: []crmcontracts.Activity{task}},
+	}
+
+	ours := deriveMoment(readerCtx(), now, page)
+
+	page.NextSteps.Data[0].AssigneeId = ptr(openapi_types.UUID(ids.NewV7()))
+	theirs := deriveMoment(readerCtx(), now, page)
+
+	if theirs.Headline == ours.Headline {
+		t.Fatalf("both readings say %q; this test needs the card to change", ours.Headline)
+	}
+	if theirs.EvidenceFingerprint == ours.EvidenceFingerprint {
+		t.Error("the fingerprint is unchanged across a reassignment, so a dismissal of one card " +
+			"silences the other — the promise disappears exactly when it changes hands")
+	}
+}
+
+// One rung, two sources, and when both are late it shows the promise closest
+// to its deadline. The reader is likeliest to be able to still act on that
+// one, and which source recorded it says nothing about that.
+func TestTheLatestOverduePromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
+	now := time.Now()
+	claimDue := now.Add(-10 * 24 * time.Hour)
+	overdueClaim := []crmcontracts.ConversationClaim{{
+		Kind:             crmcontracts.CommitmentOurs,
+		Status:           crmcontracts.ConversationClaimStatusOpen,
+		Body:             "Send the revised quote",
+		SourceQuote:      "Ich schicke dir das Angebot bis Freitag.",
+		SourceActivityId: openapi_types.UUID(ids.NewV7()),
+		DueAt:            &claimDue,
+	}}
+	pageWith := func(taskDue time.Time) *crmcontracts.Person360 {
+		return &crmcontracts.Person360{
+			Claims: &overdueClaim,
+			NextSteps: &struct {
+				Data []crmcontracts.Activity `json:"data"`
+				Page crmcontracts.PageInfo   `json:"page"`
+			}{Data: []crmcontracts.Activity{{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+				Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour),
+				DueAt: &taskDue,
+			}}},
+		}
+	}
+
+	// The task is the more recent deadline, so it leads.
+	recent := deriveMoment(readerCtx(), now, pageWith(now.Add(-2*24*time.Hour)))
+	if recent.Rule != crmcontracts.PersonMomentRuleOverduePromise {
+		t.Fatalf("rule = %q, want overdue_promise", recent.Rule)
+	}
+	if recent.Headline != "You owe them: Send the signed contract" {
+		t.Errorf("headline = %q, want the task, whose deadline passed most recently", recent.Headline)
+	}
+
+	// The claim is, so it leads — and it brings the quote a task cannot.
+	older := deriveMoment(readerCtx(), now, pageWith(now.Add(-30*24*time.Hour)))
+	if older.Headline != "You owe them: Send the revised quote" {
+		t.Errorf("headline = %q, want the claim, whose deadline passed most recently", older.Headline)
+	}
+	if older.Evidence[0].Snippet == nil {
+		t.Error("the claim's card carries no quote; the conversation it was read from is the " +
+			"one thing a claim has that a task does not")
+	}
+}
+
+// The rung shows the promise that slipped MOST RECENTLY, and it has to look at
+// all of them to know which that is. Picking the earliest overdue claim and
+// comparing only that one against the tasks named the oldest, least
+// recoverable promise while one that slipped yesterday went unmentioned.
+func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
+	now := time.Now()
+	claimDue := func(days int) *time.Time {
+		at := now.Add(-time.Duration(days) * 24 * time.Hour)
+		return &at
+	}
+	claims := []crmcontracts.ConversationClaim{
+		{
+			Kind: crmcontracts.CommitmentOurs, Status: crmcontracts.ConversationClaimStatusOpen,
+			Body: "Send the ancient quote", SourceQuote: "Bis Montag.",
+			SourceActivityId: openapi_types.UUID(ids.NewV7()), DueAt: claimDue(10),
+		},
+		{
+			Kind: crmcontracts.CommitmentOurs, Status: crmcontracts.ConversationClaimStatusOpen,
+			Body: "Send yesterday's quote", SourceQuote: "Bis gestern.",
+			SourceActivityId: openapi_types.UUID(ids.NewV7()), DueAt: claimDue(1),
+		},
+	}
+	taskDue := now.Add(-5 * 24 * time.Hour)
+	page := &crmcontracts.Person360{
+		Claims: &claims,
+		NextSteps: &struct {
+			Data []crmcontracts.Activity `json:"data"`
+			Page crmcontracts.PageInfo   `json:"page"`
+		}{Data: []crmcontracts.Activity{{
+			Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+			Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour),
+			DueAt: &taskDue,
+		}}},
+	}
+
+	// Yesterday's claim is the most recent slip, ahead of the 5-day task and
+	// the 10-day claim.
+	if got := deriveMoment(readerCtx(), now, page).Headline; got != "You owe them: Send yesterday's quote" {
+		t.Errorf("headline = %q, want the promise that slipped most recently", got)
+	}
+
+	// Among several overdue TASKS the same rule holds.
+	recent := now.Add(-2 * time.Hour)
+	page.NextSteps.Data = append(page.NextSteps.Data, crmcontracts.Activity{
+		Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+		Subject: ptr("Send this morning's file"), OccurredAt: now.Add(-24 * time.Hour),
+		DueAt: &recent,
+	})
+	if got := deriveMoment(readerCtx(), now, page).Headline; got != "You owe them: Send this morning's file" {
+		t.Errorf("headline = %q, want the task that slipped most recently", got)
+	}
+}
+
+// A dismissal is stored against the claim key, so the key a task's late card
+// carries must not change when the rule around it is renamed — every task a
+// reader had put away would come back on deploy.
+func TestTheLateTaskCardKeepsItsDismissalKey(t *testing.T) {
+	now := time.Now()
+	due := now.Add(-24 * time.Hour)
+	page := &crmcontracts.Person360{
+		NextSteps: &struct {
+			Data []crmcontracts.Activity `json:"data"`
+			Page crmcontracts.PageInfo   `json:"page"`
+		}{Data: []crmcontracts.Activity{{
+			Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+			Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour), DueAt: &due,
+		}}},
+	}
+
+	moment := deriveMoment(readerCtx(), now, page)
+	if moment.ClaimKey != "moment:overdue_task" {
+		t.Errorf("claim key = %q, want moment:overdue_task — dismissals are looked up by exact "+
+			"key, so renaming it un-dismisses every task a reader already put away", moment.ClaimKey)
+	}
+	if moment.Rule != crmcontracts.PersonMomentRuleOverduePromise {
+		t.Errorf("rule = %q, want overdue_promise — one rung covers both sources", moment.Rule)
 	}
 }

@@ -5,17 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { ProviderCard } from "./integrations-provider";
+import { PersonMeetingBrief } from "./meetingbrief";
 import {
   PersonBriefCard,
   PersonCommercialCard,
   PersonCommitmentsCard,
   PersonMattersCard,
 } from "./personcards";
-import {
-  PersonComposer,
-  PersonMeetingBrief,
-  PersonResearchDrawer,
-} from "./persondrawers";
+import { PersonComposer, PersonResearchDrawer } from "./persondrawers";
 import { PersonMemory } from "./personmemory";
 import { PersonPageV2 } from "./personpage";
 import {

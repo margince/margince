@@ -44,22 +44,17 @@ seeds:
   ai_routing:
     profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
     tiers:
-      local_small: { provider: openai_compatible, model: openai/gpt-oss-120b, base_url: https://openrouter.ai/api }
-      cheap_cloud: { provider: openai_compatible, model: openai/gpt-oss-120b, base_url: https://openrouter.ai/api }
-      premium:     { provider: openai_compatible, model: anthropic/claude-haiku-4.5, base_url: https://openrouter.ai/api }
-      frontier:    { provider: openai_compatible, model: anthropic/claude-sonnet-4.5, base_url: https://openrouter.ai/api }
-    # The embed lane rides the SAME broker key as the tiers above, so a dev
-    # stack needs one credential rather than two. It used to bind gemini here,
-    # which meant a fresh clone could not embed anything without a second
-    # provider's key — for nothing else, since every chat tier had already moved
-    # to the broker.
+      local_small: { provider: gemini, model: gemini-3.1-flash-lite }
+      cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
+      premium:     { provider: gemini, model: gemini-3.5-flash }
+      frontier:    { provider: gemini, model: gemini-3.1-pro-preview }
+    # The embed lane rides the SAME provider as the tiers above, so a dev
+    # stack needs one credential (GEMINI_API_KEY) rather than two.
     #
-    # 1024 is mistral-embed-2312's native width, which is what this provider
-    # requires — on openai_compatible the number is a declaration of what the
-    # model emits rather than a request for a width. Why, once:
+    # 1536 is one of gemini-embedding-001's supported output widths; on the
+    # gemini provider the number is a request for that width. Why, once:
     # docs/how-to/connect-a-cloud-model-provider.md §3.
     embeddings:
-      provider: openai_compatible
-      model: mistralai/mistral-embed-2312
-      base_url: https://openrouter.ai/api
-      dimensions: 1024
+      provider: gemini
+      model: gemini-embedding-001
+      dimensions: 1536

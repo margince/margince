@@ -49,3 +49,25 @@ func TestDaysReadsBothMomentsInUTC(t *testing.T) {
 		t.Errorf("48 hours is 2 days however the second moment is zoned, got %d", got)
 	}
 }
+
+// A deadline counts differently from a pair of dates. These pin the boundary
+// where the two rules disagree, which is where the bug was: a promise due in
+// two hours, read across UTC midnight.
+func TestFullDaysUntilCountsRemainingTimeNotCalendarBoundaries(t *testing.T) {
+	// 23:00 UTC, due 01:00 the next day: one calendar boundary, no whole day.
+	now := time.Date(2026, 9, 1, 23, 0, 0, 0, time.UTC)
+	soon := now.Add(2 * time.Hour)
+	if got := elapsed.FullDaysUntil(now, soon); got != 0 {
+		t.Errorf("FullDaysUntil = %d for a deadline two hours away, want 0 — it reads as \"due today\"", got)
+	}
+	if got := elapsed.Days(now, soon); got != 1 {
+		t.Fatalf("Days = %d, want 1; without the calendar rule differing here these two would be one function", got)
+	}
+	if got := elapsed.FullDaysUntil(now, now.Add(50*time.Hour)); got != 2 {
+		t.Errorf("FullDaysUntil = %d for 50 hours out, want 2", got)
+	}
+	// A deadline already past is not "in -1 days"; DaysPast answers that.
+	if got := elapsed.FullDaysUntil(now, now.Add(-time.Hour)); got != 0 {
+		t.Errorf("FullDaysUntil = %d for a past deadline, want 0", got)
+	}
+}

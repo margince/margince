@@ -13,7 +13,6 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -52,6 +51,7 @@ const (
 	paramFilter   = "$filter"
 	paramSelect   = "$select"
 	paramTop      = "$top"
+	paramCount    = "$count"
 
 	// maxMIMELen bounds one message's fetched RFC822 bytes. A message over
 	// this is refused rather than truncated (a truncated MIME blob is not
@@ -120,7 +120,10 @@ type API interface {
 	Profile(ctx context.Context, accessToken string) (email string, err error)
 	// DeltaInit starts a fresh delta over ONE well-known folder, bounded to
 	// messages received on or after the given instant, walks it to completion,
-	// and returns the deltaLink the next Delta resumes from.
+	// and returns the deltaLink the next Delta resumes from. A walk that ends
+	// holding fewer messages than the folder reports for that window is
+	// refused rather than returned: the watermark only moves forward, so a
+	// short anchor would drop what it missed for good.
 	//
 	// Per folder rather than over the whole mailbox: /me/messages/delta would
 	// also yield Drafts, Deleted Items and Junk. A draft was never sent, so
@@ -140,6 +143,22 @@ type API interface {
 	// the three would make every test double re-decide the renew-then-create
 	// order the real one exists to hold.
 	EnsureSubscription(ctx context.Context, accessToken, notificationURL, clientState string, deadline time.Time) (Subscription, error)
+	// RenewSubscription extends the subscription named by id and answers its
+	// new deadline. ErrSubscriptionGone when Microsoft no longer knows it,
+	// which is the caller's cue to fall back to EnsureSubscription.
+	//
+	// A SECOND seam beside EnsureSubscription rather than a flag on it, because
+	// the two answer different questions: Ensure asks "is there a subscription
+	// for this mailbox", which without a handle costs a paged listing, and this
+	// asks "extend THIS one", which is one call. A renewal that knows the id
+	// should not have to pay for the question it already has the answer to.
+	RenewSubscription(ctx context.Context, accessToken, id string, deadline time.Time) (Subscription, error)
+	// GetSubscription reads one subscription by id, so a renewal holding a
+	// handle can confirm it still points where the round means to deliver
+	// before extending it — asked of Microsoft rather than remembered, for the
+	// reason RenewWatch gives. ErrSubscriptionGone when Microsoft no longer
+	// knows it, same as a renewal.
+	GetSubscription(ctx context.Context, accessToken, id string) (Subscription, error)
 	// GetMIME fetches one message as its RFC822 bytes (the /$value stream).
 	GetMIME(ctx context.Context, accessToken, msgID string) (rfc822 []byte, err error)
 	// EstimateAfter returns the provider-side count of messages received on
@@ -272,91 +291,6 @@ func (a *httpAPI) Profile(ctx context.Context, accessToken string) (string, erro
 	return out.UserPrincipalName, nil
 }
 
-// receivedAfterFilter renders Graph's only supported delta/list filter:
-// receivedDateTime ge <instant>. The window boundary is a product parameter
-// measured in months, so second-grain UTC rendering loses nothing.
-func receivedAfterFilter(after time.Time) string {
-	return "receivedDateTime ge " + after.UTC().Format(time.RFC3339)
-}
-
-// The two well-known folders a standing sync follows. Named constants because
-// they are Microsoft's own identifiers rather than folder names a person chose,
-// and because which folder a message came from is what attests whether the
-// owner sent it.
-const (
-	folderInbox = "inbox"
-	folderSent  = "sentitems"
-)
-
-// deltaPage is one page of a messages delta. A tombstoned entry
-// carries @removed instead of message fields — nothing to fetch for it.
-type deltaPage struct {
-	Value []struct {
-		ID      string           `json:"id"`
-		Removed *json.RawMessage `json:"@removed"`
-	} `json:"value"`
-	NextLink  string `json:"@odata.nextLink"`  //nolint:tagliatelle // Microsoft's wire format; must match to decode
-	DeltaLink string `json:"@odata.deltaLink"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
-}
-
-func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) ([]string, string, error) {
-	q := url.Values{paramFilter: {receivedAfterFilter(after)}}
-	// receivedDateTime bounds BOTH folders: Exchange stamps it on a sent
-	// message too, so one filter serves the pair rather than the sent side
-	// needing sentDateTime and a second spelling of "recently".
-	return a.deltaWalk(ctx, accessToken,
-		a.base+"/me/mailFolders/"+url.PathEscape(folder)+"/messages/delta?"+q.Encode())
-}
-
-func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]string, string, error) {
-	if err := a.sameAPIOrigin(deltaLink); err != nil {
-		return nil, "", err
-	}
-	return a.deltaWalk(ctx, accessToken, deltaLink)
-}
-
-// deltaWalk follows a delta round from startURL through every nextLink until
-// Graph hands back the deltaLink that closes it, collecting the ids of the
-// non-tombstoned messages along the way. A 410 anywhere in the walk means the
-// server no longer honors this delta state (ErrDeltaGone).
-func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string) ([]string, string, error) {
-	var ids []string
-	next := startURL
-	for {
-		var page deltaPage
-		status, err := a.get(ctx, accessToken, next, nil, &page)
-		if err != nil {
-			if status == http.StatusGone {
-				return nil, "", ErrDeltaGone
-			}
-			return nil, "", err
-		}
-		for _, m := range page.Value {
-			if m.ID != "" && m.Removed == nil {
-				ids = append(ids, m.ID)
-			}
-		}
-		if page.NextLink == "" {
-			if page.DeltaLink == "" {
-				// A closed round with neither a next nor a delta link has lost
-				// the resumable cursor — treat the malformed response as
-				// unreachable rather than reporting success with no watermark.
-				return nil, "", ErrUnreachable
-			}
-			return ids, page.DeltaLink, nil
-		}
-		if err := a.sameAPIOrigin(page.NextLink); err != nil {
-			return nil, "", err
-		}
-		next = page.NextLink
-	}
-}
-
-// sameAPIOrigin refuses any continuation URL that does not live under the
-// configured Graph base. nextLink/deltaLink are server-supplied URLs the
-// client follows bearing the access token — and the deltaLink round-trips
-// through the stored sync cursor — so an off-origin link (tampered cursor,
-// broken provider) must never be fetched.
 func (a *httpAPI) sameAPIOrigin(link string) error {
 	if !strings.HasPrefix(link, a.base+"/") && link != a.base {
 		return fmt.Errorf("graph: continuation link does not point at the graph api")
@@ -409,7 +343,7 @@ func (a *httpAPI) EstimateAfter(ctx context.Context, accessToken string, after t
 	}
 	q := url.Values{
 		paramFilter: {receivedAfterFilter(after)},
-		"$count":    {"true"},
+		paramCount:  {"true"},
 		paramSelect: {"id"},
 		paramTop:    {"1"},
 	}

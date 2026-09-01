@@ -863,11 +863,23 @@
   gap: var(--space-2);
 }
 
-/* The buy row: one button per priced detail, wrapping rather than truncating
+/* The buy row: one offer per priced detail, wrapping rather than truncating
    so a price is never cut off. */
 .pe-buy-row {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-3);
+}
+
+/* One offer: the button, and under it the note saying what the press buys a
+   second time. Stacked so the note reads as belonging to that button rather
+   than to the row — with two offers side by side, a note in the row's own flow
+   would sit under whichever one wrapped last. */
+.pe-buy-offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+  max-width: 22rem;
 }

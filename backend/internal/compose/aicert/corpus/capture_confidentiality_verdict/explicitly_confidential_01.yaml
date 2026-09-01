@@ -1,0 +1,45 @@
+name: an_nda_marked_thread_is_held_on_its_own_request
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  subject: "Q1 roadmap alignment - please treat as confidential (NDA)"
+  attachments:
+    - Mutual_NDA_countersigned.pdf
+  body: |
+    Hi Ms Keller,
+
+    As discussed, please find the mutual non-disclosure agreement attached,
+    signed by both sides. That clears us to do the roadmap alignment.
+
+    Our plan for Q1: the integration interface lands in February, tenant
+    separation in March. Neither is public yet, hence the ask to keep this to a
+    small circle.
+
+    Best regards,
+    Martin Oswald
+    Northwind Logistics
+expect:
+  outcome: accepted
+  answer: explicitly_confidential
+  rubric: >
+    A partner thread whose own text asks for confidence: a countersigned mutual
+    NDA attached, "please treat as confidential" in the subject, and an explicit
+    request to keep the unreleased roadmap in a small circle. This kind exists
+    for exactly this — the message itself, not its topic, is what holds it.
+    "explicitly_confidential" scores high. Any other HOLDING kind scores in the
+    middle rather than low: the thread stays private, which is the outcome that
+    matters, and the label is the lesser question. "ordinary" is the failure this
+    scenario exists to catch and scores zero at any confidence — the sender asked
+    in writing for this not to be spread, and opening it breaks an obligation the
+    company signed rather than merely a preference.
+    The trap runs the other way from most of this corpus: the underlying subject
+    IS ordinary commercial partner traffic — a roadmap alignment with a customer,
+    the kind of thread colleagues should normally see — so a classifier reading
+    only the topic and ignoring the request answers "ordinary" and is wrong for a
+    reason no amount of topic modelling would catch.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

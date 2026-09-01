@@ -103,7 +103,11 @@ func linkScope(ctx context.Context, alias string, arg func(any) int) (string, er
 }
 
 // nextStepsSection reads the account's open tasks in the order a rep works
-// them: overdue first, then dated, then undated. A task reaches the
+// them: overdue first, then dated, then undated, and among tasks sharing a
+// date the one that has waited longest. That last tie-break is what makes
+// this list agree with the contact page's (person360's byUrgency): the same
+// two promises must not swap places depending on which record you opened
+// them from, and without it each list fell back to its own id order. A task reaches the
 // account through any of its links — the task itself, its deal, or the
 // contact it is about — which is why the reachability test is an EXISTS
 // over all three arms rather than one join.
@@ -135,7 +139,7 @@ func nextStepsSection(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 		return nil, crmcontracts.PageInfo{}, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id,
+		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id, a.occurred_at,
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
 		         ORDER BY dl.id LIMIT 1),
@@ -145,7 +149,7 @@ func nextStepsSection(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 		FROM activity a
 		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s%[6]s
-		ORDER BY (a.due_at IS NULL), a.due_at, a.id
+		ORDER BY (a.due_at IS NULL), a.due_at, a.occurred_at, a.id
 		LIMIT %[5]d`,
 		activityScope, activities.OrgLinkedActivityExists(orgPos), linkVisible, personVisible, sectionLimit+1,
 		opts.projectScope(arg)), args...)
@@ -156,7 +160,11 @@ func nextStepsSection(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, 
 		var step crmcontracts.Organization360NextStep
 		var id ids.UUID
 		var assignee, dealID, personID *ids.UUID
-		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &dealID, &personID); err != nil {
+		// Read only to order by: the account's task list does not show when a
+		// task was filed, but two tasks due the same day have to rank the same
+		// here as on the contact page, and there the older one leads.
+		var occurredAt time.Time
+		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &occurredAt, &dealID, &personID); err != nil {
 			return step, err
 		}
 		step.ActivityId = openapi_types.UUID(id)

@@ -41,3 +41,22 @@ func Days(from, to time.Time) int {
 	toDay := to.UTC().Truncate(hoursPerDay * time.Hour)
 	return int(toDay.Sub(fromDay).Hours() / hoursPerDay)
 }
+
+// FullDaysUntil counts whole days of REMAINING TIME from now to a future
+// moment, rounding down. Zero once less than a day is left, whatever the
+// calendar says.
+//
+// The counterpart to Days, and deliberately not the same rule. Days counts
+// calendar boundaries, which is what a reader comparing two DATES does. A
+// deadline is not a date on a wall: a promise due in two hours is due today
+// even when those two hours cross midnight, and counting boundaries called it
+// "due in 1 days" — most evenings in a UTC+7 office. Negative durations
+// return zero, because "due in -1 days" is not a sentence; a caller past the
+// deadline asks deadline.DaysPast instead.
+func FullDaysUntil(now, future time.Time) int {
+	remaining := future.Sub(now)
+	if remaining <= 0 {
+		return 0
+	}
+	return int(remaining.Hours() / hoursPerDay)
+}

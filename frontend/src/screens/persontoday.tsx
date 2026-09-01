@@ -90,10 +90,18 @@ const MOMENT_EVIDENCE_LABEL = {
 // something nobody has judged. Everything else is a live thread — a fact about
 // the relationship that wants a move rather than a verdict on it.
 function standingTone(rule: PersonMoment["rule"]): StandingTone {
-  if (rule === "gone_quiet" || rule === "overdue_promise") {
+  if (isLate(rule)) {
     return "warn";
   }
   return rule === "nothing_needed" ? "calm" : "accent";
+}
+
+// The two rules that mean somebody is being kept waiting. A promise past its
+// date is late whether it was read out of an email or filed as a task — one
+// rung covers both — while a promise not yet due is a live thread, not a
+// warning.
+function isLate(rule: PersonMoment["rule"]): boolean {
+  return rule === "gone_quiet" || rule === "overdue_promise";
 }
 
 export function PersonToday({

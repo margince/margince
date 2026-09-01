@@ -7,9 +7,10 @@ package compose
 //
 // Split from capture.go because it is a second, independent provider app: one
 // Microsoft app per deployment, its own tenant narrowing, its own scopes. It
-// shares the transport in connectors.go and nothing else — and unlike the Google
-// app it is still composed entirely from the deployment's environment, so it has
-// no runtime-resolution half to keep in step.
+// shares the transport in connectors.go and nothing else. Like the Google app it
+// composes from EITHER source — the environment the deployment supplied or the
+// Entra registration an operator stored through Settings — and both process
+// roles resolve it, which is the half that has to stay in step.
 
 import (
 	"github.com/jackc/pgx/v5/pgxpool"

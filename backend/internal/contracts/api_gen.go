@@ -1393,6 +1393,7 @@ const (
 	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
 	AttentionItemSourceFailedApproval      AttentionItemSource = "failed_approval"
 	AttentionItemSourceIntroductionRequest AttentionItemSource = "introduction_request"
+	AttentionItemSourceLeadResponse        AttentionItemSource = "lead_response"
 	AttentionItemSourceMeeting             AttentionItemSource = "meeting"
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
@@ -1429,6 +1430,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceFailedApproval:
 		return true
 	case AttentionItemSourceIntroductionRequest:
+		return true
+	case AttentionItemSourceLeadResponse:
 		return true
 	case AttentionItemSourceMeeting:
 		return true
@@ -11680,6 +11683,7 @@ const (
 	WorklistFilterCustomerWaiting WorklistFilter = "customer_waiting"
 	WorklistFilterDealsAtRisk     WorklistFilter = "deals_at_risk"
 	WorklistFilterDecisions       WorklistFilter = "decisions"
+	WorklistFilterLeads           WorklistFilter = "leads"
 	WorklistFilterMeetings        WorklistFilter = "meetings"
 	WorklistFilterSystem          WorklistFilter = "system"
 	WorklistFilterTasks           WorklistFilter = "tasks"
@@ -11695,6 +11699,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterDealsAtRisk:
 		return true
 	case WorklistFilterDecisions:
+		return true
+	case WorklistFilterLeads:
 		return true
 	case WorklistFilterMeetings:
 		return true
@@ -11850,6 +11856,7 @@ const (
 	WorklistCountCategoryCustomerWaiting WorklistCountCategory = "customer_waiting"
 	WorklistCountCategoryDealsAtRisk     WorklistCountCategory = "deals_at_risk"
 	WorklistCountCategoryDecisions       WorklistCountCategory = "decisions"
+	WorklistCountCategoryLeads           WorklistCountCategory = "leads"
 	WorklistCountCategoryMeetings        WorklistCountCategory = "meetings"
 	WorklistCountCategorySystem          WorklistCountCategory = "system"
 	WorklistCountCategoryTasks           WorklistCountCategory = "tasks"
@@ -11863,6 +11870,8 @@ func (e WorklistCountCategory) Valid() bool {
 	case WorklistCountCategoryDealsAtRisk:
 		return true
 	case WorklistCountCategoryDecisions:
+		return true
+	case WorklistCountCategoryLeads:
 		return true
 	case WorklistCountCategoryMeetings:
 		return true
@@ -11943,6 +11952,7 @@ const (
 	WorklistItemCategoryCustomerWaiting WorklistItemCategory = "customer_waiting"
 	WorklistItemCategoryDealsAtRisk     WorklistItemCategory = "deals_at_risk"
 	WorklistItemCategoryDecisions       WorklistItemCategory = "decisions"
+	WorklistItemCategoryLeads           WorklistItemCategory = "leads"
 	WorklistItemCategoryMeetings        WorklistItemCategory = "meetings"
 	WorklistItemCategorySystem          WorklistItemCategory = "system"
 	WorklistItemCategoryTasks           WorklistItemCategory = "tasks"
@@ -11957,6 +11967,8 @@ func (e WorklistItemCategory) Valid() bool {
 		return true
 	case WorklistItemCategoryDecisions:
 		return true
+	case WorklistItemCategoryLeads:
+		return true
 	case WorklistItemCategoryMeetings:
 		return true
 	case WorklistItemCategorySystem:
@@ -11970,49 +11982,49 @@ func (e WorklistItemCategory) Valid() bool {
 
 // Defines values for WorklistItemConsequence.
 const (
-	WorklistItemConsequenceBuyerWaits            WorklistItemConsequence = "buyer_waits"
-	WorklistItemConsequenceCustomerNeverReceived WorklistItemConsequence = "customer_never_received"
-	WorklistItemConsequenceDataDrifts            WorklistItemConsequence = "data_drifts"
-	WorklistItemConsequenceDealDrifts            WorklistItemConsequence = "deal_drifts"
-	WorklistItemConsequenceDealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
-	WorklistItemConsequenceLegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
-	WorklistItemConsequenceMailboxBlind          WorklistItemConsequence = "mailbox_blind"
-	WorklistItemConsequenceMeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
-	WorklistItemConsequenceNone                  WorklistItemConsequence = "none"
-	WorklistItemConsequencePromiseBreaks         WorklistItemConsequence = "promise_breaks"
-	WorklistItemConsequenceTaskSlips             WorklistItemConsequence = "task_slips"
-	WorklistItemConsequenceWorkBlocked           WorklistItemConsequence = "work_blocked"
-	WorklistItemConsequenceYouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
+	BuyerWaits            WorklistItemConsequence = "buyer_waits"
+	CustomerNeverReceived WorklistItemConsequence = "customer_never_received"
+	DataDrifts            WorklistItemConsequence = "data_drifts"
+	DealDrifts            WorklistItemConsequence = "deal_drifts"
+	DealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
+	LegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
+	MailboxBlind          WorklistItemConsequence = "mailbox_blind"
+	MeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
+	None                  WorklistItemConsequence = "none"
+	PromiseBreaks         WorklistItemConsequence = "promise_breaks"
+	TaskSlips             WorklistItemConsequence = "task_slips"
+	WorkBlocked           WorklistItemConsequence = "work_blocked"
+	YouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemConsequence enum.
 func (e WorklistItemConsequence) Valid() bool {
 	switch e {
-	case WorklistItemConsequenceBuyerWaits:
+	case BuyerWaits:
 		return true
-	case WorklistItemConsequenceCustomerNeverReceived:
+	case CustomerNeverReceived:
 		return true
-	case WorklistItemConsequenceDataDrifts:
+	case DataDrifts:
 		return true
-	case WorklistItemConsequenceDealDrifts:
+	case DealDrifts:
 		return true
-	case WorklistItemConsequenceDealSlipsPastClose:
+	case DealSlipsPastClose:
 		return true
-	case WorklistItemConsequenceLegalDeadlineMissed:
+	case LegalDeadlineMissed:
 		return true
-	case WorklistItemConsequenceMailboxBlind:
+	case MailboxBlind:
 		return true
-	case WorklistItemConsequenceMeetingUnprepared:
+	case MeetingUnprepared:
 		return true
-	case WorklistItemConsequenceNone:
+	case None:
 		return true
-	case WorklistItemConsequencePromiseBreaks:
+	case PromiseBreaks:
 		return true
-	case WorklistItemConsequenceTaskSlips:
+	case TaskSlips:
 		return true
-	case WorklistItemConsequenceWorkBlocked:
+	case WorkBlocked:
 		return true
-	case WorklistItemConsequenceYouBelieveItHappened:
+	case YouBelieveItHappened:
 		return true
 	default:
 		return false
@@ -12095,6 +12107,7 @@ const (
 	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
 	WorklistItemSourceFailedApproval      WorklistItemSource = "failed_approval"
 	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
+	WorklistItemSourceLeadResponse        WorklistItemSource = "lead_response"
 	WorklistItemSourceMeeting             WorklistItemSource = "meeting"
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
@@ -12133,6 +12146,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceFailedApproval:
 		return true
 	case WorklistItemSourceIntroductionRequest:
+		return true
+	case WorklistItemSourceLeadResponse:
 		return true
 	case WorklistItemSourceMeeting:
 		return true
@@ -12182,6 +12197,7 @@ const (
 	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
 	WorklistReachSourceFailedApproval      WorklistReachSource = "failed_approval"
 	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
+	WorklistReachSourceLeadResponse        WorklistReachSource = "lead_response"
 	WorklistReachSourceMeeting             WorklistReachSource = "meeting"
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
@@ -12220,6 +12236,8 @@ func (e WorklistReachSource) Valid() bool {
 		return true
 	case WorklistReachSourceIntroductionRequest:
 		return true
+	case WorklistReachSourceLeadResponse:
+		return true
 	case WorklistReachSourceMeeting:
 		return true
 	case WorklistReachSourceNotice:
@@ -12247,14 +12265,18 @@ const (
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
+	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
 	WorklistReasonKindQuietDays          WorklistReasonKind = "quiet_days"
 	WorklistReasonKindRepeatedFailure    WorklistReasonKind = "repeated_failure"
+	WorklistReasonKindResponseDueSoon    WorklistReasonKind = "response_due_soon"
+	WorklistReasonKindResponseOverdue    WorklistReasonKind = "response_overdue"
 	WorklistReasonKindRoutine            WorklistReasonKind = "routine"
 	WorklistReasonKindStale              WorklistReasonKind = "stale"
+	WorklistReasonKindUnassigned         WorklistReasonKind = "unassigned"
 	WorklistReasonKindWaitingDays        WorklistReasonKind = "waiting_days"
 )
 
@@ -12281,6 +12303,8 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindMeetingSoon:
 		return true
+	case WorklistReasonKindMeetingUnprepared:
+		return true
 	case WorklistReasonKindNoChampion:
 		return true
 	case WorklistReasonKindOverdue:
@@ -12293,9 +12317,15 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindRepeatedFailure:
 		return true
+	case WorklistReasonKindResponseDueSoon:
+		return true
+	case WorklistReasonKindResponseOverdue:
+		return true
 	case WorklistReasonKindRoutine:
 		return true
 	case WorklistReasonKindStale:
+		return true
+	case WorklistReasonKindUnassigned:
 		return true
 	case WorklistReasonKindWaitingDays:
 		return true
@@ -13939,6 +13969,7 @@ const (
 	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
 	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
 	Decisions       GetWorklistParamsFilter = "decisions"
+	Leads           GetWorklistParamsFilter = "leads"
 	Meetings        GetWorklistParamsFilter = "meetings"
 	System          GetWorklistParamsFilter = "system"
 	Tasks           GetWorklistParamsFilter = "tasks"
@@ -13954,6 +13985,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case DealsAtRisk:
 		return true
 	case Decisions:
+		return true
+	case Leads:
 		return true
 	case Meetings:
 		return true
@@ -16297,13 +16330,14 @@ type CaptureConnection struct {
 	// Scopes The granted provider scopes.
 	Scopes []string `json:"scopes"`
 
-	// SignatureEnrichEnabled This mailbox's own answer to the nightly signature pass, or null to follow the
-	// tenant default (`CaptureSettings.signature_enrich`). Null is a third state and not
-	// a missing value: a mailbox that never chose moves with the default, and one that
-	// did keeps its answer whatever the default becomes.
+	// SignatureEnrichEnabled This mailbox's own answer to reading contact details out of its mail, or null to
+	// follow the tenant default (`CaptureSettings.signature_enrich`). Null is a third state
+	// and not a missing value: a mailbox that never chose moves with the default, and one
+	// that did keeps its answer whatever the default becomes.
 	//
-	// False means no mail from this mailbox is ever SELECTED for enrichment — the pass
-	// never reads it, rather than reading it and discarding the result.
+	// False means no mail from this mailbox is ever SELECTED — neither its signatures are
+	// read nor its attached vCards imported. The passes never reach it, rather than
+	// reading it and discarding the result.
 	SignatureEnrichEnabled *bool `json:"signature_enrich_enabled,omitempty"`
 
 	// Status Connection state; `reauth_required` when the stored token expired/was revoked upstream.
@@ -16520,13 +16554,15 @@ type CaptureSettings struct {
 	// mail already captured. It governs what a seat may newly ask for.
 	SharedPostureAllowed bool `json:"shared_posture_allowed"`
 
-	// SignatureEnrich The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
-	// number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
-	// a value the signature does not state is not written.
+	// SignatureEnrich The workspace DEFAULT for reading stated contact details — a title, a phone number, an
+	// address, a company — out of mail a contact sent us. It governs both readers: the
+	// signature of the message, and a vCard attached to it. Nothing is inferred: a value the
+	// mail does not state is not written. Reading happens within minutes of the mail arriving;
+	// a daily pass is the backstop.
 	//
 	// A mailbox can override it (`CaptureConnection.signature_enrich_enabled`), and one that
 	// never chose follows this. Distinct from the exclusion list, which keeps whole messages
-	// out of capture by address or domain and says nothing about reading a signature.
+	// out of capture by address or domain and says nothing about reading contact details.
 	// Default is ON.
 	//
 	// "Workspace" here is the storage tenant, not the word the product shows a reader —
@@ -28008,7 +28044,7 @@ type UpdateCaptureSettingsRequest struct {
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
 	SharedPostureAllowed *bool `json:"shared_posture_allowed,omitempty"`
 
-	// SignatureEnrich Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it.
+	// SignatureEnrich Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.
 	SignatureEnrich *bool `json:"signature_enrich,omitempty"`
 }
 
