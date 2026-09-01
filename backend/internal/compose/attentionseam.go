@@ -435,6 +435,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
 		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
+		// The base-currency conversion the ranked queue's money comparisons
+		// run in — the same engine every other money surface prices with.
+		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
 		// Whether a team-scoped reader may open a named person's queue. Bound
 		// unconditionally: unbound, that reader is refused, so a seam that
 		// dropped this would present as a Team Lead unable to open their own

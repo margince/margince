@@ -101,6 +101,16 @@ func (s *Service) Worklist(
 	if err := reader.nameTheMoney(ctx, &day); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	// The amounts the ordering is about to compare, put into one currency
+	// BEFORE anything reads them. A failed conversion fails the read: a page
+	// ranked on raw cross-currency numbers is the defect this seam exists to
+	// end, not a degraded mode to fall back into. Set on the reader — this
+	// request's own copy — never on the shared service.
+	money, err := reader.priceTheDay(ctx, day)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	reader.money = money
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
@@ -185,7 +195,7 @@ func (s *Service) worklistFrom(
 	if limit > worklistMaxPage {
 		limit = worklistMaxPage
 	}
-	rows := classifyDay(day, day.AsOf)
+	rows := classifyDay(day, day.AsOf, s.money)
 	// Longest wait first, so the few that LEAD are the ones most likely to have
 	// been forgotten rather than whichever the database returned first.
 	waits := make([]ranked, 0, len(waiting.rows))
@@ -307,7 +317,7 @@ func (s *Service) worklistFrom(
 		// pure function of the same day this call already holds, so the two
 		// cannot disagree, and threading it would change a signature twenty-odd
 		// callers spell.
-		Summary:            summarize(ordered, materialBarOf(day)),
+		Summary:            summarize(ordered, materialBarOf(day, s.money)),
 		SourcesUnavailable: unavailable(day),
 		// `considered` is every candidate this read weighed, `shown` what
 		// survived folding and the cut. Both are already in hand, so no figure
@@ -429,15 +439,19 @@ func summarize(items []crmcontracts.WorklistItem, bar materialBar) crmcontracts.
 	// was a verdict with its threshold withheld: a reader could see that a deal
 	// had been called big, and had no way to ask compared to what.
 	//
-	// base_currency stays absent, and that is not an oversight. The bar is the
-	// median of raw amount_minor values — expectedRevenue converts nothing, and
-	// says so — so on a mixed-currency pipeline the figure is not in any one
-	// currency. Naming one would assert a conversion that did not happen, which
-	// is worse than sending a number the client formats cautiously. It becomes
-	// answerable when the feed reads the FX seam.
+	// base_currency travels only when the bar's amounts genuinely went through
+	// one currency — the bound FX seam converts them all, and the bar carries
+	// the currency it is stated in. In an assembly without the seam the bar is
+	// a median of raw amount_minor values in no one currency, and naming one
+	// would assert a conversion that did not happen — worse than sending a
+	// number the client formats cautiously.
 	if bar.known {
 		minor := bar.minor
 		summary.MaterialThresholdMinor = &minor
+		if bar.currency != "" {
+			currency := bar.currency
+			summary.BaseCurrency = &currency
+		}
 	}
 	for _, item := range items {
 		switch {
