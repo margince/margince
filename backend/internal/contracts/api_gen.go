@@ -29253,6 +29253,25 @@ type WeeklyReview struct {
 	// It adds nothing: every fact it may state is already in the counts and the lines
 	// beside it, which is what makes the whole lane safe to lose.
 	Narrative *string `json:"narrative,omitempty"`
+
+	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
+	// applied when the review was written.
+	//
+	// ABSENT when the week held a deal that could not be converted — an open deal freezes no
+	// rate, so a currency with no usable rate makes the whole figure unanswerable. A total
+	// covering three of four deals would be a confident number that is quietly short, and
+	// nothing is ever converted at an invented rate of 1. Absent is also the answer when the
+	// installation names no base currency.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// Prior The same rep's previous review, so a reader can see what CHANGED rather than only what
+	// happened. Absent for their first week.
+	//
+	// The counts of a frozen earlier row, not a stored delta: two frozen rows and one
+	// subtraction cannot disagree, and a stored delta could. It is their most recent earlier
+	// review rather than "last week" — a rep with a gap has a previous week that is not seven
+	// days back.
+	Prior *WeeklyReviewPrior `json:"prior,omitempty"`
 }
 
 // WeeklyReviewCounts defines model for WeeklyReviewCounts.
@@ -29267,6 +29286,26 @@ type WeeklyReviewCounts struct {
 	// DealsMoved Deals that changed stage, excluding those that closed.
 	DealsMoved int `json:"deals_moved"`
 	DealsWon   int `json:"deals_won"`
+
+	// LeadsAnsweredInTarget Of those, the ones answered before the first-response target ran out. Read from the
+	// stamps the SLA writer maintained at the time, never recomputed from today's policy —
+	// a week is judged by the target that applied to it.
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+
+	// LeadsBreached And the ones whose target ran out.
+	LeadsBreached int `json:"leads_breached"`
+
+	// LeadsRouted Inbound leads routed to this rep during the week.
+	LeadsRouted int `json:"leads_routed"`
+
+	// MeetingsHeld Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+	// week can be judged by, and counting it would credit a conversation that never occurred.
+	MeetingsHeld int `json:"meetings_held"`
+
+	// MeetingsWithNextStep Of those, the ones that left a task behind against a record the meeting was also filed
+	// under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
+	// is the pattern this figure exists to make visible.
+	MeetingsWithNextStep int `json:"meetings_with_next_step"`
 
 	// ProposalsAccepted Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
 	// `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
@@ -29313,6 +29352,34 @@ type WeeklyReviewDealOutcome string
 type WeeklyReviewIndex struct {
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
+}
+
+// WeeklyReviewPipeline Money the week added to and took out of the pipeline, in one currency.
+type WeeklyReviewPipeline struct {
+	// CreatedMinor Value of the deals opened in the week, converted at the latest rate on or before the
+	// week's end and frozen here.
+	CreatedMinor int64 `json:"created_minor"`
+
+	// Currency The currency the three figures are in, stored beside them: the installation's base
+	// currency is an operator-mutable setting, and re-reading it later would re-label old
+	// reviews with a currency their numbers were never in.
+	Currency string `json:"currency"`
+
+	// LostMinor The same, for deals lost.
+	LostMinor int64 `json:"lost_minor"`
+
+	// WonMinor Value of the deals won in the week, at each deal's own close-time rate — the honest
+	// figure for money that has already moved.
+	WonMinor int64 `json:"won_minor"`
+}
+
+// WeeklyReviewPrior The week before this one, for comparison.
+type WeeklyReviewPrior struct {
+	Counts         WeeklyReviewCounts `json:"counts"`
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Pipeline Absent under the same rule as the current week's.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
 }
 
 // Worklist The rep's day, ranked. One list rather than fourteen lanes, because a reader

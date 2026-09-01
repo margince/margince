@@ -33617,12 +33617,76 @@ components:
             The deals the week is about, won and lost first. Capped for reading — the counts stay
             complete, so a busy week reads "12 moved" beside the most recent of them rather than
             a truncated number.
+        pipeline:
+          description: |
+            What the week did to the pipeline, in the installation's base currency at the rate that
+            applied when the review was written.
+
+            ABSENT when the week held a deal that could not be converted — an open deal freezes no
+            rate, so a currency with no usable rate makes the whole figure unanswerable. A total
+            covering three of four deals would be a confident number that is quietly short, and
+            nothing is ever converted at an invented rate of 1. Absent is also the answer when the
+            installation names no base currency.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPipeline' }]
+        prior:
+          description: |
+            The same rep's previous review, so a reader can see what CHANGED rather than only what
+            happened. Absent for their first week.
+
+            The counts of a frozen earlier row, not a stored delta: two frozen rows and one
+            subtraction cannot disagree, and a stored delta could. It is their most recent earlier
+            review rather than "last week" — a rep with a gap has a previous week that is not seven
+            days back.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPrior' }]
+
+    WeeklyReviewPipeline:
+      type: object
+      additionalProperties: false
+      description: Money the week added to and took out of the pipeline, in one currency.
+      required: [created_minor, won_minor, lost_minor, currency]
+      properties:
+        created_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            Value of the deals opened in the week, converted at the latest rate on or before the
+            week's end and frozen here.
+        won_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            Value of the deals won in the week, at each deal's own close-time rate — the honest
+            figure for money that has already moved.
+        lost_minor: { type: integer, format: int64, minimum: 0, description: 'The same, for deals lost.' }
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: |
+            The currency the three figures are in, stored beside them: the installation's base
+            currency is an operator-mutable setting, and re-reading it later would re-label old
+            reviews with a currency their numbers were never in.
+
+    WeeklyReviewPrior:
+      type: object
+      additionalProperties: false
+      description: The week before this one, for comparison.
+      required: [local_week_start, counts]
+      properties:
+        local_week_start: { type: string, format: date }
+        counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
+        pipeline:
+          description: Absent under the same rule as the current week's.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPipeline' }]
 
     WeeklyReviewCounts:
       type: object
       additionalProperties: false
       required: [tasks_due, tasks_done, tasks_carried_over, deals_moved, deals_won, deals_lost,
-                 proposals_accepted, proposals_rejected, brief_items_acted, brief_items_dismissed]
+                 proposals_accepted, proposals_rejected, brief_items_acted, brief_items_dismissed,
+                 leads_routed, leads_answered_in_target, leads_breached,
+                 meetings_held, meetings_with_next_step]
       properties:
         tasks_due: { type: integer, minimum: 0, description: 'Tasks assigned to this rep that fell due in the week.' }
         tasks_done: { type: integer, minimum: 0, description: 'And were finished inside it.' }
@@ -33640,6 +33704,28 @@ components:
         proposals_rejected: { type: integer, minimum: 0, description: 'The same, rejected.' }
         brief_items_acted: { type: integer, minimum: 0, description: 'Morning-brief items this rep acted on in the week.' }
         brief_items_dismissed: { type: integer, minimum: 0, description: 'And dismissed.' }
+        leads_routed: { type: integer, minimum: 0, description: 'Inbound leads routed to this rep during the week.' }
+        leads_answered_in_target:
+          type: integer
+          minimum: 0
+          description: |
+            Of those, the ones answered before the first-response target ran out. Read from the
+            stamps the SLA writer maintained at the time, never recomputed from today's policy —
+            a week is judged by the target that applied to it.
+        leads_breached: { type: integer, minimum: 0, description: 'And the ones whose target ran out.' }
+        meetings_held:
+          type: integer
+          minimum: 0
+          description: |
+            Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+            week can be judged by, and counting it would credit a conversation that never occurred.
+        meetings_with_next_step:
+          type: integer
+          minimum: 0
+          description: |
+            Of those, the ones that left a task behind against a record the meeting was also filed
+            under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
+            is the pattern this figure exists to make visible.
 
     WeeklyReviewDeal:
       type: object

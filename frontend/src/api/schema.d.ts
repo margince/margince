@@ -25159,6 +25159,61 @@ export interface components {
              *     a truncated number.
              */
             deals: components["schemas"]["WeeklyReviewDeal"][];
+            /**
+             * @description What the week did to the pipeline, in the installation's base currency at the rate that
+             *     applied when the review was written.
+             *
+             *     ABSENT when the week held a deal that could not be converted — an open deal freezes no
+             *     rate, so a currency with no usable rate makes the whole figure unanswerable. A total
+             *     covering three of four deals would be a confident number that is quietly short, and
+             *     nothing is ever converted at an invented rate of 1. Absent is also the answer when the
+             *     installation names no base currency.
+             */
+            pipeline?: components["schemas"]["WeeklyReviewPipeline"];
+            /**
+             * @description The same rep's previous review, so a reader can see what CHANGED rather than only what
+             *     happened. Absent for their first week.
+             *
+             *     The counts of a frozen earlier row, not a stored delta: two frozen rows and one
+             *     subtraction cannot disagree, and a stored delta could. It is their most recent earlier
+             *     review rather than "last week" — a rep with a gap has a previous week that is not seven
+             *     days back.
+             */
+            prior?: components["schemas"]["WeeklyReviewPrior"];
+        };
+        /** @description Money the week added to and took out of the pipeline, in one currency. */
+        WeeklyReviewPipeline: {
+            /**
+             * Format: int64
+             * @description Value of the deals opened in the week, converted at the latest rate on or before the
+             *     week's end and frozen here.
+             */
+            created_minor: number;
+            /**
+             * Format: int64
+             * @description Value of the deals won in the week, at each deal's own close-time rate — the honest
+             *     figure for money that has already moved.
+             */
+            won_minor: number;
+            /**
+             * Format: int64
+             * @description The same, for deals lost.
+             */
+            lost_minor: number;
+            /**
+             * @description The currency the three figures are in, stored beside them: the installation's base
+             *     currency is an operator-mutable setting, and re-reading it later would re-label old
+             *     reviews with a currency their numbers were never in.
+             */
+            currency: string;
+        };
+        /** @description The week before this one, for comparison. */
+        WeeklyReviewPrior: {
+            /** Format: date */
+            local_week_start: string;
+            counts: components["schemas"]["WeeklyReviewCounts"];
+            /** @description Absent under the same rule as the current week's. */
+            pipeline?: components["schemas"]["WeeklyReviewPipeline"];
         };
         WeeklyReviewCounts: {
             /** @description Tasks assigned to this rep that fell due in the week. */
@@ -25183,6 +25238,27 @@ export interface components {
             brief_items_acted: number;
             /** @description And dismissed. */
             brief_items_dismissed: number;
+            /** @description Inbound leads routed to this rep during the week. */
+            leads_routed: number;
+            /**
+             * @description Of those, the ones answered before the first-response target ran out. Read from the
+             *     stamps the SLA writer maintained at the time, never recomputed from today's policy —
+             *     a week is judged by the target that applied to it.
+             */
+            leads_answered_in_target: number;
+            /** @description And the ones whose target ran out. */
+            leads_breached: number;
+            /**
+             * @description Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+             *     week can be judged by, and counting it would credit a conversation that never occurred.
+             */
+            meetings_held: number;
+            /**
+             * @description Of those, the ones that left a task behind against a record the meeting was also filed
+             *     under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
+             *     is the pattern this figure exists to make visible.
+             */
+            meetings_with_next_step: number;
         };
         /**
          * @description One deal the week is about, FROZEN. Every word was written when the review was, so a deal
