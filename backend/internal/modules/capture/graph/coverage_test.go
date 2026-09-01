@@ -99,8 +99,15 @@ func fail500(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.Status
 
 // emptyRound is a folder with nothing new in it, for a test that is about the
 // other folder.
-func emptyRound(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, map[string]any{"value": []map[string]any{}, "@odata.deltaLink": "https://graph/none"})
+// The link is built from the request rather than named outright: a deltaLink is
+// STORED and followed on the next cycle, so the client refuses one pointing
+// anywhere but the API it is talking to, and this stub has to be a Graph that
+// behaves.
+func emptyRound(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{
+		"value":            []map[string]any{},
+		"@odata.deltaLink": "http://" + r.Host + r.URL.Path + "?%24deltatoken=none",
+	})
 }
 
 func authViaStub(t *testing.T, c *Connector) []byte {

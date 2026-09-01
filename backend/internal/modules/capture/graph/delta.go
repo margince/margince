@@ -29,11 +29,17 @@ func receivedAfterFilter(after time.Time) string {
 }
 
 // receivedBetweenFilter closes that window at the top: ge <after> and lt
-// <before>. Second-grain rendering floors the upper bound, which narrows the
-// window rather than widening it — the safe direction for a tally a walk is
-// measured against.
+// <before>.
+//
+// The upper bound keeps its subsecond digits (RFC3339Nano) where the lower one
+// does not need them. The lower bound is a product parameter measured in
+// months; this one is the instant a walk opened, and Format TRUNCATES, so
+// second-grain rendering would move it back by up to a second and drop whatever
+// arrived in that second out of the tally the walk is measured against. Losing
+// it in that direction is losing it quietly, which is the whole failure this
+// window exists to catch.
 func receivedBetweenFilter(after, before time.Time) string {
-	return receivedAfterFilter(after) + " and receivedDateTime lt " + before.UTC().Format(time.RFC3339)
+	return receivedAfterFilter(after) + " and receivedDateTime lt " + before.UTC().Format(time.RFC3339Nano)
 }
 
 // The two well-known folders a standing sync follows. Named constants because
@@ -51,9 +57,55 @@ type deltaPage struct {
 	Value []struct {
 		ID      string           `json:"id"`
 		Removed *json.RawMessage `json:"@removed"`
+		// ReceivedAt is what decides whether an entry belongs to the window a
+		// filtered round asked for. A delta tracks a FOLDER, not a query, so
+		// Microsoft may emit an entry for a message outside the filter when
+		// something about it changed — a read/unread flip on an old message.
+		// Zero where the entry does not say.
+		ReceivedAt time.Time `json:"receivedDateTime"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 	} `json:"value"`
 	NextLink  string `json:"@odata.nextLink"`  //nolint:tagliatelle // Microsoft's wire format; must match to decode
 	DeltaLink string `json:"@odata.deltaLink"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
+}
+
+// deltaEntry is one message a walk named, with the instant that decides which
+// window it belongs to.
+type deltaEntry struct {
+	id         string
+	receivedAt time.Time
+}
+
+// ids drops the timestamps: every entry a walk named is a message to fetch,
+// whatever window it belongs to.
+func entryIDs(entries []deltaEntry) []string {
+	if len(entries) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, e.id)
+	}
+	return out
+}
+
+// countWithin counts the DISTINCT entries a walk named that belong to
+// [after, before) — the window a tally covers.
+//
+// An entry that does not carry an instant counts: it cannot be shown to be
+// outside the window, and refusing an anchor over what the response declined to
+// say would be refusing on our own ignorance rather than on evidence. What this
+// does exclude is the entry that says, in Microsoft's own words, that it belongs
+// to some older window — the one that would otherwise pad the walk's side of the
+// reconciliation and let a short round pass.
+func countWithin(entries []deltaEntry, after, before time.Time) int {
+	seen := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		if !e.receivedAt.IsZero() && (e.receivedAt.Before(after) || !e.receivedAt.Before(before)) {
+			continue
+		}
+		seen[e.id] = true
+	}
+	return len(seen)
 }
 
 func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) ([]string, string, error) {
@@ -62,7 +114,7 @@ func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, aft
 	// receivedDateTime bounds BOTH folders: Exchange stamps it on a sent
 	// message too, so one filter serves the pair rather than the sent side
 	// needing sentDateTime and a second spelling of "recently".
-	ids, deltaLink, err := a.deltaWalk(ctx, accessToken,
+	entries, deltaLink, err := a.deltaWalk(ctx, accessToken,
 		a.base+"/me/mailFolders/"+url.PathEscape(folder)+"/messages/delta?"+q.Encode())
 	if err != nil {
 		return nil, "", err
@@ -82,12 +134,18 @@ func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, aft
 	// the counted window yet may be inside the walk, and one deleted mid-walk
 	// leaves both. A walk short of the tally is therefore evidence the round
 	// ended early, never an artifact of the gap between the two calls.
-	if len(ids) < held {
+	// Measured on the entries that BELONG to the counted window, not on
+	// everything the round named: a delta tracks a folder rather than a query,
+	// so an entry for an older message that merely changed would otherwise pad
+	// this side and let a short round pass. Every entry is still returned — a
+	// message named by the round is a message to fetch, whatever window it
+	// belongs to.
+	if walked := countWithin(entries, after, opened); walked < held {
 		return nil, "", fmt.Errorf(
-			"graph: the %s anchor closed after %d message(s) but the folder holds %d since %s: %w",
-			folder, len(ids), held, after.UTC().Format(time.RFC3339), ErrUnreachable)
+			"graph: the %s anchor closed holding %d message(s) from the window but the folder holds %d since %s: %w",
+			folder, walked, held, after.UTC().Format(time.RFC3339), ErrUnreachable)
 	}
-	return ids, deltaLink, nil
+	return entryIDs(entries), deltaLink, nil
 }
 
 // countInFolder reports how many messages one folder holds for a filter, so a
@@ -95,7 +153,14 @@ func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, aft
 // rather than trusted because its last round closed.
 func (a *httpAPI) countInFolder(ctx context.Context, accessToken, folder, filter string) (int, error) {
 	var out struct {
-		Count int `json:"@odata.count"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
+		// A POINTER, so "Microsoft said none" is distinguishable from "Microsoft
+		// did not answer the question". Read as an int, a 2xx that omits
+		// @odata.count — the shape a request missing ConsistencyLevel can take —
+		// would arrive as a tally of zero, and a tally of zero is one no walk can
+		// ever fall short of. The reconciliation would pass every round while
+		// measuring nothing, which is the failure it exists to catch wearing the
+		// costume of a green check.
+		Count *int `json:"@odata.count"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 	}
 	q := url.Values{
 		paramFilter: {filter},
@@ -109,22 +174,30 @@ func (a *httpAPI) countInFolder(ctx context.Context, accessToken, folder, filter
 	if _, err := a.get(ctx, accessToken, u, hdr, &out); err != nil {
 		return 0, err
 	}
-	return out.Count, nil
+	if out.Count == nil {
+		return 0, fmt.Errorf(
+			"graph: the %s tally came back without a count: %w", folder, ErrUnreachable)
+	}
+	return *out.Count, nil
 }
 
 func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]string, string, error) {
 	if err := a.sameAPIOrigin(deltaLink); err != nil {
 		return nil, "", err
 	}
-	return a.deltaWalk(ctx, accessToken, deltaLink)
+	entries, next, err := a.deltaWalk(ctx, accessToken, deltaLink)
+	if err != nil {
+		return nil, "", err
+	}
+	return entryIDs(entries), next, nil
 }
 
 // deltaWalk follows a delta round from startURL through every nextLink until
 // Graph hands back the deltaLink that closes it, collecting the ids of the
 // non-tombstoned messages along the way. A 410 anywhere in the walk means the
 // server no longer honors this delta state (ErrDeltaGone).
-func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string) ([]string, string, error) {
-	var ids []string
+func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string) ([]deltaEntry, string, error) {
+	var entries []deltaEntry
 	next := startURL
 	for {
 		var page deltaPage
@@ -137,7 +210,7 @@ func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string) (
 		}
 		for _, m := range page.Value {
 			if m.ID != "" && m.Removed == nil {
-				ids = append(ids, m.ID)
+				entries = append(entries, deltaEntry{id: m.ID, receivedAt: m.ReceivedAt.UTC()})
 			}
 		}
 		if page.NextLink == "" {
@@ -147,7 +220,16 @@ func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string) (
 				// unreachable rather than reporting success with no watermark.
 				return nil, "", ErrUnreachable
 			}
-			return ids, page.DeltaLink, nil
+			// The deltaLink gets the same check as a nextLink, and needs it
+			// more: this one is STORED. A nextLink is followed once and the
+			// round ends either way, while an off-origin deltaLink becomes the
+			// cursor, and every later cycle then fails its own origin check
+			// before fetching anything — a mailbox stuck with no way back,
+			// since that refusal is not the 410 a re-anchor answers.
+			if err := a.sameAPIOrigin(page.DeltaLink); err != nil {
+				return nil, "", err
+			}
+			return entries, page.DeltaLink, nil
 		}
 		if err := a.sameAPIOrigin(page.NextLink); err != nil {
 			return nil, "", err
