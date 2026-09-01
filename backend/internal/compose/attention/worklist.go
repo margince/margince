@@ -212,7 +212,7 @@ func (s *Service) worklistFrom(
 	// "tasks, not shown", and a filtered-out source that hit its bound took its
 	// more_available signal out with it.
 	considered := rows
-	narrowed := filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll)
+	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
 		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
 	}

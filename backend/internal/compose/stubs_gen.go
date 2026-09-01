@@ -59,6 +59,14 @@ func (stubs) SetActivityAudience(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "SetActivityAudience")
 }
 
+func (stubs) ClearActivityDisposition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ClearActivityDispositionParams) {
+	httperr.NotImplemented(w, r, "ClearActivityDisposition")
+}
+
+func (stubs) SetActivityDisposition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SetActivityDisposition")
+}
+
 func (stubs) DraftEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftEmail")
 }

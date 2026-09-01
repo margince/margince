@@ -91,6 +91,7 @@ components:
         - engagement.reply
         - comms.delivery_bounced
         - notice.created
+        - activity.disposition_recorded
         - notice.read
         - intro_request.created
         - intro_request.decided
@@ -1815,6 +1816,38 @@ components:
         kind:
           type: string
           description: The producing flow's own label (automation, lead_sla).
+      additionalProperties: false
+
+    PublicEventActivityDispositionRecorded:
+      type: object
+      x-event-type: activity.disposition_recorded
+      x-entity-type: activity
+      x-version: 1
+      description: >-
+        Payload for activity.disposition_recorded — somebody decided what to do
+        about a waiting message and the Worklist stopped showing it
+        (activities/disposition.go). WHO it stopped showing it to is not on the
+        wire, and the omission is deliberate: `not_sales` settles what the
+        message is and holds for everybody, while `snoozed` and `not_mine`
+        belong to the one reader who set them. A consumer reading this as a
+        workspace-wide fact would report a colleague's private set-aside as the
+        thread's own state. The reader stays on the row, for a caller entitled
+        to it.
+      required:
+        - activity_id
+        - disposition
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        disposition:
+          type: string
+          enum: [not_sales, sales_again, snoozed, not_mine, picked_up]
+          description: >-
+            What was decided. `sales_again` and `picked_up` are the undos of
+            `not_sales` and of the two reader states — a decision withdrawn is
+            itself a decision, and a consumer counting dispositions has to see
+            it happen rather than infer it from a row going quiet.
       additionalProperties: false
 
     PublicEventIntroRequestCreated:

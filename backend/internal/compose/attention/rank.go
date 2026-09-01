@@ -131,6 +131,15 @@ func rankAll(rows []ranked) []crmcontracts.WorklistItem {
 			comparison := compare(row, rows[i+1])
 			item.AboveNext = &comparison
 		}
+		// What this row offers a reader who is NOT going to answer it now, and
+		// which of its verbs is the step. Stamped here rather than by each
+		// classifier, so a source added later carries a primary action by
+		// arriving in this loop instead of by its author remembering to.
+		if item.Source == sourceWaiting {
+			offered := waitingDispositions()
+			item.Dispositions = &offered
+		}
+		item.PrimaryAction = primaryActionFor(item)
 		out = append(out, item)
 	}
 	return out
