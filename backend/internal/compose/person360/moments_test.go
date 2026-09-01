@@ -480,6 +480,14 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 		t.Errorf("why_now for a task due later today = %q, want \"Due today.\"", got)
 	}
 
+	// Two tasks due the same day: the one filed first has waited longest and
+	// keeps the card. The section lists newest first, so without this the
+	// card followed whichever task was logged last.
+	page.NextSteps.Data[1].DueAt = ptr(now.Add(2 * time.Hour))
+	if got := deriveMoment(now, page).Headline; got != "You owe them: Send the MCP whitepaper" {
+		t.Errorf("with two tasks due today, headline = %q, want the older one", got)
+	}
+
 	// Done tasks never reach the section, so a page whose section is empty is
 	// the quiet state — and only then may the card say nothing is owed.
 	page.NextSteps.Data = nil
