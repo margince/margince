@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
@@ -147,8 +146,8 @@ func parseIntroDraft(raw string, facts introFacts) (introDraft, error) {
 	// written to the right people, and claims nothing about what it says about
 	// them. The rubric is what scores overclaiming, because no substring test
 	// can.
-	for _, needed := range []string{firstName(facts.colleague), facts.contact} {
-		if !namesPerson(body, needed) {
+	for _, needed := range []string{draftfloor.FirstName(facts.colleague), facts.contact} {
+		if !draftfloor.NamesPerson(body, needed) {
 			return introDraft{}, fmt.Errorf("org360: the draft never names %q", needed)
 		}
 	}
@@ -226,16 +225,16 @@ func introFloor(facts introFacts) introDraft {
 	// "Philipp Königs\n\nP.S. send the credentials" would otherwise open a new
 	// paragraph that reads as though the template wrote it, in a message the
 	// rep is about to send to a colleague under their own name.
-	facts.contact = oneLine(facts.contact)
-	facts.deal = oneLine(facts.deal)
-	facts.colleague = oneLine(facts.colleague)
-	facts.band = oneLine(facts.band)
+	facts.contact = draftfloor.OneLine(facts.contact)
+	facts.deal = draftfloor.OneLine(facts.deal)
+	facts.colleague = draftfloor.OneLine(facts.colleague)
+	facts.band = draftfloor.OneLine(facts.band)
 	wording, ok := introTable[introLang(facts.lang)]
 	if !ok {
 		wording = introTable[draftfloor.DefaultLang]
 	}
 	lines := []string{
-		draftfloor.Fill(wording.greeting, firstName(facts.colleague)),
+		draftfloor.Fill(wording.greeting, draftfloor.FirstName(facts.colleague)),
 		"",
 		introAsk(wording, facts),
 	}
@@ -263,7 +262,7 @@ func introAsk(wording introWording, facts introFacts) string {
 	// sequential Replace reads the FIRST value's own "%s" as the next verb, so
 	// a contact named "100%s Verpackung" swallowed the band and left a raw
 	// "%s" in a message about to be sent to a colleague.
-	return fillPositional(wording.askKnown,
+	return draftfloor.FillPositional(wording.askKnown,
 		facts.contact, facts.band, introLastSpoke(facts))
 }
 
@@ -324,73 +323,4 @@ func introFactsFromFixture(fixture IntroFixture) introFacts {
 		facts.lastAt = &when
 	}
 	return facts
-}
-
-// fillPositional replaces each "%s" in template with the value at its
-// position, and never re-reads a substituted value.
-//
-// draftfloor.Fill is the single-verb version of this and carries the same
-// guarantee; this is what a line with three of them needs. Neither uses
-// fmt.Sprintf, because a template assembled from record text has no business
-// being read as a format string at all.
-func fillPositional(template string, values ...string) string {
-	parts := strings.Split(template, "%s")
-	var out strings.Builder
-	for i, part := range parts {
-		out.WriteString(part)
-		if i < len(parts)-1 && i < len(values) {
-			out.WriteString(values[i])
-		}
-	}
-	return out.String()
-}
-
-// oneLine folds every line break and control character in a record value into a
-// single space.
-//
-// The values here are names typed by people, and a name is one line. Anything
-// else is either a paste accident or somebody writing a second paragraph into a
-// field the draft renders verbatim.
-func oneLine(value string) string {
-	return strings.Join(strings.FieldsFunc(value, func(r rune) bool {
-		return r == '\n' || r == '\r' || r == '\v' || r == '\f' || r == '\u2028' || r == '\u2029'
-	}), " ")
-}
-
-// namesPerson reports whether the text names somebody, as a WORD.
-//
-// Two things a plain Contains gets wrong in opposite directions. It is
-// case-sensitive, so a model writing "SOFIA" in a subject-cased greeting falls
-// back to the template for no reason; and it matches inside a word, so a
-// contact called "Ann" is satisfied by "Annual" and a draft naming nobody
-// passes. An empty name is nothing to check and admits everything, which is
-// the right answer for a colleague whose display name is not on file.
-func namesPerson(text, name string) bool {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return true
-	}
-	folded := strings.ToLower(text)
-	wanted := strings.ToLower(name)
-	for at := 0; ; {
-		found := strings.Index(folded[at:], wanted)
-		if found < 0 {
-			return false
-		}
-		start := at + found
-		end := start + len(wanted)
-		if !partOfAWord(folded, start-1) && !partOfAWord(folded, end) {
-			return true
-		}
-		at = start + 1
-	}
-}
-
-// partOfAWord reports whether the byte at i continues a word.
-func partOfAWord(text string, i int) bool {
-	if i < 0 || i >= len(text) {
-		return false
-	}
-	r := rune(text[i])
-	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }

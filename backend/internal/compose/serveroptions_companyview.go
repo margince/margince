@@ -184,3 +184,18 @@ func WithIntroRequestDraft(brain completer) Option {
 		s.org360Handlers = s.WithIntroLane(brain)
 	}
 }
+
+// WithIntroNoteDraft binds the lane that phrases the forwardable note.
+//
+// The OTHER message in one workflow. WithIntroRequestDraft above binds the ask
+// written TO a colleague; this binds the prospect-facing note that colleague
+// forwards. Two options rather than one because they are two prompts with two
+// registers, and a deployment could reasonably want the internal one and not
+// the outward one — the note is read by a customer.
+//
+// Its absence is a template, not a 501, for the reason stated above.
+func WithIntroNoteDraft(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.Reads = s.WithIntroNoteLane(brain)
+	}
+}

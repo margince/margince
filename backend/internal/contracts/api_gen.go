@@ -32310,6 +32310,19 @@ type CreatePersonEnrichmentRunParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// DraftIntroNoteJSONBody defines parameters for DraftIntroNote.
+type DraftIntroNoteJSONBody struct {
+	// ThroughPersonId The intermediary on a route that runs through another contact, when it does. Absent means the colleague knows the target directly.
+	// Both ids are matched against the routes this caller's own graph read returns, so an intermediary they cannot see is `422` — the route is not one they have — rather than `404`. That is deliberate and is NOT the shape a direct read uses: answering `404` here would tell the caller whether a contact they may not read exists, which is the fact the row-scope is keeping.
+	ThroughPersonId *openapi_types.UUID `json:"through_person_id,omitempty"`
+
+	// ValueForTarget Why this is worth the CONTACT's time, in the requester's own words. It is the one fact the product cannot derive: the records say who knows whom, and only the rep knows what they would bring. Absent writes a note that asks for a conversation without claiming a reason.
+	ValueForTarget *string `json:"value_for_target,omitempty"`
+
+	// ViaUserId The colleague who would forward the note. Named because the note is written in their voice — they are the one the contact hears from.
+	ViaUserId openapi_types.UUID `json:"via_user_id"`
+}
+
 // MergePersonJSONBody defines parameters for MergePerson.
 type MergePersonJSONBody struct {
 	// TargetId The surviving person (B). This row (A) is archived.
@@ -34237,6 +34250,9 @@ type DraftPersonEmailJSONRequestBody DraftPersonEmailJSONBody
 
 // CreatePersonEnrichmentRunJSONRequestBody defines body for CreatePersonEnrichmentRun for application/json ContentType.
 type CreatePersonEnrichmentRunJSONRequestBody = CreatePersonEnrichmentRunRequest
+
+// DraftIntroNoteJSONRequestBody defines body for DraftIntroNote for application/json ContentType.
+type DraftIntroNoteJSONRequestBody DraftIntroNoteJSONBody
 
 // CreateIntroRequestJSONRequestBody defines body for CreateIntroRequest for application/json ContentType.
 type CreateIntroRequestJSONRequestBody = IntroRequestInput
@@ -43249,6 +43265,9 @@ type ServerInterface interface {
 	// Who around this contact could open a door, and through whom.
 	// (GET /people/{id}/graph)
 	GetPersonGraph(w http.ResponseWriter, r *http.Request, id Id)
+	// Draft the forwardable note a colleague can paste into their own introduction.
+	// (POST /people/{id}/intro-note-draft)
+	DraftIntroNote(w http.ResponseWriter, r *http.Request, id Id)
 	// The asks about this contact that the caller is party to.
 	// (GET /people/{id}/intro-requests)
 	ListIntroRequests(w http.ResponseWriter, r *http.Request, id Id)
@@ -46030,6 +46049,12 @@ func (_ Unimplemented) GetPersonEnrichmentRun(w http.ResponseWriter, r *http.Req
 // Who around this contact could open a door, and through whom.
 // (GET /people/{id}/graph)
 func (_ Unimplemented) GetPersonGraph(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Draft the forwardable note a colleague can paste into their own introduction.
+// (POST /people/{id}/intro-note-draft)
+func (_ Unimplemented) DraftIntroNote(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63217,6 +63242,38 @@ func (siw *ServerInterfaceWrapper) GetPersonGraph(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// DraftIntroNote operation middleware
+func (siw *ServerInterfaceWrapper) DraftIntroNote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DraftIntroNote(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListIntroRequests operation middleware
 func (siw *ServerInterfaceWrapper) ListIntroRequests(w http.ResponseWriter, r *http.Request) {
 
@@ -71946,6 +72003,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people/{id}/graph", wrapper.GetPersonGraph)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/intro-note-draft", wrapper.DraftIntroNote)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people/{id}/intro-requests", wrapper.ListIntroRequests)

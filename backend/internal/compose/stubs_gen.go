@@ -1559,6 +1559,10 @@ func (stubs) GetPersonGraph(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "GetPersonGraph")
 }
 
+func (stubs) DraftIntroNote(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DraftIntroNote")
+}
+
 func (stubs) ListIntroRequests(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListIntroRequests")
 }
