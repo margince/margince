@@ -51,7 +51,7 @@ func TestThePreferenceCentreAnswersInOneShape(t *testing.T) {
 	// The BODY KEYS, not the function name: a second writer would be a
 	// second map literal carrying them, and renaming the helper would not
 	// help it escape.
-	const key = `"masked_email"`
+	const key = "masked_email"
 	scope := gatekit.Scope{
 		Roots:   []string{consentRoot},
 		Subject: fileContains(key),
@@ -92,6 +92,38 @@ func TestThePreferenceCentreResolvesOnePrimaryAddress(t *testing.T) {
 	}
 }
 
+// TestOneSendDerivesEveryUnsubscribeDestination holds the "every
+// destination" claim on unsubscribeLinks.
+//
+// The defect this whole change exists for was three destinations
+// collapsing into one URL: the visible "Unsubscribe" link pointed at the
+// POST-only machine endpoint, so a human click got 405. A second builder
+// is how they drift apart again — one caller keeps the pages while
+// another goes back to the API path, and each looks correct alone.
+func TestOneSendDerivesEveryUnsubscribeDestination(t *testing.T) {
+	t.Parallel()
+	// The PUBLIC PREFIX, not the function name: every destination is built
+	// by appending to it, so a second builder has to spell it too.
+	const key = "/v1/public/preferences/"
+	scope := gatekit.Scope{
+		Roots:   []string{"internal/modules/activities"},
+		Subject: fileContains(key),
+		// Both spell the prefix to SERVE or to redact it, never to build a
+		// link a recipient is sent. This gate is about the send path's
+		// builders; a reader of the same path is not a second one.
+		Exempt: gatekit.Waive(map[string]string{
+			"internal/compose/publicpreferences.go":                   "the edge that serves the prefix, matching requests rather than minting links",
+			"internal/shared/kernel/capabilitypath/capabilitypath.go": "the access-log redactor, which knows the prefix so a token never reaches a log line",
+		}),
+	}
+	total, where := countAcross(t, scope, key)
+	if total != 1 {
+		t.Errorf("the public preference URL is built %d time(s) in the send path, want exactly 1: %s\n\n"+
+			"The header, the two visible links and the redacted copy come from ONE builder; a second "+
+			"is how the machine endpoint ends up behind a human link again.", total, strings.Join(where, ", "))
+	}
+}
+
 // fileContains is the Subject predicate: does this file spell the string
 // anywhere in its source.
 func fileContains(needle string) func(string, *ast.File) bool {
@@ -120,15 +152,24 @@ func countAcross(t *testing.T, scope gatekit.Scope, needle string) (int, []strin
 }
 
 // countInFile counts a pattern's matches in a file's string literals —
-// where both subjects live, and where a copy would land.
+// where every subject here lives, and where a copy would land.
+//
+// Read through gatekit.LiteralText rather than off lit.Value: the source
+// text carries its escapes, so a statement written in double quotes would
+// not match the pattern at all and this census would report a clean tree
+// over exactly the copy it exists to find.
 func countInFile(file *ast.File, pattern *regexp.Regexp) int {
 	total := 0
 	ast.Inspect(file, func(n ast.Node) bool {
-		lit, ok := n.(*ast.BasicLit)
-		if !ok {
+		expr, isExpr := n.(ast.Expr)
+		if !isExpr {
 			return true
 		}
-		total += len(pattern.FindAllString(lit.Value, -1))
+		text, isLiteral := gatekit.LiteralText(expr)
+		if !isLiteral {
+			return true
+		}
+		total += len(pattern.FindAllString(text, -1))
 		return true
 	})
 	return total

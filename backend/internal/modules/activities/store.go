@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
@@ -42,6 +43,14 @@ type Store struct {
 	// link resolves to — configured at boot, never taken from the request
 	// (WithPublicBaseURL wires it).
 	publicBaseURL string
+	// baseLanguage is the installation's own language, the tier the footer
+	// falls back to when the message itself is too short to read
+	// (WithBaseLanguage). Nil means English.
+	baseLanguage BaseLanguageReader
+	// env decides whether a loopback public origin is a working dev stack
+	// or a link nobody outside this machine could open. The zero value is
+	// production, which is the safe direction (WithRuntimeEnvironment).
+	env runtimeenv.Environment
 	// signature is the sender's own sign-off, appended to every message they
 	// send; nil means unsigned, which is what every role did before the
 	// signature existed (WithSignature wires it).

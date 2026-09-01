@@ -477,6 +477,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			signer:        newStateSigner([]byte(c.StateKey)),
 			publicBaseURL: c.PublicBaseURL,
 			apiBaseURL:    c.APIBaseURL,
+			publicOrigin:  s.originStatus,
 			// Named here because this literal REPLACES the struct: omitting it is
 			// how the stored app became unreachable while every test still passed.
 			googleCredentials: s.googleAppResolver,

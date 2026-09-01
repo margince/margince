@@ -250,6 +250,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 				registry:          NewCaptureRegistry(pool, vault, s.captureConfig),
 				authority:         identity.NewService(pool),
 				googleCredentials: s.googleAppResolver,
+				publicOrigin:      s.originStatus,
 			}
 		}
 		// The overlay incumbent connection lifecycle needs the same
@@ -404,6 +405,11 @@ func WithPublicBaseURL(base string) Option {
 		// So does the confirm-details link, which opens one person's own record
 		// to whoever holds it.
 		s.consentHandlers = s.WithConfirmLinkBase(base)
+		// Reported to an operator, never enforced: the boot and send guards
+		// are what refuse an unusable origin, and a readiness check here
+		// would deadlock a rollout on its own ingress.
+		s.originProbe = newPublicOriginProbe(base, newOriginProbeClient(), time.Now)
+		s.publicOrigin = s.originStatus
 		s.rebuildToolRegistry(pool)
 	}
 }

@@ -373,7 +373,7 @@ func envDurationOr(key string, fallback time.Duration) (time.Duration, error) {
 // still refuses a grant that cannot send, so its absence costs a clearer
 // message, never a message that should not have gone.
 func sendPath(cfg workerConfig, delivery compose.DeliveryMachinery) compose.SendPath {
-	return compose.SendPath{PublicBaseURL: cfg.publicBaseURL, Delivery: delivery}
+	return compose.SendPath{PublicBaseURL: cfg.publicBaseURL, Delivery: delivery, Environment: cfg.posture}
 }
 
 // gmailAppWired reports whether the deployment configured the Google OAuth

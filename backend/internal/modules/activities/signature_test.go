@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -195,8 +196,11 @@ func TestNoMarkupBodyProducesNoMarkupAlternative(t *testing.T) {
 // chose to render.
 func TestBothPartsCarryTheUnsubscribeSurface(t *testing.T) {
 	derived := sendDeliverability{
-		unsubURL:  "https://app.test/v1/public/unsubscribe/tok",
-		manageURL: "https://app.test/v1/public/preferences/tok",
+		links: unsubscribeLinks{
+			unsubscribe: "https://app.test/#/unsubscribe/tok/newsletter?lang=en",
+			manage:      "https://app.test/#/preferences/tok?lang=en",
+		},
+		words: mailcopy.For("en"),
 	}
 	store := (&Store{}).WithSignature(&stubSignature{})
 
@@ -204,7 +208,7 @@ func TestBothPartsCarryTheUnsubscribeSurface(t *testing.T) {
 	if err != nil {
 		t.Fatalf("signing the markup failed: %v", err)
 	}
-	if !strings.Contains(got, derived.unsubURL) || !strings.Contains(got, derived.manageURL) {
+	if !strings.Contains(got, derived.links.unsubscribe) || !strings.Contains(got, derived.links.manage) {
 		t.Fatalf("the markup part carries no unsubscribe surface: %q", got)
 	}
 }

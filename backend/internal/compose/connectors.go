@@ -56,6 +56,10 @@ const codeUnauthorized = "unauthorized"
 
 type connectorHandlers struct {
 	registry *capture.Registry
+	// publicOrigin reports the address this installation puts in outgoing
+	// links. Nil when none is configured, and then the field is absent
+	// rather than reported as broken.
+	publicOrigin func(ctx context.Context) PublicOriginStatus
 	// authority is identity's live resolver. The callback re-reads the
 	// granting human through it before it spends the authorization code: the
 	// signed state proves who STARTED the consent, and minutes of provider
@@ -147,6 +151,17 @@ func (h connectorHandlers) ListConnectors(w http.ResponseWriter, r *http.Request
 	}
 	for _, v := range views {
 		resp.Data = append(resp.Data, toContractConnection(v))
+	}
+	// Absent when no origin is configured, which is itself the answer a
+	// screen needs: there is nothing to report rather than something broken.
+	if h.publicOrigin != nil {
+		status := h.publicOrigin(r.Context())
+		resp.PublicOrigin = &crmcontracts.PublicOriginStatus{
+			Origin:    status.Origin,
+			Reachable: status.Reachable,
+			CheckedAt: status.CheckedAt,
+			Detail:    &status.Detail,
+		}
 	}
 	httperr.WriteJSON(w, http.StatusOK, resp)
 }

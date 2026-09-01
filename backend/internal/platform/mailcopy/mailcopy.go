@@ -80,6 +80,13 @@ func Known(language string) bool {
 // field of every language: that is what stops a language reaching a mailbox
 // half-written.
 type Copy struct {
+	// The unsubscribe footer under an outgoing message. A German mail with
+	// an English footer is the product speaking two languages in one
+	// message, and the footer is the half a recipient reads when they want
+	// it to stop.
+	UnsubscribeLabel       string
+	ManagePreferencesLabel string
+
 	// The password reset a person asked for.
 	ResetSubject string
 	ResetIntro   string

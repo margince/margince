@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/cliflags"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -190,4 +191,17 @@ func envDuration(key string) (time.Duration, error) {
 		return 0, fmt.Errorf("api: %s=%q is not a duration (e.g. 15m, 24h): %w", key, raw, err)
 	}
 	return d, nil
+}
+
+// senderConfigured reports whether this deployment can put a message in
+// somebody else's mailbox — by its own SMTP relay, or through a mailbox
+// connector a rep has linked.
+//
+// It is the trigger for the public-origin rule: an installation that
+// sends nothing may be configured however an operator likes, because no
+// recipient ever sees a link built from it.
+func senderConfigured(cfg apiConfig, deployCfg deployconfig.Config) bool {
+	return deployCfg.Email.Enabled ||
+		(cfg.gmailClientID != "" && cfg.gmailClientSecret != "") ||
+		(cfg.graphClientID != "" && cfg.graphClientSecret != "")
 }

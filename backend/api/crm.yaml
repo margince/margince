@@ -19035,6 +19035,24 @@ components:
       required: [data]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/CaptureConnection' } }
+        public_origin: { $ref: '#/components/schemas/PublicOriginStatus' }
+    PublicOriginStatus:
+      type: object
+      description: |
+        The address this installation puts in outgoing links, and whether it answered when last asked.
+        Reported so an operator can SEE the value rather than discover it from a recipient; the boot and
+        send guards are what actually refuse an unusable one. A probe from inside the deployment says this
+        process can reach the origin — it cannot say a recipient's mail client can.
+      required: [origin]
+      properties:
+        origin: { type: string, description: The configured scheme and host. }
+        reachable:
+          type: [boolean, 'null']
+          description: Null until the first probe answers, so a screen can say "not checked yet" rather than implying a failure.
+        checked_at: { type: [string, 'null'], format: date-time }
+        detail:
+          type: [string, 'null']
+          description: The HTTP status or the transport failure. Never carries a path or a token.
     ConnectConnectorRequest:
       type: object
       description: |
