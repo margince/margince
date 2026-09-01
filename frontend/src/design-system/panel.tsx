@@ -26,6 +26,7 @@ export function Panel({
   sub,
   titleAction,
   tone,
+  titleLevel,
   actions,
   footer,
   children,
@@ -66,6 +67,12 @@ export function Panel({
   // internals: a screen reaching into them is a second author for a rhythm
   // this file owns, and the two drift the first time either moves.
   tone?: "accent" | "warn" | "ai";
+  // Which heading level the title takes. A panel names a section of the page,
+  // so h2 is right on a page — and wrong inside a dialog, where the dialog's
+  // own title is already the h2 these sit under. A caller that knows its
+  // surrounding outline says so rather than leaving a reader on a screen
+  // reader two h2s that are not siblings.
+  titleLevel?: 2 | 3;
   // Verbs that CHANGE this panel, in their own band under the body — not one
   // more row, and not a footer, which reports rather than acts. A caller
   // renders them only when the panel's content is real: an "add a deal"
@@ -94,7 +101,11 @@ export function Panel({
               and goes is a second header shape, and the height the band
               guarantees is measured on this one. */}
           <div className="panel-head-text">
-            <h2>{title}</h2>
+            {titleLevel === 3 ? (
+              <h3 className="panel-title">{title}</h3>
+            ) : (
+              <h2 className="panel-title">{title}</h2>
+            )}
             {sub && <span className="panel-head-sub">{sub}</span>}
           </div>
           {titleAction}

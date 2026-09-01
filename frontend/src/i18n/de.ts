@@ -6958,6 +6958,10 @@ export const de = {
   "person.meeting.risks": "Risiken und Warnsignale",
   "person.meeting.talking_points": "Vorgeschlagene Gesprächspunkte",
   "person.meeting.company_context": "Letztes Treffen",
+  "person.meeting.background": "Hintergrund und Quellen",
+  "person.meeting.omittedSource": "Nicht in diesem Briefing",
+  "person.meeting.preparedFor": "Vorbereitet für {name}",
+  "person.meeting.preparedForAt": "Vorbereitet für {name} · {org}",
 
   "co.strip.healthSummary": "Zustand",
   "co.strip.healthSummary.failingOf": "{failing} von {rated} gefährdet",
