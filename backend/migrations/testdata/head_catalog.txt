@@ -2371,6 +2371,56 @@ public.incumbent_connection.scopes text[] NOT NULL gen=- def='{}'::text[]
 public.incumbent_connection.status text NOT NULL gen=- def='active'::text
 public.incumbent_connection_pkey CREATE UNIQUE INDEX incumbent_connection_pkey ON public.incumbent_connection USING btree (id)
 public.incumbent_connection_singleton CREATE UNIQUE INDEX incumbent_connection_singleton ON public.incumbent_connection USING btree ((true))
+public.intro_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.intro_request.archived_at timestamp with time zone gen=- def=-
+public.intro_request.captured_by text NOT NULL gen=- def=-
+public.intro_request.closed_at timestamp with time zone gen=- def=-
+public.intro_request.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.intro_request.decided_at timestamp with time zone gen=- def=-
+public.intro_request.decision_reason text gen=- def=-
+public.intro_request.due_at timestamp with time zone NOT NULL gen=- def=-
+public.intro_request.fallback_policy text NOT NULL gen=- def='none'::text
+public.intro_request.forwardable_note text NOT NULL gen=- def=''::text
+public.intro_request.id uuid NOT NULL gen=- def=uuidv7()
+public.intro_request.internal_reason text NOT NULL gen=- def=-
+public.intro_request.intro_request_distinct_seats CHECK ((requester_user_id <> introducer_user_id))
+public.intro_request.intro_request_fallback CHECK ((fallback_policy = ANY (ARRAY['name_drop'::text, 'next_route'::text, 'none'::text])))
+public.intro_request.intro_request_introducer_user_id_fkey FOREIGN KEY (introducer_user_id) REFERENCES app_user(id)
+public.intro_request.intro_request_note_origin CHECK ((note_generated_by = ANY (ARRAY['human'::text, 'model'::text, 'deterministic'::text])))
+public.intro_request.intro_request_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.intro_request.intro_request_pkey PRIMARY KEY (id)
+public.intro_request.intro_request_reason_present CHECK ((internal_reason <> ''::text))
+public.intro_request.intro_request_requester_user_id_fkey FOREIGN KEY (requester_user_id) REFERENCES app_user(id)
+public.intro_request.intro_request_route_shape CHECK (((route_type = 'through_contact'::text) = (through_person_id IS NOT NULL)))
+public.intro_request.intro_request_route_type CHECK ((route_type = ANY (ARRAY['direct'::text, 'through_contact'::text])))
+public.intro_request.intro_request_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.intro_request.intro_request_status CHECK ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text, 'suggest_other'::text, 'declined'::text, 'introduced'::text, 'name_dropped'::text, 'replied'::text, 'expired'::text, 'cancelled'::text])))
+public.intro_request.intro_request_suggested_user_id_fkey FOREIGN KEY (suggested_user_id) REFERENCES app_user(id)
+public.intro_request.intro_request_suggestion_named CHECK (((status <> 'suggest_other'::text) OR (suggested_user_id IS NOT NULL)))
+public.intro_request.intro_request_through_person_id_fkey FOREIGN KEY (through_person_id) REFERENCES person(id)
+public.intro_request.introduced_at timestamp with time zone gen=- def=-
+public.intro_request.introducer_user_id uuid NOT NULL gen=- def=-
+public.intro_request.name_drop_allowed boolean NOT NULL gen=- def=false
+public.intro_request.name_dropped_at timestamp with time zone gen=- def=-
+public.intro_request.note_ai_generated boolean NOT NULL gen=- def=false
+public.intro_request.note_generated_by text NOT NULL gen=- def='human'::text
+public.intro_request.person_id uuid NOT NULL gen=- def=-
+public.intro_request.replied_at timestamp with time zone gen=- def=-
+public.intro_request.requested_at timestamp with time zone NOT NULL gen=- def=now()
+public.intro_request.requester_user_id uuid NOT NULL gen=- def=-
+public.intro_request.route_type text NOT NULL gen=- def=-
+public.intro_request.source_activity_id uuid gen=- def=-
+public.intro_request.status text NOT NULL gen=- def='requested'::text
+public.intro_request.suggested_user_id uuid gen=- def=-
+public.intro_request.through_person_id uuid gen=- def=-
+public.intro_request.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.intro_request.value_for_target text NOT NULL gen=- def=''::text
+public.intro_request.version integer NOT NULL gen=- def=1
+public.intro_request_awaiting_decision CREATE INDEX intro_request_awaiting_decision ON public.intro_request USING btree (introducer_user_id, due_at) WHERE ((status = 'requested'::text) AND (archived_at IS NULL))
+public.intro_request_due CREATE INDEX intro_request_due ON public.intro_request USING btree (due_at) WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
+public.intro_request_for_person CREATE INDEX intro_request_for_person ON public.intro_request USING btree (person_id, requested_at DESC)
+public.intro_request_open_route CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (person_id, introducer_user_id, COALESCE(through_person_id, '00000000-0000-0000-0000-000000000000'::uuid)) WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
+public.intro_request_pkey CREATE UNIQUE INDEX intro_request_pkey ON public.intro_request USING btree (id)
 public.ix_confirm_token_person CREATE INDEX ix_confirm_token_person ON public.confirm_token USING btree (person_id)
 public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
 public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
