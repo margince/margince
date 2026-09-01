@@ -11,15 +11,25 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
-// addDatabaseOnlySweepJobs registers the periodic passes that need nothing but
-// the database: the deals close-date hygiene, the follow-up reconcile, the
-// automation clock scan, and the idempotency-key retention sweep.
+// addDatabaseOnlySweepJobs registers every periodic pass that needs nothing but
+// the database.
 //
-// It takes no JobRunnerConfig, and that is the group rather than an economy of
-// arguments — there is no lane, credential or registry any of these could be
-// gated on, so every role that runs jobs runs all four. Each is a dispatcher
-// plus a workspace worker: only the dispatcher is ticked (the schedules in
-// wireJobs), and the workspace worker is enqueued by it, never scheduled.
+// It takes no JobRunnerConfig, and that is what the group IS rather than an
+// economy of arguments — there is no lane, credential or registry any of these
+// could be gated on, so every role that runs jobs runs all of them.
+//
+// Two shapes are here, and the difference decides what gets scheduled:
+//
+//   - Dispatcher plus workspace worker — close-date hygiene, the follow-up
+//     reconcile, the automation clock scan, idempotency-key retention. Only the
+//     dispatcher is ticked (the schedules in wireJobs); the workspace worker is
+//     enqueued by it and never scheduled.
+//   - Installation-wide, with no workspace fan-out — agent-task retention,
+//     approval expiry, intro expiry, approval auto-apply. One row does the whole
+//     installation, so there is no child kind to enqueue.
+//
+// It also pulls in the AI-activity and brief-generate groups, which are their
+// own functions because they are longer, not because they are gated differently.
 func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool})
 	addDeclaredWorker[CloseDateWorkspaceArgs](reg, &closeDateWorkspaceWorker{corrector: NewCloseDateCorrector(pool, log)})

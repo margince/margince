@@ -126,7 +126,22 @@ func TestARoundRenewsTheSubscriptionItAlreadyHasRatherThanAddingOne(t *testing.T
 }
 
 // A URL that is not ours is somebody else's subscription, including one left by
-// a rotated operator token: it is replaced, not extended.
+// a rotated operator token: a new one is created beside it rather than the old
+// one being re-pointed.
+//
+// The old one is NOT deleted — nothing here can prove it is ours to delete —
+// so a rotation does leave a duplicate delivering to an endpoint that now
+// refuses it. That is bounded and self-healing: exactly one, because the next
+// round matches the new URL exactly, and Microsoft drops a subscription whose
+// endpoint keeps failing.
+//
+// The alternative is matching on the resource and re-pointing whatever watches
+// `/me/messages`. It is rejected deliberately. Graph lists subscriptions per
+// APP, so two deployments sharing one Entra registration — a staging and a
+// production, the ordinary case — see each other's, and re-pointing would take
+// the other's notifications and give back nothing. The token in the URL is what
+// tells those two apart, which is the whole reason it is there. A bounded
+// duplicate beats an unbounded hijack.
 func TestASubscriptionForADifferentURLIsNotAdopted(t *testing.T) {
 	var created, renewed int
 	srv := subscriptionStub(t, subscriptionStubState{

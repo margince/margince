@@ -186,6 +186,12 @@ func bumpGraphMailboxes(
 	if err != nil {
 		return err
 	}
+	// Every hit is attempted before any failure is reported. One delivery names
+	// many mailboxes across many workspaces, and returning at the first enqueue
+	// fault would leave the rest of the batch unsynced until the redelivery —
+	// which arrives with the SAME set, so a mailbox that keeps landing behind a
+	// consistently failing one would never be reached at all.
+	var faults error
 	for _, d := range hits {
 		if err := inserter.Enqueue(ctx, CaptureSyncArgs{
 			Workspace:    d.Workspace.UUID,
@@ -199,8 +205,12 @@ func bumpGraphMailboxes(
 			UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 		}); err != nil {
 			log.ErrorContext(ctx, "graph push: enqueueing sync", "connection", d.ID.String(), "err", err)
-			return err
+			faults = errors.Join(faults, err)
 		}
 	}
-	return nil
+	// Joined, not swallowed: the handler answers Transient on any fault, so
+	// Microsoft redelivers and the mailboxes that DID enqueue are protected
+	// from a second sync by the uniqueness window rather than by this returning
+	// early.
+	return faults
 }

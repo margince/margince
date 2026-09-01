@@ -51,3 +51,16 @@ func TestTheBannerNamesTheGraphRenewalOnlyWhenItIsRegistered(t *testing.T) {
 		})
 	}
 }
+
+// THE DEFAULT DEPLOYMENT, which is every installation that never opted into
+// Outlook: no Entra app and no notification URL. The banner says nothing about
+// Graph at all — not "no notification url", which would read as a
+// misconfiguration to an operator who never asked for the lane, and which is
+// the one branch every case above steps over because they all set a client id.
+func TestTheBannerIsSilentAboutGraphOnADeploymentThatNeverAskedForIt(t *testing.T) {
+	t.Parallel()
+	banner := jobRunnerBanner(workerConfig{}, compose.GmailWatchConfig{}, false, compose.ModelPath{}, nil, nil)
+	if strings.Contains(banner, "graph") {
+		t.Errorf("the banner mentions graph on a deployment that configured none of it: %q", banner)
+	}
+}
