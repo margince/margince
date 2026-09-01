@@ -289,6 +289,33 @@ func unassignedQueueClause() string {
 	return "a.assignee_id IS NULL AND a.kind = 'task' AND NOT a.is_done"
 }
 
+// entityLinkFilter narrows the timeline to one record, in the SAME vocabulary
+// the write uses. A second list here drifted from linkTargets and silently
+// dropped two kinds: an activity could be linked to a lead or a project and
+// then be unfindable by filtering on the very link that was just written.
+func entityLinkFilter(
+	in ListActivitiesInput, arg func(any) int,
+) (join string, where []string, err error) {
+	column := linkColumn(*in.EntityType)
+	if column == "" {
+		return "", nil, &InvalidLinkTypeError{EntityType: *in.EntityType}
+	}
+	if *in.EntityType == string(datasource.RecordOrganization) {
+		// An account's timeline is wider than its direct links: mail is
+		// filed against the PERSON it was with, so a flat organization_id
+		// match hides every message the company actually exchanged.
+		// OrgLinkedActivityExists is the walk the company view's other
+		// readers already use. EXISTS rather than a join, so an activity
+		// reachable through two links stays one row and the keyset cursor
+		// keeps ordering over a stable set.
+		return "", []string{OrgLinkedActivityExists(arg(*in.EntityID))}, nil
+	}
+	return ` JOIN activity_link al ON al.activity_id = a.id`, []string{
+		sprintf("al.entity_type = $%d", arg(*in.EntityType)),
+		sprintf("al.%s = $%d", column, arg(*in.EntityID)),
+	}, nil
+}
+
 // listActivitiesFilter builds the timeline query's join, WHERE terms and
 // bind arguments from one list input, plus the per-row audience test the
 // SELECT projects as content_state.
@@ -349,28 +376,12 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 				arg(*in.OpenAndDueBy)))
 	}
 	if in.EntityType != nil && in.EntityID != nil {
-		// The SAME vocabulary the write uses. A second list here drifted from
-		// linkTargets and silently dropped two kinds: an activity could be
-		// linked to a lead or a project and then be unfindable by filtering on
-		// the very link that was just written.
-		column := linkColumn(*in.EntityType)
-		if column == "" {
-			return "", nil, "", nil, &InvalidLinkTypeError{EntityType: *in.EntityType}
+		entityJoin, entityWhere, entityErr := entityLinkFilter(in, arg)
+		if entityErr != nil {
+			return "", nil, "", nil, entityErr
 		}
-		if *in.EntityType == string(datasource.RecordOrganization) {
-			// An account's timeline is wider than its direct links: mail is
-			// filed against the PERSON it was with, so a flat organization_id
-			// match hides every message the company actually exchanged.
-			// OrgLinkedActivityExists is the walk the company view's other
-			// readers already use. EXISTS rather than a join, so an activity
-			// reachable through two links stays one row and the keyset cursor
-			// below keeps ordering over a stable set.
-			where = append(where, OrgLinkedActivityExists(arg(*in.EntityID)))
-		} else {
-			join = ` JOIN activity_link al ON al.activity_id = a.id`
-			where = append(where, sprintf("al.entity_type = $%d", arg(*in.EntityType)))
-			where = append(where, sprintf("al.%s = $%d", column, arg(*in.EntityID)))
-		}
+		join = entityJoin
+		where = append(where, entityWhere...)
 	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
