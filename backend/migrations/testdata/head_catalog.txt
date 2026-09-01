@@ -966,6 +966,7 @@ public.capture_connection.sync_cursor jsonb gen=- def=-
 public.capture_connection.uq_capture_connection_ws_id UNIQUE (id)
 public.capture_connection.user_id uuid NOT NULL gen=- def=-
 public.capture_connection.watch_expires_at timestamp with time zone gen=- def=-
+public.capture_connection.watch_ref text gen=- def=-
 public.capture_connection_unique CREATE UNIQUE INDEX capture_connection_unique ON public.capture_connection USING btree (user_id, provider)
 public.capture_counterparty_hold acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_counterparty_hold.capture_counterparty_hold_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))

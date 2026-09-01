@@ -81,6 +81,10 @@ type fakeAPI struct {
 	// The subscription half's state: what a round was asked for, and what
 	// Microsoft answered.
 	subCalls    int
+	renewCalls  int
+	renewID     string
+	renewResult Subscription
+	renewErr    error
 	subURL      string
 	subState    string
 	subDeadline time.Time
@@ -152,6 +156,23 @@ func (f *fakeAPI) EnsureSubscription(
 		return Subscription{ID: "sub-1", Expiration: deadline}, nil
 	}
 	return f.subResult, nil
+}
+
+// RenewSubscription is the by-handle seam. It records the id it was given,
+// because "did the renewal address the subscription it stored, or go looking
+// for one" is the whole question this pair exists to answer.
+func (f *fakeAPI) RenewSubscription(
+	_ context.Context, _, id string, deadline time.Time,
+) (Subscription, error) {
+	f.renewCalls++
+	f.renewID = id
+	if f.renewErr != nil {
+		return Subscription{}, f.renewErr
+	}
+	if f.renewResult.Expiration.IsZero() && f.renewResult.ID == "" {
+		return Subscription{ID: id, Expiration: deadline}, nil
+	}
+	return f.renewResult, nil
 }
 
 func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]string, string, error) {

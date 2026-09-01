@@ -166,7 +166,51 @@ func (c *Connector) Watch(ctx context.Context, auth connector.Auth, notification
 	if sub.Expiration.After(deadline) {
 		sub.Expiration = deadline
 	}
-	return connector.WatchResult{ExpiresAt: sub.Expiration}, nil
+	return connector.WatchResult{ExpiresAt: sub.Expiration, Ref: sub.ID}, nil
+}
+
+// RenewWatch extends the subscription named by ref (connector.WatchRenewer).
+//
+// The whole of what this saves is the LISTING. Watch has to make sure a
+// subscription exists, and without a handle that means walking GET
+// /subscriptions — paged, once per mailbox, every renewal cycle — to find the
+// one this installation made. A renewal that already knows the id asks
+// Microsoft to extend it and is done in one call.
+//
+// A ref Microsoft no longer knows falls through to Watch, which is where the
+// listing belongs: a subscription dropped for repeated delivery failures, or one
+// made by an installation that has since been restored from a backup, is exactly
+// the case a recovery path is for.
+func (c *Connector) RenewWatch(
+	ctx context.Context, auth connector.Auth, notificationURL, ref string,
+) (connector.WatchResult, error) {
+	st, err := graphconn.Read(connectorName, auth)
+	if err != nil {
+		return connector.WatchResult{}, err
+	}
+	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	if err != nil {
+		return connector.WatchResult{}, err
+	}
+	deadline := c.now().Add(maxSubscriptionMinutes * time.Minute).UTC()
+	sub, err := c.api.RenewSubscription(ctx, access, ref, deadline)
+	if errors.Is(err, ErrSubscriptionGone) {
+		return c.Watch(ctx, auth, notificationURL)
+	}
+	if err != nil {
+		return connector.WatchResult{}, err
+	}
+	if sub.Expiration.IsZero() {
+		return connector.WatchResult{}, errNoSubscriptionDeadline
+	}
+	// The same ceiling Watch applies, and for the same reason: a deadline
+	// further out than Microsoft can grant is a connection the renewal scan
+	// never picks up again, while the real subscription lapses within three days
+	// and the mailbox falls back to the poll with nothing failing to say so.
+	if sub.Expiration.After(deadline) {
+		sub.Expiration = deadline
+	}
+	return connector.WatchResult{ExpiresAt: sub.Expiration, Ref: sub.ID}, nil
 }
 
 // EnsureSubscription renews the subscription already pointing at
@@ -184,24 +228,29 @@ func (a *httpAPI) EnsureSubscription(
 		return Subscription{}, err
 	}
 	if existing != "" {
-		renewed, err := a.renewSubscription(ctx, accessToken, existing, deadline)
+		renewed, err := a.RenewSubscription(ctx, accessToken, existing, deadline)
 		if err == nil {
 			return renewed, nil
 		}
 		// Gone since the list named it — Microsoft drops a subscription whose
 		// endpoint failed too often, and the recovery is a new one rather than a
 		// failed round. Any other fault stops here.
-		if !errors.Is(err, errSubscriptionGone) {
+		if !errors.Is(err, ErrSubscriptionGone) {
 			return Subscription{}, err
 		}
 	}
 	return a.createSubscription(ctx, accessToken, notificationURL, clientState, deadline)
 }
 
-// errSubscriptionGone is a renewal Microsoft refused because the subscription is
-// no longer there. Internal to this file: the caller's answer is to create one,
-// never to report it.
-var errSubscriptionGone = errors.New("graph: the subscription no longer exists")
+// ErrSubscriptionGone is a renewal Microsoft refused because the subscription is
+// no longer there.
+//
+// EXPORTED, because the answer to it now lives at two levels: EnsureSubscription
+// creates one and never reports it, and RenewWatch — which is handed a stored
+// handle by the registry — falls back to the listing Ensure does. A caller that
+// cannot tell "gone" from "unreachable" would leave the mailbox on the poll for
+// as long as the stored id kept failing.
+var ErrSubscriptionGone = errors.New("graph: the subscription no longer exists")
 
 // findSubscription returns the id of this app's subscription for this user
 // pointing at notificationURL, or empty.
@@ -267,7 +316,7 @@ var errSubscriptionListUnbounded = fmt.Errorf(
 	"graph: the subscription listing did not end within %d pages: %w", maxSubscriptionPages, ErrUnreachable,
 )
 
-func (a *httpAPI) renewSubscription(ctx context.Context, accessToken, id string, deadline time.Time) (Subscription, error) {
+func (a *httpAPI) RenewSubscription(ctx context.Context, accessToken, id string, deadline time.Time) (Subscription, error) {
 	// REFUSED, not merely escaped. The id arrives as a decoded field of a
 	// provider response, and one carrying a path segment would aim this
 	// authenticated PATCH — the user's own delegated token on it — at another
@@ -281,7 +330,7 @@ func (a *httpAPI) renewSubscription(ctx context.Context, accessToken, id string,
 		// the round answers that by creating one, which is the safe direction.
 		// Failing instead would leave the mailbox on the poll for as long as
 		// the provider kept answering with an id like this.
-		return Subscription{}, errSubscriptionGone
+		return Subscription{}, ErrSubscriptionGone
 	}
 	var out subscription
 	status, err := a.writeJSON(ctx, http.MethodPatch,
@@ -289,7 +338,7 @@ func (a *httpAPI) renewSubscription(ctx context.Context, accessToken, id string,
 		subscriptionRequest{Expiration: deadline}, &out)
 	if err != nil {
 		if status == http.StatusNotFound {
-			return Subscription{}, errSubscriptionGone
+			return Subscription{}, ErrSubscriptionGone
 		}
 		return Subscription{}, err
 	}

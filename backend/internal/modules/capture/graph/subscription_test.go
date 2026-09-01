@@ -375,3 +375,59 @@ func TestASubscriptionIsNotCreatedForACredentialNamingNoMailbox(t *testing.T) {
 		t.Errorf("%d subscription(s) created for a credential that could not be routed", api.subCalls)
 	}
 }
+
+// A RENEWAL ADDRESSES THE SUBSCRIPTION IT STORED, and does not go looking.
+//
+// Watch has to make sure a subscription exists, and without a handle that means
+// walking GET /subscriptions — paged, once per mailbox, every cycle — to find
+// the one this installation made. The handle turns that into one call.
+func TestARenewalExtendsTheStoredSubscriptionWithoutListingAnything(t *testing.T) {
+	api := &fakeAPI{email: owner}
+	c := pinnedConn(api)
+
+	res, err := c.RenewWatch(context.Background(), authBytes(t),
+		"https://api.example/webhooks/graph?token=t", "sub-stored")
+	if err != nil {
+		t.Fatalf("RenewWatch: %v", err)
+	}
+	if api.renewCalls != 1 || api.renewID != "sub-stored" {
+		t.Fatalf("renewed %d time(s) naming %q, want one naming the stored id", api.renewCalls, api.renewID)
+	}
+	if api.subCalls != 0 {
+		t.Errorf("%d EnsureSubscription call(s) — a renewal that knows the id paid for the listing "+
+			"anyway, which is the round trip per mailbox per cycle this exists to save", api.subCalls)
+	}
+	want := pinned.Add(maxSubscriptionMinutes * time.Minute).UTC()
+	if !res.ExpiresAt.Equal(want) {
+		t.Errorf("reported %v, want the deadline Microsoft honored", res.ExpiresAt)
+	}
+	if res.Ref != "sub-stored" {
+		t.Errorf("Ref = %q, want the id that was renewed — the registry stores this and the next "+
+			"renewal addresses it", res.Ref)
+	}
+}
+
+// AND A HANDLE MICROSOFT NO LONGER KNOWS falls back to the listing, which is
+// where a recovery path belongs.
+//
+// A subscription dropped for repeated delivery failures, or one made by an
+// installation since restored from a backup, is exactly the case Ensure's
+// renew-then-create answers. Reporting the error instead would leave the mailbox
+// on the poll for as long as the stored id kept failing.
+func TestARenewalWhoseSubscriptionIsGoneRegistersAFreshOne(t *testing.T) {
+	api := &fakeAPI{email: owner, renewErr: ErrSubscriptionGone}
+	c := pinnedConn(api)
+
+	res, err := c.RenewWatch(context.Background(), authBytes(t),
+		"https://api.example/webhooks/graph?token=t", "sub-vanished")
+	if err != nil {
+		t.Fatalf("RenewWatch on a subscription Microsoft has dropped: %v — the mailbox would stay "+
+			"on the poll for as long as the stored id kept failing", err)
+	}
+	if api.subCalls != 1 {
+		t.Errorf("%d EnsureSubscription call(s), want one — the fallback IS the listing", api.subCalls)
+	}
+	if res.Ref == "" || res.Ref == "sub-vanished" {
+		t.Errorf("Ref = %q, want the id of the subscription that now exists", res.Ref)
+	}
+}
