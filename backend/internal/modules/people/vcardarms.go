@@ -69,28 +69,50 @@ func (s *Store) updateMatchedByCard(
 
 // createFromCard turns a card nobody matched into a person.
 //
-// No existing subject to hold on this arm — the person does not exist yet — so
-// the source check is what stands between a narrowed message and a new record,
-// and it takes this transaction's first row lock.
+// The source is checked AFTER the person is minted, and that ordering is the
+// deadlock rule rather than a preference. This arm has no prior subject to hold
+// — the person does not exist yet — so it cannot open with a subject lock the
+// way updateMatchedByCard does. What it can do is take its rows in the same
+// DIRECTION the eraser does: privacy/erasure.go deletes person_email (its
+// `email = ANY(...)` arm reaches an address held by an archived record) and only
+// then locks the subject's activities. Taking the activity lock first would put
+// this transaction holding the message and waiting on an email the eraser holds
+// while that eraser waits on the message — and the loser of a 40P01 there can be
+// the Art. 17 fulfilment, which fails on a path ordinary inbound mail drives.
+//
+// The guarantee is unchanged by the move: the check and the write are still one
+// transaction, so a narrowing cannot commit between them. Only the order in
+// which this transaction takes its two locks changes, and the rollback that
+// follows a refusal undoes the person as if it had never been minted.
 func (s *Store) createFromCard(
 	ctx context.Context, tx pgx.Tx, entry VCardEntry,
 	source ids.UUID, result *VCardResult,
 ) error {
+	person, err := s.CreatePersonTx(ctx, tx, personFromVCard(entry))
+	if err != nil {
+		return err
+	}
 	narrowed, err := sourceIsNarrowed(ctx, tx, source)
 	if err != nil {
 		return err
 	}
 	if narrowed {
+		// The person minted above goes with the transaction. Reported as a skip
+		// so the caller sees a refusal rather than a create it cannot find.
 		result.Outcome = VCardSkipped
 		result.Reason = vcardSourceNarrowed
-		return nil
-	}
-	person, err := s.CreatePersonTx(ctx, tx, personFromVCard(entry))
-	if err != nil {
-		return err
+		return errCardSourceNarrowed
 	}
 	created := ids.From[ids.PersonKind](ids.UUID(person.Id))
 	result.Outcome = VCardCreated
 	result.PersonID = &created
 	return s.attachVCardEmployer(ctx, tx, created, entry)
 }
+
+// errCardSourceNarrowed rolls back the person a refused card had already minted.
+//
+// It never leaves importOneVCard: the create arm has to write before it may take
+// the source lock (see above), so the only way to undo that write is to fail the
+// transaction. The caller recognises this one error and reports the card's own
+// outcome, which the arm has already filled in.
+var errCardSourceNarrowed = errors.New("people: the message this card arrived on is no longer readable here")

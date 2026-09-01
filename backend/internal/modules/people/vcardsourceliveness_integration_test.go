@@ -217,6 +217,45 @@ func TestANarrowedMessageStagesNoReviewEither(t *testing.T) {
 	}
 }
 
+// The create arm mints the person BEFORE it may take the source lock, so a
+// refusal has to roll that write back. This asserts the rollback: a refused card
+// leaves no person, no email and no phone, not merely a "skipped" outcome.
+//
+// It is the arm's own ordering that makes the test necessary. Taking the source
+// lock first would need no rollback — and would put this transaction holding the
+// message while waiting on an email the eraser holds, which is the deadlock the
+// ordering exists to avoid.
+func TestARefusedCreateLeavesNoHalfWrittenPerson(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	results := importMailedCard(ctx, t, e, seedSourceMessage(ctx, t, e, "participants"))
+	if len(results) != 1 || results[0].Outcome != VCardSkipped {
+		t.Fatalf("a card from a narrowed message answered %q, want skipped", outcomeOf(results))
+	}
+
+	var people, emails, phones int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM person WHERE full_name = 'Petra Post'`).Scan(&people); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM person_email WHERE email = 'petra@briefkasten.example'`).Scan(&emails); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx,
+			`SELECT count(*) FROM person_phone WHERE phone = '+49305556677'`).Scan(&phones)
+	}); err != nil {
+		t.Fatalf("reading back what the refused card left: %v", err)
+	}
+	if people != 0 || emails != 0 || phones != 0 {
+		t.Errorf("a refused card left %d person, %d email and %d phone row(s) — the outcome "+
+			"says skipped while the record it denies writing is queryable, and the email "+
+			"row would claim an address no contact here owns", people, emails, phones)
+	}
+}
+
 // outcomeOf names what one import answered, for a failure message that says what
 // happened rather than that something did.
 func outcomeOf(results []VCardResult) string {

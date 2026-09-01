@@ -201,6 +201,13 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			return s.createFromCard(ctx, tx, entry, source, &result)
 		}
 	})
+	// The create arm signals a refusal by failing its transaction, because the
+	// person it had to mint before it could take the source lock must not
+	// survive. The outcome it filled in is the answer; the error is only how the
+	// rollback was reached.
+	if errors.Is(err, errCardSourceNarrowed) {
+		return result, nil
+	}
 	if err != nil {
 		return VCardResult{}, fmt.Errorf("people: importing card %d: %w", index+1, err)
 	}
