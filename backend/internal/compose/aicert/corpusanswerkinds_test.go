@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+// Package-internal rather than aicert_test, unlike its three sibling corpus
+// gates: the vocabulary is read off firstBuiltRequest, which is unexported. Do
+// not "fix" that inconsistency by moving the file — the alternative is
+// re-creating the request build here, and a gate that builds its own request
+// certifies a copy of one.
 package aicert
 
 // The corpus census next door (corpus_test.go) is per SITE. A site whose model
@@ -22,32 +27,57 @@ package aicert
 // records, where two kinds reached the prompt while the schema still refused
 // them and every test stayed green.
 //
-// The unit is the ENUM, not the site, because a schema can be shared: the four
-// onboarding conversation sites all send companyReadMessageSchema and each
-// narrows it in prose the model is given and this gate cannot read. Demanding
-// every kind of every site would demand scenarios the prompt forbids — the
-// `acts` prompt permits five of that enum's seven and tells the model outright
-// not to emit `correction` or `confirmation`. Per enum, a kind is covered when
-// SOME site sharing it scores it, which is the obligation that is actually true:
-// the enum is a property of the schema, so the coverage of it is too.
+// The unit is the ENUM, not the site, because a schema can be shared: three
+// onboarding conversation sites send companyReadMessageSchema
+// (onboardingacts.go, onboardingcompanyanswer.go, onboardingsitereadanswer.go)
+// and each narrows it in prose the model is given and this gate cannot read.
+// Demanding every kind of every site would demand scenarios the prompt forbids —
+// the `acts` prompt permits five of that enum's seven and tells the model
+// outright not to emit `correction` or `confirmation`. Per enum, a kind is
+// covered when SOME site sharing it scores it, which is the obligation that is
+// actually true: the enum is a property of the schema, so the coverage of it is
+// too.
 //
 // Self-scoping, so it needs no maintained list of "the classification tasks": an
 // enum is under this obligation exactly when some scenario expects an answer
-// naming one of its members. An open-vocabulary site — prose, field extraction,
-// a per-call citation enum whose members are that call's passage ids — never
-// matches and is never asked to cover anything. A new closed-vocabulary task
-// comes under the gate the moment its first scenario lands, with nothing to
-// remember here.
+// naming one of its members. An open-vocabulary site — prose, a per-call citation
+// enum whose members are that call's passage ids — never matches and is never
+// asked to cover anything. A new closed-vocabulary task comes under the gate the
+// moment its first scenario lands, with nothing to remember here.
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
+
+// recognisedOwners is every closed ANSWER vocabulary the corpus reaches, named
+// by the sites that send it.
+//
+// The SET rather than a count, because a count can be masked: a vocabulary that
+// stops being recognised is hidden by any unrelated enum that splits in two, and
+// the number this gate reports is the number whose falling is the only evidence
+// of under-recognition. Naming the owners means a vocabulary cannot go missing
+// without the diff saying which one.
+//
+// Update deliberately when a task's vocabulary genuinely arrives or leaves;
+// never edit it to make a run green.
+var recognisedOwners = []string{
+	"capture_classify/classify",
+	"capture_confidentiality_verdict/thread",
+	"capture_counterparty_verdict/verdict",
+	"cold_start/acts, cold_start/company_message, cold_start/sitereadmessage",
+	"propose_roles/committee",
+	"signal_extract/thread_events",
+	"site_triage/triage",
+}
 
 // vocabulary is one closed answer enum, the sites that send it, and the members
 // the corpus has scored somewhere among them.
@@ -74,47 +104,32 @@ func TestEveryClosedAnswerKindCarriesAScenario(t *testing.T) {
 	for _, sc := range scenarios {
 		bySite[sc.Task+"/"+sc.Site] = append(bySite[sc.Task+"/"+sc.Site], sc)
 	}
-	sites := make([]string, 0, len(bySite))
-	for site := range bySite {
-		sites = append(sites, site)
-	}
-	sort.Strings(sites)
 
 	// Keyed by the enum's own members, so two sites sending one schema land on
 	// one entry and two sites that merely happen to share a task do not.
-	vocabularies := map[string]*vocabulary{}
-	for _, site := range sites {
+	recognised := map[string]*vocabulary{}
+	for _, site := range sortedMapKeys(bySite) {
 		group := bySite[site]
-		named, keyed := namedAndKeyed(group)
-		if len(named) == 0 {
-			continue // nothing in this site's corpus names a scalar kind
-		}
-		request, err := firstBuiltRequest(context.Background(), group[0], census)
+		named, err := namedKinds(group)
 		if err != nil {
-			t.Errorf("%s: building the request its own case sends: %v", site, err)
-			continue
+			t.Fatalf("%s: %v", site, err)
 		}
-		for _, members := range collectEnums(request.ResponseSchema) {
+		if len(named) == 0 {
+			continue // nothing in this site's corpus names a kind
+		}
+		enums, err := siteEnums(group, census)
+		if err != nil {
+			t.Fatalf("%s: %v", site, err)
+		}
+		for _, key := range sortedMapKeys(enums) {
+			members := enums[key]
 			if !namesAny(members, named) {
 				continue // not this site's answer vocabulary
 			}
-			// An enum whose members this site uses as expectation KEYS identifies
-			// FIELDS, not answers: site_extract/profile's 19-value enum is the
-			// set of fields the extractor may populate, and its expectations
-			// spell them `display_name: Kestrel Fold` (a key) or list them under
-			// `not_grounded` (a value). Coverage there would mean "named in some
-			// abstention list", which is satisfied by typing a field name into
-			// one — it says nothing about whether any scenario exercises that
-			// field. No answer vocabulary is ever keyed: an answer is what a
-			// scenario asserts, never what it asserts ABOUT.
-			if namesAny(members, keyed) {
-				continue
-			}
-			key := strings.Join(members, "\x00")
-			entry, seen := vocabularies[key]
+			entry, seen := recognised[key]
 			if !seen {
 				entry = &vocabulary{members: members, sites: map[string]bool{}, covered: map[string]bool{}}
-				vocabularies[key] = entry
+				recognised[key] = entry
 			}
 			entry.sites[site] = true
 			for _, member := range members {
@@ -125,14 +140,30 @@ func TestEveryClosedAnswerKindCarriesAScenario(t *testing.T) {
 		}
 	}
 
-	keys := make([]string, 0, len(vocabularies))
-	for key := range vocabularies {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	reportUncoveredKinds(t, recognised)
 
-	for _, key := range keys {
-		entry := vocabularies[key]
+	owners := make([]string, 0, len(recognised))
+	for _, entry := range recognised {
+		owners = append(owners, strings.Join(sortedMapKeys(entry.sites), ", "))
+	}
+	sort.Strings(owners)
+	if !slices.Equal(owners, recognisedOwners) {
+		t.Errorf("closed answer vocabularies are owned by\n  %s\nwant\n  %s\n"+
+			"A vocabulary missing here means the derivation stopped reaching it, which is how this gate "+
+			"could report PASS having checked less than it did yesterday. A new one wants a decision: "+
+			"is it an answer vocabulary whose every kind wants a scenario, or a set of FIELD identifiers a\n"+
+			"site merely names? Decide before making this pass.",
+			strings.Join(owners, "\n  "), strings.Join(recognisedOwners, "\n  "))
+	}
+}
+
+// reportUncoveredKinds fails once per vocabulary that admits a kind no scenario
+// names, listing the sites that send it so the author knows where a scenario may
+// live — the prompts narrow the shared enum differently per site.
+func reportUncoveredKinds(t *testing.T, recognised map[string]*vocabulary) {
+	t.Helper()
+	for _, key := range sortedMapKeys(recognised) {
+		entry := recognised[key]
 		var missing []string
 		for _, member := range entry.members {
 			if !entry.covered[member] {
@@ -146,29 +177,39 @@ func TestEveryClosedAnswerKindCarriesAScenario(t *testing.T) {
 			"Every kind the shipped schema admits must be named by some scenario's expect.answer on one of "+
 			"those sites — an unscored kind is a branch of the prompt no model has been graded on. Author it "+
 			"on whichever of those sites its own prompt permits.",
-			strings.Join(sortedKeys(entry.sites), ", "), len(entry.members), len(missing), strings.Join(missing, ", "))
-	}
-
-	// Under-recognition is the one way this gate must not break: it would read a
-	// corpus whose answers stopped matching any enum, find nothing to check, and
-	// report PASS with no failing assertion to notice. Six closed answer
-	// vocabularies are reachable today — the two capture verdicts, capture_classify,
-	// propose_roles, site_triage, and the onboarding conversation enum four
-	// cold_start sites share — so a smaller count means the derivation stopped
-	// reaching them rather than that the tree got better. Raise this with the
-	// seventh; never lower it to make a run green.
-	const reachableVocabularies = 6
-	if len(vocabularies) < reachableVocabularies {
-		t.Errorf("recognised %d closed answer vocabular(ies), expected at least %d.\n"+
-			"Each is derived from an enum in a site's built request, so this means the derivation stopped "+
-			"finding them — not that the corpus improved.", len(vocabularies), reachableVocabularies)
+			strings.Join(sortedMapKeys(entry.sites), ", "), len(entry.members), len(missing),
+			strings.Join(missing, ", "))
 	}
 }
 
-// namedAndKeyed reads every kind this site's scenarios NAME and every map key
-// they USE, from one walk of each expectation: they are two readings of the same
-// tree, and a second walk would be a second chance for the two to disagree about
-// what the tree contains.
+// siteEnums unions the enums of the request EVERY scenario in the group builds,
+// keyed by members.
+//
+// Every scenario rather than the first: a response schema may be built per call
+// from its own fixture — site_extract's citation enum is that call's passage ids
+// — so one scenario's schema does not stand for the site's. Reading only the
+// first would also make the answer depend on which filename sorts first, a
+// dependency the corpus never agreed to.
+func siteEnums(group []Scenario, census *aitasks.Registry) (map[string][]string, error) {
+	enums := map[string][]string{}
+	for _, sc := range group {
+		request, err := firstBuiltRequest(context.Background(), sc, census)
+		if err != nil {
+			return nil, fmt.Errorf("scenario %q: building the request its own case sends: %w", sc.Name, err)
+		}
+		members, err := collectEnums(request.ResponseSchema)
+		if err != nil {
+			return nil, fmt.Errorf("scenario %q: %w", sc.Name, err)
+		}
+		for _, enum := range members {
+			enums[strings.Join(enum, "\x00")] = enum
+		}
+	}
+	return enums, nil
+}
+
+// namedKinds is every kind this site's ACCEPTED scenarios name, read as the
+// string leaves of each expectation.
 //
 // Leaves rather than the whole value, because an expectation is written in its
 // own site's vocabulary and only some sites spell a kind as the entire answer:
@@ -176,50 +217,79 @@ func TestEveryClosedAnswerKindCarriesAScenario(t *testing.T) {
 // {kind: correction, changes: {...}}. Reading only the scalar form counted
 // `correction` as unscored while two scenarios asserted it.
 //
-// Keys are kept APART from leaves rather than pooled, because a key names a
-// FIELD and never an answer. Pooling them would let a field called `personal`
-// count as covering the kind `personal`, and it is the key set that tells a
-// field vocabulary from an answer vocabulary at the call site.
-func namedAndKeyed(group []Scenario) (named, keyed map[string]bool) {
-	named, keyed = map[string]bool{}, map[string]bool{}
+// Two limits of reading leaves, both worth knowing before trusting a green run.
+//
+// Coverage means "this string appears somewhere in expect.answer", not "the
+// answer's kind field equals it". A schema-path-exact match is not available —
+// an expectation is written in the site's own vocabulary and is not
+// schema-shaped, which is the whole reason the leaf set is needed — so a future
+// scenario with a free-text field whose value happened to equal an enum member
+// would mark that kind covered without scoring it. None does today, and a rubric
+// quoting a kind name is safe because Rubric is not part of Answer.
+//
+// A site whose expectations name FIELD identifiers rather than answers is
+// therefore not recognised at all, which is the honest outcome rather than an
+// exemption: site_extract/profile's 19-value enum is the set of fields the
+// extractor may populate, and its accepted scenarios spell those as KEYS
+// (`display_name: Kestrel Fold`) whose leaves are values. Only its ABSTENTION
+// case lists field names as leaves, and an abstention credits nothing. Should a
+// future accepted scenario there name a field as a leaf, the enum becomes
+// recognised and recognisedOwners fails, putting the question to a human instead
+// of resolving it silently either way.
+func namedKinds(group []Scenario) (map[string]bool, error) {
+	named := map[string]bool{}
 	for _, sc := range group {
 		if len(sc.Expect.Answer) == 0 {
 			continue
 		}
-		var decoded any
-		if err := json.Unmarshal(sc.Expect.Answer, &decoded); err != nil {
+		// Only an ACCEPTED scenario credits coverage. A scenario whose right
+		// answer is a refusal or a silence names a kind without ever asking a
+		// model to produce it, so crediting it would leave the kind's own branch
+		// of the prompt ungraded — and adding one is the cheapest way to silence a
+		// genuine miss.
+		if sc.Expect.Outcome != aitasks.OutcomeAccepted {
 			continue
 		}
-		walkExpectation(decoded, named, keyed)
+		var decoded any
+		// Not skipped on error: Expect.Answer is a JSONValue this package rendered
+		// with json.Marshal, so a value that will not decode means the renderer
+		// changed under us. Treating that as "no kinds named" would drop the
+		// scenario's coverage silently and could take a whole vocabulary with it.
+		if err := json.Unmarshal(sc.Expect.Answer, &decoded); err != nil {
+			return nil, fmt.Errorf("scenario %q: expect.answer is not the JSON its JSONValue rendered: %w", sc.Name, err)
+		}
+		walkExpectation(decoded, named)
 	}
-	return named, keyed
+	return named, nil
 }
 
 // walkExpectation is the ONE place this gate reads a decoded expectation, which
 // is why the `any` is here and nowhere else.
 //
 //craft:ignore naked-any expect.answer is free-form per site by contract — a bare string, a person-to-role map, a list of labels, a nested {kind, changes} object — so there is no shape to name, and naming one would be this gate deciding what a site may assert
-func walkExpectation(node any, named, keyed map[string]bool) {
+func walkExpectation(node any, named map[string]bool) {
 	switch typed := node.(type) {
 	case string:
 		named[typed] = true
 	case map[string]any:
-		for key, value := range typed {
-			keyed[key] = true
-			walkExpectation(value, named, keyed)
+		// Map KEYS are deliberately not read. A key names a FIELD, never an answer,
+		// and reading them would let a field called `personal` count as covering the
+		// kind `personal`.
+		for _, value := range typed {
+			walkExpectation(value, named)
 		}
 	case []any:
 		for _, item := range typed {
-			walkExpectation(item, named, keyed)
+			walkExpectation(item, named)
 		}
 	}
 }
 
 // schemaNode is as much of a JSON Schema as this gate reads: the enums, and the
 // two constructs the shipped schemas nest them under. Declared rather than
-// walked as decoded JSON so the gate STATES which parts of a schema it depends
-// on — a schema hiding an enum somewhere else would be under-recognised, which
-// is what the reachableVocabularies floor exists to catch.
+// walked as decoded JSON so the gate STATES which schema constructs it depends
+// on — a schema hiding an enum behind a third construct would be
+// under-recognised, which is what the recognisedVocabularies assertion catches.
 type schemaNode struct {
 	Enum       []json.RawMessage     `json:"enum"`
 	Properties map[string]schemaNode `json:"properties"`
@@ -229,15 +299,20 @@ type schemaNode struct {
 // collectEnums returns every all-string enum a built request's response schema
 // carries, at any depth: the capture sites nest theirs under
 // properties.results.items.properties.
-func collectEnums(responseSchema json.RawMessage) [][]string {
+//
+// A schema that will not parse is an error rather than zero enums. Zero would
+// mean "this site answers from no closed vocabulary", which is the same thing
+// this gate reports for an open-vocabulary site — so an unreadable schema would
+// disable the obligation and look exactly like the site not having one.
+func collectEnums(responseSchema json.RawMessage) ([][]string, error) {
 	if len(responseSchema) == 0 {
-		return nil
+		return nil, nil // no schema at all: the site constrains nothing
 	}
 	var root schemaNode
 	if err := json.Unmarshal(responseSchema, &root); err != nil {
-		return nil
+		return nil, fmt.Errorf("its response schema is not readable as a JSON Schema: %w", err)
 	}
-	return root.enums()
+	return root.enums(), nil
 }
 
 func (n schemaNode) enums() [][]string {
@@ -245,7 +320,7 @@ func (n schemaNode) enums() [][]string {
 	if members, allStrings := stringMembers(n.Enum); allStrings {
 		found = append(found, members)
 	}
-	for _, name := range sortedNames(n.Properties) {
+	for _, name := range sortedMapKeys(n.Properties) {
 		found = append(found, n.Properties[name].enums()...)
 	}
 	if n.Items != nil {
@@ -283,18 +358,9 @@ func namesAny(members []string, names map[string]bool) bool {
 	return false
 }
 
-// sortedNames and sortedKeys keep a failure naming the same enum, and the same
-// sites, on every run.
-func sortedNames(m map[string]schemaNode) []string {
-	names := make([]string, 0, len(m))
-	for name := range m {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
-}
-
-func sortedKeys(m map[string]bool) []string {
+// sortedMapKeys keeps every failure naming the same enum, sites and schema
+// properties on every run.
+func sortedMapKeys[V any](m map[string]V) []string {
 	keys := make([]string, 0, len(m))
 	for key := range m {
 		keys = append(keys, key)
