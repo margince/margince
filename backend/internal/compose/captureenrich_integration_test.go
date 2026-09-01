@@ -6,13 +6,16 @@
 package compose
 
 // The signature-enrich pass over a real Postgres: an evidence-grounded
-// title and phone land fill-only-empty with their PO-DDL-12 evidence rows;
-// a fabricated snippet is dropped by the code-side gate; an occupied field
-// is never touched; and a person once enriched leaves the candidate set.
+// title and phone land with their PO-DDL-12 evidence rows; a fabricated
+// snippet is dropped by the code-side gate; a human's correction is never
+// overwritten; a person once enriched leaves the candidate set; and a pass
+// that filled its limit says so, so the worker can queue the next slice
+// instead of leaving it until tonight.
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"testing"
 
@@ -89,7 +92,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 		{"field": "linkedin", "value": "linkedin.com/in/bob", "evidence_snippet": "linkedin.com/in/bob", "confidence": 0.9},
 	}}
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-	if err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -130,7 +133,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 		// select them again — and asking would show the model the identical
 		// window and get the identical answer, nightly, forever.
 		before := brain.calls
-		if err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 			t.Fatalf("Run: %v", err)
 		}
 		if brain.calls != before {
@@ -157,7 +160,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 			t.Fatal(err)
 		}
 		before := brain.calls
-		if err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 			t.Fatalf("Run: %v", err)
 		}
 		if brain.calls == before {
@@ -179,7 +182,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 		// She is still a candidate — the org_name her signature may state is
 		// unanswered — so the pass reads her mail and the model returns the
 		// same title it returns for everyone. The human's answer survives it.
-		if err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 			t.Fatalf("Run: %v", err)
 		}
 		var title string
@@ -222,7 +225,7 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	t.Run("garbage output fails the candidate, not the pass", func(t *testing.T) {
 		brain := &faultyEnrichBrain{garbage: true}
 		enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-		if err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 			t.Fatalf("a per-candidate model failure must not fail the pass: %v", err)
 		}
 		if brain.calls == 0 {
@@ -237,7 +240,7 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	t.Run("a budget stop ends the pass cleanly", func(t *testing.T) {
 		brain := &faultyEnrichBrain{err: ai.ErrBudgetDeferred}
 		enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
-		if err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 			t.Fatalf("a budget stop must not be an error: %v", err)
 		}
 		if brain.calls != 1 {
@@ -260,4 +263,175 @@ func enrichEvidenceCount(t *testing.T, e *integration.Env, email string) int {
 		t.Fatal(err)
 	}
 	return n
+}
+
+// A human who corrected a field is promised no fresh inference replaces their
+// answer without a confirm. This is the case that promise is made of: they
+// correct the title, the contact then writes again stating something else, and
+// the pass must leave the correction alone.
+//
+// Recorded through ai.FeedbackStore, the writer the page itself uses, because
+// the ledger stores a HASH of the claim path — a fixture that inserted the row
+// by hand could spell the key any way at all and would prove nothing about
+// whether the pass can find a real one.
+func TestASignatureDoesNotOverwriteACorrectedField(t *testing.T) {
+	e := integration.Setup(t)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\n+49 30 1234567\nAcme GmbH"
+	person := seedEnrichPerson(t, e, "corrected@acme.example", body)
+
+	ctx := e.Admin()
+	if err := ai.NewFeedbackStore(InstallationDB(e.Pool)).Record(ctx, ai.RecordInput{
+		SubjectType: "person",
+		SubjectID:   person,
+		ClaimKind:   ai.ClaimProfileField,
+		ClaimPath:   ai.ProfileFieldClaimPath("title"),
+		Verdict:     ai.VerdictCorrected,
+		CorrectedValue: func() *string {
+			v := "Head of Engineering"
+			return &v
+		}(),
+	}); err != nil {
+		t.Fatalf("record the human's correction: %v", err)
+	}
+
+	brain := &signatureScriptBrain{fields: []map[string]any{
+		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
+	}}
+	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
+	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	var titleRows int
+	var title *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		c := context.Background()
+		if err := tx.QueryRow(c, `SELECT title FROM person WHERE id = $1`, person).Scan(&title); err != nil {
+			return err
+		}
+		return tx.QueryRow(c,
+			`SELECT count(*) FROM person_profile_field WHERE person_id = $1 AND field = 'title'`,
+			person).Scan(&titleRows)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if title != nil {
+		t.Errorf("person.title = %q — a corrected field was overwritten by a fresh inference", *title)
+	}
+	if titleRows != 0 {
+		t.Errorf("%d title evidence rows, want 0: the pass wrote over a human's ruling", titleRows)
+	}
+}
+
+// TestAFullPassAsksForAContinuation drives the boundary the continuation turns
+// on: a pass whose candidate set filled the limit reports that more people are
+// due, and one that came back short does not.
+//
+// The limit is set to 2 rather than seeding a hundred people. What is under
+// test is the comparison against the pass's own limit, and that comparison is
+// the same one at 2 as at 100.
+func TestAFullPassAsksForAContinuation(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		people     int
+		wantFilled bool
+	}{
+		// One short of the limit: nobody is waiting, and a continuation would
+		// be a job that lists no candidates.
+		{"a short pass is finished", 1, false},
+		// Exactly the limit. There may be a hundred more behind these two, and
+		// before the continuation they waited for the nightly pass.
+		{"a full pass has more to do", 2, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
+			for i := range tc.people {
+				seedEnrichPerson(t, e, fmt.Sprintf("full%d@acme.example", i), body)
+			}
+
+			brain := &signatureScriptBrain{fields: []map[string]any{
+				{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
+			}}
+			enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
+			enricher.limit = 2
+
+			filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+			if err != nil {
+				t.Fatalf("Run: %v", err)
+			}
+			if filled != tc.wantFilled {
+				t.Errorf("filled = %v, want %v for %d candidates against a limit of 2",
+					filled, tc.wantFilled, tc.people)
+			}
+		})
+	}
+}
+
+// A budget stop reports no continuation. The pass stopped because the model
+// budget ran out, so a follow-on would hit the same wall at once — and the
+// candidate set was full, which is the signal that would otherwise fire.
+func TestABudgetStopAsksForNoContinuation(t *testing.T) {
+	e := integration.Setup(t)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
+	for i := range 2 {
+		seedEnrichPerson(t, e, fmt.Sprintf("budget%d@acme.example", i), body)
+	}
+
+	enricher := NewCaptureEnricher(e.Pool, &budgetStoppedBrain{}, slog.New(slog.DiscardHandler))
+	enricher.limit = 2
+
+	filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if filled {
+		t.Error("a budget-stopped pass asked for a continuation, which would spend a job to hit the same wall")
+	}
+}
+
+// budgetStoppedBrain is the model lane refusing on budget, which is the one
+// error RunWorkspace treats as ending the pass rather than skipping a person.
+type budgetStoppedBrain struct{}
+
+func (b *budgetStoppedBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	return model.Response{}, ai.ErrBudgetDeferred
+}
+
+// TestAPassThatMovedNobodyAsksForNoContinuation is the runaway bound.
+//
+// A candidate whose model call fails writes no watermark, deliberately, so it
+// stays the newest mail and fills the next pass too. If a full set alone
+// queued a continuation, a hundred permanently failing candidates would
+// re-select themselves and enqueue another job forever — every job succeeding,
+// every one spending the model budget, and River's attempt cap unable to see
+// it because nothing ever fails.
+func TestAPassThatMovedNobodyAsksForNoContinuation(t *testing.T) {
+	e := integration.Setup(t)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
+	for i := range 2 {
+		seedEnrichPerson(t, e, fmt.Sprintf("stuck%d@acme.example", i), body)
+	}
+
+	// Output the pass cannot parse: the candidate fails, is logged, and keeps
+	// its place at the head of the queue.
+	enricher := NewCaptureEnricher(e.Pool, &unparseableBrain{}, slog.New(slog.DiscardHandler))
+	enricher.limit = 2
+
+	filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if filled {
+		t.Error("a pass that enriched nobody asked for a continuation — " +
+			"the same candidates would fill the next pass and chain forever")
+	}
+}
+
+// unparseableBrain answers with text the verdict parser rejects, which fails
+// the candidate without failing the pass.
+type unparseableBrain struct{}
+
+func (b *unparseableBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	return model.Response{Text: "not json"}, nil
 }

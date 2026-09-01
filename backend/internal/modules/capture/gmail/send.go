@@ -14,9 +14,9 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/capture/mailwire"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -36,7 +36,15 @@ const SendScope = "https://www.googleapis.com/auth/gmail.send"
 // Reconnecting is the fix, so the caller parks rather than retries.
 var ErrSendScopeMissing = fmt.Errorf("gmail: this connection was not granted the send scope: %w", connector.ErrAuthRejected)
 
-var _ connector.EmailSender = (*Connector)(nil)
+var (
+	_ connector.EmailSender = (*Connector)(nil)
+	// Asserted as well as implemented, the way the Outlook connector does.
+	// CarriageOf reaches Carriage through a type assertion, so a rename here
+	// would stop this connector declaring carriage at all — and a message with
+	// files staged against a connector that carries nothing PARKS. The compiler
+	// is the only thing that can notice.
+	_ connector.AttachmentCarrier = (*Connector)(nil)
+)
 
 // maxSendableFiles is the most files this connector will put in one message.
 //
@@ -104,7 +112,7 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 			return connector.SendReceipt{ProviderMessageID: id}, nil
 		}
 	}
-	raw := base64.URLEncoding.EncodeToString([]byte(buildRFC822(st.Owner, msg)))
+	raw := base64.URLEncoding.EncodeToString([]byte(mailwire.Build(st.Owner, msg)))
 	id, err := c.api.Send(ctx, access, raw)
 	if err != nil {
 		return connector.SendReceipt{}, err
@@ -123,7 +131,7 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 // than going out stripped, because a recipient seeing fewer files than the
 // timeline records is a wrong record nobody is told about. Gmail takes a
 // complete RFC822 message, so the files ride in the multipart/mixed envelope
-// buildRFC822 renders — nothing is uploaded separately and nothing is linked.
+// mailwire.Build renders — nothing is uploaded separately and nothing is linked.
 //
 // The limits are mail's own inbound bounds read in the other direction: a
 // message this system will accept is one it can send.
@@ -194,43 +202,6 @@ func (c *Connector) stampedIdentity(ctx context.Context, access, owner, provider
 		return ""
 	}
 	return id
-}
-
-// bracket renders a message identity as RFC 5322 requires it on the wire. The
-// identity travels unbracketed everywhere else in this system, because that is
-// the form mail parsing yields and therefore the form the captured copy of this
-// message will be keyed on.
-func bracket(id string) string {
-	if id == "" {
-		return ""
-	}
-	return "<" + strings.Trim(id, "<>") + ">"
-}
-
-// addressList renders one address header value: each address trimmed, empties
-// dropped, comma-separated. The trim is the same normalization the send path's
-// consent gate matches on, so the address a recipient is asked about and the
-// address the header carries are one string — a stored " a@x " must not become
-// folding whitespace around an addr-spec that some clients then display raw.
-func addressList(addrs []string) string {
-	out := make([]string, 0, len(addrs))
-	for _, addr := range addrs {
-		if trimmed := strings.TrimSpace(addr); trimmed != "" {
-			out = append(out, trimmed)
-		}
-	}
-	return strings.Join(out, ", ")
-}
-
-// writeHeader emits one header line with CR and LF removed from the value: a
-// bare CR or LF inside a header is the classic injection vector, and the only
-// safe rendering of one is not to emit it.
-func writeHeader(b *strings.Builder, name, value string) {
-	clean := strings.NewReplacer("\r", "", "\n", "").Replace(value)
-	b.WriteString(name)
-	b.WriteString(": ")
-	b.WriteString(clean)
-	b.WriteString("\r\n")
 }
 
 // Send transmits one already-encoded RFC822 message via messages.send. No

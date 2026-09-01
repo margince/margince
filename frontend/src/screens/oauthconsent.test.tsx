@@ -7,18 +7,10 @@ import {
   render as rtlRender,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  clearPendingAuthorize,
-  readPendingAuthorize,
-  stashPendingAuthorize,
-} from "../app/pendingauthorize";
-import { pickOption } from "../design-system/select-testing";
-import { formatDate } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { OAuthConsent } from "./oauthconsent";
 
@@ -36,9 +28,9 @@ const NONCE = "n1";
 // would be silent — the flow still completes, bound to the wrong audience.
 const RESOURCE = "https://margince.example/mcp";
 
-// The whole authorize request minus the nonce — what a re-entry (the mint
-// detour's stash, the post-sign-in retry) must carry, spelled once so both
-// assertions read from the same list.
+// The whole authorize request minus the nonce — what a re-entry (the
+// post-sign-in retry) must carry, spelled once so both assertions read from
+// the same list.
 const AUTHORIZE_KEYS = [
   "response_type",
   "client_id",
@@ -89,13 +81,6 @@ function hashWithError(
   return `#/oauth-consent?${params.toString()}`;
 }
 
-// A RECOVERABLE refusal: the pending authorization is untouched, so the server
-// hands the nonce back with the marker and the human's next choice is submitted
-// inside the same window. This is the only refusal shape that may render a form.
-function hashWithRetry(errorCode: string): string {
-  return hashWithError(errorCode, { consent: NONCE });
-}
-
 function hashWithoutNonce(overrides: Record<string, string> = {}): string {
   const params = new URLSearchParams({
     response_type: "code",
@@ -118,50 +103,13 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-// Hands the client back for the one case that has to make the screen read the
-// consent request a SECOND time (a passport revoked while the screen was open).
-function renderWithClient(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-  return client;
-}
-
-function render(ui: ReactNode) {
-  renderWithClient(ui);
-}
-
 type ConsentPayload = {
   client_name: string;
   offline: boolean;
-  passports: Array<{
-    id: string;
-    label: string;
-    scopes: string[];
-  }>;
+  scopes: string[];
 };
 
-// Fills every passport's expires_at so the screen's own read of that
-// (required) field never breaks a test whose payload didn't spell it out.
-function withExpiry(payload: ConsentPayload) {
-  return {
-    ...payload,
-    passports: payload.passports.map((p) => ({
-      ...p,
-      expires_at: "2026-12-31T00:00:00Z",
-    })),
-  };
-}
-
-// Answers the consent-request read from whatever `current()` returns AT THE
-// TIME OF THE CALL, so a test can change what the server offers between two
-// reads — the shape a passport revoked in another tab actually arrives in.
-function stubConsentReads(current: () => ConsentPayload) {
+function stubConsent(payload: ConsentPayload) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -171,15 +119,11 @@ function stubConsentReads(current: () => ConsentPayload) {
         "https://test.local",
       );
       if (url.pathname === "/v1/oauth/consent-request") {
-        return jsonResponse(withExpiry(current()));
+        return jsonResponse(payload);
       }
       return jsonResponse({ title: "not found" }, 404);
     }),
   );
-}
-
-function stubConsent(payload: ConsentPayload) {
-  stubConsentReads(() => payload);
 }
 
 // Every read this screen makes fails. The states that need no server data must
@@ -216,6 +160,45 @@ function stubSession(hasSession: boolean) {
   );
 }
 
+function renderWithClient(ui: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return client;
+}
+
+function render(ui: ReactNode) {
+  renderWithClient(ui);
+}
+
+function renderConsent(
+  payload: Partial<ConsentPayload> & { scopes: string[] },
+) {
+  stubConsent({
+    client_name: payload.client_name ?? "Claude Code",
+    offline: payload.offline ?? false,
+    scopes: payload.scopes,
+  });
+  render(<OAuthConsent />);
+}
+
+// The ONE way a test observes what the approve form would post: a real
+// <form method="post" action="/oauth/authorize">, never fetch, so this reads
+// the form's own hidden fields exactly as the browser would send them.
+function approveForm(): HTMLFormElement {
+  const button = screen.getByRole("button", { name: /authorize/i });
+  const form = button.closest("form");
+  if (!(form instanceof HTMLFormElement)) {
+    throw new Error("the Authorize button is not inside a form");
+  }
+  return form;
+}
+
 // Captures a real <form method="post" action="/oauth/authorize"> submit —
 // the flow is a native browser POST, not fetch, so a test observes it by
 // listening for the submit event and reading the form's own data, exactly as
@@ -243,185 +226,99 @@ function stubAuthorizePost(): { body: URLSearchParams } {
   return posted;
 }
 
-// The viewer's zone as the screen asks for it. Restored by the suite's
-// afterEach, so one case pretending to be elsewhere never leaks into the next.
-function pretendViewerZone(timeZone: string): void {
-  const real = Intl.DateTimeFormat().resolvedOptions();
-  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
-    ...real,
-    timeZone,
-  });
-}
-
 beforeEach(() => {
   globalThis.location.hash = hashWith();
-  clearPendingAuthorize();
 });
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  clearPendingAuthorize();
 });
 
 describe("OAuthConsent", () => {
-  it("guides the human to mint a passport when they have none, and offers no way to approve", async () => {
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [],
-    });
-    render(<OAuthConsent />);
-    expect(
-      await screen.findByText(/need an agent passport first/i),
-    ).toBeTruthy();
-    // Not a disabled button — no approve control at all.
-    expect(screen.queryByRole("button", { name: /authorize/i })).toBeNull();
+  it("offers every scope ticked, and grants what stays ticked", async () => {
+    renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
+    const user = userEvent.setup();
+
+    // Everything is ticked by default: a connection that can only read is not
+    // what someone connecting an assistant is asking for, and the first thing
+    // they try would fail in a way that reads as the product being broken.
+    for (const label of [
+      "Read records",
+      "Draft messages",
+      "Change records",
+      "Send messages",
+      "Buy contact data",
+    ]) {
+      expect(
+        await screen.findByRole("checkbox", { name: new RegExp(label) }),
+      ).toBeChecked();
+    }
+
+    await user.click(screen.getByRole("checkbox", { name: /Send messages/ }));
+    await user.click(
+      screen.getByRole("checkbox", { name: /Buy contact data/ }),
+    );
+
+    expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
+      "read draft write",
+    );
   });
 
-  it("stashes the pending authorize request before sending the human to mint one", async () => {
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [],
-    });
-    render(<OAuthConsent />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /mint a passport/i }),
-    );
-    const stashed = readPendingAuthorize();
-    expect(stashed?.url).toContain("/oauth/authorize?");
-    expect(stashed?.clientName).toBe("Claude Code");
-    expect(globalThis.location.hash).toBe("#/settings/agents");
+  it("refuses to approve nothing", async () => {
+    renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
+    const user = userEvent.setup();
+    await screen.findByRole("checkbox", { name: /Read records/ });
+    for (const label of [
+      /Read records/,
+      /Draft messages/,
+      /Change records/,
+      /Send messages/,
+      /Buy contact data/,
+    ]) {
+      await user.click(screen.getByRole("checkbox", { name: label }));
+    }
 
-    // The nonce must NOT survive into the stash — it is single-use and
-    // cookie-bound, and the mint trip navigates away from /oauth/authorize
-    // entirely, so replaying it on return would only get a refusal at the
-    // very end of the detour. Compare the actual parameter SET rather than
-    // grepping for a handful of substrings, so a future edit that drops one
-    // of the other required params (or reintroduces the nonce under a
-    // different key) fails here too.
-    const stashedParams = new URLSearchParams(
-      (stashed?.url ?? "").split("?")[1] ?? "",
-    );
-    expect(stashedParams.has("consent")).toBe(false);
-    expect(stashedParams.toString().includes(NONCE)).toBe(false);
-    expect([...stashedParams.keys()].sort()).toEqual(
-      [...AUTHORIZE_KEYS].sort(),
-    );
-    expect(stashedParams.get("resource")).toBe(RESOURCE);
+    // The server refuses an empty set too (parseConsentedScopes) — but it does
+    // so at the POST, and the human is still here, so the screen says it
+    // first.
+    expect(screen.getByRole("button", { name: /authorize/i })).toBeDisabled();
+    expect(screen.getByText(/Pick at least one, or deny/)).toBeInTheDocument();
+  });
+
+  it("still denies without a scope selection", async () => {
+    renderConsent({ scopes: ["read"] });
+    // Deny is never gated on the ticks: a human refusing a client must not
+    // have to satisfy a form first.
+    expect(
+      await screen.findByRole("button", { name: /deny access/i }),
+    ).toBeEnabled();
   });
 
   it("names the client from the server, never from the URL", async () => {
     globalThis.location.hash = hashWith({ client_name: "EVIL" });
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [{ id: "p1", label: "night agent", scopes: ["read"] }],
-    });
-    render(<OAuthConsent />);
+    renderConsent({ client_name: "Claude Code", scopes: ["read"] });
     expect(await screen.findByText(/Claude Code/)).toBeTruthy();
     expect(screen.queryByText(/EVIL/)).toBeNull();
   });
 
-  it("posts the chosen passport and the nonce the redirect handed it", async () => {
+  it("posts the granted scopes and the nonce the redirect handed it", async () => {
     const posted = stubAuthorizePost();
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [{ id: "p1", label: "night agent", scopes: ["read"] }],
-    });
-    render(<OAuthConsent />);
+    renderConsent({ scopes: ["read", "write"] });
     await userEvent.click(
       await screen.findByRole("button", { name: /authorize/i }),
     );
-    expect(posted.body.get("passport_id")).toBe("p1");
+    expect(posted.body.get("scopes")).toBe("read write");
     // The nonce comes from the fragment, not from the endpoint: the cookie
     // that holds its counterpart is Path=/oauth/authorize and reaches
     // nothing else.
     expect(posted.body.get("consent")).toBe(NONCE);
   });
 
-  it("posts the SECOND passport when that's the one chosen — not just whatever renders first", async () => {
-    const posted = stubAuthorizePost();
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [
-        { id: "p1", label: "night agent", scopes: ["read"] },
-        { id: "p2", label: "day agent", scopes: ["read"] },
-      ],
-    });
-    render(<OAuthConsent />);
-    await pickOption(
-      userEvent.setup(),
-      await screen.findByRole("combobox"),
-      "day agent",
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /authorize/i }),
-    );
-    // A component that ignored onChange and always posted options[0] would
-    // pass a single-passport test but fail this one.
-    expect(posted.body.get("passport_id")).toBe("p2");
-  });
-
-  it("posts the passport it is displaying, even after a re-read drops the chosen one", async () => {
-    const posted = stubAuthorizePost();
-    const night = {
-      id: "p1",
-      label: "night agent",
-      scopes: ["read"],
-    };
-    const day = {
-      id: "p2",
-      label: "day agent",
-      scopes: ["read"],
-    };
-    let lendable = [night, day];
-    stubConsentReads(() => ({
-      client_name: "Claude Code",
-      offline: false,
-      passports: lendable,
-    }));
-    const client = renderWithClient(<OAuthConsent />);
-    await pickOption(
-      userEvent.setup(),
-      await screen.findByRole("combobox"),
-      "day agent",
-    );
-
-    // The day agent is revoked in another tab; the next read of the same
-    // request no longer offers it, and the selector falls back to the one
-    // passport that is left. The list is what proves the revoked one is gone,
-    // and it exists only while the popup is open — so it is opened for the
-    // count and Escape closes it again before the authorize click.
-    lendable = [night];
-    await client.invalidateQueries({ queryKey: ["oauth-consent-request"] });
-    await waitFor(() =>
-      expect(screen.getByRole("combobox")).toHaveTextContent("night agent"),
-    );
-    await userEvent.click(screen.getByRole("combobox"));
-    expect(screen.getAllByRole("option")).toHaveLength(1);
-    await userEvent.keyboard("{Escape}");
-
-    await userEvent.click(screen.getByRole("button", { name: /authorize/i }));
-    // Displayed and posted are ONE value: the trigger's face IS the display, so
-    // a form still carrying the vanished p2 would let the human approve the
-    // passport on screen while lending a different one.
-    expect(screen.getByRole("combobox")).toHaveTextContent("night agent");
-    expect(posted.body.get("passport_id")).toBe("p1");
-  });
-
   it("posts the deny marker when the human refuses the connection", async () => {
     const posted = stubAuthorizePost();
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [{ id: "p1", label: "night agent", scopes: ["read"] }],
-    });
-    render(<OAuthConsent />);
+    renderConsent({ scopes: ["read"] });
     await userEvent.click(
       await screen.findByRole("button", { name: /deny access/i }),
     );
@@ -429,132 +326,11 @@ describe("OAuthConsent", () => {
     expect(posted.body.get("consent")).toBe(NONCE);
   });
 
-  it("shows when the lent passport expires, on the viewer's own calendar", async () => {
-    // stubConsent always fills expires_at with 2026-12-31T00:00:00Z (see its
-    // own comment) — an instant that is already 31 December in Berlin but
-    // still 30 December on the US west coast. Pretend the viewer is there:
-    // formatDate takes its zone as an argument and never consults
-    // resolvedOptions, so this spy redirects only the screen's own lookup.
-    pretendViewerZone("America/Los_Angeles");
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [{ id: "p1", label: "night agent", scopes: ["read"] }],
-    });
-    render(<OAuthConsent />);
-    // The locked locale convention (format.ts INTL_LOCALE, "A100:
-    // unconfigured English is en-GB") renders DD/MM/YYYY: a fixed
-    // Europe/Berlin would print 31/12/2026 to a human whose calendar still
-    // says the 30th, on the one screen where the credential's lifetime is
-    // the decision.
-    expect(await screen.findByText(/30\/12\/2026/)).toBeTruthy();
-    const fixedZoneDate = formatDate(
-      "2026-12-31T00:00:00Z",
-      "en",
-      "Europe/Berlin",
-    );
-    expect(screen.queryByText(new RegExp(fixedZoneDate))).toBeNull();
-  });
-
-  it("discloses a self-renewing connection separately from the scopes", async () => {
-    stubConsent({
-      client_name: "Claude Code",
-      offline: true,
-      passports: [{ id: "p1", label: "night agent", scopes: ["read"] }],
-    });
-    render(<OAuthConsent />);
+  it("discloses a self-renewing connection", async () => {
+    renderConsent({ offline: true, scopes: ["read"] });
     expect(
       await screen.findByText(/stay connected without asking again/i),
     ).toBeTruthy();
-    // offline_access is never an item in a scope list.
-    expect(screen.queryByText("offline_access")).toBeNull();
-  });
-
-  it("shows the whole passport as the grant when the client asked for less", async () => {
-    stubConsent({
-      client_name: "Claude Code",
-      // The shape every real MCP client produces: it named no scope, so the
-      // server read the request as `read` alone. The passport is far wider.
-      offline: false,
-      passports: [
-        {
-          id: "p1",
-          label: "night agent",
-          scopes: ["read", "write", "send"],
-        },
-      ],
-    });
-    render(<OAuthConsent />);
-    await screen.findByRole("button", { name: /authorize/i });
-    // All three are the grant, and each reads as one: a chip the human is told
-    // is withheld would be a lie about what this connection can do.
-    for (const scope of ["read", "write", "send"]) {
-      expect(screen.getByText(scope).textContent).toBe(scope);
-    }
-    // No leftover of the old narrowing disclosure in either direction — the
-    // request neither dims a chip nor earns a line about what it did not get.
-    expect(screen.queryByText(/not granted/i)).toBeNull();
-    expect(screen.queryByText(/asked for more/i)).toBeNull();
-    expect(
-      screen.getByText(/gets exactly the scopes shown/i).textContent,
-    ).toContain("this passport carries");
-  });
-
-  it("gives an unlabelled passport a fallback that still identifies it", async () => {
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [{ id: "p1anonymous", label: "", scopes: ["read"] }],
-    });
-    render(<OAuthConsent />);
-    // The server maps a NULL label to "" deliberately — a blank entry makes two
-    // such passports indistinguishable on the one screen where knowing which
-    // credential you're lending is the point. The option list is portalled and
-    // only exists while the control is open, so the check opens it.
-    await userEvent.click(await screen.findByRole("combobox"));
-    expect(
-      within(screen.getByRole("listbox")).getByRole("option", {
-        name: /unnamed passport/i,
-      }),
-    ).toBeTruthy();
-  });
-});
-
-describe("OAuthConsent — the stash outlives only the request it represents", () => {
-  it("clears a stashed pending authorize once the screen has a usable passport list", async () => {
-    stashPendingAuthorize({
-      url: "/oauth/authorize?client_id=old&scope=read",
-      clientName: "Old Client",
-    });
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [{ id: "p1", label: "night agent", scopes: ["read"] }],
-    });
-    render(<OAuthConsent />);
-    await screen.findByRole("button", { name: /authorize/i });
-    // Arriving here with a usable list means any mint detour is over —
-    // a stash surviving past this point is what makes Settings offer to
-    // "finish" a connection that already went through.
-    expect(readPendingAuthorize()).toBeNull();
-  });
-
-  it("leaves an existing stash alone while the screen still has nothing to lend", async () => {
-    stashPendingAuthorize({
-      url: "/oauth/authorize?client_id=old&scope=read",
-      clientName: "Old Client",
-    });
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [],
-    });
-    render(<OAuthConsent />);
-    await screen.findByText(/need an agent passport first/i);
-    // The other direction of the same rule: an empty list is still a guide sending the
-    // human to mint one, and a stash cleared here would strand that trip —
-    // Settings would never offer to finish a connection actually pending.
-    expect(readPendingAuthorize()?.clientName).toBe("Old Client");
   });
 });
 
@@ -599,58 +375,6 @@ describe("OAuthConsent — what a refused consent is handed back", () => {
       screen.getByRole("button", { name: /back to margince/i }),
     ).toBeTruthy();
   });
-
-  it("re-renders the selector for unlendable_passport, carrying the nonce that came back", async () => {
-    globalThis.location.hash = hashWithRetry("unlendable_passport");
-    const posted = stubAuthorizePost();
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [{ id: "p2", label: "day agent", scopes: ["read"] }],
-    });
-    render(<OAuthConsent />);
-    expect(await screen.findByText(/no longer be lent/i)).toBeTruthy();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /authorize/i }),
-    );
-    // The point of re-rendering the selector: the second choice is SUBMITTABLE.
-    // The server left the cookie armed and handed the nonce back for this, so a
-    // form posting an empty one would fail the double-submit check and land the
-    // human on the stale-consent dead end instead.
-    expect(posted.body.get("passport_id")).toBe("p2");
-    expect(posted.body.get("consent")).toBe(NONCE);
-  });
-
-  it("offers no action at all for unlendable_passport with no nonce to submit", async () => {
-    globalThis.location.hash = hashWithError("unlendable_passport");
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [{ id: "p2", label: "day agent", scopes: ["read"] }],
-    });
-    render(<OAuthConsent />);
-    // A marker without a nonce says the pending authorization is gone, whatever
-    // the marker claims. Inviting the human to "choose a different passport"
-    // here is worse than saying nothing: every submission fails the nonce check,
-    // so the screen looks actionable and is not.
-    expect(await screen.findByText(/request has expired/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /authorize/i })).toBeNull();
-    expect(screen.queryByRole("combobox")).toBeNull();
-  });
-
-  it("falls back to the guide for unlendable_passport when nothing remains lendable", async () => {
-    globalThis.location.hash = hashWithRetry("unlendable_passport");
-    stubConsent({
-      client_name: "Claude Code",
-      offline: false,
-      passports: [],
-    });
-    render(<OAuthConsent />);
-    expect(
-      await screen.findByText(/need an agent passport first/i),
-    ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /authorize/i })).toBeNull();
-  });
 });
 
 describe("OAuthConsent — re-entering after sign-in", () => {
@@ -666,8 +390,8 @@ describe("OAuthConsent — re-entering after sign-in", () => {
     await waitFor(() => expect(assigned).toHaveLength(1));
     const reentered = new URLSearchParams(assigned[0].split("?")[1] ?? "");
     expect(assigned[0]).toContain("/oauth/authorize?");
-    // Same exclusion as the mint-detour stash: a fresh nonce is only
-    // ever minted server-side, so replaying an absent one is not on offer.
+    // A fresh nonce is only ever minted server-side, so replaying an absent
+    // one is not on offer.
     expect(reentered.has("consent")).toBe(false);
     expect([...reentered.keys()].sort()).toEqual([...AUTHORIZE_KEYS].sort());
     expect(reentered.get("resource")).toBe(RESOURCE);
@@ -703,30 +427,17 @@ describe("OAuthConsent — re-entering after sign-in", () => {
   });
 });
 
-// The 2026-07-28 profile makes the redirect's HOST a MUST on this screen, and a
-// loopback one an extra warning. Both exist for the CIMD case: a client id is a
-// URL and a client name is whatever that URL's document says, so the
-// destination is the one fact about a connection only the human can judge —
-// and a document cannot prove which program holds a port on this machine.
+// The 2026-07-28 profile makes this a MUST on this screen, and a loopback one
+// an extra warning. Both exist for the CIMD case: a client id is a URL and a
+// client name is whatever that URL's document says, so the destination is the
+// one fact about a connection only the human can judge — and a document
+// cannot prove which program is listening on a port on this machine.
 describe("the redirect disclosure", () => {
-  const oneOption: ConsentPayload = {
-    client_name: "Claude Code",
-    offline: false,
-    passports: [
-      {
-        id: "11111111-1111-4111-8111-111111111111",
-        label: "Desk",
-        scopes: ["read"],
-      },
-    ],
-  };
-
   it("names the host the authorization is sent back to", async () => {
     globalThis.location.hash = hashWith({
       redirect_uri: "https://client.example/cb",
     });
-    stubConsent(oneOption);
-    render(<OAuthConsent />);
+    renderConsent({ scopes: ["read"] });
 
     expect(await screen.findByText(/client\.example/)).toBeInTheDocument();
     expect(
@@ -738,8 +449,7 @@ describe("the redirect disclosure", () => {
     globalThis.location.hash = hashWith({
       redirect_uri: "http://127.0.0.1:3000/callback",
     });
-    stubConsent(oneOption);
-    render(<OAuthConsent />);
+    renderConsent({ scopes: ["read"] });
 
     expect(await screen.findByText(/127\.0\.0\.1:3000/)).toBeInTheDocument();
     expect(screen.getByText(/address on this computer/)).toBeInTheDocument();

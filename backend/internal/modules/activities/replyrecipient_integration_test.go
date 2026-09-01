@@ -412,3 +412,51 @@ func TestAWithheldContactIsStillAnsweredAtTheAddressTheyWroteFrom(t *testing.T) 
 		t.Error("the withheld person was named through the drafting door")
 	}
 }
+
+func TestTheSurnameAFormalGreetingNeedsIsResolvedWithTheFirstName(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+
+	sender := e.linkPerson(t, anchor, "Dietmar Rietsch")
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE person SET first_name = 'Dietmar', last_name = 'Rietsch' WHERE id = $1`,
+		sender); err != nil {
+		t.Fatalf("seeding the split name: %v", err)
+	}
+	e.seedPersonEmail(t, sender, "dietmar@buyer.test")
+	e.participate(t, anchor, sender, "from", nil)
+
+	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	if err != nil {
+		t.Fatalf("ReplyRecipientFor: %v", err)
+	}
+	// Both, from one read. A formal German greeting takes the surname and the
+	// familiar one takes the given name; resolving only the first leaves a
+	// model writing formal German to invent the half it was not given.
+	if got.FirstName != "Dietmar" || got.LastName != "Rietsch" {
+		t.Errorf("got first %q last %q, want Dietmar / Rietsch", got.FirstName, got.LastName)
+	}
+}
+
+func TestAContactWithNoSurnameOnRecordOffersNone(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+
+	// One-word name: a name, not a mistake. Empty is the answer that keeps the
+	// greeting familiar rather than producing a formal one with nothing after
+	// the honorific.
+	sender := e.linkPerson(t, anchor, "Cher")
+	e.seedPersonEmail(t, sender, "cher@buyer.test")
+	e.participate(t, anchor, sender, "from", nil)
+
+	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	if err != nil {
+		t.Fatalf("ReplyRecipientFor: %v", err)
+	}
+	if got.LastName != "" {
+		t.Errorf("last name = %q, want empty for a one-word name", got.LastName)
+	}
+	if got.FullName != "Cher" {
+		t.Errorf("full name = %q, want Cher", got.FullName)
+	}
+}

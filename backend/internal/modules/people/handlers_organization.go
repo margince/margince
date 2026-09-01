@@ -202,6 +202,62 @@ func (h Handlers) GetOrganizationVatCheck(w http.ResponseWriter, r *http.Request
 	httperr.WriteJSON(w, http.StatusOK, vatCheckWire(check))
 }
 
+// notFoundSaying answers 404 with a sentence the reader can act on.
+//
+// The bare sentinel is right when saying more would disclose whether a record
+// exists. Here the caller has already been admitted to this organization, so
+// what is absent is a value on it — and naming that is help rather than a leak.
+func notFoundSaying(w http.ResponseWriter, r *http.Request, detail string) {
+	httperr.Write(w, r, &httperr.DetailedError{
+		Status: http.StatusNotFound,
+		Code:   "not_found",
+		Detail: detail,
+	})
+}
+
+// RequestOrganizationVatCheck queues the consultation a person asked for.
+//
+// 202 rather than 200: the register can be slow or decline, and the answer is
+// read back from the GET above rather than returned here. Both refusals the
+// store distinguishes reach the reader as themselves — no number to consult is
+// a 404, and asking again too soon is a 429 — because "nothing to check" and
+// "wait a moment" call for different actions from whoever pressed the button.
+func (h Handlers) RequestOrganizationVatCheck(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	err := h.store.RequestVatCheck(r.Context(), pathID[ids.OrganizationKind](id))
+	// Both are 404 and they ask different things of the reader: one needs a
+	// number typed on this record, the other needs an operator to configure the
+	// installation. One sentence for both would send a person looking for a
+	// button that is not the one they need.
+	if errors.Is(err, ErrNoVatNumberStated) {
+		notFoundSaying(w, r, "This company states no VAT number yet. "+
+			"Add one in the details panel and it is checked automatically.")
+		return
+	}
+	if errors.Is(err, ErrNoVatRegisterConfigured) {
+		notFoundSaying(w, r, "This installation does not consult the VAT register. "+
+			"An administrator turns it on in the deployment's configuration.")
+		return
+	}
+	if errors.Is(err, apperrors.ErrBudgetExceeded) {
+		// Written here rather than let through the default path, which passes
+		// the wrapped error's own text to the client — and that text ends in
+		// the sentinel's name. A rep reading "budget exceeded" learns nothing
+		// they can act on and something about our internals.
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusTooManyRequests,
+			Code:   "rate_limited",
+			Detail: "This number was checked in the last few minutes. " +
+				"The answer on the record is that check — try again shortly.",
+		})
+		return
+	}
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
 // vatCheckWire maps the stored standing onto the wire. The three optional
 // fields go out absent rather than empty: the register naming nobody and the
 // register returning an empty name are the same fact, and "" on the wire reads
@@ -221,6 +277,7 @@ func vatCheckWire(check VatCheck) crmcontracts.OrganizationVatCheck {
 		RegisteredName:     absentWhenEmpty(check.RegisteredName),
 		RegisteredAddress:  absentWhenEmpty(check.RegisteredAddress),
 		CheckedAt:          check.CheckedAt,
+		RecordedAt:         &check.RecordedAt,
 	}
 }
 

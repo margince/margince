@@ -140,10 +140,19 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	// captured_by is `human:<uuid>` for a hand-logged row and
 	// `connector:<name>:<uuid>` for a captured one; both end in the user's
 	// id, so one suffix match names the author and the mailbox owner alike.
+	//
+	// It names ONE seat, though, and a message can arrive in several mailboxes
+	// while the row records only whichever sync landed first. capture_import is
+	// the per-mailbox record, so the arm beside it admits every seat whose own
+	// mailbox delivered the message rather than only the first — the colleague
+	// cc'd on a held thread whose own sync ran second used to fall through to
+	// the participant arm alone, which is a different question (were you on the
+	// mail) from this one (was this your mail).
 	author := arg("%:" + p.UserID.String())
 	teams := arg(p.TeamIDs)
 	return fmt.Sprintf(`(%[1]s.audience = 'workspace'
 	   OR %[1]s.captured_by LIKE $%[3]d
+	   OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
 	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d)
 	   OR (%[1]s.audience = 'selected' AND EXISTS (
 	      SELECT 1 FROM activity_audience_member am WHERE am.activity_id = %[1]s.id

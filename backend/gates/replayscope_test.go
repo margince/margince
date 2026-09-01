@@ -25,6 +25,8 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -106,6 +108,9 @@ var rowScopedResponses = map[string]expectedTarget{
 // expectedTarget mirrors compose's replayTarget for comparison.
 type expectedTarget struct {
 	object, objectNote, table, tableField, moduleProbe, idPath, pathParam, rowNote string
+	// companions are the OTHER row-scoped records the body names, as
+	// "table:idPath" so a slice compares as text.
+	companions []string
 }
 
 const replayScopeSource = "internal/compose/replayscope.go"
@@ -180,7 +185,87 @@ func TestReplayScopeCoversEveryIdempotentOperation(t *testing.T) {
 		case !probesRow && strings.TrimSpace(got.rowNote) == "":
 			t.Errorf("%s re-probes no row scope and gives no reason — a reasonless exemption is itself the finding", route)
 		}
+
+		// EVERY record the body names, not only the one it replays by. A
+		// companion reference discloses that a record exists and what it was to
+		// this call: quick-capture hands back the employer a person was
+		// attached to, and probing the person alone returned that id to a
+		// caller who may since have lost sight of the employer.
+		//
+		// Derived from the contract rather than listed, so a third schema that
+		// grows one is caught the day it lands.
+		for _, want := range companionsInContract(t, schemas, got) {
+			if !slices.Contains(got.companions, want) {
+				table, field, _ := strings.Cut(want, ":")
+				t.Errorf("%s answers a body naming %s, a row-scoped %s, and no probe re-checks it — a replay hands that id back to a caller who may no longer see the record",
+					route, field, table)
+			}
+		}
+		for _, declared := range got.companions {
+			if !slices.Contains(companionsInContract(t, schemas, got), declared) {
+				t.Errorf("%s probes companion %s, which its response schema does not carry — the probe reads a field that is never there and passes for free",
+					route, declared)
+			}
+		}
 	}
+}
+
+// companionRecordFields names the row-scoped tables a `<table>_id` property
+// refers to. Spelled here because it is the gate's own reading of a convention
+// the contract follows, and a property this list does not know is not treated
+// as a record — a guess in that direction would demand probes for ids that name
+// no row-scoped table.
+// gatekit:fixture the field-to-table convention this census reads, not costs
+// anyone is waived from: an entry here adds a check rather than removing one.
+var companionRecordFields = map[string]string{
+	"person_id":       "person",
+	"organization_id": "organization",
+	"deal_id":         "deal",
+	"lead_id":         "lead",
+	"project_id":      "project",
+}
+
+// companionsInContract names the row-scoped references a route's response
+// schemas carry, beyond the record the replay is keyed on.
+//
+// ONLY FOR A BODY THAT WRAPS A RECORD, and the distinction is the whole rule.
+// `organization_id` on a Deal is the deal's own field: the live read of that
+// deal returns it to anyone who can see the deal, so replaying it discloses
+// nothing the product would not. `organization_id` on QuickCapturePersonResult
+// sits BESIDE the person, naming a second record the call attached them to —
+// and that one the live path never hands back with the person.
+//
+// A dotted idPath is what says the body is a wrapper: the record is nested
+// inside it, and the fields beside it are the wrapper's own. TOP-LEVEL
+// properties only, for the same reason — the nested record's fields are its
+// own, covered by the probe that already resolves it.
+func companionsInContract(t *testing.T, schemas []string, got expectedTarget) []string {
+	t.Helper()
+	if !strings.Contains(got.idPath, ".") {
+		return nil
+	}
+	var out []string
+	for _, schema := range schemas {
+		for field, table := range schemaRecordFields(t, schema) {
+			out = append(out, table+":"+field)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// schemaRecordFields reads one named schema's top-level uuid properties that
+// name a row-scoped record.
+func schemaRecordFields(t *testing.T, schema string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	for field, format := range contractSchemaProperties(t)[schema] {
+		table, named := companionRecordFields[field]
+		if named && format == "uuid" {
+			out[field] = table
+		}
+	}
+	return out
 }
 
 // noResponseBody stands for a 2xx that answers nothing — a 204. It is a schema
@@ -304,6 +389,10 @@ func mappedReplayScope(t *testing.T) map[string]expectedTarget {
 				t.Fatalf("%s: replayableOperations[%q] has a positional field — teach this extractor the new shape", replayScopeSource, route)
 			}
 			name, _ := kv.Key.(*ast.Ident)
+			if name != nil && name.Name == "companions" {
+				entry.companions = companionRefs(t, route, kv.Value)
+				continue
+			}
 			text := stringLiteral(t, kv.Value)
 			switch {
 			case name == nil:
@@ -328,6 +417,40 @@ func mappedReplayScope(t *testing.T) map[string]expectedTarget {
 		}
 		out[route] = entry
 	})
+	return out
+}
+
+// companionRefs reads a companions slice literal as "table:idPath" strings.
+func companionRefs(t *testing.T, route string, expr ast.Expr) []string {
+	t.Helper()
+	slice, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		t.Fatalf("%s: replayableOperations[%q].companions is not a slice literal", replayScopeSource, route)
+	}
+	var out []string
+	for _, element := range slice.Elts {
+		lit, isLit := element.(*ast.CompositeLit)
+		if !isLit {
+			t.Fatalf("%s: replayableOperations[%q] has a companion that is not a literal", replayScopeSource, route)
+		}
+		var table, idPath string
+		for _, field := range lit.Elts {
+			kv, isField := field.(*ast.KeyValueExpr)
+			if !isField {
+				t.Fatalf("%s: replayableOperations[%q] has a positional companion field", replayScopeSource, route)
+			}
+			name, _ := kv.Key.(*ast.Ident)
+			switch {
+			case name == nil:
+			case name.Name == "table":
+				table = stringLiteral(t, kv.Value)
+			case name.Name == "idPath":
+				idPath = stringLiteral(t, kv.Value)
+			}
+		}
+		out = append(out, table+":"+idPath)
+	}
+	sort.Strings(out)
 	return out
 }
 
@@ -424,4 +547,48 @@ func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast
 	if !found {
 		t.Fatalf("%s: no package-level map named %s — teach this extractor where it moved", replayScopeSource, name)
 	}
+}
+
+// contractProperties caches the contract's schema properties, so a gate that
+// asks about thirty routes parses the document once.
+// It is not a reason map and carries no marker: the values are the contract's
+// own formats, keyed by schema and field, and nothing here is waived.
+var contractProperties map[string]map[string]string
+
+// contractSchemaProperties maps each named schema to its top-level properties
+// and their `format`, which is how a uuid reference is told from a name.
+func contractSchemaProperties(t *testing.T) map[string]map[string]string {
+	t.Helper()
+	if contractProperties != nil {
+		return contractProperties
+	}
+	src, err := os.ReadFile("api/crm.yaml")
+	if err != nil {
+		t.Fatalf("reading api/crm.yaml: %v", err)
+	}
+	var doc struct {
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]struct {
+					Format string `yaml:"format"`
+				} `yaml:"properties"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(src, &doc); err != nil {
+		t.Fatalf("parsing api/crm.yaml: %v", err)
+	}
+	if len(doc.Components.Schemas) == 0 {
+		t.Fatal("the contract yielded no schemas: this reader has stopped matching, and an empty answer would " +
+			"report every body as naming no companion record")
+	}
+	contractProperties = map[string]map[string]string{}
+	for name, schema := range doc.Components.Schemas {
+		fields := map[string]string{}
+		for field, property := range schema.Properties {
+			fields[field] = property.Format
+		}
+		contractProperties[name] = fields
+	}
+	return contractProperties
 }

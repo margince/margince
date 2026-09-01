@@ -6,7 +6,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose"
 )
@@ -18,49 +17,27 @@ import (
 // per-provider lookup handles that; nothing here needs to 501 a route
 // explicitly).
 //
-// RedirectBase (where Google sends the browser back) and PostLoginURL/
-// FailureURL (where the callback then sends it) deliberately read DIFFERENT
-// bases, the same split gmail.go's callbackURL and connectors_outcome.go's
-// landingURL already make for the connector flow: --api-base-url is set only
-// on a deployment where the api and the SPA are different origins (this
-// repo's own per-worktree dev stack is exactly that), and Google's
-// redirect_uri must reach the api while the human-facing landing must reach
-// the SPA.
+// The three URLs and the boot-time check on their bases are signinurls.go's:
+// they are properties of the DEPLOYMENT rather than of Google, and Microsoft's
+// flow needs the identical answers. What stays here is what is actually
+// Google's — which credential pair, and what the boot log calls it.
 //
-// RedirectBase is validated here rather than trusted from bindInstallation's
-// own --public-base-url check: that check runs only when
-// mcp.connector_enabled, and an installation that runs Google sign-in
-// without the MCP connector would otherwise bake a malformed or
-// credential-bearing base straight into the redirect_uri this sends to
-// Google — a boot-time refusal is the only place that can catch it before
-// it reaches a request Google's own server logs. --api-base-url gets the
-// same validateBareOrigin check --public-base-url gets, when set, for
-// exactly the same reason: this flow builds it into an outbound redirect_uri
-// too. (connectorHandlers.callbackURL, connectors.go, builds its own
-// redirect_uri from the same flag with no such check — a gap this file does
-// not widen but does not close either; narrowing that to one shared,
-// validated accessor is future work, not this feature's scope.)
+// (connectorHandlers.callbackURL, connectors.go, builds its own redirect_uri
+// from the same flag with no such check — a gap this file does not widen but
+// does not close either.)
 func googleSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, error) {
-	redirectBase := cfg.apiBaseURL
-	if redirectBase == "" {
-		redirectBase = cfg.publicBaseURL
-	}
+	redirectBase, postLogin, failure := signInURLs(cfg)
 	ssoCfg := compose.GoogleSignInConfig{
 		ClientID:     cfg.gmailClientID,
 		ClientSecret: cfg.gmailClientSecret,
 		StateKey:     cfg.connectorStateKey,
 		RedirectBase: redirectBase,
-		PostLoginURL: strings.TrimRight(cfg.publicBaseURL, "/") + "/",
-		FailureURL:   strings.TrimRight(cfg.publicBaseURL, "/") + "/#/login?oidc=failed",
+		PostLoginURL: postLogin,
+		FailureURL:   failure,
 	}
 	if ssoCfg.Enabled() {
-		if err := validatePublicBaseURL(cfg.publicBaseURL); err != nil {
-			return nil, fmt.Errorf("api: google sign-in: %w", err)
-		}
-		if cfg.apiBaseURL != "" {
-			if err := validateBareOrigin("--api-base-url", cfg.apiBaseURL); err != nil {
-				return nil, fmt.Errorf("api: google sign-in: %w", err)
-			}
+		if err := validateSignInBases(cfg, "google"); err != nil {
+			return nil, err
 		}
 	}
 	switch {

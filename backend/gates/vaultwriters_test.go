@@ -57,14 +57,19 @@ var vaultWriters = map[string]string{
 	// Sealed alongside a SETTINGS write, which is what carries the audit row
 	// (settings.SetTx -> storekit.Audit, under the setting's own verb). The two
 	// boot seals each stamp their own actor so they stay distinguishable there.
-	"internal/compose/deploymentsecretseal.go":   "audit_log via the settings write, actor deployment-secret-seal",
-	"internal/compose/providerkeyseal.go":        "audit_log via the settings write, actor routing-seed",
-	"internal/modules/ai/providerkeystore.go":    "audit_log via the settings write, under the ProviderKeys verb",
-	"internal/modules/capture/googleappstore.go": "audit_log via the settings write, under capture settings' update verb",
+	"internal/compose/deploymentsecretseal.go":      "audit_log via the settings write, actor deployment-secret-seal",
+	"internal/compose/providerkeyseal.go":           "audit_log via the settings write, actor routing-seed",
+	"internal/modules/ai/providerkeystore.go":       "audit_log via the settings write, under the ProviderKeys verb",
+	"internal/modules/capture/connectorappstore.go": "audit_log via the settings write, under capture settings' update verb",
 
 	// The declared no-domain-fact posture: bytes move, nothing changes meaning,
 	// so it records operationally rather than as an entity change.
 	"internal/platform/extsecrets/store.go": "system_log — the explicit no-domain-fact posture",
+	// A provider replaced the durable credential during a background pull.
+	// Nobody decided it, so there is no domain change to audit and no actor to
+	// attribute one to — the operational fact is what makes an aged-out mailbox
+	// diagnosable. Written in the same transaction as the ref it describes.
+	"internal/modules/capture/registry_rotation.go": "system_log, action capture.credential_rotated — the no-domain-fact posture",
 
 	// RECORDS NOTHING, and named rather than covered. The boot-time relocation of
 	// a legacy credential into the vault writes no audit row, no system log and no

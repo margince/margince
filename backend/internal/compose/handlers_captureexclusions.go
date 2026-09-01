@@ -20,7 +20,8 @@ import (
 )
 
 type captureExclusionHandlers struct {
-	store *capture.ExclusionStore
+	store  *capture.ExclusionStore
+	purger *CapturePurger
 }
 
 func (h captureExclusionHandlers) ListCaptureExclusions(w http.ResponseWriter, r *http.Request) {
@@ -65,4 +66,37 @@ func toContractExclusion(rule capture.Exclusion) crmcontracts.CaptureExclusion {
 		Value:     rule.Value,
 		CreatedAt: rule.CreatedAt,
 	}
+}
+
+// PurgeCaptureExclusion destroys the mail one of the caller's own rules already
+// let in.
+//
+// The rule the exclusion states is about the FUTURE; this is the past it cannot
+// reach. Irreversible, which is why the preview answers the same question and
+// changes nothing: the counts an owner sees before they confirm are the counts
+// they get, because both arms run the same selection.
+func (h captureExclusionHandlers) PurgeCaptureExclusion(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.PurgeCaptureExclusionParams,
+) {
+	if h.purger == nil {
+		// A role composed without an object store has no purge: destroying the
+		// rows and leaving the attachment files would report mail as gone while
+		// its files sat in the bucket. Saying so is better than a nil deref.
+		httperr.ServiceUnavailable(w, r,
+			"this installation stores no objects, so captured mail cannot be destroyed here")
+		return
+	}
+	preview := params.Preview != nil && *params.Preview
+	outcome, err := h.purger.Purge(r.Context(), ids.UUID(id), preview)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.CapturePurgeOutcome{
+		Destroyed:  outcome.Destroyed,
+		Released:   outcome.Released,
+		Skipped:    outcome.Skipped,
+		Anonymised: outcome.Anonymised,
+		Preview:    outcome.Preview,
+	})
 }

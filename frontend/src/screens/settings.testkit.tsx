@@ -121,6 +121,12 @@ export function keyedEnvelope(url: string) {
   if (url.includes("/ai/provider-keys")) {
     return jsonResponse({ providers: [] });
   }
+  // `rungs` and `window_hours` are both required, and the health card indexes
+  // them directly. No rung is the honest answer for an installation that called
+  // no model in the window — which is what a test fixture is.
+  if (url.includes("/ai/health")) {
+    return jsonResponse({ window_hours: 1, rungs: [] });
+  }
   return null;
 }
 

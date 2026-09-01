@@ -1006,8 +1006,6 @@ describe("AgentRail", () => {
 
   const runLines = () =>
     [...panel().querySelectorAll(".arrunline")].map((el) => el.textContent);
-  const runDetails = () =>
-    [...panel().querySelectorAll(".arrundetail")].map((el) => el.textContent);
 
   // The work a person ASKS for, which is the case the rail was silent on until
   // the router could say `running`. Asserted at RENDER and not against the map:
@@ -1086,9 +1084,9 @@ describe("AgentRail", () => {
     );
   });
 
-  // Opening the panel delivers EVERY settled run it lists, so it acknowledges
-  // every one of them. Clearing only the fault the orb happened to show would
-  // leave the colour up after the reader had already been told about both.
+  // Opening the panel acknowledges EVERY fault the read reported, at once.
+  // Clearing only the fault the orb happened to show would leave the colour up
+  // after the reader had already turned to the report.
   it("clears every fault the panel delivered, not one per open", async () => {
     window.localStorage.removeItem("margince.agent.faults-seen");
     withSettled(
@@ -1132,7 +1130,7 @@ describe("AgentRail", () => {
   // The overnight case, which is the whole reason a fault is acknowledged rather
   // than decayed: a run fails at four in the morning and the person it ran for
   // is asleep, so whatever the orb does at 04:12 is seen by nobody. It holds
-  // until the panel that lists it has actually been opened.
+  // until the panel has actually been opened.
   it("holds a failed run on the Core until the panel has been opened", async () => {
     // Acknowledgement is remembered per browser, so the case owns its own id and
     // its own storage: sharing either would make this test's verdict depend on
@@ -1168,26 +1166,20 @@ describe("AgentRail", () => {
   });
 
   // `degrade_reason` is server-authored operator vocabulary and untranslated.
-  // In a localized line it would be a raw internal token printed at a reader;
-  // as panel detail it is the operator's answer to "why".
-  it("shows the degrade reason as panel detail, never in the line", async () => {
+  // The reader's surfaces carry the localized line and nothing else, so the
+  // raw token reaches no surface at all.
+  it("keeps the degrade reason out of the line and out of the panel", async () => {
     const reason = "brief_partial: crm_read_timeout";
     const stopped = "I got partway through your morning brief and stopped.";
     withSettled(RUN({ state: "degraded", degrade_reason: reason }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
     await settlesOnLine(container, stopped);
-    await openPanel(user, container);
-    await waitFor(() => expect(runLines()).toEqual([stopped]));
-    expect(runDetails()).toEqual([`Why it stopped${reason}`]);
-    // The card's line and the panel head restate each other, so both are held
-    // to the same rule.
     expect(container.querySelector(".arline")?.textContent).not.toContain(
       reason,
     );
-    expect(panel().querySelector(".arptitle")?.textContent).not.toContain(
-      reason,
-    );
+    await openPanel(user, container);
+    expect(panel().textContent).not.toContain(reason);
   });
 
   // A kind the copy map has never heard of produces NOTHING: no fallback
@@ -1207,37 +1199,12 @@ describe("AgentRail", () => {
     expect(panel().textContent).not.toContain("telepathic_prospecting");
   });
 
-  // The summary is what the run itself wrote, and the runner never validates
-  // that it exists — so a run without one draws no detail row at all rather
-  // than an empty one.
-  it("shows the run's summary when there is one, and nothing when there is not", async () => {
-    withSettled(
-      RUN({ state: "done", summary: "Three deals need a nudge." }),
-      RUN({
-        id: "019f7e65-fbf7-7114-b114-40af4af63a02",
-        kind: "overnight_at_risk_sweep",
-        state: "done",
-      }),
-    );
-    const user = userEvent.setup();
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    await waitFor(() =>
-      expect(runLines()).toEqual([
-        "Your morning brief is ready.",
-        "Done. I checked your deals for risk overnight.",
-      ]),
-    );
-    expect(runDetails()).toEqual(["Three deals need a nudge."]);
-  });
-
-  // The terminal states — `done`, `degraded` and `failed` — and with them
-  // `degrade_reason` and `summary`, arrive only in `recent`, never in
-  // `running`, so the panel must read both lists to show any of them. The bar
-  // keeps its live-run rule — a settled run joins the RESTING ROTATION,
-  // because `recent` is bounded to today and a pinned "ready" would still be
-  // announcing this morning at six in the evening.
-  it("reads a run that finished today, in the panel and in the resting line", async () => {
+  // A settled run reaches the reader through the RESTING ROTATION on the card
+  // and nowhere else: the panel lists live work only, so a day of finished
+  // runs draws no list there. `recent` is bounded to today, so the rotation
+  // never pins a "ready" that would still be announcing this morning at six
+  // in the evening.
+  it("reads a run that finished today in the resting line, not as a panel list", async () => {
     withSettled(RUN({ state: "done" }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
@@ -1246,13 +1213,8 @@ describe("AgentRail", () => {
     await settlesOnLine(container, "Your morning brief is ready.");
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
     await openPanel(user, container);
-    await waitFor(() =>
-      expect(runLines()).toEqual(["Your morning brief is ready."]),
-    );
-    const headings = [...panel().querySelectorAll(".arsect h4")].map(
-      (el) => el.textContent,
-    );
-    expect(headings[0]).toBe("Finished today");
+    expect(runLines()).toEqual([]);
+    expect(panel().textContent).not.toContain("Finished today");
     expect(panel().textContent).not.toContain("Running now");
   });
 });

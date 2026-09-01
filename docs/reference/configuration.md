@@ -44,7 +44,7 @@ configurable logger.
 | `--hubspot-app-secret` | `MARGINCE_HUBSPOT_APP_SECRET` | — | the HubSpot app client secret. Verifies inbound overlay-webhook v3 signatures and, when set, mounts `/webhooks/hubspot`; unset, that route is absent rather than present-and-unverified |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one; nothing reads a routing file any more. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
 | `--ai-fake` | — | `false` | offline fake model (dev/test only), and a FALLBACK rather than an override: a servable stored binding outranks it and the flag is then inert. It serves when nothing is bound — or when the stored binding cannot be built, which is how a keyless dev stack still starts instead of refusing on a missing credential |
-| `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required to send marketing mail — a send refuses rather than derive the token-bearing link from the request Host — and for the Gmail/Graph OAuth callback |
+| `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required to send marketing mail — a send refuses rather than derive the token-bearing link from the request Host — and for the Gmail/Graph OAuth callback. **Held to an address a RECIPIENT can open** whenever a real sender is configured (SMTP `email.enabled`, or a Gmail/Graph app): https only, and not localhost, a private address or an interface-scoped one. `MARGINCE_ENV=dev` or `test` admits the dev stack's `http://localhost`. Both the api and the worker refuse to boot on an unusable value, and a tokenized send refuses at send time; the configured value and whether it last answered are shown on Settings → Connections |
 | — (env-only) | `MARGINCE_OVERLAY_BACKFILL_LIMIT` | `0` (uncapped) | same knob `cmd/worker` reads (below) — `cmd/api` also boots on it (an invalid value is a boot error here too) so the on-connect/Connect-time seeding path sees the same cap the periodic sweep does |
 | — (env-only) | `MARGINCE_PROVIDER_SURFE` | `off` | which licensed-data-provider adapter this process carries: `off` registers none (every provider surface answers honestly and no code path can reach a vendor — PI-AC-9), `offline` the deterministic fake for a dev stack, `live` the real Surfe adapter. **Both `cmd/api` and `cmd/worker` read it and must agree**: the api queues a run and the worker executes it, so a split setting would submit to one vendor and poll another. An unknown value is a boot error rather than a silent `off` — a typo must not quietly disable a feature an operator asked for, or quietly enable egress. Needs a configured keyvault; without one the provider surface stays absent |
 | `--oauth-access-token-ttl` | `MARGINCE_OAUTH_ACCESS_TOKEN_TTL` | `0` (= the passport default, 720h / 30 days) | lifetime of the access token the MCP connector's OAuth handshake mints. That token IS an Agent Seat Passport, so unset it inherits the 30-day passport default, while connector norms are ~15 minutes plus refresh; set e.g. `15m` to run those norms without a code change — the refresh-rotation machinery is what makes a short lifetime cheap for a client. It applies to **both** mints of a connection's life, the code exchange and every rotation. Maximum `2160h` (90 days, the mint's own ceiling); an out-of-range or non-duration value is a boot error, never a silent default |
@@ -92,8 +92,9 @@ Operational endpoints (served next to `/v1`):
   record verbs (`read`, `draft`, `write`, `send`, `enrich`), and the
   authorization server names those plus `offline_access`, which buys token
   lifetime rather than access to a record. What a connection is granted is the
-  passport the human lent, not what the client requested — these documents state
-  the vocabulary a client may name, they do not bound the grant.
+  scopes the human ticked on the consent screen, not what the client
+  requested — these documents state the vocabulary a client may name, they do
+  not bound the grant.
 
 ### Reading the job surfaces
 
@@ -466,8 +467,9 @@ runs the background sync.
 | Flag | Env | Role | Meaning |
 |---|---|---|---|
 | `--gmail-client-id` / `--gmail-client-secret` | `MARGINCE_GMAIL_CLIENT_ID` / `MARGINCE_GMAIL_CLIENT_SECRET` | api + worker | the Google OAuth app; with the state key and `--public-base-url`, enables `/connectors/gmail/*` (api) and the sync poll (worker) |
-| `--graph-client-id` / `--graph-client-secret` | `MARGINCE_GRAPH_CLIENT_ID` / `MARGINCE_GRAPH_CLIENT_SECRET` | api + worker | the Microsoft (Entra) app; same enablement shape for `/connectors/graph/*` |
+| `--graph-client-id` / `--graph-client-secret` | `MARGINCE_GRAPH_CLIENT_ID` / `MARGINCE_GRAPH_CLIENT_SECRET` | api + worker | the Microsoft (Entra) app; same enablement shape for `/connectors/graph/*` (Outlook mail) and `/connectors/graphcal/*` (Outlook calendar). One app serves both, with `Mail.Read` and `Calendars.Read` granted and a redirect URI registered for each — they are separate connections with separate consents |
 | `--graph-tenant` | `MARGINCE_GRAPH_TENANT` | api + worker | Microsoft identity tenant (default `common` — any organization) |
+| `--microsoft-signin-tenant` | `MARGINCE_MICROSOFT_SIGNIN_TENANT` | api | the Entra **directory id** (a GUID) whose members may sign in, enabling `/auth/oidc/microsoft/*` on the same client id/secret as Graph capture. Defaults to `--graph-tenant` when that already names a directory rather than an authority alias. **Sign-in cannot run on `common`/`organizations`/`consumers`**: it matches the token's address to an existing member, and the administrator of any Entra tenant can set any of their own users' `mail` attribute to any string — so a multi-tenant authority would let anyone who can create a tenant sign in as anyone here. An alias leaves the provider off and says so in the boot log. Add the callback the api prints at boot (`<api-base>/v1/auth/oidc/microsoft/callback`) to the Entra app's redirect URIs, and grant it the `openid profile email` delegated permissions |
 | `--connector-state-key` | `MARGINCE_CONNECTOR_STATE_KEY` | api | HMAC key (≥32 bytes) signing the OAuth connect `state`; required for both connect flows |
 | `--mcp-apps-base-url` | `MARGINCE_MCP_APPS_BASE_URL` | api | the origin the api reads the MCP App view documents from (`GET <origin>/mcp-apps/<view>.html`), fetched once at startup and refreshed periodically. Defaults to `--public-base-url`, which the connector gate already makes a boot error to omit — so wherever `/mcp` is served the chain cannot be empty. The value must be **API-reachable**, which is not the same as publicly reachable: a container may lack ingress hairpin routing, external DNS or egress, and that is the case this setting exists for. A CDN origin is supported and recommended — it trades a dependency on the web tier for a better one rather than removing it. **The scheme must be `https` unless the host is a literal loopback or private address (or `localhost`)** — a cleartext *hostname* such as `http://web.internal` is refused at BOOT, naming the setting, rather than accepted and then refused by every fetch. With the connector gate off, no fetch happens at all |
 | `--api-base-url` | `MARGINCE_API_BASE_URL` | api | the api's externally-reachable base for the OAuth callback `redirect_uri`; defaults to `--public-base-url`, set only when api and SPA are on different origins (e.g. dev). Messaging channels need NO public address of their own — Telegram ingress long-polls, so nothing is ever told where to reach this installation. Google sign-in (`/auth/oidc/google/*`) reuses this same `redirect_uri`, and it must be added to the Gmail-capture client's **authorized redirect URIs in the Google Cloud Console** — enabling sign-in needs no new credentials, but it does need that one Console edit, or every attempt ends in `redirect_uri_mismatch` at Google's consent screen |
@@ -477,6 +479,9 @@ runs the background sync.
 | `--gmail-push-token` | `MARGINCE_GMAIL_PUSH_TOKEN` | api | shared secret on the Pub/Sub push subscription URL; enables `POST /webhooks/gmail` (empty = route absent) |
 | `--gmail-push-audience` / `--gmail-push-service-account` | `MARGINCE_GMAIL_PUSH_AUDIENCE` / `MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT` | api | OIDC audience + signing service-account email; set both and the push webhook also verifies Google's OIDC token |
 | `--gmail-jwks-url` | `MARGINCE_GMAIL_JWKS_URL` | api | override Google's OIDC JWKS URL; test/dev only |
+| `--graph-notification-url` | `MARGINCE_GRAPH_NOTIFICATION_URL` | worker | public URL Microsoft posts Graph change notifications to, operator token and all (`https://<api>/webhooks/graph?token=…`); enables the subscription register+renew job (empty = poll only) |
+| `--graph-watch-interval` / `--graph-watch-renew-within` | — | worker | Graph subscription maintenance scan (`6h`) / renew this far ahead of its deadline (`24h`). Microsoft's ceiling for a `/me/messages` subscription is **4230 minutes** (just under three days) where a Gmail watch lasts seven, so the Gmail defaults do not carry across |
+| `--graph-push-token` | `MARGINCE_GRAPH_PUSH_TOKEN` | api | shared secret on the Graph change-notification URL; enables `POST /webhooks/graph` (empty = route absent). It must be the same token the worker's `--graph-notification-url` carries, and it is the ONLY admission factor — Microsoft signs nothing on a change notification |
 
 ## Object storage (api, worker) — attachments and company logos
 
@@ -902,20 +907,25 @@ destructive keys off it: the data reset is armed by `operations.allow_data_reset
 below, which is why the dev arming lives in the tracked
 `config/margince.dev.yaml` and every other posture gets the compiled default.
 
-`capture.trace_payloads` (default `false`) turns on payload capture in the
-24-hour Capture activity trace every member sees under Settings. With it off,
-the trace records what the pipeline decided about each message and nothing about
-the message itself — no address, no subject. With it on, each traced message
-additionally keeps its sender and a bounded subject for 24 hours, **including
-messages dropped because every party was internal to your own domains**, which
-is the case an operator turns it on to diagnose.
+`capture.trace_payloads` (default `true`) keeps each traced message's sender and
+a bounded subject — 320 and 300 characters, never a body — in the 24-hour
+Capture activity trace every member sees under Settings. It covers **messages
+dropped because every party was internal to your own domains**, which the CRM
+otherwise stores nothing about and which are exactly what an operator is looking
+for when a message went missing.
 
-It is settable only here, deliberately: there is no API and no in-app switch,
-because it retains correspondence the CRM otherwise refuses to store, and that
-is a decision for whoever runs the installation rather than for the people whose
-colleagues' mail it is. The hourly sweep deletes payloads with the rows carrying
-them, an erased subject's address is never written whatever the posture says,
-and an Art. 17 request inside the window reaches what is already there.
+It is on by default because the trace exists to answer why a message did not
+arrive, and a page of decisions naming nobody cannot: it tells a member their
+mail is a black box rather than telling them what the pipeline threw away. A
+member reads only rows from their own connections — no grant widens them — so
+this is somebody's own mail shown back to them.
+
+Set it to `false` where a works agreement requires it; the trace then keeps
+recording every decision and names nobody. It is settable only here: there is no
+API and no in-app switch, so neither posture is a member's to change for their
+colleagues. The hourly sweep deletes payloads with the rows carrying them, an
+erased subject's address is never written whatever the posture says, and an
+Art. 17 request inside the window reaches what is already there.
 
 `company_context.rollout` is the ordered server-side company-context capability:
 `off` disables context reads, injection, and the new onboarding surface; `read`

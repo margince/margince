@@ -297,8 +297,11 @@
           }
         },
         "trace_payloads": {
-          "description": "TracePayloads turns on payload capture in the 24-hour capture trace: each traced message keeps its sender and a bounded subject, INCLUDING messages dropped because every party was internal — which is the case an operator turns this on to diagnose, and the case that stores correspondence the pipeline otherwise refuses to keep.",
-          "type": "boolean"
+          "description": "TracePayloads keeps each traced message's sender and a bounded subject in the 24-hour capture trace, INCLUDING messages dropped because every party was internal.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       }
     },

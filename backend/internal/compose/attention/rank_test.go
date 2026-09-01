@@ -52,8 +52,15 @@ func expected(minor int64) func(*ranked) {
 	}
 }
 
+// quiet builds a wait of the given age the way classifyWaiting does: the true
+// age for what a reader is shown, the bounded age for the order. Setting only
+// one would model a row production never produces, and the ordering tests would
+// then pass against a shape that cannot occur.
 func quiet(days int) func(*ranked) {
-	return func(r *ranked) { r.waitingDays = days }
+	return func(r *ranked) {
+		r.waitingDays = days
+		r.waitingRank = min(days, waitingDaysCeiling)
+	}
 }
 
 func idsOf(items []crmcontracts.WorklistItem) []string {
@@ -230,4 +237,412 @@ func TestWithEverythingElseEqualTheLongerWaitLeads(t *testing.T) {
 	got := rankAll([]ranked{recent, old})
 
 	assertOrder(t, got, "waiting-83-days", "waiting-3-days")
+}
+
+// A comparator that "decided" on two equal values decided nothing a reader can
+// check. The live page printed "07:30 against 07:30" and asked them to accept
+// it as a reason.
+func TestARowNeverClaimsADateDecidedWhenTheDatesAreTheSame(t *testing.T) {
+	same := rankInstant.Add(24 * time.Hour)
+	first := candidate("a", levelWaiting, due(same), quiet(9))
+	second := candidate("b", levelWaiting, due(same), quiet(3))
+
+	got := rankAll([]ranked{first, second})
+
+	if got[0].AboveNext.Comparator == crmcontracts.WorklistComparisonComparatorDeadline {
+		t.Fatal("the row claims its date beat an identical date")
+	}
+	if got[0].AboveNext.Comparator != crmcontracts.WorklistComparisonComparatorWaitingDays {
+		t.Fatalf("claimed %q; the longer wait is what actually decided",
+			got[0].AboveNext.Comparator)
+	}
+}
+
+// Two instants a few seconds apart render as the same minute on screen. The
+// live page printed "16:21 against 16:21" and called it the reason.
+func TestADateComparisonIsNeverOfferedBetweenInstantsThatReadAlike(t *testing.T) {
+	base := rankInstant.Add(-24 * time.Hour)
+	first := candidate("a", levelAgreed, due(base), quiet(9))
+	second := candidate("b", levelAgreed, due(base.Add(20*time.Second)), quiet(3))
+
+	got := rankAll([]ranked{first, second})
+
+	// The date DID decide, so the row says so — without offering two values a
+	// reader would compare and find equal. Falling through to the next
+	// comparator would name something that decided nothing, which is a
+	// different lie than the one this fixes.
+	if got[0].AboveNext.Comparator != crmcontracts.WorklistComparisonComparatorDeadline {
+		t.Fatalf("claimed %q; the date is what decided", got[0].AboveNext.Comparator)
+	}
+	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
+		t.Fatal("the row offers two identical-looking times as its reason")
+	}
+}
+
+// Occurrence decides at the same reader resolution a deadline does. Thirteen
+// seconds apart printed "23:20 against 23:20" under a heading about waiting
+// days — two wrong things at once, and the live page showed it.
+func TestOccurrenceOffersNoValuesWhenTheTwoInstantsReadAlike(t *testing.T) {
+	base := rankInstant.Add(-90 * 24 * time.Hour)
+	first := candidate("a", levelWaiting)
+	first.occurredAt = base
+	second := candidate("b", levelWaiting)
+	second.occurredAt = base.Add(13 * time.Second)
+
+	got := rankAll([]ranked{first, second})
+
+	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
+		t.Fatal("the row offers two identical-looking times as its reason")
+	}
+}
+
+// A row that led because the one below it was CROWDED says so.
+//
+// Crowding is the first thing less() compares and the only step compare() never
+// walked, so the two disagreed about a case the page reaches every day: past the
+// eighth unanswered customer every further wait is crowded, sorts below the
+// other kinds, and the row above it reported whichever later step happened to
+// differ. The reader was handed a reason that did not decide anything — the
+// exact failure compare() exists to prevent, in the one place nothing checked.
+func TestARowThatWonBecauseTheNextIsCrowdedSaysSo(t *testing.T) {
+	// Same level, same everything the later steps compare. Without crowding
+	// these two are equal, so nothing but crowding can decide the pair.
+	lead := candidate("lead", levelWaiting)
+	crowded := candidate("crowded", levelWaiting)
+	crowded.crowded = true
+
+	got := rankAll([]ranked{crowded, lead})
+
+	if got[0].Id != "lead" {
+		t.Fatalf("the crowded row led: %q", got[0].Id)
+	}
+	if got[0].AboveNext == nil {
+		t.Fatal("the leading row explains nothing about why it leads")
+	}
+	if got[0].AboveNext.Comparator != crmcontracts.WorklistComparisonComparatorCrowded {
+		t.Fatalf("claimed %q decided it, but what beat the next row was that it is crowded",
+			got[0].AboveNext.Comparator)
+	}
+}
+
+// THE ORDERING IS AN ORDERING.
+//
+// less() feeds sort.SliceStable, which is entitled to assume a strict weak
+// ordering: no row before itself, no pair each before the other, and no cycle
+// of three. A comparator that breaks any of those does not merely mis-order —
+// the sort may read past its slice or loop, and the failure arrives as a panic
+// in production rather than as a wrong row here.
+//
+// Checked over a set built to exercise every step, so adding one to rankSteps
+// without thinking about its ties fails here rather than on a customer's page.
+func TestTheOrderingIsAStrictWeakOrdering(t *testing.T) {
+	rows := orderingCorpus()
+
+	for _, a := range rows {
+		if less(a, a) {
+			t.Fatalf("%q sorts before itself", a.item.Id)
+		}
+	}
+	for _, a := range rows {
+		for _, b := range rows {
+			if a.item.Id == b.item.Id {
+				continue
+			}
+			if less(a, b) && less(b, a) {
+				t.Fatalf("%q and %q each sort before the other", a.item.Id, b.item.Id)
+			}
+		}
+	}
+	// Transitivity of the "neither is less" relation, which is the half a
+	// comparator built from independent fields most easily breaks.
+	equivalent := func(x, y ranked) bool { return !less(x, y) && !less(y, x) }
+	for _, a := range rows {
+		for _, b := range rows {
+			for _, c := range rows {
+				if equivalent(a, b) && equivalent(b, c) && !equivalent(a, c) {
+					t.Fatalf("%q ties %q ties %q, but %q and %q do not tie",
+						a.item.Id, b.item.Id, c.item.Id, a.item.Id, c.item.Id)
+				}
+			}
+		}
+	}
+}
+
+// THE ORDER DOES NOT DEPEND ON THE INPUT ORDER.
+//
+// The queue's whole claim is that the server decided the ranking. A rank that
+// moved with whatever order the lanes happened to assemble in would be a claim
+// the page could not keep, and the reader has no way to tell.
+func TestTheRankedOrderIsTheSameWhateverOrderTheRowsArriveIn(t *testing.T) {
+	rows := orderingCorpus()
+	want := idsOf(rankAll(append([]ranked(nil), rows...)))
+
+	// Every rotation, plus the reverse: enough permutations to catch an
+	// ordering that leans on arrival while staying a test somebody can read.
+	for shift := 1; shift < len(rows); shift++ {
+		rotated := append(append([]ranked(nil), rows[shift:]...), rows[:shift]...)
+		if got := idsOf(rankAll(rotated)); !sameOrder(got, want) {
+			t.Fatalf("rotating the input by %d changed the page:\n got %v\nwant %v", shift, got, want)
+		}
+	}
+	reversed := make([]ranked, 0, len(rows))
+	for i := len(rows) - 1; i >= 0; i-- {
+		reversed = append(reversed, rows[i])
+	}
+	if got := idsOf(rankAll(reversed)); !sameOrder(got, want) {
+		t.Fatalf("reversing the input changed the page:\n got %v\nwant %v", got, want)
+	}
+}
+
+// EVERY ROW'S REASON IS THE ONE THAT DECIDED IT.
+//
+// The property the two functions exist to keep, asked of every adjacent pair
+// the corpus produces rather than of one hand-built case: the step compare()
+// names must be the step less() stopped at.
+func TestEveryRowNamesTheStepThatActuallyDecidedIt(t *testing.T) {
+	ordered := rankAll(orderingCorpus())
+	rows := orderingCorpus()
+	byID := map[string]ranked{}
+	for _, row := range rows {
+		byID[row.item.Id] = row
+	}
+
+	for i := 0; i+1 < len(ordered); i++ {
+		a, b := byID[ordered[i].Id], byID[ordered[i+1].Id]
+		named := ordered[i].AboveNext
+		if named == nil {
+			t.Fatalf("row %q explains nothing about the row below it", ordered[i].Id)
+		}
+		deciding := "order"
+		for _, step := range rankSteps {
+			if decided, _ := step.decides(a, b); decided {
+				deciding = step.name
+				break
+			}
+		}
+		if !namesStep(named.Comparator, deciding) {
+			t.Fatalf("row %q claims %q decided it, but %q did",
+				ordered[i].Id, named.Comparator, deciding)
+		}
+	}
+}
+
+// namesStep reports whether a comparator on the wire is how the named step
+// describes itself. The occurrence step deliberately reports as waiting_days —
+// the contract's word for "the older one leads" — and the pin step reports as
+// pin though it orders on the level.
+func namesStep(comparator crmcontracts.WorklistComparisonComparator, step string) bool {
+	switch step {
+	case "occurrence":
+		// The contract's word for "the older one leads".
+		return comparator == crmcontracts.WorklistComparisonComparatorWaitingDays
+	case "band":
+		// A band difference is caused either by the level or by crowding, and
+		// the step names whichever it was — see its explain.
+		return comparator == crmcontracts.WorklistComparisonComparatorLevel ||
+			comparator == crmcontracts.WorklistComparisonComparatorCrowded
+	}
+	return string(comparator) == step
+}
+
+// orderingCorpus is a set of rows built to reach every step in rankSteps,
+// including the ties that send a pair to the next one.
+func orderingCorpus() []ranked {
+	crowded := candidate("crowded", levelWaiting)
+	crowded.crowded = true
+	// A SECOND crowded row, so the corpus holds a pair that is crowded on both
+	// sides. Without it every crowded comparison has one true side and one
+	// false, and a step that wrongly claimed to decide every pair would still
+	// produce a consistent order — the contradiction only appears when the
+	// deciding field is equal and the step says it decided anyway.
+	crowdedToo := candidate("crowded-too", levelWaiting)
+	crowdedToo.crowded = true
+	strong := candidate("strong", levelRoutine)
+	strong.strength = 9
+	weak := candidate("weak", levelRoutine)
+	weak.strength = 1
+	older := candidate("older", levelPromise)
+	older.occurredAt = rankInstant.Add(-48 * time.Hour)
+	newer := candidate("newer", levelPromise)
+	newer.occurredAt = rankInstant.Add(-1 * time.Hour)
+	aged := candidate("aged", levelWaiting)
+	aged.waitingDays, aged.waitingRank = 12, 12
+	fresh := candidate("fresh", levelWaiting)
+	fresh.waitingDays, fresh.waitingRank = 2, 2
+
+	return []ranked{
+		candidate("pinned", levelPinned),
+		crowded,
+		candidate("waiting", levelWaiting),
+		candidate("soon", levelMaterialRisk, due(rankInstant.Add(24*time.Hour))),
+		candidate("later", levelMaterialRisk, due(rankInstant.Add(240*time.Hour))),
+		candidate("rich", levelMaterialRisk, expected(900_000_00)),
+		candidate("poor", levelMaterialRisk, expected(1_00)),
+		crowdedToo,
+		aged, fresh, strong, weak, older, newer,
+		candidate("plain", levelRoutine),
+	}
+}
+
+func sameOrder(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// EVERY BAND IS ONE CONTIGUOUS RUN.
+//
+// The client draws a heading where the band changes and never re-sorts, so a
+// band that appeared twice would draw its heading twice and split one kind of
+// work across the page with somebody else's rows in between.
+//
+// This is a property of the ORDERING, not of bandOf: the band is derived from
+// the level, and the level is the ordering's second step, so a step inserted
+// above the level would break contiguity while every band remained correct.
+func TestEachBandIsOneContiguousRun(t *testing.T) {
+	ordered := rankAll(orderingCorpus())
+
+	seen := map[string]bool{}
+	previous := ""
+	for _, item := range ordered {
+		if item.Band == nil {
+			t.Fatalf("row %q carries no band, so the page cannot head it", item.Id)
+		}
+		band := string(*item.Band)
+		if band == previous {
+			continue
+		}
+		if seen[band] {
+			t.Fatalf("band %q appears twice: row %q reopens it after %q", band, item.Id, previous)
+		}
+		seen[band] = true
+		previous = band
+	}
+}
+
+// The bands travel in DRAW order, including the ones this page has no rows for.
+//
+// A reader whose Now band is empty is being told something — nothing needs them
+// today — and a client that inferred the headings from the rows it received
+// could not say it.
+func TestEveryBandIsReportedInDrawOrderIncludingTheEmptyOnes(t *testing.T) {
+	// One row, so three of the four bands are necessarily empty.
+	only := rankAll([]ranked{candidate("just-one", levelRoutine)})
+	bands := bandsOf(only)
+
+	if len(bands) != len(bandOrder) {
+		t.Fatalf("reported %d bands, wanted all %d", len(bands), len(bandOrder))
+	}
+	for i, want := range bandOrder {
+		if string(bands[i].Band) != want {
+			t.Fatalf("band %d is %q, wanted %q — the draw order is not the reported order",
+				i, bands[i].Band, want)
+		}
+	}
+	total := 0
+	for _, band := range bands {
+		total += band.Shown
+	}
+	if total != len(only) {
+		t.Fatalf("the bands account for %d rows over a page of %d", total, len(only))
+	}
+}
+
+// A DEMOTED WAIT IS DEMOTED, NOT DUMPED.
+//
+// Crowding moves a row out of `now` — that is what stops a hundred replies
+// owning the page. It must not move it below the hygiene: the ninth waiting
+// customer is still somebody waiting, and a page that ranked it under a
+// duplicate-merge suggestion would have solved the monopoly by lying about
+// what matters.
+//
+// The case the corpus does not reach on its own, because it needs a crowded
+// HIGH-level row against an uncrowded LOW-level one.
+func TestACrowdedWaitStillLeadsTheHygiene(t *testing.T) {
+	crowdedWait := candidate("crowded-wait", levelWaiting)
+	crowdedWait.crowded = true
+	routine := candidate("routine", levelRoutine)
+
+	got := rankAll([]ranked{routine, crowdedWait})
+
+	if got[0].Id != "crowded-wait" {
+		t.Fatalf("the hygiene row led: %v", idsOf(got))
+	}
+	if got[0].Band == nil || string(*got[0].Band) != "keep_momentum" {
+		t.Fatalf("a crowded wait banded as %v, wanted keep_momentum", got[0].Band)
+	}
+	// And it did leave `now`, or the demotion did nothing.
+	uncrowded := candidate("uncrowded-wait", levelWaiting)
+	lead := rankAll([]ranked{uncrowded})
+	if lead[0].Band == nil || string(*lead[0].Band) != "now" {
+		t.Fatalf("an uncrowded wait banded as %v, wanted now — so the demotion above proves nothing",
+			lead[0].Band)
+	}
+}
+
+// THE LEVELS ARE NEVER MIXED, WHICH THE BANDS MUST NOT UNDO.
+//
+// The bands sort above the level, so a band chosen against the level would let
+// a lower-priority row lead a higher-priority one — and the contract promises
+// levels are never mixed.
+//
+// The pairing that reaches it: classifyWaiting demotes a stale unfunded wait to
+// levelRoutine, and banding that row by its SOURCE put it in keep_momentum,
+// above the blocking decision at level 5 that it had just been demoted past.
+func TestAStaleWaitDoesNotOutrankABlockingDecision(t *testing.T) {
+	stale := candidate("stale-wait", levelRoutine)
+	stale.item.Source = sourceWaiting
+	blocking := candidate("blocking", levelBlocking)
+	blocking.item.Source = "approval"
+
+	got := rankAll([]ranked{stale, blocking})
+
+	if got[0].Id != "blocking" {
+		t.Fatalf("a level-%d row led a level-%d one: %v",
+			levelRoutine, levelBlocking, idsOf(got))
+	}
+	// Both are hygiene, so both head the same band — the demotion put them in
+	// the same place rather than merely reordering them.
+	for _, item := range got {
+		if item.Band == nil || string(*item.Band) != "review" {
+			t.Fatalf("row %q banded as %v, wanted review", item.Id, item.Band)
+		}
+	}
+}
+
+// A BAND DIFFERENCE THAT IS NOT A LEVEL DIFFERENCE DOES NOT CLAIM TO BE ONE.
+//
+// Two agreed tasks band apart because one is a lead's follow-up and the other
+// is not. Reporting "level 4 against level 4" would be a reason that refutes
+// itself the moment a reader checks it.
+func TestABandDifferenceOnTheSameLevelNamesNoLevelValues(t *testing.T) {
+	// Both are TASKS. Without a source the category defaults to `system`, both
+	// band as review, and the pair ties — a fixture that would pass this test
+	// while proving nothing about the distinction it is named for.
+	lead := candidate("lead-task", levelAgreed)
+	lead.item.Source = sourceTask
+	lead.item.Subject = &crmcontracts.AttentionSubject{
+		Type: crmcontracts.AttentionSubjectType("lead"),
+	}
+	plain := candidate("plain-task", levelAgreed)
+	plain.item.Source = sourceTask
+
+	got := rankAll([]ranked{plain, lead})
+
+	if got[0].Id != "lead-task" {
+		t.Fatalf("the lead follow-up did not lead: %v", idsOf(got))
+	}
+	if got[0].AboveNext == nil {
+		t.Fatal("the leading row explains nothing")
+	}
+	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
+		t.Fatalf("the row claims level %v against %v, but the levels are equal",
+			got[0].AboveNext.Mine, got[0].AboveNext.Theirs)
+	}
 }

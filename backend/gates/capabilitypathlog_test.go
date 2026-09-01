@@ -216,8 +216,7 @@ func TestEveryPublicRoutePrefixIsJudgedForCredentials(t *testing.T) {
 	// The public prefixes whose segment is NOT a credential, each with why.
 	// A prefix leaves this map only by joining capabilitypath's list.
 	notCredentials := map[string]string{
-		"/v1/public/booking/": "a booking slug is a public identifier the host hands out; the log needs it to say which page was hit",
-		"/v1/public/rooms/":   "the segment is an operation name (peek, exchange, link-request); a deal room presents a Bearer, never a path token",
+		"/v1/public/rooms/": "the segment is an operation name (peek, exchange, link-request); a deal room presents a Bearer, never a path token",
 	}
 
 	redacted := make(map[string]bool)

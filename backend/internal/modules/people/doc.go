@@ -8,10 +8,10 @@
 // the datasource provider, flat per ADR-0054 §3.
 //
 // Tables owned: person, person_email, person_phone, person_consent,
-// organization, organization_domain, relationship, partner, lead,
-// lead_score_history, lead_manual_signal, lead_source,
+// person_profile_field, organization, organization_domain, relationship,
+// partner, lead, lead_score_history, lead_manual_signal, lead_source,
 // lead_disqualify_reason, person_signature_enrich_state,
-// person_provider_claim, organization_vat_check.
+// person_provider_claim, provider_applied_field, organization_vat_check.
 // organization_vat_check is what the EU register answered about a company's
 // VAT ID and the consultation number proving we asked: the profile field
 // holds the number a page stated, this holds whether it is real.

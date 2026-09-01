@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -24,21 +25,41 @@ import (
 type fakeOAuth struct {
 	refresh, access string
 	granted         []string
+	// rotated is what Microsoft hands back in place of the stored refresh
+	// token; empty means it rotated nothing this round.
+	rotated string
+	// askedFor records the scopes the last refresh requested — a refresh must
+	// ask for the grant's own, never the deployment's configured list.
+	askedFor []string
 }
 
-func (f fakeOAuth) AuthCodeURL(state, _ string) string { return "https://auth?state=" + state }
-func (f fakeOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
+func (f *fakeOAuth) AuthCodeURL(state, _ string) string { return "https://auth?state=" + state }
+func (f *fakeOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
 	return oauthflow.TokenGrant{RefreshToken: f.refresh, Scopes: f.granted}, nil
 }
-func (f fakeOAuth) AccessToken(context.Context, string) (string, error) { return f.access, nil }
+func (f *fakeOAuth) AccessToken(context.Context, string) (string, error) { return f.access, nil }
+
+// Refresh records what the caller asked to refresh FOR, which is half the
+// point of the seam: a refresh must ask for the grant's own scopes, never the
+// deployment's configured list.
+func (f *fakeOAuth) Refresh(_ context.Context, _ string, granted []string) (oauthflow.TokenRefresh, error) {
+	f.askedFor = granted
+	return oauthflow.TokenRefresh{AccessToken: f.access, Rotated: f.rotated}, nil
+}
 
 type fakeAPI struct {
 	email string
-	// DeltaInit's canned round (the initial/bounded anchor).
+	// DeltaInit's canned INBOX round (the initial/bounded anchor).
 	initIDs   []string
 	initDelta string
 	initAfter time.Time
 	initCalls int
+	// DeltaInit's canned SENT ITEMS round. Left zero by every test that is
+	// about the inbox, which is how the sent folder anchors to nothing.
+	sentInitIDs   []string
+	sentInitDelta string
+	sentInitCalls int
+	sentInitAfter time.Time
 	// Delta's canned round (the incremental resume).
 	deltaIDs   []string
 	deltaLink  string
@@ -46,8 +67,9 @@ type fakeAPI struct {
 	deltaCalls int
 	seenDelta  string
 
-	getErr error
-	raws   map[string][]byte
+	getErr    error
+	getErrIDs map[string]error // a fault scoped to one message, so a test can fault one folder alone
+	raws      map[string][]byte
 
 	estimate      int
 	estimateAfter time.Time
@@ -55,6 +77,24 @@ type fakeAPI struct {
 	sentIDs       map[string]bool // listed ids Graph filed under Sent Items
 	skipIDs       map[string]bool // ids GetMIME refuses as a per-message drop
 	sentFolderErr error
+
+	// The subscription half's state: what a round was asked for, and what
+	// Microsoft answered.
+	subCalls    int
+	subURL      string
+	subState    string
+	subDeadline time.Time
+	subResult   Subscription
+	subErr      error
+
+	// The outbound half's state.
+	sendCalls     int
+	sendErr       error
+	sentMIME      [][]byte
+	findCalls     int
+	findErr       error
+	seenFindID    string
+	sentByID      map[string]string
 	listNext      string
 	listCalls     int
 	seenPageToken string
@@ -62,10 +102,56 @@ type fakeAPI struct {
 
 func (f *fakeAPI) Profile(context.Context, string) (string, error) { return f.email, nil }
 
-func (f *fakeAPI) DeltaInit(_ context.Context, _ string, after time.Time) ([]string, string, error) {
+// The outbound half. sentByID is what Sent Items holds, keyed on the
+// UNBRACKETED identity the caller asks about; sentRaw is the copy the read-back
+// parses. sentMIME records what was submitted, so a test can assert that a
+// retry which found a prior send transmitted NOTHING.
+func (f *fakeAPI) SendMIME(_ context.Context, _ string, rfc822 []byte) error {
+	f.sendCalls++
+	if f.sendErr != nil {
+		return f.sendErr
+	}
+	f.sentMIME = append(f.sentMIME, rfc822)
+	return nil
+}
+
+func (f *fakeAPI) FindSentByMessageID(_ context.Context, _, id string) (string, bool, error) {
+	f.findCalls++
+	f.seenFindID = id
+	if f.findErr != nil {
+		return "", false, f.findErr
+	}
+	msgID, ok := f.sentByID[id]
+	return msgID, ok, nil
+}
+
+// DeltaInit answers per folder, because the two are separate rounds with
+// separate watermarks and a fake that conflated them would let the connector
+// conflate them too.
+func (f *fakeAPI) DeltaInit(_ context.Context, _, folder string, after time.Time) ([]string, string, error) {
+	if folder == folderSent {
+		f.sentInitCalls++
+		f.sentInitAfter = after
+		return f.sentInitIDs, f.sentInitDelta, nil
+	}
 	f.initCalls++
 	f.initAfter = after
 	return f.initIDs, f.initDelta, nil
+}
+
+func (f *fakeAPI) EnsureSubscription(
+	_ context.Context, _, notificationURL, clientState string, deadline time.Time,
+) (Subscription, error) {
+	f.subCalls++
+	f.subURL, f.subState, f.subDeadline = notificationURL, clientState, deadline
+	if f.subErr != nil {
+		return Subscription{}, f.subErr
+	}
+	if f.subResult.Expiration.IsZero() && f.subResult.ID == "" {
+		// The default answer: Microsoft honored the deadline it was asked for.
+		return Subscription{ID: "sub-1", Expiration: deadline}, nil
+	}
+	return f.subResult, nil
 }
 
 func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]string, string, error) {
@@ -80,6 +166,9 @@ func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]string, strin
 func (f *fakeAPI) GetMIME(_ context.Context, _, id string) ([]byte, error) {
 	if f.skipIDs[id] {
 		return nil, fmt.Errorf("graph: message %s exceeds the size cap: %w", id, connector.ErrSkip)
+	}
+	if err := f.getErrIDs[id]; err != nil {
+		return nil, err
 	}
 	if f.getErr != nil {
 		return nil, f.getErr
@@ -127,6 +216,22 @@ func (s *recordingSink) Upsert(_ context.Context, rec connector.NormalizedRecord
 	return datasource.EntityRef{}, nil
 }
 
+// sentMsg is a message the OWNER wrote: it is the From line, not the folder,
+// that decides who the counterparty is once the folder has attested authorship.
+func sentMsg(msgID, to string) []byte {
+	return []byte(strings.Join([]string{
+		"From: " + owner,
+		"To: " + to,
+		"Subject: hi",
+		"Date: Wed, 04 Jun 2026 08:00:00 +0000",
+		"Message-ID: <" + msgID + ">",
+		"Content-Type: text/plain; charset=utf-8",
+		"",
+		"hello there",
+		"",
+	}, "\r\n"))
+}
+
 func rawMsg(msgID, from string) []byte {
 	return []byte(strings.Join([]string{
 		"From: " + from,
@@ -159,7 +264,7 @@ func authBytes(t *testing.T) connector.Auth {
 var pinned = time.Date(2026, 7, 18, 12, 0, 0, 0, time.UTC)
 
 func pinnedConn(api *fakeAPI) *Connector {
-	c := New(fakeOAuth{access: "access-1"}, api)
+	c := New(&fakeOAuth{access: "access-1"}, api)
 	c.now = func() time.Time { return pinned }
 	return c
 }
@@ -167,7 +272,7 @@ func pinnedConn(api *fakeAPI) *Connector {
 // --- tests ---------------------------------------------------------------
 
 func TestDescriptorIsAutoExecuteReadOnly(t *testing.T) {
-	d := New(fakeOAuth{}, &fakeAPI{}).Descriptor()
+	d := New(&fakeOAuth{}, &fakeAPI{}).Descriptor()
 	if d.Name != "graph" {
 		t.Errorf("Name = %q, want graph", d.Name)
 	}
@@ -183,7 +288,7 @@ func TestDescriptorIsAutoExecuteReadOnly(t *testing.T) {
 }
 
 func TestAuthenticateBindsRefreshTokenAndOwner(t *testing.T) {
-	c := New(fakeOAuth{refresh: "refresh-1", access: "access-1"}, &fakeAPI{email: owner})
+	c := New(&fakeOAuth{refresh: "refresh-1", access: "access-1"}, &fakeAPI{email: owner})
 	req, err := AuthRequestFrom("the-code", "https://app/callback")
 	if err != nil {
 		t.Fatalf("AuthRequestFrom: %v", err)
@@ -192,7 +297,7 @@ func TestAuthenticateBindsRefreshTokenAndOwner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Authenticate: %v", err)
 	}
-	var st authState
+	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		t.Fatalf("auth is not authState json: %v", err)
 	}
@@ -202,7 +307,7 @@ func TestAuthenticateBindsRefreshTokenAndOwner(t *testing.T) {
 }
 
 func TestAuthenticateRequiresCode(t *testing.T) {
-	c := New(fakeOAuth{}, &fakeAPI{})
+	c := New(&fakeOAuth{}, &fakeAPI{})
 	req, err := AuthRequestFrom("", "https://app/callback")
 	if err != nil {
 		t.Fatalf("AuthRequestFrom: %v", err)
@@ -238,8 +343,8 @@ func TestSyncInitialAnchorIsBoundedAndCaptures(t *testing.T) {
 	if sink.recs[0].CapturedBy != "connector:graph" {
 		t.Errorf("CapturedBy = %q, want connector:graph", sink.recs[0].CapturedBy)
 	}
-	if delta, _ := parseCursor(cur); delta != "https://graph/delta?token=d1" {
-		t.Errorf("cursor deltaLink = %q, want the DeltaInit link", delta)
+	if cs, _ := parseCursor(cur); cs.DeltaLink != "https://graph/delta?token=d1" {
+		t.Errorf("cursor deltaLink = %q, want the DeltaInit link", cs.DeltaLink)
 	}
 	if want := pinned.Add(-anchorWindow); !api.initAfter.Equal(want) {
 		t.Errorf("initial delta bound = %v, want %v (now - anchorWindow)", api.initAfter, want)
@@ -273,8 +378,8 @@ func TestSyncIncrementalResumesDeltaAndAdvancesCursor(t *testing.T) {
 	if api.seenDelta != "https://graph/delta?token=d1" {
 		t.Errorf("resumed deltaLink = %q, want the stored one", api.seenDelta)
 	}
-	if delta, _ := parseCursor(cur); delta != "https://graph/delta?token=d2" {
-		t.Errorf("cursor = %q, want advanced to token=d2", delta)
+	if cs, _ := parseCursor(cur); cs.DeltaLink != "https://graph/delta?token=d2" {
+		t.Errorf("cursor = %q, want advanced to token=d2", cs.DeltaLink)
 	}
 }
 
@@ -303,8 +408,8 @@ func TestSyncDeltaGoneReAnchorsBounded(t *testing.T) {
 	if want := pinned.Add(-anchorWindow); !api.initAfter.Equal(want) {
 		t.Errorf("re-anchor bound = %v, want %v (now - anchorWindow)", api.initAfter, want)
 	}
-	if delta, _ := parseCursor(cur); delta != "https://graph/delta?token=fresh" {
-		t.Errorf("cursor should re-anchor at the fresh deltaLink, got %q", delta)
+	if cs, _ := parseCursor(cur); cs.DeltaLink != "https://graph/delta?token=fresh" {
+		t.Errorf("cursor should re-anchor at the fresh deltaLink, got %q", cs.DeltaLink)
 	}
 }
 
@@ -341,8 +446,8 @@ func TestSyncEmptyDeltaKeepsPriorWatermark(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
-	if delta, _ := parseCursor(cur); delta != "https://graph/delta?token=d1" {
-		t.Errorf("cursor = %q, want the prior watermark kept", delta)
+	if cs, _ := parseCursor(cur); cs.DeltaLink != "https://graph/delta?token=d1" {
+		t.Errorf("cursor = %q, want the prior watermark kept", cs.DeltaLink)
 	}
 }
 
@@ -363,7 +468,7 @@ func TestCursorCarriesMailboxEmail(t *testing.T) {
 }
 
 func TestNormalizeSkipsAutomatedMail(t *testing.T) {
-	c := New(fakeOAuth{}, &fakeAPI{})
+	c := New(&fakeOAuth{}, &fakeAPI{})
 	c.owner = owner
 	auto := []byte(strings.Join([]string{
 		"From: system@acme.com", "To: " + owner, "Subject: OOO",
@@ -388,7 +493,7 @@ func TestNormalizeSkipsAutomatedMail(t *testing.T) {
 // already produced — no vault round-trip and no network — and a bundle that
 // names no mailbox is a blank line in the UI, not a lost connection.
 func TestAccountLabelNamesTheAuthorizedMailbox(t *testing.T) {
-	c := New(fakeOAuth{refresh: "refresh-1", access: "access-1"}, &fakeAPI{email: owner})
+	c := New(&fakeOAuth{refresh: "refresh-1", access: "access-1"}, &fakeAPI{email: owner})
 	req, err := AuthRequestFrom("the-code", "https://app/callback")
 	if err != nil {
 		t.Fatalf("AuthRequestFrom: %v", err)
@@ -407,8 +512,8 @@ func TestAccountLabelNamesTheAuthorizedMailbox(t *testing.T) {
 }
 
 func TestAccountLabelOfAnOwnerlessBundleIsAbsentNotAnError(t *testing.T) {
-	c := New(fakeOAuth{}, &fakeAPI{})
-	bundle, err := json.Marshal(authState{RefreshToken: "r"})
+	c := New(&fakeOAuth{}, &fakeAPI{})
+	bundle, err := json.Marshal(graphconn.AuthState{RefreshToken: "r"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -418,5 +523,154 @@ func TestAccountLabelOfAnOwnerlessBundleIsAbsentNotAnError(t *testing.T) {
 	}
 	if label != "" {
 		t.Errorf("AccountLabel = %q, want empty", label)
+	}
+}
+
+// What the owner SENT is half the correspondence, and it is the half that
+// attests the counterparty: ADR-0072 §1 makes an outbound activity to an
+// address the evidence that address is corresponded with. An Outlook mailbox
+// that walked its inbox alone told a different story from the same mailbox's
+// own backfill, which has always read Sent Items.
+func TestSyncCapturesSentItemsAndAttestsTheOwnersAuthorship(t *testing.T) {
+	api := &fakeAPI{
+		email:         owner,
+		initIDs:       []string{"m1"},
+		initDelta:     "https://graph/delta?token=inbox-1",
+		sentInitIDs:   []string{"s1"},
+		sentInitDelta: "https://graph/delta?token=sent-1",
+		raws: map[string][]byte{
+			"m1": rawMsg("m1@mail.example", "alice@acme.com"),
+			"s1": sentMsg("s1@mail.example", "buyer@acme.com"),
+		},
+	}
+	c := pinnedConn(api)
+	sink := &recordingSink{}
+
+	cur, err := c.Sync(context.Background(), authBytes(t), nil, sink)
+	if err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 2 {
+		t.Fatalf("captured %d records, want the inbox message and the sent one", len(sink.recs))
+	}
+	// Keyed by source, not by position: which record is which is the question,
+	// and the ORDER is pinned on its own below where the reason for it lives.
+	bySource := map[string]connector.NormalizedRecord{}
+	for _, r := range sink.recs {
+		bySource[r.Source] = r
+	}
+	if bySource["graph:m1@mail.example"].Counterparty.SentByOwner() {
+		t.Error("an inbox message was attested as sent by the owner")
+	}
+	sent := bySource["graph:s1@mail.example"]
+	if !sent.Counterparty.SentByOwner() {
+		t.Error("a Sent Items message landed unattested — the T1 evidence its folder proves is lost")
+	}
+	if sent.Counterparty.Email != "buyer@acme.com" {
+		t.Errorf("counterparty of the sent message = %q, want its addressee", sent.Counterparty.Email)
+	}
+
+	// Two folders, two watermarks. One shared link would make each round
+	// resume the other's folder.
+	cs, err := parseCursor(cur)
+	if err != nil {
+		t.Fatalf("parseCursor: %v", err)
+	}
+	if cs.DeltaLink != "https://graph/delta?token=inbox-1" || cs.SentDeltaLink != "https://graph/delta?token=sent-1" {
+		t.Errorf("cursor = %+v, want each folder's own link", cs)
+	}
+}
+
+// A mailbox connected before the sent folder was followed carries an inbox link
+// and no sent one. It must anchor the sent side — bounded by the same window a
+// fresh connection gets — rather than re-anchoring the inbox it already has.
+func TestSyncAnchorsTheSentFolderOnAMailboxThatPredatesIt(t *testing.T) {
+	api := &fakeAPI{
+		email:         owner,
+		deltaIDs:      []string{"m3"},
+		deltaLink:     "https://graph/delta?token=inbox-2",
+		sentInitIDs:   []string{"s1"},
+		sentInitDelta: "https://graph/delta?token=sent-1",
+		raws: map[string][]byte{
+			"m3": rawMsg("m3@mail.example", "alice@acme.com"),
+			"s1": sentMsg("s1@mail.example", "buyer@acme.com"),
+		},
+	}
+	c := pinnedConn(api)
+	sink := &recordingSink{}
+
+	prior := marshalCursor("https://graph/delta?token=inbox-1", "", owner)
+	if _, err := c.Sync(context.Background(), authBytes(t), prior, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if api.initCalls != 0 {
+		t.Errorf("the inbox re-anchored %d time(s); its watermark was still good", api.initCalls)
+	}
+	if api.sentInitCalls != 1 {
+		t.Errorf("the sent folder anchored %d time(s), want exactly one", api.sentInitCalls)
+	}
+	// BOUNDED by the same window a fresh connection gets, which is the whole
+	// claim: an unbounded anchor would walk the mailbox's entire sent history on
+	// the first cycle after an upgrade.
+	if want := pinned.Add(-anchorWindow); !api.sentInitAfter.Equal(want) {
+		t.Errorf("sent anchor bound = %v, want %v (now - anchorWindow)", api.sentInitAfter, want)
+	}
+	if len(sink.recs) != 2 {
+		t.Fatalf("captured %d records, want the resumed inbox message and the anchored sent one", len(sink.recs))
+	}
+}
+
+// A fetch fault anywhere in the round stores NO watermark — neither folder's.
+// One cursor is returned, and only after both folders are through, so a round
+// that lost either half leaves the next cycle re-reading the same window rather
+// than advancing past it.
+func TestSyncStoresNoWatermarkWhenTheSentFolderFails(t *testing.T) {
+	api := &fakeAPI{
+		email:       owner,
+		initIDs:     []string{"m1"},
+		initDelta:   "https://graph/delta?token=inbox-1",
+		sentInitIDs: []string{"s1"},
+		getErrIDs:   map[string]error{"s1": ErrUnreachable},
+		raws:        map[string][]byte{"m1": rawMsg("m1@mail.example", "alice@acme.com")},
+	}
+	c := pinnedConn(api)
+
+	cur, err := c.Sync(context.Background(), authBytes(t), nil, &recordingSink{})
+	if !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("Sync = %v, want the fetch fault to stop the round", err)
+	}
+	if cur != nil {
+		t.Errorf("cursor = %s, want none — a stored watermark would skip the window that failed", cur)
+	}
+}
+
+// One RFC822 message can sit in BOTH folders — a message the owner sent to a
+// list they are on, or to themselves. The Sink is idempotent on the natural key,
+// so whichever pass reaches it first is the one whose attestation sticks and the
+// second is a no-op: reading the inbox first left exactly those messages
+// permanently unattested, which is the evidence this connector exists to collect.
+func TestAMessageInBothFoldersIsAttestedByTheSentPass(t *testing.T) {
+	const both = "both@mail.example"
+	api := &fakeAPI{
+		email:         owner,
+		initIDs:       []string{"dup"},
+		initDelta:     "https://graph/delta?token=inbox-1",
+		sentInitIDs:   []string{"dup"},
+		sentInitDelta: "https://graph/delta?token=sent-1",
+		raws:          map[string][]byte{"dup": sentMsg(both, "list@acme.com")},
+	}
+	c := pinnedConn(api)
+	sink := &recordingSink{}
+
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) == 0 {
+		t.Fatal("the message reached the sink from neither folder")
+	}
+	// The FIRST write is the one that decides, because the natural key makes
+	// every later one a no-op.
+	if !sink.recs[0].Counterparty.SentByOwner() {
+		t.Error("the first write of a message present in both folders carried no attestation; the Sent Items pass ran second and was swallowed by the natural key")
 	}
 }

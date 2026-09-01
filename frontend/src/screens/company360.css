@@ -137,14 +137,6 @@
   text-decoration: underline;
 }
 
-.co-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-}
-
 .co-row {
   display: flex;
   flex-direction: column;
@@ -191,63 +183,8 @@
   border-radius: var(--r-sm);
 }
 
-/* A link that claims its whole row as the target. The cover is a pseudo
-   element rather than an anchor wrapped around the row, so the row keeps one
-   link with one accessible name — the person's — instead of reading the
-   badges and the verbs beside them as part of it. The row it covers must be
-   the positioning context, and anything meant to stay clickable inside the
-   row must sit above the cover. */
-.co-rowcover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-}
-
-/* A contact row: the avatar and the identity it names on the left, coverage
-   and the verbs that touch this person on the right — a person is a face and
-   a name first, and everything the page can tell or do about them second. */
-.co-person-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.co-person-avatar {
-  flex: 0 0 auto;
-}
-.co-person-body {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1 1 auto;
-}
 .co-person-name {
   font-weight: var(--fw-semibold);
-}
-.co-person-sub {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-/* Above the row's link cover: these are verbs about the person, and clicking
-   one must do the verb rather than leave the page for their record. */
-.co-person-end {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1); /* matches .co-row-meta, the same row-end chip rhythm */
-  flex-wrap: wrap;
-  flex: 0 0 auto;
-  margin-left: auto;
-}
-
-/* The four message lines these states draw — "there is none", the permission
-   boundary, the failed read and its retry, the stale caveat — moved to
-   SurfaceState (design-system/surfacestate.css) with the component that draws
-   them. Every one of them was already a statement about the SURFACE rather
-   than about a company. */
-
-.co-callout {
-  margin-top: 8px;
 }
 
 .co-since {
@@ -554,6 +491,24 @@
 
 /* Facts read from the site. The rhythm is tighter than the profile card above
    because these are scanned, not read: the reader is looking for one thing. */
+/* The add-a-fact row: a chooser, a value and the two verbs, on one line until
+   the panel is too narrow to hold them — at which point the value takes the
+   full width rather than shrinking to a box nobody can read their own typing
+   in. */
+.co-facts-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  background: var(--bgCard);
+  border-radius: var(--r-sm);
+}
+.co-facts-add > :nth-child(4) {
+  flex: 1 1 12rem;
+}
+
 .co-facts-group {
   margin-bottom: var(--space-4);
 }
@@ -1272,14 +1227,6 @@
   gap: var(--space-1);
 }
 
-/* A roster row: the monogram, the name over the title, and, where the graph
-   read supports it, who here already talks to them, pushed to the far end. */
-.co-person-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
 /* Stacked blocks, not a flex gap: the two lines are close enough that the
    scale's own floor (--space-1) would push them apart, and the font's own
    leading already separates them. */

@@ -100,6 +100,14 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// on its own terms.
 	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by reviewUser",
 
+	// The buying-role reading's pre-write committee check. It asks whether a
+	// seat would SECOND an answer somebody has already given, and a seat the
+	// caller cannot see is still an answer — so scoping it would let the
+	// reading overwrite exactly the seats its author was not allowed to know
+	// about. Nothing leaves the function: no person id, no role, only the
+	// decision not to write.
+	"internal/compose/org360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
+
 	"internal/compose:employerOf": "the person auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/personautoenrich.go): it answers which company's published site may describe this person, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 
 	// The project reports' company columns. The scope IS applied — by
@@ -115,6 +123,19 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose:projectsGoneQuietSpec":  "the same declaration on the projects-gone-quiet spec, applied the same way at query time",
 
 	"internal/compose/network:readDealFacts": "the coverage view's deal row: the organization id it reads is spent one function later on readDeparted's employment test and is absent from DealCoverage, so it reaches no caller. The DEAL is gated where the reference enters — network.Reads.GetDealCoverage takes auth.Require plus auth.EnsureVisibleLive on it before opening this assembly",
+
+	// The reply consumer's sender lookup. Scoping it would be the defect, not
+	// the fix: an introduction is between two colleagues, and the contact who
+	// answers it is very often owned by neither of them. A row scope here would
+	// narrow to a principal that does not exist — advanceContext binds
+	// PrincipalSystem "system:intro-advance" before this read
+	// (compose/introadvance.go) — and would silently stop closing exactly the
+	// asks the workflow is for.
+	//
+	// Nothing escapes: the id chooses which asks to test and never leaves the
+	// consumer. Who may READ the resulting ask is decided on the read side, by
+	// introductions' own requester-or-introducer predicate.
+	"internal/compose:inboundSenders": "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the person id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForPerson on its own terms",
 })
 
 // rowScopeSpellings are the platform/auth entry points that APPLY a row scope.

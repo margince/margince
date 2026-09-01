@@ -187,6 +187,30 @@ just the To line: a Cc'd person is owed the same suppression, and this call is t
 after they could have withdrawn. One-click unsubscribe writes a per-purpose consent withdrawal, so this
 gate *is* the suppression mechanism.
 
+### The three destinations one message offers
+
+A tokenized send derives **three** links from one token, and they are not interchangeable — collapsing
+them is what put a POST-only endpoint behind a link people click:
+
+| Surface | URL | Who presses it |
+|---|---|---|
+| `List-Unsubscribe` header | `{base}/v1/public/preferences/{token}/unsubscribe?purpose=` | a mailbox provider, by POST, with no browser |
+| Visible "Unsubscribe" | `{base}/#/unsubscribe/{token}/{purpose}?lang=` | a person, who gets a page that asks before it acts |
+| Visible "Manage preferences" | `{base}/#/preferences/{token}?lang=` | a person, who gets every purpose |
+
+`activities.unsubscribeLinksFor` builds all three, so the header, both visible links and the redacted
+timeline copy cannot name different tokens, purposes or languages. The two visible ones are hash routes:
+the SPA already serves its public surfaces that way, and the token stays out of ordinary web-server
+access logs until the page deliberately calls the API with it.
+
+The human page never withdraws on arrival. Mail scanners and link prefetchers follow links in a mailbox
+with nobody present, which is the same reason RFC 8058 makes the machine endpoint POST-only.
+
+The footer speaks the language of the message it sits under — body, then subject, then the
+installation's own language, then English. That is the language of the MESSAGE and not the recipient's
+preference, which nothing records; the landing pages carry a language switcher, which is the recovery
+path.
+
 It asks in **recipients** rather than addresses, and that shape is what lets one ladder carry both
 transports: a channel recipient has no address, so a gate that could only be handed addresses would be
 handed an empty list for every channel delivery — and a default-deny gate asked about nobody refuses

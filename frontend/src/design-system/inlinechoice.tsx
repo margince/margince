@@ -1,8 +1,16 @@
 import { ChevronDown } from "lucide-react";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type ComponentPropsWithoutRef,
+  forwardRef,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
-import { BusyMark, TextInput } from "./atoms";
+import { BusyMark, Textarea, TextInput } from "./atoms";
 import "./inlinechoice.css";
 import { Select, type SelectOption } from "./select";
 
@@ -252,11 +260,30 @@ export function InlineChoice({
 // commit (a chooser commits the instant something is picked; typing has no
 // such moment, so Enter or losing focus stands in for it), and something to
 // press when the value is empty, since there is no text to click on.
+// One control, two elements. The edit session's rules — focus on open, Escape
+// reverts, blur commits, `readOnly` while saving — are identical for a line and
+// for a paragraph, so they are written once above and this only decides which
+// element receives them. Written as a forwarding component rather than a
+// ternary at the call site so the whole prop set cannot drift between the two
+// branches, which is exactly how one of them would quietly lose `aria-invalid`.
+const InlineTextControl = forwardRef<
+  HTMLInputElement & HTMLTextAreaElement,
+  { multiline?: boolean } & ComponentPropsWithoutRef<"input"> &
+    ComponentPropsWithoutRef<"textarea">
+>(function InlineTextControl({ multiline, ...props }, ref) {
+  if (multiline) {
+    return <Textarea ref={ref} rows={4} {...props} />;
+  }
+  return <TextInput ref={ref} {...props} />;
+});
+
 export function InlineText({
   label,
   value,
   placeholder,
   maxLength,
+  multiline,
+  onEditingChange,
   canEdit,
   readOnlyReason,
   onSave,
@@ -267,6 +294,18 @@ export function InlineText({
   // description is a zero-width button nobody can find.
   placeholder: string;
   maxLength?: number;
+  // A value that is a PARAGRAPH rather than a line: the account's own story
+  // fields run to several sentences, and a single-line input shows a reader
+  // one sentence of what they are editing. Enter then inserts a newline
+  // instead of committing, because a paragraph needs both — so the commit key
+  // becomes Cmd/Ctrl+Enter and blur still commits exactly as it does for a
+  // line.
+  multiline?: boolean;
+  // Fires when the reader opens or closes the editor. The row beside this
+  // control may need to know: an evidence receipt describes the STORED value,
+  // and standing beside a draft it would attribute the reader's own words to
+  // whatever produced the old one.
+  onEditingChange?: (editing: boolean) => void;
   canEdit: boolean;
   readOnlyReason?: string;
   // Returns nothing on success and throws on failure. What the reader is shown
@@ -285,7 +324,7 @@ export function InlineText({
   // tell "the reader cancelled" from "the reader tabbed away" and skip the
   // commit only for the former.
   const cancelling = useRef(false);
-  const field = useRef<HTMLInputElement>(null);
+  const field = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   // Set by the two exits the reader takes without leaving this field —
   // Escape, and Enter on a save that succeeds — and read once the resting
@@ -303,6 +342,7 @@ export function InlineText({
   // them — the box would then sit open until it was clicked into, including
   // after the reader had moved on to another field.
   useEffect(() => {
+    onEditingChange?.(editing);
     if (editing) {
       field.current?.focus();
       return;
@@ -311,7 +351,7 @@ export function InlineText({
       restoreFocus.current = false;
       trigger.current?.focus();
     }
-  }, [editing]);
+  }, [editing, onEditingChange]);
 
   if (!canEdit || !editing) {
     const shown = value || placeholder;
@@ -397,7 +437,8 @@ export function InlineText({
       <label className="sr-only" htmlFor={fieldId}>
         {label}
       </label>
-      <TextInput
+      <InlineTextControl
+        multiline={multiline}
         ref={field}
         id={fieldId}
         value={draft}
@@ -414,7 +455,12 @@ export function InlineText({
         aria-describedby={failure ? errorId : undefined}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") {
+          // In a paragraph Enter is a newline and the commit moves to
+          // Cmd/Ctrl+Enter; in a line Enter is still the commit.
+          if (
+            event.key === "Enter" &&
+            (!multiline || event.metaKey || event.ctrlKey)
+          ) {
             event.preventDefault();
             void commit(true);
           }

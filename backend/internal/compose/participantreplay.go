@@ -38,6 +38,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -60,9 +61,11 @@ const (
 // re-select it on every pass, and the honest record is that this parser has no
 // reading of that format.
 const (
-	sourceGmail = "gmail"
-	sourceIMAP  = "imap"
-	sourceGCal  = "gcal"
+	sourceGmail    = "gmail"
+	sourceIMAP     = "imap"
+	sourceGraph    = "graph"
+	sourceGCal     = "gcal"
+	sourceGraphCal = "graphcal"
 )
 
 // replayCandidate is one activity whose original is still on file.
@@ -192,10 +195,15 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 	var participants []connector.MessageParticipant
 	var parseErr error
 	switch c.source {
-	case sourceGmail, sourceIMAP:
+	case sourceGmail, sourceIMAP, sourceGraph:
+		// All three store the message as its RFC822 original, so one reader
+		// serves them: Graph hands over the MIME itself (/$value), which is why
+		// the Outlook mailbox needs no parser of its own.
 		participants, parseErr = mailmap.ParticipantsOf(raw, c.owner)
 	case sourceGCal:
 		participants, parseErr = gcal.ParticipantsOf(raw, c.owner)
+	case sourceGraphCal:
+		participants, parseErr = graphcal.ParticipantsOf(raw, c.owner)
 	default:
 		return replayUnreadable, nil
 	}

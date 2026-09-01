@@ -7,13 +7,14 @@ package compose
 //
 // One surface answering one question, because the onboarding gate has to make a
 // single decision — may this reader proceed — and composing that out of
-// /ai/profile plus a Google-app read would put the installation's own policy in
+// /ai/profile plus an OAuth-app read would put the installation's own policy in
 // the client. The moment a posture needs a different rule (a deployment serving
 // no mail, a local-model install with no vendor to key) the rule changes here
 // and every screen follows.
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -37,22 +38,22 @@ type installationSetupHandlers struct {
 	routing *ai.RoutingStore
 	// providerKeys reports which cloud vendors hold a credential.
 	providerKeys *ai.ProviderKeyStore
-	// googleApp reports whether the installation's OAuth app is held.
-	googleApp *capture.GoogleAppStore
-	// envGoogleApp records that this PROCESS was composed with a Google app from
-	// its environment.
+	// connectorApps reports whether the installation holds a vendor's OAuth app.
+	connectorApps *capture.ConnectorAppStore
+	// envConnectorApp records that this PROCESS was composed with a connector
+	// OAuth app from its environment, for either vendor.
 	//
 	// It is part of the answer because it is part of what the connect transport
 	// resolves: the stored app wins, and the environment is the fallback. An
-	// installation that has always exported the pair has a working Gmail
-	// integration, and reporting its setup step unconfigured would block it at a
-	// gate over a credential it already has.
+	// installation that exports a pair has a working mail integration, so
+	// reporting its step unconfigured would tell an operator to go and store an
+	// app the process already resolves.
 	//
 	// The two are not two sources of truth for STORAGE — the setting is the only
 	// place a write lands. They are one honest reading of a two-source
 	// resolution, and this field is how the reading stays identical to the
 	// transport's.
-	envGoogleApp bool
+	envConnectorApp bool
 }
 
 func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
@@ -84,27 +85,34 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 		httperr.Write(w, r, err)
 		return
 	}
-	googleReady, err := h.googleConfigured(ctx)
+	appReady, err := h.connectorAppConfigured(ctx)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 
 	// ORDER IS THE CONTRACT. `steps` is declared as "every setup step, in the
-	// order a reader should complete them", and onboarding walks it in the order
-	// it arrives: AI models, then the Google app. That is not cosmetic — a
-	// person who has bound no model cannot be shown a cold start, and the Gmail
-	// step is the one they can skip past without the product being unusable. A
-	// client sorting these itself would be re-deciding a sequence the server
-	// already owns, so the sequence is pinned by
+	// order a reader should complete them", and a client walks it in the order
+	// it arrives. A client sorting these itself would be re-deciding a sequence
+	// the server owns, so the sequence is pinned by
 	// TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem.
 	//
-	// Both blocking, which is this installation's policy and the reason the
-	// field exists rather than being implied: a client that assumed "every step
-	// blocks" would have to be changed the day one of them stops.
+	// ONLY THE MODEL BINDING BLOCKS, pinned by
+	// TestOnlyTheModelBindingBlocksFirstRun. Without one the product cannot
+	// perform the cold-start read that first run is, so there is nothing to let
+	// a reader through to. A connector OAuth app buys mailbox capture and
+	// nothing else: an installation signing in with passwords and no external
+	// provider is fully usable without one.
+	//
+	// The app is configured from settings, where each vendor's card carries the
+	// redirect URIs that vendor's console asks for. The step stays in the report
+	// because that is what `blocking` is for: reporting it and calling it
+	// optional is the answer. Dropping it would leave an installation that has no
+	// app and one that has a working mail integration reporting the same thing to
+	// a reader asking what is left to do.
 	steps := []crmcontracts.InstallationSetupStep{
-		{Step: crmcontracts.InstallationSetupStepStepAiModels, Configured: aiReady, Blocking: true},
-		{Step: crmcontracts.InstallationSetupStepStepGoogleApp, Configured: googleReady, Blocking: true},
+		{Step: crmcontracts.AiModels, Configured: aiReady, Blocking: true},
+		{Step: crmcontracts.OauthApp, Configured: appReady, Blocking: false},
 	}
 	complete := true
 	for _, s := range steps {
@@ -157,23 +165,41 @@ func (h installationSetupHandlers) aiConfigured(ctx context.Context) (bool, erro
 	return true, nil
 }
 
-// googleConfigured reports whether this installation can connect Gmail.
+// connectorAppConfigured reports whether this installation can connect a mailbox
+// at all — through EITHER vendor, because either one makes the step done and
+// requiring both would report an installation running happily on Google as
+// unfinished forever.
 //
 // The environment's copy counts, in the same precedence the connect transport
-// applies — see envGoogleApp. A nil store is a role that composed no vault, and
-// then only the environment can answer: it reads as unconfigured rather than
-// erroring, because a reader on that installation genuinely cannot complete this
-// step and the gate has to say so rather than fail.
-func (h installationSetupHandlers) googleConfigured(ctx context.Context) (bool, error) {
-	if h.envGoogleApp {
+// applies — see envConnectorApp. A nil store is a role that composed no vault,
+// and then only the environment can answer: it reads as unconfigured rather than
+// erroring, so the report can still name the step outstanding.
+func (h installationSetupHandlers) connectorAppConfigured(ctx context.Context) (bool, error) {
+	if h.envConnectorApp {
 		return true, nil
 	}
-	if h.googleApp == nil {
+	if h.connectorApps == nil {
 		return false, nil
 	}
-	status, err := h.googleApp.Read(ctx)
-	if err != nil {
-		return false, err
+	// Every vendor the capture module holds an app for, asked FROM it: a list
+	// spelled here would go on reporting two after a third was added, and the
+	// step would read as unconfigured on an installation that had configured it.
+	// A read failure does NOT end the scan. The question is whether ANY vendor
+	// is configured, so one unreadable row cannot answer it — and failing the
+	// whole setup report over Microsoft's row would tell an installation that
+	// had configured Google it had configured nothing. The error is kept and
+	// raised only if no vendor answered yes, where it is the difference between
+	// "not configured" and "we could not tell".
+	var unreadable error
+	for _, p := range capture.AppProviders() {
+		status, err := h.connectorApps.Read(ctx, p)
+		if err != nil {
+			unreadable = errors.Join(unreadable, err)
+			continue
+		}
+		if status.Configured {
+			return true, nil
+		}
 	}
-	return status.Configured, nil
+	return false, unreadable
 }

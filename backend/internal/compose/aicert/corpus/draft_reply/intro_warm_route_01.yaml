@@ -1,0 +1,47 @@
+name: intro_request_asks_a_colleague_without_overclaiming
+task: draft_reply
+site: intro
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  colleague: "Sofia Meier"
+  contact: "Philipp Königs"
+  contact_title: "Chief Financial Officer"
+  account: "Brandt GmbH"
+  deal: "Retrofit 2026"
+  relationship: "developing"
+  last_spoke: "2026-08-20"
+  # What the contact has written. This is what decides the language — record
+  # names are not prose, and a scenario carrying only them would certify an
+  # English ask for an account whose every message is in another language.
+  correspondence: "Thanks for sending the revised scope. I will take the depot numbers to the board on Thursday."
+expect:
+  outcome: accepted
+  # Phrases the draft must NOT contain. Each is a claim about the relationship
+  # that the record does not hold: "developing" and one exchange in August is
+  # not a friendship, not years, and not a close working relationship. The
+  # colleague reading this can falsify any of them from memory, which is what
+  # makes overclaiming worse here than in an outward draft.
+  answer:
+    - "close friend"
+    - "know each other well"
+    - "years"
+    - "good friends"
+    - "worked together"
+  bands:
+    # A colleague-facing ask degrades to a template that says the same facts in
+    # plainer words, so losing the lane costs phrasing rather than the message.
+    # The bar is the drafting family's, not the role reading's.
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the message reads as one colleague asking another for a
+    favour: short, direct, no sales register and no pleasantries stacked on the
+    front. It must name the colleague and the contact, and say what the
+    introduction is for. Penalise heavily any characterisation of the
+    relationship beyond what the facts state — the input says "developing" and
+    a date, so warmth beyond that is invented about a person the reader will
+    speak to next week. Penalise writing the introduction itself, or addressing
+    the contact rather than the colleague: the message is TO the colleague.
+    Penalise a subject line repeated inside the body.

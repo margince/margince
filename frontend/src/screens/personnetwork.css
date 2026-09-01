@@ -6,7 +6,6 @@
   display: grid;
   gap: var(--space-4);
 }
-
 /* The ring and the lists sit side by side where there is room. The ring is a
    fixed column because it is square: letting it flex would stretch the circle
    into an ellipse on a wide viewport. */
@@ -15,116 +14,44 @@
   gap: var(--space-5);
   align-items: flex-start;
 }
-
-/* The ring is square, so its column is fixed rather than flexible: letting it
-   flex would stretch the circle into an ellipse on a wide viewport. It shrinks
-   with the card, which is what keeps a thin ego graph from sitting in a large
-   empty column. */
-.pn-ring {
-  display: block;
-  flex: 0 1 220px;
-  max-width: 220px;
-  width: 100%;
-  height: auto;
-  align-self: center;
-}
-
 .pn-groups {
   flex: 1 1 auto;
   min-width: 0;
   display: grid;
   gap: var(--space-4);
 }
-
 @media (max-width: 760px) {
   .pn-split {
     flex-direction: column;
   }
-
-  .pn-ring {
-    flex: 0 0 auto;
-    margin: 0 auto;
-  }
 }
-
-/* An edge is a hairline by default. Strength thickens it, so the picture's
-   weight is the server's band and never a client re-reading of the score. */
-.pn-edge {
-  stroke: var(--borderSubtle);
-  stroke-width: 1;
-}
-
-.pn-edge-weak {
-  stroke: var(--borderStrong);
-  stroke-width: 1;
-}
-
-.pn-edge-moderate {
-  stroke: var(--accentMed);
-  stroke-width: 2;
-}
-
-.pn-edge-strong {
-  stroke: var(--accent);
-  stroke-width: 3;
-}
-
-/* An edge to a node the reader has selected, so the ring answers the list. */
-.pn-edge-active {
-  stroke: var(--accent);
-}
-
-.pn-node {
-  stroke: var(--bgCard);
-  stroke-width: 1.5;
-}
-
-/* The contact this page is about. */
-.pn-node-anchor {
-  fill: var(--textPrimary);
-}
-
-/* Our side: a colleague is not a record at the account, and drawn in the
-   anchor's fill would read as a second centre. Teal, NOT the indigo family —
-   indigo says an agent decided something, and a colleague is a person. */
-.pn-node-colleague {
-  fill: var(--tealText);
-}
-
-.pn-node-contact {
-  fill: var(--accent);
-}
-
-/* Selection is a ring, not a fill: the fill still has to say which side of the
-   account a node is on. */
-.pn-node-selected {
-  stroke: var(--textPrimary);
-  stroke-width: 3;
-}
-
 .pn-route {
   margin: var(--space-2) 0 0;
   line-height: 1.5;
 }
-
+/* The ways in, best first. An ordered list because the order is the meaning:
+   the first row is the recommendation, and a reader who has to work out which
+   one that is has lost what the ranking was for. */
+.pn-routes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pn-route-row + .pn-route-row {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
 /* The region the ring's selection writes into. */
 .pn-live {
   margin-top: var(--space-3);
 }
-
-/* One edge's facts inside that region. Named apart from the region itself so
-   a two-edge selection does not nest one spacing rule inside another. */
-.pn-edge-facts {
-  margin-top: var(--space-3);
-}
-
 .pn-band {
   margin: 0;
   display: flex;
   gap: var(--space-2);
   align-items: center;
 }
-
 .pn-chips {
   display: flex;
   flex-wrap: wrap;
@@ -133,7 +60,6 @@
   padding: 0;
   list-style: none;
 }
-
 /* The moments strip: what changed about this relationship lately. Horizontal
    because it is a chronology, and a reader scans it rather than reads it. */
 .pn-moments {
@@ -144,7 +70,6 @@
   padding: 0;
   list-style: none;
 }
-
 .pn-moment {
   display: flex;
   align-items: baseline;
@@ -154,33 +79,116 @@
   padding: var(--space-1) var(--space-3);
   font-size: var(--fs-sm);
 }
-
 .pn-moment-when {
   color: var(--textMeta);
   font-size: var(--fs-meta);
 }
-
 .pn-counts {
   margin: var(--space-1) 0 0;
   color: var(--textMeta);
   font-size: var(--fs-sm);
 }
-
 .pn-receipts {
   margin: var(--space-2) 0 0;
   padding-left: var(--space-4);
   font-size: var(--fs-sm);
 }
-
 .pn-note {
   margin: var(--space-2) 0 0;
   color: var(--textMeta);
   font-size: var(--fs-sm);
 }
-
 /* A read that failed. Danger, because the reader is being told the answer on
    screen is not the answer — not merely that there is none. */
 .pn-failed {
   margin: 0;
   color: var(--danger);
+}
+
+/* The prototype's two-column working grid: the decision and its evidence on
+   the left, the handoff and what moved on the right. One column below the
+   fold breakpoint, because a side column narrower than its content is a
+   column nobody reads. */
+.pn-work-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(285px, 0.75fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.pn-main-column,
+.pn-side-column {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* The route chain, read left to right: who asks, through whom, to whom. */
+.pn-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--r-md);
+  background: var(--bgCard);
+}
+.pn-hero-who {
+  min-width: 0;
+}
+.pn-hero-who p {
+  margin: var(--space-1) 0 0;
+  color: var(--textSecondary);
+}
+.pn-hero-arrow {
+  color: var(--accent);
+  font-size: var(--fs-lead);
+}
+.pn-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* The handoff, as an ordered list. The number is decoration; the state is in
+   words beside it, so colour is never the only thing carrying it. */
+.pn-relay {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.pn-relay-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.pn-relay-step small {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--textSecondary);
+}
+.pn-relay-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--borderStrong);
+  color: var(--textSecondary);
+  font-size: var(--fs-meta);
+}
+.pn-relay-done .pn-relay-num,
+.pn-relay-current .pn-relay-num {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bgElevated);
+}
+
+@media (max-width: 1050px) {
+  .pn-work-grid {
+    grid-template-columns: 1fr;
+  }
 }

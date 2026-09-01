@@ -19,6 +19,7 @@ package compose
 // is compared without anyone remembering to add it here.
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -54,6 +55,33 @@ func TestTheOfflineFakeDescribesTheSameProductAsTheLiveAdapter(t *testing.T) {
 	assertSamePresets(t, fake.Presets, live.Presets)
 	assertSameCosts(t, fake.CostTable, live.CostTable)
 	assertSameCascades(t, fake.Cascades, live.Cascades)
+
+	// Who each will look up at all. A fake looser than the vendor lets every
+	// dev stack and the whole test lane pass over a contact production rejects
+	// with a 400 — which the platform reads as a provider fault and uses to
+	// mark the connection broken, so the defect surfaces first in front of a
+	// customer. A fake stricter than the vendor is quieter and still wrong: the
+	// lane then rehearses refusals production never issues.
+	if len(live.MatchRules) == 0 {
+		t.Error("the live adapter declares no match rules, so every subject is sent — including the ones " +
+			"the vendor rejects for carrying nothing to match on")
+	}
+	if !reflect.DeepEqual(fake.MatchRules, live.MatchRules) {
+		t.Errorf("match rules: fake %+v, live %+v — the guard is rehearsed against a provider that does not exist",
+			fake.MatchRules, live.MatchRules)
+	}
+
+	// Which purchases are welded together. A pairing the fake declares and the
+	// live adapter does not leaves the lane rehearsing a two-category press
+	// that production sends as one — and the pairing is what stops a lone
+	// mobile request completing empty, so the fake would prove a guard
+	// production has lost. It also sets the price on the button: catalogOf
+	// prices a category together with its prerequisite, so a divergence here
+	// quotes one figure and spends another.
+	if !reflect.DeepEqual(fake.RequiresAnswerTo, live.RequiresAnswerTo) {
+		t.Errorf("prerequisites: fake %+v, live %+v — the pairing rule and the price derived from it are rehearsed against a provider that does not exist",
+			fake.RequiresAnswerTo, live.RequiresAnswerTo)
+	}
 
 	// The one field that may legitimately differ is the disclosure copy: the
 	// fake is not a vendor and links to nothing a customer must read. Every

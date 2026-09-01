@@ -98,7 +98,7 @@ export function renderableRecordZone(configured: string | undefined): string {
  * of the settings query the record zone makes.
  *
  * `enabled` is the session gate. The settings read needs one, and the three
- * public screens (`book`, `preferences`, `room`) render no record dates at all
+ * public screens (`book`, `preferences`, `unsubscribe`, `confirm`, `room`) render no record dates at all
  * — they show a moment the reader relates to their own clock, on
  * `viewerZone()`, which needs no installation.
  *

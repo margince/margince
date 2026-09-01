@@ -565,21 +565,31 @@ function CompanyEditAction({
           domain: domain.domain,
           is_primary: String(domain.is_primary),
         })),
+        // The domains as the RECORD held them, carried with the rest of this
+        // reading so the replace-set diff is taken against the same moment the
+        // rows were prefilled from. The mapper wants the record's own shape,
+        // which the prefilled rows above have already been stringified out of;
+        // the form never reads this key, because prefill walks the field list.
+        domains_at_open: org.domains ?? [],
         ...cf.recordSlice(org),
       }}
-      update={async (values, rows) => {
+      update={async (values, rows, opened) => {
         const { data, error } = await api.PATCH("/organizations/{id}", {
           params: {
             path: { id: org.id },
-            ...ifMatch(requireVersion(org.version)),
+            ...ifMatch(requireVersion(opened?.version)),
           },
           body: {
-            ...mapOrgUpdate(values, rows ?? {}, org.domains),
+            ...mapOrgUpdate(
+              values,
+              rows ?? {},
+              opened?.domains_at_open as Organization["domains"],
+            ),
             // A DIFF, like the core half above. recordSlice is what the form
             // prefilled from, so it is what "unchanged" is measured against —
             // a snapshot here sends `null` for every empty custom field, which
             // the API reads as an instruction to clear a column nobody touched.
-            ...cf.toPatch(values, cf.recordSlice(org)),
+            ...cf.toPatch(values, opened ?? {}),
           },
         });
         if (error) {
@@ -904,6 +914,13 @@ export function CompanyIdentityLine({
   // WHICH side wrote last belongs to the daily brief rather than the header
   // (the brief's own detail line still names direction). The header states
   // only that the relationship is or is not live.
+  //
+  // The COPY says "either way" for that reason. Read as "last exchange" the
+  // number looked like it disagreed with the health card beside it, which
+  // counts inbound alone: a rep who wrote yesterday and has had nothing back
+  // for a month sees one day here and a month there, both true and apparently
+  // contradictory. Naming the fold is what makes them read as two answers to
+  // two questions.
   const inbound = view?.last_inbound_at;
   const outbound = view?.last_outbound_at;
   const lastExchange =

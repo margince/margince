@@ -32,6 +32,26 @@ type Approvals interface {
 	CountPending(ctx context.Context) (int, error)
 }
 
+// MachineSender answers whether an address belongs to a sending system rather
+// than a person.
+//
+// Injected rather than imported: this package reaches no module, and the rule
+// belongs to capture, which owns what a machine sender IS. A feed given none
+// treats every address as a person's, which under-groups rather than hiding
+// anything.
+type MachineSender func(address string) bool
+
+// StagedFacts are the few things about a staged proposal this queue needs that
+// its summary sentence does not carry: enough to put a routine decision in the
+// right group without reading the payload twice.
+type StagedFacts struct {
+	// MachineSender is set when the address the decision is about belongs to a
+	// sending system rather than a person.
+	MachineSender bool
+	// KnownCompany is set when its domain already names a company here.
+	KnownCompany bool
+}
+
 // ApprovalQuery is what this feed asks the approvals engine for. Narrower than
 // the engine's own input on purpose: the feed reads one page of one status and
 // takes no part in choosing scope, which stays the engine's to decide.
@@ -79,15 +99,47 @@ type RecordFace struct {
 	RelatedCount *int
 }
 
+// TaskScope says whose open tasks a read answers.
+//
+// Three answers, not a boolean, because "nobody's" is a real one: unowned work
+// has to be reachable without arriving in every reader's own queue.
+type TaskScope int
+
+const (
+	// TasksVisible adds no narrowing of its own: the store's row-scope gate
+	// decides what comes back.
+	TasksVisible TaskScope = iota
+	// TasksMine is the open tasks assigned to the reader, and no others.
+	TasksMine
+	// TasksUnassigned is the open tasks assigned to nobody.
+	TasksUnassigned
+	// TasksOwnedBy is the open tasks assigned to one NAMED person — a manager
+	// opening the queue of the rep an exception named. The name rides beside
+	// the scope, because a scope value cannot carry one.
+	TasksOwnedBy
+)
+
 // Tasks is the open-task read, through the activities module.
 //
-// mineOnly asks the store for the READER'S OWN open tasks rather than every
-// task they may see. It belongs in the query and not in a filter afterwards:
-// the store bounds what it returns, so narrowing later would cut a colleague's
-// twelve rows out of a page of twelve and leave the reader's own overdue task
+// The scope belongs in the QUERY and not in a filter afterwards: the store
+// bounds what it returns, so narrowing later would cut a colleague's twelve
+// rows out of a page of twelve and leave the reader's own overdue task
 // unreachable behind them.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, until time.Time, limit int, mineOnly bool) ([]Task, error)
+	OpenForViewer(ctx context.Context, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+}
+
+// Teammates answers whether a named user is on a team with the reader.
+//
+// The reader is the authenticated caller and is not passed: the module behind
+// this takes it from the principal, so the question can only ever be asked
+// about an edge the asker is themselves an end of.
+//
+// Asked only when a TEAM-scoped reader names somebody else's queue. An
+// unbounded reader reaches every row and needs no such question; an own-scoped
+// reader is refused before it is asked.
+type Teammates interface {
+	SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error)
 }
 
 // Task is one piece of agreed work.
@@ -319,6 +371,42 @@ type WaitingCustomer struct {
 	PersonID       ids.UUID
 	OrganizationID ids.UUID
 	DealID         ids.UUID
+	// HasOpenDeal reports whether money this reader can see is still on this
+	// thread. It is what keeps a long wait in execution instead of sending it
+	// to review.
+	HasOpenDeal bool
+}
+
+// DealFacts answers the figures behind deals a row names but does not carry.
+//
+// Most rows arrive with their deal's numbers already on them, because the lane
+// that produced them read the deal. The overnight brief does not: it ranks deal
+// ids and keeps its composite and factor vector behind its own endpoint, so a
+// card that draws those reads them there. Without this seam its rows reach a
+// rep naming a deal and saying nothing about it — no amount, no close date,
+// nothing to act on.
+//
+// What this answers is the deal's OWN columns, which every other lane already
+// carries onto its rows. The ranking arithmetic stays where it is.
+//
+// One call for every id on the page, like the label pass beside it, rather than
+// one per row.
+//
+// A deal the caller may not read is simply absent from the answer, which is the
+// same refusal shape Names uses: the row keeps its name and loses its figures,
+// and the id still travels because naming the deal was the producer's claim.
+type DealFacts interface {
+	Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]DealFigures, error)
+}
+
+// DealFigures is what a card needs to state a deal's commercial case: what it
+// is worth, when it was meant to land, and who answers for it.
+type DealFigures struct {
+	StageID           ids.UUID
+	OwnerID           ids.UUID
+	AmountMinor       *int64
+	Currency          string
+	ExpectedCloseDate *time.Time
 }
 
 // Meetings is today's booked meetings that have not happened yet.
@@ -336,121 +424,6 @@ type Meeting struct {
 	StartsAt time.Time
 }
 
-// SyncHealth is the overlay sync's current concerns: the poller backing off,
-// the incumbent budget degraded, mirror classes stale or still backfilling.
-// Aggregated by the owning module (one concern per condition, never one per
-// row), so a broken connector is one card and not a flood.
-//
-// The seam behind it answers apperrors.ErrModeNotOverlay for a workspace that
-// never connected an incumbent, and the feed renders that as an ABSENT lane:
-// an installation not in overlay mode does not look here, which is a
-// different fact from a healthy sync and from a withheld one.
-type SyncHealth interface {
-	Concerns(ctx context.Context) ([]SyncConcern, error)
-}
-
-// SyncConcern is one sync condition worth the reader's glance. Kind names it;
-// the other fields carry that kind's facts and are zero for the rest.
-type SyncConcern struct {
-	Kind string
-	// ErrorClass and Failures describe a failing sweep; NextSweepAt is when
-	// the poller retries.
-	ErrorClass  string
-	Failures    int
-	NextSweepAt *time.Time
-	// Band is the budget band a degraded budget sits in (warn or shed).
-	Band string
-	// Objects are the canonical classes a stale/backfilling concern covers.
-	Objects []string
-}
-
-// CaptureHealth is the reader's own capture connections needing the reader's
-// hand — re-authentication, a connection in error, a failing sync, a history
-// import that ended in error. One concern per connection, its worst condition,
-// derived by the capture module from the same view its settings screen lists.
-//
-// Capture is per-user, so the seam refuses a principal with no human behind
-// it and the lane renders that refusal as withheld.
-type CaptureHealth interface {
-	CaptureConcerns(ctx context.Context) ([]CaptureConcern, error)
-}
-
-// CaptureConcern is one mailbox connection needing its owner.
-type CaptureConcern struct {
-	ConnectionID ids.UUID
-	Kind         string
-	Provider     string
-	// AccountLabel is the display-only mailbox address when one was recorded.
-	AccountLabel string
-}
-
-// AIWork is the reader's own AI runs that went wrong — failed inside the
-// window the feed asks about, or live past the lease their source declared.
-// Read from the AI-task projection, so it claims only AI work; the other
-// health lanes carry what never reaches that projection.
-//
-// Per-user like CaptureHealth: the read refuses a principal with no human
-// behind it, and the lane renders that refusal as withheld.
-type AIWork interface {
-	Troubled(ctx context.Context, since time.Time, limit int) ([]TroubledRun, error)
-}
-
-// TroubledRun is one AI run that went wrong for this reader.
-type TroubledRun struct {
-	ID    ids.UUID
-	State string
-	// Summary is the run's own recorded sentence, when it has one.
-	Summary string
-	// SubjectLabel is what the run was about, as its source named it.
-	SubjectLabel string
-	OccurredAt   time.Time
-}
-
-// Bounces is the reader's own sends whose delivery reports came back hard —
-// read from the bounce stamp on the send's row, the same fact the timeline
-// shows, rather than from a second reading of the capture stream.
-//
-// Per-user like the health lanes beside it: the read refuses a principal with
-// no human behind it, and the lane renders that refusal as withheld.
-type Bounces interface {
-	HardBounces(ctx context.Context, since time.Time, limit int) ([]BouncedSend, error)
-}
-
-// BouncedSend is one send that did not arrive.
-type BouncedSend struct {
-	ID ids.UUID
-	// Subject is the send's own subject line — the name the reader knows it by.
-	Subject string
-	// Reason is the receiving side's own words for the refusal.
-	Reason    string
-	BouncedAt time.Time
-	// PersonID is the person the send's activity is filed under, zero when it
-	// is filed under none — the card then offers no open.
-	PersonID ids.UUID
-}
-
-// AutomationHealth is the automations whose recent firings failed or were
-// blocked — a rule its owner believes is running and is not. One entry per
-// firing, newest first, bounded; only automations, because an engine
-// workflow that is not one has no rule screen to open.
-//
-// Role-withheld like DSRs: the read is refused for everyone the automation
-// screens refuse, and the lane renders that refusal as withheld.
-type AutomationHealth interface {
-	TroubledRuns(ctx context.Context, since time.Time, limit int) ([]TroubledAutomationRun, error)
-}
-
-// TroubledAutomationRun is one firing that did not do its work.
-type TroubledAutomationRun struct {
-	ID   ids.UUID
-	Name string
-	// Outcome is the contract's failed/blocked vocabulary.
-	Outcome string
-	// Reason is the engine's own recorded why, when it left one.
-	Reason     string
-	OccurredAt time.Time
-}
-
 // Notices is the acting person's own unread notices — the durable
 // informational line a system flow needed them to see. Per-user like the
 // health lanes: the read refuses a principal with no human behind it, and
@@ -466,4 +439,39 @@ type UnreadNotice struct {
 	Subject   string
 	Body      string
 	CreatedAt time.Time
+}
+
+// Introductions is the asks waiting on THIS reader to answer — a colleague
+// wanting them to open a door.
+//
+// Per-user like Notices, and for the same reason: the ask names one colleague,
+// so there is no wider tier for it to widen to. The `team` and `all` scopes
+// reach shared record-bearing work, not the question of whose favour somebody
+// else asked for.
+//
+// Without this lane an ask reached its colleague only if they happened to open
+// that contact's Network tab, so one nobody went looking for expired unanswered
+// — which reads to the requester exactly like a refusal.
+type Introductions interface {
+	Pending(ctx context.Context, limit int) ([]PendingIntroduction, error)
+}
+
+// PendingIntroduction is one colleague's ask, as the queue draws it.
+//
+// It names the CONTACT the introduction would be to, which is what the
+// colleague is deciding about. No display name travels: resolving one is a read
+// of that person's record, and fillSubjectLabels already makes it under the
+// reader's own grants (labels.go). A name carried here would be a second,
+// ungated answer to the question that pass exists to ask.
+type PendingIntroduction struct {
+	ID       ids.UUID
+	PersonID ids.UUID
+	// Reason is the requester's own sentence for why the ask is worth making,
+	// written by them at the time. Never composed here: this queue puts no
+	// words in a colleague's mouth.
+	Reason      string
+	RequestedAt time.Time
+	// DueAt is when the ask lapses. It is what this lane orders by, so the one
+	// about to expire is the one a reader sees first.
+	DueAt time.Time
 }

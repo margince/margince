@@ -95,9 +95,127 @@ func (e *noticeEnv) asUser(u ids.UserID) context.Context {
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
 
+// THE BUS IS AT-LEAST-ONCE, so a handler that writes a notice for an event it
+// may be handed twice has to land one line. workflow.Handler.Apply says as much
+// in its own contract, and a handler that relies on the queue for that instead
+// has put its correctness where no reader of this package can check it.
+//
+// Both directions, because a duplicate is not only a duplicate row: the audit
+// trail and the announcement have to collapse with it, or a second event about
+// a notice that already exists puts the same line on the same Worklist by
+// another route.
+// What a repeat ANSWERS WITH, which is a separate question from what it writes.
+//
+// A dedupe key names the EVENT rather than the text, so the two deliveries need
+// not say the same thing: the second can carry a subject reworded since, or a
+// kind a later version spells differently. Answering it with the stored id and
+// this call's words describes a notice that exists nowhere — the reader cannot
+// find it, and the database does not say it.
+func TestARepeatAnswersWithTheStoredNoticeRatherThanTheReplay(t *testing.T) {
+	e := setupNotices(t)
+	key := "lead_sla:" + ids.NewV7().String()
+	stored, err := e.store.insertNotice(e.engineCtx(), NewNotice{
+		Recipient: e.recipient, Kind: "lead_sla", Subject: "SLA breach",
+		Body: "overdue", DedupeKey: key,
+	}, nil)
+	if err != nil {
+		t.Fatalf("first insert: %v", err)
+	}
+	replay, err := e.store.insertNotice(e.engineCtx(), NewNotice{
+		Recipient: e.recipient, Kind: "lead_sla_v2", Subject: "Response overdue",
+		Body: "still overdue", DedupeKey: key,
+	}, nil)
+	if err != nil {
+		t.Fatalf("second insert: %v", err)
+	}
+	if replay != stored {
+		t.Errorf("the repeat answered %+v, want the notice that already stands %+v — every field, "+
+			"or a caller renders a line nothing in the database says", replay, stored)
+	}
+}
+
+func TestANoticeCarryingAKeyIsWrittenOncePerRecipient(t *testing.T) {
+	e := setupNotices(t)
+	again := NewNotice{
+		Recipient: e.recipient, Kind: "lead_sla", Subject: "SLA breach",
+		Body: "overdue", DedupeKey: "lead_sla:" + ids.NewV7().String(),
+	}
+	first, err := e.store.Create(e.engineCtx(), again)
+	if err != nil {
+		t.Fatalf("first Create: %v", err)
+	}
+	second, err := e.store.Create(e.engineCtx(), again)
+	if err != nil {
+		t.Fatalf("second Create: %v", err)
+	}
+	if second != first {
+		t.Errorf("the repeat answered %s, want the id of the notice that already stands (%s) — "+
+			"a caller holding an id nothing has is worse than a duplicate", second, first)
+	}
+
+	var rows, audits, events int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM notice WHERE dedupe_key = $1),
+		       (SELECT count(*) FROM audit_log
+		         WHERE entity_type = 'notice' AND entity_id = $2 AND action = 'create'),
+		       (SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'notice.created')`,
+		again.DedupeKey, first).Scan(&rows, &audits, &events); err != nil {
+		t.Fatalf("counting: %v", err)
+	}
+	if rows != 1 {
+		t.Errorf("%d notices carry the key, want 1 — one breach delivered twice is two identical lines on one Worklist", rows)
+	}
+	if audits != 1 || events != 1 {
+		t.Errorf("audits=%d events=%d, want 1 each — the second delivery announced a notice it did not write", audits, events)
+	}
+
+	// PER RECIPIENT, and this is where that claim is earned. One breach
+	// escalated to two people is TWO notices and must stay two — a key scoped
+	// to the event alone would put the line on whichever Worklist reached it
+	// first and leave the other person told nothing.
+	toSomebodyElse := again
+	toSomebodyElse.Recipient = e.other
+	other, err := e.store.Create(e.engineCtx(), toSomebodyElse)
+	if err != nil {
+		t.Fatalf("Create for the second recipient: %v", err)
+	}
+	if other == first {
+		t.Fatal("the same key addressed to a second person answered the first person's notice — " +
+			"one breach escalated to two people would tell only one of them")
+	}
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM notice WHERE dedupe_key = $1`, again.DedupeKey).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 2 {
+		t.Errorf("%d notices carry the key across two recipients, want 2", rows)
+	}
+}
+
+// A notice with NO key dedupes against nothing, and that is the answer rather
+// than an oversight: most notices are addressed by a human act and have no
+// event to key on, and two of them are two real notices.
+func TestANoticeWithoutAKeyIsWrittenEveryTime(t *testing.T) {
+	e := setupNotices(t)
+	unkeyed := NewNotice{Recipient: e.recipient, Kind: "automation", Subject: "Deal moved"}
+	first, err := e.store.Create(e.engineCtx(), unkeyed)
+	if err != nil {
+		t.Fatalf("first Create: %v", err)
+	}
+	second, err := e.store.Create(e.engineCtx(), unkeyed)
+	if err != nil {
+		t.Fatalf("second Create: %v", err)
+	}
+	if second == first {
+		t.Fatal("two unkeyed notices collapsed into one — a caller with no natural key had one of their notices silently dropped")
+	}
+}
+
 func TestANoticeIsCreatedInTheWriteShapeAndSettledOnce(t *testing.T) {
 	e := setupNotices(t)
-	id, err := e.store.Create(e.engineCtx(), e.recipient, "automation", "Deal moved", "The rule fired.")
+	id, err := e.store.Create(e.engineCtx(), NewNotice{
+		Recipient: e.recipient, Kind: "automation", Subject: "Deal moved", Body: "The rule fired.",
+	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -166,7 +284,9 @@ func TestANoticeIsCreatedInTheWriteShapeAndSettledOnce(t *testing.T) {
 
 func TestANoticeToNobodyFailsLoudly(t *testing.T) {
 	e := setupNotices(t)
-	if _, err := e.store.Create(e.engineCtx(), ids.New[ids.UserKind](), "automation", "orphan", ""); err == nil {
+	if _, err := e.store.Create(e.engineCtx(), NewNotice{
+		Recipient: ids.New[ids.UserKind](), Kind: "automation", Subject: "orphan",
+	}); err == nil {
 		t.Fatal("a notice to a user who does not exist was recorded")
 	}
 }

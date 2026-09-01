@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
+	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -119,7 +120,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	}
 
 	for _, raw := range events {
-		if err := captureOne(ctx, raw, sink, owner); err != nil {
+		if err := meetingmap.CaptureOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {
 			return nil, err
 		}
 	}
@@ -146,41 +147,10 @@ func (c *Connector) selectEvents(ctx context.Context, access, start string) ([][
 	return events, next, nil
 }
 
-// captureOne parses, drops, or upserts one raw event — the same discipline the
-// mail connectors use. A parse failure or a deliberate skip (cancelled, solo,
-// or inside the owner's domain) is a no-op; only a real Sink write fault returns a non-nil
-// error (which stops the pull). It is a package function (no receiver) so a
-// pull holds no shared state.
-func captureOne(ctx context.Context, raw []byte, sink connector.Sink, owner string) error {
-	m, err := parseEvent(raw, owner)
-	if err != nil {
-		return nil //nolint:nilerr // a single unparseable event is a skip, not a fatal pull error (mirrors the mail connectors)
-	}
-	if _, drop := m.SkipReason(); drop {
-		return nil
-	}
-	if _, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw)); err != nil {
-		if errors.Is(err, connector.ErrSkip) {
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-// Normalize maps ONE raw Calendar event resource to its meeting activity. Pure
-// — no I/O — so the mapping is the test-guarded surface; it returns an
-// ErrSkip-wrapped error for an event this connector intentionally drops
-// (cancelled, naming nobody but the owner, or wholly inside the owner's domain).
+// Normalize maps ONE raw Calendar event resource to its meeting activity — the
+// shared calendar mapping over this connector's own decode.
 func (c *Connector) Normalize(_ context.Context, raw connector.RawRecord) ([]connector.NormalizedRecord, error) {
-	m, err := parseEvent(raw, c.owner)
-	if err != nil {
-		return nil, err
-	}
-	if reason, drop := m.SkipReason(); drop {
-		return nil, fmt.Errorf("gcal: dropping %s (%s): %w", m.ID(), reason, connector.ErrSkip)
-	}
-	return []connector.NormalizedRecord{m.ToRecord(connectorName, raw)}, nil
+	return meetingmap.NormalizeOne(raw, c.owner, connectorName, decodeEvent)
 }
 
 // HealthCheck confirms the stored credential still mints a token and the

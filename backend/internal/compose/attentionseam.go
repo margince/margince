@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -38,7 +39,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attentionApprovals reads the staged queue through the engine every approval
@@ -128,62 +128,6 @@ func (d attentionDuplicates) Describe(
 
 func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
 	return d.store.CountOpenDedupeCandidates(ctx)
-}
-
-// attentionTasks reads open tasks through the activities store. A task is an
-// activity of kind `task`, so this is the same read the task queue makes.
-type attentionTasks struct{ store *activities.Store }
-
-func (t attentionTasks) OpenForViewer(
-	ctx context.Context, until time.Time, limit int, mineOnly bool,
-) ([]attention.Task, error) {
-	// The store answers "open and due by then" itself, so the limit bounds the
-	// rows that QUALIFY. This used to read ten times the lane and narrow
-	// afterwards, which put the bound on the wrong set: a pile of completed
-	// tasks filled the scan, the overdue promise underneath never reached the
-	// reader, and the day rendered clear while the work was still there.
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, Limit: &limit}
-	// Narrowed in the QUERY, so the store's own bound applies to the rows that
-	// qualify. Filtering the answer instead would let a colleague's twelve
-	// tasks fill the page and hide the reader's own overdue one behind them.
-	if mineOnly {
-		actor, ok := principal.Actor(ctx)
-		if !ok || actor.UserID.IsZero() {
-			// No human, no "own work" to answer for. Reading every task and
-			// calling the result theirs is the widening this narrowing exists
-			// to prevent.
-			return nil, nil
-		}
-		// Mine, or nobody's: a task the reader wrote themselves without an
-		// assignee is still theirs to do.
-		assignee := ids.From[ids.UserKind](actor.UserID)
-		in.OwnQueueOf = &assignee
-	}
-	rows, _, err := t.store.ListActivities(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-	open := make([]attention.Task, 0, len(rows))
-	for _, row := range rows {
-		// The filter above answers only dated rows, so this skip is unreachable
-		// today. It is here because the alternative to a skip is a nil deref
-		// that panics the WHOLE day's page, and the guarantee lives in a WHERE
-		// clause one package away — too far for the next reader of this loop to
-		// see it.
-		if row.DueAt == nil {
-			continue
-		}
-		due := *row.DueAt
-		linkType, linkID := primaryLink(row)
-		open = append(open, attention.Task{
-			ID:       ids.UUID(row.Id),
-			Subject:  subjectOfActivity(row),
-			DueAt:    &due,
-			LinkType: linkType,
-			LinkID:   linkID,
-		})
-	}
-	return open, nil
 }
 
 // subjectOfActivity is the line a task shows. An activity always carries one
@@ -475,5 +419,25 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 			projects:   projects.NewStore(db),
 		},
 		now,
-	).WithWaiting(attentionWaiting{store: activities.NewStore(db), now: now})
+	).WithWaiting(attentionWaiting{store: activities.NewStore(db), now: now}).
+		// The asks waiting on this colleague to answer. Until this lane existed
+		// a colleague learned they had been asked only by opening that
+		// contact's Network tab, so an ask nobody went looking for expired
+		// unanswered — which to the requester reads exactly like a refusal.
+		WithIntroductions(attentionIntroductions{
+			store: introductions.NewStore(db, time.Now),
+		}).
+		// The reader's own sends that never left, from the stamp the
+		// dispatcher's park records on the row.
+		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
+		WithMachineSender(capture.IsMachineAddress).
+		// The figures behind a deal a row names but does not carry — the
+		// overnight brief's rows, which rank ids and keep their evidence
+		// behind the brief's own endpoint.
+		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
+		// Whether a team-scoped reader may open a named person's queue. Bound
+		// unconditionally: unbound, that reader is refused, so a seam that
+		// dropped this would present as a Team Lead unable to open their own
+		// rep's day rather than as one able to open a stranger's.
+		WithTeammates(newTeammatesSeam(pool))
 }

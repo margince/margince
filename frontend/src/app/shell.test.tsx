@@ -4,11 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { memoryStorage } from "../testing/appharness";
-import {
-  clearPendingAuthorize,
-  readPendingAuthorize,
-  stashPendingAuthorize,
-} from "./pendingauthorize";
 import { parseHash, type Route } from "./router";
 import { PageTitle, Shell } from "./shell";
 import {
@@ -79,7 +74,6 @@ afterEach(() => {
   // simply in its other state. Cleared after the unstub, so it clears the real
   // storage rather than a stub that is about to be thrown away.
   window.localStorage.clear();
-  clearPendingAuthorize();
 });
 
 // The page's own name, standing INSIDE the scroller above the content it names.
@@ -717,40 +711,6 @@ describe("Sign-out (AS-1)", () => {
     // if `onSuccess: () => queryClient.clear()` is removed from useLogout.
     await waitFor(() => expect(loggedOut).toBe(true));
     await waitFor(() => expect(client.getQueryData(["me"])).toBeUndefined());
-  });
-
-  // A pending OAuth authorization lives in sessionStorage, which a sign-out
-  // that leaves the tab open does not touch. It is this human's request: the
-  // next human to sign in here must not be offered a connection they never
-  // started, with their own passports on the consent screen.
-  it("discards a pending connection so the next sign-in is not offered it", async () => {
-    const user = userEvent.setup();
-    let loggedOut = false;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input instanceof Request ? input.url : input);
-        const method = input instanceof Request ? input.method : "GET";
-        if (url.endsWith("/v1/auth/logout") && method === "POST") {
-          loggedOut = true;
-          return new Response(null, { status: 204 });
-        }
-        if (url.endsWith("/v1/me")) {
-          return new Response(null, { status: loggedOut ? 401 : 200 });
-        }
-        return new Response(null, { status: 404 });
-      }),
-    );
-    stashPendingAuthorize({
-      url: "/oauth/authorize?client_id=night&scope=read",
-      clientName: "Claude Code",
-    });
-    window.location.hash = "#/deals";
-    renderWith(newClient(), <Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
-    await user.click(screen.getByRole("button", { name: /Account$/ }));
-    await user.click(screen.getByText("Sign out"));
-    await waitFor(() => expect(loggedOut).toBe(true));
-    await waitFor(() => expect(readPendingAuthorize()).toBeNull());
   });
 
   // queryClient.clear() alone empties the cache but does NOT force a mounted

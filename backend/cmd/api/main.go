@@ -246,7 +246,11 @@ func validateBareOrigin(flagName, raw string) error {
 	case parsed.Path != "" && parsed.Path != "/":
 		return fmt.Errorf("api: %s %q must be a bare origin: a URL is derived by appending "+
 			"a path to it, so a path here produces one nothing resolves", flagName, raw)
-	case parsed.RawQuery != "" || parsed.Fragment != "":
+	// ForceQuery as well as RawQuery: a bare trailing "?" parses to an EMPTY
+	// RawQuery, so a query check alone admits it — and the origin is then
+	// published with a "?" that swallows every path appended to it, producing a
+	// redirect_uri no browser ever comes back to.
+	case parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "":
 		return fmt.Errorf("api: %s %q must be a bare origin, with no query or fragment", flagName, raw)
 	}
 	return nil
@@ -322,7 +326,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// they must follow kvOpts (and graph follows gmail: WithGraphCapture
 	// joins the connect registry WithGmailCapture builds when both are
 	// configured).
-	gmailOpts, err := gmailOptions(cfg, capCfg, pool, logger, stdout)
+	gmailOpts, err := gmailOptions(cfg, capCfg, pool, vault, logger, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -332,11 +336,16 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 		return nil, nil, nil, err
 	}
 	opts = append(opts, googleSignInOpts...)
-	graphOpts, err := graphOptions(cfg, pool, logger, stdout)
+	graphOpts, err := graphOptions(cfg, pool, vault, logger, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	opts = append(opts, graphOpts...)
+	microsoftSignInOpts, err := microsoftSignInOptions(cfg, stdout)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	opts = append(opts, microsoftSignInOpts...)
 
 	schemaOpts, schemaPool, closeSchemaPool, err := schemaPoolOptions(ctx, cfg.schemaDSN, stdout)
 	if err != nil {

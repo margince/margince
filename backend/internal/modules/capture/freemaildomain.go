@@ -37,10 +37,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The audit images' field names, spelled once.
+// The audit images' field names, spelled once. Shared by every capture-side
+// audit image rather than per writer: two images of the same fact keyed
+// differently read as two different facts to anybody filtering the trail.
 const (
-	auditKeyDomain = "domain"
-	auditKeyKind   = "kind"
+	auditKeyDomain  = "domain"
+	auditKeyKind    = "kind"
+	auditKeyID      = "id"
+	auditKeyPosture = "mail_posture"
 )
 
 // The two things a workspace can say about a domain.

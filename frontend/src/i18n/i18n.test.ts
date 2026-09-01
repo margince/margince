@@ -30,6 +30,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.
   "co.360.subject",
+  // A number and the SI symbol for millisecond. The symbol is the same in every
+  // language by definition — it is written "ms" in Vietnamese too — so a locale
+  // that changed it would be naming a different unit.
+  "aiHealth.ms",
   // An acronym, not a word: DNS is DNS in every language this product speaks,
   // and a "translation" of it would be a different protocol.
   "co.tech.lane.dns",
@@ -48,14 +52,18 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.spine.kind.email",
   // Same word again, this time the confirm page's own field label.
   "confirm.field.email",
-  // Google's own field names. An admin reads these off the Google Cloud
-  // console, which shows them in English whatever the reader's locale, so
-  // translating them here would have the form ask for something the page they
-  // are copying from does not call by that name. The placeholder is an id
-  // SHAPE rather than prose and is the same string everywhere.
-  "firstRun.google.clientId",
-  "firstRun.google.clientSecret",
-  "firstRun.google.clientIdPlaceholder",
+  // The vendors' own field names. An admin reads these off the Google Cloud
+  // console or the Entra portal, which show them in English whatever the
+  // reader's locale, so translating them here would have the form ask for
+  // something the page they are copying from does not call by that name. The
+  // placeholders are id SHAPES rather than prose and are the same string
+  // everywhere.
+  "oauthApp.clientId",
+  "oauthApp.clientSecret",
+  "oauthApp.google.clientIdPlaceholder",
+  "oauthApp.microsoft.clientIdPlaceholder",
+  "oauthApp.tenant",
+  "oauthApp.tenantPlaceholder",
   // "Embeddings" is the vocabulary of the routing document itself, which this
   // form renders raw beside `premium` and `gemini`. The host placeholder is a
   // URL, which is the same string in every language.
@@ -96,7 +104,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.s4.provMicrosoft",
   "ob.conv.connect.linkedinName",
   // "Email" is the loanword vi uses for the field, as en spells it.
-  "day.merge.fieldEmail",
   // Employee-count bands: digits and an en dash, the same in every locale.
   "lead.signal.employees.1-10",
   "lead.signal.employees.11-50",

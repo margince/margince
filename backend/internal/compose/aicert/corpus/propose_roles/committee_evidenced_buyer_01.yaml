@@ -1,0 +1,57 @@
+name: propose_roles_reads_a_buyer_out_of_their_own_words
+task: propose_roles
+site: committee
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  deal: "Nordwind Logistik — Depot-Rollout"
+  candidates:
+    # The contact whose OWN sentence states what they do on the deal. This is
+    # the whole of the site's positive case: a role read from what somebody
+    # wrote, not from what they are called.
+    - PersonID: p-buyer
+      FullName: "Ute Sommer"
+      Title: "Chief Financial Officer"
+      Messages:
+        - ActivityID: a-budget
+          Subject: "Re: Depot-Rollout Angebot"
+          Body: >-
+            Thanks for the revised scope. I sign off the budget for this one, so
+            send the final figures to me directly rather than to the depot team.
+    # A contact who talks about scheduling and nothing else. Their title says
+    # nothing the model may use, and their words carry no role, so the correct
+    # reading of them is silence.
+    - PersonID: p-scheduler
+      FullName: "Jan Roth"
+      Title: "Head of Operations"
+      Messages:
+        - ActivityID: a-schedule
+          Subject: "Re: Termin"
+          Body: >-
+            Thursday afternoon works for me, and I will bring the depot manager
+            from Hamburg along.
+expect:
+  outcome: accepted
+  # A person-to-role map. The scheduler is deliberately absent: a title as
+  # senior as Head of Operations is exactly the bait this site must not take,
+  # and an entry for them would certify the inference the contract forbids.
+  answer:
+    p-buyer: economic_buyer
+  bands:
+    # Higher than the drafting sites. A wrong role is written straight to the
+    # record as a real seat and a rep acts on it for a quarter, where a weak
+    # draft is text a human reads before sending. The floor is where the
+    # capability stops being worth offering at all.
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: >
+    Score whether the proposal rests on a sentence the contact themselves
+    wrote, quoted verbatim, and whether the quote genuinely supports the role
+    claimed. Penalise heavily any role proposed for the scheduling contact:
+    their title is senior and their words say nothing about who decides, so a
+    role there is the title inference this surface exists to refuse. Penalise a
+    paraphrased or tidied quote as severely as an invented one — the gate
+    checks the snippet against its source verbatim, so a paraphrase is a
+    proposal that will be silently dropped, which reads to a user as the
+    feature not working. Penalise a confidence stated outside 0 to 1.

@@ -11,7 +11,6 @@ import { useLocale, useT } from "../i18n";
 import { suggestionsFor, useAiModelCatalogue } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { problemMessageOf, throwProblem } from "./common";
-import { useSetGoogleApp } from "./google-app";
 import {
   SETUP_PROVIDER_IDS,
   SETUP_PROVIDERS,
@@ -19,8 +18,11 @@ import {
 } from "./setup-providers";
 
 /**
- * What a fresh installation must be told before it can be used, asked in the
- * order the server lists it: the model binding, then the Google app.
+ * What a fresh installation must be told before it can be used: the model
+ * binding, which is the one step the server calls blocking. Everything else the
+ * report names — the Google app today — is configured from settings, because an
+ * installation with no Google app is fully usable and demanding one here locked
+ * its operator out of every route.
  *
  * WHY THIS IS NOT THE SETTINGS CARDS. `AiRoutingCard` re-points lanes an
  * installation ALREADY binds — it says so and refuses an empty one, which is
@@ -54,16 +56,34 @@ export function useInstallationSetup() {
 }
 
 /**
- * The first step that is not done yet, in the server's order.
+ * The steps this screen has a panel for. Today the model binding is the whole
+ * list, and the server agrees — it reports every other step non-blocking, held
+ * by TestOnlyTheModelBindingBlocksFirstRun.
+ *
+ * It is read by `outstandingStep` rather than only by the render, and that is
+ * the point. A frontend older than its server would otherwise meet a blocking
+ * step it has no panel for, and the caller — which gates on this same
+ * function — would keep drawing a component that renders nothing: a reader held
+ * behind an empty screen, with nothing on it to say what it wants.
+ */
+const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models"];
+
+/**
+ * The first step that is not done yet AND that this screen can ask for, in the
+ * server's order.
  *
  * `steps` is optional-chained as well as `setup`: an answer that arrives
  * without it is not an answer, and the alternative is this throwing inside a
  * render — which takes down the screen it was meant to stand in front of.
  * Undefined here reads as "nothing outstanding", which lets the reader past
- * rather than trapping them behind a gate that cannot say what it wants.
+ * rather than trapping them behind a gate that cannot say what it wants. A
+ * blocking step with no panel takes the same exit, for the same reason: past a
+ * gate is somewhere, and a settings screen can still be reached from there.
  */
 export function outstandingStep(setup: Setup | undefined): Step | undefined {
-  return setup?.steps?.find((s) => s.blocking && !s.configured);
+  return setup?.steps?.find(
+    (s) => s.blocking && !s.configured && ASKABLE_STEPS.includes(s.step),
+  );
 }
 
 function useBindModels() {
@@ -287,71 +307,6 @@ function AiStep() {
   );
 }
 
-/** The Google step: the OAuth app a mailbox connection is made through. */
-function GoogleStep() {
-  const t = useT();
-  const [clientId, setClientId] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
-  const save = useSetGoogleApp();
-  const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
-
-  return (
-    <Panel title={t("firstRun.google.title")}>
-      <PanelBody>
-        <p className="t-body">{t("firstRun.google.sub")}</p>
-        {save.error && (
-          <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
-        )}
-        <Field label={t("firstRun.google.clientId")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={clientId}
-              disabled={save.isPending}
-              autoComplete="off"
-              placeholder={t("firstRun.google.clientIdPlaceholder")}
-              onChange={(e) => setClientId(e.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("firstRun.google.clientSecret")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="password"
-              autoComplete="off"
-              value={clientSecret}
-              disabled={save.isPending}
-              onChange={(e) => setClientSecret(e.target.value)}
-            />
-          )}
-        </Field>
-        <Button
-          variant="primary"
-          pending={save.isPending}
-          disabled={!ready}
-          onClick={() => {
-            save.reset();
-            save.mutate(
-              { clientId: clientId.trim(), clientSecret: clientSecret.trim() },
-              {
-                onSuccess: () => {
-                  // Cleared on the way out rather than left in state: the field
-                  // is the only copy this app holds, and it has done its job.
-                  setClientSecret("");
-                  save.reset();
-                },
-              },
-            );
-          }}
-        >
-          {t("firstRun.continue")}
-        </Button>
-      </PanelBody>
-    </Panel>
-  );
-}
-
 /**
  * The setup gate. Renders nothing once the server says the installation is
  * complete, so the caller can put it in front of whatever comes next without
@@ -372,5 +327,9 @@ export function InstallationSetup() {
   if (setup.isPending || !step) {
     return null;
   }
-  return step.step === "ai_models" ? <AiStep /> : <GoogleStep />;
+  // ASKABLE_STEPS is what `outstandingStep` filtered on, so the step in hand is
+  // the model binding. The Google app is configured from settings instead,
+  // where the card can also show the redirect URIs Google's console asks for —
+  // which a cold-start panel never could.
+  return <AiStep />;
 }

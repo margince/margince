@@ -69,6 +69,17 @@ const (
 	// KindSpam is unsolicited commercial mail, including the kind a human
 	// replied to only in order to decline it.
 	KindSpam = "spam"
+	// KindPersonal is a private correspondent of the mailbox owner: family, a
+	// friend, a doctor, a school. Not a counterparty of the BUSINESS, and the
+	// one kind whose mail the product destroys rather than holds — a CRM that
+	// keeps a founder's family letters forever, unreadable, has still kept them.
+	KindPersonal = "personal"
+	// KindAdvisor is a professional the mailbox owner engages personally: a
+	// lawyer, tax adviser, accountant, investor or coach. The correspondence is
+	// genuine business and the record is real, which is why this is not
+	// `personal` — but it is the OWNER's, and a colleague reading it is the
+	// disclosure this kind exists to prevent.
+	KindAdvisor = "advisor"
 )
 
 // PendingMaxAttempts bounds the verdict retries (ADR-0072 §5: retries=2). A row

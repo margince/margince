@@ -60,8 +60,13 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		Kind:    &kind,
 		Actions: []crmcontracts.AttentionItemActions{},
 	}
+	// The condition AND the mailbox it is about. Two disconnected mailboxes
+	// are two things to reconnect, and one row saying "disconnected" would
+	// send the reader to fix one and silently lose the other.
 	if mailbox != "" {
 		item.Detail = &mailbox
+		cause := "capture_health:" + kind + ":" + mailbox
+		item.CauseRef = &cause
 	}
 	return item
 }
@@ -80,6 +85,13 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 		Kind:       &state,
 		OccurredAt: &occurred,
 		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	// The condition is the TASK that ran. Not the run's summary, which is
+	// written per run and would draw one incident per failure, and not the
+	// state, which is `failed` for every broken task there is.
+	if run.Kind != "" {
+		cause := "ai_work_health:" + run.Kind
+		item.CauseRef = &cause
 	}
 	if run.Summary != "" {
 		summary := run.Summary
@@ -121,6 +133,33 @@ func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	return item
 }
 
+// parkedItem draws one send that was given up on. The subject line is the
+// headline and the dispatcher's own reason the supporting line, exactly as the
+// bounce card reads — the difference is in the verb the client writes, because
+// this message is still unsent and that one is not.
+func parkedItem(send ParkedSend) crmcontracts.AttentionItem {
+	occurred := send.ParkedAt
+	item := crmcontracts.AttentionItem{
+		Id:         send.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("undelivered"),
+		OccurredAt: &occurred,
+		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	if send.Subject != "" {
+		subject := send.Subject
+		item.Title = &subject
+	}
+	if send.Reason != "" {
+		reason := send.Reason
+		item.Detail = &reason
+	}
+	if !send.PersonID.IsZero() {
+		item.Subject = subjectOf("person", send.PersonID)
+		item.Actions = append(item.Actions, actionOpen)
+	}
+	return item
+}
+
 // automationItem draws one troubled firing. The rule's own name is the
 // headline and the engine's recorded reason the supporting line; `kind` is
 // the closed failed/blocked vocabulary. No subject and no verbs: fixing the
@@ -136,6 +175,13 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 		Title:      &name,
 		OccurredAt: &occurred,
 		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	// The condition is the RULE, not this firing of it and not its name: a
+	// name is mutable and not unique, so two rules sharing a name would merge
+	// and a renamed rule would split its own history.
+	if !run.AutomationID.IsZero() {
+		cause := "automation_run:" + run.AutomationID.String()
+		item.CauseRef = &cause
 	}
 	if run.Reason != "" {
 		reason := run.Reason
@@ -162,6 +208,40 @@ func noticeItem(notice UnreadNotice) crmcontracts.AttentionItem {
 	if notice.Body != "" {
 		body := notice.Body
 		item.Detail = &body
+	}
+	return item
+}
+
+// introductionItem draws one ask a colleague is waiting on this reader to
+// answer.
+//
+// No title. The headline this card needs is the contact's name, and that
+// arrives on `subject` through fillSubjectLabels, which reads it under the
+// reader's own grants. A title written HERE would be an English sentence on a
+// product that ships three languages, and a name resolved here would be a read
+// this assembler does not hold the grants to make.
+//
+// The requester's own reason is the detail, quoted rather than summarised: the
+// colleague is deciding whether to spend their own relationship, and a
+// paraphrase of why is not what they would be agreeing to.
+//
+// One verb, `decide`, and it routes to the ask's own endpoint. Answering is
+// irreversible and only the introducer may do it, so it is never settled from
+// the queue row itself.
+func introductionItem(ask PendingIntroduction) crmcontracts.AttentionItem {
+	requested := ask.RequestedAt
+	due := ask.DueAt
+	item := crmcontracts.AttentionItem{
+		Id:         ask.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("introduction_request"),
+		OccurredAt: &requested,
+		DueAt:      &due,
+		Actions:    []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("decide")},
+		Subject:    subjectOf("person", ask.PersonID),
+	}
+	if ask.Reason != "" {
+		reason := ask.Reason
+		item.Detail = &reason
 	}
 	return item
 }

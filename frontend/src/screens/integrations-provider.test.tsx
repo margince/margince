@@ -26,8 +26,18 @@ const CONNECTION: ProviderConnection = {
     preset: "full",
     automatic_individual_create: true,
     automatic_import: false,
-    categories: { professional: true },
+    // The work email OFF and the free profile link ON, which is what a fresh
+    // connection resolves to. A fixture with the paid one already on could not
+    // tell a switch that writes from one rendered off a constant.
+    categories: { linkedin_profile: true, professional_email: false },
   },
+  // Both halves, because the card treats them differently: the free set is what
+  // the automatic lookup takes and carries no switch of its own, and the priced
+  // set is what an admin may allow somebody to buy per contact.
+  catalog: [
+    { category: "linkedin_profile", free: true, cost: {} },
+    { category: "professional_email", free: false, cost: { email: 1 } },
+  ],
   credits: { pools: { email: 120 } },
   version: 4,
   created_at: "2026-01-05T09:00:00Z",
@@ -81,7 +91,7 @@ const ME_CONNECT_ONLY = meResponse("full", {
   delete: false,
 });
 
-function backend(principal: Me) {
+function backend(principal: Me, connection: ProviderConnection = CONNECTION) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const request = input instanceof Request ? input : undefined;
     const path = new URL(String(request ? request.url : input)).pathname;
@@ -89,23 +99,33 @@ function backend(principal: Me) {
     // back into its cache. Routed by METHOD as well as path: the same path
     // serves the list this card reads on the way in.
     if (request?.method === "PATCH") {
-      return new Response(JSON.stringify(CONNECTION), {
+      return new Response(JSON.stringify(connection), {
         headers: { "Content-Type": "application/json" },
       });
     }
-    const body = routeBody(path, principal);
+    const body = routeBody(path, principal, connection);
     return new Response(JSON.stringify(body), {
       headers: { "Content-Type": "application/json" },
     });
   });
 }
 
-function routeBody(path: string, principal: Me): unknown {
+function routeBody(
+  path: string,
+  principal: Me,
+  connection: ProviderConnection,
+): unknown {
   if (path === "/v1/me") {
     return principal;
   }
   if (path === "/v1/provider-connections") {
-    return { data: [CONNECTION] };
+    return { data: [connection] };
+  }
+  if (path === "/v1/integrations/settings") {
+    // Off, which is the state the flip below moves away from. The installation
+    // default is ON, but a fixture that started there could not tell a working
+    // switch from one wired to a constant.
+    return { automatic_lookup: false };
   }
   throw new Error(`unstubbed request: ${path}`);
 }
@@ -159,7 +179,7 @@ describe("ProviderCard write posture", () => {
   const DISCONNECT = "Disconnect";
   const DELETE_DATA = "Delete bought data";
   const KEY_FIELD = "Replace the API key";
-  const AUTO_IMPORT = "Enrich contacts that arrive from a connection";
+  const AUTOMATIC_LOOKUP = "Look up contacts automatically";
   // Disconnect and delete-data live behind the overflow, because neither is the
   // same weight as Connect: one is recoverable and the other irreversibly
   // destroys purchased contact data. The trigger's presence is what the grant
@@ -170,8 +190,11 @@ describe("ProviderCard write posture", () => {
     await user.click(screen.getByRole("button", { name: MORE }));
   }
 
-  async function renderAs(principal: Me) {
-    const fetch = backend(principal);
+  async function renderAs(
+    principal: Me,
+    connection: ProviderConnection = CONNECTION,
+  ) {
+    const fetch = backend(principal, connection);
     vi.stubGlobal("fetch", fetch);
     render(
       <Providers>
@@ -242,17 +265,16 @@ describe("ProviderCard write posture", () => {
   );
 
   it(
-    "buys captured contacts only once the import switch is flipped",
+    "buys nothing automatically until the lookup switch is flipped",
     async () => {
       const user = userEvent.setup();
       const fetch = await renderAs(ME_OPERATOR);
 
-      const importSwitch = screen.getByRole("switch", { name: AUTO_IMPORT });
-      // The fixture has it off, which is the state the server defaults to: a
-      // mailbox sync mints a person per counterparty, so nobody is billed for
-      // capture until somebody says so here.
-      expect(importSwitch.getAttribute("aria-checked")).toBe("false");
-      await user.click(importSwitch);
+      const lookupSwitch = await screen.findByRole("switch", {
+        name: AUTOMATIC_LOOKUP,
+      });
+      expect(lookupSwitch.getAttribute("aria-checked")).toBe("false");
+      await user.click(lookupSwitch);
 
       // Waited on rather than read straight after the click: the write leaves
       // on a promise, so the call is recorded a tick later than the event. The
@@ -266,19 +288,116 @@ describe("ProviderCard write posture", () => {
         timeout: SETTLE_MS,
       });
       const request = patched() as Request;
-      expect(await request.clone().json()).toEqual({
-        // Only the switch that moved. Sending the whole configuration would
-        // carry a stale copy of the OTHER switch back to the server, so one
-        // reader's flip would silently revert a colleague's.
-        configuration: { automatic_import: true },
-      });
-      // The row it overwrites is pinned, so a colleague's concurrent edit is a
-      // 409 rather than a silent loss.
-      expect(request.headers.get("If-Match")).toBe(String(CONNECTION.version));
+      // The INSTALLATION's surface, not the connection's. The three
+      // per-connection fields that used to carry this answer are deprecated and
+      // ignored by admission, so a card still patching them would save, answer
+      // 200, and change nothing.
+      expect(new URL(request.url).pathname).toBe("/v1/integrations/settings");
+      expect(await request.clone().json()).toEqual({ automatic_lookup: true });
     },
     // Two waiters, not one: the card has to settle before the switch exists,
     // and the write it sends is awaited after. The ceiling covers the sum, or
     // the second can still be inside its own budget when the test is killed.
+    WRITE_TEST_MS,
+  );
+
+  // Allowing a purchase is not making one. The switch decides which buy buttons
+  // a rep is offered on a contact; every spend is still somebody pressing a
+  // priced button on one named record. Without this pair the card had no
+  // control at all for the paid half — the buy buttons existed on the contact
+  // page and nothing on any screen could switch their categories on, so an
+  // installation could see the price list and never reach it.
+  it(
+    "offers a switch per PRICED category, and none for the free ones",
+    async () => {
+      await renderAs(ME_OPERATOR);
+
+      expect(
+        screen.getByRole("switch", { name: "Allow buying work email" }),
+      ).toBeTruthy();
+      // The free set carries no switch: it is what the automatic lookup takes,
+      // the installation switch above already governs it as ONE decision, and a
+      // second control able to turn one of them off would half-disable that
+      // feature with nothing on screen explaining the difference.
+      expect(
+        screen.queryByRole("switch", { name: "Allow buying LinkedIn profile" }),
+      ).toBeNull();
+      // Counted, not just named. Asserting the absence of one spelling passes
+      // when the label is anything else — and it did, silently, until the
+      // filter was mutated away and this case stayed green over a card
+      // rendering a switch for every category the provider sells.
+      expect(
+        screen.getAllByRole("switch", { name: /^Allow buying / }),
+      ).toHaveLength(1);
+    },
+    RENDER_TEST_MS,
+  );
+
+  // A provider nobody has connected is listed anyway, with its catalog, so the
+  // card can say what it sells before a key exists. It has no row, so the server
+  // sends no version — while the contract declares `version` required, which is
+  // why nothing in the types objects to reading it. The switches would render
+  // enabled, and every press would send `If-Match: undefined` and be refused as
+  // malformed: a control that can never work, in the state a first-time admin
+  // meets first.
+  it(
+    "offers no purchase switch before a key exists, since there is nothing to patch",
+    async () => {
+      const { version: _version, ...neverConnected } = CONNECTION;
+      await renderAs(ME_OPERATOR, {
+        ...neverConnected,
+        status: "disconnected",
+        credential_present: false,
+      } as ProviderConnection);
+
+      expect(
+        screen.queryAllByRole("switch", { name: /^Allow buying / }),
+      ).toHaveLength(0);
+      // The catalog IS present on this connection, so an empty catalog is not
+      // what made the switches absent — without this the case would pass over a
+      // card that simply had nothing to list.
+      expect(screen.getByRole("meter", { name: "email" })).toBeTruthy();
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "sends the WHOLE selection when one priced category is switched on",
+    async () => {
+      const user = userEvent.setup();
+      const fetch = await renderAs(ME_OPERATOR);
+
+      const buyEmail = screen.getByRole("switch", {
+        name: "Allow buying work email",
+      });
+      expect(buyEmail.getAttribute("aria-checked")).toBe("false");
+      await user.click(buyEmail);
+
+      const patched = () =>
+        fetch.mock.calls
+          .map(([input]) => (input instanceof Request ? input : undefined))
+          .find((request) => request?.method === "PATCH");
+      await waitFor(() => expect(patched()).toBeTruthy(), {
+        timeout: SETTLE_MS,
+      });
+      const request = patched() as Request;
+      expect(new URL(request.url).pathname).toBe(
+        "/v1/provider-connections/surfe",
+      );
+      // The free category rides along UNCHANGED. The patch replaces the map
+      // rather than merging into it, so a body carrying only the pressed pair
+      // would switch off every category not named — including the ones the
+      // automatic lookup runs on, silently stopping it from the paid tier's
+      // control.
+      expect(await request.clone().json()).toEqual({
+        configuration: {
+          categories: { linkedin_profile: true, professional_email: true },
+        },
+      });
+      // The version the card was rendered from, so two admins deciding what the
+      // installation may spend on cannot lose each other's write.
+      expect(request.headers.get("If-Match")).toBe("4");
+    },
     WRITE_TEST_MS,
   );
 

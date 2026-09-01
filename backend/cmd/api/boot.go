@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -150,6 +151,15 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 		}
 		if err := validatePublicBaseURL(cfg.publicBaseURL); err != nil {
 			return deployconfig.Config{}, nil, err
+		}
+	}
+	// A real sender means real recipients, and a link they cannot open is
+	// worse than a refused boot: the message goes out looking correct and
+	// its unsubscribe promise is dead. Checked here, at boot, so an
+	// operator learns from a startup failure rather than from a customer.
+	if senderConfigured(cfg, deployCfg) {
+		if err := netguard.RequirePublicOrigin("--public-base-url", cfg.publicBaseURL, cfg.posture); err != nil {
+			return deployconfig.Config{}, nil, fmt.Errorf("api: %w", err)
 		}
 	}
 	if err := compose.EnsureInstallation(ctx, pool, logger, deployCfg); err != nil {

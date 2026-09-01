@@ -114,6 +114,73 @@ func (r updateFactResolver) Guards(ctx context.Context, cmd UpdateFactCommand) e
 	return r.target.refuse(ctx, cmd.ID)
 }
 
+// CreateFactCommand is one hand-stated organization fact. It carries only the
+// routed organization id: what makes a fact is its category, field and value,
+// and all three travel in the body into diff_hash rather than being rendered
+// by Subject — the same call UpdateFactCommand makes about the corrected value
+// it deliberately does not carry.
+type CreateFactCommand struct {
+	ID ids.UUID
+}
+
+// NewCreateFactCall binds one hand-stated fact to the resolver that answers for it.
+//
+//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
+func NewCreateFactCall(records datasource.SystemOfRecordProvider, cmd CreateFactCommand) GovernedCall {
+	return bind[CreateFactCommand](createFactResolver{
+		target: routedRecordTarget{records: records, recordType: organizationSidecarRecordType},
+	}, cmd)
+}
+
+type createFactResolver struct {
+	target routedRecordTarget
+}
+
+func (r createFactResolver) Subject(_ context.Context, cmd CreateFactCommand) (StageInfo, error) {
+	return StageInfo{
+		TargetType: organizationSidecarRecordType,
+		TargetID:   cmd.ID,
+		Summary:    fmt.Sprintf("State a fact on organization %s", cmd.ID),
+	}, nil
+}
+
+func (r createFactResolver) Guards(ctx context.Context, cmd CreateFactCommand) error {
+	return r.target.refuse(ctx, cmd.ID)
+}
+
+// DeleteFactCommand is one organization fact removal — the routed organization
+// id and the fact key being removed, the same two operands a correction needs,
+// because which row is removed is the whole of what an approval binds to.
+type DeleteFactCommand struct {
+	ID      ids.UUID
+	FactKey string
+}
+
+// NewDeleteFactCall binds one fact removal to the resolver that answers for it.
+//
+//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
+func NewDeleteFactCall(records datasource.SystemOfRecordProvider, cmd DeleteFactCommand) GovernedCall {
+	return bind[DeleteFactCommand](deleteFactResolver{
+		target: routedRecordTarget{records: records, recordType: organizationSidecarRecordType},
+	}, cmd)
+}
+
+type deleteFactResolver struct {
+	target routedRecordTarget
+}
+
+func (r deleteFactResolver) Subject(_ context.Context, cmd DeleteFactCommand) (StageInfo, error) {
+	return StageInfo{
+		TargetType: organizationSidecarRecordType,
+		TargetID:   cmd.ID,
+		Summary:    fmt.Sprintf("Remove fact %s from organization %s", cmd.FactKey, cmd.ID),
+	}, nil
+}
+
+func (r deleteFactResolver) Guards(ctx context.Context, cmd DeleteFactCommand) error {
+	return r.target.refuse(ctx, cmd.ID)
+}
+
 // ConfirmProfileFieldCommand is one organization profile-field confirmation,
 // whichever door asked for it — Field is the closed-vocabulary profile-field
 // key (`display_name`, `icp`, …), never a fact key.

@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/persondraft"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -23,14 +24,14 @@ import (
 func TestEveryDraftingRequestCarriesThinkingHeadroom(t *testing.T) {
 	person, err := persondraft.GroundedRequest(persondraft.Input{
 		Recipient: persondraft.RecipientIn{ID: "p1", Name: "Marek", FirstName: "Marek"},
-	})
+	}, draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	account, err := accountdraft.GroundedRequest(accountdraft.Input{
 		Company:   "Northwind",
 		Recipient: accountdraft.RecipientIn{ID: "p1", Name: "Priya"},
-	})
+	}, draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}

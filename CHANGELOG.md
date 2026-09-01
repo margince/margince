@@ -248,6 +248,24 @@ numbers appear here when releases start.
 
 ### Added
 
+- **An introduction is something the product records, not something a rep
+  remembers.** The Network tab already answered "who here can reach this
+  contact"; asking them was a conversation that happened elsewhere and came
+  back as a memory. `intro_request` records the ask, the colleague's bounded
+  answer and what came of it — five endpoints, a requester's composer, and a
+  decision surface of the colleague's own.
+
+  The lifecycle is built so it cannot overstate an outcome. Approving a
+  name-drop permits a mention and nothing more, and no path turns it into a
+  handshake: the ask completes as `name_dropped`, and WHICH outcome that is
+  gets read from the state the ask was in rather than from anything the caller
+  sends. The domain row, the event and the audit after-image all say the same
+  word, because a dispute about whether an introduction happened is settled
+  from the trail.
+
+  `replied` is unreachable by any person. The contact answering is observed
+  from captured activity, so no button produces it.
+
 - **A standing overnight grant says when the agent has outgrown it.** A grant
   mints the scopes the agent needed at the moment the rep answered; when the
   agent later gains a tool needing a wider scope, every already-minted passport
@@ -482,6 +500,16 @@ numbers appear here when releases start.
   screen, which does not exist yet.
 
 ### Fixed
+
+- **A replayed body re-checks every record it names, not only the one it
+  replays by.** `POST /people/quick-capture` answers the person created plus the
+  `organization_id` they were attached to; the replay gate probed the person and
+  handed the rest back, including an employer id the caller may since have lost
+  sight of. `POST /leads/{id}/promote` and `POST /leads/{id}/demote` have the
+  same shape — the third was found by widening the gate rather than by reading
+  the code. Every record reference a wrapper body carries is probed now, and a
+  gate derived from the contract fails when a response schema grows a reference
+  that nothing re-checks.
 
 - **A refused API key is no longer reported as six broken use cases.** The
   `e2e-llm` lane guarded against an empty transcript but not against one the API

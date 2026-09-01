@@ -103,20 +103,16 @@ func TestLeadSLAEscalationLogsOneTaskOnTheLead(t *testing.T) {
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if len(recipients) == 0 {
-		t.Fatal("the breach wrote its task and no notice — the escalation target is told nothing")
+	// ONE, from the two deliveries the loop above makes. The task half has
+	// always been idempotent through its (source_system, source_id) natural
+	// key; the notice half now carries the same key, so a breach delivered
+	// twice puts one line on one Worklist instead of two identical ones beside
+	// a single task — which read as the notice being right and the task lost.
+	if len(recipients) != 1 {
+		t.Fatalf("%d notices for one breach delivered twice, want 1 — Apply is documented idempotent on its own key",
+			len(recipients))
 	}
-	for _, who := range recipients {
-		if who != e.Rep1 {
-			t.Errorf("notice addressed to %s, want the escalation target %s", who, e.Rep1)
-		}
+	if recipients[0] != e.Rep1 {
+		t.Errorf("notice addressed to %s, want the escalation target %s", recipients[0], e.Rep1)
 	}
-	// NOT asserted: how MANY. The task half is idempotent through its
-	// (source_system, source_id) natural key, which is why the loop above
-	// checks for exactly one; the notice half has no such key, so two
-	// deliveries of one breach write two lines. The port's own contract says
-	// Apply is "idempotent on IdempotencyKey(ev)", so that is a defect rather
-	// than a shape to pin here. Asserting the count either way would freeze an
-	// answer nobody has decided; the decision is what the notice register keys
-	// on, and it belongs with the notices store rather than here.
 }

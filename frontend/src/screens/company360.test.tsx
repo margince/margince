@@ -18,7 +18,6 @@ import { taskWriteKeys } from "./activitykeys";
 import {
   CommercialPanel,
   NextSteps,
-  PeopleCard,
   type SuggestionAction,
   SuggestionsSection,
 } from "./company360";
@@ -43,8 +42,6 @@ type Organization360 = components["schemas"]["Organization360"];
 // standalone gets no contextual type from `view()`, so its enums widen to
 // `string` and stop being checked at all — which is how eight of the shapes in
 // this file drifted off the contract while every test went on passing.
-type People360 = NonNullable<Organization360["people"]>;
-type Deals360 = NonNullable<Organization360["deals"]>;
 type StateStrip360 = NonNullable<Organization360["state_strip"]>;
 
 // Typed against the contract, not asserted into it. A fixture the compiler only
@@ -151,6 +148,24 @@ function stub(
       fetched.push(pathname);
       if (pathname.endsWith("/360")) {
         return jsonResponse(three60, status);
+      }
+      // The People tab's list, served from the SAME people section the 360
+      // fixture carries: a test that seeds a contact sees it on the tab
+      // without seeding it twice in two shapes that could disagree.
+      if (pathname.endsWith("/contacts")) {
+        const people =
+          (three60 as { people?: { data?: Record<string, unknown>[] } })?.people
+            ?.data ?? [];
+        return jsonResponse({
+          data: people.map((contact) => ({
+            person_id: contact.person_id,
+            full_name: contact.full_name,
+            title: contact.title,
+            engagement: "untried",
+            strength: contact.strength,
+          })),
+          page: { has_more: false, next_cursor: null },
+        });
       }
       if (pathname.endsWith("/finance-summary")) {
         return jsonResponse(finance, financeStatus);
@@ -567,88 +582,6 @@ it("offers the tag verb but not the list verb when only lists are withheld", asy
   // its own, so the action strip that changes them is unscoped here.
   expect(await screen.findByRole("button", { name: "Add tag" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Add to list" })).toBeNull();
-});
-
-describe("company view — consent is per purpose", () => {
-  it("reads an all-unknown consent map as no permission, not as silence", async () => {
-    stub(
-      view({
-        people: {
-          data: [
-            {
-              person_id: "p-1",
-              full_name: "Dana Buyer",
-              deal_roles: [],
-              consent: {
-                marketing_email: "unknown",
-                product_updates: "unknown",
-              },
-              strength: {
-                score: 0,
-                bucket: "none",
-                factors: {
-                  recency: 0,
-                  frequency: 0,
-                  reciprocity: 0,
-                  direction: 0,
-                },
-              },
-            },
-          ],
-          page: emptyPage,
-        },
-      }),
-    );
-    renderCompany();
-    // Consent is the roster's own detail, not the rail's glance: it lives on
-    // the People tab now, where ContactRow still draws the full chip set.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^People/ }),
-    );
-
-    await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Dana Buyer" })).toBeTruthy(),
-    );
-    expect(screen.getByText("No consent on file")).toBeTruthy();
-    expect(screen.queryByText("May contact")).toBeNull();
-  });
-
-  it("reads one granted purpose as contactable", async () => {
-    stub(
-      view({
-        people: {
-          data: [
-            {
-              person_id: "p-1",
-              full_name: "Dana Buyer",
-              deal_roles: [],
-              consent: {
-                marketing_email: "granted",
-                product_updates: "unknown",
-              },
-              strength: {
-                score: 62,
-                bucket: "strong",
-                factors: {
-                  recency: 0.9,
-                  frequency: 0.6,
-                  reciprocity: 0.8,
-                  direction: 0.8,
-                },
-              },
-            },
-          ],
-          page: emptyPage,
-        },
-      }),
-    );
-    renderCompany();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^People/ }),
-    );
-
-    await waitFor(() => expect(screen.getByText("May contact")).toBeTruthy());
-  });
 });
 
 describe("company view — the context column belongs to the account, not to a tab", () => {
@@ -1326,369 +1259,10 @@ describe("CommercialPanel — a capped deals page says so", () => {
 // The page said "nobody here is your champion" and gave the reader nowhere to
 // say who is: the roles live on relationship rows written from the deal
 // screen. The warning was true, unactionable and permanent.
-describe("company view — naming the buying committee", () => {
-  it("offers to record a role on the contact, against an open deal", async () => {
-    stub(
-      view({
-        deals: {
-          data: [
-            { deal_id: "d-1", name: "Pilot", status: "open", stalled: false },
-          ],
-          page: { has_more: false, next_cursor: null },
-          won_lifetime: { amount_minor: 0, currency: "EUR" },
-          lost_count: 0,
-        },
-        people: {
-          data: [
-            {
-              person_id: "p-1",
-              full_name: "Christian Hagemeyer",
-              deal_roles: [],
-              consent: {},
-              strength: {
-                score: 0,
-                bucket: "none",
-                factors: {
-                  recency: 0,
-                  frequency: 0,
-                  reciprocity: 0,
-                  direction: 0,
-                },
-              },
-            },
-          ],
-          page: emptyPage,
-        },
-      }),
-    );
-    renderCompany();
-    // Set role stays on the People tab's own roster now: the rail's glance
-    // draws no write verbs.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^People/ }),
-    );
-
-    const set = await screen.findByRole("button", { name: "Set role" });
-    await userEvent.click(set);
-
-    // The two words are defined where they are being chosen, once.
-    expect(
-      screen.getByText(/argues for you when you are not in the room/),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("dialog", { name: /What is Christian Hagemeyer/ }),
-    ).toBeTruthy();
-  });
-
-  // The connection map keeps a fresh graph copy for a minute, so a save that
-  // changes the committee must re-read it explicitly — otherwise the map
-  // beside the roster shows the pre-save committee until the copy expires.
-  it("re-reads the connection map after a role is saved", async () => {
-    const fetched = stub(
-      view({
-        deals: {
-          data: [
-            { deal_id: "d-1", name: "Pilot", status: "open", stalled: false },
-          ],
-          page: { has_more: false, next_cursor: null },
-          won_lifetime: { amount_minor: 0, currency: "EUR" },
-          lost_count: 0,
-        },
-        people: {
-          data: [
-            {
-              person_id: "p-1",
-              full_name: "Christian Hagemeyer",
-              deal_roles: [],
-              consent: {},
-              strength: {
-                score: 0,
-                bucket: "none",
-                factors: {
-                  recency: 0,
-                  frequency: 0,
-                  reciprocity: 0,
-                  direction: 0,
-                },
-              },
-            },
-          ],
-          page: emptyPage,
-        },
-      }),
-    );
-    renderCompany();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^People/ }),
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Set role" }),
-    );
-    const dialog = await screen.findByRole("dialog");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-
-    // One read when the tab drew the map, one after the save invalidated it.
-    await waitFor(() =>
-      expect(fetched.filter((path) => path.endsWith("/graph"))).toHaveLength(2),
-    );
-  });
-
-  // A role belongs to a DEAL. With nothing open there is nothing to be a
-  // champion of, and offering the verb would invite a write that has no
-  // subject.
-  it("offers nothing when the account has no open deal", async () => {
-    stub(
-      view({
-        deals: {
-          data: [],
-          page: { has_more: false, next_cursor: null },
-          won_lifetime: { amount_minor: 0, currency: "EUR" },
-          lost_count: 0,
-        },
-        people: {
-          data: [
-            {
-              person_id: "p-1",
-              full_name: "Christian Hagemeyer",
-              deal_roles: [],
-              consent: {},
-              strength: {
-                score: 0,
-                bucket: "none",
-                factors: {
-                  recency: 0,
-                  frequency: 0,
-                  reciprocity: 0,
-                  direction: 0,
-                },
-              },
-            },
-          ],
-          page: { has_more: false, next_cursor: null },
-        },
-      }),
-    );
-    renderCompany();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^People/ }),
-    );
-
-    await screen.findByRole("link", { name: "Christian Hagemeyer" });
-    expect(screen.queryByRole("button", { name: "Set role" })).toBeNull();
-  });
-});
 
 // A role belongs to a deal, so the same person can be champion on one and
 // nobody on another. Rendering the role alone made two clauses that read
 // identically.
-describe("company view — a buying role names the deal it is on", () => {
-  const contactOnTwoDeals: People360["data"][number] = {
-    person_id: "p-1",
-    full_name: "Dana Buyer",
-    deal_roles: [
-      { deal_id: "d-1", role: "champion" },
-      { deal_id: "d-2", role: "champion" },
-    ],
-    consent: { marketing_email: "granted" },
-    strength: {
-      score: 62,
-      bucket: "strong",
-      factors: { recency: 1, frequency: 1, reciprocity: 1, direction: 1 },
-    },
-  };
-  const twoOpenDeals: Deals360 = {
-    data: [
-      { deal_id: "d-1", name: "Renewal", status: "open", stalled: false },
-      { deal_id: "d-2", name: "New business", status: "open", stalled: false },
-    ],
-    page: emptyPage,
-    won_lifetime: { amount_minor: 0, currency: "EUR" },
-    lost_count: 0,
-  };
-
-  it("names each deal when the person holds the same role on two of them", async () => {
-    stub(
-      view({
-        people: { data: [contactOnTwoDeals], page: emptyPage },
-        deals: twoOpenDeals,
-      }),
-    );
-    renderCompany();
-    // The stakeholder-role badge is ContactRow's, drawn on the People tab's
-    // own roster; the rail's glance no longer carries it.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^People/ }),
-    );
-
-    await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Dana Buyer" })).toBeTruthy(),
-    );
-    // Both roles read as one quiet line under the name, not as two badges.
-    expect(
-      screen.getByText("champion · Renewal · champion · New business"),
-    ).toBeTruthy();
-  });
-
-  it("leaves the deal name off when there is only one deal to be on", async () => {
-    stub(
-      view({
-        people: {
-          data: [
-            {
-              ...contactOnTwoDeals,
-              deal_roles: [{ deal_id: "d-1", role: "champion" }],
-            },
-          ],
-          page: emptyPage,
-        },
-        deals: {
-          ...twoOpenDeals,
-          data: [twoOpenDeals.data[0]],
-        },
-      }),
-    );
-    renderCompany();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^People/ }),
-    );
-
-    await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Dana Buyer" })).toBeTruthy(),
-    );
-    expect(screen.getByText("champion")).toBeTruthy();
-  });
-});
-
-describe("company view — a recorded role reaches the screen", () => {
-  const contact: People360["data"][number] = {
-    person_id: "p-1",
-    full_name: "Christian Hagemeyer",
-    deal_roles: [],
-    consent: {},
-    strength: {
-      score: 0,
-      bucket: "none",
-      factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
-    },
-  };
-  const withOneOpenDeal = view({
-    deals: {
-      data: [{ deal_id: "d-1", name: "Pilot", status: "open", stalled: false }],
-      page: emptyPage,
-      won_lifetime: { amount_minor: 0, currency: "EUR" },
-      lost_count: 0,
-    },
-    people: { data: [contact], page: emptyPage },
-  });
-
-  it("re-reads the account after the role is saved", async () => {
-    // The committee reading, the missing-role warning and the row's own chips
-    // all come off the 360, so a save that does not re-read it leaves the page
-    // showing the state the rep just changed.
-    const fetched = stub(withOneOpenDeal);
-    renderCompany();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^People/ }),
-    );
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Set role" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() =>
-      expect(
-        fetched.filter((path) => path.endsWith("/360")).length,
-      ).toBeGreaterThan(1),
-    );
-  });
-
-  it("offers no role control on an account that takes no writes", async () => {
-    // Archived is read-only: the company page hides edit, merge and archive on
-    // one, so a write dressed as a chip has no business staying. The page
-    // passes its own read-only state down; the card is asserted directly
-    // because that state comes from the record, not from the 360.
-    render(<PeopleCard view={withOneOpenDeal} writable={false} />);
-
-    await screen.findByRole("link", { name: "Christian Hagemeyer" });
-    expect(screen.queryByRole("button", { name: "Set role" })).toBeNull();
-  });
-
-  it("opens the person's own record from the row", async () => {
-    // An href, not a click handler: a rep reading an account opens three
-    // contacts in three tabs, and a handler answers the middle click by doing
-    // nothing at all.
-    render(<PeopleCard view={withOneOpenDeal} writable={false} />);
-
-    const link = await screen.findByRole("link", {
-      name: "Christian Hagemeyer",
-    });
-    expect(link.getAttribute("href")).toBe("#/contacts/p-1");
-  });
-
-  it("offers it on an account that does", async () => {
-    render(<PeopleCard view={withOneOpenDeal} writable />);
-
-    expect(
-      await screen.findByRole("button", { name: "Set role" }),
-    ).toBeTruthy();
-  });
-});
-
-it("does not offer a role the contact already holds on that deal", async () => {
-  // The write creates an edge, so picking a held role asks the server for a
-  // second copy of a fact it already has.
-  stub(
-    view({
-      deals: {
-        data: [
-          { deal_id: "d-1", name: "Pilot", status: "open", stalled: false },
-        ],
-        page: emptyPage,
-        won_lifetime: { amount_minor: 0, currency: "EUR" },
-        lost_count: 0,
-      },
-      people: {
-        data: [
-          {
-            person_id: "p-1",
-            full_name: "Christian Hagemeyer",
-            deal_roles: [{ deal_id: "d-1", role: "champion" }],
-            consent: {},
-            strength: {
-              score: 0,
-              bucket: "none",
-              factors: {
-                recency: 0,
-                frequency: 0,
-                reciprocity: 0,
-                direction: 0,
-              },
-            },
-          },
-        ],
-        page: emptyPage,
-      },
-    }),
-  );
-  renderCompany();
-  await userEvent.click(await screen.findByRole("button", { name: /^People/ }));
-
-  await userEvent.click(
-    await screen.findByRole("button", { name: "Set role" }),
-  );
-  // The offered roles only exist while the control is open, so the list is opened
-  // to be read. Asserted as the WHOLE set rather than as the absence of one word:
-  // an absence check passes for the wrong reason the moment a label is recased or
-  // reworded, and what this case is about is that a role this contact already
-  // holds is not offered a second time.
-  await userEvent.click(screen.getByLabelText("Role"));
-  expect(
-    within(screen.getByRole("listbox"))
-      .getAllByRole("option")
-      .map((option) => option.textContent),
-  ).toEqual(["economic buyer", "influencer", "blocker", "end user"]);
-});
 
 describe("company view — Partner is not a permanent tab", () => {
   it("offers the account's own tabs but not Partner on an account with no programme", async () => {
@@ -2360,61 +1934,6 @@ describe("company view — the account's own tabs", () => {
 // in the rail of every account, costing a graph read on every page load. The
 // route-in asks the question a rep actually has, about one person, and only
 // when they ask it.
-describe("company view — the way in to one contact", () => {
-  const withContact = () =>
-    view({
-      people: {
-        data: [
-          {
-            person_id: "p-1",
-            full_name: "Dana Buyer",
-            deal_roles: [],
-            consent: {
-              marketing_email: "unknown",
-              product_updates: "unknown",
-            },
-            strength: {
-              score: 0,
-              bucket: "none",
-              factors: {
-                recency: 0,
-                frequency: 0,
-                reciprocity: 0,
-                direction: 0,
-              },
-            },
-          },
-        ],
-        page: emptyPage,
-      },
-    });
-
-  it("reads no graph until someone asks for a way in", async () => {
-    const fetched = stub(withContact());
-    renderCompany();
-    await screen.findByRole("complementary", { name: "Context" });
-    expect(fetched.filter((path) => path.endsWith("/graph"))).toEqual([]);
-  });
-
-  it("names who here already talks to that person", async () => {
-    const fetched = stub(withContact());
-    renderCompany();
-    await screen.findByRole("complementary", { name: "Context" });
-    // Route in stays on the People tab's own roster; the rail's glance draws
-    // no way to ask who here already talks to a contact.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^People/ }),
-    );
-    await userEvent.click(
-      screen.getAllByRole("button", { name: "Route in" })[0],
-    );
-
-    const dialog = await screen.findByRole("dialog");
-    await within(dialog).findByText("Mira");
-    expect(within(dialog).getByText("in regular contact")).toBeTruthy();
-    expect(fetched.filter((path) => path.endsWith("/graph"))).toHaveLength(1);
-  });
-});
 
 describe("company view — the account's primary actions", () => {
   it("offers logging what happened and setting what happens next, as separate verbs", async () => {

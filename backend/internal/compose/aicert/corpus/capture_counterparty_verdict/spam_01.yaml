@@ -1,0 +1,56 @@
+name: courteous_cold_pitch_is_spam
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Martin Adeyemi Cole
+  email: info-fbc@meridian.example
+  subject: Business Financing Inquiry
+  body: |
+    Hello,
+
+    I'm reaching out to introduce a potential funding opportunity for
+    businesses seeking capital for growth, expansion, acquisitions,
+    refinancing, or other strategic needs.
+
+    We work closely with private investors to identify suitable
+    business financing opportunities and would be pleased to explore
+    whether funding may be available for your company.
+
+    We also welcome introductions to businesses that may be seeking
+    finance. A 2% referral fee is available for successful
+    introductions that result in completed funding.
+
+    If your company is currently considering funding-or you know of a
+    business that may benefit from financing-I would be delighted to
+    have a brief conversation and discuss the possibilities.
+
+    I look forward to hearing from you.
+
+    Best regards,
+
+    Martin Adeyemi Cole
+    Investment & Management Consultancy Limited
+    25 Little Meadow, Loughton
+    Milton Keynes, MK5 8EH, England
+    Financial Broker | Financial Consultant
+expect:
+  outcome: accepted
+  answer: spam
+  rubric: >
+    Cold outreach carrying every marker of a real person: a full human name, a
+    signature block with a company, a street address and a job title, courteous
+    prose and no bulk-mail furniture at all — no unsubscribe link, no list
+    footer, no promotional formatting. It reads as a named professional writing
+    personally, and that is exactly why it was answered "person" in the field
+    and created a junk contact.
+    What makes it spam is the DIRECTION of the offer: a stranger this business
+    never contacted, pitching their own service, with a referral fee attached.
+    A kind of "spam" scores high. "newsletter" is a near miss — the label is
+    less precise but both resolve to noise, so no record is made either way.
+    "person" scores zero: it is the answer that shipped the defect.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

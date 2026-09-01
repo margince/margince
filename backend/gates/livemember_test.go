@@ -49,8 +49,15 @@ import (
 
 const (
 	liveMemberHelper = "LiveMemberSQL"
-	liveMemberOwner  = "internal/modules/identity/livemember.go"
-	identityPath     = "github.com/margince/margince/backend/internal/modules/identity"
+	// activatableMemberHelper is the SECOND definition livemember.go owns, and it
+	// is registered here for the same reason the first is: an unregistered helper
+	// call flattens to its ARGUMENTS rather than to a marker, so the statement
+	// around it renders with no halves at all and passes unjudged. Under-recognition
+	// is the one way this census must not break — it would read a smaller tree,
+	// report PASS, and leave no failing assertion to notice.
+	activatableMemberHelper = "ActivatableMemberSQL"
+	liveMemberOwner         = "internal/modules/identity/livemember.go"
+	identityPath            = "github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // cannotReachIdentity ratifies the statements that spell the predicate out
@@ -156,7 +163,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	defer namesTheSeatRatherThanOffersIt.AssertAllMatched(t)
 
 	fset := token.NewFileSet()
-	var copies, halves []string
+	var copies, activatableCopies, halves []string
 	judged, constrained := 0, 0
 	for _, path := range handWrittenGoSources(t) {
 		slash := filepath.ToSlash(path)
@@ -172,7 +179,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 		scope := helperScope{
 			qualifier: importAliasOf(file, identityPath),
 			inside:    file.Name != nil && file.Name.Name == "identity",
-			names:     map[string]bool{liveMemberHelper: true},
+			names:     map[string]bool{liveMemberHelper: true, activatableMemberHelper: true},
 		}
 		for _, decl := range file.Decls {
 			for _, sql := range appUserStatements(decl, scope) {
@@ -191,6 +198,11 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 						continue
 					}
 					copies = append(copies, fmt.Sprintf("%s: %s", path, firstLiveMemberLine(sql)))
+				case "activatable-copy":
+					if cannotReachIdentity.Waived(t, slash) {
+						continue
+					}
+					activatableCopies = append(activatableCopies, fmt.Sprintf("%s: %s", path, firstLiveMemberLine(sql)))
 				case "half":
 					if deliberatelyNotLiveness.Waived(t, slash) ||
 						namesTheSeatRatherThanOffersIt.Waived(t, slash) {
@@ -217,6 +229,13 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 			"identity.%s is the definition and identity owns app_user. compose may call it; a sibling "+
 			"module may not (ADR-0054 §3) and is ratified by name in this gate with that reason.",
 			strings.Join(copies, "\n  "), liveMemberHelper)
+	}
+	if len(activatableCopies) > 0 {
+		t.Errorf("these statements spell \"may still become active\" out themselves:\n  %s\n\n"+
+			"identity.%s is the definition. Do NOT answer this by adding status = 'active': that is "+
+			"the set which EXCLUDES an invited member, and it would refuse an invitation its own link "+
+			"was minted to redeem.",
+			strings.Join(activatableCopies, "\n  "), activatableMemberHelper)
 	}
 	if len(halves) > 0 {
 		t.Errorf("these statements constrain app_user by ONE half of liveness:\n  %s\n\n"+
@@ -325,6 +344,19 @@ func liveMemberVerdict(sql string) string {
 	if bareLivenessPredicate(sql) {
 		return "copy"
 	}
+	if bareActivatablePredicate(sql) {
+		return "activatable-copy"
+	}
+	// Judged BEFORE the halves, because the two questions overlap and the wrong
+	// answer here is actively harmful. A hand-spelled activatable pair carries
+	// `archived_at IS NULL` without `status = 'active'`, so the halves below
+	// would report it as a half-spelling — and that message tells the next
+	// author to add `status = 'active'`, which is precisely the edit that breaks
+	// invitation redemption. It is not a half of anything; it is a second copy
+	// of ActivatableMemberSQL, and the report has to say so.
+	if activatableCopy(sql) {
+		return "activatable-copy"
+	}
 	status, archived := liveMemberHalves(sql)
 	switch {
 	case status && archived:
@@ -333,6 +365,24 @@ func liveMemberVerdict(sql string) string {
 		return "half"
 	}
 	return ""
+}
+
+// activatableCopy reports a hand-written second spelling of ActivatableMemberSQL:
+// the invited-or-active status test paired with the archived half, on app_user's
+// own columns.
+//
+// It matches the exact predicate ActivatableMemberSQL emits and not an
+// arbitrary `status IN (…)` list, so a predicate over some other pair of
+// statuses is still reported by the halves below rather than quietly absorbed
+// here. A census that widens to tolerate the shape of a defect stops being able
+// to see it.
+func activatableCopy(sql string) bool {
+	sql = stripAssignments(sql)
+	prefix := appUserPrefix(sql)
+	invitedOrActive := appUserColumn(prefix, `status\s+IN\s+\(\s*'invited'\s*,\s*'active'\s*\)`).MatchString(sql) ||
+		appUserColumn(prefix, `status\s+IN\s+\(\s*'active'\s*,\s*'invited'\s*\)`).MatchString(sql)
+	archived := appUserColumn(prefix, `archived_at\s+IS\s+NULL`).MatchString(sql)
+	return invitedOrActive && archived && offersAUser(sql)
 }
 
 // bareLivenessPredicate matches the shape that started all of this: the pair
@@ -350,6 +400,27 @@ func liveMemberVerdict(sql string) string {
 func bareLivenessPredicate(sql string) bool {
 	return onlyTheLivenessPair.MatchString(strings.TrimSpace(sql))
 }
+
+// bareActivatablePredicate is bareLivenessPredicate for the SECOND definition,
+// and it exists because the defect this whole gate was written for reproduces
+// exactly once per predicate: `const activatableWhere = "status IN ('invited',
+// 'active') AND archived_at IS NULL"` names no table, so a table-keyed walk
+// never yields it and the copy sits unheld while its comment tells the next
+// reader the question is settled. That is the org360 incident, verbatim, for a
+// predicate added after it.
+func bareActivatablePredicate(sql string) bool {
+	return onlyTheActivatablePair.MatchString(strings.TrimSpace(sql))
+}
+
+// onlyTheActivatablePair matches a literal that is the activatable predicate and
+// NOTHING else, in either status order, with or without an alias — the same
+// "nothing else" discipline onlyTheLivenessPair keeps, and for the same reason:
+// prose that quotes the predicate back to a reader is not a second
+// implementation of it.
+var onlyTheActivatablePair = regexp.MustCompile(`(?is)^\(?\s*(?:` +
+	`(?:[a-z]\w*\.)?status\s+IN\s+\(\s*'(?:invited|active)'\s*,\s*'(?:invited|active)'\s*\)\s+AND\s+(?:[a-z]\w*\.)?archived_at\s+IS\s+NULL` + `|` +
+	`(?:[a-z]\w*\.)?archived_at\s+IS\s+NULL\s+AND\s+(?:[a-z]\w*\.)?status\s+IN\s+\(\s*'(?:invited|active)'\s*,\s*'(?:invited|active)'\s*\)` +
+	`)\s*\)?$`)
 
 // onlyTheLivenessPair matches a literal that is the predicate and NOTHING else,
 // in either order, with or without an alias.
@@ -378,7 +449,7 @@ func appUserStatements(decl ast.Decl, owner helperScope) []string {
 			return false
 		}
 		text, ok := flattenSQL(n, seen, owner)
-		if !ok || (!readsAppUser.MatchString(text) && !bareLivenessPredicate(text)) {
+		if !ok || (!readsAppUser.MatchString(text) && !bareLivenessPredicate(text) && !bareActivatablePredicate(text)) {
 			return true
 		}
 		out = append(out, text)
@@ -705,6 +776,43 @@ func read() string {
 func read() string {
 	return ` + "`" + `SELECT display_name FROM app_user WHERE email ILIKE $1` + "`" + `
 }`},
+	// The second definition. Its arm has to be probed for the same reason the
+	// first one's is: a regex that regressed would take the census quiet, and
+	// quiet is the one failure this file cannot afford.
+	{"a hand-spelled activatable pair", "activatable-copy", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE status IN ('invited', 'active') AND archived_at IS NULL` + "`" + `
+}`},
+	// The equally natural spelling. Reported as the SAME arm rather than as a
+	// half: the half arm's advice is to add status = 'active', which is exactly
+	// the edit that makes redemption refuse the invitation its own link was
+	// minted to spend.
+	{"a hand-spelled activatable pair, the other way round", "activatable-copy", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE status IN ('active', 'invited') AND archived_at IS NULL` + "`" + `
+}`},
+	{"the activatable helper called by name answers nothing", "", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + identity.ActivatableMemberSQL("")
+}`},
+	// A LOOKALIKE from another package is not the definition, so its argument
+	// must not be hidden behind a marker.
+	{"a lookalike activatable helper is not the definition", "activatable-copy", "noimport", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + other.ActivatableMemberSQL("status IN ('invited', 'active') AND archived_at IS NULL")
+}`},
+	// The org360 shape, for the second predicate: a bare declaration naming no
+	// table, consumed elsewhere by name. Invisible to a table-keyed walk from
+	// both ends, which is exactly why it needs its own recogniser.
+	{"the activatable pair spelled into a bare declaration", "activatable-copy", "", `
+const activatableWhere = ` + "`" + `status IN ('invited', 'active') AND archived_at IS NULL` + "`" + `
+`},
+	// A THIRD status pair is not this shape and must not be absorbed by it: it
+	// still reads as a half, which is the honest answer for a set nobody named.
+	{"a third status pair is still a half, not an activatable copy", "half", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE status IN ('suspended', 'active') AND archived_at IS NULL` + "`" + `
+}`},
 }
 
 func TestTheLiveMemberDetectorSeesWhatItClaimsTo(t *testing.T) {
@@ -713,7 +821,9 @@ func TestTheLiveMemberDetectorSeesWhatItClaimsTo(t *testing.T) {
 	for _, tc := range liveMemberProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"
-			names := map[string]bool{liveMemberHelper: true}
+			// BOTH definitions, or a probe exercising the second one would flatten
+			// its call to the arguments and prove the opposite of what it claims.
+			names := map[string]bool{liveMemberHelper: true, activatableMemberHelper: true}
 			scope := helperScope{qualifier: "identity", names: names}
 			switch tc.mode {
 			case "identity":

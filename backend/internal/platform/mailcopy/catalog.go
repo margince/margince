@@ -32,6 +32,7 @@ func buildCatalog() map[Language]Copy {
 	// One function per message rather than one long one, because the length
 	// cap is a real reading limit here: a translator opens the section they are
 	// working on, and a hundred lines of unrelated copy above it is noise.
+	unsubscribeLines(line)
 	resetLines(line)
 	inviteLines(line)
 	weeklyLines(line)
@@ -44,6 +45,18 @@ func buildCatalog() map[Language]Copy {
 type writeLine = func(field func(*Copy) *string, english, german, vietnamese string)
 
 // resetLines is the password reset a person asked for.
+// unsubscribeLines is the footer beneath an outgoing message.
+func unsubscribeLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.UnsubscribeLabel },
+		"Unsubscribe",
+		"Abmelden",
+		"Hủy đăng ký")
+	line(func(c *Copy) *string { return &c.ManagePreferencesLabel },
+		"Manage your preferences",
+		"E-Mail-Einstellungen verwalten",
+		"Quản lý tùy chọn email")
+}
+
 func resetLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ResetSubject },
 		"Reset your Margince password",

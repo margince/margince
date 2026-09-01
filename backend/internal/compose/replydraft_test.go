@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -105,11 +106,11 @@ func (b *sequencedBrainStub) Complete(_ context.Context, req model.Request) (mod
 	return b.responses[index], nil
 }
 
-func testVoiceContext() voiceContext {
-	return voiceContext{
-		ok:      true,
-		profile: ai.VoiceProfile{PersonalityMD: "Blunt, never hedges."},
-		version: ai.VoiceProfileVersion{
+func testVoiceContext() draftvoice.Context {
+	return draftvoice.Context{
+		OK:      true,
+		Profile: ai.VoiceProfile{PersonalityMD: "Blunt, never hedges."},
+		Version: ai.VoiceProfileVersion{
 			ProfileVersion: 3,
 			VoiceProfileMD: "# Voice DNA\n\n## How you think\n\nVerdict first.",
 			ProfileJSON: map[string]any{"exemplars": []any{
@@ -220,7 +221,7 @@ func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	}}
 	drafter := replyDrafter{brain: brain}
 	_, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
-		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, voiceContext{})
+		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,5 +230,75 @@ func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	}
 	if strings.Contains(brain.requests[0].Messages[0].Content, "<voice_profile>") {
 		t.Fatal("no profile must mean no voice block")
+	}
+}
+
+func TestADraftBodyReachesTheCallerAsPlainText(t *testing.T) {
+	// The answer a live model actually returned for a German reply. The
+	// contract says a body is plain text end to end, and nothing downstream
+	// converts markup, so a `<br>` that survives this parse is four visible
+	// characters in the composer, in the sent mail, and in the recipient's
+	// inbox.
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: Rechnung",` +
+		`"body":"Guten Tag Dietmar,<br><br>anbei die Aufstellung.<br><br>Viele Grüße"}`}}
+	drafter := replyDrafter{brain: brain}
+
+	draft, err := drafter.complete(context.Background(), replyActivityData{
+		Subject: "Rechnung", Body: "Bitte um die Aufstellung.", Intent: "Bestätigen",
+	}, nil)
+	if err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+	if strings.Contains(draft.Body, "<br") {
+		t.Errorf("body carries markup the reader would see: %q", draft.Body)
+	}
+	// The paragraph the model meant has to survive as a paragraph: deleting
+	// the tag would run the greeting into the sentence after it.
+	want := "Guten Tag Dietmar,\n\nanbei die Aufstellung.\n\nViele Grüße"
+	if draft.Body != want {
+		t.Errorf("body = %q, want %q", draft.Body, want)
+	}
+}
+
+func TestTheDraftIsGivenBothNamesAGreetingCanTake(t *testing.T) {
+	// A formal German greeting takes a surname. Handed only "Dietmar", a model
+	// writing formal German cannot be right — it either drops the register or
+	// fills the gap itself, and "Sehr geehrte Frau/Herr Dietmar" is what
+	// filling it looks like in a draft a rep was about to send.
+	data := replyActivityData{
+		Recipient:         "Dietmar",
+		RecipientLastName: "Rietsch",
+		Subject:           "Rechnung",
+	}
+	req, err := replyDraftRequest(replyDraftSystem, data, nil, "")
+	if err != nil {
+		t.Fatalf("replyDraftRequest: %v", err)
+	}
+	payload := req.Messages[0].Content
+	if !strings.Contains(payload, `"recipient_last_name":"Rietsch"`) {
+		t.Errorf("the surname a formal greeting needs is not in the payload: %q", payload)
+	}
+	// The rule that says which name goes with which register travels with
+	// every drafting surface, so a prompt carrying the names and not the rule
+	// leaves the model to guess the pairing.
+	if !strings.Contains(req.System, "A formal greeting takes the recipient's SURNAME") {
+		t.Error("the system prompt does not say which greeting takes the surname")
+	}
+}
+
+func TestAVoicedDraftIsToldTheGreetingRuleToo(t *testing.T) {
+	// The voiced prompt is the one a rep with a ready profile actually gets.
+	// A rule that reaches only the plain variant fixes the drafts nobody is
+	// looking at and leaves the ones they are.
+	req, err := replyDraftRequest(replyDraftSystem, replyActivityData{Recipient: "Dietmar"},
+		func(promptfence.Fence) string { return "VOICE" }, "")
+	if err != nil {
+		t.Fatalf("replyDraftRequest: %v", err)
+	}
+	if !strings.Contains(req.System, "A formal greeting takes the recipient's SURNAME") {
+		t.Error("the voiced system prompt does not carry the greeting rule")
+	}
+	if !strings.Contains(req.System, "plain text") {
+		t.Error("the voiced system prompt does not carry the plain-text rule")
 	}
 }

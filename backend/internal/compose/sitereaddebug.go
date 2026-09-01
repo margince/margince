@@ -340,7 +340,7 @@ func SiteReadDebugBrain(modelOverride string, fake bool) (profile, facts, triage
 		client := ai.NewFakeClient()
 		return client, client, client, "fake (offline; extraction yields nothing — crawl dry-run)", nil
 	default:
-		cfg, err := pinnedModelRouting(modelOverride)
+		cfg, err := pinnedModelRouting(modelOverride, ai.TaskSiteExtract, ai.TaskSiteFactExtract, ai.TaskSiteTriage)
 		if err != nil {
 			return nil, nil, nil, "", err
 		}
@@ -415,7 +415,7 @@ func TaskProbeBrain(modelSpec string, fake bool, task ai.Task) (TaskProbeComplet
 		}, "fake (offline; the seam is driven, nothing is spent)", nil
 	}
 
-	cfg, banner, err := taskProbeRouting(modelSpec)
+	cfg, banner, err := taskProbeRouting(modelSpec, task)
 	if err != nil {
 		return nil, "", err
 	}
@@ -431,28 +431,47 @@ func TaskProbeBrain(modelSpec string, fake bool, task ai.Task) (TaskProbeComplet
 	}, banner, nil
 }
 
-func taskProbeRouting(modelSpec string) (ai.RoutingConfig, string, error) {
-	cfg, err := pinnedModelRouting(modelSpec)
+func taskProbeRouting(modelSpec string, task ai.Task) (ai.RoutingConfig, string, error) {
+	cfg, err := pinnedModelRouting(modelSpec, task)
 	if err != nil {
 		return ai.RoutingConfig{}, "", err
 	}
 	return cfg, "model override " + modelSpec, nil
 }
 
-// pinnedModelRouting turns a provider:model override into a routing config that
-// binds ONE tier — every task's ladder then falls through to it.
+// pinnedModelRouting turns a provider:model override into a routing config
+// binding the override to every tier the named tasks can actually ask for.
+//
+// Binding one fixed tier does not serve every task: a ladder names the tiers a
+// task may use, and a task whose ladder omits that tier reaches no bound rung
+// and fails with "no bound tier can serve". The two tasks this cost are the
+// sender verdict and the confidentiality verdict — both pinned to
+// [local_small] precisely because they read private mail, and both therefore
+// the ones an operator most needs to probe when a verdict looks wrong.
 //
 // Both debug lanes in this file take the same override in the same spelling, so
 // it is parsed and validated once: two copies would let `worker siteread` and
 // `worker aitask` disagree about what `--model` means.
-func pinnedModelRouting(modelSpec string) (ai.RoutingConfig, error) {
+func pinnedModelRouting(modelSpec string, tasks ...ai.Task) (ai.RoutingConfig, error) {
 	provider, modelName, found := strings.Cut(modelSpec, ":")
 	if !found || provider == "" || modelName == "" {
 		return ai.RoutingConfig{}, fmt.Errorf("--model wants provider:model (e.g. anthropic:claude-sonnet-4-6), got %q", modelSpec)
 	}
+	binding := ai.ProviderConfig{Provider: provider, Model: modelName}
+	tiers := map[ai.Tier]ai.ProviderConfig{}
+	for _, task := range tasks {
+		for _, tier := range ai.TaskLadder(task) {
+			tiers[tier] = binding
+		}
+	}
+	if len(tiers) == 0 {
+		// A caller that named no task still gets a usable probe rather than a
+		// router with nothing bound, which would fail on every tier alike.
+		tiers[ai.TierCheapCloud] = binding
+	}
 	cfg := ai.RoutingConfig{
 		Profile:    ai.ProfileCloudFrontier,
-		Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierCheapCloud: {Provider: provider, Model: modelName}},
+		Tiers:      tiers,
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: ai.ProviderConfig{Provider: ai.ProviderFake}},
 	}
 	// Bound to the environment, or a cloud --model cannot run: with a nil lookup

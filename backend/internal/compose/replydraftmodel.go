@@ -57,7 +57,6 @@ Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - Nothing has been sent or received yet. There is no thread, no earlier message and no shared history: never refer to one, and never open with a follow-up phrase.
 - The stated intent is the whole brief. Write the message it describes; if it is thin, keep the message short rather than inventing a reason for it.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities — and never a prior meeting, call or email.
-- Write the body as plain text. No markdown, no HTML, no bullet characters.
 - Do NOT write a sign-off or a sender name. A name you guessed would go out over the wrong signature.
 - Say one thing and ask for one thing. Three short paragraphs at most.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.`
@@ -197,12 +196,16 @@ func parseReplyDraft(text string) (replyDraft, error) {
 	if err := json.Unmarshal([]byte(ai.Unfence(text)), &draft); err != nil {
 		return replyDraft{}, fmt.Errorf("compose: reply draft response is not valid JSON: %w", err)
 	}
+	draft.Body = ai.PlainText(draft.Body)
 	return draft, nil
 }
 
+// replyDraftShapeValid judges the answer the CALLER will get, so it reads it
+// through the same parse. Judging the raw text instead would accept a body
+// that is only non-empty because of markup the caller then strips away.
 func replyDraftShapeValid(text string) error {
-	var draft replyDraft
-	if err := json.Unmarshal([]byte(ai.Unfence(text)), &draft); err != nil {
+	draft, err := parseReplyDraft(text)
+	if err != nil {
 		return fmt.Errorf(`output must be {"subject":"...","body":"..."}: %w`, err)
 	}
 	return validateReplyDraft(draft)

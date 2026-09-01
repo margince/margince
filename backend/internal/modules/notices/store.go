@@ -47,46 +47,125 @@ type Notice struct {
 	CreatedAt time.Time
 }
 
+// NewNotice is one notice to record. It is a struct rather than a parameter
+// list because the dedupe key is the fifth thing a caller might say about a
+// notice, and five positional strings is where a caller starts passing the
+// subject as the body.
+type NewNotice struct {
+	Recipient ids.UserID
+	Kind      string
+	Subject   string
+	Body      string
+	// DedupeKey is the caller's natural key for the EVENT this notice is
+	// about. A second Create carrying the same key for the same recipient
+	// answers the first notice's id and writes nothing.
+	//
+	// Empty where the caller has no such key, and most do not: a notice
+	// addressed by a human act has no event to key on. Empty means "not
+	// claiming one", and those rows dedupe against nothing — which is the only
+	// honest answer, since an invented key would silently collapse two real
+	// notices into one.
+	DedupeKey string
+}
+
 // Create records one notice for recipient — the whole of delivery on this
 // transport. captured_by comes from the authenticated principal (the engine
 // writes as the system), never from a caller-supplied field, and the write
 // lands with its audit row and event in one transaction like every other
 // mutation. The recipient's existence is held by the row's own FK: a notice
 // to nobody fails loudly rather than landing unread forever.
-func (s *Store) Create(ctx context.Context, recipient ids.UserID, kind, subject, body string) (ids.UUID, error) {
-	if kind == "" || subject == "" {
-		return ids.UUID{}, errors.New("notices: a notice names its kind and its subject")
+//
+// AT-LEAST-ONCE IS THE CALLER'S PROBLEM AND THIS IS WHERE IT IS SOLVED.
+// workflow.Handler.Apply is documented as idempotent on IdempotencyKey(ev),
+// and a handler that is only idempotent while the QUEUE is has its correctness
+// somewhere the reader cannot see. A notice carrying a dedupe key lands as ONE
+// ROW PER RECIPIENT however many times its event is delivered; the second call
+// answers the first id and emits nothing, because a second event about a
+// notice that already exists would put the same line on the same Worklist
+// twice by another route.
+func (s *Store) Create(ctx context.Context, in NewNotice) (ids.UUID, error) {
+	// No evidence: a system flow's authority is the engine's own, which the
+	// audit row's actor already states.
+	row, err := s.insertNotice(ctx, in, nil)
+	return row.ID, err
+}
+
+// insertNotice is the write itself, returning the whole row.
+//
+// Create keeps its id-only signature because every system flow that calls it
+// wants nothing else, and widening it would make four call sites carry a value
+// none of them reads. The coach path does read it: it answers 201 with the
+// notice, and the created_at on that answer has to be the row's own.
+func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[string]any) (Notice, error) {
+	if in.Kind == "" || in.Subject == "" {
+		return Notice{}, errors.New("notices: a notice names its kind and its subject")
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return ids.UUID{}, err
+		return Notice{}, err
 	}
-	subject = truncate(subject, subjectBound)
-	body = truncate(body, bodyBound)
+	// Locals rather than in.* from here down: on the duplicate path below these
+	// are replaced by what the stored notice actually says, and a field read
+	// straight off the argument would quietly disagree with the row.
+	kind := in.Kind
+	subject := truncate(in.Subject, subjectBound)
+	body := truncate(in.Body, bodyBound)
 	id := ids.NewV7()
+	var createdAt time.Time
+	var dedupe *string
+	if in.DedupeKey != "" {
+		dedupe = &in.DedupeKey
+	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6)`,
-			id, recipient, kind, subject, body, capturedBy); err != nil {
+		// The INDEX is the guard, not a read-then-write check: two deliveries
+		// racing both pass a check and only one may pass the index.
+		//
+		// RETURNING tells the two cases apart. No row back means the key was
+		// already there, and everything below — the audit row, the event —
+		// belongs to a notice that was already recorded once.
+		//
+		// created_at is the column's own default, so the insert returns it
+		// rather than the caller stamping a second clock beside it.
+		row := tx.QueryRow(ctx, `
+			INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by, dedupe_key)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			ON CONFLICT (recipient_user_id, dedupe_key) WHERE dedupe_key IS NOT NULL
+			DO NOTHING
+			RETURNING created_at`,
+			id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe)
+		switch err := row.Scan(&createdAt); {
+		case errors.Is(err, pgx.ErrNoRows):
+			// Already recorded. Answer the notice that STANDS — all of it, not
+			// its id with this call's text pinned beside it.
+			//
+			// The two need not agree. A dedupe key names the EVENT, and a
+			// second delivery can carry a subject reworded since, or a kind a
+			// later version spells differently. Returning the stored id with
+			// the replay's words would put a notice on screen that the reader
+			// cannot find anywhere, and that nothing in the database says.
+			return tx.QueryRow(ctx, `
+				SELECT id, kind, subject, body, created_at FROM notice
+				 WHERE recipient_user_id = $1 AND dedupe_key = $2`,
+				in.Recipient, in.DedupeKey).Scan(&id, &kind, &subject, &body, &createdAt)
+		case err != nil:
 			return fmt.Errorf("notices: recording the notice: %w", err)
 		}
-		auditID, err := storekit.AuditEvent(ctx, tx, "create", "notice", id,
-			map[string]any{"kind": kind, "recipient_user_id": recipient.String()})
+		auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "create", "notice", id,
+			map[string]any{"kind": in.Kind, "recipient_user_id": in.Recipient.String()}, evidence)
 		if err != nil {
 			return err
 		}
-		recipientID := recipient.UUID
+		recipientID := in.Recipient.UUID
 		return storekit.EmitEvent(ctx, tx, auditID, recipientID, crmcontracts.PublicEventNoticeCreated{
 			NoticeId:        openapi_types.UUID(id),
 			RecipientUserId: openapi_types.UUID(recipientID),
-			Kind:            kind,
+			Kind:            in.Kind,
 		})
 	})
 	if err != nil {
-		return ids.UUID{}, err
+		return Notice{}, err
 	}
-	return id, nil
+	return Notice{ID: id, Kind: kind, Subject: subject, Body: body, CreatedAt: createdAt}, nil
 }
 
 // UnreadFor answers the CALLING person's own unread notices, newest first,

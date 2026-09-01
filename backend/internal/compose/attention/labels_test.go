@@ -15,20 +15,30 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// stubNames answers from a fixed map and counts every ask, so a test can
-// assert both the answer and that one record costs one read.
+// stubNames answers from a fixed map and records every ask, so a test can
+// assert both the answer and the SHAPE of the asking — how many calls, and
+// which ids each one carried.
 type stubNames struct {
 	labels map[ids.UUID]string
-	asked  map[ids.UUID]int
+	// calls is one entry per Labels call, in order, each the ids it named.
+	calls [][]ids.UUID
+	// asked counts how many times each id was named across every call.
+	asked map[ids.UUID]int
 }
 
-func (s *stubNames) Label(_ context.Context, _ string, id ids.UUID) (string, bool, error) {
+func (s *stubNames) Labels(_ context.Context, _ string, want []ids.UUID) (map[ids.UUID]string, error) {
 	if s.asked == nil {
 		s.asked = map[ids.UUID]int{}
 	}
-	s.asked[id]++
-	label, ok := s.labels[id]
-	return label, ok, nil
+	s.calls = append(s.calls, append([]ids.UUID(nil), want...))
+	out := map[ids.UUID]string{}
+	for _, id := range want {
+		s.asked[id]++
+		if label, ok := s.labels[id]; ok {
+			out[id] = label
+		}
+	}
+	return out, nil
 }
 
 func TestABoundResolverNamesEveryCardOnce(t *testing.T) {
@@ -133,6 +143,49 @@ func TestEveryLanesSubjectsAreNamed(t *testing.T) {
 			if item.Subject != nil && item.Subject.Label == nil {
 				t.Errorf("%s carries an unnamed subject: %+v", name, item.Subject)
 			}
+		}
+	}
+}
+
+// The claim the batched seam exists for: two records cost ONE read, not two.
+//
+// The old shape was a gated single-row get per distinct record — cheap per
+// read, and linear in exactly what a busy workspace has more of, since a full
+// at-risk lane alone admits a hundred candidates.
+func TestTwoRecordsOfOneTypeCostOneRead(t *testing.T) {
+	firstDeal, secondDeal := ids.NewV7(), ids.NewV7()
+	names := &stubNames{labels: map[ids.UUID]string{
+		firstDeal: "Fleet retrofit GmbH", secondDeal: "Weber rollout",
+	}}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
+		stubBriefing{rows: []BriefEntry{
+			{ID: ids.NewV7(), DealID: firstDeal, Rank: 1},
+			{ID: ids.NewV7(), DealID: secondDeal, Rank: 2},
+		}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
+		fixedClock)
+
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+
+	if len(names.calls) != 1 {
+		t.Fatalf("two deals cost %d resolver calls, want 1: %v", len(names.calls), names.calls)
+	}
+	if len(names.calls[0]) != 2 {
+		t.Fatalf("the one call named %d ids, want both deals in it: %v", len(names.calls[0]), names.calls[0])
+	}
+	// And both cards came back named, so batching did not cost the answer.
+	named := map[string]bool{}
+	for _, item := range out.ThisMorning {
+		if item.Subject != nil && item.Subject.Label != nil {
+			named[*item.Subject.Label] = true
+		}
+	}
+	for _, want := range []string{"Fleet retrofit GmbH", "Weber rollout"} {
+		if !named[want] {
+			t.Errorf("no card carries %q; the batch answered but the fill did not use it", want)
 		}
 	}
 }

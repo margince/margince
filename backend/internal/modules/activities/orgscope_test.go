@@ -66,7 +66,7 @@ func filterFor(ctx context.Context, t *testing.T, entityType string) (join strin
 	return joined, strings.Join(terms, " AND "), args
 }
 
-func TestOrganizationFilterWalksTheAccountsThreeLinks(t *testing.T) {
+func TestOrganizationFilterWalksTheAccountsFourArms(t *testing.T) {
 	join, where, args := filterFor(unscopedCtx(), t, "organization")
 
 	if join != "" {
@@ -76,7 +76,10 @@ func TestOrganizationFilterWalksTheAccountsThreeLinks(t *testing.T) {
 	if !strings.Contains(where, "EXISTS (") {
 		t.Fatalf("organization filter is not an EXISTS: %s", where)
 	}
-	for _, arm := range []string{"l.organization_id = $1", "d.organization_id = $1", "r.organization_id = $1"} {
+	for _, arm := range []string{
+		"l.organization_id = $1", "d.organization_id = $1", "r.organization_id = $1",
+		"emp.organization_id = $1",
+	} {
 		if !strings.Contains(where, arm) {
 			t.Errorf("organization filter misses the %q arm: %s", arm, where)
 		}
@@ -85,10 +88,41 @@ func TestOrganizationFilterWalksTheAccountsThreeLinks(t *testing.T) {
 		!strings.Contains(where, "r.ended_at IS NULL") {
 		t.Errorf("the employment arm must be live employment only: %s", where)
 	}
-	// One bind position, read by all three arms: an account id registered
-	// three times would silently mis-number every later placeholder.
+	// The participant arm reads employment the same way. A former colleague's
+	// company is one they left, whether they were linked or invited.
+	if !strings.Contains(where, "emp.kind = 'employment'") ||
+		!strings.Contains(where, "emp.ended_at IS NULL") {
+		t.Errorf("the participant arm must be live employment only: %s", where)
+	}
+	// Anchored on the activity in hand. Without it the arm asks "is anybody
+	// anywhere a participant who works here", which is true of the whole
+	// workspace at once.
+	if !strings.Contains(where, "ap.activity_id = a.id") {
+		t.Errorf("the participant arm is not anchored on the activity: %s", where)
+	}
+	// One bind position, read by all four arms: an account id registered
+	// four times would silently mis-number every later placeholder.
 	if len(args) != 1 {
 		t.Errorf("organization filter bound %d args, want 1 (the account id): %v", len(args), args)
+	}
+}
+
+// The reader's fourth arm is NOT the producer's. OrgReachSet is what a signal
+// is filed through, and somebody merely Cc'd on a message is weaker evidence
+// than somebody the message was filed against — filing against every Cc'd
+// person's employer would put claims on accounts that were never in the
+// conversation. The split is a ruling, so it is held rather than remembered.
+func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
+	set := OrgReachSet()
+	if strings.Contains(set, "activity_participant") {
+		t.Errorf("OrgReachSet reaches through participants, so a signal is now filed against "+
+			"the employer of everybody copied on a message:\n%s", set)
+	}
+	// And the reader's does, or this test is only describing an absence that
+	// was never a decision.
+	if !strings.Contains(OrgLinkedActivityExists(1), "activity_participant") {
+		t.Error("the timeline predicate no longer reaches through participants either, " +
+			"so the split above holds nothing apart")
 	}
 }
 
@@ -149,21 +183,40 @@ func TestAnUnknownEntityTypeIsRefusedRatherThanBuiltIntoSQL(t *testing.T) {
 	}
 }
 
-// A "my work" queue is mine OR nobody's. A rep who writes themselves a task
-// without filling in an assignee still owns it, and dropping it would hide the
-// reader's own to-do from them.
-func TestTheOwnQueueClauseAdmitsUnassignedWork(t *testing.T) {
+// A "my work" queue is MINE, and nobody else's.
+//
+// It used to admit unassigned work too, so a task a rep wrote themselves
+// without an assignee still reached them. That kept one case and broke the
+// queue for every other: an automation's follow-up carries no assignee either,
+// and every colleague found it in their own day at once. The self-written task
+// is answered by owning it as it is written (taskAssignee), not by widening
+// what "mine" means.
+func TestTheOwnQueueClauseIsExactlyTheReaders(t *testing.T) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	reader := ids.From[ids.UserKind](ids.MustParse("01a05500-0000-7000-8000-000000000001"))
 
 	clause := ownQueueClause(&reader, arg)
 
-	if !strings.Contains(clause, "a.assignee_id IS NULL") {
-		t.Fatalf("the own-queue clause %q drops unassigned work", clause)
+	if strings.Contains(clause, "IS NULL") {
+		t.Fatalf("the own-queue clause %q still admits work nobody owns", clause)
 	}
 	if !strings.Contains(clause, "a.assignee_id = $1") {
 		t.Fatalf("the own-queue clause %q does not bind the reader", clause)
+	}
+}
+
+// And ownerless work is still reachable, through a clause of its own. Making
+// "mine" exact without this would not have moved that work — it would have
+// hidden it.
+func TestTheUnassignedQueueClauseAnswersOwnerlessWork(t *testing.T) {
+	clause := unassignedQueueClause()
+
+	if !strings.Contains(clause, "a.assignee_id IS NULL") {
+		t.Fatalf("the unassigned clause %q does not select ownerless work", clause)
+	}
+	if !strings.Contains(clause, "NOT a.is_done") {
+		t.Fatalf("the unassigned clause %q carries finished work", clause)
 	}
 }
 
@@ -230,12 +283,27 @@ func TestTheWaitingQueryIsBoundedByTheReadInstant(t *testing.T) {
 // A thread is matched within one medium. Mail thread keys come from headers the
 // sender controls and share a namespace with channel keys, so comparing keys
 // alone lets a crafted References value silence an unrelated conversation.
+//
+// Asked as a PROPERTY of every thread match rather than as a count of two.
+// Counting pinned the query's shape at the moment the gate was written, so the
+// disposition anti-join — a third, correct medium match — failed it for being
+// new. What matters is that no comparison of thread keys stands alone.
 func TestTheWaitingQueryMatchesWithinOneMedium(t *testing.T) {
-	if strings.Count(waitingRepliesSQL, "kind = a.kind") != 2 {
-		t.Fatal("the waiting query matches threads across media")
+	matches := strings.Count(waitingRepliesSQL, "thread_key = a.thread_key")
+	if matches == 0 {
+		t.Fatal("no thread match found — this gate is reading the wrong query")
 	}
-	if strings.Count(waitingRepliesSQL, "channel_provider IS NOT DISTINCT FROM a.channel_provider") != 2 {
-		t.Fatal("the waiting query matches threads across channel providers")
+	if got := strings.Count(waitingRepliesSQL, "kind = a.kind"); got != matches {
+		t.Fatalf("%d thread match(es) but %d carry the medium: one matches across media", matches, got)
+	}
+	// The provider is compared two ways for one reason: the reply anti-joins
+	// NULL-match it, because two mail rows both having no provider is a genuine
+	// match; the disposition join coalesces it to '' instead, because a
+	// PRIMARY KEY cannot hold two NULLs as one row.
+	providers := strings.Count(waitingRepliesSQL, "channel_provider IS NOT DISTINCT FROM a.channel_provider") +
+		strings.Count(waitingRepliesSQL, "channel_provider = coalesce(a.channel_provider, '')")
+	if providers != matches {
+		t.Fatalf("%d thread match(es) but %d carry the provider: one matches across channels", matches, providers)
 	}
 }
 
@@ -256,5 +324,23 @@ func TestTheWaitingQueryExcludesUnthreadedMessages(t *testing.T) {
 	// accidental one.
 	if strings.Contains(waitingRepliesSQL, "thread_key IS NOT DISTINCT FROM") {
 		t.Fatal("the waiting query matches NULL thread keys to each other")
+	}
+}
+
+// The SELECT and the Scan must agree, column for column. They drifted when the
+// sender was added in the middle of the list, and the read then failed at the
+// database on every call — reported to the reader as "this source could not be
+// read", which is indistinguishable from a permissions problem.
+func TestTheWaitingQuerySelectsWhatItScans(t *testing.T) {
+	from := strings.Index(waitingRepliesSQL, "FROM activity a")
+	if from < 0 {
+		t.Fatal("the waiting query no longer selects from activity")
+	}
+	head := waitingRepliesSQL[:from]
+	subject := strings.Index(head, "a.subject")
+	sender := strings.Index(head, "sender.address")
+	occurred := strings.Index(head, "a.occurred_at")
+	if subject >= sender || sender >= occurred {
+		t.Fatal("the projection no longer reads id, subject, sender, occurred_at — the order Scan expects")
 	}
 }

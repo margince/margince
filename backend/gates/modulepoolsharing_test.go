@@ -89,11 +89,6 @@ var poolConstructors = []struct{ pkg, symbol string }{
 // exists to refuse, because a per-test pool on the lane's own app DSN is exactly
 // what the next suite would claim needs its own parameters.
 var ownPools = gatekit.Waive(map[string]string{
-	"internal/modules/identity/oauth_lend_lock_integration_test.go": "builds its pool on a DERIVED DSN — " +
-		"the lane's own plus lock_timeout — so that a contended row lock decides the outcome instead of the " +
-		"clock. It is a per-test instrument, bound to one test's transaction and closed with it; sharing it " +
-		"would apply that timeout to every other test in the package, and testdb.Pool keys by DSN so it " +
-		"would be a second shared pool rather than the lane's.",
 	"internal/modules/people/ensurechannel_contention_integration_test.go": "the same instrument one module " +
 		"over, built through pgxpool directly because the bound rides ConnConfig rather than the DSN: a " +
 		"lock_timeout of 250ms so that a contended account lock decides the outcome instead of the clock. " +

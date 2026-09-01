@@ -87,7 +87,7 @@ func WithGmailPush(inserter *jobs.Runner, cfg GmailPushConfig) Option {
 		if cfg.Token == "" || inserter == nil {
 			return
 		}
-		var verifier *googleOIDCVerifier
+		var verifier *oidcTokenVerifier
 		if cfg.OIDC() {
 			verifier = newGoogleOIDCVerifier(cfg.JWKSURL, func(c oidcClaims) error {
 				if c.Aud != cfg.Audience {
@@ -111,7 +111,7 @@ func WithGmailPush(inserter *jobs.Runner, cfg GmailPushConfig) Option {
 // to one URL per subscription — there is no per-mailbox path to key on), an
 // optional Google-signed OIDC bearer as the second factor, and a Handle that
 // never persists the payload it is handed — see the file comment for why.
-func gmailPushSpec(pool *pgxpool.Pool, inserter *jobs.Runner, token string, verifier *googleOIDCVerifier, log *slog.Logger) WebhookSpec {
+func gmailPushSpec(pool *pgxpool.Pool, inserter *jobs.Runner, token string, verifier *oidcTokenVerifier, log *slog.Logger) WebhookSpec {
 	spec := WebhookSpec{
 		Provider: "gmail",
 		MaxBody:  1 << 20,

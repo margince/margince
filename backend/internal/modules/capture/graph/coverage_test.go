@@ -69,6 +69,16 @@ func fullStub(t *testing.T, overrides map[string]http.HandlerFunc) *serveMuxWith
 			"@odata.deltaLink": s.srv.URL + "/me/mailFolders/inbox/messages/delta?%24deltatoken=d1",
 		})
 	})
+	reg("/me/mailFolders/sentitems/messages/delta", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{
+			"value":            []map[string]any{{"id": "s1"}},
+			"@odata.deltaLink": s.srv.URL + "/me/mailFolders/sentitems/messages/delta?%24deltatoken=s1",
+		})
+	})
+	reg("/me/messages/s1/$value", func(w http.ResponseWriter, _ *http.Request) {
+		//craft:ignore swallowed-errors test stub write; a short write surfaces as the client-side assertion failure
+		_, _ = w.Write(sentMsg("s1@x", "buyer@acme.com"))
+	})
 	reg("/me/messages/m1/$value", func(w http.ResponseWriter, _ *http.Request) {
 		//craft:ignore swallowed-errors test stub write; a short write surfaces as the client-side assertion failure
 		_, _ = w.Write(rawMsg("m1@x", "a@acme.com"))
@@ -79,6 +89,12 @@ func fullStub(t *testing.T, overrides map[string]http.HandlerFunc) *serveMuxWith
 }
 
 func fail500(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusInternalServerError) }
+
+// emptyRound is a folder with nothing new in it, for a test that is about the
+// other folder.
+func emptyRound(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, map[string]any{"value": []map[string]any{}, "@odata.deltaLink": "https://graph/none"})
+}
 
 func authViaStub(t *testing.T, c *Connector) []byte {
 	t.Helper()
@@ -102,11 +118,27 @@ func TestAuthenticateThenInitialSyncThroughRealClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
-	if len(sink.recs) != 1 || sink.recs[0].Source != "graph:m1@x" {
-		t.Fatalf("want one graph:m1@x record, got %+v", sink.recs)
+	// Both folders, through the real HTTP client: what arrived AND what the
+	// owner sent, the latter attested from its folder rather than its headers.
+	bySource := map[string]connector.NormalizedRecord{}
+	for _, r := range sink.recs {
+		bySource[r.Source] = r
 	}
-	if delta, _ := parseCursor(cur); delta == "" {
-		t.Error("cursor deltaLink should be anchored after the initial sync")
+	if len(sink.recs) != 2 || bySource["graph:m1@x"].Source == "" || bySource["graph:s1@x"].Source == "" {
+		t.Fatalf("want the inbox and sent-items records, got %+v", sink.recs)
+	}
+	if bySource["graph:m1@x"].Counterparty.SentByOwner() {
+		t.Error("an inbox message was attested as sent by the owner")
+	}
+	if !bySource["graph:s1@x"].Counterparty.SentByOwner() {
+		t.Error("a Sent Items message reached the timeline without the owner's authorship attested")
+	}
+	cs, err := parseCursor(cur)
+	if err != nil {
+		t.Fatalf("parseCursor: %v", err)
+	}
+	if cs.DeltaLink == "" || cs.SentDeltaLink == "" {
+		t.Errorf("cursor = %+v, want both folders anchored after the initial sync", cs)
 	}
 }
 
@@ -169,7 +201,10 @@ func TestSyncSkipsDeliverySystemMail(t *testing.T) {
 		//craft:ignore swallowed-errors test stub write; a short write surfaces as the client-side assertion failure
 		_, _ = w.Write([]byte("From: mailer-daemon@x.com\r\nTo: rep@myco.com\r\nSubject: hi\r\nMessage-ID: <a@x>\r\nContent-Type: text/plain\r\n\r\nx"))
 	}
-	c := realConn(t, fullStub(t, map[string]http.HandlerFunc{"/me/messages/m1/$value": auto}))
+	c := realConn(t, fullStub(t, map[string]http.HandlerFunc{
+		"/me/messages/m1/$value":                   auto,
+		"/me/mailFolders/sentitems/messages/delta": emptyRound,
+	}))
 	auth := authViaStub(t, c)
 	sink := &recordingSink{}
 	if _, err := c.Sync(context.Background(), auth, nil, sink); err != nil {

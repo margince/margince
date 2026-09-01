@@ -27,6 +27,11 @@ type Store struct {
 	// db binds the installation's workspace itself (ADR-0091 §9 step 3).
 	db  *database.DB
 	now func() time.Time
+	// installationName answers what to call this installation on the public
+	// preference page. Injected because the name lives in identity and a
+	// module never imports a sibling; nil on any installation that has not
+	// wired it, which the page renders as an omission rather than a blank.
+	installationName InstallationNameReader
 }
 
 // NewStore binds the store to the pool every read and write runs through.
@@ -49,6 +54,13 @@ type State struct {
 	LawfulBasis            *string
 	DoubleOptInConfirmedAt *time.Time
 	UpdatedAt              *time.Time
+	// Changed says whether this call MOVED the record. False for an
+	// idempotent re-assertion and for a capture that declined to override
+	// a decision already on file. The preference centre's unsubscribe
+	// endpoint reports only what it actually changed, so a recipient who
+	// presses the link twice is told the truth the second time rather
+	// than being shown a fresh confirmation for a no-op.
+	Changed bool
 }
 
 type ProofEvent struct {
@@ -392,7 +404,7 @@ func (s *Store) recordAdmittedTx(
 	}
 	if current == in.NewState {
 		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current, LawfulBasis: in.LawfulBasis}
-		return out, nil // idempotent re-assertion: no proof row, no event, no fresh token demanded
+		return out, nil // idempotent re-assertion: no proof row, no event, no fresh token demanded (Changed stays false)
 	}
 	if in.NeverOverrideExisting && current != "" {
 		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current}
@@ -426,6 +438,7 @@ func (s *Store) recordAdmittedTx(
 	out = State{
 		PurposeID: in.PurposeID, PurposeKey: purposeKey, State: in.NewState,
 		LawfulBasis: in.LawfulBasis, DoubleOptInConfirmedAt: doiConfirmedAt, UpdatedAt: &capturedAt,
+		Changed: true,
 	}
 	return out, nil
 }

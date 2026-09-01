@@ -91,8 +91,21 @@ func BindProviderDomain(store *integrations.Store) *integrations.Store {
 func bindProviderDomain(store *integrations.Store) *integrations.Store {
 	return store.
 		WithDomain(providerFence, people.DuplicateCluster, people.SubjectIdentifiers).
+		WithSubjectHold(providerSubjectHold).
+		WithStoredClaimApplier(providerStoredClaimApplier).
 		WithClaimWriter(providerClaimWriter).
+		WithFillReverter(providerFillReverter()).
 		WithClaimDeleter(providerClaimDeleter)
+}
+
+// providerSubjectHold is the fence asked while holding the subject, for the
+// hand-off that goes on to write about them.
+func providerSubjectHold(ctx context.Context, tx pgx.Tx, personID string) (integrations.FenceVerdict, error) {
+	allowed, reason, err := people.HoldEnrichmentSubject(ctx, tx, personID)
+	if err != nil {
+		return integrations.FenceVerdict{}, err
+	}
+	return integrations.FenceVerdict{Allowed: allowed, Reason: reason}, nil
 }
 
 // providerFence adapts people's verdict to the shape integrations declares.
@@ -106,9 +119,37 @@ func providerFence(ctx context.Context, tx pgx.Tx, personID string) (integration
 	return integrations.FenceVerdict{Allowed: allowed, Reason: reason}, nil
 }
 
-// providerClaimWriter lands one run's values in the table people owns.
+// providerClaimWriter lands one run's values in the table people owns, and
+// folds what a record can hold onto the record itself.
+//
+// The two are one write. A purchase stored but not applied is a run that is
+// paid, complete and invisible on the page the rep works from; splitting them
+// across transactions would make that state reachable by a crash rather than
+// only by a refusal.
 func providerClaimWriter(ctx context.Context, tx pgx.Tx, w integrations.ClaimWrite) error {
-	return people.WriteProviderClaims(ctx, tx, w.RunID, w.PersonID, w.Provider, w.Claims, w.RetrievedAt)
+	if err := people.WriteProviderClaims(ctx, tx, w.RunID, w.PersonID, w.Provider, w.Claims, w.RetrievedAt); err != nil {
+		return err
+	}
+	return people.ApplyProviderClaims(ctx, tx, w.RunID, w.PersonID, w.Provider, w.Claims)
+}
+
+// providerStoredClaimApplier folds a purchase the domain already stored onto
+// the record, for the catch-up sweep.
+func providerStoredClaimApplier(ctx context.Context, tx pgx.Tx, personID, runID string) (bool, error) {
+	return people.ApplyStoredProviderClaims(ctx, tx, personID, runID)
+}
+
+// providerFillReverter is the domain half of taking a purchase back off the
+// records it filled — the other half of the delete-data action, which until now
+// removed the claims and left the values standing.
+func providerFillReverter() integrations.RevertFillsFunc {
+	return integrations.RevertFillsFunc{
+		Subjects: people.SubjectsWithProviderFills,
+		RevertOne: func(ctx context.Context, tx pgx.Tx, providerName string, subject ids.UUID) ([]string, error) {
+			reverted, err := people.RevertProviderFills(ctx, tx, providerName, subject)
+			return reverted.Fields, err
+		},
+	}
 }
 
 // providerClaimDeleter is the domain half of the delete-data action.

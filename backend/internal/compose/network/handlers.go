@@ -42,6 +42,15 @@ type Reads struct {
 	// clock. A score that reads time.Now() inside the handler cannot be
 	// asserted on without sleeping.
 	now func() time.Time
+	// introNoteLane phrases the forwardable introduction note. Nil is an
+	// ordinary configuration, not a failure: the note is then written from the
+	// template, which is a note a colleague can actually paste.
+	introNoteLane Completer
+	// askedRoutes knows which routes to a contact are already spoken for, so a
+	// route the server would refuse with a 409 is not offered as though it
+	// were free. Nil leaves every route available, which is what the tab
+	// showed before this seam existed.
+	askedRoutes AskedRoutes
 }
 
 // NewReads builds the network surface over the pool.

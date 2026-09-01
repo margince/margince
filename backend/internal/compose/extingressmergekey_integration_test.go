@@ -8,8 +8,14 @@ package compose
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -61,14 +67,21 @@ func (e *ingressEnv) ingest(t *testing.T, rec extension.Record) error {
 func TestADirectMessageFindsTheHumanAlreadyCapturedFromMail(t *testing.T) {
 	e := setupVouchingIngress(t)
 	registerProbeTransport(t, e)
-	const sender = "known.contact@gmail.com"
+	const sender = "known.contact@globex.example"
 
+	// The incumbent is built the way production builds one: the mail record
+	// DEFERS the sender to the ledger, and a verdict admits them. No tier mints
+	// a contact from a first inbound message any more — the ladder's job is to
+	// capture the mail and leave who it is with to the verdict — so a fixture
+	// that expected the ingest alone to leave a person would be describing a
+	// pipeline this one does not have.
 	if err := e.ingest(t, aProviderRecord("ws-7:2001", sender)); err != nil {
-		t.Fatalf("landing the mail record that creates the incumbent: %v", err)
+		t.Fatalf("landing the mail record that defers the sender: %v", err)
 	}
+	admitPendingSender(t, e, sender)
 	if got := e.countAsWorkspace(t,
 		`SELECT count(*) FROM person_email WHERE email = $1 AND archived_at IS NULL`, sender); got != 1 {
-		t.Fatalf("the mail capture left %d records carrying %s; this test needs exactly the one incumbent", got, sender)
+		t.Fatalf("the admitted sender left %d records carrying %s; this test needs exactly the one incumbent", got, sender)
 	}
 
 	if err := e.ingest(t, corroboratedChannelMessage("ws-7:2002", sender, "U-2002")); err != nil {
@@ -106,5 +119,27 @@ func TestAnUndeclaredSourceCannotCorroborateByAddress(t *testing.T) {
 	if got := e.countAsWorkspace(t,
 		`SELECT count(*) FROM activity WHERE source_id = $1`, "ws-7:2003"); got != 0 {
 		t.Errorf("%d activities landed for a refused record, want 0 — the refusal runs before the transaction opens", got)
+	}
+}
+
+// admitPendingSender runs the real verdict engine over the deferral the ingest
+// left, so the incumbent this test needs is written by the code that writes one
+// in production rather than inserted by the test.
+//
+// A `person` answer is the ordinary admission: the sender turned out to be a
+// human this business deals with, and that is the moment a contact exists.
+func admitPendingSender(t *testing.T, e *ingressEnv, email string) {
+	t.Helper()
+	var dispositionID ids.UUID
+	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT id FROM capture_pending_counterparty
+			 WHERE email = $1 AND status = 'pending'`, email).Scan(&dispositionID)
+	})
+
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("admitting %s by verdict: %v", email, err)
 	}
 }

@@ -223,14 +223,15 @@ func matchSitePerson(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, i
 // images those fields carry — an explicit null per field before, the written
 // value after. Field history projects per field from those, so neither can be a
 // list of names.
-// fillSitePersonFields fills the fields a published page — or a handed-over
-// card — states, and only where the record is empty.
+// fillSitePersonFields fills the fields a published page states, and only where
+// the record is empty.
 //
-// `source` is a parameter rather than the constant it used to be because two
-// callers now write these same three fields under the same fill-only-empty
-// rule, and what differs between them is only the provenance they stamp. A
-// second copy of the rule would be a second answer to "may this overwrite what
-// a human typed", and the two would drift.
+// Fill-only-empty here while the signature and card paths replace by recency,
+// and the difference is the SOURCE rather than an inconsistency: a page is
+// somebody else's description of this person, published who-knows-when and
+// carrying no date of its own, so it has no standing to overwrite an answer
+// already on the record. A signature and a card are the person saying so
+// themselves, on a date (observedcontact.go).
 func fillSitePersonFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID, sourceRef, by, source string, in SitePersonFields) ([]string, map[string]any, map[string]any, error) {
 	var applied []string
 	previous, values := map[string]any{}, map[string]any{}

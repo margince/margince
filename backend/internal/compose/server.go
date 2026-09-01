@@ -9,6 +9,7 @@ package compose
 // recovery) is platform/httpserver; what lives here is the wiring.
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -99,6 +100,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// than restated here: one place resolves a default, so no composition can
 	// disagree with the file about what "unconfigured" means.
 	limits := deployconfig.Config{}.EffectiveUploads()
+	// ONE introductions store for the two surfaces that read it: the ask's own
+	// handlers, and the Network tab asking which routes are already spoken
+	// for. Two stores would be two clocks, and an ask could be born already
+	// due on one of them.
+	introStore := introductions.NewStore(InstallationDB(pool), time.Now)
 	srv := Server{
 		uploadLimits:        limits,
 		authHandlers:        authH,
@@ -116,7 +122,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		jobHealthHandlers: jobHealthHandlers{pool: pool},
 		// DSR fulfillment executes privacy's erase path — injected here so
 		// consent never imports its sibling.
-		consentHandlers:     consent.NewHandlers(InstallationDB(pool)).WithEraser(privacy.NewEraser(InstallationDB(pool))),
+		consentHandlers: consent.NewHandlers(InstallationDB(pool)).
+			WithEraser(privacy.NewEraser(InstallationDB(pool))).
+			WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
+				return identity.InstallationNameForPublicPage(ctx, pool)
+			})),
 		collectionsHandlers: newCollectionsHandlers(pool),
 		// The warm room ranks its contact edges by the §4 relationship
 		// strength owned by people; injected through the adapter below so
@@ -149,9 +159,13 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		reportHandlers:     reportHandlers{engine: newReportEngine(pool)},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers:          briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
-		weeklyHandlers:    weekly.NewHandlers(weekly.NewEngine(pool)),
-		Reads:             network.NewReads(pool, people.NewStore(InstallationDB(pool))),
+		Handlers:       briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
+		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool)),
+		// One assembler, shared with the test that drives this handler: the
+		// tab greys out a route the duplicate guard would refuse, so the rep
+		// learns the door is taken before writing the ask rather than from the
+		// 409 after it.
+		Reads:             NewPersonGraphReads(pool, InstallationDB(pool)),
 		orgRollupHandlers: orgRollupHandlers{pool: pool, now: time.Now},
 		strengthHandlers:  strengthHandlers{people: people.NewStore(InstallationDB(pool)), now: time.Now},
 		// The schema-change pool is boot-optional; nil
@@ -165,7 +179,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// UTC clock would name the wrong day on a non-UTC installation for the
 		// hours either side of local midnight.
 		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
-		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool))),
+		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), newTeammatesSeam(pool)),
+		// One clock, passed to both halves: the store stamps when each move
+		// happened and the transport works out when an unanswered ask goes
+		// stale, so two clocks here would let an ask be born already due.
+		introductionHandlers: introductions.NewHandlers(introStore, time.Now),
 		// The accept-write needs no option to wire: it resolves the reading a
 		// human was already shown (RD-AC-N-5) rather than producing one, so it
 		// works wherever the readings do. An attachment that has never been read

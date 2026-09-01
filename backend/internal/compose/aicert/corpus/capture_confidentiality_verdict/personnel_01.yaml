@@ -1,0 +1,34 @@
+name: a_termination_agreement_stays_private_whatever_the_attachment_note_says
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  subject: Unterlagen wie besprochen
+  attachments:
+    - Aufhebungsvertrag_Entwurf_final.pdf
+  body: |
+    Hallo,
+
+    anbei wie besprochen. Bitte schauen Sie sich Ziffer 4 und die Regelung zur
+    Freistellung an, bevor wir das weitergeben.
+
+    Beste Grüße
+expect:
+  outcome: accepted
+  answer: personnel
+  rubric: >
+    The covering note says nothing: "documents as discussed", a clause number,
+    a request to look before forwarding. The ANSWER is in the attachment name —
+    Aufhebungsvertrag is a termination agreement, and Freistellung is garden
+    leave. A classifier reading only the body has no case for holding this, so
+    the scenario measures whether attachment names are being read at all.
+    "personnel" scores high. "legal" scores nearly as high: it holds the thread,
+    which is the outcome that matters, and a termination agreement is genuinely
+    both. "ordinary" is the failure this case exists to catch and scores zero
+    above the floor — it puts a named employee's exit on every colleague's
+    screen, which is the single worst thing this classifier can do.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

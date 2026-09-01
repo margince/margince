@@ -188,9 +188,7 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		},
 		nil,
 		func(context.Context, pgx.Tx, string) (provider.PersonIdentifiers, error) {
-			return provider.PersonIdentifiers{
-				FirstName: "Anna", LastName: cfg.subjectOf(), CompanyName: "Example",
-			}, nil
+			return cfg.identifiersOf(), nil
 		},
 	)
 	if !cfg.withoutEnqueue {
@@ -228,6 +226,10 @@ type runsConfig struct {
 	// subjectLastName picks the fake's scenario, which it reads out of the
 	// subject's name. Empty means Muster, which succeeds.
 	subjectLastName string
+	// identifiers replaces what the subject seam returns. Set it to model a
+	// record the provider cannot match on; nil means a name with a company,
+	// which every rule the shipped adapters declare is satisfied by.
+	identifiers *provider.PersonIdentifiers
 	// provider names the vendor this environment's connection and adapter are
 	// for. Empty means surfe, which is what almost every test wants; a test
 	// asserting that something is derived FROM the run sets it, because a
@@ -242,6 +244,18 @@ func (c runsConfig) subjectOf() string {
 		return "Muster"
 	}
 	return c.subjectLastName
+}
+
+// identifiersOf is what the subject seam returns. The default carries a name
+// AND a company, which is what the provider's rules require — so a test that
+// does not care about matching gets a subject the lookup can proceed on.
+func (c runsConfig) identifiersOf() provider.PersonIdentifiers {
+	if c.identifiers != nil {
+		return *c.identifiers
+	}
+	return provider.PersonIdentifiers{
+		FirstName: "Anna", LastName: c.subjectOf(), CompanyName: "Example",
+	}
 }
 
 // providerOf is the vendor an environment runs as.
@@ -429,5 +443,86 @@ func TestAQueuedRunAlwaysHasAJob(t *testing.T) {
 	}
 	if e2.enqueued != 1 {
 		t.Errorf("%d jobs enqueued, want 1 — the run and its job commit together or not at all", e2.enqueued)
+	}
+}
+
+// A record the provider cannot match on is declined before anything is spent,
+// and the decline says which fact is missing.
+//
+// The defect this pins: a contact captured from a calendar invite carries a
+// name and an address and nothing else. Sent anyway, the vendor rejects the
+// REQUEST with a 400 — which the platform can only read as a provider fault,
+// so it marks the whole CONNECTION broken. One unlookupable contact then makes
+// every other lookup report "the last call to the provider failed", and the
+// sweep re-breaks it on every tick. In the installation that surfaced this,
+// 214 of 1045 contacts were in exactly this state.
+func TestASubjectWithNothingToMatchOnIsNeverSent(t *testing.T) {
+	e := setupRuns(t, runsConfig{identifiers: &provider.PersonIdentifiers{
+		FirstName: "Lars", LastName: "Jankowfsky",
+	}})
+
+	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
+		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.State != provider.RunSkipped || run.SkipReason != provider.SkipNoIdentifiers {
+		t.Fatalf("run is %s/%s, want skipped/no_identifiers", run.State, run.SkipReason)
+	}
+	if e.enqueued != 0 {
+		t.Errorf("%d jobs enqueued for a subject the provider cannot look up; each one spends a call that "+
+			"comes back a rejection and marks the connection broken", e.enqueued)
+	}
+
+	var held int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM provider_run_reservation WHERE run_id = $1`, run.ID).Scan(&held); err != nil {
+		t.Fatal(err)
+	}
+	if held != 0 {
+		t.Errorf("%d reservations held for a run that was never sent, so the customer's ceiling is spent "+
+			"on a lookup that never happened", held)
+	}
+}
+
+// The same guard must not refuse a subject the provider CAN place. Without
+// this case the one above passes against a guard that declines everybody,
+// which reads as a working feature and silences the lane completely.
+func TestASubjectWithACompanyIsStillSent(t *testing.T) {
+	e := setupRuns(t, runsConfig{identifiers: &provider.PersonIdentifiers{
+		FirstName: "Anna", LastName: "Muster", CompanyDomain: "example.com",
+	}})
+
+	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
+		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.State != provider.RunQueued {
+		t.Fatalf("run is %s/%s, want queued: a last name with a company domain is one of the two "+
+			"combinations the provider declares it can match on", run.State, run.SkipReason)
+	}
+	if e.enqueued != 1 {
+		t.Errorf("%d jobs enqueued, want 1", e.enqueued)
+	}
+}
+
+// A profile link alone is the other rule, and it carries no name at all.
+func TestAProfileLinkAloneIsEnoughToBeSent(t *testing.T) {
+	e := setupRuns(t, runsConfig{identifiers: &provider.PersonIdentifiers{
+		LinkedInURL: "https://www.linkedin.com/in/someone",
+	}})
+
+	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
+		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.State != provider.RunQueued {
+		t.Fatalf("run is %s/%s, want queued: a profile link is the identifier the provider matches on "+
+			"most directly, and a subject carrying one needs no name", run.State, run.SkipReason)
 	}
 }

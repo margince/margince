@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "2fee877a3146ccbae8d02f69a4492fbdff39de88aa2e6f208b824966838de2dd"
+const JobContractHash = "cc0508aa4201841e43826e2e824e02354b75b567add7d526a6757bf30d1f5d01"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -164,6 +164,27 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"ClassifyBrain"}},
 		Args:         []ArgField{{Name: "Workspace"}},
 	},
+	"capture_confidentiality_verdict": {
+		Kind:       "capture_confidentiality_verdict",
+		GoType:     "ConfidentialityVerdictArgs",
+		Role:       Dispatcher,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "capture_confidentiality_verdict_workspace",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 10 * time.Minute},
+	},
+	"capture_confidentiality_verdict_workspace": {
+		Kind:        "capture_confidentiality_verdict_workspace",
+		GoType:      "ConfidentialityVerdictWorkspaceArgs",
+		Role:        Worker,
+		Queue:       "ai_capture",
+		Timeout:     TimeoutPolicy{Fixed: 20 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "Workspace"}},
+	},
 	"capture_counterparty_verdict": {
 		Kind:       "capture_counterparty_verdict",
 		GoType:     "CounterpartyVerdictArgs",
@@ -272,7 +293,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"VatChecker"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Requested", Scalar: true, Reason: "whether a person asked for this consultation, rather than a write having earned it. It decides whether the worker asks about a number the register has already answered, so it cannot be resolved from the organization the job names — the row says what the number is, never who wanted it re-checked. A bare true/false carrying no subject data: it names no person, and erasing the contact who pressed the button leaves nothing here to erase."}, {Name: "Workspace"}},
 	},
 	"close_date_sweep": {
 		Kind:       "close_date_sweep",
@@ -498,6 +519,29 @@ var specs = map[string]Spec{
 		OptsOwner:   OptsFanOut,
 		Args:        []ArgField{{Name: "Workspace"}},
 	},
+	"graph_watch_renew": {
+		Kind:         "graph_watch_renew",
+		GoType:       "GraphWatchArgs",
+		Role:         Dispatcher,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit:   FanOutConnection,
+		FanOutTo:     "graph_watch_renew_connection",
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{OperatorField: "GraphWatch.Interval", ScheduleWhenPositive: "GraphWatch.Interval"},
+		Registration: Registration{When: []string{"GmailRegistry.OffersGraph", "GraphWatch.NotificationURL"}},
+	},
+	"graph_watch_renew_connection": {
+		Kind:         "graph_watch_renew_connection",
+		GoType:       "GraphWatchRenewArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts:  3,
+		OptsOwner:    OptsFanOut,
+		Registration: Registration{When: []string{"GmailRegistry.OffersGraph", "GraphWatch.NotificationURL"}},
+		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Workspace"}},
+	},
 	"idempotency_retention": {
 		Kind:       "idempotency_retention",
 		GoType:     "IdempotencyRetentionArgs",
@@ -519,6 +563,16 @@ var specs = map[string]Spec{
 		OptsOwner:   OptsFanOut,
 		Args:        []ArgField{{Name: "Workspace"}},
 	},
+	"intro_expiry": {
+		Kind:        "intro_expiry",
+		GoType:      "IntroExpiryArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts: 1,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 1 * time.Hour},
+	},
 	"knowledge_ingest": {
 		Kind:      "knowledge_ingest",
 		GoType:    "KnowledgeIngestArgs",
@@ -528,6 +582,27 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{OnDemand: true},
 		Args:      []ArgField{{Name: "DocumentID"}, {Name: "Workspace"}},
+	},
+	"link_reconcile": {
+		Kind:       "link_reconcile",
+		GoType:     "LinkReconcileArgs",
+		Role:       Dispatcher,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "link_reconcile_workspace",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 24 * time.Hour},
+	},
+	"link_reconcile_workspace": {
+		Kind:        "link_reconcile_workspace",
+		GoType:      "LinkReconcileWorkspaceArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 10 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "Workspace"}},
 	},
 	"linkedin_rematch": {
 		Kind:       "linkedin_rematch",
@@ -635,6 +710,29 @@ var specs = map[string]Spec{
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{OperatorField: "PrivacyRetention.Interval", ScheduleWhenPositive: "PrivacyRetention.Interval"},
+	},
+	"provider_lookup": {
+		Kind:         "provider_lookup",
+		GoType:       "ProviderLookupArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts:  1,
+		OptsOwner:    OptsFanOut,
+		Registration: Registration{When: []string{"ProviderRuns.Registry", "ProviderRuns.Vault"}},
+		Args:         []ArgField{{Name: "Workspace"}},
+	},
+	"provider_lookup_sweep": {
+		Kind:         "provider_lookup_sweep",
+		GoType:       "ProviderLookupSweepArgs",
+		Role:         Dispatcher,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit:   FanOutWorkspace,
+		FanOutTo:     "provider_lookup",
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 1 * time.Minute},
+		Registration: Registration{When: []string{"ProviderRuns.Registry", "ProviderRuns.Vault"}},
 	},
 	"provider_run_poll": {
 		Kind:         "provider_run_poll",
@@ -782,6 +880,16 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"TranscriptProposeBrain"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "ActivityID"}, {Name: "RequestedBy"}, {Name: "TranscriptReadID"}, {Name: "Workspace"}},
+	},
+	"vcard_ingest": {
+		Kind:      "vcard_ingest",
+		GoType:    "VCardIngestArgs",
+		Role:      Worker,
+		Queue:     "ai_capture",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{OnDemand: true},
+		Args:      []ArgField{{Name: "Activity"}, {Name: "Workspace"}},
 	},
 	"voice_build": {
 		Kind:         "voice_build",

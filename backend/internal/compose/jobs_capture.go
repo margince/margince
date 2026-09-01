@@ -65,6 +65,73 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	})
 }
 
+// addGraphWatchJobs registers the Microsoft Graph subscription-renewal pair.
+//
+// Its own function rather than a branch inside the Gmail block: the two share a
+// registry and nothing else, and the Graph pass takes a SECOND condition of its
+// own — a notification URL. A subscription registered against no URL notifies
+// nobody, so a deployment that never opted into Outlook push keeps the poll.
+func addGraphWatchJobs(reg *jobRegistry, cfg JobRunnerConfig, log *slog.Logger) {
+	if !GraphWatchWillRun(cfg.GmailRegistry, cfg.GraphWatch) {
+		return
+	}
+	addDeclaredWorker[GraphWatchArgs](reg, &graphWatchWorker{
+		registry: cfg.GmailRegistry, renewWithin: cfg.GraphWatch.RenewWithin, log: log,
+	})
+	addDeclaredWorker[GraphWatchRenewArgs](reg, &graphWatchRenewWorker{
+		registry: cfg.GmailRegistry, notificationURL: cfg.GraphWatch.NotificationURL,
+	})
+}
+
+// GraphWatchWillRun reports whether this build registers the Graph
+// subscription-renewal pair.
+//
+// A NOTIFICATION URL IS NOT ENOUGH, and a connector to renew through is the
+// other half. Both workers resolve the Graph connector out of the registry, so
+// without one every renewal fails on a connector that was never registered —
+// for every Outlook connection, on every scan, forever. A pass that can only
+// fail is worse than no pass: the poll still runs either way, and the difference
+// is a fleet-wide error rate an operator has to explain.
+//
+// The worker registers Graph from ENVIRONMENT credentials alone
+// (CaptureSyncRegistry), where the Google side also resolves a stored app. So a
+// Microsoft app configured in the product reaches the api and not this role, and
+// an operator who sets the notification URL for it gets exactly that failing
+// pass.
+//
+// EXPORTED so the boot banner can ask the same question rather than restate it.
+// A banner naming a lane that did not come up is worse than no banner: it is the
+// one place an operator looks to check.
+//
+// ASKED OF THE DECLARATION, not of the fields directly. The periodic schedule
+// gates on api/jobs.yaml's registration.when through the same `registers`, so a
+// condition spelled only here would be one the scheduler does not know about —
+// and it enqueues under its own answer. That divergence does not fail loudly:
+// the rows are inserted, no worker claims them, and the lane looks idle rather
+// than broken.
+func GraphWatchWillRun(reg *capture.Registry, cfg GraphWatchConfig) bool {
+	spec, declared := jobs.SpecFor(graphWatchKind)
+	if !declared {
+		panic("compose: api/jobs.yaml does not declare " + graphWatchKind)
+	}
+	return registers(JobRunnerConfig{GmailRegistry: reg, GraphWatch: cfg}, spec.Registration)
+}
+
+// registryOffers reports whether reg holds a connector for provider.
+//
+// Asked of the registry rather than of the config that built it: what decides
+// whether a job can run is the connector it will look up, and the two have
+// already disagreed once — a stored app registers a connector no environment
+// variable names.
+func registryOffers(reg *capture.Registry, provider string) bool {
+	for _, desc := range reg.Connectors() {
+		if desc.Name == provider {
+			return true
+		}
+	}
+	return false
+}
+
 // addCapturePipelineJobs registers what surrounds the pull above: the Telegram
 // ingest that admits a message, the passes that read one already captured, and
 // the outbound send.
@@ -112,6 +179,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		addDeclaredWorker[CaptureEnrichArgs](reg, &captureEnrichWorker{pool: pool})
 		addDeclaredWorker[CaptureEnrichWorkspaceArgs](reg, &captureEnrichWorkspaceWorker{
 			enricher: NewCaptureEnricher(pool, cfg.EnrichBrain, log),
+			log:      log,
 		})
 	}
 
@@ -131,12 +199,38 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	addDeclaredWorker[CounterpartyVerdictWorkspaceArgs](reg, &counterpartyVerdictWorkspaceWorker{
 		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, log),
 	})
+	// The confidentiality verdict, registered unconditionally for a related but
+	// distinct reason: a deployment with no model bound holds every thread, and
+	// the RETIRING stage is what moves a thread that spent its attempts to a
+	// terminal `unsure` instead of leaving it claimable forever. Gating the
+	// worker on a brain would leave exactly that deployment with a backlog
+	// nothing ever ends.
+	addDeclaredWorker[ConfidentialityVerdictArgs](reg, &confidentialityVerdictWorker{pool: pool})
+	addDeclaredWorker[ConfidentialityVerdictWorkspaceArgs](reg, &confidentialityVerdictWorkspaceWorker{
+		engine: NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log),
+	})
 	// The trace sweep, registered unconditionally and deliberately so: it is
 	// what makes the 24-hour retention true, and under the trace_payloads
 	// posture that retention is a promise about message content. A deployment
 	// that composed capture at all must expire it.
 	addDeclaredWorker[CaptureTraceSweepArgs](reg, &captureTraceSweepWorker{pool: pool})
 	addDeclaredWorker[CaptureTraceSweepWorkspaceArgs](reg, &captureTraceSweepWorkspaceWorker{pool: pool})
+}
+
+// GraphWatchConfig configures the Microsoft Graph subscription-renewal pass.
+// NotificationURL is the endpoint Microsoft posts change notifications to,
+// operator token and all (empty disables the pass entirely — Outlook capture
+// stays on the poll); Interval is the scan cadence; and RenewWithin is how far
+// ahead of a subscription's deadline it is renewed.
+//
+// RenewWithin matters more here than it does for Gmail: a Graph subscription
+// lapses in under three days where a Gmail watch lasts seven, so a deployment
+// that carried Gmail's defaults across would let every Outlook mailbox go
+// quiet between scans.
+type GraphWatchConfig struct {
+	NotificationURL string
+	Interval        time.Duration
+	RenewWithin     time.Duration
 }
 
 // GmailWatchConfig configures the Gmail push-watch maintenance pass. Topic is
@@ -262,18 +356,33 @@ type gmailWatchWorker struct {
 }
 
 func (w *gmailWatchWorker) Work(ctx context.Context, _ *river.Job[GmailWatchArgs]) error {
-	due, enumErr := w.registry.DueWatches(ctx, "gmail", w.renewWithin)
+	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGmail, w.renewWithin,
+		func(ws ids.UUID, connID string) error {
+			return dispatchOne(ctx, GmailWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
+		}))
+}
+
+// dispatchDueWatches is the fleet walk both providers' watch dispatchers run:
+// every connection whose subscription is missing or nearing its deadline gets
+// ONE renewal job. The provider and the Args type are all that differ, and a
+// second copy of the walk is the copy that would stop joining the enqueue
+// error.
+func dispatchDueWatches(
+	ctx context.Context, reg *capture.Registry, provider string,
+	renewWithin time.Duration, enqueue func(ids.UUID, string) error,
+) error {
+	// Returns the bare cause: each caller is a River Work method, and the gate
+	// that keeps a raw cause out of river_job.errors reads the return AT that
+	// method — so the wrap belongs there, where a reader of the worker sees it.
+	due, enumErr := reg.DueWatches(ctx, provider, renewWithin)
 	for _, d := range due {
-		if err := dispatchOne(ctx, GmailWatchRenewArgs{
-			Workspace:    d.Workspace.UUID,
-			ConnectionID: d.ID.String(),
-		}, nil); err != nil {
+		if err := enqueue(d.Workspace.UUID, d.ID.String()); err != nil {
 			// A refused enqueue means this connection's watch is never renewed,
 			// so it fails the DISPATCHER rather than being logged past.
 			enumErr = errors.Join(enumErr, fmt.Errorf("enqueueing the watch renewal for connection %s: %w", d.ID, err))
 		}
 	}
-	return jobs.FaultContext(ctx, enumErr)
+	return enumErr
 }
 
 // GmailWatchRenewArgs renews ONE connection's push watch. The workspace travels
@@ -299,13 +408,87 @@ type gmailWatchRenewWorker struct {
 }
 
 func (w *gmailWatchRenewWorker) Work(ctx context.Context, job *river.Job[GmailWatchRenewArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.registry, job.Args, job.Args.ConnectionID, w.topic))
+}
+
+// renewOneWatch is the body both providers' renewal workers run: bind the
+// tenant the job carries, read the connection id it names, and let the registry
+// perform the provider call and advance watch_expires_at.
+//
+// The topic is whatever that provider's Watch takes — a Pub/Sub topic for
+// Gmail, a notification URL for Graph — and this never looks inside it.
+//
+// Returns the bare cause, for the reason dispatchDueWatches does.
+func renewOneWatch(
+	ctx context.Context, reg *capture.Registry, args jobs.WorkspaceScoped, connectionID, topic string,
+) error {
+	wsCtx, err := workspaceJobCtx(ctx, args)
 	if err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
-	connID, err := ids.Parse(job.Args.ConnectionID)
+	connID, err := ids.Parse(connectionID)
 	if err != nil {
-		return jobs.FaultContext(ctx, fmt.Errorf("gmail_watch_renew_connection: connection id: %w", err))
+		return fmt.Errorf("%s: connection id: %w", args.Kind(), err)
 	}
-	return jobs.FaultContext(ctx, w.registry.RenewWatch(wsCtx, connID, w.topic))
+	return reg.RenewWatch(wsCtx, connID, topic)
+}
+
+// GraphWatchArgs schedules one subscription-maintenance pass: register a Graph
+// change-notification subscription for every active Outlook connection that has
+// none yet, and renew any nearing its deadline. Scheduled only when a
+// notification URL is configured; without one, no subscription job runs and
+// Outlook capture stays on the poll.
+type GraphWatchArgs struct{}
+
+// Kind is the stable job identifier River persists in river_job.
+func (GraphWatchArgs) Kind() string { return graphWatchKind }
+
+// graphWatchKind is the kind string, named so the registration can be read from
+// api/jobs.yaml without constructing the args — a dispatcher literal outside
+// periodicFor is what jobdispatcherenqueue_test refuses, and rightly: building
+// one to ask a question looks exactly like building one to enqueue it.
+const graphWatchKind = "graph_watch_renew"
+
+// FleetWide marks this a dispatcher: it enumerates and enqueues, and does no
+// tenant work of its own (jobs.FleetWide).
+func (GraphWatchArgs) FleetWide() {}
+
+// graphWatchWorker is the Graph twin of gmailWatchWorker, on the same walk.
+type graphWatchWorker struct {
+	registry    *capture.Registry
+	renewWithin time.Duration
+	log         *slog.Logger
+}
+
+func (w *graphWatchWorker) Work(ctx context.Context, _ *river.Job[GraphWatchArgs]) error {
+	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGraph, w.renewWithin,
+		func(ws ids.UUID, connID string) error {
+			return dispatchOne(ctx, GraphWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
+		}))
+}
+
+// GraphWatchRenewArgs renews ONE connection's subscription. The workspace
+// travels with it because capture_connection reads are workspace-predicated and
+// a job carries no session.
+type GraphWatchRenewArgs struct {
+	Workspace    ids.UUID `json:"workspace_id"`
+	ConnectionID string   `json:"connection_id"`
+}
+
+// Kind is the stable job identifier River persists in river_job.
+func (GraphWatchRenewArgs) Kind() string { return "graph_watch_renew_connection" }
+
+// WorkspaceID binds this renewal to its tenant (jobs.WorkspaceScoped).
+func (a GraphWatchRenewArgs) WorkspaceID() ids.UUID { return a.Workspace }
+
+// graphWatchRenewWorker renews one connection's subscription and advances
+// watch_expires_at. A revoked mailbox fails its OWN row, where a pass that
+// logged and skipped would be recorded as completed.
+type graphWatchRenewWorker struct {
+	registry        *capture.Registry
+	notificationURL string
+}
+
+func (w *graphWatchRenewWorker) Work(ctx context.Context, job *river.Job[GraphWatchRenewArgs]) error {
+	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.registry, job.Args, job.Args.ConnectionID, w.notificationURL))
 }

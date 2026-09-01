@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CalendarDays,
   CheckSquare,
+  FileText,
   Link as LinkIcon,
   Mail,
   MapPin,
@@ -12,6 +13,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -27,6 +29,7 @@ import type { MessageKey } from "../i18n/en";
 import { throwProblem, useSorMode } from "./common";
 import { ComposeModal } from "./compose";
 import { ConsentSection } from "./consent";
+import { LogActivityAction } from "./logactivity";
 import {
   hasCommercial,
   hasCommitments,
@@ -36,6 +39,7 @@ import {
   PersonCommitmentsCard,
   PersonMattersCard,
 } from "./personcards";
+import { EnrichedFields } from "./personcorrections";
 import {
   PersonComposer,
   PersonMeetingBrief,
@@ -102,7 +106,14 @@ function composerIntentOf(
   t: ReturnType<typeof useT>,
 ): string {
   const key = COMPOSER_INTENT_KEYS[prefill?.intent ?? ""];
-  return key ? t(key) : "";
+  if (!key) {
+    return "";
+  }
+  // The promise itself rides in `subject`. Without it, a rung firing on one of
+  // several open commitments asks the composer to deliver "what we promised"
+  // and leaves the drafter to guess which.
+  const subject = prefill?.subject?.trim();
+  return subject ? `${t(key)}: ${subject}` : t(key);
 }
 
 /**
@@ -318,6 +329,9 @@ export function PersonPageV2({
           navigate({ screen: "deals", id: destination.entity_id });
         }
         return;
+      case "activity_log":
+        setDrawer("activity_log");
+        return;
       default:
         // `task` has no surface on this page yet. Doing nothing is the honest
         // outcome; inventing a navigation would take the reader somewhere they
@@ -343,6 +357,7 @@ export function PersonPageV2({
               onWrite={() => openComposer("")}
               onWriteMail={() => setDrawer("mail")}
               onResearch={() => setDrawer("research")}
+              onLogActivity={() => setDrawer("activity_log")}
             />
             <PageAsideToggle />
           </>
@@ -435,6 +450,9 @@ export function PersonPageV2({
                 directly. It renders on a thin record too: what you may send is
                 a live fact whether or not anyone has written to them yet. */}
             <ConsentSection personId={id} />
+            {/* The fields Margince read off a signature or a card, and the
+                one place a reader can confirm or correct them. */}
+            <EnrichedFields personId={id} view={view.data} />
           </div>
         )}
 
@@ -470,6 +488,16 @@ export function PersonPageV2({
           onClose={() => setDrawer(null)}
           projects={liveProjects(view.data.projects)}
         />
+        {/* Mounted only while open, so the form starts fresh each time and the
+            day it offers is today's, not the day the drawer was first built. */}
+        {drawer === "activity_log" && (
+          <LogActivityAction
+            entityType="person"
+            entityId={id}
+            openOnMount
+            onClose={() => setDrawer(null)}
+          />
+        )}
       </RecordView>
     </div>
   );
@@ -487,6 +515,7 @@ type Drawer =
   | "composer"
   | "mail"
   | "research"
+  | "activity_log"
   | { kind: "meeting"; activityId: string }
   | null;
 
@@ -668,6 +697,7 @@ function PersonActions({
   onWrite,
   onWriteMail,
   onResearch,
+  onLogActivity,
 }: Readonly<{
   view: Person360;
   consentAllows: boolean;
@@ -676,8 +706,14 @@ function PersonActions({
   onWrite: () => void;
   onWriteMail: () => void;
   onResearch: () => void;
+  onLogActivity: () => void;
 }>): ReactNode {
   const t = useT();
+  // useCanWrite, not useCan: the form issues a POST, and a read seat is
+  // refused before RBAC is consulted. The button stays on the page and says
+  // why it will not press, so a reader can tell "not mine to do" from "this
+  // build has no such button".
+  const canLog = useCanWrite("activity", "create");
   // The transports the composer would offer, read here so the button NAMES
   // what pressing it does. The same reachability the drawer resolves: a label
   // computed from anything else is a promise the composer then breaks.
@@ -723,9 +759,19 @@ function PersonActions({
       />
       {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
           squaring this one would name the opposite of what it does. */}
-      <Button onClick={() => navigate({ screen: "today" })}>
+      <Button onClick={() => navigate({ screen: "worklist" })}>
         <CheckSquare size={15} aria-hidden="true" />{" "}
         {t("person.action.addTask")}
+      </Button>
+      {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
+          This is the standing way in; the moment card offers the same form
+          when its rung decides logging is the thing to do next. */}
+      <Button
+        disabled={!canLog}
+        reason={canLog ? undefined : t("person.action.logRefused")}
+        onClick={onLogActivity}
+      >
+        <FileText size={15} aria-hidden="true" /> {t("log.title")}
       </Button>
       {/* A real menu. This was a button labelled "More actions" that navigated
           to the timeline tab — the same place the Call button went — so the one

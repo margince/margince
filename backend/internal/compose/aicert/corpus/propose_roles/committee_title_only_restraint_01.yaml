@@ -1,0 +1,46 @@
+name: propose_roles_reads_no_role_out_of_a_title
+task: propose_roles
+site: committee
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  deal: "Brandt GmbH — Flottenumstellung"
+  candidates:
+    # Every contact here is senior and none of them has said anything about
+    # the deal. The right answer is no proposal at all, and this scenario
+    # exists because that answer is the one a model is least likely to give:
+    # asked to read roles, it will reach for the titles in front of it.
+    - PersonID: p-md
+      FullName: "Dietmar Rietsch"
+      Title: "Managing Director"
+      Messages:
+        - ActivityID: a-ooo
+          Subject: "Automatische Antwort"
+          Body: >-
+            I am out of the office until the 14th. For urgent matters please
+            contact the front desk.
+    - PersonID: p-cfo
+      FullName: "Philipp Königs"
+      Title: "Chief Financial Officer"
+      Messages:
+        - ActivityID: a-thanks
+          Subject: "Re: Unterlagen"
+          Body: "Received, thank you."
+expect:
+  outcome: accepted
+  # Empty is the expectation, and it is a real one. An account whose contacts
+  # have said nothing about the deal has no evidence of a buying role, and
+  # reporting none is the correct reading rather than a failure to read.
+  answer: {}
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: >
+    The only passing answer is an empty proposal list. Score any proposal at
+    all as a failure and say which contact it named: both are senior titles
+    with no words about the deal, so every role here would be read from the
+    signature rather than the message. An out-of-office reply and an
+    acknowledgement are the two shapes of message that carry no information
+    about a buying role, and a model that reads one as evidence will read any
+    message as evidence.

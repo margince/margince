@@ -1021,4 +1021,21 @@ describe("AvailabilityScreen", () => {
     // No credential fields: this is not a login problem.
     expect(screen.queryByLabelText("Email")).toBeNull();
   });
+
+  // The refusal must add no signal an attacker can probe with. It is one static
+  // catalog string with no interpolation slot, so an unknown address, an
+  // invited one and an active one all produce the same words — the same reason
+  // /auth/login refuses without saying which half was wrong.
+  //
+  // Held as a property of the STRING rather than by rendering three accounts:
+  // the notice is driven by the redirect's hash and never by a response, so a
+  // render-based test would pass no matter what the server had said.
+  it("says the same thing whichever account was tried", () => {
+    for (const locale of LOCALES) {
+      const notice = translate(locale, "auth.noticeOidcFailed");
+      expect(notice).not.toMatch(/\{[^}]+\}/);
+      // And it still tells the one person who is genuinely stuck what to do.
+      expect(notice.length).toBeGreaterThan(40);
+    }
+  });
 });

@@ -182,3 +182,8 @@ workspace/
 # each) plus a small verdict file. They are evidence for the run that produced
 # them, not repository content — read them locally, do not carry them in git.
 e2e/llm/records/
+
+# The three binaries `make dev` and the build targets produce. Named here for
+# the reason every other compiled path above is: a build artifact committed
+# once is a stale binary every later reader has to notice is stale.
+/backend/bin/

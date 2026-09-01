@@ -8,6 +8,7 @@ import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { CaptureNotice } from "./capture-notice";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
 
 // The IMAP connect flavor (RC-8/Task 6): the credential providers' first-
@@ -157,6 +158,10 @@ export function ImapConnectForm({
           });
         }}
       >
+        {/* Before the fields, not after: a person connecting a mailbox from
+            Settings is told the same thing onboarding tells them, and reading
+            it after typing a password is reading it too late. */}
+        <CaptureNotice />
         <Field label={t("connectors.imapHost")} required>
           {(control) => (
             <TextInput

@@ -25,30 +25,34 @@ export type ConnectorStatus =
   | CaptureConnection["status"]
   | ChannelConnection["status"];
 
-// The one scope that grants sending today. The server pre-flights a send
-// against this same string (comms.SendScopeFor), so the badge below and the
-// 422 it exists to pre-empt cannot disagree about which mailbox may send.
-const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+/** The scope each sending provider's grant must carry, keyed by provider.
+ *
+ *  A DELIBERATE MIRROR of the server's `comms.SendScopeFor`, which pre-flights
+ *  a send against these same strings — so the badge below and the 422 it exists
+ *  to pre-empt cannot disagree about which mailbox may send. A table rather
+ *  than a chain of comparisons, because there are now two vendors and the way
+ *  a chain fails is silent: a provider missing from it is never badged, and its
+ *  owner discovers the missing grant from a refused send instead. */
+const SEND_SCOPES: Readonly<Record<string, string>> = {
+  gmail: "https://www.googleapis.com/auth/gmail.send",
+  graph: "Mail.Send",
+};
 
 /** Whether this connection captures mail it will never be allowed to send.
- *  Google will not widen an existing refresh token, so every mailbox
- *  connected before sending shipped holds read-only access until its owner
- *  reconnects — a fact the connection's `status` cannot express, since it is
- *  genuinely connected and genuinely capturing. Only the granted scopes say
- *  it, which is why this reads them rather than the status.
+ *  Neither Google nor Microsoft will widen an existing refresh token, so every
+ *  mailbox connected before sending shipped for its vendor holds read-only
+ *  access until its owner reconnects — a fact the connection's `status` cannot
+ *  express, since it is genuinely connected and genuinely capturing. Only the
+ *  granted scopes say it, which is why this reads them rather than the status.
  *
- *  Gmail is the only provider that sends at all (one `if`, matching the
- *  server: a registry with a single entry is an abstraction with no second
- *  caller). A calendar or IMAP connection is not "cannot send" — it is not a
- *  sending mailbox in the first place, and badging it would be a refusal
- *  nobody could act on. */
+ *  A provider absent from the table above is not "cannot send" — it is not a
+ *  sending mailbox in the first place (a calendar, an IMAP box), and badging it
+ *  would be a refusal nobody could act on. */
 export function missingSendGrant(
   connection: Pick<CaptureConnection, "provider" | "scopes">,
 ): boolean {
-  return (
-    connection.provider === "gmail" &&
-    !connection.scopes.includes(GMAIL_SEND_SCOPE)
-  );
+  const required = SEND_SCOPES[connection.provider];
+  return required !== undefined && !connection.scopes.includes(required);
 }
 
 /** Each contract status gets its own Badge tone. Collapsing reauth_required

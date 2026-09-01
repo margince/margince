@@ -29,7 +29,9 @@ func TestCaptureRegistryComposition(t *testing.T) {
 	// constructor that ships. Two others used to stand in front of it — one
 	// gating on the environment alone — and a case driving those proved the
 	// rule of a function nothing called.
-	stored := func(context.Context) (string, string, bool, error) { return "id", "secret", true, nil }
+	stored := func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "id", ClientSecretRef: "secret"}, true, nil
+	}
 
 	t.Run("the deployment's pair registers the connector", func(t *testing.T) {
 		assertRegisters(t, newCaptureRegistryWithGoogle(nil, nil, nil, gmailApp, CaptureConfig{}), "gmail", "gcal")

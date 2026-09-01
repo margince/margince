@@ -645,3 +645,27 @@ describe("QueryStates", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
+
+// A tool's identifier is not its name.
+//
+// The wire spells a job the way the code does, and the live Worklist printed
+// "Automated by capture_counterparty_verdict" at a reader — the plumbing,
+// offered as information.
+describe("what a tool is called on screen", () => {
+  it("writes a tool's name in words rather than as an identifier", () => {
+    const provenance = provenanceOf("agent:capture_counterparty_verdict");
+
+    expect(provenance).toEqual({
+      kind: "agent",
+      agent: "capture counterparty verdict",
+    });
+  });
+
+  it("still says nothing where the id has no name in it", () => {
+    const provenance = provenanceOf(
+      "agent:01a05500-0000-7000-8000-000000000001",
+    );
+
+    expect(provenance).toEqual({ kind: "agent", agent: undefined });
+  });
+});

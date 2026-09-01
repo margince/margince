@@ -63,28 +63,35 @@ var railOwners = map[Task]string{
 
 	TaskEmbeddings: SourceNoOccurrence,
 
-	TaskBriefRanking:               SourceRouter,
-	TaskCaptureClassify:            SourceRouter,
-	TaskCaptureCounterpartyVerdict: SourceRouter,
-	TaskCertJudge:                  SourceRouter,
-	TaskWeeklyReview:               SourceRouter,
-	TaskColdStart:                  SourceRouter,
-	TaskCorpusAsk:                  SourceRouter,
-	TaskDealHealth:                 SourceRouter,
-	TaskDraftReply:                 SourceRouter,
-	TaskEnrich:                     SourceRouter,
-	TaskGrowthFit:                  SourceRouter,
-	TaskNlSearch:                   SourceRouter,
-	TaskOfferDraft:                 SourceRouter,
-	TaskRateExtract:                SourceRouter,
-	TaskSignalExtract:              SourceRouter,
-	TaskSiteExtract:                SourceRouter,
-	TaskSiteFactExtract:            SourceRouter,
-	TaskSiteTriage:                 SourceRouter,
-	TaskSummarize:                  SourceRouter,
-	TaskTranscript:                 SourceRouter,
-	TaskTranscriptPropose:          SourceRouter,
-	TaskVoiceBuild:                 SourceRouter,
+	// A planned task: nothing calls it yet, and when something does the call
+	// will be one interactive completion the router reports after the fact —
+	// there is no durable row to say queued and running for a read a human
+	// waits on.
+	TaskProposeRoles: SourceRouter,
+
+	TaskBriefRanking:                  SourceRouter,
+	TaskCaptureClassify:               SourceRouter,
+	TaskCaptureConfidentialityVerdict: SourceRouter,
+	TaskCaptureCounterpartyVerdict:    SourceRouter,
+	TaskCertJudge:                     SourceRouter,
+	TaskWeeklyReview:                  SourceRouter,
+	TaskColdStart:                     SourceRouter,
+	TaskCorpusAsk:                     SourceRouter,
+	TaskDealHealth:                    SourceRouter,
+	TaskDraftReply:                    SourceRouter,
+	TaskEnrich:                        SourceRouter,
+	TaskGrowthFit:                     SourceRouter,
+	TaskNlSearch:                      SourceRouter,
+	TaskOfferDraft:                    SourceRouter,
+	TaskRateExtract:                   SourceRouter,
+	TaskSignalExtract:                 SourceRouter,
+	TaskSiteExtract:                   SourceRouter,
+	TaskSiteFactExtract:               SourceRouter,
+	TaskSiteTriage:                    SourceRouter,
+	TaskSummarize:                     SourceRouter,
+	TaskTranscript:                    SourceRouter,
+	TaskTranscriptPropose:             SourceRouter,
+	TaskVoiceBuild:                    SourceRouter,
 }
 
 // railNoOccurrenceReasons says why a task is a step rather than an occurrence.

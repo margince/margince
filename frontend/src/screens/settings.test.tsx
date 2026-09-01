@@ -307,10 +307,10 @@ describe("SettingsScreen restructured entries", () => {
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
-    // A passport is lent by the HUMAN who minted it, so the surface that mints
+    // A passport is minted by the HUMAN who holds it, so the surface that mints
     // and lists one opens for a seat holding no org grant and no writing
     // licence at all — gating it behind the org group would have meant only
-    // admins could lend.
+    // admins could mint one.
     expect(
       await screen.findByRole("heading", { name: "Agent passports" }),
     ).toBeTruthy();
@@ -499,9 +499,9 @@ describe("installation-wide cards live under the admin group", () => {
     return walk(tabContent(id));
   }
 
-  it("puts the Google app on an admin entry, not beside a person's own connections", () => {
+  it("puts the vendor OAuth apps on an admin entry, not beside a person's own connections", () => {
     const hosts = SETTINGS_TABS.filter((tab) =>
-      tabRenders(tab.id, "GoogleAppCard"),
+      tabRenders(tab.id, "OAuthAppCard"),
     );
     expect(hosts).toHaveLength(1);
     expect(hosts[0]?.group).toBe("admin");

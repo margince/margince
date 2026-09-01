@@ -12,7 +12,8 @@ package people
 // human click writes.
 //
 // Three outcomes per card, and the third is the one that matters. An exact
-// match fills only what is empty; no match creates; and a card that merely
+// match applies what the card states by recency, the way a signature does; no
+// match creates; and a card that merely
 // LOOKS like somebody is returned for a human to judge rather than merged.
 // Guessing there is how one person becomes two records, or two people become
 // one, and neither is recoverable by the reader who imported the file.
@@ -22,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -36,14 +38,21 @@ import (
 // vcardSource is the provenance every row this import writes carries.
 const vcardSource = "vcard_import"
 
+// vcardFieldStated marks a field this import answered. The image says WHICH
+// field moved and never what it moved to: audit_log is append-only, and this
+// path writes a phone number and a postal address off a file somebody handed
+// over.
+const vcardFieldStated = "stated"
+
 // VCardOutcome is what became of one card.
 type VCardOutcome string
 
 const (
 	// VCardCreated means nobody matched, so the card became a person.
 	VCardCreated VCardOutcome = "created"
-	// VCardUpdated means an exact match, filled only where it was empty. A value a
-	// human typed is never overwritten by a card.
+	// VCardUpdated means an exact match, updated by recency: a card is the
+	// contact stating their own details, so what it says replaces what the
+	// record holds and the replaced value is kept for one click of undo.
 	VCardUpdated VCardOutcome = "updated"
 	// VCardNeedsReview means something close enough to be the same person and not
 	// close enough to be sure. The card is not written; the candidate is
@@ -73,6 +82,35 @@ type VCardResult struct {
 // find and fix the one row before any of it lands is a reader who gives up. The
 // per-card outcome list is what makes that legible.
 func (s *Store) ImportVCards(ctx context.Context, entries []VCardEntry) ([]VCardResult, error) {
+	return s.importCardsFrom(ctx, entries, ids.Nil)
+}
+
+// ImportVCardsFromMessage imports cards that arrived as an attachment, holding
+// every card's write against the message they came from.
+//
+// The difference from ImportVCards is the reason the second entry point exists:
+// a browser upload is a human holding a file, and no source row's audience can
+// change under it. A MAILED card has one, and the gap between reading the
+// attachment and writing the person is real — an object-store fetch per
+// attachment, then a transaction per card. A narrowing, a restriction or an
+// erasure committing in that gap would otherwise land the card anyway, and what
+// lands is a name, a number and a postal address on a record every seat reads,
+// which the narrowing does not reach.
+//
+// The source is re-read INSIDE each card's own transaction, as the first
+// statement there. A check taken before the transaction is a check with a gap
+// after it; this one holds for as long as the write it guards.
+func (s *Store) ImportVCardsFromMessage(ctx context.Context, entries []VCardEntry, source ids.UUID) ([]VCardResult, error) {
+	// A zero id would silently import with no guard at all, which is the one
+	// outcome this entry point exists to prevent — so it refuses rather than
+	// falling back to the unguarded path.
+	if source.IsZero() {
+		return nil, errors.New("people: importing cards from a message that names no message")
+	}
+	return s.importCardsFrom(ctx, entries, source)
+}
+
+func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, source ids.UUID) ([]VCardResult, error) {
 	// Both grants, up front. The import CREATES people and it UPDATES the ones
 	// a card already matches, and those are two different permissions: the
 	// create grant that lets somebody start an import says nothing about
@@ -89,7 +127,7 @@ func (s *Store) ImportVCards(ctx context.Context, entries []VCardEntry) ([]VCard
 	}
 	results := make([]VCardResult, 0, len(entries))
 	for i, entry := range entries {
-		result, err := s.importOneVCard(ctx, i, entry)
+		result, err := s.importOneVCard(ctx, i, entry, source)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +136,7 @@ func (s *Store) ImportVCards(ctx context.Context, entries []VCardEntry) ([]VCard
 	return results, nil
 }
 
-func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry) (VCardResult, error) {
+func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry, source ids.UUID) (VCardResult, error) {
 	result := VCardResult{Index: index, FullName: strings.TrimSpace(entry.FullName)}
 	if result.FullName == "" {
 		result.Outcome = VCardSkipped
@@ -107,6 +145,9 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry)
 	}
 
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// The dedupe first, and it takes no row lock — it is a read, so it
+		// orders nothing. What comes after it is ordered, and strictly: the
+		// SUBJECT before the source, on every arm.
 		decision, err := DedupePerson(ctx, tx, vcardCandidate(entry))
 		if err != nil {
 			return err
@@ -121,22 +162,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry)
 			// Reported as a skip rather than skipped silently: an import that
 			// quietly leaves one card out is an import nobody can audit, and
 			// the reader can act on "you may not write this one".
-			if err := auth.EnsureWritableLive(ctx, tx, entityPerson, decision.PersonID.UUID); err != nil {
-				if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-					// Deliberately says nothing about WHAT was matched. The two
-					// refusals are one sentence because telling them apart
-					// would confirm that the address on this card belongs to a
-					// real contact in this workspace, to somebody who may not
-					// see that contact.
-					result.Outcome = VCardSkipped
-					result.Reason = "this card could not be written here"
-					return nil
-				}
-				return fmt.Errorf("probing write authority over the matched person: %w", err)
-			}
-			result.Outcome = VCardUpdated
-			result.PersonID = &decision.PersonID
-			return s.fillFromVCard(ctx, tx, decision.PersonID, entry)
+			return s.updateMatchedByCard(ctx, tx, decision.PersonID, entry, source, &result)
 		case DecisionFuzzyReview, DecisionNameCollisionReview:
 			// Named, not merged, and not created either: creating beside a
 			// near-match is how a file of forty cards quietly doubles a
@@ -147,6 +173,20 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry)
 			// makes them able to find a duplicate at all — so handing the id
 			// back unchecked would turn an upload into a lookup for records
 			// outside the caller's scope.
+			// The source, before the candidate is even named. This arm writes
+			// nothing itself, but what it RETURNS becomes a durable proposal
+			// carrying the whole card — so a narrowed message would reach a
+			// review queue instead of a person record, which is the same leak
+			// in a different table.
+			narrowed, err := sourceIsNarrowed(ctx, tx, source)
+			if err != nil {
+				return err
+			}
+			if narrowed {
+				result.Outcome = VCardSkipped
+				result.Reason = vcardSourceNarrowed
+				return nil
+			}
 			result.Outcome = VCardNeedsReview
 			if err := auth.EnsureVisible(ctx, tx, entityPerson, decision.PersonID.UUID); err != nil {
 				if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -158,16 +198,16 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry)
 			result.PersonID = &decision.PersonID
 			return nil
 		default:
-			person, err := s.CreatePersonTx(ctx, tx, personFromVCard(entry))
-			if err != nil {
-				return err
-			}
-			created := ids.From[ids.PersonKind](ids.UUID(person.Id))
-			result.Outcome = VCardCreated
-			result.PersonID = &created
-			return s.attachVCardEmployer(ctx, tx, created, entry)
+			return s.createFromCard(ctx, tx, entry, source, &result)
 		}
 	})
+	// The create arm signals a refusal by failing its transaction, because the
+	// person it had to mint before it could take the source lock must not
+	// survive. The outcome it filled in is the answer; the error is only how the
+	// rollback was reached.
+	if errors.Is(err, errCardSourceNarrowed) {
+		return result, nil
+	}
 	if err != nil {
 		return VCardResult{}, fmt.Errorf("people: importing card %d: %w", index+1, err)
 	}
@@ -195,6 +235,22 @@ func vcardCandidate(entry VCardEntry) PersonCandidate {
 	return candidate
 }
 
+// ValidateVCardContacts answers whether a reviewed card's addresses and
+// numbers are ones the create will accept, without writing anything.
+//
+// It asks by BUILDING the create's own input and running the create's own
+// parser over it, rather than restating the rules: a second copy of "what is
+// a valid number here" is the thing that drifts, and the whole point of
+// asking early is that the answer matches what the writer will say.
+//
+// Nothing is normalised for the caller. The parse mutates the input it is
+// given, and the input here is built fresh and thrown away — the proposal on
+// the row is left exactly as the reviewer sees it.
+func ValidateVCardContacts(entry VCardEntry) error {
+	person := personFromVCard(entry)
+	return parsePersonContacts(person.Emails, person.Phones)
+}
+
 func personFromVCard(entry VCardEntry) CreatePersonInput {
 	person := CreatePersonInput{
 		FullName: strings.TrimSpace(entry.FullName),
@@ -203,8 +259,14 @@ func personFromVCard(entry VCardEntry) CreatePersonInput {
 	if title := strings.TrimSpace(entry.Title); title != "" {
 		person.Title = &title
 	}
-	if url := strings.TrimSpace(entry.URL); url != "" {
-		person.Social = map[string]any{profileURLField: url}
+	// Only a LinkedIn URL goes in the social slot, whose key IS "linkedin". A
+	// card's URL is usually the company site, and filing that here showed a
+	// company's home page as the person's LinkedIn profile. The website lands
+	// on the profile-field sidecar instead, by the same split the update path
+	// makes — one rule, so which outcome a card gets cannot change what it
+	// means.
+	if u := strings.TrimSpace(entry.URL); u != "" && isLinkedinURL(u) {
+		person.Social = map[string]any{profileURLField: u}
 	}
 	// The card's postal address, as the one line it was reduced to. Parsing a
 	// field and then dropping it is the quieter defect: a reader who sees an
@@ -292,29 +354,58 @@ func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*id
 }
 
 // fillFromVCard writes the card's stated fields onto a person who already
-// exists, filling only what is empty.
+// exists, by the same recency rule the signature pass obeys.
 //
-// Modelled on ApplySitePersonFields, and for the same reason: a human's own
-// entry outranks anything a machine read or a file stated, so a value already
-// on the record stays. What differs is that the human pressed the button, so
-// this writes rather than staging.
+// A card is the contact stating their own details, exactly as a signature is,
+// so it goes through the writer they now share. It used to fill only blanks and
+// only three fields, which meant a handed-over card could not correct a number
+// that had changed — and whether a stale value got fixed depended on whether
+// the details arrived by mail or on paper.
+//
+// The card's own date is when it was handed over, which is now: unlike a mail,
+// a .vcf carries no timestamp of its own, and the moment a human chose to
+// import it is the most honest thing available. That also makes a card the
+// newest statement on the record, which is the right answer — somebody is
+// holding it and typing it in.
 func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, personID ids.PersonID, entry VCardEntry) error {
-	fields := SitePersonFields{
-		Name:        strings.TrimSpace(entry.FullName),
-		Role:        strings.TrimSpace(entry.Title),
-		LinkedinURL: strings.TrimSpace(entry.URL),
-		// The card itself is the evidence, and there is no page to quote: the
-		// snippet is what the card stated, which is what an Art. 15 answer has
-		// to be able to show.
-		EvidenceSnippet: vcardEvidence(entry),
-		SourceURL:       vcardSource,
-	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	sourceRef := vcardSource
-	applied, previous, values, err := fillSitePersonFields(ctx, tx, personID, sourceRef, by, vcardSource, fields)
+	// The card itself is the evidence, and there is no page to quote: the
+	// snippet is what the card stated, which is what an Art. 15 answer has to
+	// be able to show.
+	evidence := vcardEvidence(entry)
+	// The card's own REV when it states one it can be read from, so importing
+	// the same file twice states the same thing twice. Dated from the clock
+	// instead, a re-upload would be a NEWER statement than everything since it,
+	// and a reader re-uploading a file they were unsure landed would put back a
+	// detail a signature had already corrected.
+	//
+	// A card with no REV, an unreadable one, or one dated in the FUTURE takes
+	// the import's own clock — the behaviour every card had before this. The
+	// future case is the security-relevant one and the check below says why.
+	card := observedCard{
+		Entry: entry, Evidence: evidence, SourceRef: vcardSource,
+		Source: vcardSource, CapturedBy: by,
+	}
+	// A card's REV is written by whoever exported it, so it is attacker-supplied
+	// like every other field on the card — and unlike the others it decides
+	// what this card OUTRANKS. A REV in 2099 would win against every statement
+	// the contact ever makes afterwards, permanently, from one file somebody
+	// mailed in. A future date is therefore not read as a date: the import
+	// falls back to its own clock, which is exactly the answer a card with no
+	// REV already gets.
+	if entry.Revised != nil {
+		var now time.Time
+		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
+			return fmt.Errorf("people: dating the card against the clock: %w", err)
+		}
+		if !entry.Revised.After(now) {
+			card.ObservedAt = *entry.Revised
+		}
+	}
+	applied, err := applyObservedCard(ctx, tx, personID, card)
 	if err != nil {
 		return err
 	}
@@ -324,6 +415,17 @@ func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, personID ids.Perso
 		// report a write that did not happen.
 		return nil
 	}
+	// Named, not quoted, on both sides. This writes a phone number and a
+	// postal address off a file somebody handed over, and audit_log is
+	// append-only — a value placed in an image outlives the erasure that
+	// clears the record it describes.
+	previous := map[string]any{}
+	values := map[string]any{}
+	for _, f := range applied {
+		previous[f] = nil
+		values[f] = vcardFieldStated
+	}
+	sourceRef := vcardSource
 	// The source travels in EVIDENCE rather than in the after-image: an
 	// after-image key projects as a field change in the record's own history,
 	// and "source" is not a field of a person.

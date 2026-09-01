@@ -13,10 +13,12 @@ package activities
 
 import (
 	"context"
-	"fmt"
 	"html"
 	"net/url"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // UnsubscribeLinker resolves a recipient address to their preference-center
@@ -122,23 +124,67 @@ type sendDeliverability struct {
 	// recorded is the body the timeline row keeps and every authenticated
 	// read of it serves: the same message with the capability redacted.
 	recorded string
-	// unsubURL and manageURL are the same two links the plain footer carries,
-	// kept so the markup alternative can render them as anchors from the SAME
-	// token. Rebuilding them from a second token would let the two parts of one
-	// message offer different unsubscribe capabilities.
-	unsubURL  string
-	manageURL string
+	// links are the three destinations this send offers, kept so the markup
+	// alternative renders anchors from the SAME token. Rebuilding them from a
+	// second token would let the two parts of one message offer different
+	// unsubscribe capabilities.
+	links unsubscribeLinks
+	// words are the footer's labels in the message's own language.
+	words mailcopy.Copy
+}
+
+// unsubscribeLinks is every destination one send derives from ONE token.
+//
+// Held by: TestOneSendDerivesEveryUnsubscribeDestination (backend/gates/preferencecentrewriters_test.go)
+//
+// Three, not one, because three different callers press them and they need
+// different shapes. Collapsing them is what broke: the visible "Unsubscribe"
+// link pointed at the machine endpoint, which is POST-only by design, so a
+// human clicking it in a mail client got 405 — and the visible "Manage
+// preferences" link pointed at the JSON API, which answered a recipient with
+// a wall of JSON. Built by one function so the three cannot name different
+// tokens, purposes or languages.
+type unsubscribeLinks struct {
+	// oneClick is the RFC 8058 endpoint, for the List-Unsubscribe header and
+	// NOTHING else. A mailbox provider POSTs it without a browser.
+	oneClick string
+	// unsubscribe is the page a person lands on, which asks before it acts:
+	// a GET must never withdraw, because mail scanners and link prefetchers
+	// follow links in a mailbox without a human involved.
+	unsubscribe string
+	// manage is the preference centre, where every purpose can be seen.
+	manage string
+}
+
+// unsubscribeLinksFor builds all three from one token.
+//
+// The two visible links are hash routes: the SPA already serves its public
+// surfaces that way, static hosting needs no server fallback for them, and
+// the token stays out of ordinary web-server access logs until the page
+// deliberately calls the API with it.
+func unsubscribeLinksFor(baseURL, token, purposeKey string, lang textlang.Lang) unsubscribeLinks {
+	purpose := strings.ToLower(strings.TrimSpace(purposeKey))
+	query := "?lang=" + url.QueryEscape(string(lang))
+	return unsubscribeLinks{
+		oneClick: baseURL + "/v1/public/preferences/" + url.PathEscape(token) +
+			"/unsubscribe?purpose=" + url.QueryEscape(purpose),
+		unsubscribe: baseURL + "/#/unsubscribe/" + url.PathEscape(token) + "/" +
+			url.PathEscape(purpose) + query,
+		manage: baseURL + "/#/preferences/" + url.PathEscape(token) + query,
+	}
 }
 
 // htmlFooter renders the unsubscribe links as markup, for the alternative part.
 // Empty when this send carries no unsubscribe surface, which is what a
 // transactional purpose has: nothing to unsubscribe from and no footer.
 func (d sendDeliverability) htmlFooter() string {
-	if d.unsubURL == "" {
+	if d.links.unsubscribe == "" {
 		return ""
 	}
-	return `<hr><p><a href="` + html.EscapeString(d.unsubURL) + `">Unsubscribe</a>` +
-		` · <a href="` + html.EscapeString(d.manageURL) + `">Manage your preferences</a></p>`
+	return `<hr><p><a href="` + html.EscapeString(d.links.unsubscribe) + `">` +
+		html.EscapeString(d.words.UnsubscribeLabel) + `</a>` +
+		` · <a href="` + html.EscapeString(d.links.manage) + `">` +
+		html.EscapeString(d.words.ManagePreferencesLabel) + `</a></p>`
 }
 
 // deliverability derives what a send must carry for a mailbox provider to
@@ -155,7 +201,9 @@ func (d sendDeliverability) htmlFooter() string {
 // recipients is the MERGED addressee list, every To and Cc address, because
 // the refusal above counts who RECEIVES the rendered message rather than how
 // they were addressed.
-func (s *Store) deliverability(ctx context.Context, body string, recipients []string, purposeKey string) (sendDeliverability, error) {
+func (s *Store) deliverability(
+	ctx context.Context, body, subject string, recipients []string, purposeKey string,
+) (sendDeliverability, error) {
 	untokenized := sendDeliverability{transmitted: body, recorded: body}
 	if s.unsubscribe == nil || len(recipients) == 0 {
 		return untokenized, nil
@@ -174,21 +222,26 @@ func (s *Store) deliverability(ctx context.Context, body string, recipients []st
 	if distinctAddresses(recipients) > 1 {
 		return sendDeliverability{}, &SharedUnsubscribeTokenError{}
 	}
-	if s.publicBaseURL == "" {
-		// Fail loudly rather than derive the base from the request: the link
-		// carries the recipient's unsubscribe token, and a marketing send
-		// may not go out without a working, non-forgeable List-Unsubscribe
-		// URL (features/06 §1.2).
-		return sendDeliverability{}, fmt.Errorf("send: public base URL is not configured; a marketing send must carry a working List-Unsubscribe URL")
+	// Fail loudly rather than derive the base from the request: the link
+	// carries the recipient's unsubscribe token, and a marketing send may not
+	// go out without a working, non-forgeable List-Unsubscribe URL
+	// (features/06 §1.2). The guard also refuses an origin a recipient's mail
+	// client cannot reach — a localhost base means "this computer" to whoever
+	// clicks it, which is how a real send went out with links nobody outside
+	// this machine could open.
+	if err := s.publicOriginUsable(); err != nil {
+		return sendDeliverability{}, err
 	}
-	unsubURL := unsubscribeURL(s.publicBaseURL, token, purposeKey)
+	lang := s.footerLanguage(ctx, body, subject)
+	words := mailcopy.For(string(lang))
+	live := unsubscribeLinksFor(s.publicBaseURL, token, purposeKey, lang)
+	redacted := unsubscribeLinksFor(s.publicBaseURL, redactedToken, purposeKey, lang)
 	return sendDeliverability{
-		listUnsubscribe: listUnsubscribeHeader(unsubURL),
-		unsubURL:        unsubURL,
-		manageURL:       s.publicBaseURL + "/v1/public/preferences/" + url.PathEscape(token),
-		transmitted:     appendUnsubscribeFooter(body, s.publicBaseURL, token, unsubURL),
-		recorded: appendUnsubscribeFooter(body, s.publicBaseURL, redactedToken,
-			unsubscribeURL(s.publicBaseURL, redactedToken, purposeKey)),
+		listUnsubscribe: listUnsubscribeHeader(live.oneClick),
+		links:           live,
+		words:           words,
+		transmitted:     appendUnsubscribeFooter(body, live, words),
+		recorded:        appendUnsubscribeFooter(body, redacted, words),
 	}, nil
 }
 
@@ -208,15 +261,6 @@ func distinctAddresses(recipients []string) int {
 	return len(seen)
 }
 
-// unsubscribeURL is the ONE spelling of the public one-click endpoint the
-// header and the body footer both point at: token in the path, the
-// message's purpose in the query so a per-purpose withdrawal targets
-// exactly the list this message belonged to.
-func unsubscribeURL(baseURL, token, purposeKey string) string {
-	return baseURL + "/v1/public/preferences/" + url.PathEscape(token) +
-		"/unsubscribe?purpose=" + url.QueryEscape(strings.ToLower(strings.TrimSpace(purposeKey)))
-}
-
 // listUnsubscribeHeader returns the RFC 8058 List-Unsubscribe value: the
 // bracketed https one-click URL. Its companion List-Unsubscribe-Post value
 // is fixed by the RFC at "List-Unsubscribe=One-Click" and is therefore
@@ -229,8 +273,10 @@ func listUnsubscribeHeader(unsubURL string) string {
 // appendUnsubscribeFooter adds the human-visible unsubscribe + manage-
 // preferences links beneath the message body (AC-D3 "a visible unsubscribe
 // link"), built from the same token as the machine header so the two can
-// never diverge.
-func appendUnsubscribeFooter(body, baseURL, token, unsubURL string) string {
-	manageURL := baseURL + "/v1/public/preferences/" + url.PathEscape(token)
-	return body + "\n\n---\nUnsubscribe: " + unsubURL + "\nManage your preferences: " + manageURL
+// never diverge. Both point at PAGES, never at the API: the machine
+// endpoint is POST-only and answers a human click with 405.
+func appendUnsubscribeFooter(body string, links unsubscribeLinks, words mailcopy.Copy) string {
+	return body + "\n\n---\n" +
+		words.UnsubscribeLabel + ": " + links.unsubscribe + "\n" +
+		words.ManagePreferencesLabel + ": " + links.manage
 }

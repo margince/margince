@@ -78,7 +78,7 @@ func TestChooseRouteAlwaysPrefersADirectRelationship(t *testing.T) {
 			},
 		})
 
-	route := chooseRoute(graph, graphNow)
+	route := chooseRoute(chooseRoutes(graph, graphNow))
 	if route == nil {
 		t.Fatal("two candidate routes produced no recommendation")
 	}
@@ -104,7 +104,7 @@ func TestChooseRouteNamesTheIntermediaryWhenTheHopIsIndirect(t *testing.T) {
 			Interactions90d: 12, Inbound90d: intp(6), Outbound90d: intp(6), LastAt: daysBefore(2),
 		}})
 
-	route := chooseRoute(graph, graphNow)
+	route := chooseRoute(chooseRoutes(graph, graphNow))
 	if route == nil {
 		t.Fatal("an indirect route was available and none was recommended")
 	}
@@ -136,7 +136,7 @@ func TestChooseRoutePrefersAnExchangeOverAOneSidedRelationship(t *testing.T) {
 			},
 		})
 
-	route := chooseRoute(graph, graphNow)
+	route := chooseRoute(chooseRoutes(graph, graphNow))
 	if route == nil {
 		t.Fatal("no route was chosen")
 	}
@@ -151,7 +151,7 @@ func TestChooseRoutePrefersAnExchangeOverAOneSidedRelationship(t *testing.T) {
 // A graph with nothing in it recommends nothing. Inventing a route from an
 // empty picture is the failure the whole evidence posture exists to avoid.
 func TestChooseRouteRecommendsNothingWhenThereIsNoEdge(t *testing.T) {
-	if route := chooseRoute(graphWith(nil, nil), graphNow); route != nil {
+	if route := chooseRoute(chooseRoutes(graphWith(nil, nil), graphNow)); route != nil {
 		t.Errorf("an empty graph produced a route via %q", route.ViaDisplayName)
 	}
 }
@@ -159,15 +159,15 @@ func TestChooseRouteRecommendsNothingWhenThereIsNoEdge(t *testing.T) {
 // The proof line is what a rep reads before deciding whether to ask, so it has
 // to distinguish the two cases rather than print one number.
 func TestProofLineSaysWhetherTheRelationshipIsTwoWay(t *testing.T) {
-	twoWay := proofLine(crmcontracts.PersonGraphEdge{
+	twoWay := proofLineFor(evidenceOf(&crmcontracts.PersonGraphEdge{
 		Interactions90d: 6, Inbound90d: intp(3), Outbound90d: intp(3), LastAt: daysBefore(2),
-	}, graphNow)
+	}, graphNow))
 	if !strings.Contains(twoWay, "two-way") {
 		t.Errorf("a mutual relationship reads %q and does not say it is mutual", twoWay)
 	}
-	oneSided := proofLine(crmcontracts.PersonGraphEdge{
+	oneSided := proofLineFor(evidenceOf(&crmcontracts.PersonGraphEdge{
 		Interactions90d: 30, Inbound90d: intp(0), Outbound90d: intp(30), LastAt: daysBefore(2),
-	}, graphNow)
+	}, graphNow))
 	if !strings.Contains(oneSided, "one-sided") {
 		t.Errorf("thirty unanswered sends read %q and do not say they went unanswered", oneSided)
 	}

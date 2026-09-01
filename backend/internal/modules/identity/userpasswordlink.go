@@ -157,8 +157,8 @@ func lockMemberForTokenIssue(ctx context.Context, tx pgx.Tx, userID ids.UserID) 
 //
 // The member is read WITHOUT a row lock (see lockMemberForTokenIssue). A
 // deactivation committing between this check and the insert would leave a token
-// that redemption then refuses anyway, because redemption re-checks that the
-// account is active — so the window costs a wasted link, never a usable one.
+// that redemption then refuses anyway, because redemption re-checks the same set
+// this admits — so the window costs a wasted link, never a usable one.
 func supersedeSetPasswordTokens(ctx context.Context, tx pgx.Tx, userID ids.UserID) (int64, error) {
 	if err := lockMemberForTokenIssue(ctx, tx, userID); err != nil {
 		return 0, err
@@ -180,7 +180,16 @@ func supersedeSetPasswordTokens(ctx context.Context, tx pgx.Tx, userID ids.UserI
 	if isAgent {
 		return 0, errAgentSeatHasNoPassword
 	}
-	if status != userStatusActive {
+	// Invited is admitted, and this is the case the surface exists for: a member
+	// whose invitation expired has no password, so RequestPasswordReset refuses
+	// them, and this link is the only route back into the account. Refusing it
+	// here would strand them permanently.
+	//
+	// Issuance admits exactly whom RedeemPasswordReset admits — both take
+	// ActivatableMemberSQL's set. A link minted for someone redemption refuses
+	// is dead on arrival; a link refused to someone redemption would accept is
+	// an account nobody can enter. The two sides are one rule.
+	if status != userStatusActive && status != userStatusInvited {
 		return 0, errMemberNotActive
 	}
 	tag, err := tx.Exec(ctx,

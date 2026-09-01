@@ -54,6 +54,12 @@ func TestTroubledRunsCarriesFailedAndBlockedAcrossLiveRulesOnly(t *testing.T) {
 		if run.Name != "stage_change_create_task" {
 			t.Errorf("run names rule %q, want the automation's own name", run.Name)
 		}
+		// The RULE, not this firing of it: the identity two failures of one
+		// broken rule share, and which the worklist folds them on. A name is
+		// mutable and not unique, so it cannot carry this.
+		if run.AutomationID != autoID {
+			t.Errorf("run names rule id %v, want the live automation %v", run.AutomationID, autoID)
+		}
 	}
 	if outcomes["failed"] != "provider error" || outcomes["blocked"] != "approval rejected" {
 		t.Fatalf("outcomes = %v, want failed/blocked with the engine's own reasons", outcomes)

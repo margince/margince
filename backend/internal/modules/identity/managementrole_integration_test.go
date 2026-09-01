@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -33,7 +34,7 @@ func TestManagementSeesEveryRowAndAdministersNothing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("inviting a management seat: %v", err)
 	}
-	if err := e.svc.RedeemPasswordReset(principal.WithWorkspaceID(ctx, e.ws.UUID), rawToken, "a management password!"); err != nil {
+	if err := e.svc.RedeemPasswordReset(principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws.UUID), ids.NewV7()), rawToken, "a management password!"); err != nil {
 		t.Fatalf("redeeming the invite token: %v", err)
 	}
 	mgmt, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID), "cso@acme.test", "a management password!")

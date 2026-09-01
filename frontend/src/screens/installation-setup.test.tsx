@@ -10,17 +10,21 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import { InstallationSetup } from "./installation-setup";
+import { InstallationSetup, outstandingStep } from "./installation-setup";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
-type Step = { step: string; configured: boolean; blocking: boolean };
+// The wire row, spelled from the generated contract rather than as a loose
+// `string`: a fixture naming a step the server cannot report would be a test of
+// a shape nothing serves.
+type Step = components["schemas"]["InstallationSetupStep"];
 
 // The seeded price sheet a fresh installation is provisioned with, which is
 // also the catalogue both model fields offer from. The full wire row, prices
@@ -73,16 +77,24 @@ const SEEDED_SHEET = [
   ),
 ];
 
-/** The server's answer, in the order the server gives it. */
+/**
+ * The server's answer, in the order and with the policy the server gives it:
+ * the model binding blocks, the Google app is reported and does not.
+ *
+ * `complete` follows from the blocking steps alone, because that is what the
+ * contract says it means — a fixture that waited on the Google app too would be
+ * describing an installation this server never reports, and the screen under
+ * test would be passing against a shape that does not exist.
+ */
 function setupReport(
   ai: boolean,
   google: boolean,
 ): { complete: boolean; steps: Step[] } {
   return {
-    complete: ai && google,
+    complete: ai,
     steps: [
       { step: "ai_models", configured: ai, blocking: true },
-      { step: "google_app", configured: google, blocking: true },
+      { step: "oauth_app", configured: google, blocking: false },
     ],
   };
 }
@@ -114,33 +126,82 @@ function mount(
       <LocaleProvider>{children}</LocaleProvider>
     </QueryClientProvider>
   );
-  render(<InstallationSetup />, { wrapper: Wrap });
-  return { writes };
+  const { container } = render(<InstallationSetup />, { wrapper: Wrap });
+  return { writes, container, qc };
+}
+
+/**
+ * Waits until the report has actually ARRIVED.
+ *
+ * Every "draws nothing" assertion below needs this, and none of them can get it
+ * from the DOM: the screen renders nothing while the query is in flight for
+ * exactly the same reason it renders nothing when the step is done, so a
+ * `waitFor` over an absence is satisfied by the first pending frame and the test
+ * passes without the answer ever landing. That is not a slow assertion, it is a
+ * vacuous one — it passed against a build that rendered the model form for a
+ * step it was never given.
+ */
+async function reportArrived(qc: QueryClient) {
+  await waitFor(() =>
+    expect(qc.getQueryState(["installation-setup"])?.status).toBe("success"),
+  );
 }
 
 describe("the first-run setup gate", () => {
-  // The order is the product decision the server pins: somebody with no model
-  // bound cannot be shown a cold start, while the mailbox can wait.
-  it("asks for the model binding before the Google app", async () => {
+  // The model binding is the one thing a cold start cannot proceed without, so
+  // it is the one thing asked for here.
+  it("asks for the model binding", async () => {
     mount(setupReport(false, false));
     expect(await screen.findByText("Choose a model provider")).toBeTruthy();
-    expect(screen.queryByText("Connect a Google app")).toBeNull();
   });
 
-  it("asks for the Google app once the models are bound", async () => {
-    mount(setupReport(true, false));
-    expect(await screen.findByText("Connect a Google app")).toBeTruthy();
-    expect(screen.queryByText("Choose a model provider")).toBeNull();
+  // The regression this screen was built wrong for. An installation with no
+  // Google app never reaches the company form, so `GET /company` keeps
+  // answering 404 and the shell's onboarding gate rewrites every route back to
+  // onboarding — an operator deploying without a Google app was locked out of
+  // the whole product, with `PUT /v1/company` the only way past.
+  it("lets a reader through with the models bound and no Google app", async () => {
+    // The panel is gone entirely rather than replaced by a Google one: the app
+    // is stored from settings, where the card also shows the redirect URIs
+    // Google's console asks for.
+    const { container, qc } = mount(setupReport(true, false));
+    await reportArrived(qc);
+    expect(container.innerHTML).toBe("");
   });
 
   // Nothing at all when there is nothing outstanding, so a caller can put this
   // in front of the next screen without asking the same question twice.
   it("draws nothing once every blocking step is done", async () => {
-    mount(setupReport(true, true));
-    await waitFor(() =>
-      expect(screen.queryByText("Choose a model provider")).toBeNull(),
-    );
-    expect(screen.queryByText("Connect a Google app")).toBeNull();
+    const { container, qc } = mount(setupReport(true, true));
+    await reportArrived(qc);
+    expect(container.innerHTML).toBe("");
+  });
+
+  // A frontend older than its server, meeting a blocking step it has no panel
+  // for. It lets the reader PAST rather than drawing the panel it does have —
+  // the model form under an `oauth_app` heading would take a reader's API key
+  // against a step they were never asked about — and past is what matters,
+  // because the caller gates on this same predicate and would otherwise hold an
+  // empty screen in front of them forever. The server pins ai_models as the
+  // only blocker (TestOnlyTheModelBindingBlocksFirstRun); this is the far side
+  // of that, for the deployment where the two versions disagree.
+  it("lets a reader past a blocking step it has no panel for", async () => {
+    const report: { complete: boolean; steps: Step[] } = {
+      complete: false,
+      steps: [
+        { step: "ai_models", configured: true, blocking: true },
+        { step: "oauth_app", configured: false, blocking: true },
+      ],
+    };
+    // The caller's own question, asked the caller's way. An empty screen alone
+    // would not tell the two failures apart: a gate that lets nobody through
+    // and a gate that is finished both draw nothing, and it is this answer the
+    // onboarding act reads to decide whether to keep the gate up at all.
+    expect(outstandingStep(report)).toBeUndefined();
+
+    const { container, qc } = mount(report);
+    await reportArrived(qc);
+    expect(container.innerHTML).toBe("");
   });
 
   // The key BEFORE the binding: a binding whose vendor has no key reads as
@@ -227,24 +288,6 @@ describe("the first-run setup gate", () => {
     expect(
       screen.getByRole("button", { name: "Continue" }).getAttribute("disabled"),
     ).toBeNull();
-  });
-
-  it("sends the Google app as one pair", async () => {
-    const user = userEvent.setup();
-    const { writes } = mount(setupReport(true, false));
-    await screen.findByText("Connect a Google app");
-    await user.type(
-      screen.getByLabelText("Client ID"),
-      "123-abc.apps.googleusercontent.com",
-    );
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-    await waitFor(() => expect(writes.length).toBe(1));
-    expect(writes[0].url).toBe("/v1/installation/google-app");
-    expect(writes[0].body).toEqual({
-      client_id: "123-abc.apps.googleusercontent.com",
-      client_secret: "GOCSPX-secret",
-    });
   });
 
   // A first-time admin should not have to know a model id by heart. The sheet

@@ -205,6 +205,13 @@ const PreferenceCenterScreen = lazy(
     })),
   ),
 );
+const UnsubscribeScreen = lazy(
+  routed(() =>
+    import("./screens/unsubscribe").then((m) => ({
+      default: m.UnsubscribeScreen,
+    })),
+  ),
+);
 const ConfirmDetailsScreen = lazy(
   routed(() =>
     import("./screens/confirm").then((m) => ({
@@ -239,10 +246,8 @@ const ShareScreen = lazy(
     import("./screens/share").then((m) => ({ default: m.ShareScreen })),
   ),
 );
-const TodayScreen = lazy(
-  routed(() =>
-    import("./screens/today").then((m) => ({ default: m.TodayScreen })),
-  ),
+const WorklistScreen = lazy(() =>
+  import("./screens/worklist").then((m) => ({ default: m.WorklistScreen })),
 );
 
 // safeDecode tolerates malformed percent-encoding (e.g. a stray "%2" from a
@@ -448,7 +453,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     leads: ({ id }) => (id ? <LeadScreen id={id} /> : <LeadsScreen />),
     deals: ({ id, id2 }) => <DealsRoute id={id} id2={id2} />,
     projects: ({ id }) => (id ? <ProjectScreen id={id} /> : <ProjectsScreen />),
-    today: () => <TodayScreen />,
+    worklist: () => <WorklistScreen />,
     reports: () => <ReportsScreen />,
     ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names
@@ -485,6 +490,12 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // #/preferences/<token> — anonymous; the token in the path is the
     // whole capability (security: [] in the contract).
     preferences: ({ id }) => <PreferenceCenterScreen token={id} />,
+    // #/unsubscribe/<token>/<purpose> — the page the VISIBLE unsubscribe
+    // link in a message opens. Anonymous, and it never withdraws on arrival:
+    // a mail scanner following the link is not a person pressing a button.
+    unsubscribe: ({ id, id2 }) => (
+      <UnsubscribeScreen token={id} purpose={id2} />
+    ),
     // #/confirm/<token> — anonymous, the sibling of the preference centre. The
     // token is single-use and shows the subject their own record, which is why
     // it is a different credential from the reusable preference link.
@@ -622,6 +633,7 @@ const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
   "book",
   "confirm",
   "preferences",
+  "unsubscribe",
   "room",
 ]);
 

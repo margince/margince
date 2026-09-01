@@ -10,10 +10,16 @@ package people
 // organization + relationship + link are one atomic decision here).
 // Exact match reuses; fuzzy CREATES ANYWAY and records a dedupe_candidate
 // for the review queue (capture never blocks on a human,
-// DEDUPE_FUZZY_AUTOMERGE is pinned never); no match creates. Connector-
-// created rows are workspace-visible: customer identity is shared across the
-// workspace, and the audience of the correspondence itself is decided per
-// activity (platform/auth ActivityContentClause), not by hiding the contact.
+// DEDUPE_FUZZY_AUTOMERGE is pinned never); no match creates.
+//
+// A connector-created row belongs to the MAILBOX OWNER until something judges
+// its sender. Customer identity is shared across a workspace once somebody has
+// decided the sender is a customer — before that, a mailbox with a year of
+// history names a lawyer, a doctor and a school, and one email is not a reason
+// to publish any of them. The verdict path ensures the same address without
+// asking for owner scope, and that promotes the record. The audience of the
+// correspondence itself is a separate question, decided per activity
+// (platform/auth ActivityContentClause).
 
 import (
 	"context"
@@ -75,6 +81,21 @@ type EnsureCounterpartyInput struct {
 	// person is still created — alice@gmail.com is a person, "Gmail" is
 	// not her employer.
 	SuppressOrg bool
+
+	// OwnerScoped births the person visible to their OWNER alone rather than to
+	// the workspace.
+	//
+	// It is what the two ensure callers disagree about. The capture sink mints a
+	// person from a message nothing has judged yet — connecting a mailbox with a
+	// year of history would otherwise put every correspondent, a lawyer and a
+	// doctor included, in front of every colleague on the strength of one email.
+	// The VERDICT path mints one because something judged the sender a business
+	// counterparty, which is the moment the record becomes the workspace's.
+	//
+	// False is the workspace default, so a caller that says nothing gets the
+	// behaviour that existed before this field. The wrong direction to fail in
+	// is silently narrowing a record somebody expected to see.
+	OwnerScoped bool
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to
@@ -189,6 +210,17 @@ func (s *Store) ensurePerson(ctx context.Context, tx pgx.Tx, in EnsureCounterpar
 	}
 	if match.Decision == DecisionExactCollision {
 		res.PersonID = match.PersonID
+		// A workspace-scoped ensure over an owner-scoped record PROMOTES it.
+		//
+		// This is how a contact the sink minted while its sender was unjudged
+		// becomes the workspace's: the verdict path ensures the same address
+		// with OwnerScoped false, and that is the decision. It runs before the
+		// quarantine return below, because an impersonation tell is a reason to
+		// learn nothing NEW from this message and not a reason to withhold a
+		// promotion something already decided.
+		if err := promoteIfWorkspaceScoped(ctx, tx, match.PersonID, in.OwnerScoped); err != nil {
+			return err
+		}
 		if quarantineSuspect(in.DisplayName, in.Domain) {
 			// The header carries an impersonation tell. A new record would be
 			// created quarantined for review; an EXISTING one has no such
@@ -204,7 +236,7 @@ func (s *Store) ensurePerson(ctx context.Context, tx pgx.Tx, in EnsureCounterpar
 		FirstName:   nameColumn(parsed.First),
 		LastName:    nameColumn(parsed.Last),
 		OwnerID:     ownerFromUUID(&in.OwnerID),
-		Visibility:  visibilityWorkspace,
+		Visibility:  visibilityFor(in.OwnerScoped),
 		Quarantined: quarantineSuspect(in.DisplayName, in.Domain),
 		Emails:      []PersonEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:      in.Source,

@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -37,73 +36,56 @@ type attentionNames struct {
 
 var _ attention.Names = attentionNames{}
 
-// Label answers one record's display name under the caller's scope.
+// Labels answers a set of one type's display names under the caller's scope.
 //
-// The person/organization/lead arms reuse the SAME face builders the merge
-// cards use (personFace and siblings below in this package), so the two
-// surfaces cannot come to spell one record's name two ways. A type outside
-// this vocabulary answers absent rather than guessing — the subject enum
-// and this switch are held together by the wiring test that labels every
-// lane.
-func (n attentionNames) Label(ctx context.Context, entityType string, id ids.UUID) (string, bool, error) {
-	label, err := n.read(ctx, entityType, id)
+// One store read per TYPE, which is the whole point of the seam's shape: a
+// page carrying a hundred people asks about people once. Each store's read
+// carries that record's own object grant and row-scope clause, so a label is
+// exactly as visible as the record, and this seam holds no authority of its
+// own.
+//
+// A whole-read refusal — this caller may not read PEOPLE at all — costs the
+// type's labels and nothing else, because the contract's "absent when the
+// caller may not read it" is the same answer for one record or a hundred.
+// Any other error propagates: a database that will not answer must not read
+// as a page of records the reader lacks grants for.
+//
+// A type outside this vocabulary answers nothing rather than guessing — the
+// subject enum and this switch are held together by the wiring test that
+// labels every lane.
+func (n attentionNames) Labels(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, error) {
+	labels, err := n.read(ctx, entityType, want)
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
-		return "", false, nil
+		// No labels, and no error: "the caller may not read it" is the same
+		// answer for one record or a hundred. An empty map rather than nil,
+		// so a caller reading it back cannot tell a refusal from an empty
+		// page — there is nothing here they are meant to tell apart.
+		return map[ids.UUID]string{}, nil
 	case err != nil:
-		return "", false, err
-	case label == "":
-		// A record can honestly have no name (a lead captured with none); an
-		// empty label is absent, not a blank string on a card.
-		return "", false, nil
+		return nil, err
 	default:
-		return label, true, nil
+		return labels, nil
 	}
 }
 
-func (n attentionNames) read(ctx context.Context, entityType string, id ids.UUID) (string, error) {
+func (n attentionNames) read(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, error) {
 	switch entityType {
 	case flipObjectPerson:
-		row, err := n.people.GetPerson(ctx, ids.From[ids.PersonKind](id), storekit.LiveOnly)
-		if err != nil {
-			return "", err
-		}
-		return personFace(row).Label, nil
+		return n.people.PersonLabels(ctx, want)
 	case flipObjectOrganization:
-		row, err := n.people.GetOrganization(ctx, ids.From[ids.OrganizationKind](id), storekit.LiveOnly)
-		if err != nil {
-			return "", err
-		}
-		return organizationFace(row).Label, nil
+		return n.people.OrganizationLabels(ctx, want)
 	case flipObjectLead:
-		row, err := n.people.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
-		if err != nil {
-			return "", err
-		}
-		return leadFace(row).Label, nil
+		return n.people.LeadLabels(ctx, want)
 	case string(datasource.RecordDeal):
-		row, err := n.deals.GetDeal(ctx, ids.From[ids.DealKind](id), storekit.LiveOnly)
-		if err != nil {
-			return "", err
-		}
-		return row.Name, nil
+		return n.deals.DealLabels(ctx, want)
 	case string(datasource.EntityActivity):
-		row, err := n.activities.GetActivity(ctx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
-		if err != nil {
-			return "", err
-		}
-		if row.Subject == nil {
-			return "", nil
-		}
-		return *row.Subject, nil
+		return n.activities.ActivityLabels(ctx, want)
 	case string(datasource.RecordProject):
-		row, err := n.projects.GetProject(ctx, ids.From[ids.ProjectKind](id), storekit.LiveOnly)
-		if err != nil {
-			return "", err
-		}
-		return row.Name, nil
+		return n.projects.ProjectLabels(ctx, want)
 	default:
-		return "", nil
+		// A type outside the vocabulary names nothing rather than guessing.
+		return map[ids.UUID]string{}, nil
 	}
 }
 

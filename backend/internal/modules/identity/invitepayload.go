@@ -45,12 +45,19 @@ func joinTeamsTx(ctx context.Context, tx pgx.Tx, userID ids.UUID, teams []ids.UU
 			return err
 		}
 		if tag.RowsAffected() == 0 {
-			return &values.ParseError{Field: "team_ids", Code: "unknown_team",
-				Message: "team " + teamID.String() + " does not exist or is archived"}
+			return &values.ParseError{
+				Field: fieldTeamIDs, Code: "unknown_team",
+				Message: "team " + teamID.String() + " does not exist or is archived",
+			}
 		}
 	}
 	return nil
 }
+
+// fieldTeamIDs is the contract's spelling of the invite's team list, used by the
+// refusals that name the field and by the audit image that records it — one
+// spelling, so a rename cannot leave a client matching on a stale field name.
+const fieldTeamIDs = "team_ids"
 
 // maxInviteTeams mirrors the contract's maxItems on team_ids.
 const maxInviteTeams = 20
@@ -73,8 +80,10 @@ func uniqueTeams(teams []ids.UUID) []ids.UUID {
 func validTeamIDs(teams []ids.UUID) ([]ids.UUID, error) {
 	teams = uniqueTeams(teams)
 	if len(teams) > maxInviteTeams {
-		return nil, &values.ParseError{Field: "team_ids", Code: "too_many_teams",
-			Message: fmt.Sprintf("at most %d teams", maxInviteTeams)}
+		return nil, &values.ParseError{
+			Field: fieldTeamIDs, Code: "too_many_teams",
+			Message: fmt.Sprintf("at most %d teams", maxInviteTeams),
+		}
 	}
 	return teams, nil
 }

@@ -223,6 +223,18 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(ctx context.Context, claimed []
 // floor. An answer still below the floor retires the row to `unsure` for a human
 // rather than spending another attempt on a question this model cannot answer.
 func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.PendingCounterparty) (int, error) {
+	// The OWNER's own decision first, and no model call at all when there is
+	// one. A person who told this product what a sender is has answered the
+	// question; asking anyway would spend a call to be told something we then
+	// have to discard, and a machine that could overturn them would make every
+	// correction temporary.
+	decided, kind, err := e.ownerDecided(ctx, row)
+	if err != nil {
+		return 0, err
+	}
+	if decided {
+		return e.applyOwnerDecision(ctx, row, kind)
+	}
 	answers, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err
@@ -249,10 +261,26 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 	return 1, nil
 }
 
+// applyOwnerDecision commits what a PERSON said about a sender.
+//
+// Split from applyJudged rather than sharing a bool at the call site, so the
+// two authorities are visible as two entry points: a reader asking "what can an
+// owner's click do" finds one function and the answer beside it.
+func (e *CounterpartyVerdictEngine) applyOwnerDecision(ctx context.Context, row capture.PendingCounterparty, kind string) (int, error) {
+	done, err := e.apply(ctx, row, kind, true)
+	if err != nil {
+		return 0, err
+	}
+	if done {
+		return 1, nil
+	}
+	return 0, nil
+}
+
 // applyJudged commits one above-floor answer and reports whether this caller was
 // the one that resolved the row.
 func (e *CounterpartyVerdictEngine) applyJudged(ctx context.Context, row capture.PendingCounterparty, verdict string) (int, error) {
-	done, err := e.apply(ctx, row, verdict)
+	done, err := e.apply(ctx, row, verdict, false)
 	if err != nil {
 		return 0, err
 	}
@@ -269,7 +297,7 @@ func (e *CounterpartyVerdictEngine) applyJudged(ctx context.Context, row capture
 // Resolve's compare-and-set decides who acts: only the caller that actually
 // closed the row runs the effect, which makes a replayed job or a raced sibling
 // a no-op rather than a second creation.
-func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.PendingCounterparty, kind string) (bool, error) {
+func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.PendingCounterparty, kind string, ownerSaidSo bool) (bool, error) {
 	verdict, known := statusForKind(kind)
 	if !known {
 		return false, fmt.Errorf("verdict: %q is not a sender kind", kind)
@@ -282,9 +310,11 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 			return err
 		}
 		acted = true
-		// Exhaustive by construction: every kind in verdictKinds appears here,
-		// and an unknown one was refused above. A `default` that fell through to
-		// hideNoise is how a new kind would silently start hiding real mail.
+		// Exhaustive over verdictKinds, held by TestEveryVerdictKindHasAnEffect
+		// rather than by this comment: two kinds once reached the prompt with no
+		// arm here, and the claim of exhaustiveness is what stopped anybody
+		// checking. A `default` that fell through to hideNoise is how a new kind
+		// would silently start hiding real mail, so there is none.
 		switch kind {
 		case capture.KindPerson:
 			triageDomain, err = e.createCounterparty(ctx, tx, row)
@@ -294,10 +324,42 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 			// visible; no contact is invented for a mailbox nobody owns.
 			return nil
 		case capture.KindNewsletter, capture.KindTransactional, capture.KindSpam:
-			if err := e.suppressSenderDomain(ctx, tx, row, kind); err != nil {
-				return err
+			// A seat's own `keep out` does NOT suppress the domain. The two
+			// statements are different sizes: the classifier calling a sender
+			// noise is a judgement about the sender, and suppressing their
+			// domain workspace-wide follows from it; a person saying "keep this
+			// out of my mail" is a statement about their own mailbox, and one
+			// rep who once received mail from a partner could otherwise refuse
+			// that company to every colleague — with a per-record person grant
+			// and no capture-settings grant at all.
+			//
+			// The mail hide still runs: it is what "keep out" means, and the
+			// noise scope already excludes anything a colleague corresponded
+			// with.
+			if !ownerSaidSo {
+				if err := e.suppressSenderDomain(ctx, tx, row, kind); err != nil {
+					return err
+				}
 			}
 			return e.hideNoise(ctx, tx, row)
+		case capture.KindAdvisor:
+			// A genuine contact who is the OWNER's. The record is made — a
+			// founder's lawyer is somebody they correspond with — and stays
+			// owner-scoped, because publishing it to the workspace announces
+			// that the founder has a lawyer and what about.
+			triageDomain, err = e.createOwnerScopedCounterparty(ctx, tx, row)
+			return err
+		case capture.KindPersonal:
+			// No record at all: a family member is not a counterparty of the
+			// business. The mail itself is not destroyed here — the purge that
+			// does that is its own change, with an undo window in front of it —
+			// so this withholds the record and leaves the thread to the
+			// mailbox owner.
+			//
+			// hideNoise is deliberately NOT called. Its scope excludes every
+			// address the workspace has written to, which is every address this
+			// kind is ever about, so it would be a no-op that read like a hide.
+			return nil
 		}
 		return fmt.Errorf("verdict: no effect defined for sender kind %q", kind)
 	})
@@ -319,103 +381,6 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 // verdictReason is what the ledger records as the authority for a machine
 // disposition, distinguishing it from a T2 registry rule or a human decision.
 const verdictReason = "capture_counterparty_verdict"
-
-// createCounterparty is the `real` effect: the records capture withheld while
-// the sender was ambiguous, created now under the human who granted the
-// connection — not under the job, which owns nothing.
-//
-// An address suppressed since capture — an erasure landed while the question was
-// open — creates nothing, and says so: the row is corrected to `suppressed`
-// rather than left reading `real`. Erasure outranks a verdict, and a ledger (or
-// a SAR built from it) that reports `real` for someone with no record would be
-// describing a person who does not exist.
-func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
-	created, err := createCounterpartyRecords(ctx, tx, e.people, e.activities, counterpartyCreation{
-		Email:       row.Email,
-		DisplayName: row.DisplayName,
-		Domain:      row.Domain,
-		OwnerID:     row.OwnerID,
-		ActivityID:  row.ActivityID,
-		Source:      verdictReason,
-		CapturedBy:  verdictActor,
-	})
-	if err != nil {
-		return "", err
-	}
-	if created.Suppressed {
-		// The verdict was already written by apply(), and writing it spent the
-		// claim — so this corrects the status it just set rather than trying to
-		// resolve the row a second time.
-		return "", e.pending.CorrectResolution(ctx, tx, row.ID,
-			capture.PendingStatusReal, capture.PendingStatusSuppressed,
-			"the address was erased before the verdict landed")
-	}
-	return created.TriageDomain, nil
-}
-
-// counterpartyCreation names one deferred sender being turned into records.
-type counterpartyCreation struct {
-	Email       string
-	DisplayName string
-	Domain      string
-	OwnerID     ids.UUID
-	ActivityID  ids.UUID
-	// Source is the provenance CHANNEL — which mechanism produced these records.
-	Source string
-	// CapturedBy is the acting PRINCIPAL, in the contract's declared grammar
-	// (`human:<uuid>` | `agent:<id>` | `connector:<name>`). The two are not the
-	// same thing and stamping the channel into both puts a value on the wire
-	// that no client can parse.
-	CapturedBy string
-}
-
-// counterpartyCreated reports what a `real` answer produced that its caller has
-// to act on AFTER the transaction commits. Today that is one thing: the domain
-// whose organization question is still open, which somebody has to queue a
-// triage read for.
-type counterpartyCreated struct {
-	// Suppressed marks an address erased between capture and the answer. Nothing
-	// was created: erasure outranks a verdict.
-	Suppressed bool
-	// TriageDomain names the domain still owed an organization verdict, empty
-	// when there is none.
-	TriageDomain string
-}
-
-// createCounterpartyRecords is the ONE spelling of what a `real` answer does,
-// shared by the machine verdict and the human accept. They differ only in who
-// decided; what gets created — and that the sender's whole captured cohort is
-// linked, not just the message that raised the question — must not.
-func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Store,
-	timeline *activities.Store, in counterpartyCreation,
-) (counterpartyCreated, error) {
-	res, err := store.EnsureCounterpartyTx(ctx, tx, people.EnsureCounterpartyInput{
-		Email:       in.Email,
-		DisplayName: in.DisplayName,
-		Domain:      in.Domain,
-		OwnerID:     in.OwnerID,
-		ActivityID:  ids.From[ids.ActivityKind](in.ActivityID),
-		Source:      in.Source,
-		CapturedBy:  in.CapturedBy,
-	})
-	if errors.Is(err, people.ErrCounterpartySuppressed) {
-		return counterpartyCreated{Suppressed: true}, nil
-	}
-	if err != nil {
-		return counterpartyCreated{}, err
-	}
-	// The ensure links the message that raised the question; the sender may have
-	// written more while it was open, and all of them belong on this person's
-	// timeline rather than only the first.
-	if err := timeline.LinkCapturedMailTx(ctx, tx, res.PersonID, in.Email); err != nil {
-		return counterpartyCreated{}, err
-	}
-	out := counterpartyCreated{}
-	if res.TriagePending {
-		out.TriageDomain = res.TriageDomain
-	}
-	return out, nil
-}
 
 // hideNoise is the `noise` effect's first stage: the mail stops being visible
 // immediately, and its content is redacted later by the sweep (ADR-0072 §4's
@@ -477,4 +442,31 @@ func (e *CounterpartyVerdictEngine) suppressSenderDomain(ctx context.Context, tx
 	}
 	return e.people.SuppressBulkSenderDomainTx(ctx, tx, row.Domain,
 		"mail from this domain was judged "+kind+", so it is not a company this business works with")
+}
+
+// ownerDecided answers whether the mailbox owner already settled this sender,
+// and which kind their decision amounts to.
+//
+// `business` becomes `person`: the owner is saying this is somebody the CRM
+// should hold, which is the one kind that creates a record. `keep_out` becomes
+// `spam`, the noise kind whose effects — hide the mail, suppress the domain —
+// are what "keep this out for good" means. Neither invents a new kind: the
+// ledger's vocabulary is closed: a decision spelled outside it would sit in a
+// column every downstream reader parses against a fixed set, and be skipped.
+func (e *CounterpartyVerdictEngine) ownerDecided(ctx context.Context, row capture.PendingCounterparty) (bool, string, error) {
+	var decision string
+	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		var err error
+		decision, err = capture.OverrideForTx(ctx, tx, row.OwnerID, row.Email)
+		return err
+	}); err != nil {
+		return false, "", err
+	}
+	switch decision {
+	case capture.OverrideBusiness:
+		return true, capture.KindPerson, nil
+	case capture.OverrideKeepOut:
+		return true, capture.KindSpam, nil
+	}
+	return false, "", nil
 }

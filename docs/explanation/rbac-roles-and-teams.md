@@ -47,16 +47,19 @@ same values by a test and so cannot drift from them. The shape:
 |---|---|---|
 | `admin` | Full CRUD on everything (config included). | `all` |
 | `ops` | Same CRUD reach as admin — the operations counterpart. | `all` |
-| `manager` | CRUD on records; **read-only** on most config (pipeline, automation, custom_field, quota); **no access at all** to the admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `own` |
+| `manager` | CRUD on records; **read-only** on most config (pipeline, automation, custom_field, quota); **no access at all** to the admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `team` |
 | `rep` | Create/read/update records (delete only where it's routine, e.g. disqualify a lead); **read-only** on config. | `own` |
 | `read_only` | Reads every record kind and every config surface a rep can see; writes nothing except its own saved views. The four admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`) are closed to it entirely — not even read. | `all` |
 
 Two things surprise people:
 
-- **`read_only` is `row_scope: all`, `rep`/`manager` are `row_scope: own`.** Scope and object reach
+- **`read_only` is `row_scope: all`, and `rep` is `row_scope: own`.** Scope and object reach
   are orthogonal — a read-only auditor is *meant* to see the whole workspace and write none of it,
   while a rep reads every record and writes only their own. On the five customer-record tables the
   read tier is not what scope decides at all (see *Reads* below); scope decides writes.
+- **`manager` is `row_scope: team`, and it is the only seeded role that is.** A Team Lead writes
+  their teammates' records as well as their own, resolved through live team membership. The seat
+  above it, `management`, is the same object grid at `all` — the sales leader over every row.
 - **Config objects (pipeline, custom_field, automation, quota) are read-only below admin/ops.** This
   is why a `rep` gets `pipeline.read: permission denied`-adjacent behaviour only when they have **no
   role at all** — with the `rep` role they *can* read pipelines; they just can't edit them.
@@ -105,14 +108,18 @@ Row scope decides **who may change** an identity row: the write-authority probe
 rep who can read a colleague's deal and tries to edit it gets **403**, not 404 — the row is visibly
 theirs to read, so there is nothing left for a 404 to hide.
 
-**Team membership grants nothing by itself.** The seeded `rep` and `manager` are `own`-scoped, so a
+**Team membership grants nothing to a `rep`.** The seeded `rep` is `own`-scoped, so for them a
 colleague's record takes an explicit share — a `record_grant` naming the user or one of their teams —
-or an unbounded seat. This is the change from the earlier model, where being in somebody's team was
-standing write access to everything they owned.
+or an unbounded seat. Being in somebody's team is not by itself permission to rewrite their records.
 
-The team arm survives in the predicate and is not dead code. A record grant may name a **team**, so
-sharing with a group is one act rather than one per member, and an operator may still author a custom
-role at `team` scope. What changed is only what the seeded roles claim by default.
+**For a `manager` it grants exactly one thing: their teammates.** A Team Lead is `team`-scoped, so the
+owner predicate resolves to themselves plus everyone sharing a live team with them. That is the seat's
+purpose — a lead who cannot work their team's records is a lead in name only — and it is bounded by
+membership rather than by the org chart: an archived team grants nothing, and `parent_team_id` is not
+walked, so leading a parent team reaches a child team's members only by belonging to that team too.
+
+A record grant may still name a **team**, so sharing with a group is one act rather than one per
+member, and it stays the mechanism for reaching ACROSS teams and for every seat that is not this one.
 
 An **ownerless** row (`owner_id IS NULL`) is nobody's to change until somebody claims it
 (`EnsureClaimable`, `POST /v1/records/{record_type}/{id}/claim`); claiming makes the claimer the
@@ -128,10 +135,21 @@ An activity has no owner; it inherits visibility from the records it links to (t
 and a link-less note is workspace-shared. On top of that sits a per-activity **audience**
 (`activity.audience`, `activity_audience_member`):
 
-- `workspace` — the default; everyone who can discover the row reads it;
+- `workspace` — everyone who can discover the row reads it;
 - `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant
   by seat);
 - `selected` — the participants plus the users and teams a human named.
+
+`workspace` is the default for a row a human logged. For a row a MAILBOX brought in it is derived,
+not defaulted: `activities.RecomputeAudienceTx` takes the strictest contribution across every
+importing seat's `capture_import` row — the mailbox's posture, the thread's verdict, that seat's
+counterparty holds — so a colleague whose mailbox shares cannot publish a message another importer
+is holding, in whatever order the two syncs ran. `activity.audience_reason` names the strictest
+contributor, and is withheld with the content: the reason describes what the message is about.
+
+A direct `PATCH /activities/{id}/audience` on a captured row is refused (`audience_is_derived`) and
+points at `POST /activities/threads/{key}/audience`, which releases the caller's own contribution
+and reports how many other seats still hold the thread — a count, never a name.
 
 `auth.ActivityDiscoverClause` answers "may I learn this row exists" (date, direction, kind, who owns
 it — the last-touch marker); `auth.ActivityContentClause` answers "may I read it" (subject, body,
@@ -146,9 +164,9 @@ that had no seat to attribute. Such a row is readable by everyone and writable b
 seat claims it, which is the opposite of what this paragraph used to say: an ownerless customer
 record every seat could rewrite is how two teams edit one company past each other.
 
-The seeded `rep` and `manager` are `row_scope: own`, and `read_only`, `ops`, `admin` and
-`management` are `all`. No seeded role is `team`-scoped; that tier is available to custom roles and
-is what a team-subject record grant resolves against.
+The seeded `rep` is `row_scope: own`, `manager` is `team`, and `read_only`, `ops`, `admin` and
+`management` are `all`. The `team` tier is also what a team-subject record grant resolves against,
+and a custom role may claim it.
 
 ## Field masks — one column of a readable row
 

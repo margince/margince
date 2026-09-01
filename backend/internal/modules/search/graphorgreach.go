@@ -19,6 +19,21 @@ const orgArms = `FROM activity_link l
 		    LEFT JOIN relationship r ON r.person_id = l.person_id AND r.kind = 'employment'
 		      AND r.ended_at IS NULL AND r.archived_at IS NULL`
 
+// participantEmployerArm is the fourth arm: the employer of somebody who is on
+// the event as a participant rather than as a link. Without it a meeting whose
+// only person is on the invitation reaches no company at all, since a meeting
+// may carry no direct organization link.
+//
+// activities.participantEmployerArm is the same text, held equal to this one by
+// TestTheAccountReachWalkIsOneAnswer. It is a constant of its own rather than
+// part of orgArms because the two modules also share orgArms with a producer
+// that deliberately stops at three arms (activities.OrgReachSet says why).
+const participantEmployerArm = `EXISTS (
+		    SELECT 1 FROM activity_participant ap
+		      JOIN relationship emp ON emp.person_id = ap.person_id AND emp.kind = 'employment'
+		        AND emp.ended_at IS NULL AND emp.archived_at IS NULL
+		    WHERE ap.activity_id = a.id AND emp.organization_id = %s)`
+
 // activityReachesOrg is "this activity belongs to the account", for a query
 // that aliases activity as a.
 //
@@ -30,8 +45,8 @@ const orgArms = `FROM activity_link l
 // with: an account's busiest correspondence carried no organization link at all
 // and this walk never saw it.
 //
-// activities.OrgLinkedActivityExists is the same three arms for the timeline
-// list, the account view and the roll-up. A module never imports a sibling
+// activities.OrgLinkedActivityExists is the same arms for the timeline list,
+// the account view and the roll-up. A module never imports a sibling
 // (ADR-0054), so this is its deliberate copy, held against it by
 // TestTheAccountReachWalkIsOneAnswer rather than by anybody remembering.
 //
@@ -42,9 +57,10 @@ const orgArms = `FROM activity_link l
 // same one.
 func activityReachesOrg(orgPos int) string {
 	operand := fmt.Sprintf("$%d", orgPos)
-	return fmt.Sprintf(`EXISTS (
+	linked := fmt.Sprintf(`EXISTS (
 		    SELECT 1 %s
 		    WHERE l.activity_id = a.id
 		      AND (l.organization_id = %[2]s OR d.organization_id = %[2]s OR r.organization_id = %[2]s))`,
 		orgArms, operand)
+	return "(" + linked + "\n\t\t    OR " + fmt.Sprintf(participantEmployerArm, operand) + ")"
 }

@@ -992,20 +992,3 @@
   font-size: 13px;
   line-height: 1.35;
 }
-.arrundetail {
-  color: var(--textMeta);
-  font-size: 11.5px;
-  line-height: 1.35;
-}
-/* The label the operator's reason arrives under. Upright, because the reason
-   beside it is a machine token and italics on both would make the two one
-   string. */
-.arrundetail i {
-  margin-right: var(--space-2);
-  font-style: normal;
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: 9.5px;
-  color: var(--textMeta);
-}

@@ -49,6 +49,10 @@ export const org = {
   captured_by: "human:u1",
   source: "manual",
   version: 1,
+  // Stated rather than omitted: an ABSENT `writable` means NOT writable (the
+  // contract fails closed), so a fixture without it models a record nobody may
+  // edit — a different record from the ordinary one these suites describe.
+  writable: true,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
 };

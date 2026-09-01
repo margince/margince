@@ -50,6 +50,8 @@ const (
 	paramClientID = "client_id"
 	paramScope    = "scope"
 	paramFilter   = "$filter"
+	paramSelect   = "$select"
+	paramTop      = "$top"
 
 	// maxMIMELen bounds one message's fetched RFC822 bytes. A message over
 	// this is refused rather than truncated (a truncated MIME blob is not
@@ -74,29 +76,70 @@ var ErrUnreachable = fmt.Errorf("graph: could not reach Microsoft: %w", connecto
 // resync hint); Sync falls back to a bounded re-anchor rather than failing.
 var ErrDeltaGone = fmt.Errorf("graph: delta cursor no longer valid: %w", connector.ErrCursorGone)
 
-// OAuth is the OAuth2 handshake surface: build the consent URL, exchange the
-// authorization code for a refresh token, and mint a fresh access token from
-// a stored refresh token.
-type OAuth interface {
-	AuthCodeURL(state, redirectURI string) string
+// Authorizer is the TOKEN half of the handshake: exchange an authorization code
+// for a refresh token, and mint a fresh access token from a stored one.
+//
+// The narrower half a connector holds, split from OAuth for the same reason
+// googleconn splits its own: an installation whose Entra app arrives at runtime
+// resolves the app per call, and a per-call resolution cannot build a consent
+// URL — AuthCodeURL takes no context and cannot report that the app is
+// unreachable. So the transport keeps that half, resolving the app itself, and
+// the connector holds this one.
+type Authorizer interface {
 	Exchange(ctx context.Context, code, redirectURI string) (oauthflow.TokenGrant, error)
 	AccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
+	// Refresh redeems the stored refresh token asking for exactly the scopes
+	// THIS connection holds, and reports the rotation Microsoft performs on
+	// every redemption.
+	//
+	// Both halves matter and neither is optional. Asking with the deployment's
+	// configured list instead would stop an older mailbox CAPTURING the day a
+	// scope is added — Microsoft refuses a refresh that names a permission the
+	// grant never carried — and dropping the rotation ages the connection out
+	// on Microsoft's own 90-day idle clock.
+	Refresh(ctx context.Context, refreshToken string, granted []string) (oauthflow.TokenRefresh, error)
 }
 
-// API is the read-only Graph mail surface the connector uses. All calls take
-// a short-lived access token (minted from the refresh token per Sync).
+// OAuth is the full handshake surface: an Authorizer that can also send a person
+// to Microsoft's consent screen. The transport holds this; a connector holds the
+// narrower half.
+type OAuth interface {
+	Authorizer
+	AuthCodeURL(state, redirectURI string) string
+}
+
+// API is the Graph mail surface the connector uses. Reading is what almost all
+// of it does; the writes are named and few — the two send calls at the end,
+// which ride the separate Mail.Send permission, and EnsureSubscription, which
+// registers the change-notification subscription push arrives through. All
+// calls take a short-lived access token (minted from the refresh token per
+// Sync).
 type API interface {
 	// Profile returns the mailbox owner's address (mail, falling back to
 	// userPrincipalName for a mailbox with no mail attribute).
 	Profile(ctx context.Context, accessToken string) (email string, err error)
-	// DeltaInit starts a fresh inbox delta bounded to messages received on or
-	// after the given instant, walks it to completion, and returns the
-	// deltaLink the next Delta resumes from.
-	DeltaInit(ctx context.Context, accessToken string, after time.Time) (ids []string, deltaLink string, err error)
-	// Delta resumes an inbox delta from a stored deltaLink and returns the
+	// DeltaInit starts a fresh delta over ONE well-known folder, bounded to
+	// messages received on or after the given instant, walks it to completion,
+	// and returns the deltaLink the next Delta resumes from.
+	//
+	// Per folder rather than over the whole mailbox: /me/messages/delta would
+	// also yield Drafts, Deleted Items and Junk. A draft was never sent, so
+	// putting one on a customer's timeline would be recording a message that
+	// does not exist.
+	DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) (ids []string, deltaLink string, err error)
+	// Delta resumes a folder's delta from a stored deltaLink and returns the
 	// message ids added/changed since plus the advanced deltaLink;
 	// ErrDeltaGone if Graph no longer honors the link.
 	Delta(ctx context.Context, accessToken, deltaLink string) (ids []string, newDeltaLink string, err error)
+	// EnsureSubscription registers or renews the Graph change-notification
+	// subscription pointing at notificationURL, carrying clientState, and
+	// reports the subscription that now covers this mailbox.
+	//
+	// One call rather than a list/create/renew trio on this seam: which of
+	// those a round performs is Microsoft's business, and a seam that spelled
+	// the three would make every test double re-decide the renew-then-create
+	// order the real one exists to hold.
+	EnsureSubscription(ctx context.Context, accessToken, notificationURL, clientState string, deadline time.Time) (Subscription, error)
 	// GetMIME fetches one message as its RFC822 bytes (the /$value stream).
 	GetMIME(ctx context.Context, accessToken, msgID string) (rfc822 []byte, err error)
 	// EstimateAfter returns the provider-side count of messages received on
@@ -110,6 +153,15 @@ type API interface {
 	// folder, against which a message's ParentFolderID identifies mail the
 	// authenticated owner sent.
 	SentFolderID(ctx context.Context, accessToken string) (string, error)
+
+	// SendMIME transmits one complete RFC822 message as the signed-in user.
+	// Microsoft acknowledges the submission without naming a message id, so
+	// this reports only whether it was accepted.
+	SendMIME(ctx context.Context, accessToken string, rfc822 []byte) error
+	// FindSentByMessageID resolves the sent copy of a message by the RFC822
+	// identity it was asked to carry — the at-least-once retry guard, and the
+	// only way to name a message this connector has just submitted.
+	FindSentByMessageID(ctx context.Context, accessToken, unbracketedMessageID string) (msgID string, found bool, err error)
 }
 
 // MessageRef is one listed message: its id, plus the folder Graph filed it in.
@@ -135,6 +187,14 @@ type OAuthConfig struct {
 	Scopes       []string
 	AuthURL      string
 	TokenURL     string
+	// Provider names the connector in a handshake failure's error detail.
+	// Empty means this package's own name. The Microsoft 365 CALENDAR connector
+	// runs the identical handshake against the identical endpoints with
+	// different scopes, so it reuses this constructor rather than keeping a
+	// second copy of Microsoft's consent parameters; what it must not reuse is
+	// the NAME, or its own failures would read as the mail connector's in the
+	// logs and in the connection roster.
+	Provider string
 }
 
 // NewOAuth builds the OAuth client, applying Microsoft's default endpoints
@@ -154,8 +214,12 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 	if cfg.TokenURL == "" {
 		cfg.TokenURL = fmt.Sprintf(msTokenURLFormat, url.PathEscape(tenant))
 	}
+	provider := cfg.Provider
+	if provider == "" {
+		provider = connectorName
+	}
 	return oauthflow.New(oauthflow.Config{
-		Provider:     "graph",
+		Provider:     provider,
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
 		Scopes:       cfg.Scopes,
@@ -163,12 +227,11 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		TokenURL:     cfg.TokenURL,
 		// Microsoft returns the code on the query (not fragment); the v2
 		// endpoint requires the scope in every token form for a refresh token.
-		// Microsoft rotates the refresh token on each redemption. The stored
-		// original keeps working within its lifetime (a confidential-client
-		// refresh token is valid ~90 days), so an actively-synced mailbox
-		// never reauths; a mailbox idle past that window must reconnect. A
-		// credential-rotation seam (Sync surfacing an updated credential for
-		// the registry to re-seal) is a tracked follow-up, not this PR.
+		// Microsoft rotates the refresh token on each redemption, and the
+		// replacement is persisted: Refresh reports it and the connector hands
+		// it to the registry's credential sink, which re-seals it. Without that
+		// a mailbox idle past the ~90-day confidential-client lifetime had to
+		// reconnect for no reason its owner could see.
 		AuthParams:        map[string]string{"response_mode": "query"},
 		ScopeInTokenForms: true,
 		AuthRejected:      ErrAuthRejected,
@@ -216,7 +279,16 @@ func receivedAfterFilter(after time.Time) string {
 	return "receivedDateTime ge " + after.UTC().Format(time.RFC3339)
 }
 
-// deltaPage is one page of the inbox messages delta. A tombstoned entry
+// The two well-known folders a standing sync follows. Named constants because
+// they are Microsoft's own identifiers rather than folder names a person chose,
+// and because which folder a message came from is what attests whether the
+// owner sent it.
+const (
+	folderInbox = "inbox"
+	folderSent  = "sentitems"
+)
+
+// deltaPage is one page of a messages delta. A tombstoned entry
 // carries @removed instead of message fields — nothing to fetch for it.
 type deltaPage struct {
 	Value []struct {
@@ -227,9 +299,13 @@ type deltaPage struct {
 	DeltaLink string `json:"@odata.deltaLink"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 }
 
-func (a *httpAPI) DeltaInit(ctx context.Context, accessToken string, after time.Time) ([]string, string, error) {
+func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) ([]string, string, error) {
 	q := url.Values{paramFilter: {receivedAfterFilter(after)}}
-	return a.deltaWalk(ctx, accessToken, a.base+"/me/mailFolders/inbox/messages/delta?"+q.Encode())
+	// receivedDateTime bounds BOTH folders: Exchange stamps it on a sent
+	// message too, so one filter serves the pair rather than the sent side
+	// needing sentDateTime and a second spelling of "recently".
+	return a.deltaWalk(ctx, accessToken,
+		a.base+"/me/mailFolders/"+url.PathEscape(folder)+"/messages/delta?"+q.Encode())
 }
 
 func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]string, string, error) {
@@ -334,8 +410,8 @@ func (a *httpAPI) EstimateAfter(ctx context.Context, accessToken string, after t
 	q := url.Values{
 		paramFilter: {receivedAfterFilter(after)},
 		"$count":    {"true"},
-		"$select":   {"id"},
-		"$top":      {"1"},
+		paramSelect: {"id"},
+		paramTop:    {"1"},
 	}
 	// $count=true needs the eventual-consistency header on Graph.
 	hdr := http.Header{"ConsistencyLevel": {"eventual"}}
@@ -350,8 +426,8 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.
 	if u == "" {
 		q := url.Values{
 			paramFilter: {receivedAfterFilter(after)},
-			"$select":   {"id,parentFolderId"},
-			"$top":      {strconv.Itoa(pageSize)},
+			paramSelect: {"id,parentFolderId"},
+			paramTop:    {strconv.Itoa(pageSize)},
 		}
 		u = a.base + "/me/messages?" + q.Encode()
 	} else if err := a.sameAPIOrigin(u); err != nil {
@@ -392,7 +468,7 @@ func (a *httpAPI) SentFolderID(ctx context.Context, accessToken string) (string,
 	var out struct {
 		ID string `json:"id"`
 	}
-	q := url.Values{"$select": {"id"}}
+	q := url.Values{paramSelect: {"id"}}
 	if _, err := a.get(ctx, accessToken, a.base+"/me/mailFolders/sentitems?"+q.Encode(), nil, &out); err != nil {
 		return "", err
 	}

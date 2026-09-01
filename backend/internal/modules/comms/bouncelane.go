@@ -12,15 +12,9 @@ package comms
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // HardBounce is one send of the caller's that did not arrive: what it was
@@ -35,95 +29,27 @@ type HardBounce struct {
 	PersonID  ids.UUID
 }
 
-// subjectLineBound caps the send's subject on the way to the wire, as the
-// sibling lanes cap their free text: the column is unbounded and eight
-// multi-megabyte headlines would be a self-inflicted flood.
-const subjectLineBound = 300
-
-// hardBouncesSQL joins each bounced send to the person its activity is filed
-// under. activity_link belongs to the activities module; this read joins it
-// directly rather than through a port for the same reason consent's verdict
-// read and deals' health read do — the link row is shared metadata every
-// module's row-level reads resolve in their own statement. The join carries
-// auth.LinkTargetVisibleClause, the clause the activities module's own link
-// projections ask: owning the send says nothing about the visibility of the
-// people its activity touches, and a person this caller may not read must
-// not reach the wire even as a bare id. LATERAL with
-// LIMIT 1 rather than a plain join: an activity filed under several people
-// must not put the same bounce on the lane twice.
-func hardBouncesSQL(ctx context.Context, userID ids.UUID, since time.Time, limit int, args *[]any) (string, error) {
-	// Every placeholder is derived from the arg slice — the visibility clause
-	// appends its own, and a hand-numbered $N beside a derived one drifts the
-	// day the filter gains an argument.
-	arg := func(v any) int { *args = append(*args, v); return len(*args) }
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
-	if err != nil {
-		return "", err
-	}
-	if visible == "" {
-		visible = "TRUE"
-	}
-	return fmt.Sprintf(`
-SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.bounce_reason, ''), o.bounced_at, l.person_id
-  FROM comms_outbound o
-  LEFT JOIN LATERAL (
-    SELECT al.person_id FROM activity_link al
-     WHERE al.activity_id = o.activity_id AND al.entity_type = 'person' AND `+visible+`
-     ORDER BY al.person_id LIMIT 1
-  ) l ON true
- WHERE o.user_id = $%d
-   AND o.bounce_kind = 'hard'
-   AND o.bounced_at >= $%d
- ORDER BY o.bounced_at DESC, o.id DESC
- LIMIT $%d`, subjectLineBound, arg(userID), arg(since), arg(limit)), nil
+// bounceLane is the lane's three words: the receiving side's own refusal, the
+// moment the report landed, and hard reports only.
+var bounceLane = sendLane{
+	reasonColumn: "bounce_reason",
+	atColumn:     "bounced_at",
+	only:         "o.bounce_kind = 'hard'",
 }
 
 // HardBouncesFor answers the calling person's own hard-bounced sends since
-// `since`, newest report first, bounded. The person comes from the bound
-// principal and is not a parameter — another person's bounces cannot be
-// expressed — and a caller with no person behind it is refused with the
-// permission sentinel, which the attention feed renders as a withheld lane.
+// `since`, newest report first, bounded.
 func (s *Store) HardBouncesFor(ctx context.Context, since time.Time, limit int) ([]HardBounce, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return nil, fmt.Errorf("comms: reading your bounced sends needs an authenticated person: %w", apperrors.ErrPermissionDenied)
-	}
-	// A send is an activity, and reading one back — subject line included —
-	// carries the activity read grant like every other timeline read. After
-	// the person check, so a caller with nobody behind it gets the sentinel
-	// the lane withholds on rather than a bare unauthenticated error.
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	var args []any
-	statement, err := hardBouncesSQL(ctx, actor.UserID, since, limit, &args)
+	sends, err := s.readSendLane(ctx, bounceLane, "bounced sends", since, limit)
 	if err != nil {
 		return nil, err
 	}
-	var bounced []HardBounce
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, txErr := tx.Query(ctx, statement, args...)
-		if txErr != nil {
-			return txErr
-		}
-		defer rows.Close()
-		bounced = []HardBounce{}
-		for rows.Next() {
-			var bounce HardBounce
-			var person *ids.UUID
-			if scanErr := rows.Scan(&bounce.ID, &bounce.Subject, &bounce.Reason,
-				&bounce.BouncedAt, &person); scanErr != nil {
-				return scanErr
-			}
-			if person != nil {
-				bounce.PersonID = *person
-			}
-			bounced = append(bounced, bounce)
-		}
-		return rows.Err()
-	})
-	if err != nil {
-		return nil, fmt.Errorf("comms: listing bounced sends: %w", err)
+	bounced := make([]HardBounce, 0, len(sends))
+	for _, send := range sends {
+		bounced = append(bounced, HardBounce{
+			ID: send.ID, Subject: send.Subject, Reason: send.Reason,
+			BouncedAt: send.At, PersonID: send.PersonID,
+		})
 	}
 	return bounced, nil
 }

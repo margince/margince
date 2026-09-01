@@ -48,6 +48,15 @@ type replyActivityData struct {
 	// its own author. Empty is an answer: a draft with no recipient name opens
 	// without one rather than guessing.
 	Recipient string `json:"recipient,omitempty"`
+	// RecipientLastName is the surname a FORMAL greeting takes, and it is a
+	// separate field because the two registers take different names. A model
+	// handed only "Dietmar" and writing formal German cannot be right: it
+	// either drops the register or fills the gap itself, and "Sehr geehrte
+	// Frau/Herr Dietmar" is what filling it looks like.
+	//
+	// Empty where the record holds no surname, which is the case the prompt's
+	// rule sends to the familiar greeting rather than to a guess.
+	RecipientLastName string `json:"recipient_last_name,omitempty"`
 
 	Subject string `json:"subject,omitempty"`
 	Body    string `json:"body,omitempty"`
@@ -130,7 +139,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	// timestamp tells them apart.
 	state := d.conversationState(activity)
 	envelope := d.envelope.Resolve(ctx, body, state)
-	recipient := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
+	recipient, surname := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
 
 	fallbackSubject, fallbackBody := activities.DeterministicEmailDraft(activities.DraftContext{
 		Topic:     topic,
@@ -143,12 +152,13 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		// Already bounded: NewEnvelope caps the two identity fields, which are
 		// the only ones that come from a text column rather than being
 		// server-derived and fixed-shape.
-		Envelope:  envelope,
-		Thread:    threadFlag(threaded),
-		Recipient: boundedRunes(recipient, recipientMaxRunes),
-		Subject:   boundedRunes(topic, replyActivityMaxRunes),
-		Body:      boundedRunes(body, replyActivityMaxRunes),
-		Intent:    boundedRunes(strings.TrimSpace(intent), replyActivityMaxRunes),
+		Envelope:          envelope,
+		Thread:            threadFlag(threaded),
+		Recipient:         boundedRunes(recipient, recipientMaxRunes),
+		RecipientLastName: boundedRunes(surname, recipientMaxRunes),
+		Subject:           boundedRunes(topic, replyActivityMaxRunes),
+		Body:              boundedRunes(body, replyActivityMaxRunes),
+		Intent:            boundedRunes(strings.TrimSpace(intent), replyActivityMaxRunes),
 	}
 
 	voice := d.loadVoice(ctx)
@@ -194,19 +204,22 @@ const recipientMaxRunes = 200
 // linked to nobody, and in both cases an unnamed greeting is the honest answer.
 // The reason is logged, so a lookup that breaks for some other cause is visible
 // rather than silently reading as "no recipient".
-func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) string {
+// It answers both names because the two greeting registers take different
+// ones: the familiar form uses the first name, the formal form the surname.
+// Resolving them together keeps one read behind one greeting.
+func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) (greeting, surname string) {
 	if d.store == nil {
-		return ""
+		return "", ""
 	}
 	recipient, err := d.store.ReplyRecipientFor(ctx, anchor)
 	if err != nil {
 		d.logger().WarnContext(ctx, "reply recipient unavailable; drafting without a greeting name", "err", err)
-		return ""
+		return "", ""
 	}
 	if recipient.FirstName != "" {
-		return recipient.FirstName
+		return recipient.FirstName, recipient.LastName
 	}
-	return recipient.FullName
+	return recipient.FullName, recipient.LastName
 }
 
 // conversationState places the message being answered on the silence axis.

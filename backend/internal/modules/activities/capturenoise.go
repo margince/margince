@@ -172,34 +172,3 @@ func (s *Store) RedactCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityID
 	}
 	return done, nil
 }
-
-// LinkCapturedMailTx links every captured message from one address to the person
-// it turned out to belong to — the `real` verdict's mirror of the hide. The
-// ledger row names one message, but the sender may have written several while
-// the question was open, and all of them belong on that person's timeline.
-//
-// Only mail linked to nobody: a message already attached to a person belongs to
-// that person's record, and a verdict about an unknown sender must not relabel
-// it. Conflict-free on replay — the link table's uniqueness makes a second run a
-// no-op rather than a duplicate.
-func (s *Store) LinkCapturedMailTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID, email string) error {
-	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		SELECT a.id, 'person', $2
-		  FROM activity a
-		 WHERE a.counterparty_email = $1
-		   AND a.kind = 'email' AND a.captured_by LIKE 'connector:%'
-		   -- A held record's counterparty_email is cleared, so it cannot match
-		   -- here — but the exclusion is stated rather than inherited: linking
-		   -- a restricted record to a live person would put it back in a
-		   -- reader's reach through that person's timeline.
-		   AND a.restricted_at IS NULL
-		   AND NOT EXISTS (
-		     SELECT 1 FROM activity_link l
-		      WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
-		ON CONFLICT DO NOTHING`, email, personID)
-	if err != nil {
-		return fmt.Errorf("activities: linking captured mail to its counterparty: %w", err)
-	}
-	return nil
-}

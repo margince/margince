@@ -73,15 +73,18 @@ type ListActivitiesInput struct {
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
 
-	// OwnQueueOf narrows to the work one person is answerable for: assigned to
-	// them, or assigned to NOBODY. Distinct from AssigneeID, which means exact
-	// assignment and is what the task screen filters by.
-	//
-	// The unassigned arm is the difference that matters. A rep who writes
-	// themselves a task without filling in an assignee still owns it, and a
-	// "my work" queue that dropped it would hide the reader's own to-do from
-	// them — which is worse than showing one row too many.
+	// OwnQueueOf narrows to the open work one person is answerable for.
+	// Distinct from AssigneeID, which means exact assignment on any kind and is
+	// what the task screen filters by; this one is the day's queue and carries
+	// open-ness with it.
 	OwnQueueOf *ids.UserID
+	// UnassignedQueue narrows to the open tasks nobody answers for.
+	//
+	// A scope of its own rather than an arm of OwnQueueOf: unowned work is
+	// somebody's to pick up, and a reader chooses to look at it. Folded into a
+	// personal queue it arrives as though already theirs, which is how one
+	// automation's follow-up came to sit on every colleague's page.
+	UnassignedQueue bool
 	// WithinProjectID narrows to one body of work, EXCLUDING what belongs to
 	// another project and keeping what belongs to none.
 	//

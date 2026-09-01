@@ -63,6 +63,10 @@ func toProviderConnection(c integrations.Connection) crmcontracts.ProviderConnec
 		// left; this is what this installation consumed, and the card must
 		// never let a reader take one for the other.
 		Spend: toProviderSpend(c.Spend),
+		// Absent rather than zeroed for a provider nobody has connected: a
+		// backlog of 0 would read as "everybody is looked up" where the truth
+		// is that nothing can look anybody up yet.
+		LookupBacklog: toProviderBacklog(c.Backlog),
 		// The ONLY credential fact that ever leaves: whether one is set.
 		CredentialPresent: c.CredentialPresent,
 		Catalog:           catalogWire(c.Catalog),
@@ -188,6 +192,7 @@ func toProviderRun(r provider.Run) crmcontracts.ProviderRun {
 		Trigger:         crmcontracts.ProviderRunTrigger(r.Trigger),
 		State:           crmcontracts.ProviderRunState(r.State),
 		ClaimsUnwritten: r.ClaimsUnwritten,
+		Applied:         &r.Applied,
 		// The frozen snapshot, echoed so a caller can see what the run was
 		// admitted under rather than what the connection says now.
 		ConfigurationSnapshot: toProviderSnapshot(r.Snapshot),
@@ -273,11 +278,23 @@ func catalogWire(catalog []integrations.CategoryCost) *[]crmcontracts.ProviderCa
 		for pool, n := range entry.Cost {
 			cost[pool] = n
 		}
-		out = append(out, crmcontracts.ProviderCategoryCost{
+		wire := crmcontracts.ProviderCategoryCost{
 			Category: entry.Category,
 			Free:     entry.Free,
 			Cost:     cost,
-		})
+		}
+		if entry.Requires != "" {
+			wire.Requires = &entry.Requires
+		}
+		out = append(out, wire)
 	}
 	return &out
+}
+
+// toProviderBacklog maps how much of the installation is still waiting.
+func toProviderBacklog(b *integrations.BacklogCount) *crmcontracts.ProviderLookupBacklog {
+	if b == nil {
+		return nil
+	}
+	return &crmcontracts.ProviderLookupBacklog{Remaining: b.Remaining, Paused: b.Paused}
 }

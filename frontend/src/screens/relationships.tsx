@@ -708,13 +708,13 @@ export function RelationshipsTab({
                           started_at: rel.started_at ?? "",
                           ended_at: rel.ended_at ?? "",
                         }}
-                        update={async (values) => {
+                        update={async (values, _rows, opened) => {
                           const { data, error } = await api.PATCH(
                             "/relationships/{id}",
                             {
                               params: {
                                 path: { id: rel.id },
-                                ...ifMatch(requireVersion(rel.version)),
+                                ...ifMatch(requireVersion(opened?.version)),
                               },
                               body: {
                                 role: orNull(values.role),

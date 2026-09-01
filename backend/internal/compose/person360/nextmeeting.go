@@ -84,10 +84,10 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, personID id
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
 		  AND a.occurred_at > $%d
-		  AND `+personLinkedActivity+`
+		  AND `+fmt.Sprintf(personReachesActivity, linkPos)+`
 		  AND (%s)%s
 		ORDER BY a.occurred_at, a.id
-		LIMIT 1`, participantScope, nowPos, linkPos, scope, projectScope(opts, arg)), args...).
+		LIMIT 1`, participantScope, nowPos, scope, projectScope(opts, arg)), args...).
 		Scan(&activityID, &meeting.StartsAt, &subject, &dealID, &participants)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing booked. That IS the answer, and the strip renders "None".
