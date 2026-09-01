@@ -24478,8 +24478,9 @@ components:
           description: >-
             `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier.
             `research` — the deep-research drawer. `record` — another record page. `task` — the
-            task sheet.
-          enum: [composer, meeting_brief, research, record, task]
+            task sheet. `activity_log` — the log-activity form, for writing down a note or a
+            meeting that happened off-system.
+          enum: [composer, meeting_brief, research, record, task, activity_log]
         entity_type:
           type: [string, 'null']
           enum: [person, organization, deal, activity, null]

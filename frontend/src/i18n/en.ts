@@ -6774,6 +6774,8 @@ export const en = {
   "person.action.meetings": "See meetings",
   "person.action.addTask": "Add task",
   "person.action.research": "Research",
+  "person.action.logRefused":
+    "You do not have permission to log activities on this record.",
 
   "person.strip.lastInbound": "Last inbound",
   "person.strip.lastOutbound": "Last outbound",

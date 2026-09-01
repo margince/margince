@@ -46,6 +46,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -90,12 +91,37 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		// Dismissed against THIS evidence. The quiet success state is what the
 		// reader asked for by dismissing, and it is a moment of its own rather
 		// than an empty card.
-		quiet := nothingNeededMoment(now, out)
-		out.Moment = &quiet
-		return nil
+		moment = nothingNeededMoment(now, out)
 	}
+	withholdLogActivity(ctx, &moment)
 	out.Moment = &moment
 	return nil
+}
+
+// withholdLogActivity turns a log-activity action the caller may not perform
+// into a blocked one that says so. The ladder derives its actions from the
+// page alone and knows nothing about the caller; the store behind the form
+// requires `activity.create`, so an action offered as available to a reader
+// without that grant is a button that opens a form whose save is refused.
+func withholdLogActivity(ctx context.Context, moment *crmcontracts.PersonMoment) {
+	if auth.Require(ctx, "activity", principal.ActionCreate) == nil {
+		return
+	}
+	reason := "You do not have permission to log activities"
+	withhold := func(action *crmcontracts.PersonMomentAction) {
+		if action.Kind != crmcontracts.PersonMomentActionKindLogActivity {
+			return
+		}
+		action.State = crmcontracts.PersonMomentActionStateBlocked
+		action.BlockedReason = &reason
+		action.Destination = nil
+	}
+	withhold(&moment.RecommendedAction)
+	if moment.SecondaryActions != nil {
+		for i := range *moment.SecondaryActions {
+			withhold(&(*moment.SecondaryActions)[i])
+		}
+	}
 }
 
 // momentDismissed asks whether this viewer has already put this moment away
@@ -393,21 +419,17 @@ func askColleague() crmcontracts.PersonMomentAction {
 }
 
 // logInteraction offers the one thing worth doing on a record with nothing
-// pending: write down something that happened off-system.
-//
-// Blocked for the same reason as askColleague, and it was found by the test
-// that pins that rule rather than by a report — which is the argument for
-// having written the rule instead of the one fix. The screen for it exists
-// (frontend logactivity.tsx, the contract's logActivity POST), but the person
-// page does not route to it and the destination vocabulary has no surface
-// naming it, so an available action here is a button that does nothing.
+// pending: write down something that happened off-system. It opens the
+// log-activity form the person page mounts, the same form the deal and lead
+// pages keep in their rail.
 func logInteraction() crmcontracts.PersonMomentAction {
-	reason := "Logging an interaction from this card is not available yet"
 	return crmcontracts.PersonMomentAction{
-		Kind:          crmcontracts.PersonMomentActionKindLogActivity,
-		Label:         "Log an interaction",
-		State:         crmcontracts.PersonMomentActionStateBlocked,
-		BlockedReason: &reason,
+		Kind:  crmcontracts.PersonMomentActionKindLogActivity,
+		Label: "Log an interaction",
+		State: crmcontracts.PersonMomentActionStateAvailable,
+		Destination: &crmcontracts.PersonMomentDestination{
+			Surface: crmcontracts.PersonMomentDestinationSurfaceActivityLog,
+		},
 	}
 }
 

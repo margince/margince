@@ -8217,6 +8217,7 @@ func (e PersonMomentDestinationEntityType) Valid() bool {
 
 // Defines values for PersonMomentDestinationSurface.
 const (
+	PersonMomentDestinationSurfaceActivityLog  PersonMomentDestinationSurface = "activity_log"
 	PersonMomentDestinationSurfaceComposer     PersonMomentDestinationSurface = "composer"
 	PersonMomentDestinationSurfaceMeetingBrief PersonMomentDestinationSurface = "meeting_brief"
 	PersonMomentDestinationSurfaceRecord       PersonMomentDestinationSurface = "record"
@@ -8227,6 +8228,8 @@ const (
 // Valid indicates whether the value is a known member of the PersonMomentDestinationSurface enum.
 func (e PersonMomentDestinationSurface) Valid() bool {
 	switch e {
+	case PersonMomentDestinationSurfaceActivityLog:
+		return true
 	case PersonMomentDestinationSurfaceComposer:
 		return true
 	case PersonMomentDestinationSurfaceMeetingBrief:
@@ -24740,14 +24743,14 @@ type PersonMomentDestination struct {
 	// Prefill What the surface opens with — a draft intent, a subject, a task title. Strings only: a prefill is what a human is about to edit, never a structure the client must interpret.
 	Prefill *map[string]string `json:"prefill,omitempty"`
 
-	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet.
+	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
 	Surface PersonMomentDestinationSurface `json:"surface"`
 }
 
 // PersonMomentDestinationEntityType defines model for PersonMomentDestination.EntityType.
 type PersonMomentDestinationEntityType string
 
-// PersonMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet.
+// PersonMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
 type PersonMomentDestinationSurface string
 
 // PersonMomentEvidence One thing that actually happened, which the reader can open.

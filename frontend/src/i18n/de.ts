@@ -6723,6 +6723,8 @@ export const de = {
   "person.action.meetings": "Termine ansehen",
   "person.action.addTask": "Aufgabe",
   "person.action.research": "Recherche",
+  "person.action.logRefused":
+    "Sie haben keine Berechtigung, Aktivitäten zu diesem Kontakt zu erfassen.",
 
   "person.strip.lastInbound": "Zuletzt eingehend",
   "person.strip.lastOutbound": "Zuletzt ausgehend",

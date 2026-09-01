@@ -6652,6 +6652,8 @@ export const vi = {
   "person.action.meetings": "Xem lịch hẹn",
   "person.action.addTask": "Thêm việc",
   "person.action.research": "Nghiên cứu",
+  "person.action.logRefused":
+    "Bạn không có quyền ghi nhận hoạt động cho hồ sơ này.",
 
   "person.strip.lastInbound": "Nhận gần nhất",
   "person.strip.lastOutbound": "Gửi gần nhất",
