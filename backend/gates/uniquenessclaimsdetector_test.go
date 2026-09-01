@@ -231,6 +231,10 @@ func intensifier(word string) bool {
 // legal Go identifier and a legal thing to write, and `go test` will never run
 // it — so a claim could name a "gate" that compiles, exists, and can never
 // execute. The signature is checked too, below.
+// claimWhitespace is every run of space the comment's own wrapping produced.
+// Collapsed to one space so a phrase reads the same however it was broken.
+var claimWhitespace = regexp.MustCompile(`\s+`)
+
 var heldBy = regexp.MustCompile(`Held by:\s*(Test[A-Z_][A-Za-z0-9_]*)\s*\(([^)]+)\)`)
 
 // goTestFunc finds the declarations a `Held by:` may name.
@@ -372,7 +376,15 @@ func findClaims(root string) ([]claim, error) {
 			if doc == nil {
 				return
 			}
-			text := doc.Text()
+			// Flattened before matching. doc.Text() keeps the newlines the
+			// comment was WRAPPED at, and every pattern below spells its
+			// phrase with literal spaces — so "the one spelling" is a claim
+			// this sees and the same claim broken across two lines is not.
+			//
+			// That is the one direction a census must not break: reflowing a
+			// paragraph changes no meaning, and it would have taken a live
+			// claim out of the register with nothing failing to say so.
+			text := claimWhitespace.ReplaceAllString(doc.Text(), " ")
 			shapes := sortedShapes()
 			patterns := make(map[string]*regexp.Regexp, len(claimShapes)+1)
 			for name, pattern := range claimShapes {
