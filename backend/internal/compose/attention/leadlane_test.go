@@ -152,8 +152,10 @@ func TestAnUnassignedLeadNamesThatItAnswersToNobody(t *testing.T) {
 func TestANamedOwnersQueueKeepsTheirOwedLeads(t *testing.T) {
 	rep := ids.MustParse("01a05500-0000-7000-8000-00000000c0fe")
 	svc := leadLaneService(&stubLeads{tracked: true, rows: []OwedLead{
-		{ID: ids.NewV7(), Name: "their lead", DeadlineAt: readInstant.Add(-time.Hour),
-			State: "breached", OwnerID: rep},
+		{
+			ID: ids.NewV7(), Name: "their lead", DeadlineAt: readInstant.Add(-time.Hour),
+			State: "breached", OwnerID: rep,
+		},
 	}})
 
 	day, err := svc.Worklist(leadReader(), "", "", rep, 25)
