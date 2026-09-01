@@ -71,6 +71,7 @@ var unlockedLiveWrites = gatekit.Waive(map[string]string{
 	"internal/modules/people:Store.QuickCapture":            "quick capture creates the person and its phone in one transaction, then attaches the employer edge whose probe puts this function here. The subject did not exist outside this transaction when the probe ran, so no erasure can be in flight against it",
 	"internal/modules/people:Store.quickCaptureInTx":        "the same capture running inside a caller's transaction, reached only from QuickCapture and creating the same person before writing its socials",
 	"internal/modules/people:Store.CreateFromVCardReviewTx": "a reviewed card accepted into a new person: CreatePersonTx mints the row and its socials, and the employer attach that follows is what reaches the probe. The subject is this transaction's own creation, so there is no concurrent erasure to lose a race to",
+	"internal/modules/people:Store.createFromCard":          "the import arm for a card nobody matched, and the same shape as CreateFromVCardReviewTx above: CreatePersonTx mints the person and its socials, and the employer attach that follows is what reaches the probe. The probe this function does carry is of the card's SOURCE MESSAGE, not of a subject — there is no prior person here for an erasure to be holding, because this transaction is what creates them",
 })
 
 func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {

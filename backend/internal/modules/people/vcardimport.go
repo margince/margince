@@ -82,6 +82,35 @@ type VCardResult struct {
 // find and fix the one row before any of it lands is a reader who gives up. The
 // per-card outcome list is what makes that legible.
 func (s *Store) ImportVCards(ctx context.Context, entries []VCardEntry) ([]VCardResult, error) {
+	return s.importCardsFrom(ctx, entries, ids.Nil)
+}
+
+// ImportVCardsFromMessage imports cards that arrived as an attachment, holding
+// every card's write against the message they came from.
+//
+// The difference from ImportVCards is the reason the second entry point exists:
+// a browser upload is a human holding a file, and no source row's audience can
+// change under it. A MAILED card has one, and the gap between reading the
+// attachment and writing the person is real — an object-store fetch per
+// attachment, then a transaction per card. A narrowing, a restriction or an
+// erasure committing in that gap would otherwise land the card anyway, and what
+// lands is a name, a number and a postal address on a record every seat reads,
+// which the narrowing does not reach.
+//
+// The source is re-read INSIDE each card's own transaction, as the first
+// statement there. A check taken before the transaction is a check with a gap
+// after it; this one holds for as long as the write it guards.
+func (s *Store) ImportVCardsFromMessage(ctx context.Context, entries []VCardEntry, source ids.UUID) ([]VCardResult, error) {
+	// A zero id would silently import with no guard at all, which is the one
+	// outcome this entry point exists to prevent — so it refuses rather than
+	// falling back to the unguarded path.
+	if source.IsZero() {
+		return nil, errors.New("people: importing cards from a message that names no message")
+	}
+	return s.importCardsFrom(ctx, entries, source)
+}
+
+func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, source ids.UUID) ([]VCardResult, error) {
 	// Both grants, up front. The import CREATES people and it UPDATES the ones
 	// a card already matches, and those are two different permissions: the
 	// create grant that lets somebody start an import says nothing about
@@ -98,7 +127,7 @@ func (s *Store) ImportVCards(ctx context.Context, entries []VCardEntry) ([]VCard
 	}
 	results := make([]VCardResult, 0, len(entries))
 	for i, entry := range entries {
-		result, err := s.importOneVCard(ctx, i, entry)
+		result, err := s.importOneVCard(ctx, i, entry, source)
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +136,7 @@ func (s *Store) ImportVCards(ctx context.Context, entries []VCardEntry) ([]VCard
 	return results, nil
 }
 
-func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry) (VCardResult, error) {
+func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry, source ids.UUID) (VCardResult, error) {
 	result := VCardResult{Index: index, FullName: strings.TrimSpace(entry.FullName)}
 	if result.FullName == "" {
 		result.Outcome = VCardSkipped
@@ -116,6 +145,9 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry)
 	}
 
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// The dedupe first, and it takes no row lock — it is a read, so it
+		// orders nothing. What comes after it is ordered, and strictly: the
+		// SUBJECT before the source, on every arm.
 		decision, err := DedupePerson(ctx, tx, vcardCandidate(entry))
 		if err != nil {
 			return err
@@ -130,22 +162,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry)
 			// Reported as a skip rather than skipped silently: an import that
 			// quietly leaves one card out is an import nobody can audit, and
 			// the reader can act on "you may not write this one".
-			if err := auth.EnsureWritableLive(ctx, tx, entityPerson, decision.PersonID.UUID); err != nil {
-				if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-					// Deliberately says nothing about WHAT was matched. The two
-					// refusals are one sentence because telling them apart
-					// would confirm that the address on this card belongs to a
-					// real contact in this workspace, to somebody who may not
-					// see that contact.
-					result.Outcome = VCardSkipped
-					result.Reason = "this card could not be written here"
-					return nil
-				}
-				return fmt.Errorf("probing write authority over the matched person: %w", err)
-			}
-			result.Outcome = VCardUpdated
-			result.PersonID = &decision.PersonID
-			return s.fillFromVCard(ctx, tx, decision.PersonID, entry)
+			return s.updateMatchedByCard(ctx, tx, decision.PersonID, entry, source, &result)
 		case DecisionFuzzyReview, DecisionNameCollisionReview:
 			// Named, not merged, and not created either: creating beside a
 			// near-match is how a file of forty cards quietly doubles a
@@ -167,14 +184,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry)
 			result.PersonID = &decision.PersonID
 			return nil
 		default:
-			person, err := s.CreatePersonTx(ctx, tx, personFromVCard(entry))
-			if err != nil {
-				return err
-			}
-			created := ids.From[ids.PersonKind](ids.UUID(person.Id))
-			result.Outcome = VCardCreated
-			result.PersonID = &created
-			return s.attachVCardEmployer(ctx, tx, created, entry)
+			return s.createFromCard(ctx, tx, entry, source, &result)
 		}
 	})
 	if err != nil {
