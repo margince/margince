@@ -14,6 +14,7 @@ package integrations
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -64,7 +65,45 @@ func runCategories(desc provider.Descriptor, conn admittedConnection, in provide
 	if err := requireCascadeTriggers(desc, asked); err != nil {
 		return nil, err
 	}
+	if err := requirePrerequisites(desc, asked); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// requirePrerequisites refuses a category asked for without the one that has
+// to come back with something first.
+//
+// Surfe's mobile lookup is the worked case, and it is the one that shipped
+// broken. The adapter always sends skipMobileEnrichmentIfNoEmailFound, so a
+// request naming mobile and nothing else makes the vendor hunt for an email it
+// was never asked to buy, fail to find one, and skip the number entirely. The
+// run comes back COMPLETED and empty. Nothing along the way looks wrong — no
+// refusal, no error, a successful run — and the page reports that the contact
+// was found while the field stays blank.
+//
+// Refused rather than silently widened, for the reason requireCascadeTriggers
+// gives above: adding professional_email would buy a category the caller did
+// not ask for and charge them for it. They name both, or neither.
+//
+// The map is walked in sorted order so a request breaking two of these rules
+// names the same one every time. An error that varies between identical calls
+// reads as intermittent to whoever is looking at it.
+func requirePrerequisites(desc provider.Descriptor, asked map[provider.Category]bool) error {
+	categories := make([]string, 0, len(desc.RequiresAnswerTo))
+	for category := range desc.RequiresAnswerTo {
+		categories = append(categories, string(category))
+	}
+	sort.Strings(categories)
+	for _, name := range categories {
+		category := provider.Category(name)
+		prerequisite := desc.RequiresAnswerTo[category]
+		if asked[category] && !asked[prerequisite] {
+			return fmt.Errorf("%w: %q is only looked up when %q comes back with something, so it cannot be bought without it",
+				ErrCategoryNotPermitted, category, prerequisite)
+		}
+	}
+	return nil
 }
 
 // requireCascadeTriggers refuses a fallback asked for without the category it

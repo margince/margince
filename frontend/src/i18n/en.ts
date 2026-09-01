@@ -7081,7 +7081,8 @@ export const en = {
   // exactly like one that returned all six, and nothing on the page said when
   // the answer arrived.
   // The price rides the button because the decision IS the spend.
-  "provider.profile.buy": "Buy {category} · {credits} credit",
+  "provider.profile.buy_one": "Buy {category} · {credits} credit",
+  "provider.profile.buy_other": "Buy {category} · {credits} credits",
   "provider.freeTier.hint":
     "LinkedIn profile, current role and work history cost no credits. Leave this on: every new contact gets them without anybody deciding.",
   "provider.pricedTier.hint":

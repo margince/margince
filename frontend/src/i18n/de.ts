@@ -7026,7 +7026,8 @@ export const de = {
   "provider.profile.departments": "Bereiche",
   "provider.profile.seniorities": "Ebene",
   "provider.profile.notRequested": "Nie angefragt: {categories}.",
-  "provider.profile.buy": "{category} kaufen · {credits} Credit",
+  "provider.profile.buy_one": "{category} kaufen · {credits} Credit",
+  "provider.profile.buy_other": "{category} kaufen · {credits} Credits",
   "provider.freeTier.hint":
     "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Am besten anlassen: jeder neue Kontakt bekommt sie, ohne dass jemand entscheiden muss.",
   "provider.pricedTier.hint":

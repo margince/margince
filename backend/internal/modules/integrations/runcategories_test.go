@@ -12,6 +12,7 @@ package integrations
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -157,5 +158,78 @@ func TestAFallbackCannotBeBoughtWithoutTheCategoryItFollows(t *testing.T) {
 	// the one outcome this must not allow.
 	if !errors.Is(err, ErrCategoryNotPermitted) {
 		t.Errorf("err = %v, want the fallback refused without its trigger", err)
+	}
+}
+
+// A category the provider only looks up when something else came back cannot
+// be bought on its own.
+//
+// The defect this pins is the one a customer actually hit. Surfe's adapter
+// always sends skipMobileEnrichmentIfNoEmailFound, so a request naming mobile
+// alone makes the vendor hunt for an email nobody bought, fail, and skip the
+// number. The run returns COMPLETED with no claims: no refusal, no error, a
+// successful run — and the page reports the contact as found while the mobile
+// field stays empty. Two of these were bought for one contact on consecutive
+// days and neither could ever have produced a number.
+func TestACategoryNeedingAnAnswerFirstCannotBeBoughtAlone(t *testing.T) {
+	desc := pricedDescriptor()
+	desc.RequiresAnswerTo = map[provider.Category]provider.Category{
+		"mobile": "professional_email",
+	}
+	conn := connectionBuying("professional_email", "mobile")
+
+	_, err := runCategories(desc, conn, provider.QueueInput{
+		Trigger:    provider.TriggerManual,
+		Categories: []provider.Category{"mobile"},
+	})
+
+	if !errors.Is(err, ErrCategoryNotPermitted) {
+		t.Fatalf("err = %v, want mobile refused without the email it depends on", err)
+	}
+	// The message has to name BOTH halves: a reader told only that mobile was
+	// refused cannot tell what to add.
+	if msg := err.Error(); !strings.Contains(msg, "mobile") || !strings.Contains(msg, "professional_email") {
+		t.Errorf("the refusal does not name both categories, so nobody can act on it: %v", err)
+	}
+}
+
+// The same pair bought TOGETHER goes through. Without this case the rule above
+// passes against a guard that refuses mobile outright, which would take the
+// working purchase away with the broken one.
+func TestTheDependentPairIsBoughtTogether(t *testing.T) {
+	desc := pricedDescriptor()
+	desc.RequiresAnswerTo = map[provider.Category]provider.Category{
+		"mobile": "professional_email",
+	}
+	conn := connectionBuying("professional_email", "mobile")
+
+	got, err := runCategories(desc, conn, provider.QueueInput{
+		Trigger:    provider.TriggerManual,
+		Categories: []provider.Category{"professional_email", "mobile"},
+	})
+	if err != nil {
+		t.Fatalf("naming both categories was refused: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("got %v, want both categories — the run must ask for the pair it priced", got)
+	}
+}
+
+// A provider declaring no prerequisite is unaffected. The rule reads the
+// descriptor, so an adapter that never fills the map keeps today's behaviour
+// rather than acquiring a constraint its vendor does not have.
+func TestAProviderWithoutPrerequisitesBuysWhatItLikes(t *testing.T) {
+	desc := pricedDescriptor()
+	conn := connectionBuying("mobile")
+
+	got, err := runCategories(desc, conn, provider.QueueInput{
+		Trigger:    provider.TriggerManual,
+		Categories: []provider.Category{"mobile"},
+	})
+	if err != nil {
+		t.Fatalf("a provider declaring no prerequisite refused a lone category: %v", err)
+	}
+	if len(got) != 1 {
+		t.Errorf("got %v, want just the one category asked for", got)
 	}
 }

@@ -278,11 +278,15 @@ func catalogWire(catalog []integrations.CategoryCost) *[]crmcontracts.ProviderCa
 		for pool, n := range entry.Cost {
 			cost[pool] = n
 		}
-		out = append(out, crmcontracts.ProviderCategoryCost{
+		wire := crmcontracts.ProviderCategoryCost{
 			Category: entry.Category,
 			Free:     entry.Free,
 			Cost:     cost,
-		})
+		}
+		if entry.Requires != "" {
+			wire.Requires = &entry.Requires
+		}
+		out = append(out, wire)
 	}
 	return &out
 }

@@ -124,17 +124,21 @@ func NewStore(db *database.DB, vault keyvault.Vault, reg *Registry, now func() t
 	return &Store{db: db, vault: vault, registry: reg, now: now}, nil
 }
 
-// Connection is one provider's connection as the surfaces read it. It carries
-// no credential material and no vault reference — only whether a key is
-// present at all.
 // CategoryCost is one category's price, as the settings card and a buy button
 // read it.
 type CategoryCost struct {
 	Category string
 	Free     bool
 	Cost     map[string]int
+	// Requires names another category this one is only looked up alongside,
+	// empty when there is none. A buy button asks for both or neither, and
+	// Cost above is already the price of the pair.
+	Requires string
 }
 
+// Connection is one provider's connection as the surfaces read it. It carries
+// no credential material and no vault reference — only whether a key is
+// present at all.
 type Connection struct {
 	Provider string
 	// Catalog is what this provider sells, with what each entry costs.
@@ -371,25 +375,35 @@ func catalogOf(d provider.Descriptor) []CategoryCost {
 			Category: string(category),
 			Free:     free[category],
 			Cost:     priced,
+			Requires: string(d.RequiresAnswerTo[category]),
 		})
 	}
 	return out
 }
 
 // pricedWith is the category set whose worst case is the true price of asking
-// for one category: itself, plus the trigger of any cascade it is the fallback
-// for.
+// for one category: itself, the trigger of any cascade it is the fallback for,
+// and the category it needs an answer from.
 //
-// ONE hop. No adapter declares a cascade whose trigger is itself a fallback,
-// and a chain would need this to walk it — said here rather than built for,
-// because the descriptor that needed it would also be the one to prove what
-// walking should cost.
+// The prerequisite is priced in for the same reason as the cascade trigger,
+// and here it is not even conditional: the run cannot be bought without it
+// (requirePrerequisites refuses the lone request), so a button pricing mobile
+// on its own would state one figure and spend two. Price and request name the
+// same set, or the number on the button is a lie.
+//
+// ONE hop each. No adapter declares a cascade whose trigger is itself a
+// fallback, nor a prerequisite carrying its own — said here rather than built
+// for, because the descriptor that needed it would also be the one to prove
+// what walking should cost.
 func pricedWith(d provider.Descriptor, category provider.Category) []provider.Category {
 	out := []provider.Category{category}
 	for _, cascade := range d.Cascades {
 		if cascade.Category == category {
 			out = append(out, cascade.After)
 		}
+	}
+	if prerequisite, ok := d.RequiresAnswerTo[category]; ok {
+		out = append(out, prerequisite)
 	}
 	return out
 }
