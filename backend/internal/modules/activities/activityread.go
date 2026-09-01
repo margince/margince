@@ -215,7 +215,9 @@ func readActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived st
 // unconditionally, so calling readActivity here would answer not-found no
 // matter what the archived filter said — this read does not re-decide
 // either question the caller already settled, only avoids asking a gate
-// that would answer the wrong one. Ratified in restrictedReadersAdmitted.
+// that would answer the wrong one. gates/restrictedreaders_test.go's
+// call-graph walk credits it through lockActivityForWrite's own
+// restricted_at check one hop away, rather than through a waiver entry.
 func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
 	return readActivityRow(ctx, tx, id, archived)
 }

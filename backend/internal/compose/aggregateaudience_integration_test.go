@@ -35,10 +35,9 @@ import (
 // TestAHeldMessageIsNotCountedInRelationshipStrength drives the REAL
 // PersonStrength path (people.Store, the one GET /people/{id}/strength and
 // person360 both call) rather than a hand-rolled query — a local copy of the
-// audience rule proves the rule is right, not that the code applying it is,
-// which is exactly why margince#3406 shipped past the previous version of
-// this test (it called its own `interactionCount` helper, never the real
-// strengthInputs query strength.go's fix landed in).
+// audience rule proves the rule is right, not that the code applying it is.
+// A test that calls its own duplicate helper instead of the real
+// strengthInputs query can go green over a leak the query itself still has.
 func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 	e := integration.Setup(t)
 	person := seedLinkedPerson(t, e, "anwalt@kanzlei.example")
@@ -74,11 +73,11 @@ func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 }
 
 // TestAHeldMessageDoesNotMoveLastTouch drives the real person360.Service —
-// the composite read GET /people/{id}/360 serves — through lastTouchSection,
-// the second, previously unreported gap margince#3406 found: the content
-// gate (auth.ActivityAudienceArm, used correctly by readActivities in the
-// same file) is the wrong tool for an AGGREGATE, which has to answer the
-// same for every colleague and needs auth.AudienceWorkspaceOnly instead.
+// the composite read GET /people/{id}/360 serves — through lastTouchSection:
+// the content gate (auth.ActivityAudienceArm, used correctly by
+// readActivities in the same file) is the wrong tool for an AGGREGATE,
+// which has to answer the same for every colleague and needs
+// auth.AudienceWorkspaceOnly instead.
 func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
 	e := integration.Setup(t)
 	person := seedLinkedPerson(t, e, "spaet@kanzlei.example")

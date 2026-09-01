@@ -25,10 +25,12 @@ import (
 )
 
 // activityRetentionHeld reports whether id names a currently existing
-// activity under a statutory retention hold. A row it cannot find at all
-// answers false, not an error — the caller's own LiveOnly refusal is already
-// the right answer for a genuinely missing row, and this probe only needs to
-// say whether that refusal was actually about a hold.
+// activity under a statutory retention hold. Meaningful only read under a
+// lock already held on the row: an unlocked read here is stale the instant
+// a concurrent lift commits, which is exactly the bug lockActivityForWrite,
+// its caller below, was rewritten to stop making. A row it cannot find at
+// all answers false, not an error, for a caller that has not locked one and
+// only wants to know whether a just-vanished id was ever held.
 func activityRetentionHeld(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
 	var held bool
 	err := tx.QueryRow(ctx,
@@ -40,12 +42,23 @@ func activityRetentionHeld(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, e
 }
 
 // lockActivityForWrite is storekit.LockRow against the activity table,
-// except that a row LiveOnly cannot see is checked for a retention hold
-// before being reported missing. A held row is deliberately re-locked WITH
-// archived rows included, and the caller is told so: every read of the same
-// row that follows in this transaction must resolve it with
-// storekit.IncludeArchived too, and the caller's own auth.EnsureActivityWritable
-// check must be told the row isn't live either
+// except that a row LiveOnly cannot see is LOCKED before being classified
+// gone or held, never the other way round. Reading restricted_at first and
+// locking second — this function's first shipped version — is exactly the
+// TOCTOU LockRow's own doc warns against: a lift (privacy's
+// liftAndEraseHeldRecord, run by the expiry sweep or an admin release) can
+// clear restricted_at between an unlocked read and a later lock, leaving
+// held stale-true for a row that is now merely archived, ordinary, and
+// entitled to nothing more than the 404 it always got. Locking first with
+// IncludeArchived and reading restricted_at under that lock closes the
+// window: nothing else can move the column again before this transaction
+// commits, so the classification this returns is the row's true state for
+// every read and write that follows in the same transaction.
+//
+// A held row is deliberately locked WITH archived rows included, and the
+// caller is told so: every read of the same row that follows must resolve
+// it with storekit.IncludeArchived too, and the caller's own
+// auth.EnsureActivityWritable check must be told the row isn't live either
 // (auth.EnsureActivityWritableIn(..., live=false)) — so the write reaches
 // the row and activity_refuse_restricted_mutation, not this call or that
 // one, is what refuses it, as 423 rather than a 404 that denies the row is
@@ -56,6 +69,9 @@ func lockActivityForWrite(ctx context.Context, tx pgx.Tx, id ids.UUID) (held boo
 	} else if !errors.Is(err, apperrors.ErrNotFound) {
 		return false, err
 	}
+	if _, err := storekit.LockRow(ctx, tx, "activity", id, storekit.IncludeArchived); err != nil {
+		return false, err
+	}
 	held, err = activityRetentionHeld(ctx, tx, id)
 	if err != nil {
 		return false, err
@@ -63,8 +79,7 @@ func lockActivityForWrite(ctx context.Context, tx pgx.Tx, id ids.UUID) (held boo
 	if !held {
 		return false, apperrors.ErrNotFound
 	}
-	_, err = storekit.LockRow(ctx, tx, "activity", id, storekit.IncludeArchived)
-	return true, err
+	return true, nil
 }
 
 // activityArchivedFilter is the storekit.ArchivedFilter a caller must resolve

@@ -341,10 +341,19 @@ func EnsureActivityWritable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // function with live=false already proved the row exists by another means
 // (the row lock, taken directly against the table), so re-asking the
 // discoverability gate would only reproduce the same false 404 this exists
-// to remove. The ownership test below still runs unconditionally: what
-// changes is not WHETHER a caller must be authorized over the row, only
-// which gate is asked to answer it, so an unrelated caller with no ownership
-// claim on the row still cannot learn a restricted row exists.
+// to remove.
+//
+// This file's own doc above states the rule the live=false arm must still
+// hold: a write-authority answer is a NARROWING of a visibility one, never a
+// substitute, and ErrPermissionDenied is owed only to a caller the
+// visibility gate already told the row is theirs to read. Skipping that
+// gate here does not earn an exemption from it — an unpermitted caller
+// answers ErrNotFound, exactly what the skipped gate would have answered
+// for a row that is not theirs, so a probe cannot tell "held and not mine"
+// (which must read as gone) apart from "does not exist" or "live and not
+// mine". Only a permitted caller reaches ErrPermissionDenied's absence
+// (nil) or the write that follows and answers 423 through the CHECK
+// trigger — the two cases the visibility gate would have let through too.
 func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live bool) error {
 	if live {
 		if err := ensureActivity(ctx, tx, id, ActivityContentClause, true); err != nil {
@@ -374,6 +383,9 @@ func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live 
 		return err
 	}
 	if !permitted {
+		if !live {
+			return apperrors.ErrNotFound
+		}
 		return apperrors.ErrPermissionDenied
 	}
 	return nil

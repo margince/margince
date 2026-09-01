@@ -383,11 +383,11 @@ func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 // timeline including archived rows, and the record history all answer as if
 // the row were gone; the Art. 15 package alone still reaches it; and a write
 // — through the store's own guarded path or a raw statement alike — surfaces
-// as the 423 the contract promises, with the deadline attached (margince#3231:
-// the store's write path used to read the row LiveOnly before ever reaching
-// the guard, so an authorized writer with the id in front of them was told
-// the record did not exist; lockActivityForWrite now asks whether a row
-// LiveOnly cannot see is gone or held before answering either way).
+// as the 423 the contract promises, with the deadline attached: the store's
+// write path used to read the row LiveOnly before ever reaching the guard,
+// so an authorized writer with the id in front of them was told the record
+// did not exist; lockActivityForWrite now asks whether a row LiveOnly
+// cannot see is gone or held before answering either way.
 func TestARestrictedRowLeavesEveryOrdinaryReadPath(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)

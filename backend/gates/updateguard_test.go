@@ -127,7 +127,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// before being reported missing, and the lock is retaken with
 	// IncludeArchived when it is, so the write can reach
 	// activity_refuse_restricted_mutation instead of a 404 that denies a
-	// held row exists (margince#3231). The guard is real — the witness's
+	// held row exists. The guard is real — the witness's
 	// per-function scan just does not cross the one-hop indirection a
 	// helper shared by three write paths puts between the call site and
 	// storekit.LockRow.
