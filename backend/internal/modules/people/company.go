@@ -136,10 +136,14 @@ type CompanyProfileField struct {
 	Value           string
 	EvidenceSnippet string
 	SourceURL       string
-	Confidence      float32
-	Source          string
-	CapturedBy      string
-	UpdatedAt       time.Time
+	// Nil when the row records no confidence, which the column allows and a
+	// non-site_read write leaves empty. Nil is not zero: a value nobody scored
+	// is not a value scored as worthless, and the list read of the same table
+	// (ListOrganizationFacts) already answers null for it.
+	Confidence *float32
+	Source     string
+	CapturedBy string
+	UpdatedAt  time.Time
 }
 
 // CompanyFact is one accepted repeatable fact about the company.
@@ -150,10 +154,12 @@ type CompanyFact struct {
 	ValueKey        string
 	EvidenceSnippet string
 	SourceURL       string
-	Confidence      float32
-	Source          string
-	CapturedBy      string
-	UpdatedAt       time.Time
+	// Nil for the same reason as the profile field's above, and reachable here
+	// today: the technical-signal write records no confidence at all.
+	Confidence *float32
+	Source     string
+	CapturedBy string
+	UpdatedAt  time.Time
 	// Carried because this fact reaches the browser as the same
 	// OrganizationFact the account endpoints return, and that schema promises a
 	// version for the If-Match a correction or removal sends.
@@ -169,9 +175,10 @@ type Company struct {
 	OrganizationSource     string
 	OrganizationCapturedBy string
 	Website                *string
-	// The bucket path of the mark a confirmed website read bound to the anchor
-	// record, nil when none resolved. It never reaches the wire — LogoURL turns
-	// it into the endpoint that streams the bytes.
+	// The bucket path of the mark the record is wearing — one a website read
+	// resolved, or one a person uploaded (SetCompanyLogo) — and nil when it
+	// wears none. It never reaches the wire: LogoURL turns it into the endpoint
+	// that streams the bytes.
 	LogoObjectKey   *string
 	Fields          map[string]string
 	ProfileFields   []CompanyProfileField

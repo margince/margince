@@ -15,6 +15,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -545,5 +546,56 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 	}
 	if first.Fingerprint == changed.Fingerprint {
 		t.Fatal("editing a contributing profile value did not change the context fingerprint")
+	}
+}
+
+// A fact with no confidence at all is not a broken company read. The column
+// allows one and the technical-signal lane writes exactly that — it observes a
+// mail provider from a DNS record, which is a fact it either read or did not,
+// with no score to give it. A read that scanned that row into a plain float
+// answered the whole profile with an error, which takes down the onboarding
+// gate and the shell's brand block for a company that is perfectly fine.
+func TestTheCompanyReadSurvivesAFactNobodyScored(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
+	store := people.NewStore(e.DB())
+
+	saved, err := store.SaveCompany(ctx, people.SaveCompanyInput{
+		DisplayName: "Acme GmbH",
+		Fields: map[string]*string{
+			"offer_summary": strptr("Revenue operations software"),
+			"icp":           strptr("RevOps at SaaS scale-ups"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("save the company: %v", err)
+	}
+	// Written through the real lane, not planted: what makes this row reachable
+	// is that a production writer records no confidence for it.
+	if err := store.ApplyTechnicalEnrichment(ctx, people.TechnicalEnrichment{
+		OrganizationID: saved.OrganizationID,
+		Completed:      []people.TechnicalLane{people.LaneDNS},
+		Observations: []people.TechnicalObservation{{
+			Field: "mail_provider", ValueKey: "google", Value: "Google Workspace",
+			Evidence: "aspmx.l.google.com", SourceURL: "dns:acme.example",
+		}},
+		ObservedAt: time.Now(),
+	}, nil); err != nil {
+		t.Fatalf("record the technical signal: %v", err)
+	}
+
+	company, err := store.GetCompany(ctx)
+	if err != nil {
+		t.Fatalf("read the company back: %v", err)
+	}
+	var unscored int
+	for _, fact := range company.Facts {
+		if fact.Confidence == nil {
+			unscored++
+		}
+	}
+	if unscored != 1 {
+		t.Fatalf("%d facts came back unscored, want the one the lane wrote — a zero here would "+
+			"read as a fact scored worthless rather than one nobody scored", unscored)
 	}
 }

@@ -263,7 +263,7 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 			Field: crmcontracts.CompanyProfileFieldField(field.Field), Value: field.Value,
 			Source: crmcontracts.CompanyProfileFieldSource(field.Source), CapturedBy: &field.CapturedBy,
 			EvidenceSnippet: nonEmptyString(field.EvidenceSnippet), SourceUrl: nonEmptyString(field.SourceURL),
-			Confidence: &field.Confidence, UpdatedAt: field.UpdatedAt,
+			Confidence: field.Confidence, UpdatedAt: field.UpdatedAt,
 		})
 	}
 	facts := make([]crmcontracts.OrganizationFact, 0, len(c.Facts))
@@ -274,7 +274,7 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 			Field:    crmcontracts.OrganizationFactField(fact.Field), Value: fact.Value, ValueKey: fact.ValueKey,
 			Source: crmcontracts.OrganizationFactSource(fact.Source), CapturedBy: &fact.CapturedBy,
 			EvidenceSnippet: nonEmptyString(fact.EvidenceSnippet), SourceUrl: nonEmptyString(fact.SourceURL),
-			Confidence: &fact.Confidence, UpdatedAt: fact.UpdatedAt, Version: &version,
+			Confidence: fact.Confidence, UpdatedAt: fact.UpdatedAt, Version: &version,
 		})
 	}
 	out.Fields = &profileFields
