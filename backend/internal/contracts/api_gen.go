@@ -13811,7 +13811,17 @@ type AIFeedbackInput struct {
 
 	// SubjectType The record the claim is about. One ledger across all four, so a correction made on one screen binds on the others.
 	SubjectType AIFeedbackInputSubjectType `json:"subject_type"`
-	Verdict     AIFeedbackInputVerdict     `json:"verdict"`
+
+	// ValueCapturedAt The `captured_at` of the value the client rendered. Send back whatever the read handed you (`PersonProfileField.captured_at`), beside `value_shown`.
+	// It RANKS two submissions about the same claim rather than deciding what either is about. Both stamps are the server's own, so a page that rendered the newer value carries the later one — and a correction typed against a value that has since moved is refused with 409 rather than replacing the verdict a colleague recorded about the value that stands.
+	// Optional, and omitting it is not an error: a submission that carries no stamp is not ranked against anything and simply lands.
+	ValueCapturedAt *time.Time `json:"value_captured_at,omitempty"`
+
+	// ValueShown The value the client RENDERED — the sentence the human actually had in front of them when they decided. Send back whatever the read handed you (`PersonProfileField.value`).
+	// This is what the verdict is ABOUT, and the reader compares it against the value it is asked to apply the verdict to. A record whose value has moved on since the page was drawn keeps the verdict on file and does not apply it, which is the point: a correction to one sentence must not be applied to a different one.
+	// Optional. Omitting it falls back to comparing WHEN the verdict was recorded against when the value last changed — a proxy, and the answer every verdict recorded before this field existed still gets.
+	ValueShown *string                `json:"value_shown,omitempty"`
+	Verdict    AIFeedbackInputVerdict `json:"verdict"`
 }
 
 // AIFeedbackInputClaimKind defines model for AIFeedbackInput.ClaimKind.

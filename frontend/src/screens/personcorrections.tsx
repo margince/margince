@@ -93,6 +93,17 @@ function EnrichedField({
   const recordZone = useRecordZone();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(field.value);
+  // WHAT THE EDITOR OPENED ON, held apart from `field`.
+  //
+  // `field` refreshes underneath an open editor — a re-capture lands, a
+  // colleague's correction arrives — and the draft in the box is still about
+  // what was there when the reader started typing. Submitting the CURRENT
+  // field's value and stamp would name a sentence the reader never saw, and the
+  // server would then apply their correction to it.
+  const [shown, setShown] = useState<{ value: string; capturedAt: string }>({
+    value: field.value,
+    capturedAt: field.captured_at,
+  });
   const queryClient = useQueryClient();
 
   const record = useMutation({
@@ -111,6 +122,15 @@ function EnrichedField({
           claim_path: field.claim_key ?? `profile_field:${field.field}`,
           verdict: input.verdict,
           corrected_value: input.value,
+          // WHAT THE READER WAS LOOKING AT, snapshotted when the editor
+          // opened rather than read off `field` now. It is what lets the ledger
+          // ask whether the human was looking at the value their verdict is
+          // applied to, rather than inferring it from the order two clocks fell
+          // in — and reading it live would defeat the whole point in exactly
+          // the case it exists for: a page open while something else writes the
+          // field, and the correction submitted afterwards.
+          value_shown: shown.value,
+          value_captured_at: shown.capturedAt,
         },
       });
       if (error) {
@@ -258,6 +278,10 @@ function EnrichedField({
                 small
                 onClick={() => {
                   setDraft(field.value);
+                  setShown({
+                    value: field.value,
+                    capturedAt: field.captured_at,
+                  });
                   setEditing(true);
                 }}
               >
