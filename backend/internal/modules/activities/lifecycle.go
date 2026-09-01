@@ -486,15 +486,3 @@ func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEve
 	}
 	return fields
 }
-
-// relinkedChangedFields is RelinkActivity's activity.updated builder: the
-// relink is an association change, not a field patch, so changed_fields
-// carries only the typed relinked target.
-func relinkedChangedFields(entityType string, entityID ids.UUID) crmcontracts.PublicEventActivityChangedFields {
-	return crmcontracts.PublicEventActivityChangedFields{
-		Relinked: &crmcontracts.PublicEventActivityRelinkedRef{
-			EntityType: entityType,
-			EntityId:   openapi_types.UUID(entityID),
-		},
-	}
-}

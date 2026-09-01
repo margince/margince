@@ -16,6 +16,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -142,6 +143,18 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	return true, storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
 		ChangedFields: relinkedChangedFields(in.EntityType, in.EntityID),
 	})
+}
+
+// relinkedChangedFields is RelinkActivity's activity.updated builder: the
+// relink is an association change, not a field patch, so changed_fields
+// carries only the typed relinked target.
+func relinkedChangedFields(entityType string, entityID ids.UUID) crmcontracts.PublicEventActivityChangedFields {
+	return crmcontracts.PublicEventActivityChangedFields{
+		Relinked: &crmcontracts.PublicEventActivityRelinkedRef{
+			EntityType: entityType,
+			EntityId:   openapi_types.UUID(entityID),
+		},
+	}
 }
 
 // relinkMeetsItsPin re-checks the version the caller read the activity at,
