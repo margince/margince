@@ -93,11 +93,10 @@ func addGraphWatchJobs(reg *jobRegistry, cfg JobRunnerConfig, log *slog.Logger) 
 // fail is worse than no pass: the poll still runs either way, and the difference
 // is a fleet-wide error rate an operator has to explain.
 //
-// The worker registers Graph from ENVIRONMENT credentials alone
-// (CaptureSyncRegistry), where the Google side also resolves a stored app. So a
-// Microsoft app configured in the product reaches the api and not this role, and
-// an operator who sets the notification URL for it gets exactly that failing
-// pass.
+// The registry is the thing asked, rather than the environment that helped build
+// it, because an app configured through the product registers a connector no
+// environment variable names — and the two roles have already come apart over
+// exactly that once.
 //
 // EXPORTED so the boot banner can ask the same question rather than restate it.
 // A banner naming a lane that did not come up is worse than no banner: it is the
