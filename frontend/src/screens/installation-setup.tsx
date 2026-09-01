@@ -10,6 +10,7 @@ import { ComboBox } from "../design-system/combobox";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { OnboardingStage } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
+import { ProviderMark } from "../design-system/provider-mark";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -323,10 +324,7 @@ function AiStep({
               />
             )}
           </Field>
-          <Field
-            label={t("firstRun.ai.key")}
-            hint={t("firstRun.ai.keyHint", { envVar: preset.keyEnv })}
-          >
+          <Field label={t("firstRun.ai.key")} hint={t("firstRun.ai.keyHint")}>
             {(control) => (
               <TextInput
                 {...control}
@@ -520,6 +518,11 @@ function GoogleAppHelp() {
         </OffsiteLink>
       </p>
       <p className="ob-fr-help-note">{t("firstRun.google.helpDocs")}</p>
+      {/* The sign-in step, here rather than on the screen itself. It is work for
+          whoever runs the server, not for the admin filling this form, and as a
+          permanent notice above the fields it put two environment variable names
+          between the question and the first thing anybody types. */}
+      <p className="ob-fr-help-note">{t("firstRun.google.helpSignIn")}</p>
     </Disclosure>
   );
 }
@@ -573,9 +576,18 @@ function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
         }
       >
         <PanelBody>
+          {/* Plates rather than a radio column: the answers here are two
+              vendors and a protocol, and an admin picks the platform their
+              company already runs by recognising it. The mark is the fast half
+              of that recognition and never the only half, so the label still
+              says which is which. `other` gets the component's own fallback,
+              which is a key rather than an invented logo: IMAP is not a brand,
+              and a plate with no mark at all started its label higher than the
+              two beside it. */}
           <ChoiceList<Platform>
             legend={t("firstRun.platform.legend")}
             hideLegend
+            layout="cards"
             value={platform}
             disabled={save.isPending}
             onChange={setPlatform}
@@ -583,6 +595,7 @@ function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
               value: id,
               label: t(PLATFORM_COPY[id].label),
               description: t(PLATFORM_COPY[id].what),
+              mark: <ProviderMark providerKey={id} />,
             }))}
           />
           {/* What the two answers that need no app HERE still need, and where.
@@ -593,9 +606,16 @@ function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
               does not turn the login door on. A screen that states two paths'
               gaps and hides the third's is worse than one that states none: it
               reads as a guarantee for the path it says nothing about. */}
-          <Callout tone="info" live="status">
-            {t(operatorWork ?? "firstRun.platform.googleSignInCaveat")}
-          </Callout>
+          {/* Only the two answers that leave work for somebody else say so
+              here. Google's own caveat moved to the stage foot, which is where
+              a one-line qualification about the screen belongs: as a permanent
+              notice it sat between the question and the fields, and it was the
+              longest thing on the screen. */}
+          {operatorWork === undefined ? null : (
+            <Callout tone="info" live="status">
+              {t(operatorWork)}
+            </Callout>
+          )}
           {/* And what the two answers that need no app here run into anyway.
               Silent rather than a second live region: both change on the same
               press, and two regions announcing together read the news twice. */}
@@ -749,6 +769,11 @@ export function InstallationSetup() {
         at: (setup.data?.steps ?? []).findIndex((s) => s.step === step.step),
       }}
       eyebrow={t(ai ? "firstRun.ai.eyebrow" : "firstRun.google.eyebrow")}
+      // The one qualification each step carries, on the card's bottom edge.
+      // Both are true of the whole screen rather than of any field on it, which
+      // is what makes them chrome: as callouts in the board they were read as
+      // instructions and pushed the actual form below the fold.
+      hint={t(ai ? "firstRun.ai.foot" : "firstRun.google.foot")}
       title={t(head(ignited !== null, ai).title)}
       sub={t(head(ignited !== null, ai).sub)}
     >

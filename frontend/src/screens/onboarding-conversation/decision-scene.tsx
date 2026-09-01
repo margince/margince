@@ -63,11 +63,18 @@ export function DecisionScene({
         aria-labelledby={headline}
         className="ob-decision-options"
       >
+        {/* What each answer puts on the record, stated BEFORE it is given.
+            The choices used to be names with evidence behind them, which asks
+            somebody to decide without showing the consequence: two candidates
+            can read almost identically and write very different strings into a
+            profile every later screen quotes. Only rendered where the question
+            actually writes something. See `QuestionOption.writes`. */}
         {question.options.map((option) => (
           <CandidateCard
             key={option.value}
             group={group}
             value={option.value}
+            writes={option.writes}
             label={
               option.labelKey ? t(option.labelKey, option.params) : option.label
             }
@@ -115,6 +122,7 @@ export function DecisionScene({
 function CandidateCard({
   group,
   value,
+  writes,
   label,
   detail,
   facts,
@@ -123,6 +131,8 @@ function CandidateCard({
 }: Readonly<{
   group: string;
   value: string;
+  /** The exact string this answer records, where it records one. */
+  writes?: string;
   label: string;
   detail?: string;
   facts: CandidateFacts | null;
@@ -158,6 +168,18 @@ function CandidateCard({
             )}
           </span>
         </label>
+        {writes !== undefined && writes !== "" && (
+          // The consequence, beside the choice rather than after it. Two
+          // candidates can read almost identically and put very different
+          // strings on a record every later screen quotes, so the string itself
+          // is shown, verbatim and in mono, before the answer is given.
+          <span className="ob-decision-writes">
+            <span className="ob-decision-writes-lead">
+              {t("ob.conv.scene.writes")}
+            </span>
+            <code>{writes}</code>
+          </span>
+        )}
         {hasEvidence && (
           <button
             type="button"

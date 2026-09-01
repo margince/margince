@@ -31,23 +31,30 @@ import "./onboarding-ignition.css";
  * three timers do that and nothing else.
  */
 
-/** How the Core moves through the sequence, in the order it happens. */
-const CORE_BEATS: ReadonlyArray<{ at: number; state: MarginceCoreState }> = [
+/**
+ * How the Core moves through the sequence, in the order it happens.
+ *
+ * The ring is THIS OPERATION's, not the flow's, which is why it finishes. It
+ * used to stop a little under half so as not to claim first run was over, and
+ * that was the wrong instrument for the worry: nothing on this screen ever
+ * moved it again, so it sat at 42% under a sequence that had plainly finished
+ * and read as a stall. Where the reader is in first run is the band's dashes,
+ * which already say so and already advance.
+ */
+const CORE_BEATS: ReadonlyArray<{
+  at: number;
+  state: MarginceCoreState;
+  progress: number;
+}> = [
   // Reaching the vendor for the first time: material going out and coming back.
-  { at: 0, state: "ingest" },
+  { at: 0, state: "ingest", progress: 0.12 },
   // The answer arrived and is being made sense of.
-  { at: 2100, state: "working" },
+  { at: 2100, state: "working", progress: 0.62 },
   // Bound, and waiting for the person who bound it.
-  { at: 3900, state: "idle" },
+  { at: 3900, state: "idle", progress: 1 },
 ];
 
-/**
- * Drives the Core through the sequence and reports where it is.
- *
- * The ring climbs to a little under half, not to full: the model is bound and
- * first run is not finished, so a full ring here would claim the rest of the
- * setup was done too.
- */
+/** Drives the Core through the sequence and reports where it is. */
 export function useIgnitionCore(running: boolean): {
   state: MarginceCoreState;
   progress: number | undefined;
@@ -72,7 +79,7 @@ export function useIgnitionCore(running: boolean): {
   }
   return {
     state: CORE_BEATS[beat].state,
-    progress: 0.12 + (beat / (CORE_BEATS.length - 1)) * 0.3,
+    progress: CORE_BEATS[beat].progress,
   };
 }
 

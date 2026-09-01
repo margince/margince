@@ -51,6 +51,18 @@ type LabelSource =
 
 export type QuestionOption = {
   value: string;
+  /**
+   * The exact string this answer puts on the record, when it puts one there.
+   *
+   * SEPARATE FROM `value`, which is only what the answer is called on the wire.
+   * The two happen to agree for a clarify, where the server says the value is
+   * verbatim what the selection authorizes; they do not for a question that
+   * chooses something other than a profile field, and a surface that printed
+   * `value` as "this is what gets written" would be inventing a consequence for
+   * those. Absent means this option writes nothing a screen can quote, which is
+   * a fact worth stating and never one to guess at.
+   */
+  writes?: string;
   detailKey?: MessageKey;
   params?: Record<string, string>;
 } & LabelSource;

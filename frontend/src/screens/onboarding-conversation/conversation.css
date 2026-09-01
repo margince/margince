@@ -675,6 +675,26 @@
   cursor: pointer;
 }
 
+/* What this answer puts on the record, next to the answer itself.
+   Mono and verbatim, because it is a STRING that will be stored and quoted
+   rather than a description of one: paraphrasing it here would defeat the
+   whole point of showing it before the choice is made. */
+.ob-decision-writes {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--fs-meta);
+}
+.ob-decision-writes-lead {
+  color: var(--textMeta);
+}
+.ob-decision-writes code {
+  font-family: var(--f-mono);
+  color: var(--textPrimary);
+  overflow-wrap: anywhere;
+}
+
 .ob-decision-toggle {
   flex: none;
   padding: 0;

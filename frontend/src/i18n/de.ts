@@ -4402,6 +4402,7 @@ export const de = {
   "ob.conv.scene.evidence": "Beleg",
   "ob.conv.scene.hideEvidence": "Beleg ausblenden",
   "ob.conv.scene.whyThis": "Was ich gelesen habe",
+  "ob.conv.scene.writes": "Schreibt",
   "ob.conv.scene.foundOn": "Gefunden auf",
   "ob.conv.guide.decision":
     "Ich brauche eine Entscheidung von dir: {question} Sie steht rechts, mit den Belegen zu jeder Option.",
@@ -4568,10 +4569,11 @@ export const de = {
   "ob.scan.tallyPages": "Seiten gelesen",
   "ob.scan.tallyFacts": "Fakten gefunden",
   "ob.scan.stillReading": "lese noch",
+  "ob.stop.read": "Website lesen",
   "ob.scan.pageStripLabel": "Bisher gelesene Seiten",
-  "ob.scan.pageFetched": "{url} — gelesen",
-  "ob.scan.pageSkipped": "{url} — übersprungen: {reason}",
-  "ob.scan.pageFailed": "{url} — nicht lesbar: {reason}",
+  "ob.scan.pageFetched": "{url}: gelesen",
+  "ob.scan.pageSkipped": "{url}: übersprungen, {reason}",
+  "ob.scan.pageFailed": "{url}: nicht lesbar, {reason}",
   "ob.scan.logLabel": "Die Seiten, die ich gerade durchgehe, neueste zuerst",
   "ob.scan.pageNoReason": "kein Grund erfasst",
   "ob.scan.pageStatusFetched": "gelesen",
@@ -6111,14 +6113,14 @@ export const de = {
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":
-    "Margince stellt keine eigene Inferenz bereit und arbeitet über Ihr Anbieterkonto. Alles davon lässt sich später unter Einstellungen → KI ändern.",
+    "Margince hat keine eigene KI. Es denkt über Ihr Anbieterkonto, und alles davon lässt sich später unter Einstellungen → KI ändern.",
   "firstRun.ai.provider": "Anbieter",
   "firstRun.ai.key": "API-Schlüssel",
   "firstRun.ai.keyHint":
-    "Einmal gesendet und im Schlüsseltresor versiegelt. Ist stattdessen {envVar} in der Umgebung gesetzt, liest der Server ihn von dort.",
+    "Im Schlüsseltresor versiegelt, danach nie wieder sichtbar.",
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
-    "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
+    "Ein Ausgangspunkt. Jedes Modell, das Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.rankedHint":
     "Dazu die zehn am höchsten bewerteten Modelle, die OpenRouter gerade bedient, sortiert nach {rankedBy}, mit den Preisen des Anbieters.",
   "firstRun.ai.rankedUnavailable":
@@ -6143,21 +6145,19 @@ export const de = {
   "firstRun.platform.legend": "Die Plattform dieser Organisation",
   "firstRun.platform.google": "Google Workspace",
   "firstRun.platform.googleWhat":
-    "Mail, Kalender und Anmeldung über eine eigene Google-App. Alles wird mit den Zugangsdaten Ihrer Organisation gelesen.",
+    "Mail, Kalender und Anmeldung über eine eigene Google-App.",
   "firstRun.platform.microsoft": "Microsoft 365",
   "firstRun.platform.microsoftWhat":
-    "Mail und Kalender über Microsoft Graph. Anmeldung mit einem Microsoft-Konto ist noch nicht gebaut, daher melden sich Leute mit E-Mail-Adresse und Passwort an.",
+    "Mail und Kalender über Microsoft Graph. Anmeldung per E-Mail und Passwort.",
   "firstRun.platform.other": "Keins von beiden",
   "firstRun.platform.otherWhat":
-    "Jedes Postfach verbindet sich per IMAP mit eigenen Zugangsdaten, die beim Verbinden eingegeben werden. Anmeldung mit E-Mail-Adresse und Passwort.",
+    "Jedes Postfach verbindet sich per IMAP. Anmeldung per E-Mail und Passwort.",
   "firstRun.platform.microsoftOperator":
-    "Hier ist nichts einzutragen. Die Microsoft-App ist Deployment-Konfiguration: wer den Server betreibt, setzt MARGINCE_GRAPH_CLIENT_ID, MARGINCE_GRAPH_CLIENT_SECRET und MARGINCE_GRAPH_TENANT vor dem Start.",
+    "Hier ist nichts einzutragen. Die Microsoft-App richtet ein, wer den Server betreibt, vor dem Start.",
   "firstRun.platform.otherOperator":
-    "Hier ist nichts einzutragen. Ein IMAP-Postfach bringt Host, Benutzer und Passwort selbst mit, und die werden am Postfach selbst unter Einstellungen → Integrationen eingegeben.",
-  "firstRun.platform.googleSignInCaveat":
-    "Das Speichern der App unten verbindet Mail und Kalender. Die Anmeldung mit einem Google-Konto braucht noch einen Schritt: wer den Server betreibt, exportiert dasselbe Paar als MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu. Die Anmeldung liest sie beim Start, nicht aus dem hier Gespeicherten.",
+    "Hier ist nichts einzutragen. Jedes Postfach wird unter Einstellungen → Integrationen eingerichtet.",
   "firstRun.platform.stillNeedsGoogle":
-    "Der Erststart fragt unabhängig von dieser Antwort weiterhin nach einer Google-App, dieser Weg lässt sich also noch nicht abschließen. Entweder unten eine Google-App einfügen, oder wer den Server betreibt exportiert MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu.",
+    "Der Erststart fragt unabhängig von dieser Antwort weiterhin nach einer Google-App, dieser Weg lässt sich also noch nicht abschließen. Fügen Sie unten eine ein, um weiterzukommen.",
   "firstRun.google.helpToggle": "Woher bekomme ich das?",
   "firstRun.google.helpStep1":
     "In der Google Cloud Console ein Projekt öffnen und zu APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID gehen, dann Webanwendung wählen.",
@@ -6177,8 +6177,8 @@ export const de = {
     "Alle Voraussetzungen, Microsoft und IMAP eingeschlossen: docs/how-to/connect-a-mailbox.md",
   "firstRun.step.model": "Das Modell",
   "firstRun.step.platform": "Ihre Plattform",
-  "firstRun.ai.eyebrow": "Erststart · 1 von 2",
-  "firstRun.google.eyebrow": "Erststart · 2 von 2",
+  "firstRun.ai.eyebrow": "Hier kann noch nichts denken",
+  "firstRun.google.eyebrow": "Es denkt. Erreichen kann es noch niemanden",
   "aiRates.chatLane": "Womit es denkt",
   "aiRates.embedLane": "Womit es sich erinnert",
   "aiRates.perMTokInOut": "pro Million Token, rein → raus",
@@ -6190,6 +6190,12 @@ export const de = {
   "aiRates.proposed": "Preis von OpenRouter",
   "aiRates.proposedDetail":
     "Gerade beim Anbieter gelesen, nicht aus deiner Preisliste. Beim Binden landet er in deinem Freigabe-Eingang, damit Verbrauch und Kosten ihn nach deiner Bestätigung bepreisen können.",
+  "firstRun.ai.foot":
+    "Vor dem Klick auf Weiter geht nichts an Ihren Anbieter.",
+  "firstRun.google.foot":
+    "Das Speichern verbindet Mail und Kalender. Die Google-Anmeldung braucht noch einen Schritt von dem, der den Server betreibt.",
+  "firstRun.google.helpSignIn":
+    "Für die Google-Anmeldung exportiert wer den Server betreibt dasselbe Paar als MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu. Die Anmeldung liest sie beim Start, nicht aus dem hier Gespeicherten.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client-ID",

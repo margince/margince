@@ -2,6 +2,13 @@
    bordered panel would make the graph a widget, and this is the screen's
    subject while a read runs. */
 .crawl-canvas {
+  /* The picture's three colours, named here so the canvas can read them off
+     its own element. A 2D context cannot resolve `var()`, so the alternative
+     is literals in the TypeScript, which is the one thing ADR-0040 forbids and
+     also the thing that would stop the graph following the theme. */
+  --crawl-ink: var(--ai);
+  --crawl-edge: var(--borderSubtle);
+  --crawl-rest: var(--textTertiary);
   display: block;
   width: 100%;
   height: 180px;

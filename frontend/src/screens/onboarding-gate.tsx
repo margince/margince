@@ -251,9 +251,21 @@ type StageHead = Readonly<{
    * message.
    */
   coreLabel?: string;
+  /** The part of this stop the reader is in, for the band beside the step. */
+  where?: string;
   title: string;
   sub: string;
 }>;
+
+// `pages_read` is the server's own tally; where it is absent the fetched pages
+// are the same fact counted from the array rather than a guess. One helper, so
+// the band and the tally beneath it cannot disagree about how many were read.
+function pagesReadOf(read: CompanySiteRead): number {
+  return (
+    read.pages_read ??
+    read.pages.filter((page) => page.status === "fetched").length
+  );
+}
 
 function stageHead(
   t: Translate,
@@ -287,6 +299,12 @@ function stageHead(
           fields: formatNumber(scan.read.profile_fields.length, scan.locale),
         })
       : t("ob.scan.sub"),
+    // The page count belongs here, in the band, and only here: it used to be
+    // printed a second time as its own line directly above a tally whose label
+    // is the same two words.
+    where: t("ob.scan.pagesRead", {
+      pages: formatNumber(pagesReadOf(scan.read), scan.locale),
+    }),
   };
 }
 
@@ -323,6 +341,14 @@ function GateColumn({
       // A read GROWS under the reader, tile by tile. Centred, the column would
       // re-centre on every arriving page and carry the line being read upward.
       anchor={scan === undefined ? "center" : "start"}
+      // Where the reader is, on the screen they wait on longest. The band
+      // carried the mark alone here, so the one place in the passage where
+      // somebody sits for two minutes was the one place that did not say where
+      // they were. The NAME only, with no marks: this surface is prop-driven
+      // and cannot see the flow around it, so it says what it is and does not
+      // invent how many stops the passage has.
+      step={t("ob.stop.read")}
+      where={scan === undefined ? undefined : head.where}
       title={head.title}
       sub={head.sub}
     >
@@ -495,11 +521,7 @@ function TheatreTail({
   const settled = SETTLED.has(read.status);
   const phase = phaseKey(read);
   const runtime = read.ai_runtime;
-  // `pages_read` is the server's own tally; where it is absent the fetched
-  // tiles are the same fact counted from the array rather than a guess.
-  const pagesRead =
-    read.pages_read ??
-    read.pages.filter((page) => page.status === "fetched").length;
+  const pagesRead = pagesReadOf(read);
   const skipped = read.pages.filter((page) => page.status === "skipped").length;
   const latestPage = useLatestArrivedPage(read.pages);
 
@@ -562,11 +584,6 @@ function TheatreTail({
               <ScanTickerEntry key={latestPage.url} page={latestPage} t={t} />
             )}
           </ul>
-          <p className="ob-scan-ticker-total">
-            {t("ob.scan.pagesRead", {
-              pages: formatNumber(pagesRead, locale),
-            })}
-          </p>
         </div>
 
         {/* The two figures the read is actually earning, at the size of the

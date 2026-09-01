@@ -4357,6 +4357,7 @@ export const vi = {
   "ob.conv.scene.evidence": "bằng chứng",
   "ob.conv.scene.hideEvidence": "ẩn bằng chứng",
   "ob.conv.scene.whyThis": "Tôi đã đọc được gì",
+  "ob.conv.scene.writes": "Ghi vào",
   "ob.conv.scene.foundOn": "Tìm thấy tại",
   "ob.conv.guide.decision":
     "Tôi cần bạn quyết định một việc: {question} Nội dung nằm bên phải, kèm bằng chứng cho từng phương án.",
@@ -4520,10 +4521,11 @@ export const vi = {
   "ob.scan.tallyPages": "trang đã đọc",
   "ob.scan.tallyFacts": "dữ kiện tìm được",
   "ob.scan.stillReading": "vẫn đang đọc",
+  "ob.stop.read": "Đọc website",
   "ob.scan.pageStripLabel": "Các trang đã đọc đến giờ",
-  "ob.scan.pageFetched": "{url} — đã đọc",
-  "ob.scan.pageSkipped": "{url} — đã bỏ qua: {reason}",
-  "ob.scan.pageFailed": "{url} — không đọc được: {reason}",
+  "ob.scan.pageFetched": "{url}: đã đọc",
+  "ob.scan.pageSkipped": "{url}: đã bỏ qua, {reason}",
+  "ob.scan.pageFailed": "{url}: không đọc được, {reason}",
   "ob.scan.logLabel": "Các trang tôi đang đi qua, mới nhất trước",
   "ob.scan.pageNoReason": "không ghi nhận lý do",
   "ob.scan.pageStatusFetched": "đã đọc",
@@ -6047,14 +6049,14 @@ export const vi = {
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
   "firstRun.ai.sub":
-    "Margince không tự suy luận mà hoạt động qua tài khoản nhà cung cấp của bạn. Bạn có thể đổi mọi thứ ở đây sau, trong Cài đặt → AI.",
+    "Margince không có AI riêng. Nó suy nghĩ qua tài khoản nhà cung cấp của bạn, và bạn có thể đổi mọi thứ ở đây sau, trong Cài đặt → AI.",
   "firstRun.ai.provider": "Nhà cung cấp",
   "firstRun.ai.key": "Khóa API",
   "firstRun.ai.keyHint":
-    "Gửi một lần và niêm phong trong két khóa. Nếu môi trường đã đặt {envVar}, máy chủ đọc từ đó.",
+    "Niêm phong trong két khóa, không hiện lại lần nào nữa.",
   "firstRun.ai.chatModel": "Mô hình",
   "firstRun.ai.modelHint":
-    "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
+    "Chỉ là điểm khởi đầu. Bất kỳ mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.rankedHint":
     "Kèm theo mười mô hình điểm cao nhất OpenRouter đang phục vụ, xếp theo {rankedBy}, với giá của chính nhà cung cấp.",
   "firstRun.ai.rankedUnavailable":
@@ -6078,21 +6080,19 @@ export const vi = {
   "firstRun.platform.legend": "Nền tảng của tổ chức này",
   "firstRun.platform.google": "Google Workspace",
   "firstRun.platform.googleWhat":
-    "Thư, lịch và đăng nhập qua một app Google của chính bạn. Mọi thứ được đọc bằng thông tin đăng nhập của tổ chức bạn.",
+    "Thư, lịch và đăng nhập qua một app Google của chính bạn.",
   "firstRun.platform.microsoft": "Microsoft 365",
   "firstRun.platform.microsoftWhat":
-    "Thư và lịch qua Microsoft Graph. Đăng nhập bằng tài khoản Microsoft chưa được xây dựng, nên mọi người đăng nhập bằng email và mật khẩu.",
+    "Thư và lịch qua Microsoft Graph. Đăng nhập bằng email và mật khẩu.",
   "firstRun.platform.other": "Không dùng cả hai",
   "firstRun.platform.otherWhat":
-    "Mỗi hộp thư kết nối qua IMAP bằng thông tin riêng, nhập lúc kết nối. Mọi người đăng nhập bằng email và mật khẩu.",
+    "Mỗi hộp thư kết nối qua IMAP. Đăng nhập bằng email và mật khẩu.",
   "firstRun.platform.microsoftOperator":
-    "Không có gì để nhập ở đây. App Microsoft là cấu hình triển khai: người vận hành server đặt MARGINCE_GRAPH_CLIENT_ID, MARGINCE_GRAPH_CLIENT_SECRET và MARGINCE_GRAPH_TENANT trước khi khởi động.",
+    "Không có gì để nhập ở đây. App Microsoft do người vận hành server thiết lập, trước khi khởi động.",
   "firstRun.platform.otherOperator":
-    "Không có gì để nhập ở đây. Hộp thư IMAP tự mang host, user và mật khẩu của nó, và những giá trị đó được nhập trên chính hộp thư ở Cài đặt → Tích hợp.",
-  "firstRun.platform.googleSignInCaveat":
-    "Lưu app bên dưới sẽ kết nối thư và lịch. Đăng nhập bằng tài khoản Google cần thêm một bước: người vận hành server export đúng cặp đó thành MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại. Phần đăng nhập đọc chúng lúc khởi động, không đọc từ những gì lưu ở đây.",
+    "Không có gì để nhập ở đây. Mỗi hộp thư được thiết lập ở Cài đặt → Tích hợp.",
   "firstRun.platform.stillNeedsGoogle":
-    "Lần chạy đầu vẫn hỏi một app Google bất kể bạn chọn gì ở trên, nên hướng này chưa hoàn tất được. Hoặc dán một app Google bên dưới, hoặc để người vận hành server export MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại.",
+    "Lần chạy đầu vẫn hỏi một app Google bất kể bạn chọn gì, nên hướng này chưa hoàn tất được. Dán một app bên dưới để đi tiếp.",
   "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
   "firstRun.google.helpStep1":
     "Trong Google Cloud console, mở một project rồi vào APIs & Services → Credentials → Create credentials → OAuth client ID, và chọn Web application.",
@@ -6112,8 +6112,8 @@ export const vi = {
     "Toàn bộ điều kiện tiên quyết, gồm cả Microsoft và IMAP: docs/how-to/connect-a-mailbox.md",
   "firstRun.step.model": "Mô hình",
   "firstRun.step.platform": "Nền tảng của bạn",
-  "firstRun.ai.eyebrow": "Lần chạy đầu · 1 / 2",
-  "firstRun.google.eyebrow": "Lần chạy đầu · 2 / 2",
+  "firstRun.ai.eyebrow": "Ở đây chưa có gì suy nghĩ được",
+  "firstRun.google.eyebrow": "Nó suy nghĩ được. Nhưng chưa liên lạc được với ai",
   "aiRates.chatLane": "Dùng để suy luận",
   "aiRates.embedLane": "Dùng để ghi nhớ",
   "aiRates.perMTokInOut": "trên mỗi triệu token, vào → ra",
@@ -6125,6 +6125,12 @@ export const vi = {
   "aiRates.proposed": "Giá của OpenRouter",
   "aiRates.proposedDetail":
     "Vừa đọc từ nhà cung cấp, không phải từ bảng giá của bạn. Khi bạn gán mô hình này, giá sẽ vào hộp phê duyệt để mức dùng và chi phí tính được sau khi bạn xác nhận.",
+  "firstRun.ai.foot":
+    "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
+  "firstRun.google.foot":
+    "Lưu app này sẽ kết nối thư và lịch. Đăng nhập bằng Google cần thêm một bước từ người vận hành server.",
+  "firstRun.google.helpSignIn":
+    "Để đăng nhập bằng Google, người vận hành server cũng export đúng cặp đó thành MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại. Phần đăng nhập đọc chúng lúc khởi động, không đọc từ những gì lưu ở đây.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client ID",

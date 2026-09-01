@@ -4437,6 +4437,9 @@ export const en = {
   "ob.conv.scene.evidence": "evidence",
   "ob.conv.scene.hideEvidence": "hide evidence",
   "ob.conv.scene.whyThis": "What I read",
+  // Reads straight into the value beside it, which is the point: the reader
+  // sees the exact string before choosing, not a description of it.
+  "ob.conv.scene.writes": "Writes",
   "ob.conv.scene.foundOn": "Found on",
   "ob.conv.guide.decision":
     "I need one decision from you: {question} It is on the right, with the evidence for each option.",
@@ -4608,10 +4611,13 @@ export const en = {
   "ob.scan.tallyPages": "pages read",
   "ob.scan.tallyFacts": "facts found",
   "ob.scan.stillReading": "still reading",
+  // The stops of the passage, for the band's marks. Two words each: they are
+  // read at a glance to find a place, never read as a sentence.
+  "ob.stop.read": "Read the site",
   "ob.scan.pageStripLabel": "Pages read so far",
-  "ob.scan.pageFetched": "{url} — read",
-  "ob.scan.pageSkipped": "{url} — skipped: {reason}",
-  "ob.scan.pageFailed": "{url} — could not be read: {reason}",
+  "ob.scan.pageFetched": "{url}: read",
+  "ob.scan.pageSkipped": "{url}: skipped, {reason}",
+  "ob.scan.pageFailed": "{url}: could not be read, {reason}",
   "ob.scan.logLabel": "The pages I am walking, newest first",
   "ob.scan.pageNoReason": "no reason recorded",
   "ob.scan.pageStatusFetched": "read",
@@ -6157,8 +6163,12 @@ export const en = {
   "firstRun.continue": "Continue",
   // The step's place in first run, over its title. Two questions, and the
   // reader is told which one they are on rather than left to count.
-  "firstRun.ai.eyebrow": "First run · 1 of 2",
-  "firstRun.google.eyebrow": "First run · 2 of 2",
+  // A CLAIM about the installation, not a counter. The band above already says
+  // which stop this is and draws the marks for the rest, and a fraction beside
+  // a step name is the same fact a third time. What an eyebrow can say that
+  // neither of those can is what is true of this installation right now.
+  "firstRun.ai.eyebrow": "Nothing here can think yet",
+  "firstRun.google.eyebrow": "It thinks. It cannot reach anyone yet",
   // The band's own names for the two stops, short enough to sit beside the
   // progress marks. Not the titles: a hero headline in a 12px band wraps.
   "firstRun.step.model": "The model",
@@ -6168,14 +6178,17 @@ export const en = {
   // as two different things.
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
-    "Margince provides no inference of its own, so it works through your vendor account. You can change any of this later under Settings → AI.",
+    "Margince has no AI of its own. It thinks through your vendor account, and you can change any of this later under Settings → AI.",
   "firstRun.ai.provider": "Provider",
   "firstRun.ai.key": "API key",
-  "firstRun.ai.keyHint":
-    "Sent once and sealed in the key vault. The server reads it as {envVar} when one is set in the environment instead.",
+  // The environment-variable path is real and belongs to whoever runs the
+  // server, who is not necessarily the person on this screen. It lives in the
+  // docs; what a reader here needs to know is what happens to the key they are
+  // about to type.
+  "firstRun.ai.keyHint": "Sealed in the key vault, never shown again.",
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
-    "A starting point. The listed prices are per million tokens, in → out; any model id your provider serves will do.",
+    "A starting point. Any model your provider serves will do.",
   // What the live rows in the chat list ARE, so a reader knows what put them
   // in that order. "Top ten" on its own is a claim nobody can check, and the
   // measure is somebody else's published one rather than ours.
@@ -6225,20 +6238,26 @@ export const en = {
     "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
   "firstRun.platform.legend": "The platform this organization runs on",
   "firstRun.platform.google": "Google Workspace",
+  // One line each. Side by side on three plates, a paragraph per answer is
+  // twelve lines of prose for a question most readers settle by recognising
+  // the platform they already run.
   "firstRun.platform.googleWhat":
-    "Mail, calendar and sign-in, through one Google app you own. Everything is read with your organization’s own credentials.",
+    "Mail, calendar and sign-in through one Google app you own.",
   "firstRun.platform.microsoft": "Microsoft 365",
   "firstRun.platform.microsoftWhat":
-    "Mail and calendar through Microsoft Graph. Signing in with a Microsoft account is not built yet, so people sign in with an email address and a password.",
+    "Mail and calendar through Microsoft Graph. Sign-in is email and password.",
   "firstRun.platform.other": "Neither",
   "firstRun.platform.otherWhat":
-    "Each mailbox connects over IMAP with its own credentials, entered when it is connected. People sign in with an email address and a password.",
+    "Each mailbox connects over IMAP. Sign-in is email and password.",
   // What the two paths that need no app here still need somewhere else. Named
   // because it is not this screen's to do and a reader has to know whose it is.
+  // First sentence plus where the rest lives. The variable names are work for
+  // whoever runs the server and are in the docs; naming them here spent four
+  // lines of an onboarding screen on something its reader cannot act on.
   "firstRun.platform.microsoftOperator":
-    "Nothing to fill in here. Microsoft’s app is deployment configuration: whoever runs the server sets MARGINCE_GRAPH_CLIENT_ID, MARGINCE_GRAPH_CLIENT_SECRET and MARGINCE_GRAPH_TENANT before it starts.",
+    "Nothing to fill in here. Microsoft’s app is set up by whoever runs the server, before it starts.",
   "firstRun.platform.otherOperator":
-    "Nothing to fill in here. An IMAP mailbox carries its own host, user and password, and those are entered on the mailbox itself under Settings → Integrations.",
+    "Nothing to fill in here. Each mailbox is set up under Settings → Integrations.",
   // The honest statement of a gap this screen cannot close. First run still
   // requires a Google app whatever the answer above, so the two paths that need
   // none are held here — and a refusal that says why beats a Continue that
@@ -6249,10 +6268,18 @@ export const en = {
   // environment when the server starts rather than from what is stored. An
   // operator who finished this screen and then looked for the button would find
   // nothing and nothing telling them why.
-  "firstRun.platform.googleSignInCaveat":
-    "Saving the app below connects mail and calendar. Signing in with a Google account needs one more thing: whoever runs the server exports the same pair as MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restarts it. Sign-in reads them at startup, not from what is saved here.",
   "firstRun.platform.stillNeedsGoogle":
-    "First run still asks for a Google app whatever you answer here, so this path cannot finish yet. Either paste a Google app below, or have whoever runs the server export MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restart it.",
+    "First run still asks for a Google app whatever you answer, so this path cannot finish yet. Paste one below to get past it.",
+  // The one qualification each step carries, on the card's bottom edge. Each is
+  // true of the whole screen rather than of a field on it.
+  "firstRun.ai.foot":
+    "Nothing is sent to your vendor until you press Continue.",
+  "firstRun.google.foot":
+    "Saving this app connects mail and calendar. Google sign-in needs one more step from whoever runs the server.",
+  // The step itself, in the disclosure rather than on the screen: it names two
+  // environment variables and a restart, which is not this reader's work.
+  "firstRun.google.helpSignIn":
+    "For Google sign-in, whoever runs the server also exports the same pair as MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restarts it. Sign-in reads them at startup, not from what is saved here.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client ID",

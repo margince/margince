@@ -50,11 +50,13 @@ export type StageProgress = Readonly<{ steps: readonly string[]; at: number }>;
  */
 function StageBand({
   progress,
+  step,
   where,
   coreStateLabel,
   lit,
 }: Readonly<{
   progress?: StageProgress;
+  step?: string;
   where?: string;
   coreStateLabel?: string;
   lit: boolean;
@@ -67,8 +69,10 @@ function StageBand({
         <span className="ob-stage-mark" aria-hidden="true">
           M
         </span>
-        {progress === undefined ? null : (
-          <span className="ob-stage-step">{progress.steps[progress.at]}</span>
+        {progress === undefined && step === undefined ? null : (
+          <span className="ob-stage-step">
+            {step ?? progress?.steps[progress.at]}
+          </span>
         )}
         {where === undefined ? null : (
           <span className="ob-stage-where">· {where}</span>
@@ -112,6 +116,7 @@ export function OnboardingStage({
   coreScale = "hero",
   anchor = "center",
   progress,
+  step,
   where,
   hint,
   eyebrow,
@@ -170,6 +175,17 @@ export function OnboardingStage({
   /** How far through the flow this screen is. See `StageProgress`. */
   progress?: StageProgress;
   /**
+   * This screen's own name, for a surface that knows what it is without knowing
+   * the flow around it.
+   *
+   * The gate is the case: it is prop-driven with no router, so it can say "Read
+   * the site" honestly and cannot say how many stops the passage has or which
+   * one this is. Naming a flow it cannot see would be inventing one. A caller
+   * that knows the whole shape passes `progress` instead and the step name comes
+   * from there.
+   */
+  step?: string;
+  /**
    * Which part of the current step this is, beside the step's own name.
    *
    * A stop can take several screens ("Set up" holds the sign-in, the model and
@@ -202,6 +218,7 @@ export function OnboardingStage({
         <div className="ob-stage-light" />
         <StageBand
           progress={progress}
+          step={step}
           where={where}
           coreStateLabel={coreStateLabel}
           lit={lit}

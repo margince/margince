@@ -14,6 +14,16 @@
 /* The panel is the form, not a second frame around the stage: the stage is
    already the surface, so the card's own ground and shadow would draw a box
    inside a room. */
+/* The form takes the board's width rather than its own content's. The board
+   starts every child at the same left edge and lets it shrink-wrap, which for
+   text is right and for a form is a width that moves whenever the copy inside
+   it changes length: shortening three option descriptions narrowed every field
+   on the screen with them. */
+.ob-fr-form {
+  justify-self: stretch;
+  width: 100%;
+}
+
 .ob-fr-form .panel {
   background: transparent;
   border-color: var(--borderSubtle);

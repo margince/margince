@@ -81,7 +81,13 @@ export function CrawlCanvas({
       if (started === 0) {
         started = now;
       }
-      if (measure()) {
+      const palette = paletteOf(el);
+      // No colours, no picture. The three come from this element's own
+      // stylesheet, so an empty one means the design system moved out from
+      // under it; painting a guessed colour would put a mark on screen that
+      // belongs to no token and follows no theme. The words beside the canvas
+      // carry the statement either way.
+      if (palette !== null && measure()) {
         drawCrawl(ctx, {
           nodes,
           // Reduced motion draws the graph already complete: the end state, not
@@ -90,9 +96,7 @@ export function CrawlCanvas({
           elapsed: reduced ? Number.POSITIVE_INFINITY : (now - started) / 1000,
           width: el.width / Math.min(2, globalThis.devicePixelRatio || 1),
           height: el.height / Math.min(2, globalThis.devicePixelRatio || 1),
-          ink: read(el, "--ai", "#5b61d6"),
-          faint: read(el, "--borderSubtle", "#e5e9e7"),
-          dim: read(el, "--textTertiary", "#9aa6a0"),
+          ...palette,
         });
       }
       if (reduced) {
@@ -115,9 +119,26 @@ export function CrawlCanvas({
   );
 }
 
-/** A token's current value, with the literal only as the fallback a missing
- *  custom property would otherwise render as transparent black. */
-function read(el: Element, token: string, fallback: string): string {
-  const value = getComputedStyle(el).getPropertyValue(token).trim();
-  return value === "" ? fallback : value;
+/**
+ * The three colours the picture is drawn in, read off the canvas itself.
+ *
+ * A 2D context cannot resolve `var()`, so the values have to be read rather
+ * than written. They are read EVERY FRAME, which is also what makes the graph
+ * follow a theme change without remounting.
+ *
+ * Null when any of them is missing, which is the design system having moved out
+ * from under this component. Nothing is drawn then, because the alternative is
+ * a hard-coded colour belonging to no token and following no theme.
+ */
+function paletteOf(
+  el: Element,
+): Readonly<{ ink: string; faint: string; dim: string }> | null {
+  const style = getComputedStyle(el);
+  const ink = style.getPropertyValue("--crawl-ink").trim();
+  const faint = style.getPropertyValue("--crawl-edge").trim();
+  const dim = style.getPropertyValue("--crawl-rest").trim();
+  if (ink === "" || faint === "" || dim === "") {
+    return null;
+  }
+  return { ink, faint, dim };
 }
