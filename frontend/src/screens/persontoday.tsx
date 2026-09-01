@@ -41,6 +41,7 @@ const MOMENT_RULE_LABEL = {
   re_engaged: "person.moment.rule.re_engaged",
   job_change: "person.moment.rule.job_change",
   overdue_promise: "person.moment.rule.overdue_promise",
+  overdue_task: "person.moment.rule.overdue_task",
   gone_quiet: "person.moment.rule.gone_quiet",
   open_promise: "person.moment.rule.open_promise",
   role_change: "person.moment.rule.role_change",
@@ -64,10 +65,22 @@ const MOMENT_EVIDENCE_LABEL = {
 // something nobody has judged. Everything else is a live thread — a fact about
 // the relationship that wants a move rather than a verdict on it.
 function standingTone(rule: PersonMoment["rule"]): StandingTone {
-  if (rule === "gone_quiet" || rule === "overdue_promise") {
+  if (isLate(rule)) {
     return "warn";
   }
   return rule === "nothing_needed" ? "calm" : "accent";
+}
+
+// The three rules that mean somebody is being kept waiting. A promise past
+// its date is late whether it was read out of an email or filed as a task, so
+// both rungs colour the card the same; a promise not yet due is a live thread,
+// not a warning.
+function isLate(rule: PersonMoment["rule"]): boolean {
+  return (
+    rule === "gone_quiet" ||
+    rule === "overdue_promise" ||
+    rule === "overdue_task"
+  );
 }
 
 export function PersonToday({
@@ -85,8 +98,7 @@ export function PersonToday({
   // The amber treatment is the finding itself — a relationship that stopped,
   // or a promise that is late — so it colours the card rather than a badge
   // inside it.
-  const warn =
-    moment.rule === "gone_quiet" || moment.rule === "overdue_promise";
+  const warn = isLate(moment.rule);
   const secondary = moment.secondary_actions ?? [];
   // What the moment rests on, in the shape every claim on a record states it:
   // the label a reader can act on, and the kind of record it was read from.

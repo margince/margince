@@ -6697,6 +6697,7 @@ export const vi = {
   "person.moment.rule.re_engaged": "Họ đã quay lại",
   "person.moment.rule.job_change": "Đã đổi việc",
   "person.moment.rule.overdue_promise": "Lời hứa quá hạn",
+  "person.moment.rule.overdue_task": "Lời hứa quá hạn",
   "person.moment.rule.gone_quiet": "Đã im lặng",
   "person.moment.rule.open_promise": "Lời hứa còn mở",
   "person.moment.rule.role_change": "Đã đổi vai trò",
@@ -6748,6 +6749,7 @@ export const vi = {
   "person.loops.dueInDays": "trong {count} ngày",
   "person.loops.waiting": "đang chờ",
   "person.loops.open": "đang mở",
+  "person.loops.atLeast": "ít nhất {count}",
 
   "person.memory.title": "Ký ức trò chuyện",
   "person.memory.empty": "Chưa ghi nhận gì trên kênh này.",
