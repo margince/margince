@@ -3785,6 +3785,19 @@ export const vi = {
     "Bạn đã đồng ý, nhưng quyền mà Margince đang dùng đã hết hạn. Tắt rồi bật lại tùy chọn này để gia hạn — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
   "overnightGrant.renewScope":
     "Bạn đã đồng ý, nhưng Margince nay làm được nhiều hơn, và quyền bạn đã cấp không bao gồm phần việc mới. Tắt rồi bật lại tùy chọn này để mở rộng — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
+  "aiHealth.title": "Các tầng mô hình",
+  "aiHealth.sub":
+    "Mỗi tầng mô hình có đang trả lời hay không. Một tầng đã ngừng và một tầng chỉ đang thận trọng trông giống hệt nhau ở mọi nơi khác — thư đã thu thập vẫn bị giữ lại trong cả hai trường hợp.",
+  "aiHealth.noCalls": "không có mô hình nào được gọi trong {hours} giờ qua",
+  "aiHealth.colTier": "Tầng",
+  "aiHealth.colState": "Trạng thái",
+  "aiHealth.colCalls": "{hours} giờ qua",
+  "aiHealth.colLatency": "Trung vị",
+  "aiHealth.colLast": "Trả lời gần nhất",
+  "aiHealth.answering": "Đang trả lời",
+  "aiHealth.notAnswering": "Không trả lời",
+  "aiHealth.callCounts": "{calls} lượt gọi, {failures} thất bại",
+  "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Đang giữ lại khỏi nhóm",
   "heldThreads.sub":
     "Những chuỗi thư hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi cho phép mọi đồng nghiệp đọc nó; không ai khác có thể chia sẻ chuỗi của bạn.",

@@ -3821,6 +3821,20 @@ export const de = {
     "Du hast zugestimmt, aber die Vollmacht, unter der Margince gearbeitet hat, ist abgelaufen. Schalte die Option aus und wieder ein, um sie zu erneuern — bis dahin wird dein Überblick nicht vorbereitet.",
   "overnightGrant.renewScope":
     "Du hast zugestimmt, aber Margince kann inzwischen mehr, und die erteilte Vollmacht deckt die neue Arbeit nicht ab. Schalte die Option aus und wieder ein, um sie zu erweitern — bis dahin wird dein Überblick nicht vorbereitet.",
+  "aiHealth.title": "Modell-Lanes",
+  "aiHealth.sub":
+    "Ob jede Modellstufe antwortet. Eine ausgefallene Lane und eine, die nur vorsichtig ist, sehen überall sonst gleich aus — erfasste Post bleibt in beiden Fällen zurückgehalten.",
+  "aiHealth.noCalls":
+    "in den letzten {hours} Stunde(n) wurde kein Modell aufgerufen",
+  "aiHealth.colTier": "Stufe",
+  "aiHealth.colState": "Zustand",
+  "aiHealth.colCalls": "Letzte {hours} Std.",
+  "aiHealth.colLatency": "Median",
+  "aiHealth.colLast": "Letzte Antwort",
+  "aiHealth.answering": "Antwortet",
+  "aiHealth.notAnswering": "Antwortet nicht",
+  "aiHealth.callCounts": "{calls} Aufrufe, {failures} fehlgeschlagen",
+  "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Vom Team zurückgehalten",
   "heldThreads.sub":
     "Konversationen, die Ihr Postfach zurückhält. Wenn Sie eine freigeben, können alle Kolleginnen und Kollegen sie lesen; niemand sonst kann Ihre freigeben.",

@@ -122,3 +122,43 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 	out.Budget.Currency = &currency
 	return out
 }
+
+// GetAiHealth implements (GET /ai/health).
+//
+// Beside the usage handler because both are the same operator's view of the
+// model lanes — what they cost, and whether they are answering — and both are
+// admitted through the same automation-config grant.
+func (h Handlers) GetAiHealth(w http.ResponseWriter, r *http.Request) {
+	rungs, err := h.meter.RungHealthReport(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.AiHealth{
+		WindowHours: int(HealthWindow / time.Hour),
+		Rungs:       make([]crmcontracts.AiRungHealth, 0, len(rungs)),
+	}
+	for _, rung := range rungs {
+		out.Rungs = append(out.Rungs, toContractRungHealth(rung))
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// toContractRungHealth maps one rung onto the wire.
+//
+// The empty sentinel becomes an absent field rather than an empty string: a
+// rung that reported no error is not a rung whose error was blank.
+func toContractRungHealth(r RungHealth) crmcontracts.AiRungHealth {
+	out := crmcontracts.AiRungHealth{
+		Tier:            r.Tier,
+		Healthy:         r.Healthy(),
+		Calls:           r.Calls,
+		Failures:        r.Failures,
+		MedianLatencyMs: r.MedianLatencyMs,
+	}
+	if r.LastSentinel != "" {
+		out.LastSentinel = &r.LastSentinel
+	}
+	out.LastCallAt = r.LastCallAt
+	return out
+}

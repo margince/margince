@@ -3857,6 +3857,19 @@ export const en = {
     "You said yes, but the authority Margince was working under has expired. Turn this off and on again to renew it — until then your brief is not being prepared.",
   "overnightGrant.renewScope":
     "You said yes, but Margince has learned to do more since, and the authority you gave does not cover the new work. Turn this off and on again to widen it — until then your brief is not being prepared.",
+  "aiHealth.title": "Model lanes",
+  "aiHealth.sub":
+    "Whether each model tier is answering. A lane that stopped and one that is merely cautious look the same everywhere else — captured mail stays held either way.",
+  "aiHealth.noCalls": "no model was called in the last {hours} hour(s)",
+  "aiHealth.colTier": "Tier",
+  "aiHealth.colState": "State",
+  "aiHealth.colCalls": "Last {hours}h",
+  "aiHealth.colLatency": "Median",
+  "aiHealth.colLast": "Last answer",
+  "aiHealth.answering": "Answering",
+  "aiHealth.notAnswering": "Not answering",
+  "aiHealth.callCounts": "{calls} calls, {failures} failed",
+  "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Held back from your team",
   "heldThreads.sub":
     "Threads your mailbox is withholding. Releasing one lets every colleague read it; nobody else can release yours.",

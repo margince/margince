@@ -10115,6 +10115,38 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /ai/health:
+    get:
+      tags: [AI]
+      operationId: getAiHealth
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Whether the model lanes are answering.
+      description: |
+        One row per model tier for the last hour: how many terminal attempts it made, how many
+        failed, the most recent error it reported, and its median latency.
+
+        This exists because an outage is otherwise invisible. Under the capture posture a thread
+        stays held whether the classifier judged it confidential or never answered at all, so a
+        working-and-cautious classifier and a dead one look identical from every other surface —
+        and nobody notices until somebody asks why a thread never opened.
+
+        Read from `ai_call`, which already records every attempt. Nothing is written for this: a
+        health surface with its own bookkeeping would be a second account of what happened, free
+        to disagree with the first. Terminal attempts only, so a failure a retry rescued does not
+        report a lane as failing while every caller of it got an answer.
+
+        An hour, because the question is whether it is answering NOW — a day-long window would
+        call a lane that died forty minutes ago healthy on the strength of this morning.
+      responses:
+        '200':
+          description: One row per tier that made a terminal attempt in the window.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiHealth' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /ai/usage:
     get:
       tags: [AI]
@@ -19625,6 +19657,52 @@ components:
       properties:
         disposition: { type: string, enum: [merge, not_a_duplicate] }
         winner_id: { type: [string, 'null'], format: uuid, description: 'Required for merge: the surviving record — must be one of the pair.' }
+    AiHealth:
+      type: object
+      required: [window_hours, rungs]
+      properties:
+        window_hours:
+          type: integer
+          description: How far back the counts reach, so a reader knows what "no calls" covers.
+        rungs:
+          type: array
+          items: { $ref: '#/components/schemas/AiRungHealth' }
+
+    AiRungHealth:
+      type: object
+      description: One model tier and what it has been doing.
+      required: [tier, healthy, calls, failures, median_latency_ms]
+      properties:
+        tier:
+          type: string
+          description: The rung's name — `local_small`, `cloud_large` and the rest.
+        healthy:
+          type: boolean
+          description: |
+            The tier answered at least once in the window without every attempt failing. Decided
+            here rather than left to each client: two clients deciding what an all-failed rung
+            means would be two answers, and one surface would call an outage while the other did
+            not.
+        calls:
+          type: integer
+          description: Terminal attempts in the window.
+        failures:
+          type: integer
+          description: How many of them carried an error.
+        last_sentinel:
+          type: string
+          description: |
+            The most recent error this tier reported, absent when it reported none. It is the
+            first clue an operator has: a budget refusal and an unreachable model are both "not
+            answering" and want different fixes.
+        last_call_at:
+          type: string
+          format: date-time
+          description: When this tier last answered anything at all.
+        median_latency_ms:
+          type: integer
+          description: The window's middle latency, which tells a slow lane from a dead one.
+
     AiUsage:
       type: object
       description: 'AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace''s ai_model_rate price sheet as of each call''s day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line''s window carries no priced call.'

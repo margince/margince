@@ -81,6 +81,7 @@ import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
 import { AiCallsCard } from "./aicalls";
@@ -965,6 +966,13 @@ function AiSettingsTab() {
           can call it at all. A binding whose vendor holds no key fails closed,
           and this is where a reader finds out why. */}
       <AiProviderKeysCard />
+      {/* And whether the lanes those two cards configure are actually
+          ANSWERING. It sits here rather than under the spend cards because it
+          completes the binding's own story: which vendor serves a tier, whether
+          we hold a key for it, whether it replied. Under the capture posture
+          the last one is the expensive gap — mail stays held whether the
+          classifier judged it or never ran. */}
+      <AiHealthCard />
       <AutomationsAdmin />
       <AiUsageCard />
       <ModelCostsCard />

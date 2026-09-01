@@ -14420,6 +14420,14 @@ type AiEmbeddingsBinding struct {
 	Provider string `json:"provider"`
 }
 
+// AiHealth defines model for AiHealth.
+type AiHealth struct {
+	Rungs []AiRungHealth `json:"rungs"`
+
+	// WindowHours How far back the counts reach, so a reader knows what "no calls" covers.
+	WindowHours int `json:"window_hours"`
+}
+
 // AiModelRate One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
 type AiModelRate struct {
 	CacheReadPerMtok  string             `json:"cache_read_per_mtok"`
@@ -14559,6 +14567,35 @@ type AiRunSummary struct {
 
 // AiRunSummaryCurrency defines model for AiRunSummary.Currency.
 type AiRunSummaryCurrency string
+
+// AiRungHealth One model tier and what it has been doing.
+type AiRungHealth struct {
+	// Calls Terminal attempts in the window.
+	Calls int `json:"calls"`
+
+	// Failures How many of them carried an error.
+	Failures int `json:"failures"`
+
+	// Healthy The tier answered at least once in the window without every attempt failing. Decided
+	// here rather than left to each client: two clients deciding what an all-failed rung
+	// means would be two answers, and one surface would call an outage while the other did
+	// not.
+	Healthy bool `json:"healthy"`
+
+	// LastCallAt When this tier last answered anything at all.
+	LastCallAt *time.Time `json:"last_call_at,omitempty"`
+
+	// LastSentinel The most recent error this tier reported, absent when it reported none. It is the
+	// first clue an operator has: a budget refusal and an unreachable model are both "not
+	// answering" and want different fixes.
+	LastSentinel *string `json:"last_sentinel,omitempty"`
+
+	// MedianLatencyMs The window's middle latency, which tells a slow lane from a dead one.
+	MedianLatencyMs int `json:"median_latency_ms"`
+
+	// Tier The rung's name — `local_small`, `cloud_large` and the rest.
+	Tier string `json:"tier"`
+}
 
 // AiTierBinding defines model for AiTierBinding.
 type AiTierBinding struct {
@@ -41995,6 +42032,9 @@ type ServerInterface interface {
 	// Record a human's verdict on a claim the system derived — the correction the next re-derivation must respect.
 	// (POST /ai/feedback)
 	RecordAIFeedback(w http.ResponseWriter, r *http.Request)
+	// Whether the model lanes are answering.
+	// (GET /ai/health)
+	GetAiHealth(w http.ResponseWriter, r *http.Request)
 	// Authenticated AI configuration posture for transparent human-facing workspaces.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
@@ -43702,6 +43742,12 @@ func (_ Unimplemented) GetAiCall(w http.ResponseWriter, r *http.Request, id Id) 
 // Record a human's verdict on a claim the system derived — the correction the next re-derivation must respect.
 // (POST /ai/feedback)
 func (_ Unimplemented) RecordAIFeedback(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether the model lanes are answering.
+// (GET /ai/health)
+func (_ Unimplemented) GetAiHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -48152,6 +48198,26 @@ func (siw *ServerInterfaceWrapper) RecordAIFeedback(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecordAIFeedback(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetAiHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -70632,6 +70698,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai/feedback", wrapper.RecordAIFeedback)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/health", wrapper.GetAiHealth)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/profile", wrapper.GetAiProfile)

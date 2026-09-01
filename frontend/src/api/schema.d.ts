@@ -6943,6 +6943,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the model lanes are answering.
+         * @description One row per model tier for the last hour: how many terminal attempts it made, how many
+         *     failed, the most recent error it reported, and its median latency.
+         *
+         *     This exists because an outage is otherwise invisible. Under the capture posture a thread
+         *     stays held whether the classifier judged it confidential or never answered at all, so a
+         *     working-and-cautious classifier and a dead one look identical from every other surface —
+         *     and nobody notices until somebody asks why a thread never opened.
+         *
+         *     Read from `ai_call`, which already records every attempt. Nothing is written for this: a
+         *     health surface with its own bookkeeping would be a second account of what happened, free
+         *     to disagree with the first. Terminal attempts only, so a failure a retry rescued does not
+         *     report a lane as failing while every caller of it got an answer.
+         *
+         *     An hour, because the question is whether it is answering NOW — a day-long window would
+         *     call a lane that died forty minutes ago healthy on the strength of this morning.
+         */
+        get: operations["getAiHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/usage": {
         parameters: {
             query?: never;
@@ -13300,6 +13334,40 @@ export interface components {
              * @description Required for merge: the surviving record — must be one of the pair.
              */
             winner_id?: string | null;
+        };
+        AiHealth: {
+            /** @description How far back the counts reach, so a reader knows what "no calls" covers. */
+            window_hours: number;
+            rungs: components["schemas"]["AiRungHealth"][];
+        };
+        /** @description One model tier and what it has been doing. */
+        AiRungHealth: {
+            /** @description The rung's name — `local_small`, `cloud_large` and the rest. */
+            tier: string;
+            /**
+             * @description The tier answered at least once in the window without every attempt failing. Decided
+             *     here rather than left to each client: two clients deciding what an all-failed rung
+             *     means would be two answers, and one surface would call an outage while the other did
+             *     not.
+             */
+            healthy: boolean;
+            /** @description Terminal attempts in the window. */
+            calls: number;
+            /** @description How many of them carried an error. */
+            failures: number;
+            /**
+             * @description The most recent error this tier reported, absent when it reported none. It is the
+             *     first clue an operator has: a budget refusal and an unreachable model are both "not
+             *     answering" and want different fixes.
+             */
+            last_sentinel?: string;
+            /**
+             * Format: date-time
+             * @description When this tier last answered anything at all.
+             */
+            last_call_at?: string;
+            /** @description The window's middle latency, which tells a slow lane from a dead one. */
+            median_latency_ms: number;
         };
         /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call. */
         AiUsage: {
@@ -37247,6 +37315,28 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAiHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One row per tier that made a terminal attempt in the window. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     getAiUsage: {
