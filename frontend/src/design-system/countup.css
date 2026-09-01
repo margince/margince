@@ -1,0 +1,7 @@
+/* A running figure. Tabular, because a number that changes every frame must not
+   move the words beside it: proportional digits reflow the whole line as the
+   count climbs, which reads as the layout twitching rather than as a number
+   arriving. */
+.countup {
+  font-variant-numeric: tabular-nums;
+}

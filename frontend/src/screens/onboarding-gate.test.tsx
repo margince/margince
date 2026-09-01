@@ -406,8 +406,11 @@ describe("ReadTheatre phase line", () => {
   });
 });
 
-describe("ReadTheatre page strip", () => {
-  it("shows one named tile per page, with the reason and its honest fallback", () => {
+describe("ReadTheatre page list", () => {
+  // The crawl picture cannot be read aloud, so the same walk is stated in
+  // words beside it. This is the half a screen reader gets, and it has to
+  // name every page, not only the one that just landed.
+  it("names every page in words, with the reason and its honest fallback", () => {
     render(
       <ReadTheatre
         read={siteRead()}
@@ -420,19 +423,17 @@ describe("ReadTheatre page strip", () => {
     const strip = screen.getByRole("list", { name: "Pages read so far" });
     expect(strip.querySelectorAll("li")).toHaveLength(4);
 
+    expect(screen.getByText("https://gradion.com — read")).toBeInTheDocument();
     expect(
-      screen.getByRole("img", { name: "https://gradion.com — read" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", {
-        name: "https://gradion.com/careers — skipped: not company context",
-      }),
+      screen.getByText(
+        "https://gradion.com/careers — skipped: not company context",
+      ),
     ).toBeInTheDocument();
     // reason: null must not read as an empty reason.
     expect(
-      screen.getByRole("img", {
-        name: "https://gradion.com/legal — could not be read: no reason recorded",
-      }),
+      screen.getByText(
+        "https://gradion.com/legal — could not be read: no reason recorded",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -448,8 +449,11 @@ describe("ReadTheatre page strip", () => {
 
     expect(screen.getByText("2 pages read")).toBeInTheDocument();
     expect(screen.getByText("1 skipped")).toBeInTheDocument();
-    expect(screen.getByText("1 facts so far")).toBeInTheDocument();
     expect(screen.getByText("still reading")).toBeInTheDocument();
+    // The two figures the read is earning, each under its own label and each
+    // open: a denominator anywhere here would be a total nobody can check.
+    expect(screen.getByText("pages read")).toBeInTheDocument();
+    expect(screen.getByText("facts found")).toBeInTheDocument();
 
     const surface = screen.getByRole("heading", { level: 1 }).parentElement;
     expect(surface).not.toBeNull();
@@ -690,13 +694,20 @@ describe("ReadTheatre page ticker", () => {
       />,
     );
 
-    // The path is the one place the url appears; the status beside it names
-    // what happened without repeating it.
-    expect(screen.getByText("/legal")).toBeInTheDocument();
+    // The path is the one place the url appears IN THE TICKER; the status
+    // beside it names what happened without repeating it. Scoped to the
+    // ticker, because the screen-reader list beside the crawl picture names
+    // every page by its full url on purpose, and that is a different job.
+    const ticker = screen.getByRole("list", {
+      name: "The pages I am walking, newest first",
+    });
+    expect(within(ticker).getByText("/legal")).toBeInTheDocument();
     expect(
-      screen.getByText("could not be read: no reason recorded"),
+      within(ticker).getByText("could not be read: no reason recorded"),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/https:\/\/gradion\.com\/legal/)).toBeNull();
+    expect(
+      within(ticker).queryByText(/https:\/\/gradion\.com\/legal/),
+    ).toBeNull();
   });
 });
 

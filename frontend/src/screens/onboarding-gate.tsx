@@ -10,6 +10,8 @@ import {
 } from "react";
 import type { components } from "../api/schema";
 import { Disclosure } from "../design-system/atoms";
+import { CountUp } from "../design-system/countup";
+import { CrawlCanvas } from "../design-system/crawl-canvas";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { OnboardingStage } from "../design-system/onboarding-stage";
 import { formatNumber, INTL_LOCALE } from "../format/format";
@@ -385,12 +387,24 @@ function phaseKey(read: CompanySiteRead): MessageKey | null {
   return null;
 }
 
+// The path alone, because every row shares the host and printing it on each one
+// buys nothing. A URL the browser cannot parse is shown whole rather than
+// dropped: it came from the server, and hiding it would lose the one clue an
+// operator has about why that page behaved oddly.
+function pathOf(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+}
+
 function reasonOf(t: Translate, page: CompanySiteReadPage): string {
   return skipReasonText(t, page.reason);
 }
 
-// Colour is never the only carrier: the tile's own name says what happened to
-// the page and why, and it is both the tooltip and the accessible name.
+// What happened to one page and why, as one sentence. The crawl picture cannot
+// carry this and does not try: it is the accessible statement of the same walk.
 function pageLabel(t: Translate, page: CompanySiteReadPage): string {
   const reason = reasonOf(t, page);
   if (page.status === "skipped") {
@@ -507,21 +521,28 @@ function TheatreTail({
           )}
         </p>
 
-        <ul className="ob-scan-strip" aria-label={t("ob.scan.pageStripLabel")}>
-          {read.pages.map((page) => {
-            const label = pageLabel(t, page);
-            return (
-              <li key={page.url}>
-                <span
-                  className="ob-scan-tile"
-                  data-page-status={page.status}
-                  role="img"
-                  title={label}
-                  aria-label={label}
-                />
-              </li>
-            );
-          })}
+        {/* The site as it is read. It replaced a strip of one tile per page,
+            which said the same thing in the same order and said nothing about
+            the shape it was walking: a reader waiting two minutes can find
+            their own site in this one. The tiles' accessible statement is not
+            lost: the list right under this names every page in words, the
+            ticker names each as it lands, and the counters carry the totals. */}
+        <CrawlCanvas
+          pages={read.pages.map((page) => ({
+            path: pathOf(page.url),
+            note: pageStatusWord(t, page),
+          }))}
+          label={t("ob.scan.pageStripLabel")}
+        />
+        {/* The same pages in words, for a reader the picture cannot reach. The
+            tiles it replaced named every page and its status one by one, and a
+            canvas carrying one summary label would have quietly taken that
+            away: the ticker below announces only the page that just landed, so
+            without this there is no way to review what was walked. */}
+        <ul className="sr-only" aria-label={t("ob.scan.pageStripLabel")}>
+          {read.pages.map((page) => (
+            <li key={page.url}>{pageLabel(t, page)}</li>
+          ))}
         </ul>
 
         {/* The page itself: which one the crawl just walked, not a growing
@@ -548,15 +569,32 @@ function TheatreTail({
           </p>
         </div>
 
+        {/* The two figures the read is actually earning, at the size of the
+            thing being waited for. They COUNT UP because they are still being
+            earned: a number climbing while somebody waits is the difference
+            between a wait that is going somewhere and one that is not. The
+            counts are open on purpose, with no denominator anywhere, because
+            the crawl does not know how many pages a site has and a total it
+            invented would be the one number here nobody could trust. */}
+        <dl className="ob-scan-tally">
+          <div>
+            <dt>{t("ob.scan.tallyPages")}</dt>
+            <dd>
+              <CountUp value={pagesRead} locale={INTL_LOCALE[locale]} />
+            </dd>
+          </div>
+          <div>
+            <dt>{t("ob.scan.tallyFacts")}</dt>
+            <dd>
+              <CountUp value={read.facts.length} locale={INTL_LOCALE[locale]} />
+            </dd>
+          </div>
+        </dl>
+
         <p className="ob-scan-counts">
           <span>
             {t("ob.scan.pagesSkipped", {
               count: formatNumber(skipped, locale),
-            })}
-          </span>
-          <span className="ob-scan-found">
-            {t("ob.scan.factsSoFar", {
-              count: formatNumber(read.facts.length, locale),
             })}
           </span>
           {settled ? null : <span>{t("ob.scan.stillReading")}</span>}

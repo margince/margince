@@ -1,0 +1,8 @@
+/* The read's own picture. It takes a band of the board rather than a box: a
+   bordered panel would make the graph a widget, and this is the screen's
+   subject while a read runs. */
+.crawl-canvas {
+  display: block;
+  width: 100%;
+  height: 180px;
+}
