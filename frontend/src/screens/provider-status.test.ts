@@ -132,7 +132,11 @@ describe("the provider status vocabulary", () => {
     // own connection-level sentence for it.
     const message = en[profileLabel("provider_error")];
     expect(message).not.toMatch(/paus/i);
-    expect(message).toMatch(/this contact/i);
+    // And it must stay true for BOTH causes: this key is also what a
+    // degraded CONNECTION renders, before any run history is read. Wording
+    // that named this contact's own lookup would be a false claim on every
+    // page during an outage, including contacts nobody ever asked about.
+    expect(message).not.toMatch(/this contact/i);
   });
 
   it("tells the reader what to add rather than blaming the provider", () => {

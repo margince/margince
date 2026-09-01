@@ -7043,7 +7043,7 @@ export const de = {
   "provider.profile.rateLimited":
     "Nicht gekauft: der Anbieter hat uns gebremst.",
   "provider.profile.providerError":
-    "Die letzte Abfrage für diesen Kontakt kam nicht durch. Versuchen Sie es erneut, oder sehen Sie in den Einstellungen auf der Karte des Anbieters nach, wenn es wieder passiert.",
+    "Die letzte Abfrage kam nicht durch. Versuchen Sie es erneut, oder sehen Sie in den Einstellungen auf der Karte des Anbieters nach, wenn es wieder passiert.",
   "provider.profile.submissionUnknown":
     "Wie diese Abfrage ausgegangen ist, haben wir nie erfahren. Sie kann berechnet worden sein.",
   "provider.profile.claimsUnwritten":

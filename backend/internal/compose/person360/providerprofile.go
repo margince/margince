@@ -24,7 +24,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -73,7 +72,15 @@ func (s *Service) providerProfileSection(ctx context.Context, tx pgx.Tx, personI
 	//
 	// The SAME function the queue asks, so the page and the lookup cannot
 	// disagree about whether this person is findable.
-	idents, err := people.SubjectIdentifiers(ctx, tx, personID.String())
+	//
+	// It reads the employer as well as the name, and the employer lives behind
+	// its own grant — every other section here that touches an edge asks
+	// requireRead("relationship") first. A seat without it must not learn from
+	// this sentence that the contact HAS an employer, so it is not read at
+	// all, and the answer falls back to findable: reporting a record as
+	// unlookupable on the strength of a field we were not allowed to see would
+	// invent a fact from an absence.
+	idents, err := s.matchIdentifiers(ctx, tx, personID)
 	if err != nil {
 		return err
 	}

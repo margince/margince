@@ -101,3 +101,49 @@ func TestADisconnectedProviderStillSaysStaleOverAnUnlookupableRecord(t *testing.
 			"on the page below", got)
 	}
 }
+
+// A charge the customer has nothing to show for outranks a missing employer.
+//
+// completed_claims_unwritten means the provider answered, money moved, and the
+// values never reached the record. submission_unknown means the outcome was
+// never learned and the run may have been charged. Both are facts about
+// somebody's money; replacing either with "nothing to look them up by" would
+// hide a paid-for loss behind a tidy explanation about the record.
+func TestAPaidRunIsNotHiddenBehindAMissingIdentifier(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name string
+		run  providerRunRow
+		want crmcontracts.PersonProviderProfileState
+	}{
+		{
+			name: "paid and nothing landed",
+			run: providerRunRow{
+				state:           string(provider.RunCompleted),
+				claimsUnwritten: true,
+			},
+			want: crmcontracts.PersonProviderProfileStateCompletedClaimsUnwritten,
+		},
+		{
+			name: "outcome never learned",
+			run:  providerRunRow{state: string(provider.RunSubmissionUnknown)},
+			want: crmcontracts.PersonProviderProfileStateSubmissionUnknown,
+		},
+		{
+			// A purchase that DID land is still on the page below, and saying
+			// the contact cannot be looked up over their own bought values is
+			// the contradiction this whole section exists to avoid.
+			name: "bought and delivered",
+			run:  providerRunRow{state: string(provider.RunCompleted)},
+			want: crmcontracts.PersonProviderProfileStateCompleted,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			if got := resolveProviderState([]providerRunRow{c.run}, "connected", false); got != c.want {
+				t.Errorf("state = %q, want %q — an unlookupable record must not mask what a run cost", got, c.want)
+			}
+		})
+	}
+}
