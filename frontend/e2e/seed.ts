@@ -422,6 +422,35 @@ export const aiProviderKeys = {
   ],
 };
 
+// Whether the model lanes are answering (the AI settings health card). Two
+// rungs rather than none: an empty `rungs` draws the "nobody called anything"
+// empty state, and the table — the part with the latency, the failure count and
+// the sentinel — would then never be rendered by any sweep that visits this
+// page. One healthy lane and one that is failing, so both badges are painted
+// and the axe pass measures the tones it actually ships.
+export const aiHealth = {
+  window_hours: 1,
+  rungs: [
+    {
+      tier: "cheap_cloud",
+      healthy: true,
+      calls: 412,
+      failures: 3,
+      last_call_at: "2026-07-13T09:41:00Z",
+      median_latency_ms: 640,
+    },
+    {
+      tier: "premium",
+      healthy: false,
+      calls: 7,
+      failures: 7,
+      last_sentinel: "provider_quota",
+      last_call_at: "2026-07-13T09:12:00Z",
+      median_latency_ms: 2_180,
+    },
+  ],
+};
+
 export const aiUsage = {
   days: [
     {
@@ -2176,6 +2205,9 @@ export async function mockApi(
     }
     if (path === "/installation/license") {
       return json(installationLicense);
+    }
+    if (path === "/ai/health") {
+      return json(aiHealth);
     }
     if (path === "/ai/usage") {
       return json(aiUsage);
