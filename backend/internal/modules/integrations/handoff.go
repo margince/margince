@@ -75,7 +75,14 @@ type WriteClaimsFunc func(ctx context.Context, tx pgx.Tx, w ClaimWrite) error
 // Its own callback rather than a second use of WriteClaimsFunc: that one takes
 // the claims it is about to store, and a sweep has none to hand over. Passing an
 // empty slice would make the writer's contract depend on which caller it was.
-type ApplyStoredClaimsFunc func(ctx context.Context, tx pgx.Tx, personID, runID string) error
+//
+// It reports whether it FOUND anything to apply. A run reaches its terminal
+// state in one transaction and its claims arrive in the next, so a sweep landing
+// in that window sees a completed run with nothing stored — and treating that as
+// applied stamps a purchase that has not reached the record. The stamp is what a
+// waiting client reads, so the false one stops it one step before the values
+// exist and nothing comes back to say they arrived.
+type ApplyStoredClaimsFunc func(ctx context.Context, tx pgx.Tx, personID, runID string) (applied bool, err error)
 
 // WithStoredClaimApplier binds it. Without it the sweep applies nothing and
 // says so by leaving applied_at NULL, which is the honest record for a build

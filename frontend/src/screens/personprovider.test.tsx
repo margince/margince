@@ -3,7 +3,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { PersonProviderSection } from "./personprovider";
+import {
+  keepPolling,
+  PersonProviderSection,
+  POLL_LIMIT,
+} from "./personprovider";
 import {
   completedProviderRun,
   providerCompletedProfile,
@@ -580,6 +584,23 @@ describe("watching a run that is still moving", () => {
     applied: false,
   });
 
+  // A run the platform stops advancing leaves its flags exactly as they are,
+  // and every ordinary way out of `stillMoving` is a state the platform writes.
+  // Without a ceiling an open tab asks after it every 2.5 seconds until it is
+  // closed — so the page gives up, which is a thing a reader can see.
+  it("stops asking after a run the platform never finishes", () => {
+    const stuck = {
+      ...completedProviderRun,
+      id: "run-stuck",
+      applied: false,
+    };
+    // The rule is still true about the run itself: this is a ceiling on asking,
+    // not a claim that the run finished.
+    expect(keepPolling(stuck, 0)).toBe(true);
+    expect(keepPolling(stuck, POLL_LIMIT - 1)).toBe(true);
+    expect(keepPolling(stuck, POLL_LIMIT)).toBe(false);
+  });
+
   // The half a reader can see. The poll below is what makes the page correct;
   // this is what stops it looking broken while it works.
   it("says a lookup is happening, and does not report the old failure over it", async () => {
@@ -605,6 +626,68 @@ describe("watching a run that is still moving", () => {
     // live one, which is what sent Lars looking for a broken button.
     expect(screen.queryByText(/last call to the provider failed/)).toBeNull();
     expect(await screen.findByText("Looking them up…")).toBeDefined();
+  });
+
+  // Two phases, and the reader is told which. Once the provider has answered,
+  // saying "asking Surfe" reports work nobody is doing — the vendor is done and
+  // the values are being folded onto the record.
+  it("says the answer is landing once the provider has finished", async () => {
+    const unapplied = {
+      ...completedProviderRun,
+      id: "run-landing",
+      applied: false,
+    };
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-landing": () =>
+        jsonResponse(unapplied),
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[
+            { ...neverRun(), state: "completed", latest_run: unapplied },
+          ]}
+        />
+      </StoryProviders>,
+    );
+
+    expect(
+      await screen.findByText("Answer received. Putting it on the record."),
+    ).toBeDefined();
+    expect(screen.queryByText(/Asking Surfe/)).toBeNull();
+  });
+
+  // The money case. The server's duplicate-spend fence covers the LIVE run
+  // states only, so a completed-but-unapplied run is buyable again — and the
+  // claim has not landed yet, so nothing else hides the button either. Two
+  // presses, two charges, for one detail.
+  it("offers no purchase button while a run's values are still landing", async () => {
+    const unapplied = {
+      ...completedProviderRun,
+      id: "run-landing-2",
+      applied: false,
+    };
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-landing-2": () =>
+        jsonResponse(unapplied),
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[
+            { ...neverRun(), state: "completed", latest_run: unapplied },
+          ]}
+        />
+      </StoryProviders>,
+    );
+
+    await screen.findByText("Answer received. Putting it on the record.");
+    expect(screen.queryByRole("button", { name: /Buy / })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Check again/ })).toBeNull();
   });
 
   it("polls a live run even while the connection reads as failed", async () => {

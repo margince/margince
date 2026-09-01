@@ -17,6 +17,7 @@ package integrations
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -244,4 +245,64 @@ func TestAHumanCanProbeADegradedConnection(t *testing.T) {
 				"transient vendor condition becomes a sustained one", status)
 		}
 	}
+}
+
+// A completed run with no claims stored yet must not be recorded as applied.
+//
+// The terminal state commits in one transaction and the hand-off writes the
+// claims in the next, so a sweep tick landing between them finds a completed
+// run with nothing to fold. Treating that as success stamps applied_at over a
+// purchase the record never received — and applied_at is what a waiting client
+// reads, so it stops one step before the values exist and nothing comes back to
+// say they arrived.
+func TestASweepDoesNotCallAnEmptyRunApplied(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+	runID := seedCompletedRunWithoutClaims(t, e)
+
+	var applied int
+	e.store.WithStoredClaimApplier(
+		func(context.Context, pgx.Tx, string, string) (bool, error) {
+			applied++
+			// What the real applier answers with nothing stored.
+			return false, nil
+		})
+	e.store.WithSubjectHold(
+		func(context.Context, pgx.Tx, string) (FenceVerdict, error) {
+			return FenceVerdict{Allowed: true}, nil
+		})
+
+	if err := e.store.applyStoredPurchases(e.ctx, "surfe"); err != nil {
+		t.Fatal(err)
+	}
+	if applied == 0 {
+		t.Fatal("the sweep never reached the run, so this case proves nothing about the stamp")
+	}
+
+	var stamped *time.Time
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT applied_at FROM provider_run WHERE id = $1`, runID).Scan(&stamped); err != nil {
+		t.Fatal(err)
+	}
+	if stamped != nil {
+		t.Error("a run with no stored claims was stamped as applied: the page stops waiting " +
+			"on that stamp, so the values land after nothing is watching for them")
+	}
+}
+
+// seedCompletedRunWithoutClaims is the window between the terminal commit and
+// the hand-off: completed, not exhausted, and holding nothing.
+func seedCompletedRunWithoutClaims(t *testing.T, e *runsEnv) string {
+	t.Helper()
+	var runID string
+	if err := e.owner.QueryRow(context.Background(), `
+		INSERT INTO provider_run
+		  (subject_kind, person_id, provider, trigger, state, input_fingerprint,
+		   external_correlation_id, connection_version, connection_epoch,
+		   configuration_snapshot, requested_categories, completed_at)
+		VALUES ('person', $1, 'surfe', 'manual', 'completed', $2,
+		        gen_random_uuid(), 1, 1, '{}'::jsonb, ARRAY['linkedin_profile'], now())
+		RETURNING id::text`, e.mine, "fp-unstored-"+e.mine.String()).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+	return runID
 }

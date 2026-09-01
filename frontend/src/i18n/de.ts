@@ -6730,6 +6730,8 @@ export const de = {
   "provider.profile.inProgress": "Wird nachgeschlagen …",
   "provider.profile.working":
     "{provider} wird gefragt. Das dauert bis zu einer Minute.",
+  "provider.profile.landing":
+    "Antwort da. Sie wird in den Datensatz übernommen.",
   "provider.profile.completed": "Gefunden",
   "provider.profile.noMatch": "Der Anbieter hatte nichts zu diesem Kontakt.",
   "provider.profile.stale":

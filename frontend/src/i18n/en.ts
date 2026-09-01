@@ -6791,6 +6791,7 @@ export const en = {
   "provider.profile.queued": "Queued",
   "provider.profile.inProgress": "Looking them up…",
   "provider.profile.working": "Asking {provider}. This takes up to a minute.",
+  "provider.profile.landing": "Answer received. Putting it on the record.",
   "provider.profile.completed": "Found",
   "provider.profile.noMatch": "The provider had nothing for this contact.",
   "provider.profile.stale":

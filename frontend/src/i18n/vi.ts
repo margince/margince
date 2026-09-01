@@ -6656,6 +6656,7 @@ export const vi = {
   "provider.profile.queued": "Trong hàng đợi",
   "provider.profile.inProgress": "Đang tra cứu…",
   "provider.profile.working": "Đang hỏi {provider}. Việc này mất tới một phút.",
+  "provider.profile.landing": "Đã có câu trả lời. Đang ghi vào hồ sơ.",
   "provider.profile.completed": "Đã tìm thấy",
   "provider.profile.noMatch": "Nhà cung cấp không có gì về liên hệ này.",
   "provider.profile.stale":

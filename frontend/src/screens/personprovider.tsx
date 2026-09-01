@@ -146,6 +146,11 @@ function ProviderPanel({
   // cannot answer: it reports the connection's condition ahead of the run, so
   // a live run under a connection that last failed reads as provider_error.
   const running = stillMoving(profile.latest_run);
+  // Two phases, and the reader cares which. `asking` is the provider working;
+  // `landing` is the provider done and the values being folded onto the record.
+  // Both keep the watch alive, and saying "asking Surfe" over the second one
+  // reports work nobody is doing — the vendor has already answered.
+  const asking = running && profile.latest_run?.state !== "completed";
   // The vendor as the reader should see it named. Spelled once and used by
   // both the heading and the plate: two spellings would let a section headed
   // "Surfe" explain a purchase from "surfe".
@@ -179,8 +184,12 @@ function ProviderPanel({
         // `in_progress` rather than with a tone picked here: a local answer
         // would be a second opinion about what running looks like, and the two
         // would drift the first time the shared one changed.
-        <Badge tone={profileTone(running ? "in_progress" : profile.state)}>
-          {t(profileLabel(running ? "in_progress" : profile.state))}
+        <Badge tone={profileTone(asking ? "in_progress" : profile.state)}>
+          {t(
+            asking
+              ? "provider.profile.inProgress"
+              : profileLabel(profile.state),
+          )}
         </Badge>
       }
       actions={
@@ -191,6 +200,7 @@ function ProviderPanel({
             enrich={enrich}
             free={free}
             catalogPending={catalogPending}
+            running={running}
             // This contact has already been looked up, so the press is a
             // RE-CHECK: same free details, asked again because a job may have
             // changed. The empty-state twin below is the first lookup and says
@@ -218,7 +228,9 @@ function ProviderPanel({
             caveat about what is under it. */}
         {running && (
           <Callout tone="info" live="status">
-            {t("provider.profile.working", { provider: name })}
+            {asking
+              ? t("provider.profile.working", { provider: name })
+              : t("provider.profile.landing")}
           </Callout>
         )}
         {firstRun ? (
@@ -231,6 +243,7 @@ function ProviderPanel({
                 enrich={enrich}
                 free={free}
                 catalogPending={catalogPending}
+                running={running}
               />
             }
           >
@@ -239,7 +252,12 @@ function ProviderPanel({
         ) : (
           <ProviderValues profile={profile} />
         )}
-        <BuyPriced personId={personId} profile={profile} enrich={enrich} />
+        <BuyPriced
+          personId={personId}
+          profile={profile}
+          enrich={enrich}
+          running={running}
+        />
         <RunWatch personId={personId} profile={profile} />
       </PanelBody>
     </Panel>
@@ -258,10 +276,15 @@ function BuyPriced({
   personId,
   profile,
   enrich,
+  running,
 }: Readonly<{
   personId: string;
   profile: Profile;
   enrich: ReturnType<typeof useEnrichRun>;
+  // Whether a run is still moving, from the panel that already asked. Not
+  // recomputed here: two answers to "is a lookup happening" would drift, and
+  // the one that drifts wrong leaves a spending button on screen.
+  running: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -277,7 +300,7 @@ function BuyPriced({
       (connection?.configuration.categories?.[entry.category] ?? false) &&
       !alreadyHeld(profile, entry.category),
   );
-  if (buyable.length === 0 || !canEnrichNow(profile.state)) {
+  if (buyable.length === 0 || !canEnrichNow(profile.state, running)) {
     return null;
   }
   return (
@@ -583,10 +606,14 @@ function EnrichNow({
   enrich,
   free,
   catalogPending,
+  running,
   recheck = false,
   small = false,
 }: Readonly<{
   free: string[];
+  /** Whether a run is still moving. See canEnrichNow: the section state alone
+   *  cannot answer it, and a button offered over a live run spends twice. */
+  running: boolean;
   // Whether the connection catalog has answered yet. Separate from `free`
   // being empty, which a connection selling nothing free also produces.
   catalogPending: boolean;
@@ -602,7 +629,7 @@ function EnrichNow({
   small?: boolean;
 }>) {
   const t = useT();
-  if (!canEnrichNow(profile.state)) {
+  if (!canEnrichNow(profile.state, running)) {
     return null;
   }
   return (
@@ -686,9 +713,41 @@ function useRunWatch(personId: string, profile: Profile) {
     // The same rule the arming uses, read from the answer just received rather
     // than from the prop: the prop only changes when the page refetches, which
     // is the thing this poll exists to cause.
-    refetchInterval: (query) => (stillMoving(query.state.data) ? 2500 : false),
+    //
+    // Under a CEILING, because the rule alone has no end. Every ordinary route
+    // out of `stillMoving` is a state the platform writes — a terminal run, an
+    // exhausted hand-off — so a run the workers stop advancing leaves these
+    // flags exactly as they are, and a tab left open asks for it every 2.5
+    // seconds until it is closed. The ceiling turns that into a page that
+    // stopped waiting, which is a thing a reader can see and act on.
+    refetchInterval: (query) =>
+      keepPolling(query.state.data, query.state.dataUpdateCount)
+        ? POLL_EVERY_MS
+        : false,
   });
 }
+
+/** Whether the page asks after this run again.
+ *
+ *  The rule and its ceiling in one place, so a test can put the ceiling to it
+ *  without waiting out ten minutes of real interval. */
+export function keepPolling(
+  run: components["schemas"]["ProviderRun"] | undefined,
+  asked: number,
+): boolean {
+  return stillMoving(run) && asked < POLL_LIMIT;
+}
+
+const POLL_EVERY_MS = 2500;
+
+/** How many times the page asks after a run before giving up on it.
+ *
+ *  Ten minutes at POLL_EVERY_MS. Long enough to cover the slowest honest path —
+ *  the hand-off's retry ladder, which ends by writing `claims_unwritten` and
+ *  stopping the watch on its own — and short enough that a genuinely stuck run
+ *  stops costing a request every few seconds for as long as somebody leaves the
+ *  tab open. */
+export const POLL_LIMIT = 240;
 
 /** The run states that are still moving. `submitting` counts: the run is
  *  mid-flight to the provider, and treating it as finished would offer a
