@@ -387,19 +387,27 @@
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
 }
-/* The WIDE drawer: research and the composer.
+/* The WIDE drawer: research, the composer and the meeting brief.
  *
- * Both are surfaces a rep works IN rather than glances at — a numbered claim
- * list with its quotes, or a message being written — and at 460px each of
- * those wraps into a column too narrow to read. The upper bound rises to 30% of
- * the viewport so the drawer grows with the screen it sits on, and stops at
- * 560px because past that it stops being a margin and becomes the page.
+ * All three are surfaces a rep works IN rather than glances at — a numbered
+ * claim list with its quotes, a message being written, a brief read minutes
+ * before a room — and at 460px each of those wraps into a column too narrow to
+ * read. The upper bound is 52% of the viewport so the drawer grows with the
+ * screen it sits on, and stops at 860px because past that it stops being a
+ * margin and becomes the page.
+ *
+ * 52vw rather than the original 30vw because of what the widest of these
+ * drawers now holds: the meeting brief's preparation panels put an objective,
+ * a risk and its response, and a three-column close plan side by side, and at
+ * 384px (30vw of a 1280 laptop) the three columns had 100px each. A reader
+ * two minutes from a room reads the first screen or nothing, so the width is
+ * set by what must fit on it.
  *
  * Header and footer are STICKY: the close control and the commit button are
  * the two things a reader must always be able to reach, and a long claim list
  * would otherwise scroll both of them away. */
 .modal-drawer-wide {
-  width: clamp(360px, 30vw, 560px);
+  width: clamp(360px, 52vw, 860px);
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -468,6 +476,14 @@
     max-height: 100dvh;
     border-radius: 0;
     padding: var(--space-4);
+  }
+  /* A split drawer keeps paying its padding in its three bands, on a phone as
+     on a desktop. The rule above is written for the unsplit sheet and reaches
+     this one through .modal-drawer, so without this the sticky header sits one
+     --space-4 inside the sheet and the band's own edge-to-edge ground stops at
+     the padding — the seam reads as a rendering fault rather than a header. */
+  .modal-drawer-wide:has(> .drawer-head) {
+    padding: 0;
   }
   /* The actions sit at the foot of the sheet rather than after the content,
      so a long form does not bury its own confirm button. */

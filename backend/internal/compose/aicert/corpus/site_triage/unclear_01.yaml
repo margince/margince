@@ -1,0 +1,57 @@
+name: a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder
+task: site_triage
+site: triage
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# `unclear` is the abstention of this site and the hardest kind to write a
+# fixture for, because the neighbouring kinds are broad in both directions. Two
+# earlier attempts failed for opposite reasons and are worth recording, because
+# the next author will reach for both:
+#
+#   - An "under construction" page is `parked`. The prompt says so outright, so a
+#     fixture built from one fails the model for obeying its own instruction.
+#   - A branded page naming a service is `company`, even for a sole trader —
+#     false_refusal_01 makes that the release-blocking rule of this site.
+#
+# What is left is a page that is genuinely LIVE, so no placeholder kind fits, and
+# that identifies nobody at all.
+fixture:
+  url: https://portal.hexbridge.example
+  text: |
+    Sign in
+
+    Email address
+    Password
+
+    Forgot your password?
+    Trouble signing in? Contact your administrator.
+
+    © 2026
+expect:
+  outcome: accepted
+  answer: unclear
+  rubric: >
+    A working sign-in form and nothing else. It is a LIVE page — a real
+    application behind a real login, with a password-reset route and an
+    administrator to contact — so none of the placeholder readings fit: it is not
+    a registrar placeholder, a coming-soon notice, a bare error page or a
+    domain-for-sale listing.
+    And it identifies nobody. No company name, no person, no service, no product,
+    no legal notice, not even a tagline; the domain is the only string that could
+    hint at anything, and a hostname is not evidence of what a business is. The
+    question this site exists to answer is therefore unanswered by the seed page,
+    and saying so is the right answer: `unclear` falls through to the full read
+    instead of guessing, which is precisely what should happen here.
+    "unclear" scores high, and its CONFIDENCE should be high too — the page is
+    unambiguously uninformative, which is different from the model being unsure.
+    "company" is the failure this scenario exists to catch and scores low: a
+    login page is exactly where a model that infers a business from a domain name
+    will do so, and it would create an organization record grounded in nothing.
+    "parked" scores low: reading a functioning application as an empty
+    placeholder would abandon a crawl that has a real site behind it.
+    "personal" and "provider" score low; nothing here names a human or sells
+    addresses to the public.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

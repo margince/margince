@@ -16,6 +16,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -38,6 +39,86 @@ const maxBulkRelink = 500
 // inbox, and neither reader is re-checked against the rows.
 type RelinkBatchResult struct {
 	Relinked int
+}
+
+// RelinkActivityInput is one relink: the destination and, for the single
+// door only, the version pin closing the resolver-to-write gap.
+type RelinkActivityInput struct {
+	EntityType string
+	// note: the relink target is polymorphic (any entity kind, re-admitted
+	// against the kind vocabulary below), so the id stays untyped (rule 6).
+	EntityID              ids.UUID
+	ReplaceExistingOfType bool
+	// IfVersion is the version the caller read the ACTIVITY at, re-checked
+	// inside the transaction that moves it.
+	//
+	// It is what closes the window a dynamic tier opens: the resolver reads the
+	// activity to decide whether this destination may auto-execute, that read
+	// commits, and the agent controls both sides of the gap — so the verdict is
+	// only true of the record as it WAS. auth/admit.go binds the version it was
+	// resolved from for exactly this, and until it reached here nothing
+	// re-checked it.
+	//
+	// Only the SINGLE relink carries one. A thread or a named set moves many
+	// activities and one version cannot speak for them, so the batch doors
+	// refuse a pin rather than applying it to whichever row happens to match.
+	IfVersion *int64
+}
+
+// RelinkActivity is the single-relink door: admits the request, then commits
+// the same guarded write RelinkActivityInTx applies inside the caller's own
+// transaction, in one of its own.
+func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in RelinkActivityInput) (crmcontracts.Activity, error) {
+	column, err := admitRelink(ctx, in)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	var out crmcontracts.Activity
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		_, held, err := relinkAdmittedRow(ctx, tx, id, in, column)
+		if err != nil {
+			return err
+		}
+		// held, not a bare storekit.LiveOnly: a no-op relink (the target was
+		// already linked) never reaches relinkActivityRow's own write, so a
+		// held row's row lock is the only thing that proved it exists — a
+		// LiveOnly read here would answer not-found for a replay that, on a
+		// live row, correctly answers with the row unchanged.
+		var err2 error
+		out, err2 = readActivityForWrite(ctx, tx, id, held)
+		return err2
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return crmcontracts.Activity{}, apperrors.ErrNotFound
+	}
+	return out, err
+}
+
+// RelinkActivityInTx is the single relink on the CALLER's transaction: the
+// same admission, the same target probe and the same guarded row write as
+// RelinkActivity, for a caller that must commit the link together with a
+// record of its own — the confirm of a project attribution candidate closes
+// the candidate in the transaction that writes the link, so neither can be
+// read without the other. It answers whether a link was written; replaying an
+// association the activity already carries is a no-op.
+func RelinkActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) (bool, error) {
+	column, err := admitRelink(ctx, in)
+	if err != nil {
+		return false, err
+	}
+	wrote, _, err := relinkAdmittedRow(ctx, tx, id, in, column)
+	return wrote, err
+}
+
+// LockActivityLive takes the row lock on one live activity for the rest of the
+// caller's transaction, for a caller that must read something about the
+// activity and then relink it as ONE state — the attribution confirm reads
+// where the message is filed before filing it. The lock belongs to this
+// module because the row does; a gone or archived activity answers the same
+// not-found every live read gives.
+func LockActivityLive(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+	_, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly)
+	return err
 }
 
 // admitRelink is the pre-transaction admission every relink door shares: the
@@ -64,13 +145,15 @@ func admitRelink(ctx context.Context, in RelinkActivityInput) (string, error) {
 
 // relinkActivityRow is the guarded write for ONE activity, inside the caller's
 // transaction, after the caller has probed the destination record. It answers
-// whether a link was actually written: replaying the same association is a
-// no-op, and a no-op writes no audit noise.
+// whether a link was actually written — replaying the same association is a
+// no-op, and a no-op writes no audit noise — and whether the row is held, so
+// a caller reading it back afterward (RelinkActivity's own final read) knows
+// which archived filter still finds a no-op's row.
 //
 // The write check is per row on purpose. Customer identity is workspace-
 // readable, so the write arm (auth.EnsureActivityWritable) is what keeps a
 // colleague's correspondence theirs — and in a batch every row is somebody's.
-func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (bool, error) {
+func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (wrote, held bool, err error) {
 	// THE LOCK COMES FIRST, before the authority check and before the version
 	// compare, because both are answers about the row and both are only true
 	// while it holds still. Checked first and locked after, an ownership change
@@ -80,26 +163,27 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	// It is taken for every relink rather than only a pinned one: the write
 	// below updates this row, so the lock is acquired either way — this decides
 	// WHEN, and the two checks above are the reason it is now.
-	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
-		return false, err
+	held, err = lockActivityForWrite(ctx, tx, id.UUID)
+	if err != nil {
+		return false, false, err
 	}
-	if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
-		return false, err
+	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		return false, held, err
 	}
-	if err := relinkMeetsItsPin(ctx, tx, id, in.IfVersion); err != nil {
-		return false, err
+	if err := relinkMeetsItsPin(ctx, tx, id, in.IfVersion, held); err != nil {
+		return false, held, err
 	}
 	var displaced []ids.UUID
 	if in.ReplaceExistingOfType {
 		var err error
 		displaced, err = deleteVisibleLinksOfType(ctx, tx, id, in.EntityType, column)
 		if err != nil {
-			return false, err
+			return false, held, err
 		}
 	}
 	if in.EntityType == linkEntityPerson && in.ReplaceExistingOfType && len(displaced) > 0 {
 		if err := repointDisplacedParticipants(ctx, tx, id, in.EntityID, displaced); err != nil {
-			return false, err
+			return false, held, err
 		}
 	}
 	tag, err := tx.Exec(ctx, storekit.SQLf(`
@@ -108,11 +192,19 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 		ON CONFLICT (activity_id, entity_type, `+linkIDCoalesce+`) DO NOTHING`, column),
 		id, in.EntityType, in.EntityID)
 	if err != nil {
-		return false, err
+		return false, held, err
 	}
 	if tag.RowsAffected() == 0 {
-		return false, nil
+		return false, held, nil
 	}
+	return true, held, finalizeRelinkedActivity(ctx, tx, id, in)
+}
+
+// finalizeRelinkedActivity is the bookkeeping relinkActivityRow's own write
+// earns once the link itself is written: the version bump a staged approval
+// re-checks, the project correspondence stamp, and the audit row + outbox
+// event — split out so the guard chain above it reads as one shape.
+func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
 	// Touch the activity ROW itself, not just its link table: a staged
 	// approval pins activity.version (versionTables includes objectActivity),
 	// and that pin is the only defense between an approved "send this body on
@@ -123,24 +215,36 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	// trigger (set_updated_at_bump_version, 0008_activity.up.sql) does the
 	// actual bump; this only has to be a genuine UPDATE of the row.
 	if _, err := tx.Exec(ctx, `UPDATE activity SET updated_at = now() WHERE id = $1`, id); err != nil {
-		return false, err
+		return err
 	}
 	// Filing under a project is what qualifies the correspondence (D5), so
 	// the stamp commits with the link that earned it.
 	if in.EntityType == linkEntityProject {
 		if err := StampCorrespondenceForProject(ctx, tx, id, in.EntityID); err != nil {
-			return false, err
+			return err
 		}
 	}
 	auditID, err := storekit.Audit(ctx, tx, "activity_relink", "activity", id.UUID, nil, map[string]any{
 		"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType,
 	})
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
+	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
 		ChangedFields: relinkedChangedFields(in.EntityType, in.EntityID),
 	})
+}
+
+// relinkedChangedFields is RelinkActivity's activity.updated builder: the
+// relink is an association change, not a field patch, so changed_fields
+// carries only the typed relinked target.
+func relinkedChangedFields(entityType string, entityID ids.UUID) crmcontracts.PublicEventActivityChangedFields {
+	return crmcontracts.PublicEventActivityChangedFields{
+		Relinked: &crmcontracts.PublicEventActivityRelinkedRef{
+			EntityType: entityType,
+			EntityId:   openapi_types.UUID(entityID),
+		},
+	}
 }
 
 // relinkMeetsItsPin re-checks the version the caller read the activity at,
@@ -155,11 +259,15 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 // No pin is the ordinary case and is not an error: a human's relink through the
 // app conditions on nothing, and a static-tier agent call has nothing to
 // condition on either.
-func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
-	if ifVersion == nil {
+func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, held bool) error {
+	// held=true skips the compare: every write to a held row is refused by
+	// activity_refuse_restricted_mutation below regardless of version, so a
+	// stale version on a held row still owes 423, not a 409 that invites a
+	// retry the row can never accept.
+	if ifVersion == nil || held {
 		return nil
 	}
-	current, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	current, err := readActivityForWrite(ctx, tx, id, held)
 	if err != nil {
 		return err
 	}
@@ -228,7 +336,7 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 			return err
 		}
 		for _, id := range members {
-			written, err := relinkActivityRow(ctx, tx, id, in, column)
+			written, _, err := relinkActivityRow(ctx, tx, id, in, column)
 			switch {
 			case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
 				continue
@@ -290,7 +398,7 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 				continue
 			}
 			seen[raw] = struct{}{}
-			written, err := relinkActivityRow(ctx, tx, ids.From[ids.ActivityKind](raw), in, column)
+			written, _, err := relinkActivityRow(ctx, tx, ids.From[ids.ActivityKind](raw), in, column)
 			if err != nil {
 				return err
 			}

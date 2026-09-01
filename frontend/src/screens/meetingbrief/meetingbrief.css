@@ -1,0 +1,107 @@
+/* The meeting brief drawer's own rhythm.
+ *
+ * The drawer itself — the sticky head/body/foot split, the width, the phone
+ * sheet — belongs to the design system's wide drawer and is not restated here.
+ * What is here is only how this brief's content sits inside it. */
+
+/* The scroll lane is a container so the close plan can answer to the drawer's
+   width rather than the window's: the same drawer is 665px on a laptop and
+   full-width on a phone, and a three-column grid keyed to the viewport would
+   be three columns in both. */
+.mb-body {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.mb-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Who the brief is for, under the dialog's title. */
+.mb-prepared-for {
+  margin: var(--space-1) 0 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}
+
+.mb-meeting-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.mb-meeting-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.mb-meeting-text strong {
+  color: var(--textPrimary);
+}
+
+.mb-meeting-text span {
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}
+
+.mb-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* The meeting's own line, above the panels. It carries no panel chrome
+   because it is the answer to "which meeting is this", read once. */
+.mb-glance {
+  font-size: var(--fs-sm);
+}
+
+.mb-background {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.mb-failed-detail {
+  margin: var(--space-2) 0 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}
+
+/* The risks carry a section heading of their own: the callout inside titles
+   itself with a paragraph, which is right for an inline alert and wrong for a
+   named part of a document a reader navigates by heading. */
+.mb-risks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mb-section-title {
+  margin: 0;
+  color: var(--textPrimary);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+}
+
+/* A citation chip inside the risk callout takes the body ink rather than the
+   meta ink.
+ *
+ * --textMeta is tuned against a panel's own ground. The callout lays a tinted
+ * amber wash over that ground, and in the dark theme the pair lands at 4.1:1 —
+ * under AA, on the one section a reader must not skim. The chip is still
+ * quieter than the sentence it follows: it is 11px and dotted-underlined, and
+ * the contrast it needs is a floor rather than an emphasis. */
+.mb-risks .co-brief-cite-flat,
+.mb-risks .co-brief-cite {
+  color: var(--textContent);
+}

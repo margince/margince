@@ -30,6 +30,7 @@ import { throwProblem, useSorMode } from "./common";
 import { ComposeModal } from "./compose";
 import { ConsentSection } from "./consent";
 import { LogActivityAction } from "./logactivity";
+import { PersonMeetingBrief } from "./meetingbrief";
 import {
   hasCommercial,
   hasCommitments,
@@ -40,11 +41,7 @@ import {
   PersonMattersCard,
 } from "./personcards";
 import { EnrichedFields } from "./personcorrections";
-import {
-  PersonComposer,
-  PersonMeetingBrief,
-  PersonResearchDrawer,
-} from "./persondrawers";
+import { PersonComposer, PersonResearchDrawer } from "./persondrawers";
 import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";

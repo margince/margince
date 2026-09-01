@@ -30,16 +30,33 @@ const MODEL_WRITTEN = /^(.*brief|.*dossier|.*growth-fit|deal-status)$/i;
  */
 const NOT_PROSE: Record<string, string> = {};
 
-function everyQueryKeyFirstSegment(): { key: string; file: string }[] {
+// Walks INTO subdirectories, because screens have them: record360/ and
+// meetingbrief/ both hold components that query. A reader that stopped at the
+// top level saw a smaller tree, reported PASS, and had no failing assertion to
+// notice — which is the one way a census must not break.
+function everyQueryKeyFirstSegment(
+  dir: string = SCREENS,
+  prefix = "",
+): {
+  key: string;
+  file: string;
+}[] {
   const found: { key: string; file: string }[] = [];
-  for (const name of readdirSync(SCREENS)) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const name = entry.name;
+    if (entry.isDirectory()) {
+      found.push(
+        ...everyQueryKeyFirstSegment(join(dir, name), `${prefix}${name}/`),
+      );
+      continue;
+    }
     if (!name.endsWith(".tsx") && !name.endsWith(".ts")) continue;
     if (name.endsWith(".test.tsx") || name.endsWith(".test.ts")) continue;
-    const source = readFileSync(join(SCREENS, name), "utf8");
+    const source = readFileSync(join(dir, name), "utf8");
     // `queryKey: ["name", …]` — the first segment only, which is the one that
     // names the resource.
     for (const match of source.matchAll(/queryKey:\s*\[\s*"([^"]+)"/g)) {
-      found.push({ key: match[1], file: name });
+      found.push({ key: match[1], file: `${prefix}${name}` });
     }
   }
   return found;

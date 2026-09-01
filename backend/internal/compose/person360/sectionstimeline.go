@@ -96,7 +96,7 @@ func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, personID ids
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
-	rows, hasMore, err := s.readActivities(ctx, tx, personID, opts, "")
+	rows, hasMore, err := s.readActivities(ctx, tx, personID, opts, "", byRecency)
 	if err != nil {
 		return err
 	}
@@ -114,16 +114,38 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, personID ids.
 		return err
 	}
 	rows, hasMore, err := s.readActivities(ctx, tx, personID, opts,
-		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`)
+		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`, byUrgency)
 	if err != nil {
 		return err
 	}
 	out.NextSteps = &struct {
 		Data []crmcontracts.Activity `json:"data"`
 		Page crmcontracts.PageInfo   `json:"page"`
-	}{Data: rows, Page: sectionPage(rows, hasMore)}
+	}{Data: rows, Page: crmcontracts.PageInfo{HasMore: hasMore}}
 	return nil
 }
+
+// How a section's rows are ordered, and why the two differ.
+//
+// byRecency is the timeline's order and the one GET /activities pages by, so
+// a section using it can hand out a keyset cursor that continues the same
+// list. byUrgency is what a TASK list is for: the soonest deadline first,
+// undated work after it, and the oldest of those ahead of the newest — the
+// order a reader would put their own to-do list in. The undated tail is where
+// a transcript's "I'll send it later" lands, and filing order is the only
+// thing that separates two of those.
+//
+// A section ordered by urgency carries NO cursor: the activities list has no
+// such order to continue into, so a cursor minted here would be read against
+// (occurred_at, id) and page into the middle of a different list. It bounds
+// at sectionCap and says has_more instead, which is what every other summary
+// section does when it runs out of room.
+type sectionOrder string
+
+const (
+	byRecency sectionOrder = "a.occurred_at DESC, a.id DESC"
+	byUrgency sectionOrder = "a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC"
+)
 
 // sectionPage is the section's edge in the activities list's own cursor
 // vocabulary: the same (occurred_at, id) keyset GET /activities orders by, so
@@ -155,7 +177,7 @@ func sectionPage(rows []crmcontracts.Activity, hasMore bool) crmcontracts.PageIn
 // TestThePerson360TimelineNamesTheTransportThatCarriedAMessage and
 // TestThePerson360TimelineCarriesTheVersionAWriteNeeds are the guards that
 // say so out loud.
-func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.PersonID, opts AssembleOptions, extra string) ([]crmcontracts.Activity, bool, error) {
+func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.PersonID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	personPos := arg(personID)
@@ -173,16 +195,16 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, a.kind, a.channel_provider, a.subject, a.body, a.direction,
-		       a.occurred_at, a.due_at, a.is_done, a.source, a.captured_by, a.created_at,
+		       a.occurred_at, a.due_at, a.is_done, a.assignee_id, a.source, a.captured_by, a.created_at,
 		       a.thread_key, a.bulk_mail_attested, a.audience, a.audience_reason,
 		       a.version, (%s) AS content_available,
 		       EXISTS (SELECT 1 FROM activity_link fl
 		                WHERE fl.activity_id = a.id AND fl.person_id = $%d) AS filed_here
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
-		ORDER BY a.occurred_at DESC, a.id DESC
+		ORDER BY %s
 		LIMIT %d`,
-		contentArm, personPos, fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg), extra, sectionCap+1), args...)
+		contentArm, personPos, fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -196,7 +218,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		var contentAvailable, bulkMailAttested, filedHere bool
 		var threadKey, audienceReason *string
 		if err := rows.Scan(&id, &a.Kind, &a.ChannelProvider, &a.Subject, &a.Body,
-			&a.Direction, &a.OccurredAt, &a.DueAt, &a.IsDone, &a.Source, &a.CapturedBy,
+			&a.Direction, &a.OccurredAt, &a.DueAt, &a.IsDone, &a.AssigneeId, &a.Source, &a.CapturedBy,
 			&a.CreatedAt, &threadKey, &bulkMailAttested, &audience, &audienceReason,
 			&version, &contentAvailable, &filedHere); err != nil {
 			return nil, false, err
@@ -264,12 +286,19 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, personID ids.
 	if err != nil {
 		return err
 	}
+	// An aggregate, not a per-row read: it has to agree for every colleague,
+	// so it asks whether the WORKSPACE may see the row (auth.AudienceWorkspaceOnly)
+	// rather than the caller-scoped arm readActivities uses above for content —
+	// a private message narrowed to its participants must not move the date a
+	// colleague outside them reads here, the same rule relationship strength
+	// holds (people/strength.go).
 	return tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound')
 		FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND (%s)%s`,
-		fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg)), args...).
+		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
+		fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg),
+		auth.AudienceWorkspaceOnly("a")), args...).
 		Scan(&out.LastInboundAt, &out.LastOutboundAt)
 }
 

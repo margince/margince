@@ -235,19 +235,73 @@ iso_in_days() { # iso_in_days <days>
 
 # One activity, created only if a row with that subject is not already there.
 #
-# `ensure` leans on the endpoint answering 409 for a duplicate, and /activities
-# has no natural key to answer it with: a rep may genuinely log the same call
-# twice. So the seed asks first. Without this, every `make seed-dev` adds
-# another copy and the demo Worklist grows a row per run.
-ensure_activity() { # ensure_activity <label> <subject> <json-body>
-  local label="$1" subject="$2" data="$3" status
-  status="$(api GET "/activities?q=$(url_encode "$subject")&limit=50")"
-  [ "$status" = "200" ] || fail "GET /v1/activities returned HTTP $status while checking for $label"
-  if jq -e --arg s "$subject" '.data[]? | select(.subject == $s)' "$workdir/body" >/dev/null; then
+# `ensure_keyed` leans on the endpoint reporting a duplicate rather than writing
+# one — 409 where it refuses the second write, 200 where it answers with the row
+# that stands — and /activities does so only for a row carrying a natural key — a rep may genuinely log the
+# same call twice, so an activity without one is never a duplicate. The seeded
+# conversations supply one (ensure_conversation), which is what makes two
+# overlapping seed runs land one row; everything else here asks first. Without
+# either, every `make seed-dev` adds another copy and the demo Worklist grows a
+# row per run.
+ensure_activity() { # ensure_activity <label> <subject> <source-id> <json-body>
+  local label="$1" subject="$2" key="$3" data="$4" query mine theirs
+  query="/activities?q=$(url_encode "$subject")"
+  # THE SEED'S OWN ROW, matched on the NATURAL KEY rather than on the subject.
+  #
+  # Skipping the POST skips everything the POST does, and the links are the half
+  # that matters: the server stamps participants from them at creation, so a row
+  # this seeder did not write has none, and every network surface built on them
+  # renders empty against a demo stack that reported success. A hand-logged
+  # "Quarterly review with Demo GmbH" is all it takes to hold the subject.
+  #
+  # The KEY is what says the row is this seeder's — the subject is a title
+  # anybody may reuse, and `source: "seed"` is a claim about who wrote a row
+  # rather than about which row it is.
+  #
+  # THROUGH find_first, which follows the pages. A single-page probe answers
+  # from the first hundred rows that match the subject, and an installation
+  # carrying the demo dataset plus a real inbox can hold more — so the seeder
+  # would miss both its own row and somebody else's, and write a second one.
+  mine="$(find_first "$query" '.source_system == "seed" and .source_id == $k' --arg k "$key")"
+  if [ -n "$mine" ]; then
     echo "  OK: $label already present"
     return
   fi
-  ensure "$label" /activities "$data"
+  # A row holding the SUBJECT but not the key is somebody else's — a hand-logged
+  # activity that happens to be titled the same. REFUSED rather than seeded
+  # beside: two activities with one title and nothing to tell them apart is a
+  # demo whose result depends on which row a reader or a verification step
+  # happens to open, and that is worse than a seed that stops and says so.
+  theirs="$(find_first "$query" '.subject == $s' --arg s "$subject")"
+  if [ -n "$theirs" ]; then
+    fail "an activity titled \"$subject\" is already here without the seed key $key — remove or rename it, because seeding beside it would leave two rows nothing can tell apart"
+  fi
+  # KEYED, so the write is idempotent at the database: two seed runs overlapping
+  # both find nothing above and both POST, and the endpoint answers the second
+  # with the row that already stands.
+  ensure_keyed "$label" /activities "$data"
+}
+
+# ensure_keyed is `ensure` for a write carrying a natural key, which one more
+# status means "already there" for.
+#
+# 200 is the endpoint answering idempotently with the row that stands — see
+# LogActivity's `http.StatusOK // idempotent capture replay`. Accepting it in
+# `ensure` itself would be wrong: a 200 from creating a person, an organization
+# or a deal is not a replay, and reading one as "already present" would let a
+# contract regression pass as a seeded fixture nobody wrote.
+ensure_keyed() { # ensure_keyed <label> <path> <json-body>
+  local label="$1" path="$2" data="$3" status
+  status="$(api POST "$path" "$data")"
+  case "$status" in
+    201) echo "  OK: created $label" ;;
+    200 | 409) echo "  OK: $label already present" ;;
+    *)
+      echo "  response body:" >&2
+      cat "$workdir/body" >&2
+      fail "POST /v1$path ($label) returned HTTP $status"
+      ;;
+  esac
 }
 
 ensure() { # ensure <label> <path> <json-body>
@@ -467,8 +521,15 @@ alice_id="$(person_id "Alice Müller" "alice@demo.test")"
 # A task the admin wrote themselves and did not assign. It lands on their own
 # queue because the writer stamps the author as assignee — which is the whole
 # reason "mine" can be exact.
-ensure_activity "task: call Alice back" "Call Alice back about the retrofit" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 0)" \
+#
+# KEYED, like the conversations below. Two seed runs overlapping — a colleague's,
+# a second terminal — both find nothing and both POST, and the demo Worklist then
+# opens on two of every task. The key is what lets /activities answer 409 for the
+# second rather than write a duplicate; the read above it is what keeps a seeder
+# from skipping the links when somebody else's row holds the subject.
+ensure_activity "task: call Alice back" "Call Alice back about the retrofit" "task:call-alice-back" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 0)" \
   '{kind:"task",subject:"Call Alice back about the retrofit",source:"seed",due_at:$due,
+    source_system:"seed",source_id:"task:call-alice-back",
     links:[{entity_type:"person",entity_id:$p}]}')"
 
 # The unanswered inbound that makes a customer WAIT is seeded in seed-dev.sql
@@ -484,9 +545,72 @@ ensure_activity "task: call Alice back" "Call Alice back about the retrofit" "$(
 # by automations running as the system principal, which no seed can impersonate
 # through a public endpoint — and should not, since impersonating one is exactly
 # what captured_by exists to prevent.
-ensure_activity "task: follow up with the lead" "Follow up with the new lead" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 1)" \
+ensure_activity "task: follow up with the lead" "Follow up with the new lead" "task:follow-up-new-lead" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 1)" \
   '{kind:"task",subject:"Follow up with the new lead",source:"seed",due_at:$due,
+    source_system:"seed",source_id:"task:follow-up-new-lead",
     links:[{entity_type:"person",entity_id:$p}]}')"
+
+echo "== seed-dev: demo conversations =="
+# WITHOUT THESE, HALF THE PRODUCT RENDERS ITS EMPTY STATE. The relationship
+# graph, the contact peers, who-knows-this-contact and the decay lane all derive
+# from activity_participant, and nothing else in this seed writes a row of it:
+# links alone do not say two people spoke, and a task or a note is not a
+# conversation. A cold demo stack therefore showed every network surface blank,
+# and reading one meant hand-seeding participant rows first.
+#
+# Logged through the API like everything else here, and that is what makes it
+# work: the server stamps the participants itself from the person links, for an
+# INTERACTION kind only (email, call, meeting). The seeder states the
+# conversation and the server decides who was in it, which is the same rule the
+# capture path follows.
+#
+# Two person links on a thread, not one: a single counterparty draws the
+# colleague-to-contact edge and leaves contact-to-contact and the peer arm
+# empty, which is half the surface this exists to fill.
+ensure_conversation() { # ensure_conversation <slug> <subject> <kind> <direction|-> <days-back> <person-id>…
+  local slug="$1" subject="$2" kind="$3" direction="$4" back="$5"
+  shift 5
+  local links direction_field='{}'
+  links="$(printf '%s\n' "$@" | jq -R '{entity_type:"person",entity_id:.}' | jq -s '.')"
+  # NOBODY SENDS A MEETING. `-` leaves the field off rather than asserting a
+  # direction the event does not have; the server then stamps the roles it
+  # stamps for an undirected interaction, which is what a meeting is.
+  if [ "$direction" != "-" ]; then
+    direction_field="$(jq -n --arg d "$direction" '{direction:$d}')"
+  fi
+  # A NATURAL KEY, so the write is idempotent at the database rather than only
+  # at the read above it. Two seed runs overlapping — a colleague's, a second
+  # terminal — both find nothing and both POST, and without a key the demo stack
+  # ends up with two of every conversation.
+  #
+  # THE SLUG, not the subject. A subject is display copy somebody may reword,
+  # and a reworded one with a fresh key is a second conversation — the duplicate
+  # this key exists to prevent, arriving through the door it was meant to close.
+  ensure_activity "$kind \"$subject\"" "$subject" "$slug" \
+    "$(jq -n --arg s "$subject" --arg k "$kind" --arg at "$(iso_in_days "-$back")" \
+        --arg key "$slug" --argjson l "$links" --argjson dir "$direction_field" \
+        '{kind:$k,subject:$s,occurred_at:$at,source:"seed",
+          source_system:"seed",source_id:$key,links:$l} + $dir')"
+}
+
+bob_id="$(person_id "Bob Schmidt" "bob@demo.test")"
+carol_id="$(person_id "Carol Wagner" "carol@demo.test")"
+[ -n "$bob_id" ] && [ -n "$carol_id" ] \
+  || fail "the demo people this seed just wrote are not readable back — nothing to hang a conversation on"
+
+# Both directions on the same contact, deliberately: the strength score's
+# reciprocity term has nothing to say about a one-way exchange, so a seed that
+# only ever sends draws every edge at the floor and the ranking demonstrates
+# nothing. And they are dated BACK, because a decay lane whose every row arrived
+# this second has nothing decaying in it.
+# ONE contact on the reciprocal pair. Both rows are about Alice — that is what
+# makes them reciprocal — and adding Bob to the outbound one draws a
+# contact-to-contact edge from a conversation that is not about a peer
+# relationship at all. The meeting below is where peers are meant to come from,
+# and a seed that populates that arm twice cannot show either case cleanly.
+ensure_conversation "conversation:renewal-terms-outbound" "Renewal terms for Demo GmbH" email outbound 12 "$alice_id"
+ensure_conversation "conversation:renewal-terms-inbound" "Re: Renewal terms for Demo GmbH" email inbound 9 "$alice_id"
+ensure_conversation "conversation:quarterly-review" "Quarterly review with Demo GmbH" meeting - 40 "$bob_id" "$carol_id"
 
 echo ""
 echo "seed-dev: DONE — log in at $API_BASE with $ADMIN_EMAIL / $ADMIN_PASSWORD"

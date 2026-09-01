@@ -1,6 +1,12 @@
 import type { Page, Route } from "@playwright/test";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
+import { briefEmpty, briefOmitted } from "../src/screens/meetingbrief/fixtures";
 import { type MockProject, projectMock } from "./projectmock";
+
+// The booked meeting the person record offers a brief for. Its id is the one
+// the brief fixtures were written against, so the drawer's request and the
+// answer describe the same room.
+const MEETING_ACTIVITY = "3f7c1a90-0000-4000-8000-00000000a001";
 
 // The AC specs drive an admin, and the UI now scopes every write affordance on
 // the grant map /me carries rather than on the role name — so the mock has to
@@ -901,6 +907,9 @@ export type MockApiOptions = Readonly<{
   // is what proves it. A test that wants to SEE the federated block seeds it
   // here — this option is the only place in this repo where a provider exists.
   oidcProviders?: ReadonlyArray<{ key: string; label: string }>;
+  // Which meeting brief the drawer gets. The default is the everyday one,
+  // carrying a withheld source so the AC that reads it has something to read.
+  meetingBrief?: "rep" | "empty" | "failed";
 }>;
 
 export async function mockApi(
@@ -1392,6 +1401,20 @@ export async function mockApi(
       return json({
         as_of: "2026-06-20T09:00:00Z",
         person: anna,
+        // A booked meeting, so the meetings tab has a "Brief me" to press. The
+        // overlay mirror holds no natively captured interaction, so it holds no
+        // meeting either.
+        next_meeting:
+          sorMode === "overlay"
+            ? undefined
+            : {
+                activity_id: MEETING_ACTIVITY,
+                starts_at: "2026-06-24T13:00:00Z",
+                subject: "Retrofit-Abstimmung",
+                participants: [
+                  { person_id: "p-anna", full_name: "Anna Weber" },
+                ],
+              },
         last_inbound_at:
           sorMode === "overlay" ? undefined : "2026-06-18T08:00:00Z",
         last_outbound_at:
@@ -1413,6 +1436,28 @@ export async function mockApi(
               ]
             : [],
       });
+    }
+    // The meeting brief, from the same fixtures the stories and the unit tests
+    // read. One shape for all three, so a story cannot show a surface the e2e
+    // run never serves.
+    if (method === "GET" && /^\/activities\/[^/]+\/meeting-brief$/.test(path)) {
+      switch (options?.meetingBrief) {
+        case "empty":
+          return json(briefEmpty);
+        case "failed":
+          return json(
+            {
+              type: "about:blank",
+              title: "Not found",
+              status: 404,
+              code: "not_found",
+              detail: "That meeting is filed under a different engagement.",
+            },
+            404,
+          );
+        default:
+          return json(briefOmitted);
+      }
     }
     if (method === "GET" && /^\/people\/[^/]+\/brief$/.test(path)) {
       return json({

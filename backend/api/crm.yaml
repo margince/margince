@@ -9605,7 +9605,7 @@ paths:
             licence to read a colleague's inbox.
         - name: filter
           in: query
-          schema: { type: string, enum: [all, customer_waiting, deals_at_risk, meetings, tasks, decisions, system] }
+          schema: { type: string, enum: [all, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system] }
           description: 'Narrow the queue to one kind of work. Omitted means everything, which is the default view.'
         - name: limit
           in: query
@@ -18943,13 +18943,15 @@ components:
         signature_enrich:
           type: boolean
           description: |
-            The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
-            number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
-            a value the signature does not state is not written.
+            The workspace DEFAULT for reading stated contact details — a title, a phone number, an
+            address, a company — out of mail a contact sent us. It governs both readers: the
+            signature of the message, and a vCard attached to it. Nothing is inferred: a value the
+            mail does not state is not written. Reading happens within minutes of the mail arriving;
+            a daily pass is the backstop.
 
             A mailbox can override it (`CaptureConnection.signature_enrich_enabled`), and one that
             never chose follows this. Distinct from the exclusion list, which keeps whole messages
-            out of capture by address or domain and says nothing about reading a signature.
+            out of capture by address or domain and says nothing about reading contact details.
             Default is ON.
 
             "Workspace" here is the storage tenant, not the word the product shows a reader —
@@ -19246,7 +19248,7 @@ components:
       properties:
         auto_enrich: { type: boolean, description: Toggle captured-organization auto-enrichment. }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects mail captured from now on.' }
-        signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it.' }
+        signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
 
     BlockedDomain:
@@ -19356,13 +19358,14 @@ components:
         signature_enrich_enabled:
           type: [boolean, 'null']
           description: |
-            This mailbox's own answer to the nightly signature pass, or null to follow the
-            tenant default (`CaptureSettings.signature_enrich`). Null is a third state and not
-            a missing value: a mailbox that never chose moves with the default, and one that
-            did keeps its answer whatever the default becomes.
+            This mailbox's own answer to reading contact details out of its mail, or null to
+            follow the tenant default (`CaptureSettings.signature_enrich`). Null is a third state
+            and not a missing value: a mailbox that never chose moves with the default, and one
+            that did keeps its answer whatever the default becomes.
 
-            False means no mail from this mailbox is ever SELECTED for enrichment — the pass
-            never reads it, rather than reading it and discarding the result.
+            False means no mail from this mailbox is ever SELECTED — neither its signatures are
+            read nor its attached vCards imported. The passes never reach it, rather than
+            reading it and discarding the result.
         mail_posture:
           type: string
           enum: [shared, classified, held]
@@ -24602,7 +24605,7 @@ components:
         `job_change` fires only on a RECORDED employment change, and `public_signal` needs a
         connected data provider. A rule that cannot fire is absent from the page, not an empty
         card.
-      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
+      enum: [meeting_prep, re_engaged, job_change, overdue_promise, overdue_task, gone_quiet, open_promise, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
 
     PersonMomentEvidence:
       type: object
@@ -33914,7 +33917,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -34074,7 +34077,7 @@ components:
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
-        filter: { type: string, enum: [all, customer_waiting, deals_at_risk, meetings, tasks, decisions, system], description: 'The narrowing this read applied.' }
+        filter: { type: string, enum: [all, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system], description: 'The narrowing this read applied.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
           type: array
@@ -34128,7 +34131,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice, introduction_request, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice, introduction_request, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -34186,7 +34189,7 @@ components:
       properties:
         category:
           type: string
-          enum: [customer_waiting, deals_at_risk, meetings, tasks, decisions, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
           description: 'Which kind of work these numbers are about. The same vocabulary the filter uses.'
         considered:
           type: integer
@@ -34239,7 +34242,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
@@ -34248,7 +34251,7 @@ components:
             row rather than a hundred. Its own facts ride in `batch`.
         category:
           type: string
-          enum: [customer_waiting, deals_at_risk, meetings, tasks, decisions, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
           description: 'The badge, and the filter it answers to. A reader groups by this; the ORDER never does.'
         level:
           type: integer
@@ -34339,7 +34342,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, stale]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 

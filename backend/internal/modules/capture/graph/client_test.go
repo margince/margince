@@ -65,16 +65,28 @@ func msStub(t *testing.T) *httptest.Server {
 			// The opening page of a fresh delta round: one page, then the next.
 			if r.URL.Query().Get("$skiptoken") == "p2" {
 				writeJSON(w, map[string]any{
-					"value":            []map[string]any{{"id": "m2"}},
+					"value":            []map[string]any{{"id": "m2", "receivedDateTime": "2026-07-12T00:00:00Z"}},
 					"@odata.deltaLink": srv.URL + "/me/mailFolders/inbox/messages/delta?%24deltatoken=d1",
 				})
 				return
 			}
 			writeJSON(w, map[string]any{
-				"value":           []map[string]any{{"id": "m1"}},
+				"value":           []map[string]any{{"id": "m1", "receivedDateTime": "2026-07-12T00:00:00Z"}},
 				"@odata.nextLink": srv.URL + "/me/mailFolders/inbox/messages/delta?%24skiptoken=p2",
 			})
 		}
+	})
+
+	mux.HandleFunc("/me/mailFolders/{folder}/messages", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("ConsistencyLevel") != "eventual" {
+			// $count without the header fails on real Graph; the stub makes
+			// that contract visible as a client-side failure.
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// The two the delta round hands back, so a walk of the whole folder
+		// measures up and the anchor stands.
+		writeJSON(w, map[string]any{"@odata.count": 2, "value": []map[string]any{{"id": "m1"}}})
 	})
 
 	mux.HandleFunc("/me/messages", func(w http.ResponseWriter, r *http.Request) {
@@ -514,4 +526,289 @@ func jsonStub(t *testing.T, body map[string]any) *httptest.Server {
 	}))
 	t.Cleanup(srv.Close)
 	return srv
+}
+
+// anchorStub serves one folder: a single-page delta round holding the given
+// ids, and a $count answering held. It records the filter the count carried.
+func anchorStub(t *testing.T, ids []string, held int) (*httptest.Server, *string) {
+	t.Helper()
+	return datedAnchorStub(t, entriesFor(ids), &held)
+}
+
+// anchorAfter is the lower bound every anchor test asks for, so the entries a
+// stub hands back and the window they are reconciled against agree.
+var anchorAfter = time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC)
+
+// entriesFor renders delta entries received inside that window, which is what a
+// round over a folder of recent mail looks like. Dated, because the round asks
+// Graph for the field and an entry without it does not count.
+func entriesFor(ids []string) []map[string]any {
+	value := make([]map[string]any, 0, len(ids))
+	for _, id := range ids {
+		value = append(value, map[string]any{
+			"id":               id,
+			"receivedDateTime": anchorAfter.Add(time.Hour).Format(time.RFC3339),
+		})
+	}
+	return value
+}
+
+// datedAnchorStub serves one folder: a single-page delta round holding the given
+// raw entries, and a $count answering held — omitting @odata.count entirely when
+// held is nil. It records the filter the count carried.
+func datedAnchorStub(t *testing.T, value []map[string]any, held *int) (*httptest.Server, *string) {
+	t.Helper()
+	var countFilter string
+	mux := http.NewServeMux()
+	var srv *httptest.Server
+	mux.HandleFunc("/me/mailFolders/inbox/messages/delta", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{
+			"value":            value,
+			"@odata.deltaLink": srv.URL + "/me/mailFolders/inbox/messages/delta?%24deltatoken=d1",
+		})
+	})
+	mux.HandleFunc("/me/mailFolders/inbox/messages", func(w http.ResponseWriter, r *http.Request) {
+		countFilter = r.URL.Query().Get("$filter")
+		body := map[string]any{"value": []map[string]any{}}
+		if held != nil {
+			body["@odata.count"] = *held
+		}
+		writeJSON(w, body)
+	})
+	srv = httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv, &countFilter
+}
+
+func TestAnAnchorHoldingFewerThanTheFolderReportsIsRefused(t *testing.T) {
+	srv, _ := anchorStub(t, []string{"m1"}, 5)
+	ids, delta, err := NewAPI(srv.Client(), srv.URL).
+		DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	if !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("err = %v, want ErrUnreachable — a round that closed short of the folder's own tally", err)
+	}
+	if ids != nil || delta != "" {
+		t.Errorf("ids = %v, deltaLink = %q, want neither: a watermark stored here would drop the 4 the walk never saw", ids, delta)
+	}
+	if !strings.Contains(err.Error(), "holds 5") {
+		t.Errorf("err = %q, want the tally the walk was measured against", err)
+	}
+}
+
+func TestAnAnchorHoldingMoreThanTheFolderReportsStands(t *testing.T) {
+	// A message arriving mid-walk is inside the walk and outside the closed
+	// window the tally covers. That gap must not read as a short round.
+	srv, _ := anchorStub(t, []string{"m1", "m2", "m3"}, 2)
+	ids, delta, err := NewAPI(srv.Client(), srv.URL).
+		DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	if err != nil {
+		t.Fatalf("DeltaInit: %v", err)
+	}
+	if len(ids) != 3 || delta == "" {
+		t.Errorf("ids = %v, deltaLink = %q, want all three and the link that closed the round", ids, delta)
+	}
+}
+
+func TestTheAnchorsTallyCoversTheWindowTheWalkOpenedIn(t *testing.T) {
+	after := anchorAfter
+	opened := time.Now().UTC()
+	srv, filter := anchorStub(t, []string{"m1"}, 1)
+	if _, _, err := NewAPI(srv.Client(), srv.URL).
+		DeltaInit(context.Background(), "at", folderInbox, after); err != nil {
+		t.Fatalf("DeltaInit: %v", err)
+	}
+	closed := time.Now().UTC()
+	if !strings.HasPrefix(*filter, "receivedDateTime ge "+after.Format(time.RFC3339)+" and ") {
+		t.Fatalf("count filter = %q, want the anchor's own lower bound", *filter)
+	}
+	_, upper, found := strings.Cut(*filter, " and receivedDateTime lt ")
+	if !found {
+		t.Fatalf("count filter = %q, want a closed upper bound: an open tally would count arrivals the walk could not have seen", *filter)
+	}
+	at, err := time.Parse(time.RFC3339, upper)
+	if err != nil {
+		t.Fatalf("upper bound %q: %v", upper, err)
+	}
+	// Second-grain rendering floors the bound, so allow the second it truncates.
+	if at.Before(opened.Truncate(time.Second)) || at.After(closed) {
+		t.Errorf("upper bound = %s, want the instant the walk opened (between %s and %s)", at, opened, closed)
+	}
+}
+
+// A TALLY THAT DID NOT ANSWER is not a tally of zero.
+//
+// A 2xx without @odata.count — the shape a request Graph decides not to count
+// can take — would read as "the folder holds none", and no walk can fall short
+// of none. The reconciliation would pass every round while measuring nothing.
+func TestATallyWithNoCountIsRefusedRatherThanReadAsZero(t *testing.T) {
+	srv, _ := datedAnchorStub(t, entriesFor([]string{"m1"}), nil)
+	_, _, err := NewAPI(srv.Client(), srv.URL).
+		DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	if !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("err = %v, want ErrUnreachable — a tally read as zero passes every round while "+
+			"measuring nothing, which is this guard wearing the costume of a green check", err)
+	}
+}
+
+// AN ENTRY FROM OUTSIDE THE WINDOW DOES NOT COUNT TOWARD IT.
+//
+// A delta tracks a FOLDER, not a query: Microsoft may name a message that falls
+// outside the filter because something about it changed — a read/unread flip on
+// an old one. Counted, it stands in for an in-window message the round never
+// reached, and the short round passes.
+func TestAnEntryOlderThanTheWindowDoesNotStandInForOneInsideIt(t *testing.T) {
+	after := anchorAfter
+	held := 2
+	srv, _ := datedAnchorStub(t, []map[string]any{
+		{"id": "in-window", "receivedDateTime": after.Add(time.Hour).Format(time.RFC3339)},
+		{"id": "changed-old-message", "receivedDateTime": after.Add(-30 * 24 * time.Hour).Format(time.RFC3339)},
+	}, &held)
+
+	ids, _, err := NewAPI(srv.Client(), srv.URL).DeltaInit(context.Background(), "at", folderInbox, after)
+	if !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("err = %v, want ErrUnreachable: the round holds ONE message from the window and the "+
+			"folder reports two, and an entry from a month earlier is not the missing one", err)
+	}
+	if ids != nil {
+		t.Errorf("ids = %v, want none alongside the refusal", ids)
+	}
+}
+
+// AND AN ENTRY THE ROUND NAMED IS STILL FETCHED, whatever window it belongs to:
+// the reconciliation narrows what COUNTS, never what is captured.
+func TestAnEntryOutsideTheWindowIsStillReturnedToBeFetched(t *testing.T) {
+	after := anchorAfter
+	held := 1
+	srv, _ := datedAnchorStub(t, []map[string]any{
+		{"id": "in-window", "receivedDateTime": after.Add(time.Hour).Format(time.RFC3339)},
+		{"id": "changed-old-message", "receivedDateTime": after.Add(-30 * 24 * time.Hour).Format(time.RFC3339)},
+	}, &held)
+
+	ids, _, err := NewAPI(srv.Client(), srv.URL).DeltaInit(context.Background(), "at", folderInbox, after)
+	if err != nil {
+		t.Fatalf("DeltaInit: %v", err)
+	}
+	if strings.Join(ids, ",") != "in-window,changed-old-message" {
+		t.Errorf("ids = %v, want both — a message the round named is a message to fetch", ids)
+	}
+}
+
+// A DELTALINK IS CHECKED FOR ORIGIN LIKE A NEXTLINK, and needs it more: this one
+// is STORED. An off-origin deltaLink becomes the cursor, and every later cycle
+// then refuses it before fetching anything — a refusal that is not the 410 a
+// re-anchor answers, so the mailbox has no way back.
+func TestAnOffOriginDeltaLinkIsRefusedRatherThanStored(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/me/mailFolders/inbox/messages/delta", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{
+			"value":            []map[string]any{{"id": "m1"}},
+			"@odata.deltaLink": "https://attacker.example/me/mailFolders/inbox/messages/delta?%24deltatoken=d1",
+		})
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	_, delta, err := NewAPI(srv.Client(), srv.URL).
+		DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	if err == nil {
+		t.Fatalf("DeltaInit accepted an off-origin deltaLink and would have stored %q as the cursor", delta)
+	}
+	if !strings.Contains(err.Error(), "does not point at the graph api") {
+		t.Errorf("err = %v, want the origin refusal", err)
+	}
+}
+
+// THE UPPER BOUND KEEPS ITS SUBSECOND DIGITS. Format truncates, so a
+// second-grain bound moves the window back by up to a second and drops whatever
+// arrived in it out of the tally — quietly, which is the failure this window is
+// for.
+func TestTheTallysUpperBoundKeepsSubsecondPrecision(t *testing.T) {
+	after := time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC)
+	before := time.Date(2026, 8, 1, 9, 30, 15, 123456789, time.UTC)
+	got := receivedBetweenFilter(after, before)
+	if !strings.HasSuffix(got, "receivedDateTime lt 2026-08-01T09:30:15.123456789Z") {
+		t.Errorf("filter = %q, want the bound at the instant it was taken, subseconds and all", got)
+	}
+}
+
+// AN ENTRY WITH NO INSTANT DOES NOT COUNT TOWARD THE WINDOW.
+//
+// The opening request asks Graph for receivedDateTime, so an entry that carries
+// none is not the ordinary silence of a field nobody asked for: it is an entry
+// that cannot be shown to belong to the window being reconciled, and one that
+// cannot be shown to belong must not stand in for a message the round never
+// reached. The cost is a refusal the next cycle retries; the alternative is a
+// watermark stored over a gap, and the watermark only moves forward.
+func TestAnUndatedEntryDoesNotStandInForOneInsideTheWindow(t *testing.T) {
+	held := 2
+	srv, _ := datedAnchorStub(t, []map[string]any{
+		{"id": "in-window", "receivedDateTime": anchorAfter.Add(time.Hour).Format(time.RFC3339)},
+		{"id": "no-instant"},
+	}, &held)
+
+	_, _, err := NewAPI(srv.Client(), srv.URL).DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	if !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("err = %v, want ErrUnreachable: one entry belongs to the window, one says nothing, "+
+			"and the folder reports two", err)
+	}
+}
+
+// AND THE ROUND ASKS FOR THE FIELD IT RECONCILES ON. Graph does not promise
+// receivedDateTime on every entry of a delta round; $select is the request that
+// asks, and it rides the deltaLink into every later round of the same stream.
+func TestTheAnchorAsksForTheFieldItReconcilesOn(t *testing.T) {
+	var selected string
+	mux := http.NewServeMux()
+	var srv *httptest.Server
+	mux.HandleFunc("/me/mailFolders/inbox/messages/delta", func(w http.ResponseWriter, r *http.Request) {
+		selected = r.URL.Query().Get("$select")
+		writeJSON(w, map[string]any{
+			"value":            entriesFor([]string{"m1"}),
+			"@odata.deltaLink": srv.URL + "/me/mailFolders/inbox/messages/delta?%24deltatoken=d1",
+		})
+	})
+	mux.HandleFunc("/me/mailFolders/inbox/messages", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{"@odata.count": 1, "value": []map[string]any{}})
+	})
+	srv = httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	if _, _, err := NewAPI(srv.Client(), srv.URL).
+		DeltaInit(context.Background(), "at", folderInbox, anchorAfter); err != nil {
+		t.Fatalf("DeltaInit: %v", err)
+	}
+	if !strings.Contains(selected, "receivedDateTime") {
+		t.Errorf("$select = %q, want receivedDateTime — without asking, the field the "+
+			"reconciliation reads is one Graph does not promise", selected)
+	}
+	if !strings.Contains(selected, "id") {
+		t.Errorf("$select = %q, want the id too — there is nothing to fetch without it", selected)
+	}
+}
+
+// THE TWO SIDES READ THE LOWER BOUND THE SAME WAY.
+//
+// The filter renders `after` at second grain, so Microsoft counts everything
+// from the top of that second. Comparing against the exact instant instead would
+// drop a message arriving in the fractional remainder from the walk's side while
+// the tally kept it — a complete anchor refused as short, on nothing but a
+// rounding difference between the two questions.
+func TestASubsecondLowerBoundDoesNotRefuseACompleteAnchor(t *testing.T) {
+	// The anchor window is now-minus-a-span, so `after` carries nanoseconds in
+	// every real call; this is the ordinary case, not a contrived one.
+	after := time.Date(2026, 7, 11, 0, 0, 0, 500_000_000, time.UTC)
+	held := 1
+	srv, _ := datedAnchorStub(t, []map[string]any{
+		// Inside the second the filter opens on, before the instant itself.
+		{"id": "arrived-in-the-truncated-remainder", "receivedDateTime": "2026-07-11T00:00:00Z"},
+	}, &held)
+
+	ids, _, err := NewAPI(srv.Client(), srv.URL).DeltaInit(context.Background(), "at", folderInbox, after)
+	if err != nil {
+		t.Fatalf("DeltaInit: %v — Microsoft counted this message and the reconciliation did not, "+
+			"which is a rounding difference reported as a short round", err)
+	}
+	if len(ids) != 1 {
+		t.Errorf("ids = %v, want the one message the round named", ids)
+	}
 }

@@ -3979,7 +3979,7 @@ export const en = {
     "Mail capture isn't configured in this deployment.",
   "connectors.reconnect": "Reconnect",
   "connectors.disconnect": "Disconnect",
-  "connectors.signatureEnrich.label": "Read signatures from this mailbox",
+  "connectors.signatureEnrich.label": "Read contact details from this mailbox",
   "connectors.signatureEnrich.followingDefault":
     "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
   "connectors.signatureEnrich.ownAnswer":
@@ -6354,10 +6354,9 @@ export const en = {
   "captureSettings.autoEnrich.label": "Auto-enrich captured companies",
   "captureSettings.autoEnrich.help":
     "When on, each new company created from captured mail gets an automatic web dossier — its site is read and its profile filled in. Runs under a daily limit.",
-  "captureSettings.signatureEnrich.label":
-    "Read signatures for contact details",
+  "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, a nightly pass lifts what a contact states under their own name in mail they sent you — a title, a phone number, a company. Nothing is inferred: a detail the signature does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
+    "When on, Margince reads what a contact states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
 
   "ownDomains.companyTitle": "Company domains",
@@ -6835,6 +6834,7 @@ export const en = {
   "person.moment.rule.re_engaged": "They came back",
   "person.moment.rule.job_change": "They moved on",
   "person.moment.rule.overdue_promise": "Promise overdue",
+  "person.moment.rule.overdue_task": "Promise overdue",
   "person.moment.rule.gone_quiet": "Gone quiet",
   "person.moment.rule.open_promise": "You owe them",
   "person.moment.rule.role_change": "Role changed",
@@ -6886,6 +6886,7 @@ export const en = {
   "person.loops.dueInDays": "in {count} days",
   "person.loops.waiting": "waiting",
   "person.loops.open": "open",
+  "person.loops.atLeast": "at least {count}",
 
   "person.memory.title": "Conversation memory",
   "person.memory.empty": "Nothing captured on this channel yet.",
@@ -7017,6 +7018,10 @@ export const en = {
   "person.meeting.risks": "Risks and watch-outs",
   "person.meeting.talking_points": "Suggested talking points",
   "person.meeting.company_context": "When you last met",
+  "person.meeting.background": "Background and sources",
+  "person.meeting.omittedSource": "Not in this brief",
+  "person.meeting.preparedFor": "Prepared for {name}",
+  "person.meeting.preparedForAt": "Prepared for {name} · {org}",
 
   "co.strip.healthSummary": "Health",
   "co.strip.healthSummary.failingOf": "{failing} of {rated} at risk",
@@ -7070,8 +7075,12 @@ export const en = {
   "provider.automaticLookupJurisdiction":
     "Switch this off if your contacts fall under a law that forbids trading personal data, Vietnam's among them. The button on each contact still works, which keeps the decision with the person making it.",
   "provider.buyable": "Allow buying {category}",
-  "provider.buyableHint":
+  "provider.buyableHint_one":
     "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credit, so somebody can buy this detail for one person at a time.",
+  "provider.buyableHint_other":
+    "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credits, so somebody can buy this detail for one person at a time.",
+  "provider.buyableNeeds":
+    "The provider looks for this only alongside the {prerequisite}, so it cannot be bought on its own. Allow that one first.",
   "provider.backlog": "Still to look up",
   "provider.backlogRemaining_one": "{count} contact",
   "provider.backlogRemaining_other": "{count} contacts",
@@ -7154,6 +7163,8 @@ export const en = {
   // The price rides the button because the decision IS the spend.
   "provider.profile.buy_one": "Buy {category} · {credits} credit",
   "provider.profile.buy_other": "Buy {category} · {credits} credits",
+  "provider.profile.buyRebuys":
+    "The price includes the {categories} again: the provider will not look for this without it, and it charges for whatever it sends back.",
   "provider.freeTier.hint":
     "LinkedIn profile, current role and work history cost no credits. Leave this on: every new contact gets them without anybody deciding.",
   "provider.pricedTier.hint":
@@ -7522,12 +7533,14 @@ export const en = {
   "worklist.filter.label": "Kind of work",
   "worklist.filter.all": "All",
   "worklist.filter.customer_waiting": "Customer waiting",
+  "worklist.filter.leads": "Leads",
   "worklist.filter.deals_at_risk": "Deals at risk",
   "worklist.filter.meetings": "Meetings",
   "worklist.filter.tasks": "Tasks",
   "worklist.filter.decisions": "Decisions",
   "worklist.filter.system": "System",
   "worklist.category.customer_waiting": "Customer waiting",
+  "worklist.category.leads": "Lead",
   "worklist.category.deals_at_risk": "Deal at risk",
   "worklist.category.meetings": "Meeting",
   "worklist.category.tasks": "Task",
@@ -7558,6 +7571,10 @@ export const en = {
   "worklist.because.repeated_failure": "the same thing keeps failing",
   "worklist.because.legal_deadline": "a legal deadline is running",
   "worklist.because.meeting_soon": "starting shortly",
+  "worklist.because.meeting_unprepared": "nothing prepared",
+  "worklist.because.response_overdue": "reply overdue",
+  "worklist.because.response_due_soon": "reply due soon",
+  "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
@@ -7597,6 +7614,7 @@ export const en = {
   "worklist.untitled.brief_item": "The night picked this out",
   "worklist.untitled.conversation_claim": "A promise you made",
   "worklist.untitled.customer_waiting": "Someone is waiting for a reply",
+  "worklist.untitled.lead_response": "A lead",
   "worklist.untitled.deal_at_risk": "A deal is drifting",
   "worklist.untitled.meeting": "A meeting",
   "worklist.untitled.relationship_decay": "A relationship is going quiet",

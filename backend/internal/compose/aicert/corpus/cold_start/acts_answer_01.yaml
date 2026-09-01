@@ -1,0 +1,36 @@
+name: a_factual_question_about_connecting_is_answered
+task: cold_start
+site: acts
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  act: connect
+  message: If I connect the inbox, does that mean you read everything that's already in there?
+  history: []
+  context:
+    company_confirmed: true
+    research_status: confirmed
+    remaining_required_fields: []
+  locale: en
+expect:
+  outcome: accepted
+  answer: answer
+  rubric: >
+    A plain factual question about what connecting a mailbox does. The connect
+    act's own role states the ground truth it must answer from: connecting is
+    optional and happens last, consent is per purpose and default-deny, and
+    nothing is read without an explicit grant.
+    Score high only if the reply is classified "answer" and says that — the
+    substance matters as much as the label here, because this is the question on
+    which an administrator decides whether to hand over their mailbox. A reply
+    that is reassuring but vague about the grant, or that implies reading has
+    already happened, scores at the floor: this act must never claim it read,
+    saved or connected anything.
+    "clarification" scores low. The question is not ambiguous, and answering it
+    with a question is the failure mode that makes a consent conversation feel
+    evasive at exactly the wrong moment. "status" and "recommendation" score in
+    the middle — wrong label, and the reply's substance can still be right.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

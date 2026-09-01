@@ -1,0 +1,44 @@
+name: an_unpatched_vulnerability_is_held_until_it_is_closed
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  subject: "Re: report via the security form - customer portal"
+  attachments:
+    - PoC_steps.txt
+  body: |
+    Hi,
+
+    Quick update: the reported bug in the customer portal is confirmed. The
+    parameter in the share URL can be used to pull documents belonging to other
+    tenants; the attached steps reproduce it in three moves. Everything since
+    the June release is affected.
+
+    The fix is built but not rolled out yet. Until then please don't circulate
+    this — we need to check first whether it was ever used.
+expect:
+  outcome: accepted
+  answer: security_incident
+  rubric: >
+    A confirmed, reproducible, cross-tenant data exposure with a working
+    reproduction attached and the fix not yet deployed. Every hour this is
+    readable by more people than need it is an hour a working exploit for a live
+    hole sits somewhere it can leak.
+    "security_incident" scores high. "explicitly_confidential" scores in the
+    middle — the message does ask for it not to be circulated, and it holds the
+    thread, which is the outcome that matters. "legal" also scores in the middle:
+    a breach that may have been used becomes a notification duty, so the reading
+    is not unreasonable and its effect is the same.
+    "ordinary" is the failure this scenario exists to catch and scores zero at
+    any confidence. It is the worst-consequence miss in this corpus: an
+    unpatched, reproducible vulnerability handed to the whole workspace.
+    The trap is the register it is written in. This reads as routine engineering traffic — a
+    "quick update", a build, a rollout, a parameter — with none of the vocabulary
+    a keyword-matching classifier looks for. Nothing says "incident", "breach" or
+    "confidential"; the severity is only legible from what the sentences actually
+    describe.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

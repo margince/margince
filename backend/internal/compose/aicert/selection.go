@@ -16,7 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
-// ladderForTask binds every tier in a task's ladder to the run's one binding.
+// ladderForTask binds every tier in a task's ladder to one binding. role names
+// which side it is — "candidate" or "judge" — for the error only.
 //
 // This replaced an override applied on top of a routing FILE's bindings. With
 // the file gone there is no "on top of": the binding a run is given IS what it
@@ -27,7 +28,7 @@ import (
 // closed without one, and a ladder that dropped it on the second rung would
 // certify the first rung and then fail in a way that reads like the model
 // refusing rather than the binding being incomplete.
-func ladderForTask(binding ai.ProviderConfig, profile ai.Profile, task ai.Task) (ai.RoutingConfig, error) {
+func ladderForTask(role string, binding ai.ProviderConfig, profile ai.Profile, task ai.Task) (ai.RoutingConfig, error) {
 	ladder := ai.TaskLadder(task)
 	if len(ladder) == 0 {
 		return ai.RoutingConfig{}, fmt.Errorf("aicert: task %s has no routing ladder to bind", task)
@@ -52,9 +53,14 @@ func ladderForTask(binding ai.ProviderConfig, profile ai.Profile, task ai.Task) 
 	// refuse. Binding one to the candidate to satisfy it would put a chat model
 	// in the embed lane of every record.
 	if err := ai.ValidateTierBinding(profile, ladder[0], binding); err != nil {
+		// Named by ROLE, because both the candidate and the judge are validated
+		// through here and they are set by different variables: a message that
+		// always said MARGINCE_AICERT_MODEL sent a reader to fix the candidate
+		// when it was the judge's binding that was incomplete.
 		return ai.RoutingConfig{}, fmt.Errorf(
-			"aicert: MARGINCE_AICERT_MODEL=%s:%s under profile %s: %w",
-			binding.Provider, binding.Model, profile, err)
+			"aicert: the %s binding %s:%s under profile %s: %w",
+			role, binding.Provider, binding.Model, profile, err,
+		)
 	}
 	// The embed lane is bound to the same model because the ROUTER requires one,
 	// not because certification embeds anything: this lane drives chat tasks and

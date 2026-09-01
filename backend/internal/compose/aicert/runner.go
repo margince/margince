@@ -76,9 +76,29 @@ type RunnerConfig struct {
 	// Profile is the environment class each record is filed under — it is part of
 	// a record's identity (its path and its sort key), not a label, so a run says
 	// which one it measured rather than inheriting it from a file.
-	Profile    ai.Profile // MARGINCE_AICERT_PROFILE
-	TaskFilter string     // MARGINCE_AICERT_TASK ("" = all tasks with a corpus)
-	Repeats    int        // MARGINCE_AICERT_RUNS, default 3, must be odd
+	// Routing, when set, resolves the candidate binding PER TASK from a
+	// deployment's own tier→model map instead of Binding naming one model for
+	// every task: each task is certified against the model bound at its LEADING
+	// ladder rung (ai.LeadingTier), which is the model that would actually serve
+	// it, and Profile comes from the file rather than the environment.
+	//
+	// It exists because a model is not a thing anybody deploys. A hand-typed
+	// MODEL= measures whichever model an engineer chose; a deployment binds
+	// gpt-oss-120b at local_small and claude-haiku-4.5 at premium, and those are
+	// the answers a customer's install depends on. One ROUTING= run covers both.
+	//
+	// The resolved model still binds EVERY tier for the task under test, exactly
+	// as a MODEL= override does — see ladderForTask. Binding each tier to its own
+	// real model would let one run be served by two models and pool them into a
+	// record with one ServedModel field.
+	//
+	// Mutually exclusive with Binding: one names a deployment, the other a
+	// candidate, and a run that silently preferred one would report a model
+	// nobody asked for.
+	Routing    *ai.RoutingConfig // MARGINCE_AICERT_ROUTING
+	Profile    ai.Profile        // MARGINCE_AICERT_PROFILE
+	TaskFilter string            // MARGINCE_AICERT_TASK ("" = all tasks with a corpus)
+	Repeats    int               // MARGINCE_AICERT_RUNS, default 3, must be odd
 	RecordDir  string
 	CorpusDir  string
 	// TraceDir, when non-empty, turns on the opt-in payload trace
@@ -96,7 +116,15 @@ type RunnerConfig struct {
 // construction. The old file made the second point structurally — the judge rode
 // the file while MODEL= moved only the candidate — so with the file gone it has
 // to be checked outright rather than assumed.
-func validateBindings(cfg RunnerConfig) error {
+func validateBindings(cfg RunnerConfig, log *slog.Logger) error {
+	if cfg.Routing != nil && cfg.Binding.Provider != "" {
+		return errors.New("both MARGINCE_AICERT_ROUTING and MARGINCE_AICERT_MODEL are set — " +
+			"the first certifies the models a deployment binds, the second one model you name; " +
+			"a run cannot report both, so pick one")
+	}
+	if cfg.Routing != nil {
+		return validateRoutedBindings(cfg, log)
+	}
 	if cfg.Binding.Provider == "" || cfg.Binding.Model == "" {
 		return errors.New("no candidate binding — set MARGINCE_AICERT_MODEL=provider:model " +
 			"(and MARGINCE_AICERT_BASE_URL for an openai_compatible host, which fails closed without one)")
@@ -143,7 +171,7 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	// Refused here rather than per task: with no routing file to fall back on,
 	// a run with no binding could only report that it measured nothing, after
 	// paying for it.
-	if err := validateBindings(cfg); err != nil {
+	if err := validateBindings(cfg, log); err != nil {
 		return nil, fmt.Errorf("aicert: runner: %w", err)
 	}
 
@@ -176,7 +204,20 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	var records []Record
 	var runErrs []error
 	for _, task := range sortedTasks(byTask) {
-		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, cfg.Binding, cfg.JudgeBinding, cfg.Profile, repeats, log, &certifyHooks{trace: trace})
+		binding := cfg.Binding
+		if cfg.Routing != nil {
+			resolved, rung, ok := resolveBinding(*cfg.Routing, task)
+			if !ok {
+				// Not fatal to the whole run: another task's rung may be bound
+				// perfectly well, and one unbound tier must not cost every record.
+				runErrs = append(runErrs, fmt.Errorf("aicert: task %s: no rung of its ladder %v is bound in the supplied routing, so there is no model to certify it against — and production could not serve it either",
+					task, ai.TaskLadder(task)))
+				continue
+			}
+			binding = resolved
+			log.InfoContext(ctx, "aicert: routed", "task", string(task), "tier", string(rung), "model", resolved.Model)
+		}
+		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, cfg.JudgeBinding, cfg.recordProfile(), repeats, log, &certifyHooks{trace: trace})
 		if err != nil {
 			log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
 			runErrs = append(runErrs, fmt.Errorf("task %s: %w", task, err))
@@ -209,7 +250,7 @@ type certifyHooks struct {
 // certifyTask runs every scenario for one task over a fresh
 // candidate/judge router pair and folds the outcome into one Record.
 func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census *aitasks.Registry, binding, judgeBinding ai.ProviderConfig, profile ai.Profile, repeats int, log *slog.Logger, hooks *certifyHooks) (Record, error) {
-	candidateCfg, err := ladderForTask(binding, profile, task)
+	candidateCfg, err := ladderForTask("candidate (MARGINCE_AICERT_MODEL, or the rung MARGINCE_AICERT_ROUTING resolved)", binding, profile, task)
 	if err != nil {
 		return Record{}, err
 	}
@@ -217,10 +258,15 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	// own request builder, so a corpus this build cannot build a request from is
 	// a run that could never have produced a record — found for free rather than
 	// after N repeats of real spend.
-	promptVersion, err := PromptVersion(ctx, scenarios, census)
+	scenarioStamps, err := ScenarioStamps(ctx, scenarios, census)
 	if err != nil {
 		return Record{}, err
 	}
+	// Folded here rather than re-derived by PromptVersion, which would build every
+	// scenario's candidate and grader request a second time — and would leave the
+	// one window where a record's task stamp could differ from the fold of its own
+	// per-scenario stamps.
+	promptVersion := FoldScenarioStamps(scenarioStamps)
 	var candidateExtra, judgeExtra []ai.LocalOption
 	var trace *payloadTrace
 	if hooks != nil {
@@ -243,7 +289,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	// The judge NEVER rides the candidate's binding — a model grading itself is
 	// certified by construction, which defeats the whole point of a second
 	// router. Run refuses the two being equal before a single call is paid for.
-	judgeCfg, err := ladderForTask(judgeBinding, profile, task)
+	judgeCfg, err := ladderForTask("judge (MARGINCE_AICERT_JUDGE_MODEL / _JUDGE_BASE_URL)", judgeBinding, profile, task)
 	if err != nil {
 		return Record{}, err
 	}
@@ -258,7 +304,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	taskVerdict := VerdictCertified // folded down to the worst scenario verdict below
 
 	for _, sc := range scenarios {
-		scenarioVerdict, err := runScenario(ctx, task, sc, census, repeats, candidateRouter, candidateRec, judgeRouter, judgeRec, log, acc, trace)
+		scenarioVerdict, err := runScenario(ctx, task, sc, scenarioStamps[sc.Name], census, repeats, candidateRouter, candidateRec, judgeRouter, judgeRec, log, acc, trace)
 		if err != nil {
 			return Record{}, err
 		}
@@ -309,7 +355,8 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	if acc.identitySet && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
 		return fmt.Errorf(
 			"aicert: task %s scenario %s run %d: candidate served by %s:%s, but run 1 was served by %s:%s — refusing to certify a mixed run set",
-			task, sc.Name, runIndex+1, outcome.Provider, outcome.ServedModel, acc.provider, acc.servedModel)
+			task, sc.Name, runIndex+1, outcome.Provider, outcome.ServedModel, acc.provider, acc.servedModel,
+		)
 	}
 	acc.allResults = append(acc.allResults, outcome.RunResult)
 	acc.latencies = append(acc.latencies, outcome.LatencyMS)

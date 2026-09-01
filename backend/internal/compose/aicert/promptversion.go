@@ -55,36 +55,89 @@ import (
 // The grader's request is digested beside it, and graderRequestDigest states
 // what that reaches.
 func PromptVersion(ctx context.Context, scenarios []Scenario, census *aitasks.Registry) (string, error) {
-	if census == nil {
-		return "", fmt.Errorf("aicert: stamp: no census supplied — a stamp covers the request each site's own code builds, and only the census says which case builds it")
+	stamps, err := ScenarioStamps(ctx, scenarios, census)
+	if err != nil {
+		return "", err
 	}
-	ordered := make([]string, 0, len(scenarios))
-	for _, sc := range scenarios {
-		// Hash each scenario on its own, then order the digests: joining raw
-		// fields would let text shift across a separator and collide.
-		encoded, err := json.Marshal(sc)
-		if err != nil {
-			return "", fmt.Errorf("aicert: stamp: scenario %q cannot be digested: %w", sc.Name, err)
-		}
-		request, err := firstBuiltRequest(ctx, sc, census)
-		if err != nil {
-			return "", err
-		}
-		candidate, err := canonicalRequestDigest(request)
-		if err != nil {
-			return "", err
-		}
-		grader, err := graderRequestDigest(sc, request)
-		if err != nil {
-			return "", err
-		}
-		sum := sha256.Sum256(encoded)
-		// All three parts are fixed-width hex, so concatenating them is unambiguous.
-		ordered = append(ordered, hex.EncodeToString(sum[:])+candidate+grader)
+	return FoldScenarioStamps(stamps), nil
+}
+
+// FoldScenarioStamps is the task stamp a set of per-scenario stamps folds to.
+//
+// Exported because the readiness report needs BOTH halves — the per-scenario
+// stamps to say which cases a record still describes, and the task stamp to
+// judge a record written before those existed — and computing them from two
+// separate passes would build every scenario's request twice. One writer for
+// the fold, called by PromptVersion and by the report alike.
+func FoldScenarioStamps(stamps map[string]string) string {
+	// Ordered by DIGEST rather than by scenario name: joining raw fields would
+	// let text shift across a separator and collide, and ordering by name would
+	// make a rename move the task stamp without any scenario changing.
+	ordered := make([]string, 0, len(stamps))
+	for _, stamp := range stamps {
+		ordered = append(ordered, stamp)
 	}
 	sort.Strings(ordered)
 	sum := sha256.Sum256([]byte(strings.Join(ordered, "")))
-	return "p" + hex.EncodeToString(sum[:16]), nil
+	return "p" + hex.EncodeToString(sum[:16])
+}
+
+// ScenarioStamps is the stamp of each scenario ON ITS OWN, keyed by scenario
+// name — the same three digests PromptVersion folds into one task stamp, before
+// the fold.
+//
+// It exists because the fold destroys the only information that makes
+// re-certification affordable. A task stamp answers "is this whole record still
+// about what ships", so ADDING one scenario to a nine-scenario task invalidates
+// nine measurements that are still perfectly true, and clearing that costs a
+// re-run of all ten. Per scenario, the same corpus edit says "nine current, one
+// never measured" and costs one.
+//
+// The guarantee is unchanged, and is the reason this is a finer claim rather
+// than a weaker one: a scenario's stamp still covers the scenario WHOLE plus the
+// candidate and grader requests this build constructs from it, so a record still
+// cannot describe a case, or a prompt, it did not measure. It simply stops
+// throwing away the cases it did.
+//
+// Held by: TestScenarioStampsFoldIntoThePromptVersion
+// (backend/internal/compose/aicert/promptversion_test.go), so the two can never
+// disagree about what a scenario's stamp is.
+func ScenarioStamps(ctx context.Context, scenarios []Scenario, census *aitasks.Registry) (map[string]string, error) {
+	if census == nil {
+		return nil, fmt.Errorf("aicert: stamp: no census supplied — a stamp covers the request each site's own code builds, and only the census says which case builds it")
+	}
+	stamps := make(map[string]string, len(scenarios))
+	for _, sc := range scenarios {
+		// Hash each scenario on its own: the scenario WHOLE, the request its site
+		// builds, and the grader's request beside it.
+		encoded, err := json.Marshal(sc)
+		if err != nil {
+			return nil, fmt.Errorf("aicert: stamp: scenario %q cannot be digested: %w", sc.Name, err)
+		}
+		request, err := firstBuiltRequest(ctx, sc, census)
+		if err != nil {
+			return nil, err
+		}
+		candidate, err := canonicalRequestDigest(request)
+		if err != nil {
+			return nil, err
+		}
+		grader, err := graderRequestDigest(sc, request)
+		if err != nil {
+			return nil, err
+		}
+		sum := sha256.Sum256(encoded)
+		// All three parts are fixed-width hex, so concatenating them is unambiguous.
+		stamp := hex.EncodeToString(sum[:]) + candidate + grader
+		// A duplicate name would silently drop one scenario's stamp from the map
+		// and, with it, from the task stamp the map folds into — two corpora
+		// would then share one stamp. LoadCorpus does not forbid it, so this does.
+		if _, clash := stamps[sc.Name]; clash {
+			return nil, fmt.Errorf("aicert: stamp: two scenarios are both named %q — a stamp is keyed by name, so one would go unrecorded", sc.Name)
+		}
+		stamps[sc.Name] = stamp
+	}
+	return stamps, nil
 }
 
 // stampReply is what the stamp's completer answers with. No case reads it for
