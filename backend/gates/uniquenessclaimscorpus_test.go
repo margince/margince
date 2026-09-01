@@ -135,25 +135,14 @@ func TestTheSweptCorpusIsEveryModuleThatCouldCarryAClaim(t *testing.T) {
 	perRoot := map[string]int{}
 	var unswept []string
 	modules := 0
-	err := filepath.WalkDir(repoRoot, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			if unauthoredDir(entry.Name()) {
-				return fs.SkipDir
-			}
-			return nil
-		}
-		// A symlink is neither a directory nor a file to this walk, and the
-		// claim sweep does not follow one either — so sources behind one are
-		// unswept AND invisible to this arm. The tree carries none today;
-		// refusing the first is cheaper than discovering it as a blind spot.
-		if entry.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("%s is a symlink: neither walk follows one, so anything behind it "+
-				"is outside the sweep and outside this check of the sweep", path)
-		}
-		if entry.Name() != "go.mod" {
+	// What git IGNORES is not this repository's source, and a checkout carries
+	// plenty of it: a package manager's cache, an install somebody ran at the
+	// top of the tree. Skipping it at the head of the subtree is also what
+	// keeps the symlink refusal below meaningful — the symlinks in a pnpm store
+	// are not blind spots in the sweep, they are not in the sweep's subject.
+	ignored := gitIgnoredPaths(t, repoRoot)
+	err := walkSweptTree(repoRoot, ignored, func(path string) error {
+		if filepath.Base(path) != "go.mod" {
 			return nil
 		}
 		module, relErr := filepath.Rel(repoRoot, filepath.Dir(path))
@@ -323,5 +312,116 @@ func TestTheTwoDoorsAreJudgedRatherThanTrusted(t *testing.T) {
 	if declares {
 		t.Error("a DIRECTORY named go.mod read as a module declaration — the subtree behind it " +
 			"would be skipped as answering for itself while nothing registers it as a module")
+	}
+}
+
+// walkSweptTree walks root the way the corpus sweep does: past what git
+// ignores, and refusing a symlink it meets.
+//
+// Its own function so a test can drive it over a repository built for the
+// purpose. The two halves are one claim — the skip is what makes the refusal
+// mean something — and neither can be exercised against the committed tree,
+// which carries no symlinks and, on a clean checkout, nothing ignored either.
+// A regression removing the skip would leave the sweep refusing on the first
+// symlink in somebody's package store, which is the flake this exists to stop.
+func walkSweptTree(root string, ignored map[string]bool, visit func(path string) error) error {
+	return filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			if unauthoredDir(entry.Name()) || ignored[path] {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if ignored[path] {
+			return nil
+		}
+		// A symlink is neither a directory nor a file to this walk, and the
+		// claim sweep does not follow one either — so sources behind one are
+		// unswept AND invisible to this arm. The tree carries none today;
+		// refusing the first is cheaper than discovering it as a blind spot.
+		if entry.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("%s is a symlink: neither walk follows one, so anything behind it "+
+				"is outside the sweep and outside this check of the sweep", path)
+		}
+		return visit(path)
+	})
+}
+
+// THE SYMLINK IN THE PACKAGE STORE, which is where this whole change started.
+//
+// A pnpm install at the top of the tree leaves .pnpm-store full of symlinks, git
+// ignores it, and the sweep met one and refused — failing `make check-backend`
+// on a file that is neither in the repository nor in anybody's diff.
+//
+// Driven over a purpose-built repository, because the committed tree has no
+// symlinks and a clean checkout has nothing ignored: the real-tree sweep passes
+// whether the skip works or not, and a regression removing it would go green on
+// every check until somebody ran an install.
+func TestTheSweepSkipsAnIgnoredStoreRatherThanRefusingTheSymlinksInIt(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	_, write := initRepo(t, root, map[string]string{
+		".gitignore": "/cache/\n",
+		"go.mod":     "module probe\n",
+	})
+
+	// The store: ignored, and holding the shape that broke the sweep.
+	write("cache/store/marker", "")
+	if err := os.Symlink(root, filepath.Join(root, "cache", "store", "link")); err != nil {
+		t.Fatalf("planting the symlink a package store leaves: %v", err)
+	}
+
+	var visited []string
+	if err := walkSweptTree(root, gitIgnoredPaths(t, root), func(path string) error {
+		visited = append(visited, filepath.ToSlash(path))
+		return nil
+	}); err != nil {
+		t.Fatalf("the sweep refused an ignored store: %v — a package manager's cache is not this "+
+			"repository's source, and meeting a symlink in one fails a build over nothing", err)
+	}
+	for _, path := range visited {
+		if strings.Contains(path, "/cache/") {
+			t.Errorf("the sweep walked into an ignored store: %s", path)
+		}
+	}
+	// And it visited the repository's OWN source, or the case above passes
+	// against a walk that reached nothing worth reaching. Named rather than
+	// counted: `len(visited) > 0` says a walk produced paths and nothing about
+	// which, and the only path this fixture guarantees is the one it committed.
+	if !slices.Contains(visited, filepath.ToSlash(filepath.Join(root, "go.mod"))) {
+		t.Fatalf("the sweep did not reach the repository's own go.mod, so skipping the store proves "+
+			"nothing about the skip: %v", visited)
+	}
+}
+
+// AND THE REFUSAL ITSELF, which the case above cannot reach.
+//
+// There the skip fires first, by design — that is what it is for. So the arm it
+// protects goes unexercised, and the committed tree carries no symlink either:
+// a regression in the refusal would be invisible in both places, which is this
+// repository's own "a guard the tree happens not to reach is a guard with no
+// test".
+//
+// A symlink OUTSIDE anything ignored is a real blind spot: neither this walk nor
+// the claim sweep follows one, so whatever is behind it is unswept and unseen.
+func TestTheSweepRefusesASymlinkNothingIgnores(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	initRepo(t, root, map[string]string{"go.mod": "module probe\n"})
+
+	if err := os.Symlink(root, filepath.Join(root, "elsewhere")); err != nil {
+		t.Fatalf("planting the symlink: %v", err)
+	}
+
+	err := walkSweptTree(root, gitIgnoredPaths(t, root), func(string) error { return nil })
+	if err == nil {
+		t.Fatal("the sweep walked past a symlink nothing ignores — anything behind it is outside " +
+			"the claim sweep and outside this check of it, which is a blind spot rather than a skip")
+	}
+	if !strings.Contains(err.Error(), "is a symlink") {
+		t.Errorf("the sweep failed with %v, which does not say what it met", err)
 	}
 }
