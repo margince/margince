@@ -18,10 +18,12 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -117,6 +119,64 @@ func TestOneRepsNotMineDoesNotHideTheRowFromAnother(t *testing.T) {
 	}
 	if !waitsFor(t, e, e.Rep2, "Not mine to answer") {
 		t.Fatal("one rep's not-mine took the message off the colleague it was handed TO")
+	}
+}
+
+// A DISPOSITION IS REFUSED ON A MESSAGE THE CALLER MAY NOT READ, and refused
+// the same way as one that is not there.
+//
+// The schema fitness gate waives activity_reader_state.activity_id on exactly
+// this claim: the write is gated, so the FK is not the thing standing between a
+// rep and a message they have no business knowing exists. A waiver is a claim,
+// and this is the test that holds it — without one, a change to judgeMessage
+// would leave the waiver standing over nothing.
+//
+// INDISTINGUISHABLE is the point. If "you may not read this" and "there is no
+// such message" answered differently, setting one aside would be a way to ask
+// whether it exists — and the answer is itself the disclosure.
+func TestSettingAsideAMessageTheReaderCannotSeeIsRefusedAsAbsent(t *testing.T) {
+	e := Setup(t)
+	seedWaitingMessage(t, e, "thread-unreadable", "inbound", "Held from this reader",
+		waitingInstant.Add(-3*24*time.Hour))
+	id := waitingMessageID(t, e, "Held from this reader")
+	store := activities.NewStore(e.DB())
+
+	// THE ADMISSION FIRST. While the message is workspace-wide the same call
+	// succeeds, so the refusal below is about what the reader may see rather
+	// than about the write being broken.
+	if err := store.SetMessageNotMine(e.As(e.Rep1, nil, AdminPerms), id); err != nil {
+		t.Fatalf("a readable message could not be set aside: %v — the refusal below would prove nothing", err)
+	}
+	if _, err := OwnerConn(t).Exec(context.Background(),
+		`DELETE FROM activity_reader_state WHERE activity_id = $1`, id); err != nil {
+		t.Fatalf("clearing the admission: %v", err)
+	}
+
+	// Now held to its participants, of whom this rep is not one.
+	if _, err := OwnerConn(t).Exec(context.Background(),
+		`UPDATE activity SET audience = 'participants' WHERE id = $1`, id); err != nil {
+		t.Fatalf("narrowing the message: %v", err)
+	}
+
+	err := store.SetMessageNotMine(e.As(e.Rep1, nil, AdminPerms), id)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("setting aside a message the reader may not open answered %v, want ErrNotFound — the "+
+			"reader-state row is what would tell them it exists", err)
+	}
+
+	absent := ids.From[ids.ActivityKind](ids.NewV7())
+	missing := store.SetMessageNotMine(e.As(e.Rep1, nil, AdminPerms), absent)
+	if !errors.Is(missing, apperrors.ErrNotFound) {
+		t.Fatalf("setting aside a message that does not exist answered %v, want ErrNotFound", missing)
+	}
+
+	var rows int
+	if err := OwnerConn(t).QueryRow(context.Background(),
+		`SELECT count(*) FROM activity_reader_state WHERE activity_id = $1`, id).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 0 {
+		t.Errorf("%d reader-state row(s) landed for a message the caller may not read", rows)
 	}
 }
 
