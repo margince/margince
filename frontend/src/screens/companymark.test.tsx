@@ -70,12 +70,21 @@ it("draws the mark the company wears, and offers to replace or remove it", () =>
   expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
 });
 
-it("sends the chosen file as the multipart part the upload route names", async () => {
-  const user = userEvent.setup();
-  const fetchStub = vi.fn(async () =>
-    Response.json(WITH_MARK, { status: 200 }),
+// The stub declares fetch's own parameters rather than none, because what each
+// case reads is the CALL: a zero-argument mock records zero-length calls, and
+// the assertions below would then be reaching into an empty tuple.
+function stubFetch(answer: CompanyProfile) {
+  const fetchStub = vi.fn(
+    async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      Response.json(answer, { status: 200 }),
   );
   vi.stubGlobal("fetch", fetchStub);
+  return fetchStub;
+}
+
+it("sends the chosen file as the multipart part the upload route names", async () => {
+  const user = userEvent.setup();
+  const fetchStub = stubFetch(WITH_MARK);
   mark(WITHOUT_MARK);
 
   await user.click(screen.getByRole("button", { name: "Add a mark" }));
@@ -85,21 +94,18 @@ it("sends the chosen file as the multipart part the upload route names", async (
   await user.upload(screen.getByLabelText("Company mark"), chosen);
 
   await waitFor(() => expect(fetchStub).toHaveBeenCalled());
-  const [path, init] = fetchStub.mock.calls[0] as [string, RequestInit];
+  const [path, init] = fetchStub.mock.calls[0];
   expect(path).toBe("/v1/company/logo");
-  expect(init.method).toBe("POST");
+  expect(init?.method).toBe("POST");
   // The part's NAME is the contract's, and a body that spells it differently
   // reaches a server that answers 422 for a file the person did choose.
-  const body = init.body as FormData;
+  const body = init?.body as FormData;
   expect((body.get("file") as File).name).toBe("acme-logo.png");
 });
 
 it("removes the mark through the delete the contract declares", async () => {
   const user = userEvent.setup();
-  const fetchStub = vi.fn(async () =>
-    Response.json(WITHOUT_MARK, { status: 200 }),
-  );
-  vi.stubGlobal("fetch", fetchStub);
+  const fetchStub = stubFetch(WITHOUT_MARK);
   mark(WITH_MARK);
 
   await user.click(screen.getByRole("button", { name: "Remove" }));
@@ -107,7 +113,8 @@ it("removes the mark through the delete the contract declares", async () => {
   await waitFor(() => expect(fetchStub).toHaveBeenCalled());
   // The typed client sends a Request, not a (url, init) pair — asserting the
   // pair here would pass on any object at all once stringified.
-  const [request] = fetchStub.mock.calls[0] as [Request];
+  const [input] = fetchStub.mock.calls[0];
+  const request = input as Request;
   expect(new URL(request.url).pathname).toBe("/v1/company/logo");
   expect(request.method).toBe("DELETE");
 });

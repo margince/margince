@@ -81,7 +81,9 @@ export function CompanyMark({
   // a mark the company already has reads as the thing to do, and the thing to
   // do on this row is usually nothing.
   const [picking, setPicking] = useState(false);
-  const busy = upload.isPending || remove.isPending;
+  // Each verb is disabled by the OTHER one's flight, never by its own: a button
+  // that disables itself the moment it is pressed takes the focus with it, and
+  // the reader is left with no idea what happened or where they are.
   const failure = upload.error ?? remove.error;
 
   return (
@@ -105,7 +107,7 @@ export function CompanyMark({
             <Button
               small
               onClick={() => setPicking((open) => !open)}
-              disabled={busy}
+              disabled={remove.isPending}
             >
               {profile.logo_url
                 ? t("settings.companyMarkReplace")
@@ -116,7 +118,7 @@ export function CompanyMark({
                 small
                 variant="ghost"
                 onClick={() => remove.mutate()}
-                disabled={busy}
+                disabled={upload.isPending}
               >
                 {t("settings.companyMarkRemove")}
               </Button>
