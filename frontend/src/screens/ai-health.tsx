@@ -21,6 +21,7 @@ type RungHealth = components["schemas"]["AiRungHealth"];
 
 export function AiHealthCard() {
   const t = useT();
+  const { locale } = useLocale();
   const query = useQuery({
     queryKey: ["ai-health"],
     queryFn: async () => {
@@ -49,7 +50,7 @@ export function AiHealthCard() {
               <EmptyState>
                 <p className="t-small">
                   {t("aiHealth.noCalls", {
-                    hours: String(health.window_hours),
+                    hours: formatNumber(health.window_hours, locale),
                   })}
                 </p>
               </EmptyState>
@@ -93,7 +94,9 @@ function RungTable({
         },
         {
           key: "calls",
-          header: t("aiHealth.colCalls", { hours: String(hours) }),
+          header: t("aiHealth.colCalls", {
+            hours: formatNumber(hours, locale),
+          }),
           render: (row) =>
             // Both numbers, because "12 calls" beside a red badge leaves a
             // reader working out how many of them failed.

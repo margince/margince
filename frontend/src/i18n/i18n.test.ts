@@ -30,6 +30,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.
   "co.360.subject",
+  // A number and the SI symbol for millisecond. The symbol is the same in every
+  // language by definition — it is written "ms" in Vietnamese too — so a locale
+  // that changed it would be naming a different unit.
+  "aiHealth.ms",
   // An acronym, not a word: DNS is DNS in every language this product speaks,
   // and a "translation" of it would be a different protocol.
   "co.tech.lane.dns",

@@ -6,7 +6,7 @@ import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -174,7 +174,9 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
       )}
       {stillHeld.map(([threadKey, owners]) => (
         <Callout key={threadKey} tone="info">
-          {t("heldThreads.heldByOthers", { count: String(owners) })}
+          {t("heldThreads.heldByOthers", {
+            count: formatNumber(owners, locale),
+          })}
         </Callout>
       ))}
     </>
@@ -189,12 +191,15 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
 // classifier that judged nothing rather than one that has not answered.
 function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (row.pending) {
     return (
       <span className="cell-stack">
         <Badge tone="warn">{t("heldThreads.pending")}</Badge>
         <span className="t-meta">
-          {t("heldThreads.attempts", { count: String(row.attempts) })}
+          {t("heldThreads.attempts", {
+            count: formatNumber(row.attempts, locale),
+          })}
         </span>
       </span>
     );
