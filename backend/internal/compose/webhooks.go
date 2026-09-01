@@ -24,11 +24,15 @@ import (
 // deployment key via WithWebhookSigningKey.
 func newWebhookHandlers(pool *pgxpool.Pool, cipher *webhooks.Cipher, log *slog.Logger) webhooks.Handlers {
 	store := webhooks.NewStore(InstallationDB(pool), cipher)
-	// The HTTP-transport deliverer serves replay only (re-sending an
-	// already-authorized delivery), so it needs no principal resolver — the
-	// owner-scoped fan-out lives on the bus-consumer deliverer wired in the
-	// worker/api roles (WithWebhookConsumer).
-	deliverer := webhooks.NewDeliverer(store, webhooks.NewGuardedClient(), nil, nil, log)
+	// The HTTP-transport deliverer serves replay only, and it carries the
+	// principal resolver even so. Replay used to re-send an
+	// already-authorized delivery without asking anything, which is what let
+	// this constructor pass nil; it now re-checks that the subscription owner
+	// can still see the record, and canSee refuses outright without a
+	// resolver. A nil one here would make every replay answer 200, write its
+	// audit row, and send nothing.
+	deliverer := webhooks.NewDeliverer(store, webhooks.NewGuardedClient(), nil,
+		identity.NewService(pool), log)
 	return webhooks.NewHandlers(store, deliverer)
 }
 

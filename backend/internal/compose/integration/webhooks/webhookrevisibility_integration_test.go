@@ -182,6 +182,67 @@ func TestARetryStillShipsWhenTheSubjectIsStillVisible(t *testing.T) {
 	assertDeliveryStatus(t, we, subID, "delivered", 2)
 }
 
+// TestARevocationHoldsAgainstALaterSweepAndReplay is the durability half: a
+// delivery refused once stays refused, however many times something asks again.
+//
+// Three separate things would each have to fail for it not to. The check itself
+// is the load-bearing one — the activity is still narrowed, so a re-claimed
+// delivery is simply re-refused — and behind it sit two structural properties
+// nothing can currently drive past: markVisibilityRevoked clears next_retry_at,
+// and dueRetries claims only 'retrying'. Mutating either of those alone, or both
+// together, leaves this test green, which is exactly the point: the guarantee
+// does not rest on any one of them.
+//
+// What it does prove is the operator-visible outcome. The endpoint is healthy
+// for the second half, so any path that let the delivery through would deliver
+// it, and the count would move.
+func TestARevocationHoldsAgainstALaterSweepAndReplay(t *testing.T) {
+	we := setupWebhooks(t)
+	rcv := newReceiver(t, http.StatusInternalServerError)
+	now := time.Now().UTC()
+	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
+
+	subID, _ := we.createSubscription(t, rcv.server.URL+"/hook", []string{"activity.captured"})
+	activity := we.seedOpenActivity(t)
+	if err := deliverer.HandleEvent(context.Background(),
+		activityEnvelope(we.wsID, activity)); err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+	we.narrowActivity(t, activity)
+	now = now.Add(64 * time.Second)
+	if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+		t.Fatalf("sweep: %v", err)
+	}
+	assertDeliveryStatus(t, we, subID, "visibility_revoked", 1)
+	attemptsAtRevocation := rcv.count.Load()
+
+	// The endpoint is healthy now, so a sweep that re-claimed the row would
+	// deliver it — the revocation undone by a recovery nobody asked about.
+	rcv.setStatus(http.StatusOK)
+	now = now.Add(64 * time.Second)
+	if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+		t.Fatalf("second sweep: %v", err)
+	}
+	assertDeliveryStatus(t, we, subID, "visibility_revoked", 1)
+
+	sysCtx := principal.WithActor(
+		principal.WithWorkspaceID(context.Background(), we.wsID),
+		principal.Principal{Type: principal.PrincipalSystem, ID: "system"},
+	)
+	if _, err := deliverer.Replay(sysCtx, we.subUUID(t, subID), we.deliveryID(t, subID)); err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+	assertDeliveryStatus(t, we, subID, "visibility_revoked", 1)
+	if got := rcv.count.Load(); got != attemptsAtRevocation {
+		t.Errorf("the endpoint saw %d attempts after the revocation, want %d: a delivery "+
+			"already refused was let through by a later sweep or replay", got, attemptsAtRevocation)
+	}
+	if reason := we.deliveryError(t, subID); reason == "" {
+		t.Error("a later write cleared the revocation reason, so an operator reading the row " +
+			"can no longer tell why it stopped")
+	}
+}
+
 // activityEnvelope names an activity subject, whose visibility is the row's own
 // audience rather than anybody's grants.
 func activityEnvelope(wsID ids.UUID, activity ids.UUID) kevents.Envelope {

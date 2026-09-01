@@ -329,7 +329,8 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 				UPDATE webhook_delivery
 				SET status = 'delivered', attempts = $2, last_status_code = $3,
 				    last_error = NULL, next_retry_at = NULL, delivered_at = $4
-				WHERE id = $1`, t.deliveryID, attempts, statusCode, now)
+				WHERE id = $1 AND status <> 'visibility_revoked'`,
+				t.deliveryID, attempts, statusCode, now)
 			return err
 		}
 		if attempts >= maxAttempts {
@@ -337,7 +338,8 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 				UPDATE webhook_delivery
 				SET status = 'dead_lettered', attempts = $2, last_status_code = $3,
 				    last_error = $4, next_retry_at = NULL, dead_lettered_at = $5
-				WHERE id = $1`, t.deliveryID, attempts, statusCode, res.failure, now)
+				WHERE id = $1 AND status <> 'visibility_revoked'`,
+				t.deliveryID, attempts, statusCode, res.failure, now)
 			return err
 		}
 		next := now.Add(backoff(attempts))
@@ -345,35 +347,50 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 			UPDATE webhook_delivery
 			SET status = 'retrying', attempts = $2, last_status_code = $3,
 			    last_error = $4, next_retry_at = $5
-			WHERE id = $1`, t.deliveryID, attempts, statusCode, res.failure, next)
+			WHERE id = $1 AND status <> 'visibility_revoked'`,
+			t.deliveryID, attempts, statusCode, res.failure, next)
 		return err
 	})
 }
 
-// resetForReplay clears a parked delivery back to pending so it can be
-// re-attempted. Returns ErrNotFound if the delivery is absent in the
-// caller's workspace (existence-hiding).
 // markVisibilityRevoked parks a delivery whose subject the owner may no longer
 // see. Terminal, and deliberately not dead_lettered: dead_lettered is the store
 // an operator replays FROM, and a revoked delivery must not be in it. The reason
 // goes in last_error for the operator, and stays there — resetForReplay clears
 // that column, so a status that shared the replay path would destroy it.
+//
+// Every writer of this table carries `status <> 'visibility_revoked'`, and that
+// clause is DEFENCE rather than a reachable race. Three things already stop a
+// revoked row being written over: the visibility check refuses it again (the
+// activity is still narrowed), this method clears next_retry_at, and dueRetries
+// claims only 'retrying'. Removing any of them — or the first two together —
+// leaves the behaviour unchanged, which is why no test drives this clause.
+//
+// It earns its line on the one case none of those three covers: a sweep already
+// mid-POST when a revocation commits, whose recordOutcome would otherwise land
+// 'delivered' on top. And it means the next caller added to this store inherits
+// the invariant rather than having to know it.
 func (s *Store) markVisibilityRevoked(ctx context.Context, deliveryID ids.UUID, reason string) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE webhook_delivery
 			SET status = 'visibility_revoked', last_error = $2, next_retry_at = NULL
-			WHERE id = $1`, deliveryID, reason)
+			WHERE id = $1 AND status <> 'visibility_revoked'`, deliveryID, reason)
 		return err
 	})
 }
 
+// resetForReplay clears a parked delivery back to pending so it can be
+// re-attempted. Returns ErrNotFound if the delivery is absent in the caller's
+// workspace (existence-hiding), or if it was revoked: a revoked delivery is not
+// replayable, and the replay path checks visibility before reaching here anyway
+// — this guard is what stops a concurrent revocation being undone.
 func (s *Store) resetForReplay(ctx context.Context, deliveryID ids.UUID) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE webhook_delivery
 			SET status = 'pending', next_retry_at = NULL, dead_lettered_at = NULL, last_error = NULL
-			WHERE id = $1`, deliveryID)
+			WHERE id = $1 AND status <> 'visibility_revoked'`, deliveryID)
 		if err != nil {
 			return err
 		}
