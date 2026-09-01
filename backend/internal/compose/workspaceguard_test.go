@@ -129,6 +129,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		KnowledgeIngestArgs{}.Kind(): func(ctx context.Context) error {
 			return (&knowledgeIngestWorker{}).Work(ctx, &river.Job[KnowledgeIngestArgs]{})
 		},
+		VCardIngestArgs{}.Kind(): func(ctx context.Context) error {
+			return (&vcardIngestWorker{}).Work(ctx, &river.Job[VCardIngestArgs]{})
+		},
 		CloseDateWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&closeDateWorkspaceWorker{}).Work(ctx, &river.Job[CloseDateWorkspaceArgs]{})
 		},

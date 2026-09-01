@@ -447,6 +447,12 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 	// (jobs_embedreindex.go).
 	addEmbedReindexJobs(reg, pool, cfg.Embedder)
 	addKnowledgeIngestJobs(reg, pool, cfg.Blobstore, cfg.Embedder, log)
+	// The mailed-card import, registered unconditionally: a .vcf is parsed and
+	// not inferred, so there is no model lane for it to be missing. Its trigger
+	// starts unconditionally too, and the two must agree — River discards a job
+	// whose kind no worker claims, so a trigger without this registration would
+	// drop every mailed card silently.
+	addDeclaredWorker[VCardIngestArgs](reg, newVCardIngestWorker(pool, cfg.Blobstore, log))
 	// Both refreshes read a source the deployment configures. An unconfigured
 	// one — a nil brain, an empty url, no pricing sources — leaves the worker
 	// registered and its producer proposing nothing, which is the honest

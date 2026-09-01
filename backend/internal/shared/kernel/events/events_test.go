@@ -207,6 +207,10 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// and a consumer whose retries cost money must not share a cursor with
 		// one whose retries are free.
 		"cg:capture-enrich": {"gw:events:crm:activity"},
+		// A card attached to captured mail imports itself. Its own group beside
+		// the one above: that one needs a model and this one only parses, so
+		// they run in different deployments and must not share a cursor.
+		"cg:vcard-ingest": {"gw:events:crm:activity"},
 		// Turning a won deal into what its partner earned. Its own group
 		// because accrual is money: a projection rebuild must not be able to
 		// stall it, and a failure to accrue must not read as a failure to index.

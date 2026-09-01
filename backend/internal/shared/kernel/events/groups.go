@@ -125,6 +125,13 @@ func Groups() []Group {
 		// customer's token budget must not share a cursor with a projection
 		// that is cheap to replay.
 		{Name: "cg:capture-enrich", Streams: forEntities(activityStreamEntity)},
+		// A card attached to captured mail imports itself. Its own group beside
+		// the one above rather than a second handler on it, because the two do
+		// not fail alike: that one queues a MODEL-backed pass and this one
+		// PARSES a file, so a deployment with no model runs this and not that,
+		// and one cursor between them would tie the deterministic half to the
+		// budgeted half's retries.
+		{Name: "cg:vcard-ingest", Streams: forEntities(activityStreamEntity)},
 		// Automatic enrichment from a LICENSED provider (ADR-0101/PI-EVT-1).
 		// Its own group rather than a second handler on the pass above,
 		// because the two differ in what a failure costs: that one reads a

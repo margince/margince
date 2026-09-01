@@ -170,6 +170,14 @@ func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 		}
 	}
 
+	// A card attached to that same mail, imported on arrival — and deliberately
+	// NOT gated on the enrich lane, because parsing a .vcf needs no model.
+	// Gating it here would delete the feature in an AI-less deployment for a
+	// reason that belongs only to the pass above.
+	if err := startVCardIngestTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
+		return lanes, err
+	}
+
 	announceGeocoding(cfg.geocodeBaseURL, stdout)
 
 	if err := startWebhookLane(laneCtx, cfg, pool, rdb, &lanes, logger, stdout); err != nil {

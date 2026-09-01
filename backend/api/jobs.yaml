@@ -738,6 +738,22 @@ kinds:
       Workspace: id
       DocumentID: id
 
+  vcard_ingest:
+    role: worker
+    go_type: VCardIngestArgs
+    queue: ai_capture
+    timeout:
+      value: 5m
+      reason: >-
+        Parsing a handful of small text files and writing at most five people.
+        No model call and no network read is in it, so anything past this is a
+        stuck database handle rather than a large card.
+    opts_owner: caller
+    cadence: on_demand
+    args:
+      Workspace: id
+      Activity: id
+
   embed_reindex:
     role: worker
     go_type: EmbedReindexArgs
