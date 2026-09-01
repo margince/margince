@@ -181,6 +181,70 @@ func TestTheSourceMapAgreesWithTheClassifiers(t *testing.T) {
 	}
 }
 
+// EVERY SOURCE THE CONTRACT DECLARES REACHES THE GUARDRAILS BELOW.
+//
+// everyLane is a hand-written list, and a hand-written census is one that can
+// fail short: it reads a smaller tree, reports PASS, and no assertion notices.
+// Eleven of the contract's twenty sources were in it when this was written, and
+// the nine missing ones included customer_waiting and dedupe_candidate — the
+// two categories a reader is most likely to be lied to about.
+//
+// So the LIST is checked against the contract's own enum. A source added there
+// and not here fails this, and the two guardrails below then cover it by
+// arriving in everyLane at all.
+func TestEverySourceTheContractDeclaresHasALane(t *testing.T) {
+	covered := map[crmcontracts.WorklistItemSource]bool{}
+	for _, l := range everyLane() {
+		covered[crmcontracts.WorklistItemSource(l.source)] = true
+	}
+	for _, source := range everyWorklistSource() {
+		if notADayLane[source] {
+			continue
+		}
+		if !covered[source] {
+			t.Errorf("source %q has no lane, so no guardrail below reaches it — "+
+				"add one to everyLane", source)
+		}
+	}
+}
+
+// notADayLane are the sources classifyDay cannot produce, and why.
+//
+// Each is covered somewhere else or is not a producer at all. Listed rather
+// than skipped silently, so a source added to this set is a decision somebody
+// wrote down.
+var notADayLane = map[crmcontracts.WorklistItemSource]bool{
+	// A GROUP of rows rather than a producer: foldRoutineDecisions makes one
+	// from rows that already have their own lanes, and its category is its
+	// members'.
+	crmcontracts.WorklistItemSourceBatch: true,
+	// Read from its own store rather than from the assembled day: worklist.go
+	// classifies the waiting lane separately, so no Attention field carries
+	// it. Its own suite (waitinglane_integration_test.go) drives it end to end.
+	crmcontracts.WorklistItemSourceCustomerWaiting: true,
+}
+
+// everyWorklistSource is the contract's own source list, derived from the
+// generated Valid() rather than retyped: a list here would be the third copy of
+// a vocabulary that already exists twice.
+func everyWorklistSource() []crmcontracts.WorklistItemSource {
+	all := []crmcontracts.WorklistItemSource{
+		"approval", "dedupe_candidate", "task", "brief_item", "conversation_claim",
+		"customer_waiting", "deal_at_risk", "meeting", "relationship_decay",
+		"failed_approval", "dsr", "sync_health", "capture_health", "ai_work_health",
+		"bounce", "undelivered", "automation_run", "notice", "introduction_request",
+		"batch",
+	}
+	// Held against the generated enum: a value the contract drops fails here
+	// rather than leaving a lane nothing produces.
+	for _, source := range all {
+		if !source.Valid() {
+			panic("worklist source " + string(source) + " is not in the contract")
+		}
+	}
+	return all
+}
+
 // THE HIDDEN-BACKLOG GUARDRAIL: no category holds work while reporting none.
 //
 // The concept names this as a metric whose target is zero incidents, and a
@@ -278,6 +342,27 @@ func everyLane() []struct {
 		)}},
 		{"automation_run", crmcontracts.Attention{AsOf: rankInstant, AutomationHealth: lane(
 			item("x", "automation_run"),
+		)}},
+		{"dedupe_candidate", crmcontracts.Attention{AsOf: rankInstant, NeedsYou: []crmcontracts.AttentionItem{
+			item("x", "dedupe_candidate"),
+		}}},
+		{"brief_item", crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{
+			item("x", "brief_item"),
+		}}},
+		{"sync_health", crmcontracts.Attention{AsOf: rankInstant, SyncHealth: lane(
+			item("x", "sync_health"),
+		)}},
+		{"capture_health", crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: lane(
+			item("x", "capture_health"),
+		)}},
+		{"ai_work_health", crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: lane(
+			item("x", "ai_work_health"),
+		)}},
+		{"undelivered", crmcontracts.Attention{AsOf: rankInstant, Undelivered: lane(
+			item("x", "undelivered"),
+		)}},
+		{"introduction_request", crmcontracts.Attention{AsOf: rankInstant, Introductions: lane(
+			item("x", "introduction_request"),
 		)}},
 	}
 }
