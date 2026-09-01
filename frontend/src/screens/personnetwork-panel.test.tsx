@@ -306,7 +306,9 @@ describe("PersonNetworkTab", () => {
     });
     renderPanel();
 
-    await user.click(await screen.findByRole("button", { name: "Bo" }));
+    // The map composes a node's name as "label, sublabel, lane", so this
+    // matches the label rather than comparing the whole string.
+    await user.click(await screen.findByRole("button", { name: /Bo/ }));
 
     expect(await screen.findByText("with Cara")).toBeTruthy();
     expect(screen.queryByText("with Bo")).toBeNull();
