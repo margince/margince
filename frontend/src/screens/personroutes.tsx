@@ -208,9 +208,17 @@ function lastContactPhrase(
   return t("person.intro.whenDays", { days: formatNumber(days, locale) });
 }
 
-// An available route needs no label; the other three each say something the
-// reader would otherwise learn by asking and being turned down.
-function availabilityLabel(
+/**
+ * availabilityLabel names why a route cannot be asked for, or null when it can.
+ *
+ * An available route needs no label; the other three each say something the
+ * reader would otherwise learn by asking and being turned down.
+ *
+ * The lead panel and this list draw the SAME route, so both take their wording
+ * here: one state must not have two spellings, or the reader has to decide
+ * which card to believe.
+ */
+export function availabilityLabel(
   availability: RouteCandidate["availability"],
   t: Translate,
 ): string | null {

@@ -70,8 +70,9 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 // arrives with the per-workspace admin surface.
 //
 // `connection` is the field that tells the two kinds of row apart — a passport
-// the human minted from the credential a client received after they lent one —
-// and it is absent, not empty, on the former. Settings reads its presence
+// the human minted directly, and the credential a client received after the
+// human granted it consent — and it is absent, not empty, on the former.
+// Settings reads its presence
 // rather than the `oauth:` label prefix, which is display text a human could
 // equally type.
 func (h Handlers) ListPassports(w http.ResponseWriter, r *http.Request) {
@@ -123,13 +124,6 @@ func passportSummary(p PassportRow) crmcontracts.PassportSummary {
 		ConnectedAt: c.ConnectedAt,
 		Renewable:   c.Renewable,
 	}
-	// Provenance is omitted, never zeroed: a connection made before it was
-	// recorded has no answer, and a zero uuid on the wire would read as one.
-	if c.LentPassportID != nil {
-		lent := openapi_types.UUID(c.LentPassportID.UUID)
-		summary.Connection.LentPassportId = &lent
-	}
-	summary.Connection.LentPassportLabel = c.LentPassportLabel
 	return summary
 }
 

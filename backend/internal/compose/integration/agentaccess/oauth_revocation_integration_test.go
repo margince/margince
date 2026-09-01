@@ -266,15 +266,15 @@ func TestAKilledClientCanNeitherWinConsentNorRedeemACode(t *testing.T) {
 				if status != http.StatusBadRequest || body["error"] != "invalid_grant" {
 					t.Fatalf("exchange under a %s client → %d %v, want 400 invalid_grant", name, status, body)
 				}
-				// Nothing durable came into being under the killed client. The
-				// passport the human LENT to win consent is not under it — it
-				// predates the approval and outlives it untouched — so it is
-				// counted apart, and the total pins that the refused exchange
-				// added nothing of its own.
+				// Nothing durable came into being under the killed client: the
+				// refused exchange mints neither a grant nor the connection's own
+				// passport, and this human minted nothing of their own beforehand
+				// either — an empty account is exactly the case the redemption must
+				// still refuse cleanly.
 				assertOwnerCount(t, o, 0, `SELECT count(*) FROM oauth_grant`)
 				assertOwnerCount(t, o, 0, `SELECT count(*) FROM oauth_refresh_token`)
 				assertOwnerCount(t, o, 0, `SELECT count(*) FROM passport WHERE oauth_grant_id IS NOT NULL`)
-				assertOwnerCount(t, o, 1, `SELECT count(*) FROM passport`)
+				assertOwnerCount(t, o, 0, `SELECT count(*) FROM passport`)
 			})
 		})
 	}

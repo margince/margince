@@ -273,11 +273,11 @@ func (s *Service) revokeBorrowedAuthority(ctx context.Context, tx pgx.Tx, userID
 // sliding its 90-day window forward — so a stolen session that planted a
 // connection here would keep it after the credential that planted it is
 // gone. The cascade also takes the grant → refresh → passport lock order
-// (oauth_grant.go), and a bulk passport UPDATE ahead of it would take a
+// (oauth_grantrevocation.go), and a bulk passport UPDATE ahead of it would take a
 // passport lock first and deadlock against a rotation racing this call.
 //
 // The consent nobody redeemed yet ends next. An authorization code carries
-// the lent scopes and the human's id, and redemption re-checks only that the
+// the consented scopes and the human's id, and redemption re-checks only that the
 // human is live — so a code minted in the minutes before this call would
 // still exchange for a passport afterward, on a consent given under
 // authority that no longer exists. That is the same restoration the grant

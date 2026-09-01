@@ -6,7 +6,7 @@
 // Package agentaccess holds the integration suites for how a non-human caller is
 // admitted and what it may then do: the OAuth surface and its discovery documents,
 // dynamic client registration, consent and its refusals, the grant, refresh,
-// revocation and lending of tokens, the passports those tokens carry, and the MCP
+// revocation and exchange of tokens, the passports those tokens carry, and the MCP
 // transport that presents them — handshake, framing, deadlines and the task
 // surface — plus the query vocabulary the surface publishes.
 //

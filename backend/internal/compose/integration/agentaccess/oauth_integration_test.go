@@ -179,7 +179,7 @@ func (o *oauthEnv) postConsent(t *testing.T, form url.Values) (status int, locat
 }
 
 // requestedScopes is the passport vocabulary a scope parameter names, which is
-// what a passport minted to be LENT against that request has to carry. It
+// what a passport minted against that request has to carry. It
 // mirrors the server's own parse: offline_access asks for the connection's
 // lifetime rather than authority over a record, so it is never a passport
 // scope, and a request naming no access scope at all defaults to read exactly
@@ -198,20 +198,19 @@ func requestedScopes(scope string) []string {
 }
 
 // authorize drives the whole consent flow the way a human does: the GET hands
-// the browser to the consent screen, the human LENDS one of their own
-// passports, and the nonce-bound POST is the consent whose redirect carries the
-// code.
+// the browser to the consent screen, the human TICKS the scopes the request
+// asked for, and the nonce-bound POST is the consent whose redirect carries
+// the code.
 //
-// The passport it mints carries exactly the scopes this request asked for, so
-// the connection receives the request itself — not because the request bounds
-// anything (it does not; the grant is the passport's own scopes) but because
-// the two are deliberately made equal here, letting a caller assert about the
-// scopes it named. A test whose subject IS the gap between request and passport
-// mints one that differs and lends it through approveWithPassport.
+// The ticked scopes are exactly the request's own, so the connection
+// receives the request itself — not because the request bounds anything (it
+// does not; the grant is whatever the human ticked) but because the two are
+// deliberately made equal here, letting a caller assert about the scopes it
+// named.
 func (o *oauthEnv) authorize(t *testing.T, extra url.Values) string {
 	t.Helper()
 	form := o.armConsent(t, extra)
-	form.Set("passport_id", o.mintPassport(t, "lent to the night agent", requestedScopes(form.Get("scope"))))
+	form.Set("scopes", strings.Join(requestedScopes(form.Get("scope")), " "))
 
 	status, location, body := o.postConsent(t, form)
 	if status != http.StatusFound {

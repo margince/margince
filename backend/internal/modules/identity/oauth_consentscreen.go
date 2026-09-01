@@ -32,9 +32,8 @@ const ConsentScreenPath = "/#/oauth-consent"
 // each into one sentence in the human's language, which is why the marker
 // travels alone and the server's client-facing description does not follow it.
 //
-// They split in two, and the split decides whether the nonce travels with them:
-// a refusal the human's NEXT action can fix keeps the pending authorization
-// alive, and one that nothing can fix ends the flow on the screen.
+// Both are terminal: nothing the human clicks fixes them, so the screen ends
+// the flow and asks the human to start again from their client.
 const (
 	consentScreenParamError = "error"
 	// consentScreenParamNonce is the screen's half of the double-submit pair.
@@ -42,20 +41,14 @@ const (
 	// or reads it: it exists between this endpoint and the SPA alone.
 	consentScreenParamNonce = "consent"
 	// consentErrorStale: the nonce cookie is gone, expired, or does not match
-	// the submitted value. UNRECOVERABLE — a spent or forged nonce fails the
+	// the submitted value. TERMINAL — a spent or forged nonce fails the
 	// same way however often it is presented — so the screen renders a terminal
 	// card asking the human to start again from their client, which is the only
 	// place a fresh authorization begins.
 	consentErrorStale = "stale_consent"
-	// consentErrorUnlendable: the selected passport did not survive the
-	// re-resolved selectability check, or no usable passport_id was submitted.
-	// RECOVERABLE — the pending authorization is untouched and only the human's
-	// CHOICE was wrong, so the nonce comes back with the request and their next
-	// selection succeeds inside the window the GET already armed.
-	consentErrorUnlendable = "unlendable_passport"
 	// consentErrorInvalid: validateAuthorize refused the POST — the request the
 	// screen posted back is not one this server will authorize any more.
-	// UNRECOVERABLE for the same reason: re-posting it would be refused again.
+	// TERMINAL for the same reason: re-posting it would be refused again.
 	consentErrorInvalid = "invalid_request"
 )
 
@@ -73,8 +66,8 @@ var authorizeScreenParams = []string{
 // would reflect arbitrary attacker-chosen keys into the screen's own state.
 //
 // The nonce is not among them because it is not part of the REQUEST: it is the
-// credential half of the double-submit pair, added back only where the
-// authorization it belongs to is still usable (retryAtConsentScreen).
+// credential half of the double-submit pair, added back only by
+// consentHandoffParams, below, at the initial GET hand-off.
 func consentScreenParams(src url.Values) url.Values {
 	params := url.Values{}
 	for _, name := range authorizeScreenParams {
@@ -145,26 +138,5 @@ func redirectToConsentScreen(w http.ResponseWriter, r *http.Request, params url.
 func refuseToConsentScreen(w http.ResponseWriter, r *http.Request, form url.Values, reason string) {
 	params := consentScreenParams(form)
 	params.Set(consentScreenParamError, reason)
-	redirectToConsentScreen(w, r, params)
-}
-
-// retryAtConsentScreen answers the refusal the human's next action fixes. The
-// pending authorization is still armed and still valid; only the passport they
-// picked was not lendable. So the nonce goes back WITH the request, and the
-// cookie holding its counterpart is deliberately left alone (clearConsentCookie
-// runs where consent COMMITS, not where a nonce was merely presented) — the
-// human chooses again and submits inside the same five minutes.
-//
-// Handing the nonce back discloses nothing new: it rides in the fragment, which
-// no browser ever transmits, and its value is what this very browser just sent.
-// The double-submit property is untouched, because the POST still requires the
-// cookie and the body to agree — this only declines to destroy a pair that is
-// still good.
-func retryAtConsentScreen(
-	w http.ResponseWriter, r *http.Request, form url.Values, nonce, reason string,
-) {
-	params := consentScreenParams(form)
-	params.Set(consentScreenParamError, reason)
-	params.Set(consentScreenParamNonce, nonce)
 	redirectToConsentScreen(w, r, params)
 }
