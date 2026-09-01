@@ -206,6 +206,20 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", org.LogoUrl, wantURL)
 	}
 
+	// The same face on the profile the app shell reads. The record screens draw
+	// the mark from the organization and the chrome draws it from the company
+	// profile, so a company that wore the mark on one and not the other would be
+	// two companies to the person looking at it.
+	profile, err := e.People.GetCompany(ctx)
+	if err != nil {
+		t.Fatalf("read the company profile: %v", err)
+	}
+	wire := toContractCompany(profile)
+	if wire.LogoUrl == nil || *wire.LogoUrl != wantURL {
+		t.Fatalf("the profile's logo_url = %v, want %q — the face the shell renders",
+			wire.LogoUrl, wantURL)
+	}
+
 	// The mark is the site read's, never the confirming human's: provenance is
 	// written once, and a machine mark filed under a person would make the
 	// human-precedence guard refuse every later resolve.
@@ -355,6 +369,14 @@ func TestConfirmingAnOnboardingReadSurvivesALogoThatNeverResolved(t *testing.T) 
 	}
 	if org.LogoUrl != nil {
 		t.Fatalf("logo_url = %q, want none", *org.LogoUrl)
+	}
+	profile, err := e.People.GetCompany(ctx)
+	if err != nil {
+		t.Fatalf("read the company profile: %v", err)
+	}
+	if wire := toContractCompany(profile); wire.LogoUrl != nil {
+		t.Fatalf("the profile's logo_url = %q, want none so the shell draws the monogram",
+			*wire.LogoUrl)
 	}
 }
 
