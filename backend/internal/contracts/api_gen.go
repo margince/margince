@@ -11737,6 +11737,30 @@ func (e WorklistScopeOptions) Valid() bool {
 	}
 }
 
+// Defines values for WorklistBandBand.
+const (
+	WorklistBandBandBuildPipeline WorklistBandBand = "build_pipeline"
+	WorklistBandBandKeepMomentum  WorklistBandBand = "keep_momentum"
+	WorklistBandBandNow           WorklistBandBand = "now"
+	WorklistBandBandReview        WorklistBandBand = "review"
+)
+
+// Valid indicates whether the value is a known member of the WorklistBandBand enum.
+func (e WorklistBandBand) Valid() bool {
+	switch e {
+	case WorklistBandBandBuildPipeline:
+		return true
+	case WorklistBandBandKeepMomentum:
+		return true
+	case WorklistBandBandNow:
+		return true
+	case WorklistBandBandReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistBatchKey.
 const (
 	CompanyMatch     WorklistBatchKey = "company_match"
@@ -11769,6 +11793,7 @@ func (e WorklistBatchKey) Valid() bool {
 
 // Defines values for WorklistComparisonComparator.
 const (
+	WorklistComparisonComparatorCrowded         WorklistComparisonComparator = "crowded"
 	WorklistComparisonComparatorDeadline        WorklistComparisonComparator = "deadline"
 	WorklistComparisonComparatorExpectedRevenue WorklistComparisonComparator = "expected_revenue"
 	WorklistComparisonComparatorLevel           WorklistComparisonComparator = "level"
@@ -11781,6 +11806,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistComparisonComparator enum.
 func (e WorklistComparisonComparator) Valid() bool {
 	switch e {
+	case WorklistComparisonComparatorCrowded:
+		return true
 	case WorklistComparisonComparatorDeadline:
 		return true
 	case WorklistComparisonComparatorExpectedRevenue:
@@ -11863,6 +11890,30 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsSetAside:
 		return true
 	case WorklistItemActionsSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemBand.
+const (
+	WorklistItemBandBuildPipeline WorklistItemBand = "build_pipeline"
+	WorklistItemBandKeepMomentum  WorklistItemBand = "keep_momentum"
+	WorklistItemBandNow           WorklistItemBand = "now"
+	WorklistItemBandReview        WorklistItemBand = "review"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemBand enum.
+func (e WorklistItemBand) Valid() bool {
+	switch e {
+	case WorklistItemBandBuildPipeline:
+		return true
+	case WorklistItemBandKeepMomentum:
+		return true
+	case WorklistItemBandNow:
+		return true
+	case WorklistItemBandReview:
 		return true
 	default:
 		return false
@@ -28914,6 +28965,15 @@ type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
 
+	// Bands The outcome headings, in the order a page draws them, each with how many of this
+	// page's rows sit under it.
+	//
+	// Every band appears, including one with no rows: "nothing needs you today" is
+	// something to tell a reader, and a client inferring the headings from the rows it
+	// received could not say it. The queue arrives sorted so each band's rows are
+	// contiguous — a client draws a heading where the band changes.
+	Bands *[]WorklistBand `json:"bands,omitempty"`
+
 	// Counts The same accounting per KIND of work rather than per producer — what a filter
 	// pill counts, and what lets the page say how much it is not showing. Counted
 	// before any narrowing, so a filtered page still reports the categories it is
@@ -28955,6 +29015,22 @@ type WorklistScope string
 
 // WorklistScopeOptions defines model for Worklist.ScopeOptions.
 type WorklistScopeOptions string
+
+// WorklistBand One outcome band and how much of it this page is showing — the headings a client draws,
+// in the order it draws them.
+//
+// Sent even for a band with no rows on this page. A reader whose Now band is empty is being
+// told something ("nothing needs you today"), and a client that inferred the headings from
+// the rows it received could not say it.
+type WorklistBand struct {
+	Band WorklistBandBand `json:"band"`
+
+	// Shown How many rows of this band are on the page.
+	Shown int `json:"shown"`
+}
+
+// WorklistBandBand defines model for WorklistBand.Band.
+type WorklistBandBand string
 
 // WorklistBatch A group of routine decisions that read alike, standing on the queue as one row.
 //
@@ -29016,7 +29092,14 @@ type WorklistBatchKey string
 //
 // Absent on the last row of the page, which has nothing below it to beat.
 type WorklistComparison struct {
-	// Comparator What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+	// Comparator What decided it. `order` means every comparator tied and the ids broke it, which the
+	// client renders as no reason at all.
+	//
+	// `crowded` means the row below is one of many of its kind: past a lead group, further
+	// rows of the same source sort under the other kinds of work so one noisy lane cannot own
+	// the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+	// otherwise bury the reader's one overdue task — which is why it can be the answer even
+	// when the two rows share a level.
 	Comparator WorklistComparisonComparator `json:"comparator"`
 
 	// Mine A typed comparator value — a date, an amount, a count of days, or nothing. Typed
@@ -29030,7 +29113,14 @@ type WorklistComparison struct {
 	Theirs *WorklistValue `json:"theirs,omitempty"`
 }
 
-// WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+// WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the
+// client renders as no reason at all.
+//
+// `crowded` means the row below is one of many of its kind: past a lead group, further
+// rows of the same source sort under the other kinds of work so one noisy lane cannot own
+// the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+// otherwise bury the reader's one overdue task — which is why it can be the answer even
+// when the two rows share a level.
 type WorklistComparisonComparator string
 
 // WorklistCount What one CATEGORY of work held, and how much of it reached the page.
@@ -29103,6 +29193,17 @@ type WorklistItem struct {
 
 	// Actions What this item offers, routed to the endpoint that owns the verb.
 	Actions []WorklistItemActions `json:"actions"`
+
+	// Band The heading this row sits under, as an OUTCOME rather than a priority number.
+	//
+	// `level` says what kind of work a row is; the band says what the reader is being asked
+	// to do about it today. Seven levels make a correct ordering and poor headings — a reader
+	// scanning for "what must happen now" should not have to know which levels mean that.
+	//
+	// Derived from the level and the row's own subject, so it cannot disagree with the order:
+	// the queue arrives already sorted, and every row of one band is contiguous. A client
+	// draws a heading when the band changes and never re-sorts.
+	Band *WorklistItemBand `json:"band,omitempty"`
 
 	// Batch A group of routine decisions that read alike, standing on the queue as one row.
 	//
@@ -29211,6 +29312,17 @@ type WorklistItem struct {
 
 // WorklistItemActions defines model for WorklistItem.Actions.
 type WorklistItemActions string
+
+// WorklistItemBand The heading this row sits under, as an OUTCOME rather than a priority number.
+//
+// `level` says what kind of work a row is; the band says what the reader is being asked
+// to do about it today. Seven levels make a correct ordering and poor headings — a reader
+// scanning for "what must happen now" should not have to know which levels mean that.
+//
+// Derived from the level and the row's own subject, so it cannot disagree with the order:
+// the queue arrives already sorted, and every row of one band is contiguous. A client
+// draws a heading when the band changes and never re-sorts.
+type WorklistItemBand string
 
 // WorklistItemCategory The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 type WorklistItemCategory string

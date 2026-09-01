@@ -25625,6 +25625,16 @@ export interface components {
              *     not drawing.
              */
             counts: components["schemas"]["WorklistCount"][];
+            /**
+             * @description The outcome headings, in the order a page draws them, each with how many of this
+             *     page's rows sit under it.
+             *
+             *     Every band appears, including one with no rows: "nothing needs you today" is
+             *     something to tell a reader, and a client inferring the headings from the rows it
+             *     received could not say it. The queue arrives sorted so each band's rows are
+             *     contiguous — a client draws a heading where the band changes.
+             */
+            bands?: components["schemas"]["WorklistBand"][];
         };
         /**
          * @description What one source contributed, in numbers that say what they counted.
@@ -25656,6 +25666,20 @@ export interface components {
              *     "200+" rather than "200".
              */
             more_available: boolean;
+        };
+        /**
+         * @description One outcome band and how much of it this page is showing — the headings a client draws,
+         *     in the order it draws them.
+         *
+         *     Sent even for a band with no rows on this page. A reader whose Now band is empty is being
+         *     told something ("nothing needs you today"), and a client that inferred the headings from
+         *     the rows it received could not say it.
+         */
+        WorklistBand: {
+            /** @enum {string} */
+            band: "now" | "build_pipeline" | "keep_momentum" | "review";
+            /** @description How many rows of this band are on the page. */
+            shown: number;
         };
         /**
          * @description What one CATEGORY of work held, and how much of it reached the page.
@@ -25795,6 +25819,19 @@ export interface components {
             /** @description What this item offers, routed to the endpoint that owns the verb. */
             actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge")[];
             /**
+             * @description The heading this row sits under, as an OUTCOME rather than a priority number.
+             *
+             *     `level` says what kind of work a row is; the band says what the reader is being asked
+             *     to do about it today. Seven levels make a correct ordering and poor headings — a reader
+             *     scanning for "what must happen now" should not have to know which levels mean that.
+             *
+             *     Derived from the level and the row's own subject, so it cannot disagree with the order:
+             *     the queue arrives already sorted, and every row of one band is contiguous. A client
+             *     draws a heading when the band changes and never re-sorts.
+             * @enum {string}
+             */
+            band?: "now" | "build_pipeline" | "keep_momentum" | "review";
+            /**
              * @description The ways this row can be PUT DOWN, as the server declares them. A client
              *     never infers this from `source`: which rows a rep may judge is a server
              *     rule, and a client guessing it draws a verb that 404s or hides one the rep
@@ -25837,10 +25874,17 @@ export interface components {
          */
         WorklistComparison: {
             /**
-             * @description What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+             * @description What decided it. `order` means every comparator tied and the ids broke it, which the
+             *     client renders as no reason at all.
+             *
+             *     `crowded` means the row below is one of many of its kind: past a lead group, further
+             *     rows of the same source sort under the other kinds of work so one noisy lane cannot own
+             *     the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+             *     otherwise bury the reader's one overdue task — which is why it can be the answer even
+             *     when the two rows share a level.
              * @enum {string}
              */
-            comparator: "pin" | "level" | "deadline" | "expected_revenue" | "waiting_days" | "relationship" | "order";
+            comparator: "pin" | "crowded" | "level" | "deadline" | "expected_revenue" | "waiting_days" | "relationship" | "order";
             mine?: components["schemas"]["WorklistValue"];
             theirs?: components["schemas"]["WorklistValue"];
         };

@@ -33957,6 +33957,17 @@ components:
             pill counts, and what lets the page say how much it is not showing. Counted
             before any narrowing, so a filtered page still reports the categories it is
             not drawing.
+        bands:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistBand' }
+          description: |
+            The outcome headings, in the order a page draws them, each with how many of this
+            page's rows sit under it.
+
+            Every band appears, including one with no rows: "nothing needs you today" is
+            something to tell a reader, and a client inferring the headings from the rows it
+            received could not say it. The queue arrives sorted so each band's rows are
+            contiguous — a client draws a heading where the band changes.
 
     WorklistReach:
       type: object
@@ -33993,6 +34004,20 @@ components:
             page that stopped one short of more, and it says the cautious thing rather than
             claiming a source is complete when it is not. The client renders `considered` as
             "200+" rather than "200".
+
+    WorklistBand:
+      type: object
+      description: |
+        One outcome band and how much of it this page is showing — the headings a client draws,
+        in the order it draws them.
+
+        Sent even for a band with no rows on this page. A reader whose Now band is empty is being
+        told something ("nothing needs you today"), and a client that inferred the headings from
+        the rows it received could not say it.
+      required: [band, shown]
+      properties:
+        band: { type: string, enum: [now, build_pipeline, keep_momentum, review] }
+        shown: { type: integer, description: 'How many rows of this band are on the page.' }
 
     WorklistCount:
       type: object
@@ -34127,6 +34152,19 @@ components:
           type: array
           items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
+        band:
+          type: string
+          enum: [now, build_pipeline, keep_momentum, review]
+          description: |
+            The heading this row sits under, as an OUTCOME rather than a priority number.
+
+            `level` says what kind of work a row is; the band says what the reader is being asked
+            to do about it today. Seven levels make a correct ordering and poor headings — a reader
+            scanning for "what must happen now" should not have to know which levels mean that.
+
+            Derived from the level and the row's own subject, so it cannot disagree with the order:
+            the queue arrives already sorted, and every row of one band is contiguous. A client
+            draws a heading when the band changes and never re-sorts.
         dispositions:
           type: array
           items: { type: string, enum: [snooze, not_mine, not_sales] }
@@ -34175,8 +34213,16 @@ components:
       properties:
         comparator:
           type: string
-          enum: [pin, level, deadline, expected_revenue, waiting_days, relationship, order]
-          description: 'What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.'
+          enum: [pin, crowded, level, deadline, expected_revenue, waiting_days, relationship, order]
+          description: |
+            What decided it. `order` means every comparator tied and the ids broke it, which the
+            client renders as no reason at all.
+
+            `crowded` means the row below is one of many of its kind: past a lead group, further
+            rows of the same source sort under the other kinds of work so one noisy lane cannot own
+            the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+            otherwise bury the reader's one overdue task — which is why it can be the answer even
+            when the two rows share a level.
         mine: { $ref: '#/components/schemas/WorklistValue' }
         theirs: { $ref: '#/components/schemas/WorklistValue' }
 

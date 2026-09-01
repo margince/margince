@@ -24,6 +24,21 @@
   margin: var(--space-4) 0;
 }
 
+/* The band heading, above the first row of its run.
+   Inside the list item rather than between them, because an <ol> may hold only
+   <li> children — a heading placed as a sibling would be invalid structure that
+   the browser silently reparents. The margin collapses to nothing on the first
+   heading, which needs no gap above it. */
+.worklist-band {
+  color: var(--textSecondary);
+  display: block;
+  margin: var(--space-5) 0 var(--space-2);
+}
+
+.worklist-list > li:first-child .worklist-band {
+  margin-top: 0;
+}
+
 .worklist-row {
   align-items: flex-start;
   display: flex;
