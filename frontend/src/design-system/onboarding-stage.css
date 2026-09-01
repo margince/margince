@@ -29,7 +29,11 @@
   grid-template-columns: minmax(0, 24rem) minmax(0, 34rem);
   grid-template-rows: auto 1fr;
   justify-content: center;
-  align-items: center;
+  /* SAFE centring: past the point where the question is taller than the room,
+     a centred row overflows equally in both directions and the top half is the
+     half that cannot be scrolled back to. Safe centring gives up and anchors
+     rather than putting the heading above the ceiling. */
+  align-items: safe center;
   gap: var(--space-10);
   padding: 0 var(--space-6) var(--space-12);
   background: var(--bgElevated);
@@ -72,6 +76,12 @@
  */
 .ob-stage-band {
   grid-column: 1 / -1;
+  /* PLACED EXPLICITLY, because the band is optional: a flow that neither
+     numbers itself nor carries a Core reading draws none, and auto-placement
+     then slides the question up into the band's row. The room's whole height
+     collects underneath it as empty floor, and the heading sits against the
+     ceiling with its ascenders cut. */
+  grid-row: 1;
   align-self: start;
   /* Out past the stage's own inline padding: a band inset from the edges reads
      as a wide card sitting on the page rather than as the room's own header. */
@@ -175,6 +185,8 @@
   position: relative;
   z-index: 1;
   min-width: 0;
+  /* The question's row, named rather than inferred. See the band above. */
+  grid-row: 2;
 }
 
 .ob-stage-core {
@@ -308,6 +320,14 @@
     grid-template-rows: auto auto 1fr;
     justify-items: center;
     gap: var(--space-6);
+  }
+  /* Stacked, the two take a row each under the band. The wide layout's shared
+     row would put them side by side again in a single-column grid. */
+  .ob-stage-core {
+    grid-row: 2;
+  }
+  .ob-stage-column {
+    grid-row: 3;
   }
   /* One column is always top-anchored, whatever the anchor says: centred, an
      expanding form pushes the heading off the top of the screen while somebody

@@ -107,14 +107,14 @@
 }
 /* Indigo for what the agent may now do, and the ordinary meta ink for what it
    may not: the refusal is not a warning, it is the shape of the product. */
+/* The type is `.t-eyebrow` on the element itself (base.css owns the size, the
+   tracking and the case). What is left here is what belongs to THIS list: a
+   label column the two rows align down, set in mono because it names a machine
+   state, and indigo because the state it names is the agent's. */
 .ob-ig-can li b {
   flex: none;
   min-width: 6.5ch;
   font-family: var(--f-mono);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-medium);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
   color: var(--aiText);
 }
 .ob-ig-can li[data-can="false"] b {

@@ -115,7 +115,7 @@ export function Ignition({
       <ul className="ob-ig-can" role="status">
         {CAPABILITIES.map((c) => (
           <li key={c.what} data-can={c.can}>
-            <b>
+            <b className="t-eyebrow">
               {t(c.can ? "firstRun.ignite.canNow" : "firstRun.ignite.cannot")}
             </b>
             <span>{t(c.what)}</span>

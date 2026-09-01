@@ -70,12 +70,14 @@ function StageBand({
         </p>
       )}
       {coreStateLabel === undefined ? null : (
-        // A live region, because this is the ONE place the Core's state is
-        // readable at all: the orb itself is aria-hidden, so a change nobody
-        // announces is a change half the readers never learn about.
-        <p className="ob-stage-corestate" role="status">
-          {coreStateLabel}
-        </p>
+        // Readable, and deliberately NOT a live region. The orb is aria-hidden
+        // and WDS-CORE-4 requires its state to be stated in words: stated, not
+        // announced. A second `role="status"` on the stage competes with the
+        // one the screen under it already owns: it mounts first, so a query for
+        // the status resolves on this frame label instead of on the sentence a
+        // reader has to act on, and on the gate it is the read's own phase line
+        // said a second time.
+        <p className="ob-stage-corestate">{coreStateLabel}</p>
       )}
     </div>
   );
@@ -127,11 +129,13 @@ export function OnboardingStage({
    */
   coreScale?: "hero" | "work";
   /**
-   * What the Core is doing, in words, for the band to say out loud.
+   * What the Core is doing, in words, for the band to carry.
    *
    * The Core is `aria-hidden` (WDS-CORE-4) and every state it shows has to be
    * stated in text by the surface around it — that is what makes it safe for
-   * the orb to be this decorative. The stage cannot compose the sentence
+   * the orb to be this decorative. Stated, not announced: the band is the
+   * room's frame, and the screen standing in it owns the live region. The
+   * stage cannot compose the sentence
    * itself: no copy lives in a primitive. A caller that passes no label draws
    * no band reading, which is honest for a screen whose Core is not carrying a
    * state anybody needs to act on.
