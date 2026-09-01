@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { INTL_LOCALE } from "../format/format";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 /** The categories a provider names, as words a reader knows.
@@ -36,10 +38,37 @@ export function categoryName(
   return label ? t(label) : category;
 }
 
-/** Several categories, as one comma-joined phrase. */
+/** Several categories, as one comma-joined phrase. For a LIST of categories —
+ *  what a run asked for, what came back empty. */
 export function categoryNames(
   categories: readonly string[],
   t: (key: MessageKey) => string,
 ): string {
   return categories.map((category) => categoryName(category, t)).join(", ");
+}
+
+/** Several categories a single press buys TOGETHER, joined by the locale's own
+ *  conjunction: "work email and mobile number".
+ *
+ *  A comma is what categoryNames gives, and on a button it reads as a list the
+ *  press might pick from rather than a pair it buys as one. A reader who
+ *  scanned "Buy work email, mobile number · 2 credits" as the work-email
+ *  button and got a mobile number too is the case this exists for — the price
+ *  beside it was already the pair's, so nobody was overcharged, but nobody was
+ *  told either.
+ *
+ *  Intl.ListFormat rather than a conjunction per language: German's "und" and
+ *  Vietnamese's "và" are the platform's to know, and an i18n key would ask a
+ *  translator to re-derive what the runtime already has right.
+ */
+export function categoryNamesTogether(
+  categories: readonly string[],
+  t: (key: MessageKey) => string,
+  locale: Locale,
+): string {
+  const names = categories.map((category) => categoryName(category, t));
+  return new Intl.ListFormat(INTL_LOCALE[locale], {
+    style: "long",
+    type: "conjunction",
+  }).format(names);
 }

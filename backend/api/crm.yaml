@@ -4898,6 +4898,75 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '423': { $ref: '#/components/responses/RetentionHeld' }
 
+  /activities/{id}/disposition:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Activities]
+      operationId: setActivityDisposition
+      x-agent-access: human-only
+      # Session cookie only: putting work down is a person's judgement about
+      # their own day, and an agent has no queue to clear.
+      security: [{ cookieAuth: [] }]
+      summary: Put a waiting message down, so the Worklist stops offering it.
+      description: |
+        The Worklist claims to be finite: work it and it empties. A message the rep has already
+        judged had no way to leave, so it returned every morning and the count above it stayed
+        wrong.
+
+        THREE JUDGEMENTS, TWO REACHES.
+
+        `not_sales` is a fact about the THREAD — recognizing the procurement newsletter settles
+        what the message is, for everybody. `snooze` and `not_mine` belong to the ONE READER who
+        set them: a rep putting a reply down until Thursday must not take it off the colleague who
+        owns the deal, and saying "not mine" is precisely saying somebody else must still see it.
+
+        A snooze names a moment still ahead and lifts on its own. `not_mine` names none and does
+        NOT lift by itself: it stands until the reader picks the message back up. Nothing watches
+        for the record changing hands, so a rep who hands work on and later inherits it again has
+        to undo their own judgement — which is the honest behaviour to publish, rather than a
+        re-arm no consumer performs.
+
+        Reading the message is the licence to judge it: an id the caller cannot read answers 404,
+        the same as one that does not exist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetActivityDispositionRequest' }
+      responses:
+        '204': { description: 'Put down. Setting the same disposition again is the same success.' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Activities]
+      operationId: clearActivityDisposition
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Pick the message back up — the undo behind every set-aside verb.
+      description: |
+        Clears what THIS reader set aside, and, with `scope=thread`, the workspace-wide `not_sales`
+        judgement. The two are separate because their reach is: a rep undoing their own snooze must
+        not also re-admit a thread a colleague ruled out.
+
+        Idempotent — picking up a message nobody set down is the same success, because the reader's
+        goal state already holds.
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema: { type: string, enum: [mine, thread], default: mine }
+          description: |
+            `mine` clears this reader's own snooze or not-mine. `thread` withdraws the
+            workspace-wide not-sales judgement, which anybody who can read the message may do:
+            the judgement was never one person's property.
+      responses:
+        '204': { description: 'Picked up, or was never put down.' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /activities/{id}/meeting-brief:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -24431,7 +24500,7 @@ components:
         `job_change` fires only on a RECORDED employment change, and `public_signal` needs a
         connected data provider. A rule that cannot fire is absent from the page, not an empty
         card.
-      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
+      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
 
     PersonMomentEvidence:
       type: object
@@ -26710,6 +26779,28 @@ components:
       type: string
       enum: [workspace, participants, selected]
       description: Who may read an activity's content — see Activity.audience.
+    SetActivityDispositionRequest:
+      type: object
+      additionalProperties: false
+      required: [disposition]
+      properties:
+        disposition:
+          type: string
+          enum: [snooze, not_mine, not_sales]
+          description: |
+            What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
+            `not_mine` bind only the caller.
+        snoozed_until:
+          type: string
+          format: date-time
+          description: |
+            When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
+            with no moment would never lift, and a moment on `not_mine` would make a hand-off
+            expire on a Thursday.
+
+            A moment already past is refused rather than stored: it would write a row that hides
+            nothing, and read to the rep as a snooze that did not take.
+
     SetActivityAudienceRequest:
       type: object
       required: [audience]
@@ -33906,6 +33997,17 @@ components:
             pill counts, and what lets the page say how much it is not showing. Counted
             before any narrowing, so a filtered page still reports the categories it is
             not drawing.
+        bands:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistBand' }
+          description: |
+            The outcome headings, in the order a page draws them, each with how many of this
+            page's rows sit under it.
+
+            Every band appears, including one with no rows: "nothing needs you today" is
+            something to tell a reader, and a client inferring the headings from the rows it
+            received could not say it. The queue arrives sorted so each band's rows are
+            contiguous — a client draws a heading where the band changes.
 
     WorklistReach:
       type: object
@@ -33942,6 +34044,20 @@ components:
             page that stopped one short of more, and it says the cautious thing rather than
             claiming a source is complete when it is not. The client renders `considered` as
             "200+" rather than "200".
+
+    WorklistBand:
+      type: object
+      description: |
+        One outcome band and how much of it this page is showing — the headings a client draws,
+        in the order it draws them.
+
+        Sent even for a band with no rows on this page. A reader whose Now band is empty is being
+        told something ("nothing needs you today"), and a client that inferred the headings from
+        the rows it received could not say it.
+      required: [band, shown]
+      properties:
+        band: { type: string, enum: [now, build_pipeline, keep_momentum, review] }
+        shown: { type: integer, description: 'How many rows of this band are on the page.' }
 
     WorklistCount:
       type: object
@@ -34076,6 +34192,40 @@ components:
           type: array
           items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
+        band:
+          type: string
+          enum: [now, build_pipeline, keep_momentum, review]
+          description: |
+            The heading this row sits under, as an OUTCOME rather than a priority number.
+
+            `level` says what kind of work a row is; the band says what the reader is being asked
+            to do about it today. Seven levels make a correct ordering and poor headings — a reader
+            scanning for "what must happen now" should not have to know which levels mean that.
+
+            Derived from the level and the row's own subject, so it cannot disagree with the order:
+            the queue arrives already sorted, and every row of one band is contiguous. A client
+            draws a heading when the band changes and never re-sorts.
+        dispositions:
+          type: array
+          items: { type: string, enum: [snooze, not_mine, not_sales] }
+          description: |
+            The ways this row can be PUT DOWN, as the server declares them. A client
+            never infers this from `source`: which rows a rep may judge is a server
+            rule, and a client guessing it draws a verb that 404s or hides one the rep
+            is entitled to.
+
+            Absent or empty means the row cannot be set aside — most sources answer
+            through the surface that owns them and leave nothing to dispose of here.
+        primary_action:
+          type: string
+          enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge]
+          description: |
+            The one verb this row is FOR, out of `actions`. The queue is ranked, so the
+            reader arriving at a row should not have to weigh three equally-drawn
+            controls to find the step the ranking already implies.
+
+            Absent when the row offers no single obvious step, which is a real state
+            rather than a gap: a dedupe pair genuinely asks the reader to choose.
 
     WorklistReason:
       type: object
@@ -34103,8 +34253,16 @@ components:
       properties:
         comparator:
           type: string
-          enum: [pin, level, deadline, expected_revenue, waiting_days, relationship, order]
-          description: 'What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.'
+          enum: [pin, crowded, level, deadline, expected_revenue, waiting_days, relationship, order]
+          description: |
+            What decided it. `order` means every comparator tied and the ids broke it, which the
+            client renders as no reason at all.
+
+            `crowded` means the row below is one of many of its kind: past a lead group, further
+            rows of the same source sort under the other kinds of work so one noisy lane cannot own
+            the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+            otherwise bury the reader's one overdue task — which is why it can be the answer even
+            when the two rows share a level.
         mine: { $ref: '#/components/schemas/WorklistValue' }
         theirs: { $ref: '#/components/schemas/WorklistValue' }
 

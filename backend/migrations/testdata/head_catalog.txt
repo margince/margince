@@ -166,6 +166,20 @@ public.activity_participant_replay.outcome text NOT NULL gen=- def=-
 public.activity_participant_replay.replayed_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_participant_replay_pkey CREATE UNIQUE INDEX activity_participant_replay_pkey ON public.activity_participant_replay USING btree (activity_id)
 public.activity_pkey CREATE UNIQUE INDEX activity_pkey ON public.activity USING btree (id)
+public.activity_reader_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_reader_state.activity_id uuid NOT NULL gen=- def=-
+public.activity_reader_state.activity_reader_state_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_reader_state.activity_reader_state_known CHECK ((state = ANY (ARRAY['snoozed'::text, 'not_mine'::text])))
+public.activity_reader_state.activity_reader_state_pkey PRIMARY KEY (activity_id, reader_id)
+public.activity_reader_state.activity_reader_state_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.activity_reader_state.activity_reader_state_shaped CHECK ((((state = 'snoozed'::text) AND (snoozed_until IS NOT NULL)) OR ((state = 'not_mine'::text) AND (snoozed_until IS NULL))))
+public.activity_reader_state.reader_id uuid NOT NULL gen=- def=-
+public.activity_reader_state.set_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_reader_state.set_by text NOT NULL gen=- def=-
+public.activity_reader_state.snoozed_until timestamp with time zone gen=- def=-
+public.activity_reader_state.state text NOT NULL gen=- def=-
+public.activity_reader_state_by_reader CREATE INDEX activity_reader_state_by_reader ON public.activity_reader_state USING btree (reader_id, activity_id)
+public.activity_reader_state_pkey CREATE UNIQUE INDEX activity_reader_state_pkey ON public.activity_reader_state USING btree (activity_id, reader_id)
 public.activity_refuse_restricted_mutation() secdef=false cfg=- acl=- 
 BEGIN
   IF TG_OP = 'DELETE' THEN
@@ -329,6 +343,14 @@ BEGIN
 END;
 
 public.activity_retention_evidence_pkey CREATE UNIQUE INDEX activity_retention_evidence_pkey ON public.activity_retention_evidence USING btree (id)
+public.activity_sales_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_sales_state.activity_sales_state_pkey PRIMARY KEY (thread_key, kind, channel_provider)
+public.activity_sales_state.channel_provider text NOT NULL gen=- def=''::text
+public.activity_sales_state.kind text NOT NULL gen=- def=-
+public.activity_sales_state.set_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_sales_state.set_by text NOT NULL gen=- def=-
+public.activity_sales_state.thread_key text NOT NULL gen=- def=-
+public.activity_sales_state_pkey CREATE UNIQUE INDEX activity_sales_state_pkey ON public.activity_sales_state USING btree (thread_key, kind, channel_provider)
 public.activity_ts_config(lang text) secdef=false cfg=- acl=- 
 public.agent_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.agent_run.agent_run_approval_fkey FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE SET NULL (approval_id)

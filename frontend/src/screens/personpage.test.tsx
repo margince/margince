@@ -214,6 +214,38 @@ describe("the contact record's tabs", () => {
   });
 });
 
+describe("the overview tab's added capabilities", () => {
+  it("lets a reader confirm or correct a field Margince read off a signature", async () => {
+    const withEnrichment: Person360 = {
+      ...view,
+      profile_fields: [
+        {
+          field: "title",
+          value: "Head of Procurement",
+          evidence_snippet: "Head of Procurement, Brandt Automotive GmbH",
+          source: "capture_enrich",
+          captured_by: "agent:enrich",
+          captured_at: "2026-08-01T08:00:00Z",
+        },
+      ],
+    };
+    mount("overview", withEnrichment);
+    expect(await screen.findByText("What Margince read")).toBeTruthy();
+    expect(screen.getByText("Head of Procurement")).toBeTruthy();
+    // The heading and the value alone don't prove the page reaches the
+    // control the ticket was about — the confirm/correct buttons themselves
+    // have to be there too, or this passes on a row that reads but does not
+    // write.
+    // Both buttons are gated on the caller's own grant, off a SEPARATE query
+    // (/me) than the field's own read — findByRole waits it out rather than
+    // catching the render before that query has settled.
+    expect(
+      await screen.findByRole("button", { name: "That is right" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Correct" })).toBeTruthy();
+  });
+});
+
 describe("a moment action that opens the composer", () => {
   // The steering field's own value, read off the element rather than through a
   // matcher: this file carries no jest-dom, and narrowing beats asserting.

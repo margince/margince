@@ -71,6 +71,18 @@ func TestTheOfflineFakeDescribesTheSameProductAsTheLiveAdapter(t *testing.T) {
 			fake.MatchRules, live.MatchRules)
 	}
 
+	// Which purchases are welded together. A pairing the fake declares and the
+	// live adapter does not leaves the lane rehearsing a two-category press
+	// that production sends as one — and the pairing is what stops a lone
+	// mobile request completing empty, so the fake would prove a guard
+	// production has lost. It also sets the price on the button: catalogOf
+	// prices a category together with its prerequisite, so a divergence here
+	// quotes one figure and spends another.
+	if !reflect.DeepEqual(fake.RequiresAnswerTo, live.RequiresAnswerTo) {
+		t.Errorf("prerequisites: fake %+v, live %+v — the pairing rule and the price derived from it are rehearsed against a provider that does not exist",
+			fake.RequiresAnswerTo, live.RequiresAnswerTo)
+	}
+
 	// The one field that may legitimately differ is the disclosure copy: the
 	// fake is not a vendor and links to nothing a customer must read. Every
 	// field that decides BEHAVIOUR is compared above.
