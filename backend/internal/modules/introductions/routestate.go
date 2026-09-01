@@ -76,13 +76,20 @@ func (s *Store) RouteStates(
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// A caller with no seat has no tab to render. Refusing here keeps this
-	// blind read out of an agent's reach, which is the trade that lets it be
-	// blind at all.
+	// A caller with no person behind it has no tab to render, and this read
+	// reports on asks the caller is not party to — so it answers only a
+	// principal that IS somebody.
+	//
+	// This does not exclude an agent: a passport-backed agent carries its
+	// granting human's UserID, so it passes here. What keeps agents off this
+	// read is the route itself — getPersonGraph is annotated human-only, and
+	// the agent gate refuses it before the handler runs. Wiring RouteStates to
+	// any agent-reachable caller would need that decision made again.
 	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() {
 		return nil, apperrors.ErrPermissionDenied
 	}
 
+	actor, _ := principal.Actor(ctx)
 	out := map[RouteKey]RouteState{}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The contact gate, on the read that discloses about them. Without it
@@ -92,7 +99,7 @@ func (s *Store) RouteStates(
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT introducer_user_id, through_person_id, status
+			SELECT introducer_user_id, through_person_id, status, requester_user_id
 			  FROM intro_request
 			 WHERE person_id = $1 AND archived_at IS NULL
 			   AND status = ANY($2)`, personID, statesWorthReporting())
@@ -107,7 +114,8 @@ func (s *Store) RouteStates(
 			// NULL and keys on the zero id, which is the collapse the guard
 			// index spells as COALESCE.
 			var through *ids.PersonID
-			if err := rows.Scan(&key.Introducer, &through, &status); err != nil {
+			var requester ids.UUID
+			if err := rows.Scan(&key.Introducer, &through, &status, &requester); err != nil {
 				return fmt.Errorf("introductions: reading a route's state: %w", err)
 			}
 			if through != nil {
@@ -117,6 +125,18 @@ func (s *Store) RouteStates(
 			// cannot act on either, and the live one is the truer sentence.
 			if Open(status) {
 				out[key] = RouteOpen
+				continue
+			}
+			// A refusal is reported only to the rep who was refused.
+			//
+			// The open ask above is reported to everybody because the guard
+			// index refuses everybody — withholding it would let the tab
+			// promise an ask the server rejects. A refusal blocks nothing: the
+			// route stays askable, so naming it to a third rep buys no
+			// collision-avoidance and gives away that this colleague turned
+			// somebody down over this contact. ForPerson calls that the
+			// introducer's answer to give, and this read does not overrule it.
+			if requester != actor.UserID {
 				continue
 			}
 			if _, taken := out[key]; !taken {

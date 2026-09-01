@@ -48,26 +48,6 @@ func TestAnotherRepsOpenAskTakesTheRoute(t *testing.T) {
 	}
 }
 
-// And the ask itself stays private. The state is the whole payload: that the
-// door is taken is the fact this rep needs, while who asked and what they
-// wrote is between those two.
-func TestTheStateIsAllAThirdRepLearns(t *testing.T) {
-	e := setupIntro(t)
-	if _, err := e.store.Create(e.asUser(e.requester), e.ask()); err != nil {
-		t.Fatalf("Create: %v", err)
-	}
-
-	asks, err := e.store.ForPerson(
-		e.asUser(e.stranger), e.contact, 20)
-	if err != nil {
-		t.Fatalf("ForPerson: %v", err)
-	}
-	if len(asks) != 0 {
-		t.Errorf("a third rep read %d of somebody else's asks; the route state "+
-			"is all they may learn", len(asks))
-	}
-}
-
 // A refusal is reported as a refusal and not as an open ask. The guard is one
 // OPEN ask, so a declined route is still askable — the tab says the colleague
 // said no before, and lets the rep decide.
@@ -149,9 +129,14 @@ func TestASettledAskReleasesItsRoute(t *testing.T) {
 	}
 }
 
-// The contact gate rides this read, because it discloses about them. Without
-// it a rep could probe which colleagues have been asked about a person they
-// may not open.
+// The contact gate rides this read, because it discloses about them.
+//
+// What this proves is the erasure half: a contact that does not exist, and one
+// archived under Art. 17, are both refused rather than answered with an empty
+// map. The row-scope half is not asserted here — asUser holds RowScopeAll, so
+// the scope clause renders empty and only `archived_at IS NULL` is doing work.
+// EnsureVisibleLive is the same probe the graph's own anchor read takes, and
+// the scope arm is held there.
 func TestRouteStatesRefusesAContactTheCallerCannotSee(t *testing.T) {
 	e := setupIntro(t)
 
@@ -194,5 +179,47 @@ func TestRouteStatesNeedsAPersonBehindIt(t *testing.T) {
 	_, err := e.store.RouteStates(ctx, ids.From[ids.PersonKind](e.contact))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a caller with no seat read route states (%v)", err)
+	}
+}
+
+// A refusal is the introducer's answer to the rep who asked, and nobody
+// else's.
+//
+// The open ask above is reported to everybody because the guard index refuses
+// everybody. A refusal blocks nothing — the route stays askable — so telling a
+// third rep buys no collision-avoidance and gives away that this colleague
+// turned somebody down over this contact. ForPerson calls that the
+// introducer's answer to give; this read does not overrule it.
+func TestARefusalIsToldOnlyToTheRepWhoWasRefused(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := e.store.Decide(
+		e.asUser(e.introducer), id, StatusDeclined, "Not close enough to help.", nil, 1,
+	); err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+
+	stranger, err := e.store.RouteStates(
+		e.asUser(e.stranger), ids.From[ids.PersonKind](e.contact))
+	if err != nil {
+		t.Fatalf("RouteStates: %v", err)
+	}
+	if state, told := stranger[directRoute(e.introducer)]; told {
+		t.Errorf("a third rep was told the route reads %q; a colleague's refusal "+
+			"is theirs to give, and it blocks no ask this rep could make", state)
+	}
+
+	// The admit case: the rep who WAS refused still reads it, or the check
+	// above would pass against a read that reported no refusal to anybody.
+	refused, err := e.store.RouteStates(
+		e.asUser(e.requester), ids.From[ids.PersonKind](e.contact))
+	if err != nil {
+		t.Fatalf("RouteStates: %v", err)
+	}
+	if got := refused[directRoute(e.introducer)]; got != RouteRefused {
+		t.Errorf("the rep who was refused reads %q; want refused", got)
 	}
 }

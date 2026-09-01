@@ -3,71 +3,35 @@
 
 package compose
 
-// The Network tab asks the introductions module which doors are taken.
+// One assembler for the person-graph read surface.
 //
-// Two modules, and neither may import the other, so the edge is made here.
-// Without it the tab offers every route as free and the rep discovers the
-// duplicate guard by being refused after writing the whole ask.
+// The Network tab ranks routes and has no idea which favours have already been
+// asked; the introductions module holds that and refuses a second open ask on
+// one route. Joining them is compose's job, and this is the whole of it — the
+// store already answers what network's AskedRoutes asks for, so there is no
+// adapter here, only the wiring.
 //
-// The translation is the whole of this file: introductions answers in its own
-// vocabulary, network compares against its own, and neither has to know the
-// other's spelling. Both are string constants and the pairing is checked, so
-// a rename on either side fails a test rather than silently unblocking every
-// route.
+// Exported so a test drives the SAME assembly the process serves. Built by
+// hand in a test, the introductions reader is the piece most easily left out —
+// and left out it stamps nothing, so every route reads `available` exactly as
+// it did before this seam existed and the test passes over the gap.
+// Held by: TestPersonGraphMarksARouteThatAlreadyHasAnOpenAsk
+// (backend/internal/compose/integration/persongraph_integration_test.go)
 
 import (
-	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/modules/introductions"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// askedRoutesSeam adapts the introductions reader to what network asks for.
-type askedRoutesSeam struct {
-	store *introductions.Store
-}
-
-// newAskedRoutesSeam binds the reader that knows which routes are spoken for.
-func newAskedRoutesSeam(store *introductions.Store) askedRoutesSeam {
-	return askedRoutesSeam{store: store}
-}
-
-// RouteStates translates both the key and the verdict across the seam.
-//
-// Held by: TestTheRouteSeamTranslatesEveryState (introroutesseam_test.go),
-// which fails if either side gains a state this mapping drops — a dropped
-// state reads as "no answer", which is exactly "the route is free".
-func (s askedRoutesSeam) RouteStates(
-	ctx context.Context, personID ids.PersonID,
-) (map[network.RouteKey]network.RouteState, error) {
-	taken, err := s.store.RouteStates(ctx, personID)
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[network.RouteKey]network.RouteState, len(taken))
-	for key, state := range taken {
-		translated, ok := networkRouteState(state)
-		if !ok {
-			// A state this seam has no word for must not read as "free". The
-			// introductions module reported it precisely because the route is
-			// spoken for, so the safe reading is the blocking one: the rep is
-			// told the door is taken and the server agrees when they try.
-			translated = network.RouteOpen
-		}
-		out[network.RouteKey{Introducer: key.Introducer, Through: key.Through}] = translated
-	}
-	return out, nil
-}
-
-// networkRouteState is the one place the two vocabularies are paired.
-func networkRouteState(state introductions.RouteState) (network.RouteState, bool) {
-	switch state {
-	case introductions.RouteOpen:
-		return network.RouteOpen, true
-	case introductions.RouteRefused:
-		return network.RouteRefused, true
-	default:
-		return "", false
-	}
+// NewPersonGraphReads assembles the network read surface the way the server
+// does, including the introductions reader that stamps route availability.
+func NewPersonGraphReads(pool *pgxpool.Pool, db *database.DB) network.Reads {
+	return network.NewReads(pool, people.NewStore(db)).
+		WithAskedRoutes(introductions.NewStore(db, time.Now))
 }

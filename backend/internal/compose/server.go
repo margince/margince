@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -162,11 +161,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
 		Handlers:       briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
 		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool)),
-		// The tab greys out a route the duplicate guard would refuse, so the
-		// rep learns the door is taken before writing the ask rather than from
-		// the 409 after it.
-		Reads: network.NewReads(pool, people.NewStore(InstallationDB(pool))).
-			WithAskedRoutes(newAskedRoutesSeam(introStore)),
+		// One assembler, shared with the test that drives this handler: the
+		// tab greys out a route the duplicate guard would refuse, so the rep
+		// learns the door is taken before writing the ask rather than from the
+		// 409 after it.
+		Reads:             NewPersonGraphReads(pool, InstallationDB(pool)),
 		orgRollupHandlers: orgRollupHandlers{pool: pool, now: time.Now},
 		strengthHandlers:  strengthHandlers{people: people.NewStore(InstallationDB(pool)), now: time.Now},
 		// The schema-change pool is boot-optional; nil

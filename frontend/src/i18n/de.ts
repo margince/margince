@@ -6494,9 +6494,6 @@ export const de = {
     "Einige Kolleginnen und Kollegen werden nicht angezeigt.",
   "person.graph.withheldAccount":
     "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
-  "person.graph.routeAlreadyAsked": "Bereits angefragt",
-  "person.graph.routeDeclined": "Zuvor abgelehnt",
-  "person.graph.routeUnavailable": "Nicht verfügbar",
   "person.intro.askFirstName": "{name} um eine Vorstellung bitten",
   "person.intro.leadEyebrow": "Empfohlener Weg",
   "person.intro.leadRouteBadge": "Starker Weg",

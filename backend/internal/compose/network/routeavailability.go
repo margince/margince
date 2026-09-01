@@ -28,44 +28,24 @@ import (
 	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// RouteState is what the introductions module reports about one route. The
-// strings are its own; this package compares, never parses.
-type RouteState string
-
-const (
-	// RouteOpen is an ask on this exact route that has not been settled.
-	RouteOpen RouteState = "open"
-	// RouteRefused is this colleague having said no to this contact before.
-	RouteRefused RouteState = "refused"
-)
-
-// RouteKey identifies a route the way the duplicate guard does: the colleague
-// AND the contact the ask would pass through. Asking Lena directly and asking
-// Lena through Marco are two favours, and the index refuses them separately.
-//
-// Through is a VALUE and zero means direct, mirroring the index's own
-// COALESCE onto the zero uuid. A pointer here would compile and be wrong: a
-// struct with a pointer field is compared by pointer identity, so two keys
-// naming the same intermediary would miss each other and every indirect route
-// would read as free.
-// Held by: TestAnOpenIndirectAskLeavesTheDirectRouteFree
-// (routeavailability_test.go)
-type RouteKey struct {
-	Introducer ids.UserID
-	Through    ids.PersonID
-}
-
 // AskedRoutes reports which routes to a contact are already spoken for.
 //
-// Injected as an interface because introductions is a sibling module: the edge
-// is compose's to make. The map is keyed by route and states only that — no
-// requester, no reason, no date — so a rep learns a door is taken without
-// learning who took it.
+// An interface rather than the store itself, so the stamping can be tested
+// against a reader that answers whatever the case needs. It speaks the
+// introductions module's own types: a second vocabulary here would be two
+// spellings of one fact, and the translation between them is exactly where a
+// new state gets dropped and reads as "route is free".
+//
+// The map is keyed by route and states only that — no requester, no reason, no
+// date — so a rep learns a door is taken without learning who took it.
 type AskedRoutes interface {
-	RouteStates(ctx context.Context, personID ids.PersonID) (map[RouteKey]RouteState, error)
+	RouteStates(
+		ctx context.Context, personID ids.PersonID,
+	) (map[introductions.RouteKey]introductions.RouteState, error)
 }
 
 // WithAskedRoutes binds the reader that knows which routes are taken.
@@ -81,17 +61,20 @@ func (h Reads) WithAskedRoutes(asked AskedRoutes) Reads {
 // out the same colleague's indirect route — the index would have accepted that
 // one, and greying it out would refuse an ask the server does not.
 func stampAvailability(
-	routes []crmcontracts.PersonGraphRouteCandidate, asked map[RouteKey]RouteState,
+	routes []crmcontracts.PersonGraphRouteCandidate,
+	asked map[introductions.RouteKey]introductions.RouteState,
 ) {
 	for i := range routes {
-		key := RouteKey{Introducer: ids.From[ids.UserKind](ids.UUID(routes[i].ViaUserId))}
+		key := introductions.RouteKey{
+			Introducer: ids.From[ids.UserKind](ids.UUID(routes[i].ViaUserId)),
+		}
 		if through := routes[i].ThroughPersonId; through != nil {
 			key.Through = ids.From[ids.PersonKind](ids.UUID(*through))
 		}
 		switch asked[key] {
-		case RouteOpen:
+		case introductions.RouteOpen:
 			routes[i].Availability = crmcontracts.PersonGraphRouteAvailabilityAlreadyRequested
-		case RouteRefused:
+		case introductions.RouteRefused:
 			routes[i].Availability = crmcontracts.PersonGraphRouteAvailabilityDeclined
 		}
 	}

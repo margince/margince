@@ -88,11 +88,20 @@ func (h Reads) GetPersonGraph(w http.ResponseWriter, r *http.Request, id crmcont
 
 // markAskedRoutes greys out the routes the server would refuse.
 //
-// A refusal is survivable and leaves every route offerable: a caller with no
-// introduction grant has no asks of their own to collide with, and the ask
-// they cannot make is refused at the point they make it. Any other fault fails
-// the read, for the reason a missing group does — a graph that quietly claims
-// every door is open is worse than an error, because the rep acts on it.
+// Two failures leave the graph standing with its routes unstamped, and both
+// describe a caller who has already been served a valid picture:
+//
+//   - A denial. The caller holds no introduction grant, so they have no ask to
+//     collide with, and the one they cannot make is refused where they make it.
+//   - A not-found. This read gates the contact a SECOND time, in its own
+//     transaction, and the graph's own gate already admitted them — so the only
+//     way to reach it is a contact archived between the two. The routes are
+//     then merely unstamped, where failing would turn a served graph into a 404
+//     over a decoration.
+//
+// Any other fault fails the read, for the reason a missing group does: a graph
+// that quietly claims every door is open is worse than an error, because the
+// rep acts on it.
 func (h Reads) markAskedRoutes(
 	ctx context.Context, personID ids.PersonID, out *crmcontracts.PersonGraph,
 ) error {
@@ -100,16 +109,13 @@ func (h Reads) markAskedRoutes(
 		return nil
 	}
 	asked, err := h.askedRoutes.RouteStates(ctx, personID)
-	if isDenied(err) {
+	if isDenied(err) || errors.Is(err, apperrors.ErrNotFound) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
 	stampAvailability(*out.Routes, asked)
-	// The recommendation is the head of the list and shares its identity, so
-	// it carries the stamp the list gave it rather than a second lookup.
-	out.Route = chooseRoute(*out.Routes)
 	return nil
 }
 

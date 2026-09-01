@@ -6432,9 +6432,6 @@ export const vi = {
   "person.graph.withheldDirect": "Một số đồng nghiệp không được hiển thị.",
   "person.graph.withheldAccount":
     "Một số người liên hệ tại công ty này không được hiển thị.",
-  "person.graph.routeAlreadyAsked": "Đã nhờ rồi",
-  "person.graph.routeDeclined": "Đã từ chối trước đó",
-  "person.graph.routeUnavailable": "Không khả dụng",
   "person.intro.askFirstName": "Nhờ {name} giới thiệu",
   "person.intro.leadEyebrow": "Hướng được đề xuất",
   "person.intro.leadRouteBadge": "Hướng mạnh",

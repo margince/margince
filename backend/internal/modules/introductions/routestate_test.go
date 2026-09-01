@@ -7,6 +7,10 @@ import "testing"
 
 // The tab is told about every status that holds a route, and about refusals.
 //
+// The census comes from everyStatus(), which is itself held against the type's
+// own constants — so a status added to the const block and forgotten here
+// fails there rather than silently narrowing this check.
+//
 // The way this fails without a check is the silent one: a status that holds a
 // route but is missing from the list is simply not selected, the tab shows the
 // route as free, and the rep is refused by the index after writing the ask —
