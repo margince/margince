@@ -62,7 +62,7 @@ func TestReadinessReportCallsEverySiteAbsentWhenNothingIsCertified(t *testing.T)
 		{Task: ai.TaskAgentLoop, Variant: "loop", Kind: ai.SiteKindAgentLoop},
 	}
 
-	out := renderReadiness(shippedCensus{sites: sites}, nil, nil)
+	out := renderReadiness(shippedCensus{sites: sites}, nil, nil, nil)
 
 	for _, site := range []string{"rate_extract/fx", "agent_loop/loop"} {
 		row := rowFor(t, out, site)
@@ -103,7 +103,7 @@ func TestReadinessReportRendersStaleAndAbsentDistinctly(t *testing.T) {
 		},
 	}
 
-	out := renderReadiness(shippedCensus{sites: sites}, stamps, records)
+	out := renderReadiness(shippedCensus{sites: sites}, stamps, nil, records)
 
 	fresh := rowFor(t, out, "rate_extract/fx")
 	if !strings.Contains(fresh, "current") {
@@ -148,7 +148,7 @@ func TestReadinessReportCarriesTheBandTheCountsAndTheBinding(t *testing.T) {
 		}},
 	}}
 
-	out := renderReadiness(shippedCensus{sites: sites}, map[string]string{"rate_extract": currentStamp}, records)
+	out := renderReadiness(shippedCensus{sites: sites}, map[string]string{"rate_extract": currentStamp}, nil, records)
 
 	row := rowFor(t, out, "rate_extract/fx")
 	for _, want := range []string{
@@ -180,7 +180,7 @@ func TestReadinessReportShowsTheScopeEachSiteCanClaim(t *testing.T) {
 		{Task: ai.TaskAgentLoop, Variant: "loop", Kind: ai.SiteKindAgentLoop},
 	}
 
-	out := renderReadiness(shippedCensus{sites: sites}, nil, nil)
+	out := renderReadiness(shippedCensus{sites: sites}, nil, nil, nil)
 
 	if got := rowFor(t, out, "rate_extract/fx"); !strings.Contains(got, aitasks.ScopeFullInvocation) {
 		t.Errorf("a one-shot site does not report full_invocation scope: %q", got)
@@ -200,7 +200,7 @@ func TestReadinessReportShowsTheScopeACaseNarrowedItselfTo(t *testing.T) {
 		scopes: map[string]string{"capture_classify/classify": aitasks.ScopeSingleCall},
 	}
 
-	out := renderReadiness(census, nil, nil)
+	out := renderReadiness(census, nil, nil, nil)
 
 	got := rowFor(t, out, "capture_classify/classify")
 	if !strings.Contains(got, aitasks.ScopeSingleCall) {
@@ -240,7 +240,7 @@ func TestReadinessReportNamesRecordsNoShippedSiteClaims(t *testing.T) {
 		Verdict: aicert.VerdictCertified, Runs: 3,
 	}}
 
-	out := renderReadiness(shippedCensus{sites: sites}, nil, records)
+	out := renderReadiness(shippedCensus{sites: sites}, nil, nil, records)
 
 	if !strings.Contains(out, "retired_task") {
 		t.Errorf("a record for a task this build no longer registers vanished from the report:\n%s", out)
@@ -266,7 +266,7 @@ func TestReadinessReportGivesEachSiteItsOwnNumbers(t *testing.T) {
 		},
 	}}
 
-	out := renderReadiness(shippedCensus{sites: sites}, map[string]string{"cold_start": currentStamp}, records)
+	out := renderReadiness(shippedCensus{sites: sites}, map[string]string{"cold_start": currentStamp}, nil, records)
 
 	acts := rowFor(t, out, "cold_start/acts")
 	if !strings.Contains(acts, aicert.VerdictCertified) || !strings.Contains(acts, "1.00") {
@@ -292,7 +292,7 @@ func TestReadinessReportNamesARecordNoSiteRowCanCarry(t *testing.T) {
 		Scenarios: []aicert.ScenarioRecord{scenarioRecordFor("a_site_that_moved")},
 	}}
 
-	out := renderReadiness(shippedCensus{sites: sites}, map[string]string{"rate_extract": currentStamp}, records)
+	out := renderReadiness(shippedCensus{sites: sites}, map[string]string{"rate_extract": currentStamp}, nil, records)
 
 	if row := rowFor(t, out, "rate_extract/fx"); !strings.Contains(row, "absent") {
 		t.Errorf("a site this record never measured is not reported as unmeasured: %q", row)
@@ -328,7 +328,7 @@ func TestReadinessReportNamesTheTasksCertifiedWithoutTheirCompanyContext(t *test
 	}
 	stamps := map[string]string{"offer_draft": currentStamp, "rate_extract": currentStamp}
 
-	out := renderReadiness(shippedCensus{sites: sites}, stamps, records)
+	out := renderReadiness(shippedCensus{sites: sites}, stamps, nil, records)
 
 	if !strings.Contains(out, "offer_draft (offer, positioning, proof)") {
 		t.Errorf("the report never says which reference data offer_draft was certified without:\n%s", out)
@@ -337,5 +337,88 @@ func TestReadinessReportNamesTheTasksCertifiedWithoutTheirCompanyContext(t *test
 	// one that did.
 	if strings.Contains(out, "rate_extract (") {
 		t.Errorf("a task whose contract prepends no company context is named as having gone without one:\n%s", out)
+	}
+}
+
+// A record whose measured scenarios are all still current, against a corpus that
+// has since GROWN, is partial and not stale: it is wrong about nothing, and
+// clearing it costs the new scenarios rather than the whole task. Before
+// ScenarioRecord.Stamp there was no way to say that — the task stamp moved and
+// every measurement beside the new case was discarded with it.
+func TestAGrownCorpusLeavesTheMeasuredScenariosCurrent(t *testing.T) {
+	sites := []aitasks.Site{{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}}
+	rec := aicert.Record{
+		Task: "rate_extract", Provider: "gemini", ServedModel: "gemini-3.5-flash",
+		EnvClass: "eu_hosted", PromptVersion: "p-whatever-the-task-stamp-was",
+		Runs: 3, Passed: 3, Verdict: "certified",
+		Scenarios: []aicert.ScenarioRecord{
+			{Scenario: "fx_basic", Site: "fx", Stamp: "s-fx-basic", Verdict: "certified", Runs: 3, Passed: 3, ReportedAccepted: 3},
+		},
+	}
+	perScenario := map[string]map[string]string{"rate_extract/fx": {
+		"fx_basic": "s-fx-basic", // unchanged: still measured
+		"fx_added": "s-fx-added", // new: never measured
+	}}
+	out := renderReadiness(shippedCensus{sites: sites},
+		map[string]string{"rate_extract": "p-something-else-entirely"}, perScenario, []aicert.Record{rec})
+
+	if !strings.Contains(out, "partial") {
+		t.Errorf("a grown corpus should read partial, got:\n%s", out)
+	}
+	if strings.Contains(out, "stale") {
+		t.Errorf("nothing the record measured changed, so it must not read stale:\n%s", out)
+	}
+	if !strings.Contains(out, "1/2") {
+		t.Errorf("the row should say 1 of 2 scenarios are measured:\n%s", out)
+	}
+}
+
+// The other direction: a scenario the record DID measure has changed, so the
+// record describes a case this build no longer sends. That is stale however many
+// of its siblings are still current — the claim is false, not merely partial.
+func TestAChangedMeasuredScenarioIsStale(t *testing.T) {
+	sites := []aitasks.Site{{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}}
+	rec := aicert.Record{
+		Task: "rate_extract", Provider: "gemini", ServedModel: "gemini-3.5-flash",
+		EnvClass: "eu_hosted", PromptVersion: "p-old", Runs: 3, Passed: 3, Verdict: "certified",
+		Scenarios: []aicert.ScenarioRecord{
+			{Scenario: "fx_basic", Site: "fx", Stamp: "s-fx-basic-OLD", Verdict: "certified", Runs: 3, Passed: 3, ReportedAccepted: 3},
+		},
+	}
+	perScenario := map[string]map[string]string{"rate_extract/fx": {"fx_basic": "s-fx-basic-NEW"}}
+	out := renderReadiness(shippedCensus{sites: sites},
+		map[string]string{"rate_extract": "p-new"}, perScenario, []aicert.Record{rec})
+	if !strings.Contains(out, "stale") {
+		t.Errorf("a measured scenario that changed must read stale, got:\n%s", out)
+	}
+}
+
+// A row is one SITE. Its scenario coverage must count that site's scenarios and
+// nobody else's: a task can ship several sites (cold_start ships four), and
+// counting the task's whole corpus against one site reports a fully current site
+// as partial and prints a denominator that is not its own.
+func TestSiteCoverageIgnoresASiblingSitesScenarios(t *testing.T) {
+	sites := []aitasks.Site{{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}}
+	rec := aicert.Record{
+		Task: "rate_extract", Provider: "gemini", ServedModel: "gemini-3.5-flash",
+		EnvClass: "eu_hosted", PromptVersion: "p-task", Runs: 3, Passed: 3, Verdict: "certified",
+		Scenarios: []aicert.ScenarioRecord{
+			{Scenario: "fx_basic", Site: "fx", Stamp: "s-fx", Verdict: "certified", Runs: 3, Passed: 3, ReportedAccepted: 3},
+		},
+	}
+	// The fx site's own corpus is complete. `pricing` is a DIFFERENT site of the
+	// same task and says nothing about this row.
+	perSite := map[string]map[string]string{
+		"rate_extract/fx":      {"fx_basic": "s-fx"},
+		"rate_extract/pricing": {"pricing_basic": "s-pricing"},
+	}
+	out := renderReadiness(shippedCensus{sites: sites},
+		map[string]string{"rate_extract": "p-task"}, perSite, []aicert.Record{rec})
+
+	if strings.Contains(out, "partial") {
+		t.Errorf("the fx site measured every fx scenario, so it is current — a sibling site's corpus must not make it partial:\n%s", out)
+	}
+	if !strings.Contains(out, "1/1") {
+		t.Errorf("the fx row should count only its own single scenario:\n%s", out)
 	}
 }

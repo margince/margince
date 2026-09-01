@@ -39,6 +39,17 @@ The list comes from the census (`compose.NewTaskCensus()`, built from `tasks_gen
 it cannot drift from the contract. **SCOPE is the column to read first** — see
 [What a probe does not cover](#what-a-probe-does-not-cover).
 
+**LADDER is the ladder, not every rung that can answer.** It is
+`ai.TaskLadder(task)` — where a call starts and where it escalates on a provider
+or schema failure. Under budget pressure the router also *degrades*, and
+`degrade_to` reaches rungs the ladder never names: `draft_reply`'s ladder is
+`[cheap_cloud, premium]`, `cheap_cloud` degrades to `local_small`, so a model
+bound at `local_small` can end up serving `draft_reply`. `ai.ServableTiers(task)`
+is the honest set — the ladder plus the transitive `degrade_to` closure, ladder
+rungs first — and `ai.LeadingTier(task)` is just the first rung, what serves when
+nothing has gone wrong. If you are asking "which of my bound models could answer
+this task", ask the closure; the ladder alone under-answers it.
+
 ## 2. Get a starting fixture
 
 Every site takes a differently shaped fixture (`page_text` here, `pages[].text` there,
@@ -94,8 +105,20 @@ jq -n --rawfile t .tmp/aitask/fetch-openrouter.ai_api_v1_models.txt \
 make ai-probe ARGS='run --site rate_extract/pricing \
   --fixture ../.tmp/aitask/fx.json \
   --expect  ../.tmp/aitask/expect.json \
-  --ai-routing ../config/ai-routing.openrouter.example.yaml'
+  --model anthropic:claude-sonnet-4-6'
 ```
+
+**The probe is told its model outright; it reads no routing file.** Nothing in
+this tree does any more — the installation's binding is a stored setting, seeded
+for a fresh install from `seeds.ai_routing` and changed under Settings → AI, and
+this lane opens no database to read it from. Exactly one of `--model
+provider:model` (one pinned model behind the full routed pipeline) and
+`--ai-fake` (the offline fake) is required.
+
+`--model` carries a provider and a model and nowhere to put a **host**, so a
+broker-served `openai_compatible:…` model cannot be probed: that binding fails
+closed without a base URL, by design. Pin a native vendor here, and use
+`make e2e-ai … BASE_URL=…` when the question is specifically about the broker.
 
 ### A JSON catalog needs reducing first, or you are probing the wrong shape
 
@@ -147,13 +170,13 @@ That is the site's own message. The probe never invents an expectation to get pa
 
 ```text
 site      rate_extract/pricing   kind=one_shot   scope=full_invocation
-binding   routing config/ai-routing.openrouter.example.yaml   ladder [premium,cheap_cloud]
+binding   model override anthropic:claude-sonnet-4-6   ladder [premium,cheap_cloud]
 caveat    company context not declared for this site
 fixture   589194 B
 
 call 1
   request   system 1182 B  payload 529955 B  passages 1  ~133k tok  max_tokens 8192  schema 588 B
-  response  in 175453 tok  out 8192 tok (HIT CAP)  20287 B  served=mistralai/mistral-large-2512  tier=premium  3m2.873s
+  response  in 175453 tok  out 8192 tok (HIT CAP)  20287 B  served=claude-sonnet-4-6  tier=premium  3m2.873s
 
 evaluate  invalid — parse extraction: unexpected end of JSON input
 ```
@@ -161,7 +184,7 @@ evaluate  invalid — parse extraction: unexpected end of JSON input
 | line | what it tells you |
 |---|---|
 | `scope=` | how much of production this exercised — read it every time |
-| `binding` | which routing answered, and the tier ladder behind it |
+| `binding` | which model was pinned (`--model`, or the fake), and the tier ladder behind it — the pin is bound to every rung of that ladder, so the probe never fails as "no bound tier can serve" |
 | `caveat` | company context this DB-less lane could not assemble |
 | `request` | the system prompt and payload sized separately, the **passage count**, and the output ceiling |
 | `response` | billed usage, the served model, the tier that answered, latency |
@@ -248,8 +271,10 @@ so it MUST differ per call. Two runs of an unchanged prompt therefore always dif
 in two places. The dumps stay faithful to what was actually sent; the normalisation
 happens in the diff, where it belongs.
 
-Remember the corpus prompts are byte-pinned: changing a shipped prompt invalidates that
-site's certification record, which `make e2e-ai-report` will then show as `stale`.
+Remember the corpus prompts are byte-pinned: changing a shipped prompt moves the stamp
+of every scenario built from it, so `make e2e-ai-report` shows that site `stale` until it
+is re-certified. Adding a *scenario* is the cheaper case — the record stays right about
+what it measured and reads `partial`, and only the new case has to be paid for.
 
 ## Promoting a finding
 
@@ -269,7 +294,7 @@ column is what each flag actually affects.
 | `--site <task>/<variant>` | run, scaffold | which site to probe (needed with `--fixture`) |
 | `--scenario <file.yaml>` | run | fixture + expectation in the corpus format |
 | `--fixture <file.json>` / `--expect <file.json>` | run | the two halves separately |
-| `--ai-routing <path>` / `--model provider:model` / `--ai-fake` | run | exactly one; `--ai-fake` is free |
+| `--model provider:model` / `--ai-fake` | run | exactly one; `--ai-fake` is free. No routing file: a native vendor only, since `--model` carries no host |
 | `--json <path\|->` | run | the whole result, machine-readable |
 | `--dump-request <dir>` | run | each stripped request |
 | `--out <path\|->` | scaffold, fetch | where this verb's artifact goes |

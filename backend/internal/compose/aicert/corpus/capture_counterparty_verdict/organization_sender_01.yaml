@@ -25,10 +25,13 @@ expect:
     else. There is no employee anywhere in it — no sender named in the
     salutation, no signature block, no "on behalf of" — and the local part is the
     company's own name rather than a function.
-    "organization_sender" scores high. "role_mailbox" is a near miss scoring
-    nearly as high: the effect is identical (the mail stays visible, no person is
-    created) and which of the two an address is can be genuinely unclear from one
-    message. "person" is the failure this scenario exists to catch and scores
+    "organization_sender" scores high, and the prompt's tiebreak is what makes it
+    decidable: between these two kinds the LOCAL PART decides, and `helvetia@` is
+    the company's own name rather than a function like support@ or sales@.
+    "role_mailbox" scores in the middle. Its EFFECT is identical — the mail stays
+    visible and no person is created — so a reader loses nothing, but it is the
+    wrong side of a rule the prompt now states outright, and this scenario is the
+    only place that rule is measured in this direction. "person" is the failure this scenario exists to catch and scores
     zero above the floor — it is the precise defect the taxonomy was rewritten
     for, a contact called "Helvetia Toolworks Ltd" appearing in the CRM as though
     a human by that name had written. The prompt states this outright: a company

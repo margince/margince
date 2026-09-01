@@ -127,6 +127,10 @@ open, prefer "person" and a lower confidence — a wrong "spam" hides a real sup
 everyone, where a wrong "person" only leaves a record somebody can delete.
 A company NAME in the display name with no human named anywhere is "organization_sender" or
 "role_mailbox", never "person" — do not invent a contact called after a company or a product.
+Between those two the LOCAL PART decides: an address named for a function — support@, info@,
+sales@, office@, service@, kontakt@ or a team — is "role_mailbox", and anything else signed only
+with the company's own name is "organization_sender". This tiebreak decides only between those
+two: automated service mail is "transactional" whatever its address looks like.
 If this business replied only to decline — "not interested", "please remove me", "unsubscribe" —
 that reply is not a relationship. Judge the ORIGINAL sender: unsolicited commercial mail stays
 "spam" or "newsletter" no matter who answered it.

@@ -1,46 +1,56 @@
-name: a_holding_page_that_names_no_business_is_unclear_not_parked
+name: a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder
 task: site_triage
 site: triage
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
-# `unclear` is the abstention of this site and the only kind with no scenario:
-# every other case here is decidable from the seed page, so nothing measured
-# whether the model will decline when the page genuinely does not say.
+# `unclear` is the abstention of this site and the hardest kind to write a
+# fixture for, because the neighbouring kinds are broad in both directions. Two
+# earlier attempts failed for opposite reasons and are worth recording, because
+# the next author will reach for both:
+#
+#   - An "under construction" page is `parked`. The prompt says so outright, so a
+#     fixture built from one fails the model for obeying its own instruction.
+#   - A branded page naming a service is `company`, even for a sole trader —
+#     false_refusal_01 makes that the release-blocking rule of this site.
+#
+# What is left is a page that is genuinely LIVE, so no placeholder kind fits, and
+# that identifies nobody at all.
 fixture:
-  url: https://halvorsen-group.example
+  url: https://portal.hexbridge.example
   text: |
-    HALVORSEN GROUP
+    Sign in
 
-    Website under construction.
+    Email address
+    Password
 
-    For enquiries: post@halvorsen-group.example
+    Forgot your password?
+    Trouble signing in? Contact your administrator.
+
+    © 2026
 expect:
   outcome: accepted
   answer: unclear
   rubric: >
-    A holding page with a name, a contact address and nothing else. It states no
-    services, no products, no legal entity, no people, and no indication whether
-    Halvorsen Group is a company, one person trading under a name, or a mailbox
-    vendor. The page simply does not answer the question, and saying so is the
-    right answer.
-    "unclear" scores high. This is the one case in this site's corpus where
-    abstention is correct, so a model that never abstains cannot be distinguished
-    from a good one anywhere else.
+    A working sign-in form and nothing else. It is a LIVE page — a real
+    application behind a real login, with a password-reset route and an
+    administrator to contact — so none of the placeholder readings fit: it is not
+    a registrar placeholder, a coming-soon notice, a bare error page or a
+    domain-for-sale listing.
+    And it identifies nobody. No company name, no person, no service, no product,
+    no legal notice, not even a tagline; the domain is the only string that could
+    hint at anything, and a hostname is not evidence of what a business is. The
+    question this site exists to answer is therefore unanswered by the seed page,
+    and saying so is the right answer: `unclear` falls through to the full read
+    instead of guessing, which is precisely what should happen here.
+    "unclear" scores high, and its CONFIDENCE should be high too — the page is
+    unambiguously uninformative, which is different from the model being unsure.
     "company" is the failure this scenario exists to catch and scores low: a
-    business name in capitals plus a contact address is the thinnest possible
-    basis for creating an organization, and guessing here is how the CRM acquires
-    records nobody can trace to evidence. It is not the safe direction merely
-    because a company is the common case.
-    "parked" scores low for a different reason and the distinction is the point:
-    a parked domain is a REGISTRAR's placeholder offering the domain for sale,
-    and nothing here does that — the name is the occupant's own and the address
-    is on their own domain. Confusing the two would let a real business under
-    construction be filed as a domain for sale.
-    "personal" and "provider" score low: nothing on the page names a person or
-    offers addresses to the public.
-    Confidence matters as much as the label. "unclear" asserted at high
-    confidence is the honest answer here; the page is unambiguously
-    uninformative, which is different from the model being unsure.
+    login page is exactly where a model that infers a business from a domain name
+    will do so, and it would create an organization record grounded in nothing.
+    "parked" scores low: reading a functioning application as an empty
+    placeholder would abandon a crawl that has a real site behind it.
+    "personal" and "provider" score low; nothing here names a human or sells
+    addresses to the public.
   bands:
     certified_min: 70
     degraded_min: 50

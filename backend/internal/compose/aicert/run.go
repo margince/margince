@@ -25,7 +25,7 @@ import (
 // worst-case verdict. The per-run degrade gates sit here rather than inside
 // certifyTask because they void the WHOLE task: a demoted answer or a demoted
 // grader anywhere in the set means no record, not a lower band.
-func runScenario(ctx context.Context, task ai.Task, sc Scenario, census *aitasks.Registry, repeats int,
+func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, census *aitasks.Registry, repeats int,
 	candidateRouter *ai.Router, candidateRec *traceRecorder, judgeRouter *ai.Router, judgeRec *traceRecorder,
 	log *slog.Logger, acc *taskAccumulation, trace *payloadTrace,
 ) (string, error) {
@@ -51,7 +51,7 @@ func runScenario(ctx context.Context, task ai.Task, sc Scenario, census *aitasks
 		scenarioResults = append(scenarioResults, outcome.RunResult)
 	}
 	scenarioVerdict, _ := Verdict(scenarioResults, sc.Expect.Bands)
-	acc.scenarios = append(acc.scenarios, scenarioRow(sc, scenarioVerdict, scenarioResults))
+	acc.scenarios = append(acc.scenarios, scenarioRow(sc, stamp, scenarioVerdict, scenarioResults))
 	return scenarioVerdict, nil
 }
 
@@ -59,11 +59,12 @@ func runScenario(ctx context.Context, task ai.Task, sc Scenario, census *aitasks
 // beside the task's pooled numbers. Passed and the reported outcomes are
 // counted separately because they answer different questions: whether the run
 // did what the scenario asked, and what came back when it did not.
-func scenarioRow(sc Scenario, verdict string, results []RunResult) ScenarioRecord {
+func scenarioRow(sc Scenario, stamp, verdict string, results []RunResult) ScenarioRecord {
 	tally := tallyOutcomes(results)
 	row := ScenarioRecord{
 		Scenario:            sc.Name,
 		Site:                sc.Site,
+		Stamp:               stamp,
 		Verdict:             verdict,
 		Runs:                len(results),
 		ReportedAccepted:    tally.accepted,

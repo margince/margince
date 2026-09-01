@@ -51,7 +51,7 @@ func TestRepeatsOrDefault(t *testing.T) {
 func TestLadderForTaskBindsEveryTierTheTaskCanFallThrough(t *testing.T) {
 	binding := ai.ProviderConfig{Provider: "anthropic", Model: "claude-cert-test"}
 
-	bound, err := ladderForTask(binding, ai.ProfileCloudFrontier, ai.TaskColdStart)
+	bound, err := ladderForTask("candidate", binding, ai.ProfileCloudFrontier, ai.TaskColdStart)
 	if err != nil {
 		t.Fatalf("valid binding rejected: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestLadderForTaskBindsEveryTierTheTaskCanFallThrough(t *testing.T) {
 }
 
 func TestLadderForTaskRefusesATaskWithNoLadder(t *testing.T) {
-	_, err := ladderForTask(ai.ProviderConfig{Provider: "anthropic", Model: "x"}, ai.ProfileCloudFrontier, ai.Task("not_a_real_task"))
+	_, err := ladderForTask("candidate", ai.ProviderConfig{Provider: "anthropic", Model: "x"}, ai.ProfileCloudFrontier, ai.Task("not_a_real_task"))
 	if err == nil || !strings.Contains(err.Error(), "no routing ladder") {
 		t.Fatalf("want a no-routing-ladder complaint, got %v", err)
 	}
@@ -91,7 +91,7 @@ func TestLadderForTaskCarriesTheEndpointToEveryRung(t *testing.T) {
 		Model:    "z-ai/glm-5.2",
 		BaseURL:  "https://openrouter.ai/api",
 	}
-	bound, err := ladderForTask(binding, ai.ProfileCloudFrontier, ai.TaskColdStart)
+	bound, err := ladderForTask("candidate", binding, ai.ProfileCloudFrontier, ai.TaskColdStart)
 	if err != nil {
 		t.Fatalf("broker binding rejected: %v", err)
 	}
@@ -109,14 +109,21 @@ func TestLadderForTaskCarriesTheEndpointToEveryRung(t *testing.T) {
 // deployment nobody has.
 func TestLadderForTaskRefusesACloudModelUnderASovereignProfile(t *testing.T) {
 	_, err := ladderForTask(
+		"candidate",
 		ai.ProviderConfig{Provider: "anthropic", Model: "claude-cert-test"},
 		ai.ProfileSovereign, ai.TaskColdStart)
 	if err == nil {
 		t.Fatal("a cloud binding under profile sovereign was accepted; the run would have built the client and called api.anthropic.com")
 	}
-	// The refusal has to name both halves or it is unactionable: WHICH knob
-	// caused it, and WHAT rule it broke.
-	if !strings.Contains(err.Error(), "MARGINCE_AICERT_MODEL=anthropic:claude-cert-test") {
+	// The refusal has to name three things or it is unactionable: WHICH SIDE is
+	// misbound, which binding it is, and WHAT rule it broke. The side matters
+	// because the candidate and the judge are set by different variables and are
+	// validated through this same function — a refusal that named only the
+	// binding sent a reader to fix whichever one they thought of first.
+	if !strings.Contains(err.Error(), "candidate") {
+		t.Errorf("the refusal must say which side is misbound, got %q", err)
+	}
+	if !strings.Contains(err.Error(), "anthropic:claude-cert-test") {
 		t.Errorf("the refusal must name the binding that caused it, got %q", err)
 	}
 	if !strings.Contains(err.Error(), "profile sovereign forbids cloud provider") {
@@ -128,6 +135,7 @@ func TestLadderForTaskRefusesACloudModelUnderASovereignProfile(t *testing.T) {
 // wrong reason: validating must not refuse a binding the profile allows.
 func TestLadderForTaskAcceptsALocalModelUnderASovereignProfile(t *testing.T) {
 	bound, err := ladderForTask(
+		"candidate",
 		ai.ProviderConfig{Provider: "ollama", Model: "qwen3:14b"},
 		ai.ProfileSovereign, ai.TaskColdStart)
 	if err != nil {

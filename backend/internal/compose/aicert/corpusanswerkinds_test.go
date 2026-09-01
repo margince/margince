@@ -58,8 +58,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
 
-// recognisedOwners is every closed ANSWER vocabulary the corpus reaches, named
-// by the sites that send it.
+// recognisedOwners lists the closed ANSWER vocabularies the corpus reaches,
+// named by the sites that send it.
+//
+// Held by: TestEveryClosedAnswerKindCarriesAScenario, below — it compares this
+// list against what the corpus actually reaches and fails naming the
+// difference, in both directions.
 //
 // The SET rather than a count, because a count can be masked: a vocabulary that
 // stops being recognised is hidden by any unrelated enum that splits in two, and
@@ -208,7 +212,7 @@ func siteEnums(group []Scenario, census *aitasks.Registry) (map[string][]string,
 	return enums, nil
 }
 
-// namedKinds is every kind this site's ACCEPTED scenarios name, read as the
+// namedKinds collects the kinds this site's ACCEPTED scenarios name, reading the
 // string leaves of each expectation.
 //
 // Leaves rather than the whole value, because an expectation is written in its
@@ -288,8 +292,15 @@ func walkExpectation(node any, named map[string]bool) {
 // schemaNode is as much of a JSON Schema as this gate reads: the enums, and the
 // two constructs the shipped schemas nest them under. Declared rather than
 // walked as decoded JSON so the gate STATES which schema constructs it depends
-// on — a schema hiding an enum behind a third construct would be
-// under-recognised, which is what the recognisedVocabularies assertion catches.
+// on.
+//
+// The limit that follows, stated rather than hidden: recognisedOwners catches a
+// vocabulary that STOPS being recognised — a schema refactored behind anyOf,
+// oneOf or $ref drops out of the owner set and fails. It cannot catch a NEW task
+// whose schema hides its enum behind one of those from day one: that vocabulary
+// never appears, so nothing fails and the "self-scoping, nothing to remember"
+// promise above holds only for the shapes this struct can see. Widen it when a
+// site starts nesting an answer enum another way.
 type schemaNode struct {
 	Enum       []json.RawMessage     `json:"enum"`
 	Properties map[string]schemaNode `json:"properties"`
