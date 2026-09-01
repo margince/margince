@@ -89,6 +89,13 @@ func (s *Store) PromotePersonCohortTx(
 	if err != nil {
 		return CohortPromotion{}, err
 	}
+	// After the promotion, never before it: this reads the person-resolved
+	// attendee rows the promotion above has just written.
+	meetings, err := linkAttendedMeetings(ctx, tx, canonical)
+	if err != nil {
+		return CohortPromotion{}, err
+	}
+	linked = append(linked, meetings...)
 	if len(linked) == 0 && len(promoted) == 0 {
 		// Nothing moved. A repair that found nothing is not an event in this
 		// person's history, and auditing every replayed person.updated would
@@ -247,12 +254,34 @@ func (s *Store) PeopleOwedACohortRepair(ctx context.Context, limit int) ([]ids.P
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_link l
 				        WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
+				UNION
+				-- Meetings this contact attended but is not filed under. A
+				-- separate arm because the one above finds work by
+				-- counterparty_email, and a meeting has none: attendance is a
+				-- list, so the only thing naming the attendee is a participant
+				-- row. Without this arm a person owed nothing BUT meeting links
+				-- is never offered, and the sweep reports a drained backlog
+				-- while every synced meeting stays off their page.
+				SELECT coalesce(att.merged_into_id, att.id)
+				  FROM activity_participant ap
+				  JOIN activity a ON a.id = ap.activity_id
+				  JOIN person att ON att.id = ap.person_id
+				 WHERE ap.person_id IS NOT NULL
+				   AND a.kind = 'meeting'
+				   AND a.captured_by LIKE 'connector:%' AND a.restricted_at IS NULL
+				   AND a.archived_at IS NULL
+				   AND NOT EXISTS (
+				       SELECT 1 FROM activity_link l
+				        WHERE l.activity_id = a.id
+				          AND l.person_id = coalesce(att.merged_into_id, att.id))
+				   AND (SELECT count(*) FROM activity_link cap
+				         WHERE cap.activity_id = a.id) < $2
 			)
 			SELECT owed.person_id FROM owed
 			  JOIN person live ON live.id = owed.person_id
 			 WHERE live.archived_at IS NULL AND live.merged_into_id IS NULL
 			 ORDER BY owed.person_id
-			 LIMIT $1`, limit)
+			 LIMIT $1`, limit, maxMeetingLinksPerActivity)
 		if err != nil {
 			return fmt.Errorf("people: listing the contacts owed a cohort repair: %w", err)
 		}

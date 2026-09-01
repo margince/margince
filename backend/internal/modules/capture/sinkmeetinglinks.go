@@ -29,9 +29,13 @@ package capture
 // Nothing is CREATED from an invite. An attendee with no person record stays an
 // address here; an invitation is not correspondence, and one all-hands with
 // forty unknown externals would otherwise buy forty creation decisions nobody
-// asked for. Those meetings are picked up later, without a second mechanism:
-// the cohort repair matches participant addresses, so the day that attendee
-// becomes a contact their meetings come with them.
+// asked for. Those meetings are picked up later by the cohort repair, in two
+// steps: it promotes the attendee's address-only participant row to name the
+// new person, then files the meeting under them (people.linkAttendedMeetings).
+// The second step is a MEETING-shaped arm on purpose — the repair's other arm
+// finds work by counterparty_email, and a meeting carries none, so for a while
+// this comment described a pickup that could not happen and every synced
+// meeting stayed unlinked.
 
 import (
 	"context"
