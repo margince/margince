@@ -146,19 +146,30 @@ function ConsentSelector({
       <h1>{t("consent.title")}</h1>
       <p>{t("consent.asks", { client: data.client_name })}</p>
       <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
-      {data.scopes.map((scope) => (
-        <Checkbox
-          key={scope}
-          checked={granted.has(scope)}
-          onChange={() => setGranted((current) => toggled(current, scope))}
-          label={
-            <>
-              <strong>{t(`passport.scope.${scope}`)}</strong>{" "}
-              <span className="t-small">{t(`consent.scopeNote.${scope}`)}</span>
-            </>
-          }
-        />
-      ))}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-2)",
+          margin: "var(--space-3) 0",
+        }}
+      >
+        {data.scopes.map((scope) => (
+          <Checkbox
+            key={scope}
+            checked={granted.has(scope)}
+            onChange={() => setGranted((current) => toggled(current, scope))}
+            label={
+              <>
+                <strong>{t(`passport.scope.${scope}`)}</strong>{" "}
+                <span className="t-small">
+                  {t(`consent.scopeNote.${scope}`)}
+                </span>
+              </>
+            }
+          />
+        ))}
+      </div>
       <p className="t-small">{t("consent.ceiling")}</p>
       {data.offline && <p>{t("consent.offline")}</p>}
       <div
