@@ -65,10 +65,11 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 	}
 	var out crmcontracts.Activity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+		held, err := lockActivityForWrite(ctx, tx, id.UUID)
+		if err != nil {
 			return err
 		}
-		if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
+		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 			return err
 		}
 		// A CAPTURED message is not one person's to set.
@@ -81,10 +82,18 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		// the derivation actually reads.
 		//
 		// A hand-logged row has no contributors and stays writable here.
-		if err := refuseCapturedAudienceWrite(ctx, tx, id); err != nil {
-			return err
+		//
+		// held skips this: a captured, held row is refused by
+		// activity_refuse_restricted_mutation below either way, and that
+		// refusal outranks this one — 422 tells the caller their request is
+		// fixable by asking the owner endpoint instead, which a held row's
+		// request never is.
+		if !held {
+			if err := refuseCapturedAudienceWrite(ctx, tx, id); err != nil {
+				return err
+			}
 		}
-		if err := ensureVersion(ctx, tx, id, in.IfVersion); err != nil {
+		if err := ensureVersion(ctx, tx, id, in.IfVersion, held); err != nil {
 			return err
 		}
 		if err := ensureAudienceSubjectsExist(ctx, tx, members); err != nil {
@@ -200,12 +209,24 @@ func audienceMembersFor(in SetAudienceInput) ([]AudienceMember, error) {
 
 // ensureVersion is the If-Match compare, against the row the caller just
 // locked; a mismatch is version skew, which the wire answers as 409.
-func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
-	if ifVersion == nil {
+//
+// held=true skips the compare entirely: every write to a held row is
+// refused by activity_refuse_restricted_mutation regardless of which
+// version the caller supplied, so a stale version on a held row still owes
+// 423, the reachable answer the write below reaches — not 409, which
+// would tell the caller a refetch-and-retry could ever succeed against a
+// row nothing can write to.
+//
+// No archived filter otherwise: lockActivityForWrite already proved the
+// row exists, live or held, before this runs, so re-filtering here would
+// hide a held row's version from under a lock that already resolved it —
+// exactly the 404-instead-of-423 lockActivityForWrite exists to remove.
+func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, held bool) error {
+	if ifVersion == nil || held {
 		return nil
 	}
 	var current int64
-	if err := tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND archived_at IS NULL`, id).Scan(&current); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1`, id).Scan(&current); err != nil {
 		return err
 	}
 	if current != *ifVersion {
