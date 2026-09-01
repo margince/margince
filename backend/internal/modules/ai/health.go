@@ -45,10 +45,10 @@ type RungHealth struct {
 	// LastOutcomeFailed is what actually decides health: whether the MOST
 	// RECENT terminal attempt on this rung carried an error.
 	//
-	// A count cannot answer it. A lane that answered once at the top of the
-	// hour and has failed every call since has more successes than zero, and a
-	// rule reading "any success in the window" calls that healthy — which is
-	// precisely the lane this endpoint exists to catch, reported as fine.
+	// A count cannot answer it. A lane with a single success at the top of the
+	// hour that has failed every call since still has more successes than zero,
+	// and a rule reading "any success in the window" calls that healthy — which
+	// is precisely the lane this endpoint exists to catch, reported as fine.
 	LastOutcomeFailed bool
 	// LastSentinel is the most recent error this rung reported, empty when it
 	// reported none. It is the operator's first clue: a budget refusal and an
@@ -63,8 +63,8 @@ type RungHealth struct {
 
 // Healthy reports that this rung's most recent terminal attempt answered.
 //
-// The LATEST outcome, not a ratio over the window. A lane that answered at the
-// top of the hour and has failed everything since is down now, and that is the
+// The LATEST outcome, not a ratio over the window. A lane whose last success
+// was at the top of the hour and has failed everything since is down now, and that is the
 // only tense this question has — an operator reads this page to decide whether
 // to act, and "it worked 59 minutes ago" is not a reason not to.
 //
