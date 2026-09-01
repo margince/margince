@@ -30,6 +30,11 @@ import (
 // conversation, and the product has surfaces for those.
 const noteBound = 500
 
+// fieldRecipient is the contract's spelling of who a coaching notice is for.
+// Three refusals point at this field, and a caller matching on the name cannot
+// tell a typo from a different field.
+const fieldRecipient = "recipient_user_id"
+
 // Teammates answers whether the recipient is on a team with the calling person.
 //
 // The caller is not a parameter: the module behind this reads it from the
@@ -74,6 +79,16 @@ func (s *Store) RaiseCoachNotice(
 		// blank, which Create rejects one layer down as a server error.
 		return Notice{}, fmt.Errorf("notices: no subject for kind %q", kind)
 	}
+	if recipient.IsZero() {
+		// An absent recipient_user_id decodes to the zero UUID with no error,
+		// so without this it reaches the membership question, comes back "not a
+		// teammate", and answers 403 — a refusal about a person the caller
+		// never named and cannot connect to anything they did.
+		return Notice{}, &values.ParseError{
+			Field: fieldRecipient, Code: "missing_recipient",
+			Message: "a coaching notice names who it is for",
+		}
+	}
 	note = strings.TrimSpace(note)
 	if len([]rune(note)) > noteBound {
 		return Notice{}, &values.ParseError{
@@ -100,7 +115,7 @@ func (s *Store) RaiseCoachNotice(
 		// it is not a notice either: it would sit in the raiser's own queue
 		// looking like somebody had asked them for something.
 		return Notice{}, &values.ParseError{
-			Field: "recipient_user_id", Code: "self_coaching",
+			Field: fieldRecipient, Code: "self_coaching",
 			Message: "a coaching notice goes to somebody else",
 		}
 	}
@@ -112,5 +127,5 @@ func (s *Store) RaiseCoachNotice(
 		return Notice{}, apperrors.ErrPermissionDenied
 	}
 
-	return s.create(ctx, recipient, string(kind), subject, note)
+	return s.insertNotice(ctx, recipient, string(kind), subject, note)
 }

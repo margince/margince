@@ -20,6 +20,7 @@ import {
   rowHref,
   sourceUnavailableText,
 } from "./worklist.copy";
+import { CoachControl, OwnerPicker, ReassignControl } from "./worklist.manager";
 import {
   useApproval,
   useWorklist,
@@ -71,10 +72,14 @@ function reviewFilter(item: WorklistItem): WorklistFilter {
 function WorklistRow({
   item,
   position,
+  owner,
   onReview,
 }: Readonly<{
   item: WorklistItem;
   position: number;
+  // Whose queue this row is on, empty for the reader's own. A row can only be
+  // handed to somebody else from a page that is already about somebody else.
+  owner: string;
   onReview: () => void;
 }>) {
   const t = useT();
@@ -131,6 +136,11 @@ function WorklistRow({
         <BatchVerb onReview={onReview} />
       ) : (
         <RowVerbs item={item} href={href} move={moveHref(item)} />
+      )}
+      {/* Only a task carries an assignee, so only a task can be handed on. A
+          group row stands for a pile and names no single activity to move. */}
+      {owner !== "" && item.source === "task" && !item.batch && (
+        <ReassignControl item={item} owner={owner} />
       )}
       {decidable(item) && <RowDecision item={item} />}
     </PanelRow>
@@ -320,12 +330,16 @@ function WorklistHeader({
   filter,
   onScope,
   onFilter,
+  owner,
+  onOwner,
 }: Readonly<{
   day: Worklist;
   scope: WorklistScope;
   filter: WorklistFilter;
+  owner: string;
   onScope: (next: WorklistScope) => void;
   onFilter: (next: WorklistFilter) => void;
+  onOwner: (next: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -342,7 +356,7 @@ function WorklistHeader({
       </p>
       {/* Drawn only when there is a choice: a rep who can see only their own
           work is never offered a switch that would refuse when pressed. */}
-      {scopes.length > 1 && (
+      {scopes.length > 1 && owner === "" && (
         <SegmentedControl
           options={scopes}
           value={scope}
@@ -355,6 +369,14 @@ function WorklistHeader({
             all: t("worklist.scope.all"),
           }}
         />
+      )}
+      {/* Whose queue. Offered on the same tier the server admits a named owner
+          on — `team` in the options means this reader reaches past themselves —
+          so the control and the refusal cannot disagree. It replaces the scope
+          switch rather than sitting beside it: a named owner outranks the scope
+          word, and the pair is a 422. */}
+      {scopes.includes("team") && (
+        <OwnerPicker owner={owner} onOwner={onOwner} />
       )}
       <FilterPills
         pills={FILTERS.map((value) => ({
@@ -380,14 +402,18 @@ function WorklistBody({
   day,
   scope,
   filter,
+  owner,
   onScope,
   onFilter,
+  onOwner,
 }: Readonly<{
   day: Worklist;
   scope: WorklistScope;
   filter: WorklistFilter;
+  owner: string;
   onScope: (next: WorklistScope) => void;
   onFilter: (next: WorklistFilter) => void;
+  onOwner: (next: string) => void;
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
@@ -397,9 +423,14 @@ function WorklistBody({
         day={day}
         scope={scope}
         filter={filter}
+        owner={owner}
         onScope={onScope}
         onFilter={onFilter}
+        onOwner={onOwner}
       />
+      {/* The verbs a lead has over somebody else's day. Drawn only on a named
+          person's queue: on the reader's own there is nobody to coach. */}
+      {owner !== "" && <CoachControl owner={owner} />}
       {/* A day cannot read as clear while something that would have filled it
           was never read. This is the surface speaking about ITSELF, which is
           what Callout is for. */}
@@ -427,6 +458,7 @@ function WorklistBody({
                 <WorklistRow
                   item={item}
                   position={index + 1}
+                  owner={owner}
                   onReview={() => onFilter(reviewFilter(item))}
                 />
               </li>
@@ -446,7 +478,10 @@ export function WorklistScreen() {
   // than the reader asked on their next visit.
   const [scope, setScope] = useState<WorklistScope>("mine");
   const [filter, setFilter] = useState<WorklistFilter>("all");
-  const day = useWorklist(scope, filter);
+  // Whose queue, when it is not the reader's own. Empty means their own day,
+  // which is what every seat sees and the only thing most seats may ask for.
+  const [owner, setOwner] = useState("");
+  const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const state = day.isPending ? "loading" : day.isError ? "failed" : "ready";
   return (
     <div className="wrap worklist">
@@ -463,8 +498,10 @@ export function WorklistScreen() {
             day={day.data}
             scope={scope}
             filter={filter}
+            owner={owner}
             onScope={setScope}
             onFilter={setFilter}
+            onOwner={setOwner}
           />
         )}
       </SurfaceState>

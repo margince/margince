@@ -54,17 +54,17 @@ type Notice struct {
 // mutation. The recipient's existence is held by the row's own FK: a notice
 // to nobody fails loudly rather than landing unread forever.
 func (s *Store) Create(ctx context.Context, recipient ids.UserID, kind, subject, body string) (ids.UUID, error) {
-	row, err := s.create(ctx, recipient, kind, subject, body)
+	row, err := s.insertNotice(ctx, recipient, kind, subject, body)
 	return row.ID, err
 }
 
-// create is the write itself, returning the whole row.
+// insertNotice is the write itself, returning the whole row.
 //
 // Create keeps its id-only signature because every system flow that calls it
 // wants nothing else, and widening it would make four call sites carry a value
 // none of them reads. The coach path does read it: it answers 201 with the
 // notice, and the created_at on that answer has to be the row's own.
-func (s *Store) create(ctx context.Context, recipient ids.UserID, kind, subject, body string) (Notice, error) {
+func (s *Store) insertNotice(ctx context.Context, recipient ids.UserID, kind, subject, body string) (Notice, error) {
 	if kind == "" || subject == "" {
 		return Notice{}, errors.New("notices: a notice names its kind and its subject")
 	}
