@@ -208,3 +208,183 @@ func linkCapturedCohort(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (
 	}
 	return linked, nil
 }
+
+// PeopleOwedACohortRepair lists contacts whose captured mail is not all on their
+// record yet, up to limit, ordered by id so a tick takes a stable slice.
+//
+// The two arms are the two halves the repair fixes, and each one asks its
+// question the same way the write does — including the guards. That symmetry is
+// what makes the scan terminate: a row the write refuses (a second address of a
+// party already recorded, say) must not be offered again on every pass, or the
+// sweep never drains and the job looks stuck rather than done.
+//
+// Only LIVE, unmerged contacts are offered, and that single filter is what makes
+// a merge safe here. A merged-away record still owns participant rows — the
+// merge repoints them now, but a database written before it does not — and
+// repairing under that id would write links onto a page no read returns, then
+// find the same rows again on the next tick. Resolving the redirect inside the
+// arms as well would be a second guard for the one case this already covers,
+// and two guards that each pass alone are one guard with a spare.
+func (s *Store) PeopleOwedACohortRepair(ctx context.Context, limit int) ([]ids.PersonID, error) {
+	var out []ids.PersonID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			WITH owed AS (
+				SELECT pe.person_id
+				  FROM activity_participant ap
+				  JOIN person_email pe ON lower(pe.email) = ap.address AND pe.archived_at IS NULL
+				 WHERE ap.person_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL
+				   AND NOT EXISTS (
+				       SELECT 1 FROM activity_participant other
+				        WHERE other.activity_id = ap.activity_id
+				          AND other.role = ap.role
+				          AND other.person_id = pe.person_id)
+				UNION
+				SELECT pe.person_id
+				  FROM activity a
+				  JOIN person_email pe ON pe.email = a.counterparty_email AND pe.archived_at IS NULL
+				 WHERE a.captured_by LIKE 'connector:%' AND a.restricted_at IS NULL
+				   AND NOT EXISTS (
+				       SELECT 1 FROM activity_link l
+				        WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
+			)
+			SELECT owed.person_id FROM owed
+			  JOIN person live ON live.id = owed.person_id
+			 WHERE live.archived_at IS NULL AND live.merged_into_id IS NULL
+			 ORDER BY owed.person_id
+			 LIMIT $1`, limit)
+		if err != nil {
+			return fmt.Errorf("people: listing the contacts owed a cohort repair: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id ids.PersonID
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("people: listing the contacts owed a cohort repair: %w", err)
+			}
+			out = append(out, id)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// RepairPersonCohort is PromotePersonCohortTx on its own transaction, for the
+// sweep that owns no other write.
+func (s *Store) RepairPersonCohort(ctx context.Context, personID ids.PersonID) (CohortPromotion, error) {
+	var done CohortPromotion
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		done, err = s.PromotePersonCohortTx(ctx, tx, personID)
+		return err
+	})
+	if err != nil {
+		return CohortPromotion{}, err
+	}
+	return done, nil
+}
+
+// DomainsOwedTheirPeople lists companies whose domain has live contacts with no
+// employer yet, up to limit.
+//
+// They accumulate while nobody has a company for the domain: capture creates
+// each person and deliberately leaves the employer undecided, so by the time the
+// company is recorded its whole roster is attached to nothing. The account then
+// shows ONE contact — whichever sender writes next and earns an edge from their
+// own ensure — and the health card blames the entire relationship on them.
+//
+// It is a SWEEP rather than a write on the create path, and that is the point.
+// Attaching a person to a company is a write about the PERSON, and the human
+// recording a company holds no authority over contacts they may not even see —
+// a rep scoped to their own records would otherwise plant employment for a
+// colleague's private contact by typing in a company name. The sweep runs as the
+// system, which is the only actor that honestly may touch all of them.
+func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]DomainBacklog, error) {
+	var out []DomainBacklog
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT DISTINCT od.organization_id, od.domain
+			  FROM organization_domain od
+			  JOIN organization o ON o.id = od.organization_id
+			  JOIN person_email pe
+			    ON pe.archived_at IS NULL
+			    -- The SAME two arms the plant matches on, subdomain included. A
+			    -- selector narrower than the write leaves a backlog nothing ever
+			    -- offers; one wider offers work the write will not take, and the
+			    -- domain is returned on every tick for ever.
+			   AND (split_part(pe.email, '@', 2) = od.domain
+			        OR right(split_part(pe.email, '@', 2), length(od.domain) + 1) = '.' || od.domain)
+			  JOIN person p ON p.id = pe.person_id
+			 WHERE od.archived_at IS NULL
+			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL
+			   AND p.archived_at IS NULL AND p.merged_into_id IS NULL
+			   AND NOT EXISTS (
+			       SELECT 1 FROM relationship r
+			        WHERE r.person_id = p.id AND `+CurrentPrimarySlotSQL("r")+`)
+			   -- And not a person the index will refuse anyway. uq_rel_employment
+			   -- admits ONE live employment per (person, organization), so
+			   -- somebody already holding a non-primary edge to this company is a
+			   -- row the plant's ON CONFLICT silently drops — offering them again
+			   -- is a domain that can never drain.
+			   AND NOT EXISTS (
+			       SELECT 1 FROM relationship held
+			        WHERE held.person_id = p.id AND held.organization_id = od.organization_id
+			          AND `+LiveEmploymentSlotSQL("held")+`)
+			 ORDER BY od.organization_id, od.domain
+			 LIMIT $1`, limit)
+		if err != nil {
+			return fmt.Errorf("people: listing the domains owed their people: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var owed DomainBacklog
+			if err := rows.Scan(&owed.OrganizationID, &owed.Domain); err != nil {
+				return fmt.Errorf("people: listing the domains owed their people: %w", err)
+			}
+			out = append(out, owed)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DomainBacklog names one company domain whose people are not attached yet.
+type DomainBacklog struct {
+	OrganizationID ids.OrganizationID
+	Domain         string
+}
+
+// AttachDomainBacklog gives the live people on one company domain their
+// employment edge, and answers how many it planted.
+//
+// The same plant the domain-triage verdict runs — it never reassigns anybody a
+// human already placed, and it takes its own row locks.
+func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (int, error) {
+	var planted int
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The company was live when the selector read it, in an earlier
+		// transaction. Re-check it here under its own lock: an archive or a
+		// merge in between would otherwise attach a domain's people to a record
+		// no read returns, which is the failure this whole sweep exists to
+		// repair rather than create.
+		live, err := organizationIsLive(ctx, tx, owed.OrganizationID)
+		if err != nil {
+			return err
+		}
+		if !live {
+			return nil
+		}
+		planted, err = plantDomainEmployment(ctx, tx, owed.Domain, owed.OrganizationID)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return planted, nil
+}

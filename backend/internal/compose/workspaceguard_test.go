@@ -156,6 +156,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		LinkedInRematchWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&linkedInRematchWorkspaceWorker{}).Work(ctx, &river.Job[LinkedInRematchWorkspaceArgs]{})
 		},
+		LinkReconcileWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
+			return (&linkReconcileWorkspaceWorker{}).Work(ctx, &river.Job[LinkReconcileWorkspaceArgs]{})
+		},
 		OrgNamePromotionWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&orgNamePromotionWorkspaceWorker{}).Work(ctx, &river.Job[OrgNamePromotionWorkspaceArgs]{})
 		},

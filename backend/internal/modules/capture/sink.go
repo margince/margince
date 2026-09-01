@@ -220,7 +220,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// The tier ladder already decided, and recorded its decision, inside
 		// the transaction above. Creation runs AFTER that commit, in its own
 		// transaction: the timeline row is never lost to a resolver fault, and
-		// a fault here is logged for the nightly reconcile rather than
+		// a fault here is logged for the link_reconcile sweep rather than
 		// surfaced as a capture failure (the 60s p95 already delivered).
 		s.ensureCounterparty(ctx, rec, ref, decision)
 		// The project ladder runs on the same terms and for the same reasons:

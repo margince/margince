@@ -84,8 +84,13 @@ func (s *Sink) WithProjectAttribution(attribution ProjectAttribution) *Sink {
 //
 // Post-commit, in its own transaction, for the reason ensureCounterparty is:
 // the timeline row must never be lost to an attribution fault, and the capture
-// budget must not wait on this. A fault is recorded for the nightly reconcile
-// and never returned — the message is already on the timeline and stays there.
+// budget must not wait on this. A fault is recorded in system_log and never
+// returned — the message is already on the timeline and stays there.
+//
+// Nothing re-runs the ladder over it afterwards. link_reconcile repairs the
+// PERSON links a captured message is owed; a project attribution it never made
+// is a filing decision nobody has re-asked, and saying otherwise here would
+// describe a repair that does not exist.
 func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
 	if s.projectKeys == nil || s.stampProject == nil {
 		return
@@ -105,9 +110,9 @@ func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRec
 
 // logProjectAttributionFault records a failed attribution in system_log, on its
 // own transaction — the one this fault came out of is already rolled back. The
-// activity stands, filed under nothing, and the nightly reconcile re-runs the
-// ladder over it; there is no partial state to repair, because a failed
-// transaction wrote no link.
+// activity stands, filed under nothing. There is no partial state to repair,
+// because a failed transaction wrote no link — and no pass re-runs the ladder,
+// so the breadcrumb is the whole record that the question went unanswered.
 //
 // It logs rather than returns for the reason every post-commit step does: the
 // message is on the timeline and nothing here may take it off.

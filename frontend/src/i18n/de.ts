@@ -1037,7 +1037,7 @@ export const de = {
   "room.state.expired": "Abgelaufen",
   "room.state.archived": "Archiviert",
   "co.pulse.created": "Erstellt {when}",
-  "co.pulse.lastExchange": "Letzter Austausch {when}",
+  "co.pulse.lastExchange": "Letzter Kontakt {when}, in beide Richtungen",
   "co.pulse.neverTouched": "Noch nie kontaktiert",
   "co.pulse.owner": "Betreut von",
   "co.pulse.strongestLead": "Zugang \u00fcber",

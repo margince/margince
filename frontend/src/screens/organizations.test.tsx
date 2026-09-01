@@ -1395,10 +1395,13 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
 
     // The way in, and that the relationship is live. WHICH side wrote last is
     // the daily brief's to say — acting on whose move it is belongs with the
-    // moves, and the header states only that an exchange happened and when.
+    // moves, and the header states only that contact happened and when. It
+    // says "either way" out loud, because the health card beside it counts
+    // inbound alone and the two numbers otherwise read as contradicting each
+    // other when a rep wrote recently and has had nothing back.
     await waitFor(() => expect(screen.getByText(/Way in/)).toBeTruthy());
     expect(screen.getByText(/of 3 contacts here/)).toBeTruthy();
-    expect(screen.getByText(/Last exchange/)).toBeTruthy();
+    expect(screen.getByText(/Last contact .*either way/)).toBeTruthy();
     // The composite is gone: it was PO-F-3's MAX over contacts, so one
     // talkative contact spoke for the account and "41/100" read as a verdict.
     expect(screen.queryByText(/41\/100/)).toBeNull();

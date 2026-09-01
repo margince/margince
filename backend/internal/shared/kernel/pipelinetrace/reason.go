@@ -45,8 +45,9 @@ const (
 // Derived reasons. These are computed at read time from live product state, and
 // exist so a stage that did NOT run says why rather than rendering as an absence.
 const (
-	// StagePersonCreate. Neither promises a repair: the nightly reconcile
-	// re-runs the resolver over link-less activities, but a channel identity
+	// StagePersonCreate. Neither promises a repair: the link_reconcile sweep
+	// links a message once a person EXISTS for its address and never re-runs
+	// the resolver, but a channel identity
 	// conflict stages a human-review proposal the resolver will never clear, so
 	// that message stays link-less until a person acts. Copy that said "tonight"
 	// would be false indefinitely for exactly those.

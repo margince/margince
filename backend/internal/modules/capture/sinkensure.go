@@ -83,7 +83,8 @@ func (s *Sink) WithEnsurer(ensurer CounterpartyEnsurer, transactional *Transacti
 // mail activity: the deterministic gates first (internal domain → skip
 // everything; free-mail → person only), then the resolver seam. Runs after
 // the capture transaction committed, and NEVER fails the capture — a fault
-// lands in system_log for the nightly reconcile (the link-less connector
+// lands in system_log, and the link_reconcile sweep links the message if a
+// person for that address turns up by any route (the link-less connector
 // activity is the retry marker).
 func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, decision counterpartyDecision) {
 	if !decision.create {
@@ -325,7 +326,7 @@ func (s *Sink) deferAmbiguous(ctx context.Context, tx pgx.Tx, rec connector.Norm
 // acts for a human, and with no owner nothing can honestly own the created rows.
 // The ACTIVITY still stands — refusing the derivation is the honest answer,
 // where failing the capture would throw away a message we successfully read — so
-// the fault is recorded for the nightly reconcile and creation is skipped.
+// the fault is recorded for the link_reconcile sweep and creation is skipped.
 func (s *Sink) derivationStart(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, cp connector.Counterparty, activityID ids.UUID) (dispositionRow, counterpartyDecision, bool, error) {
 	if s.ensurer == nil || cp.Email == "" {
 		return dispositionRow{}, counterpartyDecision{}, false, nil

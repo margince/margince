@@ -95,6 +95,14 @@ func promoteParticipantsToPerson(
 		        WHERE ($1::uuid IS NULL OR sub.activity_id = $1)
 		          AND sub.person_id IS NULL AND sub.user_id IS NULL
 		          AND sub.address IS NOT NULL
+		          -- Correlated to THIS person. A bound that picked the first N
+		          -- address-only rows in the workspace would let somebody else's
+		          -- backlog fill it: this contact stays selected by the sweep,
+		          -- is offered every tick, and is never reached.
+		          AND EXISTS (
+		              SELECT 1 FROM person_email pe
+		               WHERE pe.person_id = $2 AND pe.archived_at IS NULL
+		                 AND lower(pe.email) = sub.address)
 		        ORDER BY sub.id
 		        LIMIT $3))
 		RETURNING ap.activity_id`,

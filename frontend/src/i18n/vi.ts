@@ -1023,7 +1023,7 @@ export const vi = {
   "room.state.expired": "Đã hết hạn",
   "room.state.archived": "Đã lưu trữ",
   "co.pulse.created": "Tạo {when}",
-  "co.pulse.lastExchange": "Trao đổi gần nhất {when}",
+  "co.pulse.lastExchange": "Liên hệ gần nhất {when}, cả hai chiều",
   "co.pulse.neverTouched": "Chưa từng liên hệ",
   "co.pulse.owner": "Người phụ trách",
   "co.pulse.strongestLead": "Đường tiếp cận",

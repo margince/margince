@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "c630f11fd404a20608ec05cfb8964fd56aec009817d46a35d16967f440c016d8"
+const JobContractHash = "3d1197a8b2e970c9bf1c42373fef0076f95347398f080311ec8f87d9bf73435c"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -549,6 +549,27 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{OnDemand: true},
 		Args:      []ArgField{{Name: "DocumentID"}, {Name: "Workspace"}},
+	},
+	"link_reconcile": {
+		Kind:       "link_reconcile",
+		GoType:     "LinkReconcileArgs",
+		Role:       Dispatcher,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "link_reconcile_workspace",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 24 * time.Hour},
+	},
+	"link_reconcile_workspace": {
+		Kind:        "link_reconcile_workspace",
+		GoType:      "LinkReconcileWorkspaceArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 10 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "Workspace"}},
 	},
 	"linkedin_rematch": {
 		Kind:       "linkedin_rematch",
