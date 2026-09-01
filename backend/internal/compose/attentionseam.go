@@ -446,5 +446,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		WithLeadResponses(attentionLeadResponses{
 			store:     people.NewStore(db),
 			teammates: newTeammatesSeam(pool),
-		})
+		}).
+		// How many promises each teammate has already missed, for the team
+		// board. Counted rather than listed, because the task lane above stops
+		// at a dozen and a board built from it would call every loaded rep
+		// equally loaded.
+		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
 }

@@ -35,6 +35,20 @@ func (h Handlers) GetAttention(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// GetTeamBoard answers what each teammate is carrying.
+//
+// No parameters: whose team it is comes from the principal, so a reader cannot
+// ask about somebody else's. The row-scope tier that admits the read is checked
+// in the service, beside the roster it draws.
+func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+	out, err := h.svc.TeamBoard(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // GetWorklist answers the same day as one ranked queue.
 //
 // It reads through the same assembler GetAttention does, so a lane added there

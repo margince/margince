@@ -55,6 +55,23 @@ type WaitingReply struct {
 	// exists". The looser reading would let somebody learn a deal is there by
 	// watching a row they can see decline to go stale.
 	HasOpenDeal bool
+	// OwnerID is who owes this reply, resolved from the record the thread is
+	// filed under. Zero when no record on it names an owner.
+	//
+	// PRECEDENCE, first owner found: deal, lead, person, organization. It is the
+	// order of how specific the claim is — a thread on a deal is that deal
+	// owner's to answer whatever else it touches, and a person outranks their
+	// company because the company owner is answerable for the account rather
+	// than for every conversation inside it.
+	//
+	// A separate question from the record ids above, which the caller picks a
+	// DISPLAY record from by link priority. The two are allowed to differ: those
+	// answer "what is this about", this one answers "who owes the reply".
+	//
+	// Resolved through the SAME visibility-gated links, so an owner appears only
+	// where the reader may see the record naming them. Read off an ungated join
+	// it would publish who owns a record the reader cannot open.
+	OwnerID ids.UUID
 }
 
 // waitingScanCap bounds the work one read does. Beyond this the answer is
@@ -166,7 +183,30 @@ const waitingRepliesSQL = `
 	       -- off an ungated one it would answer "a deal exists" rather than "you
 	       -- can see a deal", and a reader would learn the first by watching a
 	       -- row they can see decline to go stale.
-	       bool_or(openDeal.id IS NOT NULL)
+	       bool_or(openDeal.id IS NOT NULL),
+	       -- WHO owes the reply, first owner found down the precedence: deal,
+	       -- lead, person, organization.
+	       --
+	       -- COALESCE over four aggregates rather than four correlated
+	       -- subqueries: the links are already joined and grouped here, so this
+	       -- costs the group it is already paying for. Each arm picks the first
+	       -- by text order for the same reason the record ids above do — one
+	       -- message filed under two owned deals must attribute to the same
+	       -- person on every read, or the board's numbers move on their own.
+	       --
+	       -- Every arm reads through wl, the VISIBILITY-GATED link join. An
+	       -- owner off an ungated join would name who owns a record this reader
+	       -- may not open.
+	       COALESCE(
+	         (array_agg(ownerDeal.owner_id ORDER BY ownerDeal.owner_id::text)
+	          FILTER (WHERE ownerDeal.owner_id IS NOT NULL))[1],
+	         (array_agg(ownerLead.owner_id ORDER BY ownerLead.owner_id::text)
+	          FILTER (WHERE ownerLead.owner_id IS NOT NULL))[1],
+	         (array_agg(ownerPerson.owner_id ORDER BY ownerPerson.owner_id::text)
+	          FILTER (WHERE ownerPerson.owner_id IS NOT NULL))[1],
+	         (array_agg(ownerOrg.owner_id ORDER BY ownerOrg.owner_id::text)
+	          FILTER (WHERE ownerOrg.owner_id IS NOT NULL))[1],
+	         '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
@@ -176,6 +216,11 @@ const waitingRepliesSQL = `
 	         ON sender.activity_id = a.id AND sender.role = 'from'
 	  LEFT JOIN deal openDeal ON openDeal.id = wl.deal_id
 	                         AND %[8]s
+	  -- The ownership walk, all four off the gated link join above.
+	  LEFT JOIN deal ownerDeal ON ownerDeal.id = wl.deal_id
+	  LEFT JOIN lead ownerLead ON ownerLead.id = wl.lead_id
+	  LEFT JOIN person ownerPerson ON ownerPerson.id = wl.person_id
+	  LEFT JOIN organization ownerOrg ON ownerOrg.id = wl.organization_id
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
@@ -381,7 +426,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.PersonID, &row.OrganizationID, &row.DealID,
-				&row.HasOpenDeal); err != nil {
+				&row.HasOpenDeal, &row.OwnerID); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)

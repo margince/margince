@@ -264,6 +264,7 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 			OrganizationID: row.OrganizationID,
 			DealID:         row.DealID,
 			HasOpenDeal:    row.HasOpenDeal,
+			OwnerID:        row.OwnerID,
 		})
 	}
 	return out, nil
@@ -402,4 +403,26 @@ func (t attentionTasks) OpenForViewer(
 		})
 	}
 	return open, nil
+}
+
+// attentionOverdue counts overdue tasks per assignee for the team board.
+//
+// A second reader over the same table attentionTasks lists from, and the reason
+// is the bound rather than the rows: that lane stops at a dozen, so a board that
+// counted its answer would report every loaded rep as holding exactly twelve.
+// The store's aggregate is unbounded and answers the count itself.
+type attentionOverdue struct{ store *activities.Store }
+
+func (o attentionOverdue) OverduePerAssignee(
+	ctx context.Context, asOf time.Time,
+) (map[ids.UUID]int, error) {
+	rows, err := o.store.OverdueLoadByAssignee(ctx, asOf)
+	if err != nil {
+		return nil, err
+	}
+	per := make(map[ids.UUID]int, len(rows))
+	for _, row := range rows {
+		per[row.OwnerID] = row.Overdue
+	}
+	return per, nil
 }

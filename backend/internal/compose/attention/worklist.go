@@ -172,24 +172,29 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf)
-	// A waiting message has no owner of its own, so under `mine` its ownership
-	// is the ownership of the record it is filed under: a thread about a
-	// colleague's deal is that colleague's to answer. Judged against the deals
-	// this reader owns in THIS day, which is the set `mine` already narrowed.
-	owned := ownedDealsIn(ctx, day, scope)
+	// A waiting message has no owner of its own, so its ownership is the
+	// ownership of the record it is filed under: a thread about a colleague's
+	// deal is that colleague's to answer. The lane resolves that walk and
+	// carries the owner on the row.
+	//
+	// A caller with no human behind it fails CLOSED under `mine`, exactly as
+	// keepReadersOwn does: no reader, no own work, and a queue that answered
+	// every row would widen a scope named mine.
+	reader, seated := principal.Actor(ctx)
 	// Longest wait first, so the few that LEAD are the ones most likely to have
 	// been forgotten rather than whichever the database returned first.
 	mine := make([]WaitingCustomer, 0, len(waiting))
 	for _, customer := range waiting {
-		if mineOnly(scope) && !waitingIsMine(customer, owned) {
+		if mineOnly(scope) && (!seated || !waitingIsMine(customer, reader)) {
 			continue
 		}
-		// The unassigned queue is about work with no ASSIGNEE, and a message has
-		// no assignee column — waitingIsMine reads the record it is filed under,
-		// which cannot tell "nobody owns this" from "the owner's deal is
-		// healthy". Rather than guess, this scope carries no waiting rows and
-		// every one of them stays reachable from mine, team and all.
-		if scope == scopeUnassigned {
+		// The unassigned queue is the work that names nobody, and a resolved
+		// owner is what tells that from work whose owner is simply somebody
+		// else. Before the lane carried one this scope had to drop every waiting
+		// row rather than guess; now the unowned customer — the wait most likely
+		// to go unseen — reaches the queue somebody opens to look for exactly
+		// that.
+		if scope == scopeUnassigned && !customer.OwnerID.IsZero() {
 			continue
 		}
 		mine = append(mine, customer)
@@ -310,11 +315,6 @@ func (s *Service) worklistFrom(
 	return out
 }
 
-// ownedDealsIn is the set of deals on this day that the reader owns.
-//
-// Read off the assembled day rather than queried again: the at-risk lane has
-// already returned the deals under the reader's own scope, so this is the
-// answer that surface already has rather than a second opinion about it.
 // boundedSources names the lanes that came back exactly at their own work
 // bound, and therefore may have had more behind them.
 //
@@ -326,14 +326,18 @@ func (s *Service) worklistFrom(
 // complete tells a rep there is no more work of that kind, and there is no
 // failing row to notice — which is why every lane with a bound appears here and
 // `TestEveryBoundedLaneIsNamedInTheBoundsTable` fails when a new one is not.
-// The bounds of the two lanes whose limit lives behind their seam, where this
-// package cannot reach it. They are MIRRORS: `compose.slippingScanLimit` and
-// `compose.decayCandidateCap` are the real numbers, and
-// `backend/gates/worklistbounds_test.go` fails in both directions when either
-// side moves, because a mirror nobody checks is a wrong number waiting.
+// The bounds of the lanes whose limit lives behind their seam, where this
+// package cannot reach it. They are MIRRORS: `compose.slippingScanLimit`,
+// `compose.decayCandidateCap` and `activities.waitingScanCap` are the real
+// numbers, and `backend/gates/worklistbounds_test.go` fails in both directions
+// when either side moves, because a mirror nobody checks is a wrong number
+// waiting.
 const (
 	quietDealBound = 50
 	decayBound     = 40
+	// waitingReadBound is read by the team board, which reports a count as a
+	// floor when the lane came back exactly full.
+	waitingReadBound = 200
 )
 
 func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSource]bool {
@@ -370,26 +374,6 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
 	bounded["dedupe_candidate"] = bounded["approval"]
 	return bounded
-}
-
-func ownedDealsIn(ctx context.Context, day crmcontracts.Attention, scope string) map[ids.UUID]bool {
-	owned := map[ids.UUID]bool{}
-	if !mineOnly(scope) || day.AtRisk == nil {
-		return owned
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return owned
-	}
-	for _, item := range *day.AtRisk {
-		if item.Deal == nil || item.Deal.OwnerId == nil || item.Subject == nil {
-			continue
-		}
-		if ids.UUID(*item.Deal.OwnerId) == actor.UserID {
-			owned[ids.UUID(item.Subject.Id)] = true
-		}
-	}
-	return owned
 }
 
 // page cuts the candidates to what one read carries.

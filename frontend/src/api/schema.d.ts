@@ -6509,6 +6509,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One row per teammate — who is carrying what, so a lead can see where to help.
+         * @description The manager's read of the same work `/worklist` ranks for one person. It answers
+         *     "who on my team is drowning", which the ranked queue structurally cannot: that
+         *     queue assembles ONE person's day, so widening its scope cannot produce rows for
+         *     sources that were never read for anybody else.
+         *
+         *     So this is COUNTS, not rows. Three per teammate — customers waiting on a reply,
+         *     deals at risk, tasks already past due — chosen because each is work somebody is
+         *     answerable for rather than a volume of activity. A lead reads the board to pick
+         *     who to talk to, then opens that person's own day with `GET /worklist?owner=`,
+         *     which is the drill-down this board exists to route to.
+         *
+         *     Every count is read under the CALLER's visibility, never the teammate's. A number
+         *     summing rows the reader may not open would publish a colleague's volume to
+         *     somebody with no access to any of it, so what this reports is "how much of their
+         *     load you can see" — the only honest answer available without giving one person a
+         *     licence to read another's records.
+         *
+         *     Requires a row scope of `team` or `all`; an own-scoped reader is refused with 403
+         *     rather than shown a board of one. The teammates listed are the live human seats
+         *     sharing a live team with the caller, the caller included — a lead who also sells
+         *     needs their own row beside their team's. A caller on no team gets themselves
+         *     alone, which says plainly that nobody has been put on a team with them; an empty
+         *     board would read as an outage.
+         */
+        get: operations["getTeamBoard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/digest": {
         parameters: {
             query?: never;
@@ -25905,6 +25947,68 @@ export interface components {
             more_available: boolean;
         };
         /**
+         * @description Who on the team is carrying what. One row per live teammate, plus the work that
+         *     reached nobody.
+         */
+        TeamBoard: {
+            /**
+             * Format: date-time
+             * @description The instant every count below was read at.
+             */
+            as_of: string;
+            /**
+             * @description The live human seats sharing a live team with the caller, the caller included,
+             *     ordered by display name. Never empty: a caller on no team is their own single
+             *     row, because "only you" and "nobody" are different answers and the second reads
+             *     as an outage.
+             */
+            members: components["schemas"]["TeamBoardMember"][];
+            /**
+             * @description The same three counts over work that names nobody — an unowned customer writing
+             *     in, a deal with no owner, a task nobody was assigned.
+             *
+             *     Its own figure rather than a member row, because there is no person to open. A
+             *     board that dropped it would report a clean team while the work nobody is looking
+             *     at is exactly the work that goes missing.
+             */
+            unassigned: components["schemas"]["TeamBoardCounts"];
+            /**
+             * @description True when a count was read to its work bound, so the real figure may be higher
+             *     than what is shown. The waiting-customer read scans a bounded number of threads
+             *     across the whole installation, so a busy installation reports a floor — and says
+             *     so here rather than presenting a floor as a total.
+             */
+            truncated: boolean;
+        };
+        /** @description One teammate and the work they are answerable for. */
+        TeamBoardMember: {
+            /**
+             * Format: uuid
+             * @description Whose row this is. It is what `GET /worklist?owner=` takes, which is the
+             *     drill-down the board routes to.
+             */
+            user_id: string;
+            /** @description The teammate, as the roster names them. */
+            display_name: string;
+            counts: components["schemas"]["TeamBoardCounts"];
+        };
+        /**
+         * @description Three counts of work somebody owes, all read under the CALLER's visibility rather
+         *     than the teammate's — so this is how much of their load the reader can see.
+         */
+        TeamBoardCounts: {
+            /**
+             * @description Customers who wrote and have had no reply, attributed by the record the thread is
+             *     filed under: deal, then lead, then person, then organization, first owner found.
+             *     The same eligibility the ranked queue applies, so the board and the day agree.
+             */
+            waiting: number;
+            /** @description Open deals gone quiet or already past their expected close date. */
+            at_risk: number;
+            /** @description Open tasks whose due moment has already passed. */
+            overdue: number;
+        };
+        /**
          * @description One outcome band and how much of it this page is showing — the headings a client draws,
          *     in the order it draws them.
          *
@@ -37396,6 +37500,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getTeamBoard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The team's load. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamBoard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getMorningDigest: {

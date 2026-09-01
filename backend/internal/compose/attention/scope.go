@@ -187,23 +187,22 @@ func ownedByReader(item crmcontracts.WorklistItem, reader principal.Principal) b
 //
 // A message has no owner column, so the question is answered by the RECORD it
 // is filed under: a thread about a colleague's deal is that colleague's to
-// answer.
+// answer. The lane resolves that walk — deal, then lead, then person, then
+// organization — and carries the answer on the row.
 //
-// A message filed under nothing names nobody, and stays — an unowned customer
-// writing in is everybody's, and dropping it would leave nobody looking at it.
+// It used to be judged against the deals in this day's at-risk lane instead,
+// and that set is the wrong one: a deal the reader owns which is perfectly
+// healthy never enters it, so their own waiting customer read as unowned. The
+// resolved owner replaces the guess.
 //
-// That reading is the one this queue is otherwise moving away from, and it
-// survives here for a reason worth stating: ownedDeals is built from the
-// at-risk lane alone, so a deal the reader owns which is perfectly healthy is
-// absent from it and reads as unowned. Judging a wait exactly against that set
-// would drop the reader's own waiting customer whenever their deal was doing
-// well. Making it exact needs the owner on the row itself, which is the read
-// the waiting query does not yet carry.
-func waitingIsMine(waiting WaitingCustomer, ownedDeals map[ids.UUID]bool) bool {
-	if waiting.DealID.IsZero() {
+// A message no record attributes to anybody STAYS, in every reader's mine. An
+// unowned customer writing in is everybody's, and the alternative is a row
+// nobody sees at all.
+func waitingIsMine(waiting WaitingCustomer, reader principal.Principal) bool {
+	if waiting.OwnerID.IsZero() {
 		return true
 	}
-	return ownedDeals[waiting.DealID]
+	return waiting.OwnerID == reader.UserID
 }
 
 // keepReadersOwn drops the rows belonging to somebody else.
