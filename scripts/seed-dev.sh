@@ -220,6 +220,36 @@ sign_in_as_admin
 
 # Demo records ride the same natural-key dedupe the product uses: a 201
 # created it, a 409 means an earlier run did — anything else is a defect.
+# A moment N days from now, in the format the API takes. Negative for the past.
+# Relative rather than fixed, so a seed run next month produces a wait of two
+# days rather than one of six weeks — a fixture that ages is a fixture that
+# stops demonstrating what it was written for.
+iso_in_days() { # iso_in_days <days>
+  # The sign is explicit because BSD date's -v needs one and GNU date's -d
+  # tolerates it, so one spelling works on a developer's laptop and in CI.
+  local offset="$1"
+  case "$offset" in -*) : ;; *) offset="+$offset" ;; esac
+  date -u -v"${offset}d" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null \
+    || date -u -d "${offset} days" +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+# One activity, created only if a row with that subject is not already there.
+#
+# `ensure` leans on the endpoint answering 409 for a duplicate, and /activities
+# has no natural key to answer it with: a rep may genuinely log the same call
+# twice. So the seed asks first. Without this, every `make seed-dev` adds
+# another copy and the demo Worklist grows a row per run.
+ensure_activity() { # ensure_activity <label> <subject> <json-body>
+  local label="$1" subject="$2" data="$3" status
+  status="$(api GET "/activities?q=$(url_encode "$subject")&limit=50")"
+  [ "$status" = "200" ] || fail "GET /v1/activities returned HTTP $status while checking for $label"
+  if jq -e --arg s "$subject" '.data[]? | select(.subject == $s)' "$workdir/body" >/dev/null; then
+    echo "  OK: $label already present"
+    return
+  fi
+  ensure "$label" /activities "$data"
+}
+
 ensure() { # ensure <label> <path> <json-body>
   local label="$1" path="$2" data="$3" status
   status="$(api POST "$path" "$data")"
@@ -419,6 +449,44 @@ ensure_deal() { # ensure_deal <name> <stage-id> <amount-minor>
 
 ensure_deal "Acme Expansion" "$stage_id_qualified" 2500000
 ensure_deal "Globex Renewal" "$stage_id_proposal" 1200000
+
+# The Worklist needs WORK to show, and nothing above produces any: people,
+# organizations and deals are records, and the queue ranks obligations. A demo
+# database with none of those renders the surface as an honest empty page, which
+# is the one state a demo must not open on — and it is why two shipped changes
+# to that queue could not be demonstrated at all.
+#
+# Through the real endpoints, like everything else here. Rows written straight
+# to the table would be rows the product never produces, and a demo built on
+# those teaches whoever reads it something false about the software.
+echo "== seed-dev: work for the Worklist =="
+
+alice_id="$(person_id "Alice Müller" "alice@demo.test")"
+[ -n "$alice_id" ] || fail "Alice Müller is missing, so there is nobody for the demo mail to be from"
+
+# A task the admin wrote themselves and did not assign. It lands on their own
+# queue because the writer stamps the author as assignee — which is the whole
+# reason "mine" can be exact.
+ensure_activity "task: call Alice back" "Call Alice back about the retrofit" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 0)" \
+  '{kind:"task",subject:"Call Alice back about the retrofit",source:"seed",due_at:$due,
+    links:[{entity_type:"person",entity_id:$p}]}')"
+
+# The unanswered inbound that makes a customer WAIT is seeded in seed-dev.sql
+# instead. A waiting row needs a thread_key, and that column is capture's to
+# stamp: the create endpoint refuses it, correctly, because a client naming its
+# own thread could silence an unrelated conversation. So the one fixture this
+# API cannot produce is written where the file for exactly that lives.
+
+# A second task, so the queue has more than one row of agreed work.
+#
+# It is OWNED, like the one above and for the same reason: a human writing a
+# task through the API is stamped as its assignee. The unassigned queue is fed
+# by automations running as the system principal, which no seed can impersonate
+# through a public endpoint — and should not, since impersonating one is exactly
+# what captured_by exists to prevent.
+ensure_activity "task: follow up with the lead" "Follow up with the new lead" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 1)" \
+  '{kind:"task",subject:"Follow up with the new lead",source:"seed",due_at:$due,
+    links:[{entity_type:"person",entity_id:$p}]}')"
 
 echo ""
 echo "seed-dev: DONE — log in at $API_BASE with $ADMIN_EMAIL / $ADMIN_PASSWORD"
