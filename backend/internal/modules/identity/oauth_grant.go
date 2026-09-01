@@ -65,13 +65,28 @@ var errConsentingUserInactive = errors.New("oauth: the consenting user is not ac
 // row serializes two consents racing for the same registration. Without it,
 // two transactions can each read supersedePriorGrants' "no active grant yet"
 // snapshot before either commits its INSERT, and both succeed: two live
-// grants for one registration, the exact state the invariant forbids. Reading
-// no columns is deliberate, matching lockGrant (oauth_grantrevocation.go):
-// the row's own state is read authoritatively after the lock, under it.
+// grants for one registration, the exact state the invariant forbids.
+//
+// It carries liveClientPredicate (passport.go) for the same reason every
+// other read of oauth_client does: consumeAuthCode checked liveness before
+// this transaction reached here, but READ COMMITTED re-evaluates each
+// statement against what is now committed, so a disable racing between that
+// check and this lock would otherwise mint a grant for a client an admin
+// just killed. The predicate sits in the WHERE, not a check after — a
+// disabled client's row is excluded from the SELECT entirely, so it is never
+// locked and there is nothing to recheck; pgx.ErrNoRows becomes errCodeSpent,
+// the same invalid_grant a spent code gets, matching consumeAuthCode's own
+// reasoning for a dead client (oauth_token.go).
 func lockClientRegistration(ctx context.Context, tx pgx.Tx, clientID string) error {
 	var locked string
-	return tx.QueryRow(ctx,
-		`SELECT client_id FROM oauth_client WHERE client_id = $1 FOR UPDATE`, clientID).Scan(&locked)
+	err := tx.QueryRow(ctx, `
+		SELECT c.client_id FROM oauth_client c
+		WHERE c.client_id = $1 AND `+liveClientPredicate+`
+		FOR UPDATE`, clientID).Scan(&locked)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errCodeSpent
+	}
+	return err
 }
 
 // requireLiveConsentingUser refuses to build a connection on authority its

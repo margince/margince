@@ -15,6 +15,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 
@@ -69,6 +70,7 @@ func TestTwoConsentsRacingTheSameRegistrationNeverLeaveTwoActiveGrants(t *testin
 
 		var (
 			wg                  sync.WaitGroup
+			start               = make(chan struct{})
 			adminErr, memberErr error
 			adminGrant          ids.UUID
 			memberGrant         ids.UUID
@@ -76,12 +78,19 @@ func TestTwoConsentsRacingTheSameRegistrationNeverLeaveTwoActiveGrants(t *testin
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
-			adminGrant, adminErr = issueGrantTx(e, e.admin, clientID)
+			<-start
+			adminGrant, _, adminErr = e.issueGrantTx(e.admin, clientID)
 		}()
 		go func() {
 			defer wg.Done()
-			memberGrant, memberErr = issueGrantTx(e, e.member, clientID)
+			<-start
+			memberGrant, _, memberErr = e.issueGrantTx(e.member, clientID)
 		}()
+		// Both goroutines block on start until they are scheduled and waiting,
+		// so closing it releases them together instead of letting whichever the
+		// runtime scheduled first get a head start on the other — the gap a
+		// missing lock needs to slip through undetected.
+		close(start)
 		wg.Wait()
 
 		if adminErr != nil {
@@ -104,19 +113,42 @@ func TestTwoConsentsRacingTheSameRegistrationNeverLeaveTwoActiveGrants(t *testin
 	}
 }
 
+// TestIssueGrantRefusesAClientDisabledUnderTheLock proves lockClientRegistration
+// (oauth_grant.go) carries liveClientPredicate: a client disabled after the
+// caller already validated it (consumeAuthCode does, in the same transaction,
+// before issueGrant runs) must not still mint a grant because the lock query
+// only checked client_id existed.
+func TestIssueGrantRefusesAClientDisabledUnderTheLock(t *testing.T) {
+	e := setupRevocationEnv(t, "oauth-supersede-disabled-client")
+
+	clientID := "client-" + ids.NewV7().String()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO oauth_client (client_id, client_name, redirect_uris, disabled_at)
+		VALUES ($1, 'disabled client', ARRAY['https://client.example/cb'], now())`, clientID); err != nil {
+		t.Fatalf("registering the disabled client: %v", err)
+	}
+
+	_, _, err := e.issueGrantTx(e.admin, clientID)
+	if !errors.Is(err, errCodeSpent) {
+		t.Fatalf("issuing a grant for a disabled client: got %v, want errCodeSpent", err)
+	}
+}
+
 // issueGrantTx runs issueGrant in its own transaction for the given consenter,
-// the shape a real consent commits in.
-func issueGrantTx(e *revocationEnv, consenter Identity, clientID string) (grantID ids.UUID, err error) {
+// the shape a real consent commits in — the one body both connectOAuthWithClient
+// (which needs the fixture's t.Fatalf on failure) and the racing goroutines
+// above (which need the error back to report the attempt) build on.
+func (e *revocationEnv) issueGrantTx(consenter Identity, clientID string) (grantID ids.UUID, refresh string, err error) {
 	ctx := e.wsCtx(consenter)
 	err = e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
 		var txErr error
-		grantID, _, txErr = issueGrant(ctx, tx, issueGrantInput{
+		grantID, refresh, txErr = issueGrant(ctx, tx, issueGrantInput{
 			WorkspaceID: consenter.WorkspaceID, UserID: consenter.UserID, ClientID: clientID,
 			Scopes: []string{"read"}, RefreshAllowed: true,
 		})
 		return txErr
 	})
-	return grantID, err
+	return grantID, refresh, err
 }
 
 // connectOAuthWithClient is connectOAuthWith without minting a NEW client_id:
@@ -124,17 +156,10 @@ func issueGrantTx(e *revocationEnv, consenter Identity, clientID string) (grantI
 // registration, so the client row already exists from the first call.
 func (e *revocationEnv) connectOAuthWithClient(t *testing.T, consenter Identity, clientID string) connectFixture {
 	t.Helper()
-	var out connectFixture
-	out.clientID = clientID
-	ctx := e.wsCtx(consenter)
-	if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out.grantID, out.refresh, err = issueGrant(ctx, tx, issueGrantInput{
-			WorkspaceID: consenter.WorkspaceID, UserID: consenter.UserID, ClientID: clientID,
-			Scopes: []string{"read"}, RefreshAllowed: true,
-		})
-		return err
-	}); err != nil {
+	out := connectFixture{clientID: clientID}
+	var err error
+	out.grantID, out.refresh, err = e.issueGrantTx(consenter, clientID)
+	if err != nil {
 		t.Fatalf("issuing the second grant: %v", err)
 	}
 	return out
