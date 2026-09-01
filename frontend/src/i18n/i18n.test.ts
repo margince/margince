@@ -49,14 +49,18 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.spine.kind.email",
   // Same word again, this time the confirm page's own field label.
   "confirm.field.email",
-  // Google's own field names. An admin reads these off the Google Cloud
-  // console, which shows them in English whatever the reader's locale, so
-  // translating them here would have the form ask for something the page they
-  // are copying from does not call by that name. The placeholder is an id
-  // SHAPE rather than prose and is the same string everywhere.
-  "googleApp.clientId",
-  "googleApp.clientSecret",
-  "googleApp.clientIdPlaceholder",
+  // The vendors' own field names. An admin reads these off the Google Cloud
+  // console or the Entra portal, which show them in English whatever the
+  // reader's locale, so translating them here would have the form ask for
+  // something the page they are copying from does not call by that name. The
+  // placeholders are id SHAPES rather than prose and are the same string
+  // everywhere.
+  "oauthApp.clientId",
+  "oauthApp.clientSecret",
+  "oauthApp.google.clientIdPlaceholder",
+  "oauthApp.microsoft.clientIdPlaceholder",
+  "oauthApp.tenant",
+  "oauthApp.tenantPlaceholder",
   // "Embeddings" is the vocabulary of the routing document itself, which this
   // form renders raw beside `premium` and `gemini`. The host placeholder is a
   // URL, which is the same string in every language.

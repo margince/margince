@@ -137,7 +137,14 @@ func (s *Store) RaiseCoachNotice(
 	// second is a fact about the world on the day it was true. Membership
 	// changes, so a reader years later asking "why was this allowed" needs the
 	// edge stated rather than re-derived from a team that has since moved.
-	return s.insertNotice(ctx, recipient, string(kind), subject, note, map[string]any{
+	return s.insertNotice(ctx, NewNotice{
+		Recipient: recipient,
+		Kind:      string(kind),
+		Subject:   subject,
+		Body:      note,
+		// No dedupe key: a coaching note is a human act, not the delivery of an
+		// event, so there is nothing to key on and two notes are two notices.
+	}, map[string]any{
 		"admitted_by":      "coaching_role_and_live_team",
 		"shared_live_team": true,
 	})

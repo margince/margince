@@ -6181,33 +6181,51 @@ export const de = {
     "Diesen Anbieter auf der Anmeldeseite anbieten. Beim Abschalten brechen auch laufende Anmeldungen ab; bestehende Sitzungen bleiben unberührt.",
   "signInMethods.noneConfigured":
     "Für diese Installation ist kein externer Anbieter konfiguriert, daher steht außer dem Passwort nichts zur Auswahl.",
-  "googleApp.title": "Google-App",
-  "googleApp.sub":
+  "oauthApp.google.title": "Google-App",
+  "oauthApp.google.sub":
     "Postfächer werden über eine eigene Google-OAuth-App verbunden, und die Anmeldung mit Google läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Organisation verwendet und nicht unsere.",
-  "googleApp.configured": "In Verwendung: {clientId}",
-  "googleApp.absent":
+  "oauthApp.google.absent":
     "Aus keiner Quelle ist eine App verfügbar. Gmail und Kalender lassen sich nicht verbinden, und die Anmeldung mit Google kann nicht angeboten werden.",
-  "googleApp.replaceHint":
-    "Ein neues Paar ersetzt das hinterlegte. Bereits bestehende Verbindungen laufen weiter, bis sie neu verbunden werden.",
-  "googleApp.store": "App hinterlegen",
-  "googleApp.replace": "App ersetzen",
-  "googleApp.removeConfirmTitle": "Google-App entfernen?",
-  "googleApp.removeConfirmBody":
-    "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App. Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
-  "googleApp.remove": "App entfernen",
-  "googleApp.redirectCopied": "Kopiert",
-  "googleApp.redirectCopy": "URI für {purpose} kopieren",
-  "googleApp.redirect.mailbox_connect": "Postfach und Kalender",
-  "googleApp.redirect.sign_in": "Anmeldung",
-  "googleApp.redirectSub":
+  "oauthApp.google.redirectSub":
     "Tragen Sie jede der folgenden URIs beim OAuth-Client in der Google Console ein. Fehlt eine, scheitert die Zustimmung mit redirect_uri_mismatch, ohne zu nennen, welche URI falsch war.",
-  "googleApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
-  "googleApp.fromEnvironment":
-    "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App ersetzt sie, solange eine gespeichert ist.",
-  "googleApp.clientId": "Client-ID",
-  "googleApp.clientSecret": "Client-Secret",
-  "googleApp.clientIdPlaceholder":
+  "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
+  "oauthApp.google.removeConfirmTitle": "Google-App entfernen?",
+  "oauthApp.google.removeConfirmBody":
+    "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App. Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
+  "oauthApp.microsoft.title": "Microsoft-App",
+  "oauthApp.microsoft.sub":
+    "Outlook-Postfächer und -Kalender werden über eine eigene Entra-App-Registrierung verbunden, und die Anmeldung mit Microsoft läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Organisation verwendet und nicht unsere.",
+  "oauthApp.microsoft.absent":
+    "Aus keiner Quelle ist eine App verfügbar. Outlook-Mail und -Kalender lassen sich nicht verbinden, und die Anmeldung mit Microsoft kann nicht angeboten werden.",
+  "oauthApp.microsoft.redirectSub":
+    "Tragen Sie jede der folgenden URIs in der Entra-App-Registrierung unter Authentifizierung als Web-Plattform ein. Fehlt eine, scheitert die Zustimmung mit AADSTS50011, ohne zu nennen, welche URI falsch war.",
+  "oauthApp.microsoft.clientIdPlaceholder":
+    "00000000-0000-0000-0000-000000000000",
+  "oauthApp.microsoft.removeConfirmTitle": "Microsoft-App entfernen?",
+  "oauthApp.microsoft.removeConfirmBody":
+    "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus dem Entra-Portal eingetragen werden. Outlook-Mail- und -Kalender-Verbindungen laufen über diese App. Google- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
+  "oauthApp.configured": "In Verwendung: {clientId}",
+  "oauthApp.fromEnvironment":
+    "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App ersetzt sie, solange eine gespeichert ist.",
+  "oauthApp.pinnedToDirectory": "An das Verzeichnis {tenant} gebunden.",
+  "oauthApp.replaceHint":
+    "Ein neues Paar ersetzt das hinterlegte. Bereits bestehende Verbindungen laufen weiter, bis sie neu verbunden werden.",
+  "oauthApp.store": "App hinterlegen",
+  "oauthApp.replace": "App ersetzen",
+  "oauthApp.remove": "App entfernen",
+  "oauthApp.redirectCopied": "Kopiert",
+  "oauthApp.redirectCopy": "URI für {purpose} kopieren",
+  "oauthApp.redirect.mailbox_connect": "Postfach",
+  "oauthApp.redirect.calendar_connect": "Kalender",
+  "oauthApp.redirect.sign_in": "Anmeldung",
+  "oauthApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
+  "oauthApp.clientId": "Client-ID",
+  "oauthApp.clientSecret": "Client-Secret",
+  "oauthApp.tenant": "Verzeichnis-ID (Mandant)",
+  "oauthApp.tenantHint":
+    "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis, sodass nur dessen Mitglieder zustimmen können. Leer lassen, um jede Organisation zuzulassen.",
+  "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":

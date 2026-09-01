@@ -135,7 +135,39 @@ var erasureCascadeFiles = []string{
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",
 	"internal/modules/privacy/deliveries.go",
+	// The subject's RESTRICTION record and the deal-room seats their address
+	// holds. Both are executed by ErasePerson's own transaction and both write
+	// subject tables — activity and deal_room_participant — which were
+	// invisible to every census keyed on this list while they were missing
+	// from it.
+	"internal/modules/privacy/erasure_restrict.go",
+	"internal/modules/privacy/erasuredealroom.go",
+	// The subject's own columns, and the strings the anonymize-in-place writes
+	// over them. Reached from the same transaction and each executing SQL of
+	// its own.
+	"internal/modules/privacy/subjectcolumns.go",
+	"internal/modules/privacy/erasurestrings.go",
 }
+
+// reachedButNotCascade are files ErasePerson's call graph reaches which are NOT
+// part of the Art. 17 cascade, each with the reason it is not.
+//
+// The register exists because the census below derives what the cascade touches
+// from the call graph rather than trusting the list above — the list has fallen
+// short twice, silently, which is the one way a census must not break. A
+// derivation alone would over-reach the other way: it walks into the retention
+// engine through a shared helper, and letting a retention sweep satisfy "Art. 17
+// reaches this table" is exactly the confusion this file exists to prevent. So
+// the derivation names everything and this register accounts for what is not
+// cascade, one entry at a time.
+var reachedButNotCascade = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. ErasePerson reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
+	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
+	"internal/modules/privacy/retentionscope.go":       "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
+	"internal/modules/privacy/erasure_tombstone.go":    "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
+	"internal/modules/privacy/scheduledsends.go":       "the queued sends cancelled on the way through. Reached from the cascade and executing no SQL of its own — it hands its statements to a helper this scan already reads at that call site",
+	"internal/modules/privacy/retentionpolicystore.go": "the policy CRUD an operator drives — reads the table and writes rules, never a subject's PII. It is reached only through a name the walk cannot tell apart from the cascade's own, and admitting it would let a policy edit count as an erasure",
+})
 
 // retentionSweepFiles are the nightly time-based evaluator — the only eraser a
 // subject-unlinked PII table has. Kept apart from the cascade above so a

@@ -65,6 +65,18 @@ type WebhookSpec struct {
 	// secret (Gmail's Google-signed OIDC bearer); nil skips it — the
 	// chassis composes it rather than flattening it into the secret check.
 	Verify func(context.Context, *http.Request) error
+	// Challenge answers a provider's endpoint-ownership handshake, when it
+	// has one: Microsoft Graph will not create a subscription until the
+	// notification URL echoes a token it POSTs there first. Reported ok, the
+	// chassis writes 200 text/plain with the returned body and stops — no
+	// Handle, because there is no notification in a handshake.
+	//
+	// Run AFTER the secret check, deliberately. A handshake that answered
+	// before admission would make this endpoint an echo oracle for anybody who
+	// found the URL, reflecting attacker-chosen bytes under our own origin.
+	//
+	// nil for a provider with no handshake, which is every provider but Graph.
+	Challenge func(*http.Request) (body string, ok bool)
 	// Handle acts on a body that has cleared admission and reports why it
 	// stopped.
 	Handle func(ctx context.Context, r *http.Request, body []byte) (Disposition, error)
@@ -103,6 +115,22 @@ func Webhook(spec WebhookSpec, log *slog.Logger) http.Handler {
 				log.WarnContext(r.Context(), "webhook: second-factor verification failed",
 					"provider", spec.Provider, "err", err)
 				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+		}
+
+		if spec.Challenge != nil {
+			if token, ok := spec.Challenge(r); ok {
+				// text/plain and nosniff: the token is the provider's bytes,
+				// echoed verbatim because the handshake compares them byte for
+				// byte, so nothing may re-interpret them as markup.
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.Header().Set("X-Content-Type-Options", "nosniff")
+				w.WriteHeader(http.StatusOK)
+				if _, err := io.WriteString(w, token); err != nil {
+					log.WarnContext(r.Context(), "webhook: writing the handshake echo",
+						"provider", spec.Provider, "err", err)
+				}
 				return
 			}
 		}

@@ -76,11 +76,16 @@ var ErrUnreachable = fmt.Errorf("graph: could not reach Microsoft: %w", connecto
 // resync hint); Sync falls back to a bounded re-anchor rather than failing.
 var ErrDeltaGone = fmt.Errorf("graph: delta cursor no longer valid: %w", connector.ErrCursorGone)
 
-// OAuth is the OAuth2 handshake surface: build the consent URL, exchange the
-// authorization code for a refresh token, and mint a fresh access token from
-// a stored refresh token.
-type OAuth interface {
-	AuthCodeURL(state, redirectURI string) string
+// Authorizer is the TOKEN half of the handshake: exchange an authorization code
+// for a refresh token, and mint a fresh access token from a stored one.
+//
+// The narrower half a connector holds, split from OAuth for the same reason
+// googleconn splits its own: an installation whose Entra app arrives at runtime
+// resolves the app per call, and a per-call resolution cannot build a consent
+// URL — AuthCodeURL takes no context and cannot report that the app is
+// unreachable. So the transport keeps that half, resolving the app itself, and
+// the connector holds this one.
+type Authorizer interface {
 	Exchange(ctx context.Context, code, redirectURI string) (oauthflow.TokenGrant, error)
 	AccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
 	// Refresh redeems the stored refresh token asking for exactly the scopes
@@ -95,9 +100,20 @@ type OAuth interface {
 	Refresh(ctx context.Context, refreshToken string, granted []string) (oauthflow.TokenRefresh, error)
 }
 
-// API is the Graph mail surface the connector uses — read-only but for the two
-// send calls at the end, which ride the separate Mail.Send permission. All calls take
-// a short-lived access token (minted from the refresh token per Sync).
+// OAuth is the full handshake surface: an Authorizer that can also send a person
+// to Microsoft's consent screen. The transport holds this; a connector holds the
+// narrower half.
+type OAuth interface {
+	Authorizer
+	AuthCodeURL(state, redirectURI string) string
+}
+
+// API is the Graph mail surface the connector uses. Reading is what almost all
+// of it does; the writes are named and few — the two send calls at the end,
+// which ride the separate Mail.Send permission, and EnsureSubscription, which
+// registers the change-notification subscription push arrives through. All
+// calls take a short-lived access token (minted from the refresh token per
+// Sync).
 type API interface {
 	// Profile returns the mailbox owner's address (mail, falling back to
 	// userPrincipalName for a mailbox with no mail attribute).
@@ -115,6 +131,15 @@ type API interface {
 	// message ids added/changed since plus the advanced deltaLink;
 	// ErrDeltaGone if Graph no longer honors the link.
 	Delta(ctx context.Context, accessToken, deltaLink string) (ids []string, newDeltaLink string, err error)
+	// EnsureSubscription registers or renews the Graph change-notification
+	// subscription pointing at notificationURL, carrying clientState, and
+	// reports the subscription that now covers this mailbox.
+	//
+	// One call rather than a list/create/renew trio on this seam: which of
+	// those a round performs is Microsoft's business, and a seam that spelled
+	// the three would make every test double re-decide the renew-then-create
+	// order the real one exists to hold.
+	EnsureSubscription(ctx context.Context, accessToken, notificationURL, clientState string, deadline time.Time) (Subscription, error)
 	// GetMIME fetches one message as its RFC822 bytes (the /$value stream).
 	GetMIME(ctx context.Context, accessToken, msgID string) (rfc822 []byte, err error)
 	// EstimateAfter returns the provider-side count of messages received on

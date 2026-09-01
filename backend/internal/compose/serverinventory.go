@@ -98,7 +98,7 @@ type Server struct {
 	ownDomainHandlers
 	installationSettingsHandlers
 	licenseHandlers
-	googleAppHandlers
+	connectorAppHandlers
 	installationSetupHandlers
 	consumerMailDomainHandlers
 	blockedDomainHandlers
@@ -168,6 +168,11 @@ type Server struct {
 	// webhook.go), injected by WithGmailPush only when a subscription token
 	// is configured — the route is absent otherwise, never open.
 	gmailPush http.Handler
+
+	// graphPush is the Microsoft Graph change-notification webhook (the same
+	// chassis), injected by WithGraphPush only when a notification token is
+	// configured — the route is absent otherwise, never open.
+	graphPush http.Handler
 
 	// overlayWebhook is the HubSpot webhook-as-signal receiver (OVA-WIRE-10),
 	// injected by WithOverlayWebhook only when the overlay app secret is
@@ -262,15 +267,17 @@ type Server struct {
 	// providers, so both reach the pre-flight and a missing field would report
 	// a configured deployment as unable to send.
 	graphAppConfigured bool
-	// googleAppResolver resolves the installation's STORED Google app, built by
-	// WithKeyvault and named in every connectorHandlers literal.
+	// googleAppResolver and microsoftAppResolver resolve the installation's
+	// STORED app for each vendor, built by WithKeyvault and named in every
+	// connectorHandlers literal.
 	//
-	// It lives on the Server rather than only inside those handlers because the
+	// They live on the Server rather than only inside those handlers because the
 	// struct is REPLACED wholesale in two places, and a field assigned beside a
 	// composite literal is one the next literal drops without a word — which is
 	// exactly how this arrived inert the first time. Kept here, each construction
-	// has to name it, and a reader sees the omission.
-	googleAppResolver googleAppResolver
+	// has to name them, and a reader sees the omission.
+	googleAppResolver    appResolver
+	microsoftAppResolver appResolver
 
 	// schemaPoolReady is the /readyz schema-pool probe, injected only by
 	// WithSchemaPool — a role that never mounted --schema-dsn declares

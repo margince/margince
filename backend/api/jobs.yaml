@@ -876,6 +876,38 @@ kinds:
       One users.watch call against Gmail for one connection, and the write that
       advances watch_expires_at behind it.
 
+  graph_watch_renew:
+    role: dispatcher
+    go_type: GraphWatchArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: {operator: GraphWatch.Interval, schedule_when_positive: GraphWatch.Interval}
+    registration: {when: [GmailRegistry.OffersGraph, GraphWatch.NotificationURL], absent: registers_nothing}
+    fans_out_to: graph_watch_renew_connection
+    fan_out_unit: connection
+    reason: >-
+      A Microsoft Graph subscription lapses in under three days, where a Gmail
+      watch lasts seven — so this pass exists on its own cadence rather than
+      riding the Gmail one, and the registration takes the notification URL as
+      its second condition because a subscription against no URL notifies
+      nobody.
+
+  graph_watch_renew_connection:
+    role: worker
+    go_type: GraphWatchRenewArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: fan_out
+    registration: {when: [GmailRegistry.OffersGraph, GraphWatch.NotificationURL], absent: registers_nothing}
+    args:
+      Workspace: id
+      ConnectionID: id
+    reason: >-
+      One subscription create-or-renew against Microsoft Graph for one
+      connection, and the write that advances watch_expires_at behind it.
+
   graph_edge_reconcile:
     role: dispatcher
     go_type: GraphEdgeReconcileArgs

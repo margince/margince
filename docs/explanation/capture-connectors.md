@@ -63,8 +63,8 @@ Every integration implements `connector.Connector`
 Two **optional** seams a connector implements only when its provider supports them — the registry
 type-asserts and skips a connector that doesn't:
 
-- **`Watcher`** — a renewable push subscription (Gmail's 7-day Pub/Sub watch). A provider with no
-  renewable push simply is not a `Watcher`.
+- **`Watcher`** — a renewable push subscription (Gmail's 7-day Pub/Sub watch, Graph's under-3-day
+  change-notification subscription). A provider with no renewable push simply is not a `Watcher`.
 - **`Backfiller`** — bounded date-backward enumeration of a mailbox (`EstimateBackfill` +
   `BackfillPage`). A provider that can't page backward is not a `Backfiller`, and the backfill engine
   refuses honestly rather than pretending.
@@ -122,10 +122,12 @@ A connector's records reach the CRM through one of four paths, all converging on
    never kills a connection — the sidecar backs off (`2m·2^n`, capped `4h`, ±20% jitter), degrades to a
    daily probe after 20 consecutive failures, and heals on one success. The error taxonomy
    (`rate_limited | unreachable | auth | history_gone | internal`) surfaces as `last_sync_error_class`.
-3. **Push — Gmail only.** With a Pub/Sub topic configured, Gmail delivers change notifications to `POST
-   /webhooks/gmail` (a shared-secret token + Google OIDC when set); the handler zeroes the mailbox's
+3. **Push — the two mail vendors.** With a Pub/Sub topic configured, Gmail delivers change
+   notifications to `POST /webhooks/gmail` (a shared-secret token + Google OIDC when set); with a
+   notification URL configured, Graph delivers them to `POST /webhooks/graph` (the token alone —
+   Microsoft signs nothing on a change notification). Either handler zeroes the mailbox's
    `next_sync_at` and enqueues an immediate sync. Push is a *latency* optimization over the poll, not a
-   separate write path.
+   separate write path, and no calendar connector implements it on either vendor.
 
 4. **Channel long poll — Telegram only.** A messaging channel is not one human's mailbox: an admin
    binds one bot for the whole workspace, and the installation *pulls*. Telegram's two ingress modes
@@ -170,7 +172,7 @@ refresh token (see below).
 | Auth | OAuth `gmail.readonly` + `gmail.send` | IMAPS app-password | OAuth `Mail.Read` + `Mail.Send` | OAuth `calendar.readonly` | OAuth `Calendars.Read` | BotFather bot token |
 | Connection | standing, per human | standing, per human | standing, per human | standing, per human | standing, per human | standing, **per workspace** (an admin binds one bot) |
 | Cursor | `historyId` | UID watermark | `deltaLink` | `syncToken` | `deltaLink` | `getUpdates` offset |
-| Push | Pub/Sub 7-day | — (poll) | — (poll) | — (poll) | — (poll) | — (long poll, exclusive per bot) |
+| Push | Pub/Sub 7-day | — (poll) | subscription, <3-day | — (poll) | — (poll) | — (long poll, exclusive per bot) |
 | Backfill | ✔ | — | ✔ | — | — (the window IS the sync) | — (the Bot API has no history endpoint) |
 | Send | ✔ (`EmailSender`) | — | ✔ (`EmailSender`) | — | — | ✔ (`MessageSender`) |
 | Connect UI | onboarding + Settings | onboarding + Settings | onboarding + Settings | Settings only | Settings only | Settings only (its own card) |
@@ -214,16 +216,28 @@ inline form is reachable from both the onboarding **IMAP** chip and the Settings
 footer; it answers with the connected row, not a capture tally — the connect returns before any mail is
 read.
 
-### Microsoft Graph — standing OAuth, poll-only
+### Microsoft Graph — standing OAuth, push-capable, send-capable
 
 OAuth2 to the Microsoft identity platform with delegated permissions `offline_access User.Read
 Mail.Read Mail.Send` (tenant defaults to `common`) — mail read for capture and send for the governed
 outbound path, on **one consent**, because Microsoft will not add a permission to an existing refresh
 token. A mailbox connected before the send permission landed captures normally and refuses every send
 by name until it is reconnected. Incremental sync walks a **delta query** from a `deltaLink`; a stale
-link (`ErrDeltaGone`, HTTP 410) re-anchors to a bounded 7-day window. It is a `Backfiller` and an
-`EmailSender` but **not** a `Watcher` — there is no change-notification subscription built, so Outlook
-latency is the poll interval, not a push p95.
+link (`ErrDeltaGone`, HTTP 410) re-anchors to a bounded 7-day window. It implements `Backfiller`,
+`EmailSender` and `Watcher`: the watch is a **change-notification subscription** on `/me/messages`,
+renewed by the worker every `6h`, `24h` ahead of its deadline. That deadline is under **three days**
+where Gmail's watch lasts seven, which is why the two passes carry different defaults rather than one.
+
+The subscription is addressed by an id Microsoft mints. Rather than storing it, a renewal round ASKS —
+Microsoft lists the subscriptions this app holds for this user, and the one pointing at our notification
+URL is ours, so a subscription left by an earlier deployment is adopted rather than duplicated. A
+notification's `resource` names a directory object id this system never stored, so the subscription
+carries the mailbox owner's address in `clientState`, which Microsoft echoes verbatim; the webhook
+routes on that and authenticates on the operator token in the URL. Microsoft signs nothing on a change
+notification, so that token is the only admission factor — the same posture Gmail's push has when a
+deployment configures no OIDC push identity. Microsoft will not create a subscription until the URL
+echoes a `validationToken` it POSTs there first, and that handshake runs **after** the token check, so
+the endpoint is never an echo oracle.
 
 Sending submits the whole RFC822 message to `/me/sendMail`, rendered by the **shared** wire builder
 (`capture/mailwire`) that Gmail's send uses — one answer to what a multipart/alternative puts first and
@@ -233,7 +247,7 @@ guard, and unlike Gmail's (which searches for an identity Gmail has already disc
 message's own property. It still does not close the window — Exchange may rewrite the identity on
 submission depending on tenant configuration. **Microsoft carries less than Gmail**: the MIME submit
 ceiling is 4 MB of base64, so `Carriage` declares ~3 MiB per file where Gmail declares 25 MiB, and an
-over-large message parks with an honest reason instead of drawing an opaque refusal. **To run:** a Microsoft Entra (Azure AD) app + tenant + the vault key. **UI:** a
+over-large message parks with an honest reason instead of drawing an opaque refusal. **To run:** a Microsoft Entra (Azure AD) app + tenant + the vault key; a notification URL is optional (without it, capture runs on the poll). **UI:** a
 first-connect affordance from both the onboarding **Microsoft** chip and the Settings **Add a connection**
 footer; the roster manages an existing connection. Microsoft **rotates the refresh token on every redemption**, and the replacement is now persisted: the
 connector reports it through `CredentialRotator` and the registry re-seals it into the vault on each
@@ -282,11 +296,12 @@ connector owns only its vendor's decode.
 Capture spans both process roles ([the four `cmd/<role>` binaries](architecture.md)):
 
 - **`api`** serves the *interactive* surface: `connect` (OAuth and IMAP alike), `callback`,
-  `disconnect`, `list`, backfill `preview`/`start`(enqueue)/`status`/`cancel`, the Gmail push webhook,
+  `disconnect`, `list`, backfill `preview`/`start`(enqueue)/`status`/`cancel`, the two mail push
+  webhooks,
   the morning `digest` read, the capture-settings toggle, and the consumer-mail domain list.
 - **`worker`** runs *every background pull* as leader-elected River periodic jobs: the sync dispatcher
-  (`30s`) → per-connection `SyncOnce`, the backfill engine (one page/tick), the Gmail watch-renewal scan
-  (`6h`), and the nightly capture suite (classify hourly, enrich + digest daily). The Surface-B agent
+  (`30s`) → per-connection `SyncOnce`, the backfill engine (one page/tick), each vendor's
+  watch-renewal scan (`6h`), and the nightly capture suite (classify hourly, enrich + digest daily). The Surface-B agent
   runner shares the worker process but is a *separate* scheduler — it does not run capture.
 
 Gmail/Graph OAuth needs its config on **both** roles (the api connects, the worker syncs). The full
@@ -324,11 +339,11 @@ The pipeline is live; these were scoped out, not missed:
   `connect`/`callback`/`disconnect` + sync as Gmail/Graph); Settings' **Add a connection** footer starts
   one, but the onboarding connect step's three chips (Google, Microsoft, IMAP) don't include it — adding
   Calendar during first-run onboarding still means a trip to Settings afterward.
-- **Graph is poll-only, mail and calendar alike.** The change-notification subscription
-  (validationToken handshake, `clientState`, ≤3-day renewal) is unbuilt, so Outlook latency is the poll
-  interval. (Gmail has both halves — the push-watch renewal sweep and the `/webhooks/gmail` consumer
-  above — so a Gmail deployment with a Pub/Sub topic configured is push-driven, with the poll behind it
-  as the safety net.)
+- **Outlook MAIL is push-driven; the Outlook calendar is not.** The mailbox has both halves — the
+  change-notification subscription (validationToken handshake, `clientState`, under-3-day renewal) and
+  the `/webhooks/graph` consumer — so a deployment with a notification URL configured runs on push with
+  the poll behind it as the safety net. `graphcal` implements no `Watcher`, so calendar latency is the
+  poll interval on both vendors.
 - **The Outlook calendar sees a bounded window.** 90 days back, a year ahead, reopened every 30 days so
   forward-dated meetings enter it. History older than 90 days at connect time is never imported — there
   is no calendar `Backfiller` on either vendor.
@@ -364,7 +379,7 @@ The pipeline is live; these were scoped out, not missed:
   on every redemption) reports the replacement through `CredentialRotator`, and the re-seal obeys the
   same fence and the same destroy-the-old rule.
 - **Every connection is standing** and syncs in the background; only Gmail/Graph backfill, only
-  Gmail/Graph send, and only Gmail pushes.
+  Gmail/Graph send, and only Gmail/Graph push.
 - **Mail and calendar are always separate connections**, on Google and Microsoft alike: one consent
   each, so a person can bring one without the other and disconnect either.
 

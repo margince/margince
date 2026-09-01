@@ -78,6 +78,15 @@ type fakeAPI struct {
 	skipIDs       map[string]bool // ids GetMIME refuses as a per-message drop
 	sentFolderErr error
 
+	// The subscription half's state: what a round was asked for, and what
+	// Microsoft answered.
+	subCalls    int
+	subURL      string
+	subState    string
+	subDeadline time.Time
+	subResult   Subscription
+	subErr      error
+
 	// The outbound half's state.
 	sendCalls     int
 	sendErr       error
@@ -128,6 +137,21 @@ func (f *fakeAPI) DeltaInit(_ context.Context, _, folder string, after time.Time
 	f.initCalls++
 	f.initAfter = after
 	return f.initIDs, f.initDelta, nil
+}
+
+func (f *fakeAPI) EnsureSubscription(
+	_ context.Context, _, notificationURL, clientState string, deadline time.Time,
+) (Subscription, error) {
+	f.subCalls++
+	f.subURL, f.subState, f.subDeadline = notificationURL, clientState, deadline
+	if f.subErr != nil {
+		return Subscription{}, f.subErr
+	}
+	if f.subResult.Expiration.IsZero() && f.subResult.ID == "" {
+		// The default answer: Microsoft honored the deadline it was asked for.
+		return Subscription{ID: "sub-1", Expiration: deadline}, nil
+	}
+	return f.subResult, nil
 }
 
 func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]string, string, error) {

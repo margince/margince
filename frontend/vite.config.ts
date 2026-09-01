@@ -202,6 +202,15 @@ export default defineConfig({
       "/readyz": { target: proxyTarget, changeOrigin: false, secure: false },
       "/healthz": { target: proxyTarget, changeOrigin: false, secure: false },
       "/metrics": { target: proxyTarget, changeOrigin: false, secure: false },
+      // The anonymous inbound edge every channel connector publishes. It is
+      // mounted beside /v1 rather than under it, because /v1 carries session
+      // middleware this edge has none of — and the connector screens hand a
+      // member a copy-paste command built from the browser's OWN origin, which
+      // is the app's port. Without this line that command 404s on a dev stack
+      // while the edge answers correctly one port over, and the reader goes
+      // looking for a misconfigured connector, a wrong secret or a disabled
+      // extension. A broken example is worse than no example.
+      "/webhooks": { target: proxyTarget, changeOrigin: false, secure: false },
       // The MCP connector's three route groups proxy together, never
       // separately: RFC 9728 discovery is a chain rooted at the resource
       // server's 401, so the transport (/mcp), the authorization server

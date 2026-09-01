@@ -6224,33 +6224,51 @@ export const en = {
     "Offer this provider on the login screen. Turning it off stops sign-ins already in progress, and existing sessions are unaffected.",
   "signInMethods.noneConfigured":
     "This deployment has no external provider configured, so there is nothing to offer besides a password.",
-  "googleApp.title": "Google app",
-  "googleApp.sub":
+  "oauthApp.google.title": "Google app",
+  "oauthApp.google.sub":
     "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your organization’s own credentials are used rather than ours.",
-  "googleApp.configured": "In use: {clientId}",
-  "googleApp.absent":
+  "oauthApp.google.absent":
     "No app is available from any source. Gmail and Calendar cannot be connected, and Google sign-in cannot be offered.",
-  "googleApp.replaceHint":
-    "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
-  "googleApp.store": "Store app",
-  "googleApp.replace": "Replace app",
-  "googleApp.removeConfirmTitle": "Remove the Google app?",
-  "googleApp.removeConfirmBody":
-    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
-  "googleApp.remove": "Remove app",
-  "googleApp.redirectCopied": "Copied",
-  "googleApp.redirectCopy": "Copy {purpose} URI",
-  "googleApp.redirect.mailbox_connect": "Mailbox and calendar",
-  "googleApp.redirect.sign_in": "Sign-in",
-  "googleApp.redirectSub":
+  "oauthApp.google.redirectSub":
     "Register every URI below on the OAuth client in the Google console. A missing one fails at the consent screen with redirect_uri_mismatch, which does not say which URI was wrong.",
-  "googleApp.redirectTitle": "Authorized redirect URIs",
-  "googleApp.fromEnvironment":
-    "In use from this deployment’s configuration: {clientId}. Storing an app here replaces it for as long as one is stored.",
-  "googleApp.clientId": "Client ID",
-  "googleApp.clientSecret": "Client secret",
-  "googleApp.clientIdPlaceholder":
+  "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
+  "oauthApp.google.removeConfirmTitle": "Remove the Google app?",
+  "oauthApp.google.removeConfirmBody":
+    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
+  "oauthApp.microsoft.title": "Microsoft app",
+  "oauthApp.microsoft.sub":
+    "Outlook mailboxes and calendars are connected, and people sign in with Microsoft, through an Entra app registration you own. Your organization’s own credentials are used rather than ours.",
+  "oauthApp.microsoft.absent":
+    "No app is available from any source. Outlook mail and calendar cannot be connected, and Microsoft sign-in cannot be offered.",
+  "oauthApp.microsoft.redirectSub":
+    "Register every URI below under Authentication on the Entra app registration, as a Web platform. A missing one fails at the consent screen with AADSTS50011, which does not say which URI was wrong.",
+  "oauthApp.microsoft.clientIdPlaceholder":
+    "00000000-0000-0000-0000-000000000000",
+  "oauthApp.microsoft.removeConfirmTitle": "Remove the Microsoft app?",
+  "oauthApp.microsoft.removeConfirmBody":
+    "The client secret cannot be read back, so removing it means re-entering both halves from the Entra portal. Outlook mail and calendar connections are made through this app. Google and IMAP mailboxes are not affected. First-run setup will ask for one again.",
+  "oauthApp.configured": "In use: {clientId}",
+  "oauthApp.fromEnvironment":
+    "In use from this deployment’s configuration: {clientId}. Storing an app here replaces it for as long as one is stored.",
+  "oauthApp.pinnedToDirectory": "Pinned to directory {tenant}.",
+  "oauthApp.replaceHint":
+    "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
+  "oauthApp.store": "Store app",
+  "oauthApp.replace": "Replace app",
+  "oauthApp.remove": "Remove app",
+  "oauthApp.redirectCopied": "Copied",
+  "oauthApp.redirectCopy": "Copy {purpose} URI",
+  "oauthApp.redirect.mailbox_connect": "Mailbox",
+  "oauthApp.redirect.calendar_connect": "Calendar",
+  "oauthApp.redirect.sign_in": "Sign-in",
+  "oauthApp.redirectTitle": "Authorized redirect URIs",
+  "oauthApp.clientId": "Client ID",
+  "oauthApp.clientSecret": "Client secret",
+  "oauthApp.tenant": "Directory (tenant) ID",
+  "oauthApp.tenantHint":
+    "Optional. Pins the app to one Entra directory, so only its members may authorize. Leave it empty to allow any organization.",
+  "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":

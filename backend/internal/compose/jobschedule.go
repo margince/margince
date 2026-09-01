@@ -131,19 +131,26 @@ func configDependencies(cfg JobRunnerConfig) map[string]bool {
 		"Embedder":               cfg.Embedder != nil,
 		"EnrichBrain":            cfg.EnrichBrain != nil,
 		"GmailRegistry":          cfg.GmailRegistry != nil,
-		"GmailWatch.Topic":       cfg.GmailWatch.Topic != "",
-		"OverlayVault":           cfg.OverlayVault != nil,
-		"SendDelivery":           cfg.SendDelivery != nil,
-		"SendRegistry":           cfg.SendRegistry != nil,
-		"TranscriptProposeBrain": cfg.TranscriptProposeBrain != nil,
-		"Geocoder":               cfg.Geocoder != nil,
-		"VatChecker":             cfg.VatChecker != nil,
-		"TechnicalEnricher":      cfg.TechnicalEnricher != nil,
-		"DocumentExtractBrain":   cfg.DocumentExtractBrain != nil,
-		"VoiceBrain":             cfg.VoiceBrain != nil,
-		"WebhookRetry.Deliverer": cfg.WebhookRetry.Deliverer != nil,
-		"ProviderRuns.Registry":  cfg.ProviderRuns.Registry != nil,
-		"ProviderRuns.Vault":     cfg.ProviderRuns.Vault != nil,
+		// The registry OFFERING graph, not merely existing. The Gmail registry
+		// is the same object for both vendors, so "a registry is present" is
+		// true on a worker that has Gmail credentials and no Microsoft ones —
+		// and scheduling under that while the workers gate on the connector
+		// leaves rows nothing can claim.
+		"GmailRegistry.OffersGraph":  cfg.GmailRegistry != nil && registryOffers(cfg.GmailRegistry, providerGraph),
+		"GmailWatch.Topic":           cfg.GmailWatch.Topic != "",
+		"GraphWatch.NotificationURL": cfg.GraphWatch.NotificationURL != "",
+		"OverlayVault":               cfg.OverlayVault != nil,
+		"SendDelivery":               cfg.SendDelivery != nil,
+		"SendRegistry":               cfg.SendRegistry != nil,
+		"TranscriptProposeBrain":     cfg.TranscriptProposeBrain != nil,
+		"Geocoder":                   cfg.Geocoder != nil,
+		"VatChecker":                 cfg.VatChecker != nil,
+		"TechnicalEnricher":          cfg.TechnicalEnricher != nil,
+		"DocumentExtractBrain":       cfg.DocumentExtractBrain != nil,
+		"VoiceBrain":                 cfg.VoiceBrain != nil,
+		"WebhookRetry.Deliverer":     cfg.WebhookRetry.Deliverer != nil,
+		"ProviderRuns.Registry":      cfg.ProviderRuns.Registry != nil,
+		"ProviderRuns.Vault":         cfg.ProviderRuns.Vault != nil,
 	}
 }
 
@@ -156,6 +163,7 @@ func operatorIntervals(cfg JobRunnerConfig) map[string]time.Duration {
 		"Geocoding.BackfillInterval":           cfg.Geocoding.BackfillInterval,
 		"TechnicalEnrichment.BackfillInterval": cfg.TechnicalEnrichment.BackfillInterval,
 		"GmailWatch.Interval":                  cfg.GmailWatch.Interval,
+		"GraphWatch.Interval":                  cfg.GraphWatch.Interval,
 		"OverlayInterval":                      cfg.OverlayInterval,
 		"PrivacyRetention.Interval":            cfg.PrivacyRetention.Interval,
 		"ReconcileInterval":                    cfg.ReconcileInterval,
