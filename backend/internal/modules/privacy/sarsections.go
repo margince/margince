@@ -39,7 +39,17 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		// subject cannot tell a retirement that happened from one that did not —
 		// in the very package they would check it in.
 		{&pkg.Emails, `SELECT email, email_type, is_primary, archived_at FROM person_email WHERE person_id = $1`, nil},
-		{&pkg.Phones, `SELECT phone, phone_type, archived_at FROM person_phone WHERE person_id = $1`, nil},
+		// The number this row replaced is exported as the NUMBER, not as the
+		// superseded_phone_id the column holds: a bare row id tells the subject
+		// nothing, and the point of the export is what is known about them. The
+		// join is left, because the replaced row is deleted outright by erasure
+		// while this one survives archived, and a subject whose old number has
+		// already gone should still receive the row that replaced it.
+		{&pkg.Phones, `SELECT p.phone, p.phone_type, p.archived_at, p.observed_at,
+		          prev.phone AS replaced_phone, prev.observed_at AS replaced_observed_at
+		   FROM person_phone p
+		   LEFT JOIN person_phone prev ON prev.id = p.superseded_phone_id
+		  WHERE p.person_id = $1`, nil},
 		{&pkg.ChannelIdentities, `SELECT provider, channel_user_id, username, blocked_at, source, created_at, archived_at
 		   FROM person_channel_identity WHERE person_id = $1`, nil},
 		{&pkg.InteractionParticipation, `SELECT ap.activity_id, ap.role, ap.address, ap.created_at,
@@ -248,8 +258,18 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// enriched value and the correction — which travels beside it in
 		// Corrections below, as its own section. Merging them here would hand
 		// the subject one value and conceal that the override exists at all.
+		// observed_at and the superseded_* trio are exported beside the value
+		// they belong to. They are held personal data in their own right: the
+		// superseded value is a second thing this installation says about the
+		// subject — often the one a colleague typed — and observed_at is the
+		// date the record believes the subject stated it. Exporting the current
+		// value alone would tell the subject their title is X while the row
+		// also holds that it used to say Y until a message dated Z replaced it,
+		// which is precisely the sort of held-but-unstated fact Art. 15 owes.
 		{&pkg.EnrichedFields, `SELECT ppf.field, ppf.value, ppf.evidence_snippet, ppf.source_ref,
-		          ppf.confidence, ppf.source, ppf.captured_by, ppf.updated_at
+		          ppf.confidence, ppf.source, ppf.captured_by, ppf.updated_at,
+		          ppf.observed_at, ppf.superseded_value, ppf.superseded_captured_by,
+		          ppf.superseded_observed_at
 		   FROM person_profile_field ppf
 		   WHERE ppf.person_id = $1`, nil},
 		// claim_key is exported as it stands: it is a hash of the claim's
