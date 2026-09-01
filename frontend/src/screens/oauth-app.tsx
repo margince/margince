@@ -11,26 +11,63 @@ import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 /**
- * The Google OAuth app a mailbox connection is made through.
+ * A connector OAuth app a mailbox connection is made through — Google's, or
+ * Microsoft's.
  *
- * The ONLY form that writes it, and the only place first run sends an operator
- * for it: the app is optional, and a second form would be one that cannot show
- * the redirect URIs below — the half an operator has to paste into Google's
- * console. So how long a client SECRET lives in a mutation's `variables` has
- * one answer here rather than two answers to compare.
+ * ONE card, rendered once per vendor. The two ask for the same three things and
+ * differ only in the words around them, so a second component would be a second
+ * answer to how long a client SECRET lives in a mutation's `variables` — and the
+ * two would drift on exactly that.
  *
  * The secret is never read back. `GET` answers whether one is stored and the
  * client id, which is not a secret — it travels in every authorization redirect,
  * and an operator needs to see WHICH app their installation uses to check it
- * against the Google console.
+ * against the vendor's console.
  */
 
-export function useGoogleApp() {
+type Vendor = "google" | "microsoft";
+
+// vendorCopy is each vendor's own wording, as literal message keys.
+//
+// A record of literals rather than a template built from the provider name: the
+// translator's key type is a closed union, so a computed key types as a plain
+// string and a missing translation would reach a reader as a raw key instead of
+// failing the build.
+const vendorCopy = {
+  google: {
+    title: "oauthApp.google.title",
+    sub: "oauthApp.google.sub",
+    absent: "oauthApp.google.absent",
+    redirectSub: "oauthApp.google.redirectSub",
+    clientIdPlaceholder: "oauthApp.google.clientIdPlaceholder",
+    removeConfirmTitle: "oauthApp.google.removeConfirmTitle",
+    removeConfirmBody: "oauthApp.google.removeConfirmBody",
+  },
+  microsoft: {
+    title: "oauthApp.microsoft.title",
+    sub: "oauthApp.microsoft.sub",
+    absent: "oauthApp.microsoft.absent",
+    redirectSub: "oauthApp.microsoft.redirectSub",
+    clientIdPlaceholder: "oauthApp.microsoft.clientIdPlaceholder",
+    removeConfirmTitle: "oauthApp.microsoft.removeConfirmTitle",
+    removeConfirmBody: "oauthApp.microsoft.removeConfirmBody",
+  },
+} as const;
+
+// The query key carries the vendor, so storing one app does not blank the
+// other's card — one key for both would make every write invalidate a view it
+// says nothing about.
+function appQueryKey(provider: Vendor) {
+  return ["installation-oauth-app", provider];
+}
+
+export function useOAuthApp(provider: Vendor) {
   return useQuery({
-    queryKey: ["installation-google-app"],
+    queryKey: appQueryKey(provider),
     queryFn: async () => {
       const { data, error, response } = await api.GET(
-        "/installation/google-app",
+        "/installation/oauth-apps/{provider}",
+        { params: { path: { provider } } },
       );
       if (error || !response.ok) {
         throwProblem(error);
@@ -40,16 +77,27 @@ export function useGoogleApp() {
   });
 }
 
-export function useSetGoogleApp() {
+export function useSetOAuthApp(provider: Vendor) {
   const queryClient = useQueryClient();
   return useMutation({
     // Collected the moment nothing observes it, because what this mutation's
     // `variables` hold is a credential rather than a form field. The caller
     // resets it once settled for the same reason.
     gcTime: 0,
-    mutationFn: async (vars: { clientId: string; clientSecret: string }) => {
-      const { error } = await api.PUT("/installation/google-app", {
-        body: { client_id: vars.clientId, client_secret: vars.clientSecret },
+    mutationFn: async (vars: {
+      clientId: string;
+      clientSecret: string;
+      tenant: string;
+    }) => {
+      const { error } = await api.PUT("/installation/oauth-apps/{provider}", {
+        params: { path: { provider } },
+        body: {
+          client_id: vars.clientId,
+          client_secret: vars.clientSecret,
+          // Omitted rather than sent empty: the server refuses a tenant on a
+          // vendor that has no directories, and an empty string is a value.
+          ...(vars.tenant === "" ? {} : { tenant: vars.tenant }),
+        },
       });
       if (error) {
         throwProblem(error);
@@ -58,27 +106,26 @@ export function useSetGoogleApp() {
     onSuccess: async () => {
       // Both: the card's own view, and the setup report, which names this
       // step as outstanding whether or not it blocks anything.
-      await queryClient.invalidateQueries({
-        queryKey: ["installation-google-app"],
-      });
+      await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
       await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
     },
   });
 }
 
-function useRemoveGoogleApp() {
+function useRemoveOAuthApp(provider: Vendor) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE("/installation/google-app");
+      const { error } = await api.DELETE(
+        "/installation/oauth-apps/{provider}",
+        { params: { path: { provider } } },
+      );
       if (error) {
         throwProblem(error);
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["installation-google-app"],
-      });
+      await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
       await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
     },
   });
@@ -88,12 +135,18 @@ function useRemoveGoogleApp() {
 // message key, because the catalog is a closed union: a template key would type
 // as any string and a purpose the contract adds later would reach a reader as a
 // raw key rather than as words.
+//
+// Every purpose the contract declares has an arm. A missing one renders the raw
+// enum beside two translated rows, which is what a reader takes for a bug in the
+// list rather than in this switch.
 function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
   switch (purpose) {
     case "sign_in":
-      return t("googleApp.redirect.sign_in");
+      return t("oauthApp.redirect.sign_in");
     case "mailbox_connect":
-      return t("googleApp.redirect.mailbox_connect");
+      return t("oauthApp.redirect.mailbox_connect");
+    case "calendar_connect":
+      return t("oauthApp.redirect.calendar_connect");
     default:
       return purpose;
   }
@@ -103,17 +156,19 @@ function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
 // client, one per purpose this deployment actually serves.
 //
 // The URLs come from the response and are never built here. They have one job —
-// to be byte-identical to what Google receives — and a second spelling in the
+// to be byte-identical to what the vendor receives — and a second spelling in the
 // client is exactly how the two come apart. The backend derives them from the
 // functions that send them, held by a fitness test in both directions.
 //
 // An empty list renders nothing rather than an empty heading: a deployment that
-// serves no Google flow has nothing to register, and a bare heading would read
-// as a list that failed to load.
+// serves none of a vendor's flows has nothing to register, and a bare heading
+// would read as a list that failed to load.
 function RedirectUris({
   uris,
+  sub,
 }: Readonly<{
   uris: readonly { purpose: string; url: string }[] | undefined;
+  sub: string;
 }>) {
   const t = useT();
   const [copied, setCopied] = useState("");
@@ -127,8 +182,8 @@ function RedirectUris({
   }
   return (
     <div className="stack-sm">
-      <p className="t-label">{t("googleApp.redirectTitle")}</p>
-      <p className="t-caption">{t("googleApp.redirectSub")}</p>
+      <p className="t-label">{t("oauthApp.redirectTitle")}</p>
+      <p className="t-caption">{sub}</p>
       <SettingList>
         {uris.map((uri) => {
           const purpose = purposeLabel(uri.purpose, t);
@@ -158,8 +213,8 @@ function RedirectUris({
                   }}
                 >
                   {copied === uri.purpose
-                    ? t("googleApp.redirectCopied")
-                    : t("googleApp.redirectCopy", { purpose })}
+                    ? t("oauthApp.redirectCopied")
+                    : t("oauthApp.redirectCopy", { purpose })}
                 </Button>
               }
             />
@@ -170,14 +225,24 @@ function RedirectUris({
   );
 }
 
-export function GoogleAppCard() {
+export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   const t = useT();
+  const copy = vendorCopy[provider];
   const canManage = useCanWrite("capture_settings", "update");
-  const app = useGoogleApp();
-  const save = useSetGoogleApp();
-  const remove = useRemoveGoogleApp();
+  const app = useOAuthApp(provider);
+  const save = useSetOAuthApp(provider);
+  const remove = useRemoveOAuthApp(provider);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  // Microsoft only: an Entra app may be pinned to one directory, and Google has
+  // no such concept — a field that silently does nothing is worse than an absent
+  // one, because an operator who fills it in believes they narrowed something.
+  //
+  // `undefined` until the app has loaded, which is what separates "not typed in
+  // yet" from "deliberately cleared": rotating a pinned app with this blank
+  // would send no tenant and silently widen it to every organization, which is
+  // the one change on this card nobody would see happen.
+  const [tenant, setTenant] = useState<string | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
   // Focus has to land somewhere that still exists. The button that opened the
   // dialog is the natural target and the one that disappears: a successful
@@ -190,9 +255,9 @@ export function GoogleAppCard() {
   const failure = save.error ?? remove.error;
 
   return (
-    <Panel title={t("googleApp.title")}>
+    <Panel title={t(copy.title)}>
       <PanelBody>
-        <p className="t-body">{t("googleApp.sub")}</p>
+        <p className="t-body">{t(copy.sub)}</p>
         <QueryGate query={app}>
           {(status) => (
             <>
@@ -202,23 +267,31 @@ export function GoogleAppCard() {
               {/* Three states, because there are three answers. `configured`
                   alone could not tell "nothing anywhere" from "the deployment
                   supplies one", and the card said the former in both — telling
-                  an operator Gmail could not be connected on installations
+                  an operator mail could not be connected on installations
                   where it demonstrably could. */}
               <p className="t-body">
                 {status.source === "stored" &&
-                  t("googleApp.configured", { clientId: status.client_id })}
+                  t("oauthApp.configured", { clientId: status.client_id })}
                 {status.source === "environment" &&
-                  t("googleApp.fromEnvironment", {
+                  t("oauthApp.fromEnvironment", {
                     clientId: status.client_id,
                   })}
-                {status.source === "none" && t("googleApp.absent")}
+                {status.source === "none" && t(copy.absent)}
               </p>
-              <RedirectUris uris={status.redirect_uris} />
+              {status.source === "stored" && status.tenant && (
+                <p className="t-caption">
+                  {t("oauthApp.pinnedToDirectory", { tenant: status.tenant })}
+                </p>
+              )}
+              <RedirectUris
+                uris={status.redirect_uris}
+                sub={t(copy.redirectSub)}
+              />
               <Field
-                label={t("googleApp.clientId")}
+                label={t("oauthApp.clientId")}
                 hint={
                   status.source === "stored"
-                    ? t("googleApp.replaceHint")
+                    ? t("oauthApp.replaceHint")
                     : undefined
                 }
               >
@@ -229,12 +302,12 @@ export function GoogleAppCard() {
                     value={clientId}
                     autoComplete="off"
                     disabled={!canManage || busy}
-                    placeholder={t("googleApp.clientIdPlaceholder")}
+                    placeholder={t(copy.clientIdPlaceholder)}
                     onChange={(e) => setClientId(e.target.value)}
                   />
                 )}
               </Field>
-              <Field label={t("googleApp.clientSecret")}>
+              <Field label={t("oauthApp.clientSecret")}>
                 {(control) => (
                   <TextInput
                     {...control}
@@ -246,6 +319,27 @@ export function GoogleAppCard() {
                   />
                 )}
               </Field>
+              {provider === "microsoft" && (
+                <Field
+                  label={t("oauthApp.tenant")}
+                  hint={t("oauthApp.tenantHint")}
+                >
+                  {(control) => (
+                    <TextInput
+                      {...control}
+                      // The stored directory until somebody edits it, so a
+                      // rotation carries the pinning forward. Emptying the
+                      // field is then a deliberate act, which is what widening
+                      // an app to every organization ought to be.
+                      value={tenant ?? status.tenant ?? ""}
+                      autoComplete="off"
+                      disabled={!canManage || busy}
+                      placeholder={t("oauthApp.tenantPlaceholder")}
+                      onChange={(e) => setTenant(e.target.value)}
+                    />
+                  )}
+                </Field>
+              )}
               <div className="row-inline">
                 <Button
                   variant="primary"
@@ -257,6 +351,7 @@ export function GoogleAppCard() {
                       {
                         clientId: clientId.trim(),
                         clientSecret: clientSecret.trim(),
+                        tenant: (tenant ?? status.tenant ?? "").trim(),
                       },
                       {
                         onSuccess: () => {
@@ -264,6 +359,7 @@ export function GoogleAppCard() {
                           // has done its job.
                           setClientSecret("");
                           setClientId("");
+                          setTenant(undefined);
                           save.reset();
                         },
                       },
@@ -271,8 +367,8 @@ export function GoogleAppCard() {
                   }}
                 >
                   {status.source === "stored"
-                    ? t("googleApp.replace")
-                    : t("googleApp.store")}
+                    ? t("oauthApp.replace")
+                    : t("oauthApp.store")}
                 </Button>
                 {status.source === "stored" && (
                   <Button
@@ -281,15 +377,15 @@ export function GoogleAppCard() {
                     disabled={!canManage || save.isPending}
                     onClick={() => setConfirming(true)}
                   >
-                    {t("googleApp.remove")}
+                    {t("oauthApp.remove")}
                   </Button>
                 )}
               </div>
               <ConfirmModal
                 open={confirming}
                 onClose={() => setConfirming(false)}
-                title={t("googleApp.removeConfirmTitle")}
-                confirmLabel={t("googleApp.remove")}
+                title={t(copy.removeConfirmTitle)}
+                confirmLabel={t("oauthApp.remove")}
                 confirmVariant="danger"
                 pending={remove.isPending}
                 // A refused DELETE leaves this dialog OPEN, so the reason has
@@ -301,11 +397,22 @@ export function GoogleAppCard() {
                 onConfirm={() => {
                   save.reset();
                   remove.mutate(undefined, {
-                    onSuccess: () => setConfirming(false),
+                    onSuccess: () => {
+                      setConfirming(false);
+                      // AND THE DRAFT GOES WITH IT. An operator who typed
+                      // replacement credentials and then removed the app
+                      // instead was left with both fields populated and Store
+                      // app ready to press — offering to store a secret they
+                      // had just decided to be rid of, against an app that no
+                      // longer exists.
+                      setClientSecret("");
+                      setClientId("");
+                      setTenant(undefined);
+                    },
                   });
                 }}
               >
-                {t("googleApp.removeConfirmBody")}
+                {t(copy.removeConfirmBody)}
               </ConfirmModal>
             </>
           )}

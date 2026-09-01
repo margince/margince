@@ -45,7 +45,7 @@ const (
 // different connections never race. (owner is a field only for the pure
 // Normalize surface, which is test-only — Sync never touches it.)
 type Connector struct {
-	oauth OAuth
+	oauth Authorizer
 	api   API
 	owner string // used ONLY by Normalize (the test-guarded pure mapping); never set by Sync
 	// now anchors the initial-sync window; a field so tests pin the clock.
@@ -84,8 +84,13 @@ func (c *Connector) WithCredentialSink(sink connector.CredentialSink) connector.
 	return &copied
 }
 
-// New returns a Graph connector over the given OAuth + API surfaces.
-func New(oauth OAuth, api API) *Connector {
+// New returns a Graph connector over the given Authorizer + API surfaces.
+//
+// The Authorizer is the TOKEN half of the handshake, not the whole of it: a
+// connector never sends anybody to a consent screen, and the installation's app
+// may be resolved per call, which building a consent URL cannot report a failure
+// from. The transport holds the wider OAuth surface.
+func New(oauth Authorizer, api API) *Connector {
 	return &Connector{oauth: oauth, api: api, now: time.Now}
 }
 

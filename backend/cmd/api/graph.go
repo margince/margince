@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
 // graphOptions wires the Microsoft Graph (Outlook/M365) capture surface: the
@@ -20,7 +21,7 @@ import (
 // providers share one connect registry). WithGraphCapture self-gates: absent
 // the client id/secret, state key, or public base URL it is a no-op and
 // /connectors/graph/* keeps its declared 501.
-func graphOptions(cfg apiConfig, pool *pgxpool.Pool, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
+func graphOptions(cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
 	graphCfg := compose.GraphConfig{
 		ClientID:      cfg.graphClientID,
 		ClientSecret:  cfg.graphClientSecret,
@@ -41,8 +42,10 @@ func graphOptions(cfg apiConfig, pool *pgxpool.Pool, logger *slog.Logger, stdout
 		opts = append(opts, compose.WithGraphPush(pushInserter, compose.GraphPushConfig{Token: cfg.graphPushToken}))
 		_, _ = fmt.Fprintln(stdout, "api graph push webhook enabled (/webhooks/graph)")
 	}
-	switch {
-	case graphCfg.Enabled():
+	// Keyed on what the option itself gates on, not on the environment carrying
+	// an app: an installation whose Entra app is stored through Settings mounts
+	// the same transport and needs the same backfill ops.
+	if graphCfg.TransportMountable() && vault != nil {
 		// The backfill ops ride the shared connect registry plus an
 		// insert-only client — the api enqueues the paging job, the worker
 		// pages. WithCaptureBackfill is idempotent, so a deployment that
@@ -52,9 +55,14 @@ func graphOptions(cfg apiConfig, pool *pgxpool.Pool, logger *slog.Logger, stdout
 			return nil, err
 		}
 		opts = append(opts, compose.WithCaptureBackfill(backfillInserter))
+	}
+	switch {
+	case graphCfg.Enabled():
 		_, _ = fmt.Fprintln(stdout, "api graph capture connector enabled (/connectors/graph/*, backfill ops)")
+	case graphCfg.TransportMountable() && vault != nil:
+		_, _ = fmt.Fprintln(stdout, "api graph capture transport mounted; no Entra app in the environment — Settings supplies one, or /connectors/graph/* answers 501")
 	case cfg.graphClientID != "":
-		_, _ = fmt.Fprintln(stdout, "api graph capture connector configured but INCOMPLETE — needs client secret, --connector-state-key (>=32B), and --public-base-url; surface stays 501")
+		_, _ = fmt.Fprintln(stdout, "api graph capture connector configured but INCOMPLETE — needs --connector-state-key (>=32B) and --public-base-url; surface stays 501")
 	}
 	return opts, nil
 }

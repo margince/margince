@@ -7,7 +7,7 @@ package compose
 //
 // One surface answering one question, because the onboarding gate has to make a
 // single decision — may this reader proceed — and composing that out of
-// /ai/profile plus a Google-app read would put the installation's own policy in
+// /ai/profile plus an OAuth-app read would put the installation's own policy in
 // the client. The moment a posture needs a different rule (a deployment serving
 // no mail, a local-model install with no vendor to key) the rule changes here
 // and every screen follows.
@@ -37,14 +37,14 @@ type installationSetupHandlers struct {
 	routing *ai.RoutingStore
 	// providerKeys reports which cloud vendors hold a credential.
 	providerKeys *ai.ProviderKeyStore
-	// googleApp reports whether the installation's OAuth app is held.
-	googleApp *capture.GoogleAppStore
-	// envGoogleApp records that this PROCESS was composed with a Google app from
-	// its environment.
+	// connectorApps reports whether the installation holds a vendor's OAuth app.
+	connectorApps *capture.ConnectorAppStore
+	// envConnectorApp records that this PROCESS was composed with a connector
+	// OAuth app from its environment, for either vendor.
 	//
 	// It is part of the answer because it is part of what the connect transport
 	// resolves: the stored app wins, and the environment is the fallback. An
-	// installation that exports the pair has a working Gmail integration, so
+	// installation that exports a pair has a working mail integration, so
 	// reporting its step unconfigured would tell an operator to go and store an
 	// app the process already resolves.
 	//
@@ -52,7 +52,7 @@ type installationSetupHandlers struct {
 	// place a write lands. They are one honest reading of a two-source
 	// resolution, and this field is how the reading stays identical to the
 	// transport's.
-	envGoogleApp bool
+	envConnectorApp bool
 }
 
 func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +84,7 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 		httperr.Write(w, r, err)
 		return
 	}
-	googleReady, err := h.googleConfigured(ctx)
+	appReady, err := h.connectorAppConfigured(ctx)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -99,19 +99,19 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	// ONLY THE MODEL BINDING BLOCKS, pinned by
 	// TestOnlyTheModelBindingBlocksFirstRun. Without one the product cannot
 	// perform the cold-start read that first run is, so there is nothing to let
-	// a reader through to. A Google app buys mailbox capture and nothing else:
-	// an installation signing in with passwords and no external provider is
-	// fully usable without one.
+	// a reader through to. A connector OAuth app buys mailbox capture and
+	// nothing else: an installation signing in with passwords and no external
+	// provider is fully usable without one.
 	//
-	// The app is configured from settings, where the card carries the redirect
-	// URIs Google's console asks for. The step stays in the report because that
-	// is what `blocking` is for: reporting it and calling it optional is the
-	// answer. Dropping it would leave an installation that has no app and one
-	// that has a working Gmail integration reporting the same thing to a reader
-	// asking what is left to do.
+	// The app is configured from settings, where each vendor's card carries the
+	// redirect URIs that vendor's console asks for. The step stays in the report
+	// because that is what `blocking` is for: reporting it and calling it
+	// optional is the answer. Dropping it would leave an installation that has no
+	// app and one that has a working mail integration reporting the same thing to
+	// a reader asking what is left to do.
 	steps := []crmcontracts.InstallationSetupStep{
-		{Step: crmcontracts.InstallationSetupStepStepAiModels, Configured: aiReady, Blocking: true},
-		{Step: crmcontracts.InstallationSetupStepStepGoogleApp, Configured: googleReady, Blocking: false},
+		{Step: crmcontracts.AiModels, Configured: aiReady, Blocking: true},
+		{Step: crmcontracts.OauthApp, Configured: appReady, Blocking: false},
 	}
 	complete := true
 	for _, s := range steps {
@@ -164,22 +164,33 @@ func (h installationSetupHandlers) aiConfigured(ctx context.Context) (bool, erro
 	return true, nil
 }
 
-// googleConfigured reports whether this installation can connect Gmail.
+// connectorAppConfigured reports whether this installation can connect a mailbox
+// at all — through EITHER vendor, because either one makes the step done and
+// requiring both would report an installation running happily on Google as
+// unfinished forever.
 //
 // The environment's copy counts, in the same precedence the connect transport
-// applies — see envGoogleApp. A nil store is a role that composed no vault, and
-// then only the environment can answer: it reads as unconfigured rather than
+// applies — see envConnectorApp. A nil store is a role that composed no vault,
+// and then only the environment can answer: it reads as unconfigured rather than
 // erroring, so the report can still name the step outstanding.
-func (h installationSetupHandlers) googleConfigured(ctx context.Context) (bool, error) {
-	if h.envGoogleApp {
+func (h installationSetupHandlers) connectorAppConfigured(ctx context.Context) (bool, error) {
+	if h.envConnectorApp {
 		return true, nil
 	}
-	if h.googleApp == nil {
+	if h.connectorApps == nil {
 		return false, nil
 	}
-	status, err := h.googleApp.Read(ctx)
-	if err != nil {
-		return false, err
+	// Every vendor the capture module holds an app for, asked FROM it: a list
+	// spelled here would go on reporting two after a third was added, and the
+	// step would read as unconfigured on an installation that had configured it.
+	for _, p := range capture.AppProviders() {
+		status, err := h.connectorApps.Read(ctx, p)
+		if err != nil {
+			return false, err
+		}
+		if status.Configured {
+			return true, nil
+		}
 	}
-	return status.Configured, nil
+	return false, nil
 }

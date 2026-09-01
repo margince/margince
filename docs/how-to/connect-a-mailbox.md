@@ -232,20 +232,20 @@ Graph is the richer Outlook path — delta-cursor sync, backfill and push — an
 
 ### C1. Prerequisites (operator config)
 
-```sh
-export MARGINCE_GRAPH_CLIENT_ID="<entra-app-id>"
-export MARGINCE_GRAPH_CLIENT_SECRET="<entra-app-secret>"
-export MARGINCE_GRAPH_TENANT="common"   # or a specific tenant id
-# plus the same MARGINCE_CONNECTOR_STATE_KEY / MARGINCE_KEYVAULT_ROOT_KEY / MARGINCE_PUBLIC_BASE_URL as A1
-# Optional push (else poll-only) — the SAME secret on both roles: api mounts the route, worker registers against it
-# export MARGINCE_GRAPH_PUSH_TOKEN="<secret>"; export MARGINCE_GRAPH_NOTIFICATION_URL="https://<api>/webhooks/graph?token=<secret>"
-```
-
 Register a Microsoft Entra (Azure AD) app with delegated permissions `offline_access User.Read
-Mail.Read Mail.Send` and a redirect URI of `<api-base>/v1/connectors/graph/callback`, then `make dev`
-to pick up the env. `Mail.Send` rides the same consent because Microsoft will not add a permission to
-an existing refresh token — a mailbox connected without it captures normally and refuses every send
-by name until it is reconnected.
+Mail.Read Mail.Send` and a redirect URI of `<api-base>/v1/connectors/graph/callback`. `Mail.Send`
+rides the same consent because Microsoft will not add a permission to an existing refresh token — a
+mailbox connected without it captures normally and refuses every send by name until it is
+reconnected.
+
+Then give the app to the installation, either way — a stored app wins and takes effect on the next
+consent, with no restart. **Settings → General → Microsoft app** takes the Application (client)
+ID and secret, optionally a Directory (tenant) ID to pin it to one directory, and lists the redirect
+URIs to register byte for byte. Or the environment, which still works: `MARGINCE_GRAPH_CLIENT_ID`,
+`MARGINCE_GRAPH_CLIENT_SECRET`, `MARGINCE_GRAPH_TENANT`, plus the same A1 state/vault/base-URL keys —
+then `make dev` to pick it up. Push is optional and the lane is poll-only without it: set the SAME
+`MARGINCE_GRAPH_PUSH_TOKEN` on api and worker, and `MARGINCE_GRAPH_NOTIFICATION_URL` to
+`https://<api>/webhooks/graph?token=<that token>`.
 
 ### C2. Connect from the UI
 

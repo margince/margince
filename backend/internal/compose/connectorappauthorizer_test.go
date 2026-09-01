@@ -9,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
+	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -33,12 +35,14 @@ func (r recordingAuthorizer) AccessToken(context.Context, string) (string, error
 
 // authorizerFor builds the subject with a recording client on each side, so a
 // test can tell WHICH app answered rather than only that something did.
-func authorizerFor(t *testing.T, resolve googleAppResolver, envApp string) (googleAppAuthorizer, *string) {
+func authorizerFor(t *testing.T, resolve appResolver, envApp string) (googleAppAuthorizer, *string) {
 	t.Helper()
 	used := new(string)
 	a := googleAppAuthorizer{
 		resolve: resolve,
-		build:   func(id, _ string) googleconn.Authorizer { return recordingAuthorizer{clientID: id, used: used} },
+		build: func(app capture.ConnectorApp) googleconn.Authorizer {
+			return recordingAuthorizer{clientID: app.ClientID, used: used}
+		},
 	}
 	if envApp != "" {
 		a.env = recordingAuthorizer{clientID: envApp, used: used}
@@ -49,8 +53,8 @@ func authorizerFor(t *testing.T, resolve googleAppResolver, envApp string) (goog
 // What an admin sets through Settings outranks the environment: the environment
 // is how the pair ARRIVES, and the stored app is where it lives.
 func TestTheStoredAppOutranksTheEnvironment(t *testing.T) {
-	a, used := authorizerFor(t, func(context.Context) (string, string, bool, error) {
-		return "stored-id", "stored-secret", true, nil
+	a, used := authorizerFor(t, func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
 	}, "env-id")
 
 	if _, err := a.AccessToken(context.Background(), "refresh"); err != nil {
@@ -64,8 +68,8 @@ func TestTheStoredAppOutranksTheEnvironment(t *testing.T) {
 // An installation that never stored one keeps running on what the deployment
 // composed, with no action required of its operator.
 func TestTheEnvironmentStillServesWhenNothingIsStored(t *testing.T) {
-	a, used := authorizerFor(t, func(context.Context) (string, string, bool, error) {
-		return "", "", false, nil
+	a, used := authorizerFor(t, func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "", ClientSecretRef: ""}, false, nil
 	}, "env-id")
 
 	if _, err := a.Exchange(context.Background(), "code", "https://app/cb"); err != nil {
@@ -81,8 +85,8 @@ func TestTheEnvironmentStillServesWhenNothingIsStored(t *testing.T) {
 // that behind a flow that half works.
 func TestAResolutionFailureIsReportedNotPaperedOverWithTheEnvironment(t *testing.T) {
 	boom := errors.New("vault: sealed secret will not open")
-	a, used := authorizerFor(t, func(context.Context) (string, string, bool, error) {
-		return "", "", false, boom
+	a, used := authorizerFor(t, func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{}, false, boom
 	}, "env-id")
 
 	_, err := a.AccessToken(context.Background(), "refresh")
@@ -113,12 +117,12 @@ func TestNoAppAnywhereRefusesAsRejectedRatherThanRetryable(t *testing.T) {
 // installation that set its app through Settings was therefore refused with the
 // declared 501 and had no way to connect Gmail at all.
 func TestAStoredAppRegistersTheGoogleConnectors(t *testing.T) {
-	resolve := googleAppResolver(func(context.Context) (string, string, bool, error) {
-		return "stored-id", "stored-secret", true, nil
+	resolve := appResolver(func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
 	})
 	for _, c := range []struct {
 		name    string
-		resolve googleAppResolver
+		resolve appResolver
 		cfg     GmailConfig
 		want    bool
 	}{
@@ -144,8 +148,8 @@ func TestAStoredAppCanRunTheConsentFlow(t *testing.T) {
 	WithKeyvault(fakeVault{})(&s, nil)
 	// WithKeyvault builds the real resolver over a nil pool; stand a working one
 	// in its place so this test is about the WIRING, not about the store.
-	s.googleAppResolver = func(context.Context) (string, string, bool, error) {
-		return "stored-id", "stored-secret", true, nil
+	s.googleAppResolver = func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
 	}
 	// Only what a deployment must supply. No client id or secret anywhere in the
 	// environment — the operator's case.
@@ -167,5 +171,112 @@ func TestAStoredAppCanRunTheConsentFlow(t *testing.T) {
 				t.Errorf("consent URL = %q, want it built from the STORED client id", url)
 			}
 		})
+	}
+}
+
+// recordingGraphAuthorizer is the Microsoft twin: it reports which app it was
+// built from, and it carries the third method the Google pair does not.
+type recordingGraphAuthorizer struct {
+	clientID, tenant string
+	used             *string
+	usedTenant       *string
+}
+
+func (r recordingGraphAuthorizer) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
+	*r.used, *r.usedTenant = r.clientID, r.tenant
+	return oauthflow.TokenGrant{RefreshToken: "refresh"}, nil
+}
+
+func (r recordingGraphAuthorizer) AccessToken(context.Context, string) (string, error) {
+	*r.used, *r.usedTenant = r.clientID, r.tenant
+	return "access", nil
+}
+
+func (r recordingGraphAuthorizer) Refresh(context.Context, string, []string) (oauthflow.TokenRefresh, error) {
+	*r.used, *r.usedTenant = r.clientID, r.tenant
+	return oauthflow.TokenRefresh{AccessToken: "access"}, nil
+}
+
+// graphAuthorizerFor builds the Microsoft subject with a recording client on
+// each side.
+func graphAuthorizerFor(t *testing.T, resolve appResolver, envApp string) (graphAppAuthorizer, *string, *string) {
+	t.Helper()
+	used, tenant := new(string), new(string)
+	a := graphAppAuthorizer{
+		resolve: resolve,
+		build: func(app capture.ConnectorApp) graph.Authorizer {
+			return recordingGraphAuthorizer{clientID: app.ClientID, tenant: app.Tenant, used: used, usedTenant: tenant}
+		},
+	}
+	if envApp != "" {
+		a.env = recordingGraphAuthorizer{clientID: envApp, tenant: "env-tenant", used: used, usedTenant: tenant}
+	}
+	return a, used, tenant
+}
+
+// All THREE methods resolve the same app. Refresh is the one the Google pair
+// has no equivalent of, and a copy that resolved separately would refresh an
+// Outlook mailbox against a different registration than it connected on.
+func TestEveryMicrosoftMethodReachesTheSameResolvedApp(t *testing.T) {
+	stored := func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{
+			ClientID: "stored-entra", ClientSecretRef: "stored-secret", Tenant: "stored-tenant",
+		}, true, nil
+	}
+	for name, call := range map[string]func(graphAppAuthorizer) error{
+		"Exchange": func(a graphAppAuthorizer) error {
+			_, err := a.Exchange(context.Background(), "code", "https://app/cb")
+			return err
+		},
+		"AccessToken": func(a graphAppAuthorizer) error {
+			_, err := a.AccessToken(context.Background(), "refresh")
+			return err
+		},
+		"Refresh": func(a graphAppAuthorizer) error {
+			_, err := a.Refresh(context.Background(), "refresh", []string{"Mail.Read"})
+			return err
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			a, used, tenant := graphAuthorizerFor(t, stored, "env-entra")
+			if err := call(a); err != nil {
+				t.Fatalf("%s: %v", name, err)
+			}
+			if *used != "stored-entra" {
+				t.Errorf("%s used %q, want the stored app", name, *used)
+			}
+			// The stored app carries its OWN directory: an operator who pinned
+			// their registration to one directory pinned the app, and reading
+			// the deployment's tenant over it would authorize a directory they
+			// deliberately excluded.
+			if *tenant != "stored-tenant" {
+				t.Errorf("%s used tenant %q, want the stored app's own", name, *tenant)
+			}
+		})
+	}
+}
+
+// With nothing stored the environment answers, and with neither the refusal
+// names Microsoft rather than Google — the two apps are configured in different
+// places and an operator sent to the wrong one finds nothing wrong there.
+func TestTheMicrosoftRefusalNamesMicrosoft(t *testing.T) {
+	a, used, _ := graphAuthorizerFor(t, nil, "env-entra")
+	if _, err := a.AccessToken(context.Background(), "refresh"); err != nil {
+		t.Fatalf("AccessToken: %v", err)
+	}
+	if *used != "env-entra" {
+		t.Errorf("used %q, want the environment's app when nothing is stored", *used)
+	}
+
+	bare, _, _ := graphAuthorizerFor(t, nil, "")
+	_, err := bare.AccessToken(context.Background(), "refresh")
+	if !errors.Is(err, errNoMicrosoftApp) {
+		t.Fatalf("AccessToken with no app = %v, want the Microsoft refusal", err)
+	}
+	if errors.Is(err, errNoGoogleApp) {
+		t.Error("the Microsoft refusal is the Google one; an operator would be sent to the wrong console")
+	}
+	if !strings.Contains(err.Error(), "Microsoft") {
+		t.Errorf("refusal = %q, want it to name the vendor", err)
 	}
 }

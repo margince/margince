@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocaleProvider } from "../i18n";
-import { GoogleAppCard } from "./google-app";
+import { OAuthAppCard } from "./oauth-app";
 import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The card has THREE states, and the middle one is why it was rewritten: an app
@@ -13,13 +13,13 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // reporting it as absent told operators Gmail could not be connected on
 // installations where it demonstrably could.
 
-const meta: Meta<typeof GoogleAppCard> = {
+const meta: Meta<typeof OAuthAppCard> = {
   title: "Settings/Admin settings/General/Google app",
-  component: GoogleAppCard,
+  component: OAuthAppCard,
   parameters: { layout: "padded" },
 };
 export default meta;
-type Story = StoryObj<typeof GoogleAppCard>;
+type Story = StoryObj<typeof OAuthAppCard>;
 
 const CLIENT_ID = "111-abc.apps.googleusercontent.com";
 const URIS = [
@@ -42,7 +42,11 @@ function Served({
   children,
 }: Readonly<{ app: unknown; children: ReactNode }>) {
   installFetchStub({
-    "GET /installation/google-app": () => jsonResponse(app),
+    // The RESOLVED path, not the template: installFetchStub matches a route key
+    // against the request's pathname by exact string, and api.GET has already
+    // substituted the provider by the time it is called. A key still carrying
+    // `{provider}` matches nothing and every story renders the fallback.
+    "GET /installation/oauth-apps/google": () => jsonResponse(app),
     "GET /me": () =>
       jsonResponse({
         user: { email: "admin@brandt.example" },
@@ -70,7 +74,7 @@ export const Stored: Story = {
         redirect_uris: URIS,
       }}
     >
-      <GoogleAppCard />
+      <OAuthAppCard provider="google" />
     </Served>
   ),
 };
@@ -86,7 +90,7 @@ export const FromEnvironment: Story = {
         redirect_uris: URIS,
       }}
     >
-      <GoogleAppCard />
+      <OAuthAppCard provider="google" />
     </Served>
   ),
 };
@@ -104,7 +108,7 @@ export const Absent: Story = {
         redirect_uris: URIS,
       }}
     >
-      <GoogleAppCard />
+      <OAuthAppCard provider="google" />
     </Served>
   ),
 };

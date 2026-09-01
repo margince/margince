@@ -33,6 +33,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -203,6 +205,16 @@ func MicrosoftSignInRedirectURI(redirectBase string) string {
 // routes 404 (identity's own per-provider lookup).
 func WithMicrosoftSignIn(cfg MicrosoftSignInConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
+		// Published BEFORE the completeness gate, exactly as the Google twin
+		// does: an operator registers this URL while CREATING the app
+		// registration, which is before any credential exists for the gate to
+		// pass. The Microsoft app card tells them to register every URI it
+		// lists, so one missing here is a sign-in that fails at Microsoft's
+		// consent screen with AADSTS50011 — naming no URI.
+		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
+			s.addRedirectURI(capture.AppProviderMicrosoft, crmcontracts.SignIn,
+				identity.SignInRedirectURI(base, microsoftProviderKey))
+		}
 		if !cfg.Enabled() {
 			return
 		}

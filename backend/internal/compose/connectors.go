@@ -87,8 +87,8 @@ type connectorHandlers struct {
 	// Empty for a same-origin deployment (the callback then rides
 	// publicBaseURL/v1); a split dev stack (SPA :5173, api :8080) sets it.
 	apiBaseURL string
-	// googleCredentials resolves the installation's STORED Google app, on each
-	// call rather than once at boot.
+	// googleCredentials and microsoftCredentials resolve the installation's
+	// STORED app for each vendor, on each call rather than once at boot.
 	//
 	// It exists so an app set through Settings works without restarting the api.
 	// The boot-composed `oauth` below is the environment's copy, and it stays as
@@ -99,7 +99,8 @@ type connectorHandlers struct {
 	// A func rather than the store, so this file needs neither the pool nor the
 	// system-principal context the read runs on — compose binds both where it
 	// wires this, and a test can hand over a fake without a database.
-	googleCredentials func(ctx context.Context) (clientID, clientSecret string, ok bool, err error)
+	googleCredentials    appResolver
+	microsoftCredentials appResolver
 }
 
 // wired reports whether the Gmail OAuth app is composed for this role.
@@ -198,7 +199,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		// Classified rather than handed to httperr.Write raw — these are plain
 		// errors it does not recognise, so the caller would get a bare 500 with
 		// less to act on than the 501 this branch exists to avoid.
-		writeGoogleAppFailure(w, r, err)
+		writeConnectorAppFailure(w, r, err)
 		return
 	}
 	if h.registry == nil || !ok {

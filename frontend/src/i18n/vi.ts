@@ -6108,33 +6108,51 @@ export const vi = {
     "Cung cấp nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng cả những lượt đăng nhập đang diễn ra; các phiên hiện có không bị ảnh hưởng.",
   "signInMethods.noneConfigured":
     "Bản triển khai này chưa cấu hình nhà cung cấp bên ngoài nào, nên ngoài mật khẩu không có lựa chọn khác.",
-  "googleApp.title": "Ứng dụng Google",
-  "googleApp.sub":
+  "oauthApp.google.title": "Ứng dụng Google",
+  "oauthApp.google.sub":
     "Hộp thư được kết nối, và mọi người đăng nhập bằng Google, thông qua một ứng dụng Google OAuth của bạn. Thông tin xác thực của tổ chức bạn được dùng thay vì của chúng tôi.",
-  "googleApp.configured": "Đang dùng: {clientId}",
-  "googleApp.absent":
+  "oauthApp.google.absent":
     "Không có ứng dụng nào từ bất kỳ nguồn nào. Không thể kết nối Gmail và Lịch, và không thể cung cấp đăng nhập bằng Google.",
-  "googleApp.replaceHint":
-    "Nhập cặp mới sẽ thay thế cặp đã lưu. Các kết nối đã tạo vẫn chạy cho tới khi kết nối lại.",
-  "googleApp.store": "Lưu ứng dụng",
-  "googleApp.replace": "Thay ứng dụng",
-  "googleApp.removeConfirmTitle": "Xoá ứng dụng Google?",
-  "googleApp.removeConfirmBody":
-    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ bảng điều khiển Google. Kết nối Gmail và Lịch đi qua ứng dụng này. Hộp thư Microsoft và IMAP không bị ảnh hưởng. Bước thiết lập lần đầu sẽ hỏi lại.",
-  "googleApp.remove": "Xoá ứng dụng",
-  "googleApp.redirectCopied": "Đã sao chép",
-  "googleApp.redirectCopy": "Sao chép URI {purpose}",
-  "googleApp.redirect.mailbox_connect": "Hộp thư và lịch",
-  "googleApp.redirect.sign_in": "Đăng nhập",
-  "googleApp.redirectSub":
+  "oauthApp.google.redirectSub":
     "Hãy đăng ký mọi URI bên dưới cho OAuth client trong Google console. Thiếu một URI sẽ khiến màn hình đồng ý báo redirect_uri_mismatch mà không nói URI nào sai.",
-  "googleApp.redirectTitle": "URI chuyển hướng được uỷ quyền",
-  "googleApp.fromEnvironment":
-    "Đang dùng từ cấu hình triển khai này: {clientId}. Lưu một ứng dụng tại đây sẽ thay thế nó trong thời gian còn lưu.",
-  "googleApp.clientId": "Client ID",
-  "googleApp.clientSecret": "Client secret",
-  "googleApp.clientIdPlaceholder":
+  "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
+  "oauthApp.google.removeConfirmTitle": "Xoá ứng dụng Google?",
+  "oauthApp.google.removeConfirmBody":
+    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ bảng điều khiển Google. Kết nối Gmail và Lịch đi qua ứng dụng này. Hộp thư Microsoft và IMAP không bị ảnh hưởng. Bước thiết lập lần đầu sẽ hỏi lại.",
+  "oauthApp.microsoft.title": "Ứng dụng Microsoft",
+  "oauthApp.microsoft.sub":
+    "Hộp thư và lịch Outlook được kết nối, và mọi người đăng nhập bằng Microsoft, thông qua một đăng ký ứng dụng Entra của bạn. Thông tin xác thực của tổ chức bạn được dùng thay vì của chúng tôi.",
+  "oauthApp.microsoft.absent":
+    "Không có ứng dụng nào từ bất kỳ nguồn nào. Không thể kết nối thư và lịch Outlook, và không thể cung cấp đăng nhập bằng Microsoft.",
+  "oauthApp.microsoft.redirectSub":
+    "Hãy đăng ký mọi URI bên dưới trong mục Authentication của đăng ký ứng dụng Entra, dưới nền tảng Web. Thiếu một URI sẽ khiến màn hình đồng ý báo AADSTS50011 mà không nói URI nào sai.",
+  "oauthApp.microsoft.clientIdPlaceholder":
+    "00000000-0000-0000-0000-000000000000",
+  "oauthApp.microsoft.removeConfirmTitle": "Xoá ứng dụng Microsoft?",
+  "oauthApp.microsoft.removeConfirmBody":
+    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ cổng Entra. Kết nối thư và lịch Outlook đi qua ứng dụng này. Hộp thư Google và IMAP không bị ảnh hưởng. Bước thiết lập lần đầu sẽ hỏi lại.",
+  "oauthApp.configured": "Đang dùng: {clientId}",
+  "oauthApp.fromEnvironment":
+    "Đang dùng từ cấu hình triển khai này: {clientId}. Lưu một ứng dụng tại đây sẽ thay thế nó trong thời gian còn lưu.",
+  "oauthApp.pinnedToDirectory": "Đã gắn với thư mục {tenant}.",
+  "oauthApp.replaceHint":
+    "Nhập cặp mới sẽ thay thế cặp đã lưu. Các kết nối đã tạo vẫn chạy tới khi kết nối lại.",
+  "oauthApp.store": "Lưu ứng dụng",
+  "oauthApp.replace": "Thay ứng dụng",
+  "oauthApp.remove": "Xoá ứng dụng",
+  "oauthApp.redirectCopied": "Đã sao chép",
+  "oauthApp.redirectCopy": "Sao chép URI {purpose}",
+  "oauthApp.redirect.mailbox_connect": "Hộp thư",
+  "oauthApp.redirect.calendar_connect": "Lịch",
+  "oauthApp.redirect.sign_in": "Đăng nhập",
+  "oauthApp.redirectTitle": "URI chuyển hướng được uỷ quyền",
+  "oauthApp.clientId": "Client ID",
+  "oauthApp.clientSecret": "Client secret",
+  "oauthApp.tenant": "Directory (tenant) ID",
+  "oauthApp.tenantHint":
+    "Tùy chọn. Gắn ứng dụng với một thư mục Entra duy nhất, chỉ thành viên của nó mới có thể uỷ quyền. Để trống để cho phép mọi tổ chức.",
+  "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
   "firstRun.ai.sub":

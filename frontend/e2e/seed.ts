@@ -1072,28 +1072,50 @@ export async function mockApi(
         system_of_record: { mode: sorMode },
       });
     }
-    if (path === "/installation/google-app" && method === "GET") {
-      // Answered explicitly: the catch-all would hand back a list envelope, and
-      // the Google-app card would then read a source and a redirect list off a
-      // body that carries neither — taking the whole settings screen down.
+    if (path.startsWith("/installation/oauth-apps/") && method === "GET") {
+      // Answered explicitly, per vendor: the catch-all would hand back a list
+      // envelope, and the card would then read a source and a redirect list off
+      // a body that carries neither — taking the whole settings screen down.
+      // The screen renders one card per vendor, so a route that answered only
+      // Google would leave the Microsoft one on the fallback.
       //
       // `environment` because it is the state the card was rewritten for: an app
       // the deployment supplies rather than one stored here, which the surface
       // used to report as no app at all.
+      const microsoft = path.endsWith("/microsoft");
       return json({
+        provider: microsoft ? "microsoft" : "google",
         configured: true,
-        client_id: "000000000000-brandt.apps.googleusercontent.com",
+        client_id: microsoft
+          ? "11111111-2222-3333-4444-555555555555"
+          : "000000000000-brandt.apps.googleusercontent.com",
+        // Only Microsoft has directories, and this app is pinned to one — the
+        // state the card reports back and carries through a rotation.
+        ...(microsoft
+          ? { tenant: "99999999-8888-7777-6666-555555555555" }
+          : {}),
         source: "environment",
-        redirect_uris: [
-          {
-            purpose: "sign_in",
-            url: "https://api.brandt.example/v1/auth/oidc/google/callback",
-          },
-          {
-            purpose: "mailbox_connect",
-            url: "https://api.brandt.example/v1/connectors/google/callback",
-          },
-        ],
+        redirect_uris: microsoft
+          ? [
+              {
+                purpose: "sign_in",
+                url: "https://api.brandt.example/v1/auth/oidc/microsoft/callback",
+              },
+              {
+                purpose: "mailbox_connect",
+                url: "https://api.brandt.example/v1/connectors/graph/callback",
+              },
+            ]
+          : [
+              {
+                purpose: "sign_in",
+                url: "https://api.brandt.example/v1/auth/oidc/google/callback",
+              },
+              {
+                purpose: "mailbox_connect",
+                url: "https://api.brandt.example/v1/connectors/gmail/callback",
+              },
+            ],
       });
     }
     if (path === "/installation/settings" && method === "GET") {
