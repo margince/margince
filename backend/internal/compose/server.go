@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -101,6 +100,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// than restated here: one place resolves a default, so no composition can
 	// disagree with the file about what "unconfigured" means.
 	limits := deployconfig.Config{}.EffectiveUploads()
+	// ONE introductions store for the two surfaces that read it: the ask's own
+	// handlers, and the Network tab asking which routes are already spoken
+	// for. Two stores would be two clocks, and an ask could be born already
+	// due on one of them.
+	introStore := introductions.NewStore(InstallationDB(pool), time.Now)
 	srv := Server{
 		uploadLimits:        limits,
 		authHandlers:        authH,
@@ -155,9 +159,13 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		reportHandlers:     reportHandlers{engine: newReportEngine(pool)},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers:          briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
-		weeklyHandlers:    weekly.NewHandlers(weekly.NewEngine(pool)),
-		Reads:             network.NewReads(pool, people.NewStore(InstallationDB(pool))),
+		Handlers:       briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
+		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool)),
+		// One assembler, shared with the test that drives this handler: the
+		// tab greys out a route the duplicate guard would refuse, so the rep
+		// learns the door is taken before writing the ask rather than from the
+		// 409 after it.
+		Reads:             NewPersonGraphReads(pool, InstallationDB(pool)),
 		orgRollupHandlers: orgRollupHandlers{pool: pool, now: time.Now},
 		strengthHandlers:  strengthHandlers{people: people.NewStore(InstallationDB(pool)), now: time.Now},
 		// The schema-change pool is boot-optional; nil
@@ -175,8 +183,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// One clock, passed to both halves: the store stamps when each move
 		// happened and the transport works out when an unanswered ask goes
 		// stale, so two clocks here would let an ask be born already due.
-		introductionHandlers: introductions.NewHandlers(
-			introductions.NewStore(InstallationDB(pool), time.Now), time.Now),
+		introductionHandlers: introductions.NewHandlers(introStore, time.Now),
 		// The accept-write needs no option to wire: it resolves the reading a
 		// human was already shown (RD-AC-N-5) rather than producing one, so it
 		// works wherever the readings do. An attachment that has never been read

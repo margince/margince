@@ -6534,9 +6534,6 @@ export const en = {
   "person.graph.withheldDirect": "Some colleagues are not shown.",
   "person.graph.withheldAccount":
     "Some contacts at this company are not shown.",
-  "person.graph.routeAlreadyAsked": "Already asked",
-  "person.graph.routeDeclined": "Declined before",
-  "person.graph.routeUnavailable": "Unavailable",
   "person.intro.askFirstName": "Ask {name} for an intro",
   "person.intro.leadEyebrow": "Recommended route",
   "person.intro.leadRouteBadge": "Strong route",
