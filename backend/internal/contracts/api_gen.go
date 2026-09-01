@@ -24943,7 +24943,7 @@ type PipelineTrace struct {
 	// Connector The provider id that carried the message, never a display label; resolve it against `GET /channel-providers`. Empty when the trace rows have been swept.
 	Connector *string `json:"connector,omitempty"`
 
-	// PayloadCaptureEnabled The deployment's `capture.trace_payloads` posture. False means no rung carries `counterparty` or `subject` because the operator did not turn payload capture on — as against a rung that simply has none.
+	// PayloadCaptureEnabled The deployment's `capture.trace_payloads` posture, on unless the deployment file turns it off. False means no rung carries `counterparty` or `subject` because the operator turned payload capture off — as against a rung that simply has none.
 	PayloadCaptureEnabled bool `json:"payload_capture_enabled"`
 
 	// RetentionHours How long stored rungs are kept. Derived rungs answer at any age; stored ones report `unknown` past this, which is a different claim from `not_applicable` — the rows are gone, so whether the stage ran can no longer be established.
