@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -225,4 +226,92 @@ func TestTheLaneFeedStillReadsEveryVisibleTask(t *testing.T) {
 	if tasks.mineOnly() {
 		t.Fatal("the lane feed narrowed to the reader, changing a surface this did not set out to change")
 	}
+}
+
+// Opening somebody else's queue is a team-or-wider question.
+//
+// Both halves, because either alone proves nothing: a resolver that refused
+// everybody would pass the refusal test while making the feature dead, and one
+// that admitted everybody would pass the admission test while handing a rep
+// their colleague's day.
+func TestOpeningAnothersQueueNeedsATierThatReachesThem(t *testing.T) {
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000bb")
+
+	for _, tier := range []principal.RowScope{principal.RowScopeTeam, principal.RowScopeAll} {
+		got, err := resolveOwner(readerAt(tier), colleague)
+		if err != nil {
+			t.Fatalf("row scope %q was refused a colleague's queue: %v", tier, err)
+		}
+		if got != colleague {
+			t.Fatalf("row scope %q was given %v, wanted the named colleague", tier, got)
+		}
+	}
+
+	if _, err := resolveOwner(readerAt(principal.RowScopeOwn), colleague); err == nil {
+		t.Fatal("a reader whose scope reaches only themselves opened a colleague's queue")
+	}
+}
+
+// Naming yourself is the question the default already answers, so every tier
+// may ask it. A rep following a link that spells out their own id must not be
+// refused their own day.
+func TestNamingYourselfNeedsNoWiderTier(t *testing.T) {
+	me := ids.MustParse("01a05500-0000-7000-8000-000000000001")
+
+	got, err := resolveOwner(readerAt(principal.RowScopeOwn), me)
+	if err != nil {
+		t.Fatalf("a reader was refused their OWN queue: %v", err)
+	}
+	if got != me {
+		t.Fatalf("asking for their own queue answered %v", got)
+	}
+}
+
+// No ask is no narrowing. The parameter is optional, and its absence must not
+// read as "nobody's queue" and empty the page.
+func TestNoOwnerAskNarrowsNothing(t *testing.T) {
+	got, err := resolveOwner(readerAt(principal.RowScopeAll), ids.UUID{})
+	if err != nil {
+		t.Fatalf("omitting the owner was refused: %v", err)
+	}
+	if !got.IsZero() {
+		t.Fatalf("omitting the owner narrowed to %v", got)
+	}
+}
+
+// A named rep's queue carries THEIR work, not the reader's.
+//
+// The per-user lanes — notices, meetings, a mailbox, a promise — stay bound to
+// the ACTING reader whatever owner is asked for, because that is where the
+// modules that own them bind. So a filter that kept every row it could not
+// judge handed a manager their own day with somebody else's name at the top of
+// it. Nothing crossed a scope boundary; the page simply was not true.
+func TestOpeningAnothersQueueCarriesTheirWorkAndNotTheReadersOwn(t *testing.T) {
+	lena := ids.MustParse("01a05500-0000-7000-8000-0000000000bb")
+	lenasDeal := item("lenas-deal", "deal_at_risk", withDeal(90_000_00))
+	lenasDeal.Deal.OwnerId = uuidPtr(lena)
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		// The reader's own: a notice addressed to them, and a meeting they can
+		// see. Neither carries a deal, so neither can be judged by ownership.
+		Notices:  lane(item("my-notice", "notice")),
+		Meetings: lane(item("my-meeting", "meeting", withDue(rankInstant.Add(time.Hour)))),
+		AtRisk:   lane(lenasDeal),
+	}
+	reader := &Service{taskOwner: lena, taskScope: TasksOwnedBy}
+
+	out := reader.worklistFrom(context.Background(), day, scopeMine, "", 25, nil)
+
+	var ids []string
+	for _, row := range out.Queue {
+		ids = append(ids, row.Id)
+	}
+	if len(out.Queue) != 1 || out.Queue[0].Id != "lenas-deal" {
+		t.Fatalf("Lena's queue came back as %v, wanted only the deal she owns", ids)
+	}
+}
+
+func uuidPtr(id ids.UUID) *openapi_types.UUID {
+	out := openapi_types.UUID(id)
+	return &out
 }

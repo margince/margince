@@ -9,6 +9,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // needsYouPage is how many decisions one read carries.
@@ -118,6 +119,20 @@ type Service struct {
 	// anybody's, the reader's, nobody's — where a mailbox or a notice is
 	// per-reader by construction and has only one.
 	taskScope TaskScope
+	// taskOwner is whose queue TasksOwnedBy means. Zero for every other scope,
+	// and never read by them.
+	taskOwner ids.UUID
+}
+
+// forOwner returns a copy that reads one named person's queue. Same
+// copy-per-read reason as forReader: a service is shared by every request, and
+// an owner set on it would follow one manager's question onto another reader's
+// page.
+func (s *Service) forOwner(owner ids.UUID) *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksOwnedBy
+	narrowed.taskOwner = owner
+	return &narrowed
 }
 
 // forReader returns a copy of this service that reads only the acting reader's
@@ -394,7 +409,7 @@ func endOfDay(asOf time.Time) time.Time {
 
 // planned is today's agreed work, overdue first.
 func (s *Service) planned(ctx context.Context, asOf time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
-	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, scope)
+	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, scope, s.taskOwner)
 	if err != nil {
 		return nil, err
 	}

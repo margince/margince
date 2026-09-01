@@ -30,6 +30,12 @@ import (
 // compile.
 const sourceWaiting = "customer_waiting"
 
+// sourceTask names the open-task producer. Named for the reason sourceWaiting
+// is: the owner filter asks whether a row came from the lane that narrowed to
+// one person in its own query, and a typo there would silently drop every task
+// out of the queue it was asked for.
+const sourceTask = "task"
+
 // subjectDeal is the subject type a deal-shaped row names.
 const subjectDeal = "deal"
 

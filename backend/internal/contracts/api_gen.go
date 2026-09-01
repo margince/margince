@@ -33415,6 +33415,31 @@ type GetWorklistParams struct {
 
 	// Limit How many ranked items to return.
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Owner Whose queue to answer, when it is somebody else's. A manager reading a team
+	// exception is told which rep it belongs to, and the next question is always
+	// "show me their day" — without this they can only widen to `team`, which
+	// answers about everybody when they asked about one person.
+	//
+	// Refused with 403 rather than quietly narrowed when the reader's own row scope
+	// does not reach past themselves. A narrowing here would be worse than
+	// elsewhere: the answer would look like the named rep's day while being the
+	// reader's own.
+	//
+	// It narrows the shared, record-bearing work — their tasks and their deals. It
+	// does NOT reach their mailbox, their notices or their promises: those sources
+	// are bound to the acting user inside the modules that own them, exactly as
+	// they are under `team` and `all`. Reading somebody's queue is not reading
+	// their inbox.
+	//
+	// Naming yourself is the same question the default answers, and needs no wider
+	// tier.
+	//
+	// Sending it together with a `scope` other than `mine` is refused with 422. They
+	// are two answers to one question and nothing defines which wins; letting the
+	// owner take it silently would echo back the scope that had been ignored, so one
+	// rep's work would arrive labelled `"scope": "unassigned"`.
+	Owner *openapi_types.UUID `form:"owner,omitempty" json:"owner,omitempty"`
 }
 
 // GetWorklistParamsScope defines parameters for GetWorklist.
@@ -70150,6 +70175,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "owner" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner", r.URL.Query(), &params.Owner, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner", Err: err})
 		}
 		return
 	}
