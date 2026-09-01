@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -219,4 +221,45 @@ func registeredNames(descs []connector.Descriptor) map[string]bool {
 		names[d.Name] = true
 	}
 	return names
+}
+
+// THE WORKER REGISTERS EVERY VENDOR THE INSTALLATION COULD HAVE AN APP FOR,
+// including one it configured through the product rather than the environment.
+//
+// This is the failure that reads as an empty inbox rather than a broken one: the
+// dispatcher walks registry.Connectors(), so a connection made against a stored
+// app that the worker never registered is never enumerated, and the renewal pass
+// resolves its connector by name and finds nothing. Both roles ask the same
+// question through newConnectorAppResolvers; what this pins is that the WORKER
+// asks it for Microsoft too, which is where the two last came apart.
+func TestTheWorkerRegistersVendorsItCanOnlyResolveAtRuntime(t *testing.T) {
+	// A pool and a vault and NOTHING in the environment: the shape of an
+	// installation that set both apps through Settings.
+	stored := CaptureSyncRegistry(&pgxpool.Pool{}, fakeVault{},
+		GmailConfig{}, GraphConfig{}, CaptureConfig{}, nil)
+
+	names := registeredNames(stored.Connectors())
+	for _, want := range []string{"gmail", "gcal", "graph", "graphcal"} {
+		if !names[want] {
+			t.Errorf("no %q connector: an installation that configured its app in the product "+
+				"connects the mailbox and then nothing pulls it — connectors = %v", want, names)
+		}
+	}
+}
+
+// AND REGISTERS NONE OF THEM WHERE NOTHING COULD SUPPLY AN APP. A connector with
+// no app behind it fails every call with "no app configured", which is a worse
+// answer than the declared 501: it looks configured and is not.
+func TestTheWorkerRegistersNoVendorItCannotResolveAnAppFor(t *testing.T) {
+	names := registeredNames(
+		CaptureSyncRegistry(nil, nil, GmailConfig{}, GraphConfig{}, CaptureConfig{}, nil).Connectors())
+	for _, unwanted := range []string{"gmail", "gcal", "graph", "graphcal"} {
+		if names[unwanted] {
+			t.Errorf("registered %q with neither a stored app to resolve nor one in the "+
+				"environment — connectors = %v", unwanted, names)
+		}
+	}
+	if !names["imap"] {
+		t.Error("the standing IMAP connector needs no app and must be there regardless")
+	}
 }
