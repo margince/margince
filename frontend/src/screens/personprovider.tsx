@@ -17,7 +17,7 @@ import {
   providerBrandName,
 } from "../design-system/provider-mark";
 import { formatDateAbbrev, formatNumber } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { categoryNames } from "./provider-categories";
 import {
@@ -287,17 +287,26 @@ function BuyPriced({
   running: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const connections = useProviderConnections();
   const connection = connections.data?.connections.find(
     (c) => c.provider === profile.provider,
   );
-  // Only what this connection actually carries: a category an admin switched
-  // off is not one to offer, and the server would refuse it anyway.
+  // Only what this connection actually carries, asked of EVERY category the
+  // press would send — not just the one on the button.
+  //
+  // A category with a prerequisite sends both, so a connection with the mobile
+  // switched on and the work email switched off would otherwise show a
+  // two-credit button whose request the server refuses every time. The comment
+  // that used to sit here said "the server would refuse it anyway"; that only
+  // stays true if this asks about the same set the press does.
+  const enabled = (category: string) =>
+    connection?.configuration.categories?.[category] ?? false;
   const buyable = (connection?.catalog ?? []).filter(
     (entry) =>
       !entry.free &&
-      (connection?.configuration.categories?.[entry.category] ?? false) &&
+      boughtWith(entry).every(enabled) &&
       !alreadyHeld(profile, entry.category),
   );
   if (buyable.length === 0 || !canEnrichNow(profile.state, running)) {
@@ -316,18 +325,35 @@ function BuyPriced({
             enrich.mutate({
               personId,
               provider: profile.provider,
-              categories: [entry.category],
+              categories: boughtWith(entry),
             })
           }
         >
-          {t("provider.profile.buy", {
-            category: categoryNames([entry.category], t),
+          {plural("provider.profile.buy", creditsOf(entry), {
+            category: categoryNames(boughtWith(entry), t),
             credits: formatNumber(creditsOf(entry), locale),
           })}
         </Button>
       ))}
     </div>
   );
+}
+
+/** What one press actually asks for: the category, and the one it can only be
+ *  looked up alongside.
+ *
+ *  Surfe's mobile lookup is the case. Asked for on its own, the provider hunts
+ *  for an email nobody bought, fails, and skips the number — returning a run
+ *  that COMPLETED with nothing in it, which the page then reports as a
+ *  successful lookup over an empty field. The server refuses the lone request
+ *  now; this is what stops the button making it.
+ *
+ *  `entry.cost` is already the price of the pair, so the figure beside this
+ *  needs no adjusting — the two are derived from one descriptor rule. */
+function boughtWith(
+  entry: components["schemas"]["ProviderCategoryCost"],
+): string[] {
+  return entry.requires ? [entry.requires, entry.category] : [entry.category];
 }
 
 /** The credits one category costs, summed across pools. A category priced in

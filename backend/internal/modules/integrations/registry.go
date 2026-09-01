@@ -72,6 +72,9 @@ func NewRegistry(adapters ...provider.Adapter) (*Registry, error) {
 		if err := matchesOnKnownIdentifiers(d); err != nil {
 			return nil, err
 		}
+		if err := prerequisitesAreFlat(d); err != nil {
+			return nil, err
+		}
 		if d.EgressHost == "" {
 			return nil, fmt.Errorf("integrations: provider %q declared no egress host", d.Name)
 		}
@@ -142,6 +145,39 @@ func matchesOnKnownIdentifiers(d provider.Descriptor) error {
 						"an unknown field is never present, so the rule matches nobody and the lane goes silent",
 					d.Name, i, f)
 			}
+		}
+	}
+	return nil
+}
+
+// prerequisitesAreFlat refuses a descriptor whose RequiresAnswerTo forms a
+// chain or a cycle.
+//
+// Everything that reads this map walks ONE hop: the price of a purchase, the
+// set a button sends, the check that refuses a lone request, the free-set
+// derivation. That is deliberate — no adapter needs more, and a single hop is
+// what a reader can hold. But one hop over a chain is silently wrong in the
+// direction that costs money: with A needing B and B needing C, A's button
+// quotes and sends A+B, and the server then refuses it for missing C. A cycle
+// is worse and simply meaningless — no ordering satisfies "answer first" in
+// both directions.
+//
+// Refused where the author can see it rather than depth-walked. Supporting
+// chains would mean four call sites learning to walk, each with its own
+// termination, to serve a descriptor nobody has written. When one is written,
+// this is the error that says so.
+func prerequisitesAreFlat(d provider.Descriptor) error {
+	for category, prerequisite := range d.RequiresAnswerTo {
+		if category == prerequisite {
+			return fmt.Errorf(
+				"integrations: provider %q declares category %q as its own prerequisite, which no request can satisfy",
+				d.Name, category)
+		}
+		if next, chained := d.RequiresAnswerTo[prerequisite]; chained {
+			return fmt.Errorf(
+				"integrations: provider %q declares %q needing %q, which itself needs %q: every reader of this "+
+					"map walks one hop, so the chain would be priced and requested short and refused by the server",
+				d.Name, category, prerequisite, next)
 		}
 	}
 	return nil

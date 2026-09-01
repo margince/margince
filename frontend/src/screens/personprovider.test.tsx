@@ -407,13 +407,33 @@ describe("a lookup that came back mostly empty", () => {
 });
 
 describe("the details that cost credits", () => {
+  // Surfe's real shape: the mobile lookup is only issued when a work email
+  // comes back, so its price is the PAIR and `requires` names the other half.
+  // A fixture pricing it alone would model a provider that does not exist and
+  // would let the button send the request the server now refuses.
   const catalog = [
     { category: "linkedin_profile", free: true, cost: {} },
     { category: "professional_email", free: false, cost: { email: 1 } },
-    { category: "mobile", free: false, cost: { mobile: 1 } },
+    {
+      category: "mobile",
+      free: false,
+      cost: { mobile: 1, email: 1 },
+      requires: "professional_email",
+    },
   ];
 
-  function mountWithCatalog(profile: Profile, run: () => Response) {
+  function mountWithCatalog(
+    profile: Profile,
+    run: () => Response,
+    // Which categories the admin has switched on. The default is all three,
+    // which is what almost every case wants; a case about the SELECTION says
+    // so here rather than building a second stub beside this one.
+    categories: Record<string, boolean> = {
+      linkedin_profile: true,
+      professional_email: true,
+      mobile: true,
+    },
+  ) {
     const posted: unknown[] = [];
     installFetchStub({
       "GET /me": meRoute({ person: ["read", "update"] }),
@@ -425,13 +445,7 @@ describe("the details that cost credits", () => {
               status: "connected",
               credential_present: true,
               catalog,
-              configuration: {
-                categories: {
-                  linkedin_profile: true,
-                  professional_email: true,
-                  mobile: true,
-                },
-              },
+              configuration: { categories },
               credits: { pools: {} },
               version: 1,
               created_at: "2026-08-20T09:00:00Z",
@@ -500,9 +514,13 @@ describe("the details that cost credits", () => {
     expect(
       await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
     ).toBeDefined();
+    // The mobile button names BOTH halves and the price of both. The provider
+    // will not look for a number without an email to anchor it, so a button
+    // offering "mobile, 1 credit" would promise a purchase that cannot happen
+    // and understate what it spends.
     expect(
       await screen.findByRole("button", {
-        name: /Buy mobile number · 1 credit/,
+        name: /Buy work email, mobile number · 2 credits/,
       }),
     ).toBeDefined();
 
@@ -518,8 +536,11 @@ describe("the details that cost credits", () => {
       queuedRun,
     );
 
+    // Anchored on the price, because the mobile button names the work email
+    // too — it cannot be bought without one — and a loose /Buy work email/
+    // matches both.
     await user.click(
-      await screen.findByRole("button", { name: /Buy work email/ }),
+      await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
     );
 
     // One category, named. A press that sent the connection's whole selection
@@ -528,6 +549,31 @@ describe("the details that cost credits", () => {
     expect(posted[0]).toEqual({
       provider: "surfe",
       categories: ["professional_email"],
+    });
+  });
+
+  it("buys the email with the mobile, because the provider will not look for one without it", async () => {
+    const user = userEvent.setup();
+    const posted = mountWithCatalog(
+      { ...neverRun(), state: "completed" },
+      queuedRun,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Buy work email, mobile number · 2 credits/,
+      }),
+    );
+
+    // BOTH categories, and the email first. Surfe always sends
+    // skipMobileEnrichmentIfNoEmailFound, so a request naming the mobile alone
+    // makes it hunt for an email nobody bought, fail, and skip the number —
+    // returning a run that COMPLETED with nothing in it. The server refuses
+    // that request now; this is what stops the button making it.
+    await expect.poll(() => posted.length).toBe(1);
+    expect(posted[0]).toEqual({
+      provider: "surfe",
+      categories: ["professional_email", "mobile"],
     });
   });
 

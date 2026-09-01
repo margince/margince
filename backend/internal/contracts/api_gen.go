@@ -25416,6 +25416,9 @@ type ProviderCategoryCost struct {
 
 	// Free Automatic enrichment buys exactly these; everything else waits for a human to press a button.
 	Free bool `json:"free"`
+
+	// Requires Another category this one is only looked up alongside, because the provider skips it entirely when that one comes back empty. Surfe's mobile lookup is the case: asked for on its own it makes the vendor hunt for an email nobody bought, fail, and skip the number — returning a run that COMPLETED with nothing in it. A buy button asks for both or neither; the server refuses the lone request.
+	Requires *string `json:"requires,omitempty"`
 }
 
 // ProviderCategorySelection Resolved per-category choices, keyed by the connected provider's declared category

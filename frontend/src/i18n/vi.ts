@@ -6947,7 +6947,8 @@ export const vi = {
   "provider.profile.departments": "Bộ phận",
   "provider.profile.seniorities": "Cấp bậc",
   "provider.profile.notRequested": "Chưa bao giờ hỏi tới: {categories}.",
-  "provider.profile.buy": "Mua {category} · {credits} tín dụng",
+  "provider.profile.buy_one": "Mua {category} · {credits} tín dụng",
+  "provider.profile.buy_other": "Mua {category} · {credits} tín dụng",
   "provider.freeTier.hint":
     "Hồ sơ LinkedIn, vai trò hiện tại và quá trình làm việc không tốn tín dụng. Nên bật: mọi liên hệ mới đều có chúng mà không ai phải quyết định.",
   "provider.pricedTier.hint":
