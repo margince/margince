@@ -6362,9 +6362,13 @@ export const vi = {
     "Tốt nhất trước. Chọn lối bạn thực sự dùng được — lối thứ hai có ở đây vì lối đầu không phải lúc nào cũng sẵn sàng.",
   "person.intro.best": "Tốt nhất",
   "person.intro.alternative": "Lựa chọn khác",
-  "person.intro.evidenceTwoWay":
+  "person.intro.evidenceTwoWay_one":
     "{total} lượt trao đổi hai chiều trong 90 ngày · {when}",
-  "person.intro.evidenceOneSided":
+  "person.intro.evidenceTwoWay_other":
+    "{total} lượt trao đổi hai chiều trong 90 ngày · {when}",
+  "person.intro.evidenceOneSided_one":
+    "{total} lượt tương tác trong 90 ngày, một chiều · {when}",
+  "person.intro.evidenceOneSided_other":
     "{total} lượt tương tác trong 90 ngày, một chiều · {when}",
   "person.intro.whenToday": "liên hệ gần nhất hôm nay",
   "person.intro.whenYesterday": "liên hệ gần nhất hôm qua",

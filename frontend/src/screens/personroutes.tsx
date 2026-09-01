@@ -11,13 +11,14 @@
 import type { components } from "../api/schema";
 import { Badge, Card } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import "./personnetwork.css";
 
 type Graph = components["schemas"]["PersonGraph"];
 type RouteCandidate = components["schemas"]["PersonGraphRouteCandidate"];
 type RouteEvidence = components["schemas"]["PersonGraphRouteEvidence"];
 type Translate = ReturnType<typeof useT>;
+type Pluralize = ReturnType<typeof usePlural>;
 
 /**
  * RoutesCard lists the ways in, the recommendation first.
@@ -29,23 +30,64 @@ type Translate = ReturnType<typeof useT>;
 export function RoutesCard({ graph }: Readonly<{ graph: Graph }>) {
   const t = useT();
   const routes = graph.routes ?? [];
+  // `routes` is optional in the contract and `route` is not, so a response from
+  // a server that predates the list still carries the recommendation. Reading
+  // only the list would render that payload as "nobody can reach them" — the
+  // one sentence on this card a reader must never see wrongly.
+  const legacy = routes.length === 0 ? graph.route : undefined;
   return (
     <Card
       title={t("person.intro.routesTitle")}
       sub={t("person.intro.routesSub")}
     >
-      {routes.length === 0 ? (
+      {routes.length === 0 && !legacy ? (
         <p className="pn-route">{t("person.graph.noRoute")}</p>
       ) : (
         <ol className="pn-routes">
-          {routes.map((route, index) => (
-            <li className="pn-route-row" key={route.route_id}>
-              <RouteRow route={route} lead={index === 0} />
+          {legacy ? (
+            <li className="pn-route-row">
+              <LegacyRouteRow route={legacy} />
             </li>
-          ))}
+          ) : (
+            routes.map((route, index) => (
+              <li className="pn-route-row" key={route.route_id}>
+                <RouteRow route={route} lead={index === 0} />
+              </li>
+            ))
+          )}
         </ol>
       )}
     </Card>
+  );
+}
+
+/**
+ * LegacyRouteRow renders the singular `route` from a server that does not send
+ * the list yet.
+ *
+ * It prints the server's own English `why`, because that payload carries no
+ * structured counts to write a translated sentence from. Stating the sentence
+ * the server sent is honest; inventing one from fields that are not there is
+ * not.
+ */
+function LegacyRouteRow({
+  route,
+}: Readonly<{ route: NonNullable<Graph["route"]> }>) {
+  const t = useT();
+  return (
+    <>
+      <p className="pn-route">
+        {route.through_display_name
+          ? t("person.graph.routeVia", {
+              name: route.via_display_name,
+              through: route.through_display_name,
+            })
+          : t("person.graph.routeDirect", {
+              name: route.via_display_name,
+            })}
+      </p>
+      <p className="pn-counts">{route.why}</p>
+    </>
   );
 }
 
@@ -54,6 +96,7 @@ function RouteRow({
   lead,
 }: Readonly<{ route: RouteCandidate; lead: boolean }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const blocked = availabilityLabel(route.availability, t);
   return (
@@ -79,7 +122,9 @@ function RouteRow({
             has already declined. */}
         {blocked ? <Badge quiet>{blocked}</Badge> : null}
       </p>
-      <p className="pn-counts">{evidenceSentence(route.evidence, t, locale)}</p>
+      <p className="pn-counts">
+        {evidenceSentence(route.evidence, t, plural, locale)}
+      </p>
     </>
   );
 }
@@ -94,13 +139,20 @@ function RouteRow({
 export function evidenceSentence(
   ev: RouteEvidence,
   t: Translate,
+  plural: Pluralize,
   locale: Locale,
 ): string {
   const when = lastContactPhrase(ev, t, locale);
-  const key = ev.two_way
+  const base = ev.two_way
     ? "person.intro.evidenceTwoWay"
     : "person.intro.evidenceOneSided";
-  return t(key, { total: formatNumber(ev.interactions_90d, locale), when });
+  // Through the plural translator, not a count comparison: "1 interactions"
+  // undermines the very claim the line is making, and which counts are
+  // singular is a fact about the reader's language rather than about one.
+  return plural(base, ev.interactions_90d, {
+    total: formatNumber(ev.interactions_90d, locale),
+    when,
+  });
 }
 
 // The server counts the days, so the client never re-derives today from a

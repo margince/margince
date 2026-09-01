@@ -6467,9 +6467,13 @@ export const en = {
     "Best first. Pick the one you can actually use — the second is here because the first is not always available.",
   "person.intro.best": "Best",
   "person.intro.alternative": "Alternative",
-  "person.intro.evidenceTwoWay":
+  "person.intro.evidenceTwoWay_one":
+    "{total} two-way exchange in 90 days · {when}",
+  "person.intro.evidenceTwoWay_other":
     "{total} two-way exchanges in 90 days · {when}",
-  "person.intro.evidenceOneSided":
+  "person.intro.evidenceOneSided_one":
+    "{total} interaction in 90 days, one-sided · {when}",
+  "person.intro.evidenceOneSided_other":
     "{total} interactions in 90 days, one-sided · {when}",
   "person.intro.whenToday": "last contact today",
   "person.intro.whenYesterday": "last contact yesterday",

@@ -142,6 +142,105 @@ describe("PersonNetworkTab", () => {
     ).toBeTruthy();
   });
 
+  // "1 interactions" undermines the claim the line is making. The count decides
+  // the wording through the plural translator, because which numbers are
+  // singular is a fact about the reader's language and not about the number.
+  it("counts one interaction in the singular", async () => {
+    stub({
+      person_id: "p-1",
+      nodes: [
+        { id: "person:p-1", type: "contact", group: "anchor", label: "Anna" },
+        {
+          id: "user:u-1",
+          type: "colleague",
+          group: "direct",
+          label: "Quiet Quinn",
+        },
+      ],
+      edges: [
+        {
+          from: "user:u-1",
+          to: "person:p-1",
+          strength_bucket: "weak",
+          interactions_90d: 1,
+          inbound_90d: 0,
+          outbound_90d: 1,
+        },
+      ],
+      groups_omitted: [],
+      routes: [
+        {
+          route_id: "direct:u-1",
+          route_type: "direct",
+          via_user_id: "u-1",
+          via_display_name: "Quiet Quinn",
+          strength_bucket: "weak",
+          evidence: {
+            interactions_90d: 1,
+            inbound_90d: 0,
+            outbound_90d: 1,
+            two_way: false,
+            days_since_last: 3,
+          },
+          availability: "available",
+        },
+      ],
+    });
+    renderPanel();
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "1 interaction in 90 days, one-sided · last contact 3 days ago",
+        ),
+      ).toBeTruthy(),
+    );
+  });
+
+  // `routes` is optional in the contract and `route` is not. A server that
+  // predates the list still carries the recommendation, and reading only the
+  // list would tell the reader nobody can reach this contact.
+  it("still shows the recommendation when only the singular route arrives", async () => {
+    stub({
+      person_id: "p-1",
+      nodes: [
+        { id: "person:p-1", type: "contact", group: "anchor", label: "Anna" },
+        {
+          id: "user:u-1",
+          type: "colleague",
+          group: "direct",
+          label: "Direct Dana",
+        },
+      ],
+      edges: [
+        {
+          from: "user:u-1",
+          to: "person:p-1",
+          strength_bucket: "strong",
+          interactions_90d: 6,
+          inbound_90d: 3,
+          outbound_90d: 3,
+        },
+      ],
+      groups_omitted: [],
+      route: {
+        via_user_id: "u-1",
+        via_display_name: "Direct Dana",
+        why: "6 two-way exchanges in 90 days · last contact yesterday",
+      },
+    });
+    renderPanel();
+    await waitFor(() =>
+      expect(
+        screen.getByText("Direct Dana already corresponds with them."),
+      ).toBeTruthy(),
+    );
+    expect(
+      screen.queryByText(
+        "Nobody here corresponds with them or with anyone at their company yet.",
+      ),
+    ).toBeNull();
+  });
+
   // A group withheld for lack of a grant says so. Rendering it as empty would
   // tell the reader nobody knows this contact when the truth is that they
   // cannot see who does.
