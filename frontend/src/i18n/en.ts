@@ -3969,7 +3969,7 @@ export const en = {
     "Mail capture isn't configured in this deployment.",
   "connectors.reconnect": "Reconnect",
   "connectors.disconnect": "Disconnect",
-  "connectors.signatureEnrich.label": "Read signatures from this mailbox",
+  "connectors.signatureEnrich.label": "Read contact details from this mailbox",
   "connectors.signatureEnrich.followingDefault":
     "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
   "connectors.signatureEnrich.ownAnswer":
@@ -6339,10 +6339,9 @@ export const en = {
   "captureSettings.autoEnrich.label": "Auto-enrich captured companies",
   "captureSettings.autoEnrich.help":
     "When on, each new company created from captured mail gets an automatic web dossier — its site is read and its profile filled in. Runs under a daily limit.",
-  "captureSettings.signatureEnrich.label":
-    "Read signatures for contact details",
+  "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, a nightly pass lifts what a contact states under their own name in mail they sent you — a title, a phone number, a company. Nothing is inferred: a detail the signature does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
+    "When on, Margince reads what a contact states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
 
   "ownDomains.companyTitle": "Company domains",

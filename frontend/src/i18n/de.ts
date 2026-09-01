@@ -3934,7 +3934,7 @@ export const de = {
     "Die Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
   "connectors.disconnect": "Trennen",
-  "connectors.signatureEnrich.label": "Signaturen aus diesem Postfach lesen",
+  "connectors.signatureEnrich.label": "Kontaktdaten aus diesem Postfach lesen",
   "connectors.signatureEnrich.followingDefault":
     "Folgt der Einstellung Ihrer Organisation. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
   "connectors.signatureEnrich.ownAnswer":
@@ -6295,10 +6295,9 @@ export const de = {
     "Erfasste Unternehmen automatisch anreichern",
   "captureSettings.autoEnrich.help":
     "Wenn aktiviert, erhält jedes aus erfassten E-Mails erstellte Unternehmen automatisch ein Web-Dossier — seine Website wird gelesen und sein Profil ausgefüllt. Läuft unter einem Tageslimit.",
-  "captureSettings.signatureEnrich.label":
-    "Signaturen für Kontaktdaten auswerten",
+  "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails auswerten",
   "captureSettings.signatureEnrich.help":
-    "Wenn aktiv, übernimmt ein nächtlicher Durchlauf, was ein Kontakt in seiner eigenen Signatur angibt — Position, Telefonnummer, Firma. Nichts wird erschlossen: Was die Signatur nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
+    "Wenn aktiv, übernimmt Margince, was ein Kontakt in E-Mails an Sie unter seinem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
   "captureSettings.adminOnly":
     "Nur ein Administrator oder Ops kann dies ändern.",
 

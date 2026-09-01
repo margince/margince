@@ -85,9 +85,18 @@ var SharedPostureAllowed = settings.Define[bool](
 	nil, // every bool is a valid posture; a validator here would be ceremony
 ).MachineryApplied() // SetMailPosture reads it inside the write it gates
 
-// SignatureEnrich is the workspace DEFAULT for the nightly pass that lifts
-// stated fields out of an email signature — a title, a phone number, the
-// company somebody types under their own name.
+// SignatureEnrich is the workspace DEFAULT for reading contact details out of
+// captured mail — a title, a phone number, an address, the company somebody
+// types under their own name.
+//
+// It governs BOTH readers, which is why its name is narrower than its subject:
+// the signature pass, and the ingest of a vCard attached to a message
+// (compose/vcardingest.go reads this same key). One switch, because somebody
+// turning it off means "do not take contact details off my mail", and a card
+// attached to that mail is the same answer to the same question.
+//
+// No longer nightly. The pass runs within minutes of a message arriving; the
+// nightly cycle is the backstop now, not the trigger.
 //
 // It is the default rather than the answer: `capture_connection.signature_enrich_enabled`
 // overrides it per mailbox, and a mailbox that never chose follows this. That
@@ -97,7 +106,7 @@ var SharedPostureAllowed = settings.Define[bool](
 //
 // Distinct from the exclusion list, which is a different lever entirely: that
 // keeps whole MESSAGES out of capture by address or domain, and says nothing
-// about whether captured mail may be read for a signature.
+// about whether captured mail may be read for contact details.
 //
 // Default true: the pass reads only what a person put under their own name in
 // mail they sent us, which is the least-surprising enrichment in the product.
