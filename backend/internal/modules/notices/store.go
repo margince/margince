@@ -54,21 +54,36 @@ type Notice struct {
 // mutation. The recipient's existence is held by the row's own FK: a notice
 // to nobody fails loudly rather than landing unread forever.
 func (s *Store) Create(ctx context.Context, recipient ids.UserID, kind, subject, body string) (ids.UUID, error) {
+	row, err := s.create(ctx, recipient, kind, subject, body)
+	return row.ID, err
+}
+
+// create is the write itself, returning the whole row.
+//
+// Create keeps its id-only signature because every system flow that calls it
+// wants nothing else, and widening it would make four call sites carry a value
+// none of them reads. The coach path does read it: it answers 201 with the
+// notice, and the created_at on that answer has to be the row's own.
+func (s *Store) create(ctx context.Context, recipient ids.UserID, kind, subject, body string) (Notice, error) {
 	if kind == "" || subject == "" {
-		return ids.UUID{}, errors.New("notices: a notice names its kind and its subject")
+		return Notice{}, errors.New("notices: a notice names its kind and its subject")
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return ids.UUID{}, err
+		return Notice{}, err
 	}
+	var createdAt time.Time
 	subject = truncate(subject, subjectBound)
 	body = truncate(body, bodyBound)
 	id := ids.NewV7()
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
+		// created_at is the column's own default, so the insert returns it
+		// rather than the caller stamping a second clock beside it.
+		if err := tx.QueryRow(ctx, `
 			INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6)`,
-			id, recipient, kind, subject, body, capturedBy); err != nil {
+			VALUES ($1, $2, $3, $4, $5, $6)
+			RETURNING created_at`,
+			id, recipient, kind, subject, body, capturedBy).Scan(&createdAt); err != nil {
 			return fmt.Errorf("notices: recording the notice: %w", err)
 		}
 		auditID, err := storekit.AuditEvent(ctx, tx, "create", "notice", id,
@@ -84,9 +99,9 @@ func (s *Store) Create(ctx context.Context, recipient ids.UserID, kind, subject,
 		})
 	})
 	if err != nil {
-		return ids.UUID{}, err
+		return Notice{}, err
 	}
-	return id, nil
+	return Notice{ID: id, Kind: kind, Subject: subject, Body: body, CreatedAt: createdAt}, nil
 }
 
 // UnreadFor answers the CALLING person's own unread notices, newest first,

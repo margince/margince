@@ -171,7 +171,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// UTC clock would name the wrong day on a non-UTC installation for the
 		// hours either side of local midnight.
 		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
-		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool))),
+		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), newTeammatesSeam(pool)),
 		// One clock, passed to both halves: the store stamps when each move
 		// happened and the transport works out when an unanswered ask goes
 		// stale, so two clocks here would let an ask be born already due.

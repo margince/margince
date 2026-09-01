@@ -455,6 +455,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/lists":                                                     {Op: "createList", Access: "tool", Tool: "create_record", RecordType: "list", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/lists/{id}/members":                                        {Op: "addListMember", Access: "tool", Tool: "update_record", RecordType: "list", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/me/linkedin-connections":                                   {Op: "importLinkedInConnections", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/notices":                                                   {Op: "raiseNotice", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/notices/{id}/read":                                         {Op: "markNoticeRead", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/offer-templates":                                           {Op: "createOfferTemplate", Access: "tool", Tool: "create_record", RecordType: "offer_template", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/offers/{id}/accept":                                        {Op: "acceptOffer", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

@@ -6247,6 +6247,30 @@ func (e MyAgentGrantState) Valid() bool {
 	}
 }
 
+// Defines values for NoticeKind.
+const (
+	CoachDealNeedsNextStep NoticeKind = "coach_deal_needs_next_step"
+	CoachGeneral           NoticeKind = "coach_general"
+	CoachReplyAging        NoticeKind = "coach_reply_aging"
+	CoachReviewBacklog     NoticeKind = "coach_review_backlog"
+)
+
+// Valid indicates whether the value is a known member of the NoticeKind enum.
+func (e NoticeKind) Valid() bool {
+	switch e {
+	case CoachDealNeedsNextStep:
+		return true
+	case CoachGeneral:
+		return true
+	case CoachReplyAging:
+		return true
+	case CoachReviewBacklog:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OfferStatus.
 const (
 	OfferStatusAccepted   OfferStatus = "accepted"
@@ -21705,6 +21729,33 @@ type MyAgentGrants struct {
 	Data []MyAgentGrant `json:"data"`
 }
 
+// Notice One durable line addressed to one person, as the raising call returns it.
+type Notice struct {
+	// Body The coach's note. Absent when none was given.
+	Body      *string            `json:"body,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Kind What a coaching notice is about. A closed vocabulary, because a notice addressed to a
+	// colleague is words in their queue: the kind is what the recipient reads as the headline,
+	// and the coach supplies only the note beneath it.
+	//
+	// The kinds an automation raises under the system principal (`automation`, `lead_sla`) are
+	// deliberately absent — a person may not raise a notice that looks like the system spoke.
+	Kind NoticeKind `json:"kind"`
+
+	// Subject The headline the recipient reads, derived from the kind rather than supplied.
+	Subject string `json:"subject"`
+}
+
+// NoticeKind What a coaching notice is about. A closed vocabulary, because a notice addressed to a
+// colleague is words in their queue: the kind is what the recipient reads as the headline,
+// and the coach supplies only the note beneath it.
+//
+// The kinds an automation raises under the system principal (`automation`, `lead_sla`) are
+// deliberately absent — a person may not raise a notice that looks like the system spoke.
+type NoticeKind string
+
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
 type Offer struct {
 	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
@@ -26047,6 +26098,26 @@ type QuotaAttainmentDeal struct {
 type QuotaListResponse struct {
 	Data []Quota  `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// RaiseNoticeRequest defines model for RaiseNoticeRequest.
+type RaiseNoticeRequest struct {
+	// Kind What a coaching notice is about. A closed vocabulary, because a notice addressed to a
+	// colleague is words in their queue: the kind is what the recipient reads as the headline,
+	// and the coach supplies only the note beneath it.
+	//
+	// The kinds an automation raises under the system principal (`automation`, `lead_sla`) are
+	// deliberately absent — a person may not raise a notice that looks like the system spoke.
+	Kind NoticeKind `json:"kind"`
+
+	// Note The coach's own words, shown beneath the kind's headline. Optional: without one the
+	// notice still says what it is about, which is why the kind is closed and this is not.
+	Note *string `json:"note,omitempty"`
+
+	// RecipientUserId Who the notice is for. Must be a teammate of the caller, resolved through live team
+	// membership exactly as `GET /worklist`'s `owner` parameter is, so coaching reaches no
+	// further than the queue the caller could already open.
+	RecipientUserId openapi_types.UUID `json:"recipient_user_id"`
 }
 
 // RbacObjectGrant One object's effective CRUD grant, already merged across every role the principal holds (any role allowing an action allows it).
@@ -34058,6 +34129,9 @@ type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMult
 
 // SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
 type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
+
+// RaiseNoticeJSONRequestBody defines body for RaiseNotice for application/json ContentType.
+type RaiseNoticeJSONRequestBody = RaiseNoticeRequest
 
 // CreateOfferTemplateJSONRequestBody defines body for CreateOfferTemplate for application/json ContentType.
 type CreateOfferTemplateJSONRequestBody = CreateOfferTemplateRequest
@@ -42851,6 +42925,9 @@ type ServerInterface interface {
 	// Choose the language your own interface is in.
 	// (PUT /me/locale)
 	SaveMyLocale(w http.ResponseWriter, r *http.Request)
+	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
+	// (POST /notices)
+	RaiseNotice(w http.ResponseWriter, r *http.Request)
 	// Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane.
 	// (POST /notices/{id}/read)
 	MarkNoticeRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -45305,6 +45382,12 @@ func (_ Unimplemented) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request
 // Choose the language your own interface is in.
 // (PUT /me/locale)
 func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
+// (POST /notices)
+func (_ Unimplemented) RaiseNotice(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -57933,6 +58016,28 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyLocale(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RaiseNotice operation middleware
+func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RaiseNotice(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71517,6 +71622,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/notices", wrapper.RaiseNotice)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/notices/{id}/read", wrapper.MarkNoticeRead)
