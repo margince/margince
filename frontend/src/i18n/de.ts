@@ -3077,8 +3077,6 @@ export const de = {
   "agent.activity.offerDraft.stalled":
     "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "agent.panel.runningNow": "Läuft jetzt",
-  "agent.panel.finishedToday": "Heute abgeschlossen",
-  "agent.panel.stoppedEarly": "Warum es gestoppt hat",
 
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":

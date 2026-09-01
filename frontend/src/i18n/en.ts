@@ -3118,8 +3118,6 @@ export const en = {
   "agent.activity.offerDraft.stalled":
     "Drafting your offer has taken unusually long. It may have stopped.",
   "agent.panel.runningNow": "Running now",
-  "agent.panel.finishedToday": "Finished today",
-  "agent.panel.stoppedEarly": "Why it stopped",
 
   "agents.connected": "Connected agents",
   "agents.connectedSub":
