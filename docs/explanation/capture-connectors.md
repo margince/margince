@@ -304,6 +304,12 @@ Capture spans both process roles ([the four `cmd/<role>` binaries](architecture.
   watch-renewal scan (`6h`), and the nightly capture suite (classify hourly, enrich + digest daily). The Surface-B agent
   runner shares the worker process but is a *separate* scheduler — it does not run capture.
 
+  The enrich pass has a second door: `activity.captured` queues it for the workspace that
+  received the mail, so contact details land within minutes rather than overnight. A pass that
+  fills its candidate limit and moved somebody queues the next slice itself. The daily run is
+  the backstop for whatever those miss — a mailbox that was switched off, a model that was
+  unavailable, a message the freshness window had already passed.
+
 Gmail/Graph OAuth needs its config on **both** roles (the api connects, the worker syncs). The full
 flag/env table is [reference/configuration.md → Capture connector OAuth](../reference/configuration.md).
 

@@ -3898,7 +3898,7 @@ export const vi = {
     "Việc thu thập thư chưa được cấu hình trên bản triển khai này.",
   "connectors.reconnect": "Kết nối lại",
   "connectors.disconnect": "Ngắt kết nối",
-  "connectors.signatureEnrich.label": "Đọc chữ ký từ hộp thư này",
+  "connectors.signatureEnrich.label": "Đọc thông tin liên hệ từ hộp thư này",
   "connectors.signatureEnrich.followingDefault":
     "Đang theo thiết lập của tổ chức. Đổi ở đây thì hộp thư này giữ lựa chọn riêng.",
   "connectors.signatureEnrich.ownAnswer":
@@ -6236,10 +6236,9 @@ export const vi = {
     "Tự động bổ sung thông tin cho công ty đã thu thập",
   "captureSettings.autoEnrich.help":
     "Khi bật, mỗi công ty mới tạo từ thư đã thu thập sẽ được lập hồ sơ web tự động — website của công ty được đọc và hồ sơ được điền. Chạy trong một giới hạn theo ngày.",
-  "captureSettings.signatureEnrich.label":
-    "Đọc chữ ký để lấy thông tin liên hệ",
+  "captureSettings.signatureEnrich.label": "Đọc thông tin liên hệ từ thư",
   "captureSettings.signatureEnrich.help":
-    "Khi bật, một lượt chạy hằng đêm lấy những gì người liên hệ tự ghi trong chữ ký của họ — chức danh, số điện thoại, công ty. Không suy đoán: điều chữ ký không nói thì không được ghi. Đây là mặc định của tổ chức; hộp thư đã tự chọn thì giữ lựa chọn đó.",
+    "Khi bật, Margince lấy những gì người liên hệ tự ghi dưới tên mình trong thư gửi cho bạn — trong chữ ký, và trên danh thiếp đính kèm. Chức danh, số điện thoại, địa chỉ, công ty. Việc này diễn ra trong vài phút sau khi thư đến. Không suy đoán: điều thư không nói thì không được ghi. Đây là mặc định của tổ chức; hộp thư đã tự chọn thì giữ lựa chọn đó.",
   "captureSettings.adminOnly":
     "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
 
