@@ -44,21 +44,32 @@ func UsdPerMTokToMicroUSD(field, usd string) (int64, error) {
 	}
 	r, _ := new(big.Rat).SetString(s)
 	r.Mul(r, new(big.Rat).SetInt64(microUSDPerMTok))
+	// The 6-fractional-digit cap above makes num/den exact after scaling by
+	// 1e6, so the round-half-up step never actually rounds today; the guard
+	// stays anyway in case that cap is ever widened.
+	micro, ok := scaleRatToMicroUSD(r)
+	if !ok {
+		return 0, rateInvalid(field, "rate_price_too_large", field+" is too large")
+	}
+	return micro, nil
+}
+
+// scaleRatToMicroUSD rounds an already-scaled exact rational to the nearest
+// integer, half-up, reporting false when it would not fit int64. Both
+// money-scale conversions this module makes (per-MTok here, per-token in
+// catalogueranking.go) scale a decimal string by a fixed power of ten and then need
+// this same round-and-guard step, so the two share this helper instead of
+// each carrying its own copy.
+func scaleRatToMicroUSD(r *big.Rat) (int64, bool) {
 	num, den := r.Num(), r.Denom()
 	q := new(big.Int).Quo(num, den)
-	// The 6-fractional-digit cap above makes num/den exact after scaling by 1e6,
-	// so this round-half-up branch never fires today — it is a defensive guard
-	// that keeps the conversion correct if that cap is ever widened.
 	if new(big.Int).Mul(new(big.Int).Rem(num, den), big.NewInt(2)).CmpAbs(den) >= 0 {
 		q.Add(q, big.NewInt(1))
 	}
-	// Defensive: the 12-integer-digit cap above keeps q within int64 after the
-	// 1e6 scale, so this never fires today — it guards the conversion if that
-	// cap is ever widened (the same posture as the round-half-up branch).
 	if !q.IsInt64() {
-		return 0, rateInvalid(field, "rate_price_too_large", field+" is too large")
+		return 0, false
 	}
-	return q.Int64(), nil
+	return q.Int64(), true
 }
 
 // MicroUSDToUsdPerMTok formats a stored µUSD/MTok integer back to a trimmed

@@ -89,6 +89,88 @@ export const BindingTheModel: Story = {
   },
 };
 
+// The vendor's live catalogue, ranked. Only OpenRouter has one, so the story
+// picks that vendor and the list appears under the chat field's own sheet rows.
+const VENDOR_CATALOGUE = {
+  ranked_by: "Artificial Analysis intelligence index",
+  unavailable: false,
+  data: [
+    {
+      model_id: "anthropic/claude-opus-5",
+      name: "Anthropic: Claude Opus 5",
+      input_per_mtok: "5",
+      output_per_mtok: "25",
+      rank_score: "63.1",
+    },
+    {
+      model_id: "x-ai/grok-4.6",
+      name: "xAI: Grok 4.6",
+      input_per_mtok: "2",
+      output_per_mtok: "6",
+      rank_score: "60.9",
+    },
+    {
+      model_id: "z-ai/glm-5.3-flash",
+      name: "Z.AI: GLM 5.3 Flash",
+      input_per_mtok: "0.07",
+      output_per_mtok: "0.25",
+      rank_score: "57.5",
+    },
+  ],
+};
+
+// THE LIVE LIST. Press the chat field open: the sheet's own rows come first,
+// then what the vendor is serving today, and the field's hint names the measure
+// that put them in that order rather than claiming a bare "top ten".
+//
+// The reader has to CHOOSE OpenRouter to see it: the catalogue is not read
+// until a vendor with a public one is picked, because until then this
+// installation has no business talking to that vendor at all.
+export const TheLiveList: Story = {
+  render: () => {
+    installFetchStub({
+      ...setup([
+        { step: "ai_models", configured: false },
+        { step: "google_app", configured: false },
+      ]),
+      "GET /ai-model-catalogue": () => jsonResponse(VENDOR_CATALOGUE),
+    });
+    return (
+      <StoryProviders>
+        <InstallationSetup />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("radio", { name: /OpenRouter/ }),
+    );
+  },
+};
+
+// The vendor unreachable, which is the case that must never block first run.
+// The field falls back to the sheet and the hint says so, rather than the step
+// failing because somebody else's service is down.
+export const TheLiveListUnavailable: Story = {
+  ...TheLiveList,
+  render: () => {
+    installFetchStub({
+      ...setup([
+        { step: "ai_models", configured: false },
+        { step: "google_app", configured: false },
+      ]),
+      "GET /ai-model-catalogue": () =>
+        jsonResponse({ ranked_by: "", unavailable: true, data: [] }),
+    });
+    return (
+      <StoryProviders>
+        <InstallationSetup />
+      </StoryProviders>
+    );
+  },
+};
+
 // The same screen with the price sheet unavailable — a seat that may bind a
 // model but may not read rates gets a 403, which `useAiModelCatalogue` answers
 // as an empty list. Both fields still work and both slots say they have no

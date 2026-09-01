@@ -6118,6 +6118,10 @@ export const de = {
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
+  "firstRun.ai.rankedHint":
+    "Dazu die zehn am höchsten bewerteten Modelle, die OpenRouter gerade bedient, sortiert nach {rankedBy}, mit den Preisen des Anbieters.",
+  "firstRun.ai.rankedUnavailable":
+    "Die aktuelle Modell-Liste von OpenRouter war gerade nicht lesbar, deshalb steht hier, was Ihre Preisliste hergibt.",
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.ignite.title": "Es hat einen Puls.",
   "firstRun.ignite.sub":
@@ -6182,6 +6186,9 @@ export const de = {
   "aiRates.unpricedDetail":
     "Aufrufe laufen trotzdem. Sie werden als nicht bepreist gemeldet und fehlen damit in Verbrauch und Kosten, bis jemand unter Einstellungen → KI einen Satz hinterlegt.",
   "aiRates.priced": "Preis gültig ab {date}",
+  "aiRates.proposed": "Preis von OpenRouter",
+  "aiRates.proposedDetail":
+    "Gerade beim Anbieter gelesen, nicht aus deiner Preisliste. Beim Binden landet er in deinem Freigabe-Eingang, damit Verbrauch und Kosten ihn nach deiner Bestätigung bepreisen können.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client-ID",

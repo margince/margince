@@ -56,6 +56,90 @@ export function useAiModelCatalogue() {
   });
 }
 
+/** One model the vendor serves right now, at the vendor's own asking price. */
+type VendorModel = components["schemas"]["AiModelCatalogueEntry"];
+
+/**
+ * The vendor's live catalogue as a caller holds it. `rankedBy` travels with the
+ * models because a screen that prints a top ten has to be able to say what
+ * "top" measured, and `unavailable` because an empty list on its own cannot
+ * tell a vendor that is down from a vendor that serves nothing.
+ */
+export type VendorCatalogue = Readonly<{
+  models: readonly VendorModel[];
+  rankedBy: string;
+  unavailable: boolean;
+}>;
+
+const VENDOR_UNREACHABLE: VendorCatalogue = {
+  models: [],
+  rankedBy: "",
+  unavailable: true,
+};
+
+/**
+ * What the vendor is serving TODAY, which the price sheet cannot know.
+ *
+ * The sheet is what this installation can put a number on, and it is right that
+ * the sheet governs cost. It is not a catalogue of what exists: a model the
+ * vendor shipped last week is absent from it, and an admin binding one has no
+ * way to find out what the options even are. This read answers only that
+ * question, for the ONE vendor whose catalogue is public and unauthenticated,
+ * and it is asked only once that vendor has been chosen.
+ *
+ * IT NEVER THROWS, for the same reason the sheet read does not. First run must
+ * not be blocked by another company's uptime, so an unreachable vendor is an
+ * empty list that says it is empty, and the field falls back to the sheet.
+ */
+export function useVendorCatalogue(provider: "openrouter" | undefined) {
+  return useQuery({
+    queryKey: ["ai-model-catalogue", provider],
+    // Nothing is asked until a vendor with a public catalogue is chosen. The
+    // admin is about to hand that vendor their key and their text, so reading
+    // its catalogue is not an escalation, but reading it before they have
+    // chosen would be this installation talking to a vendor it may never use.
+    enabled: provider !== undefined,
+    // The server caches this for the same span. A vendor's catalogue does not
+    // turn over while somebody is filling in one form.
+    staleTime: 15 * 60 * 1000,
+    retry: false,
+    queryFn: async (): Promise<VendorCatalogue> => {
+      if (provider === undefined) {
+        return VENDOR_UNREACHABLE;
+      }
+      const { data, error } = await api.GET("/ai-model-catalogue", {
+        params: { query: { provider } },
+      });
+      // A 200 is not by itself an answer: an intermediary can return one with a
+      // body this cannot read, and a list that is missing rather than empty
+      // would reach the render as undefined and take the screen down. An
+      // unreadable body is the same thing as an unreachable vendor.
+      if (error || !data || !Array.isArray(data.data)) {
+        return VENDOR_UNREACHABLE;
+      }
+      return {
+        models: data.data,
+        rankedBy: data.ranked_by ?? "",
+        unavailable: data.unavailable !== false,
+      };
+    },
+  });
+}
+
+/**
+ * The vendor's own price for one model, or undefined if it does not serve it.
+ *
+ * Callers use this only where the SHEET has nothing to say: a recorded price
+ * always outranks a proposed one, because the recorded number is the one this
+ * installation has agreed to bill against.
+ */
+export function vendorModel(
+  catalogue: VendorCatalogue | undefined,
+  modelId: string,
+): VendorModel | undefined {
+  return catalogue?.models.find((m) => m.model_id === modelId);
+}
+
 /**
  * What one model costs, short enough to sit beside its id in a dropdown row.
  *
@@ -113,4 +197,47 @@ export function suggestionsFor(
     .filter((r) => r.provider === provider && r.lane === lane)
     .map((r) => ({ value: r.model_id, hint: priceHint(r, locale) }))
     .sort((a, b) => stable(a.value, b.value));
+}
+
+/**
+ * The vendor's ranked models, for a field the sheet cannot fill on its own.
+ *
+ * IN THE VENDOR'S ORDER, not alphabetical, which is the one place this differs
+ * from `suggestionsFor` and the whole reason the list is worth fetching: the
+ * order IS the ranking, and sorting it by id would throw away the only thing
+ * that makes ten rows more useful than four hundred.
+ *
+ * A model the sheet already prices is dropped here rather than listed twice.
+ * The sheet's own row is the better offer: it carries a date and a price this
+ * installation has agreed to, where the vendor's is a number nobody has
+ * confirmed yet.
+ */
+export function vendorSuggestions(
+  vendor: VendorCatalogue | undefined,
+  priced: ModelCatalogue,
+  provider: string,
+  locale: Locale,
+): readonly ComboBoxSuggestion[] {
+  const onSheet = new Set(
+    (priced ?? [])
+      .filter((r) => r.provider === provider)
+      .map((r) => r.model_id),
+  );
+  return (vendor?.models ?? [])
+    .filter((m) => !onSheet.has(m.model_id))
+    .map((m) => ({ value: m.model_id, hint: vendorHint(m, locale) }));
+}
+
+function vendorHint(model: VendorModel, locale: Locale): string | undefined {
+  // Same guard as the sheet's hint, for the same reason: a hint is decoration,
+  // and a price that will not read must leave the model offered without one
+  // rather than printing NaN or throwing inside a render.
+  if (
+    unreadablePrice(model.input_per_mtok) ||
+    unreadablePrice(model.output_per_mtok)
+  ) {
+    return undefined;
+  }
+  const shown = formatUsdPerMTok(model.input_per_mtok, locale);
+  return `${shown} → ${formatUsdPerMTok(model.output_per_mtok, locale)}`;
 }

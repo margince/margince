@@ -6054,6 +6054,10 @@ export const vi = {
   "firstRun.ai.chatModel": "Mô hình",
   "firstRun.ai.modelHint":
     "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
+  "firstRun.ai.rankedHint":
+    "Kèm theo mười mô hình điểm cao nhất OpenRouter đang phục vụ, xếp theo {rankedBy}, với giá của chính nhà cung cấp.",
+  "firstRun.ai.rankedUnavailable":
+    "Hiện chưa đọc được danh sách mô hình trực tiếp của OpenRouter, nên đây là những gì bảng giá của bạn có.",
   "firstRun.ai.embedModel": "Mô hình embedding",
   "firstRun.ignite.title": "Nó đã có nhịp đập.",
   "firstRun.ignite.sub":
@@ -6117,6 +6121,9 @@ export const vi = {
   "aiRates.unpricedDetail":
     "Mô hình vẫn phục vụ được. Các lệnh gọi sẽ báo là chưa có giá, nên không xuất hiện trong mức dùng và chi phí cho tới khi ai đó thêm đơn giá ở Cài đặt → AI.",
   "aiRates.priced": "Giá áp dụng từ {date}",
+  "aiRates.proposed": "Giá của OpenRouter",
+  "aiRates.proposedDetail":
+    "Vừa đọc từ nhà cung cấp, không phải từ bảng giá của bạn. Khi bạn gán mô hình này, giá sẽ vào hộp phê duyệt để mức dùng và chi phí tính được sau khi bạn xác nhận.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client ID",

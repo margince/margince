@@ -83,3 +83,11 @@
 .ai-rate-plate {
   margin-top: var(--space-2);
 }
+
+/* Where a price came from, when it did not come from the sheet. Indigo carries
+   its one meaning here as everywhere: a machine proposed this and nobody has
+   confirmed it. The recorded price beside it stays unmarked, because a number
+   this installation has agreed to is the ordinary case. */
+.ai-rate-proposed {
+  color: var(--aiText);
+}

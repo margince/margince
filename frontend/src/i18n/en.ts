@@ -6172,6 +6172,13 @@ export const en = {
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
     "A starting point. The listed prices are per million tokens, in → out; any model id your provider serves will do.",
+  // What the live rows in the chat list ARE, so a reader knows what put them
+  // in that order. "Top ten" on its own is a claim nobody can check, and the
+  // measure is somebody else's published one rather than ours.
+  "firstRun.ai.rankedHint":
+    "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
+  "firstRun.ai.rankedUnavailable":
+    "OpenRouter's live model list could not be read just now, so this offers what your price sheet holds.",
   "firstRun.ai.embedModel": "Embedding model",
   // What the binding on screen will cost, from this installation's own price
   // sheet. The lane labels name the JOB rather than the mechanism: a first-time
@@ -6185,6 +6192,9 @@ export const en = {
   "aiRates.unpricedDetail":
     "It will still serve calls. They report as unpriced, so they are missing from usage and spend until someone adds a rate under Settings → AI.",
   "aiRates.priced": "Priced from {date}",
+  "aiRates.proposed": "OpenRouter's price",
+  "aiRates.proposedDetail":
+    "Read from the vendor just now, not from your price sheet. Bind it and it goes to your approvals inbox, so usage and spend can price it once you confirm.",
   // ONE question, not two. Mail and sign-in are separate mechanisms in the
   // server and the same decision for an organization: a company on Workspace
   // reads mail through a Google app and signs in with Google accounts, through

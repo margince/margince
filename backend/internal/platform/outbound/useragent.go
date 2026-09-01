@@ -105,4 +105,16 @@ const (
 	// abuse must be able to tell apart from an anonymous metadata read.
 	SignInProduct = "margince-signin"
 	SignInHeader  = SignInProduct + "/" + version
+
+	// ModelCatalogueProduct identifies the read of a model vendor's public
+	// catalogue during setup. The request carries no credential, so the agent
+	// is the only thing the vendor's operator has to attribute it by, and it
+	// is asked once per installation rather than on a schedule.
+	//
+	// A SEPARATE token from the site reader even though both read public
+	// documents: this one goes to a named vendor's API on a path they publish
+	// for the purpose, where the crawler's identity is matched against
+	// robots.txt groups that have nothing to say about it.
+	ModelCatalogueProduct = "margince-modelcatalogue"
+	ModelCatalogueHeader  = ModelCatalogueProduct + "/" + version
 )

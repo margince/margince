@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { formatUsdPerMTok } from "../format/format";
 import { type Locale, useT } from "../i18n";
-import type { ModelCatalogue, ModelLane } from "./ai-models";
+import {
+  type ModelCatalogue,
+  type ModelLane,
+  type VendorCatalogue,
+  vendorModel,
+} from "./ai-models";
+
+type VendorModel = components["schemas"]["AiModelCatalogueEntry"];
 
 /**
  * What the models this installation is about to bind will cost, said out loud.
@@ -73,6 +81,28 @@ function priceOf(rate: Rate, locale: Locale): string | undefined {
 }
 
 /**
+ * The vendor's asking price for one model, in the same shape the sheet's is.
+ *
+ * Both sides, always: the vendor publishes an input and an output price for
+ * every chat model, and this is only ever reached for a chat lane, because the
+ * one vendor with a public catalogue publishes no embedding models at all.
+ */
+function proposedPrice(
+  model: VendorModel | undefined,
+  locale: Locale,
+): string | undefined {
+  if (
+    model === undefined ||
+    unreadable(model.input_per_mtok) ||
+    unreadable(model.output_per_mtok)
+  ) {
+    return undefined;
+  }
+  const input = formatUsdPerMTok(model.input_per_mtok, locale);
+  return `${input} → ${formatUsdPerMTok(model.output_per_mtok, locale)}`;
+}
+
+/**
  * One lane's slot. Absent from the strip entirely when no model is chosen yet:
  * an empty slot on a plate reads as a reading that failed to load, and before a
  * model id is typed there is nothing this lane costs.
@@ -81,15 +111,46 @@ function LaneSlot({
   label,
   modelId,
   rate,
+  proposed,
   locale,
 }: Readonly<{
   label: string;
   modelId: string;
   rate: Rate | undefined;
+  /** The vendor's live entry for this model, where the sheet has no price. */
+  proposed: VendorModel | undefined;
   locale: Locale;
 }>) {
   const t = useT();
   const price = rate ? priceOf(rate, locale) : undefined;
+  // The vendor's own asking price, for a model the sheet has never seen. It is
+  // shown ONLY here, under the sheet: a recorded price outranks a proposed one,
+  // because the recorded number is the one this installation has agreed to bill
+  // against and the proposed one is a number a machine went and read.
+  const asked =
+    price === undefined ? proposedPrice(proposed, locale) : undefined;
+  if (asked !== undefined) {
+    return (
+      <StatCard
+        label={label}
+        value={asked}
+        // `source` rather than a tone: this is not a worse price, it is a price
+        // from somewhere else, and the card already owns a slot for saying
+        // where a figure came from. Indigo, because indigo means a machine
+        // proposed it and nobody has confirmed it yet.
+        source={
+          <span className="ai-rate-proposed">{t("aiRates.proposed")}</span>
+        }
+        detail={
+          <>
+            <span className="t-mono">{modelId}</span>
+            <span>{t("aiRates.perMTokInOut")}</span>
+            <span>{t("aiRates.proposedDetail")}</span>
+          </>
+        }
+      />
+    );
+  }
   // Both halves of the same case: a model the sheet has never seen, and one it
   // has a row for that it cannot state. They read the same to the person
   // binding it, because the consequence is the same — the call runs, and the
@@ -149,12 +210,19 @@ function LaneSlot({
  */
 export function ModelRatePlate({
   catalogue,
+  vendor,
   provider,
   chatModel,
   embedModel,
   locale,
 }: Readonly<{
   catalogue: ModelCatalogue;
+  /**
+   * The vendor's live catalogue, where one was fetched. Only the chat lane can
+   * ever be answered from it: the one vendor with a public catalogue publishes
+   * no embedding models, so the embed lane is the sheet's alone.
+   */
+  vendor?: VendorCatalogue;
   provider: string;
   chatModel: string;
   embedModel: string;
@@ -173,6 +241,7 @@ export function ModelRatePlate({
           label={t("aiRates.chatLane")}
           modelId={chat}
           rate={rateFor(catalogue, provider, chat, "chat")}
+          proposed={vendorModel(vendor, chat)}
           locale={locale}
         />
       )}
@@ -181,6 +250,9 @@ export function ModelRatePlate({
           label={t("aiRates.embedLane")}
           modelId={embed}
           rate={rateFor(catalogue, provider, embed, "embeddings")}
+          // Never a proposed price: no vendor with a public catalogue publishes
+          // embedding models, so anything shown here would be invented.
+          proposed={undefined}
           locale={locale}
         />
       )}

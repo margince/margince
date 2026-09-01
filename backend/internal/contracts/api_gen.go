@@ -11800,6 +11800,21 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ListAiModelCatalogueParamsProvider.
+const (
+	Openrouter ListAiModelCatalogueParamsProvider = "openrouter"
+)
+
+// Valid indicates whether the value is a known member of the ListAiModelCatalogueParamsProvider enum.
+func (e ListAiModelCatalogueParamsProvider) Valid() bool {
+	switch e {
+	case Openrouter:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListApprovalsParamsStatus.
 const (
 	ListApprovalsParamsStatusApproved ListApprovalsParamsStatus = "approved"
@@ -13710,6 +13725,43 @@ type AiEmbeddingsBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+}
+
+// AiModelCatalogueEntry One model a vendor serves right now, at the vendor's own asking price. A PROPOSAL rather
+// than a rate: it carries no effective date because nothing dated it, and the two prices are
+// in the same USD-per-1M-tokens decimal strings as `AiModelRate` so one screen can put a
+// proposed price and a recorded one side by side without converting between them.
+type AiModelCatalogueEntry struct {
+	// ContextLength Omitted where the vendor does not publish one.
+	ContextLength *int   `json:"context_length,omitempty"`
+	InputPerMtok  string `json:"input_per_mtok"`
+
+	// ModelId The id to bind, spelled the vendor's way.
+	ModelId string `json:"model_id"`
+
+	// Name What the vendor calls it, for a reader who does not think in ids.
+	Name          string `json:"name"`
+	OutputPerMtok string `json:"output_per_mtok"`
+
+	// RankScore This model's score under `ranked_by`, so a screen can show WHY a model is in the list
+	// rather than asking a reader to trust the order. A decimal string for the same reason
+	// the prices are: a score is displayed, never arithmetic.
+	RankScore *string `json:"rank_score,omitempty"`
+}
+
+// AiModelCatalogueResponse defines model for AiModelCatalogueResponse.
+type AiModelCatalogueResponse struct {
+	Data []AiModelCatalogueEntry `json:"data"`
+
+	// FetchedAt When the vendor was last read. Absent when unavailable.
+	FetchedAt *time.Time `json:"fetched_at,omitempty"`
+
+	// RankedBy The measure the order came from, in words a screen can print. "Top" is meaningless
+	// without it, and the vendor's own list arrives in no useful order at all.
+	RankedBy string `json:"ranked_by"`
+
+	// Unavailable True when the vendor could not be read. `data` is then empty and the caller falls back to the price sheet.
+	Unavailable bool `json:"unavailable"`
 }
 
 // AiModelRate One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
@@ -27654,6 +27706,18 @@ type ResetDataJSONBody struct {
 	Confirmation string `json:"confirmation"`
 }
 
+// ListAiModelCatalogueParams defines parameters for ListAiModelCatalogue.
+type ListAiModelCatalogueParams struct {
+	// Provider The vendor to ask. Only a vendor whose catalogue is PUBLIC and unauthenticated can be
+	// listed here, because this read runs before any key is sealed; that is OpenRouter alone
+	// today. A native vendor's catalogue needs the operator's own key and belongs on a
+	// different route, not behind a widened enum here.
+	Provider ListAiModelCatalogueParamsProvider `form:"provider" json:"provider"`
+}
+
+// ListAiModelCatalogueParamsProvider defines parameters for ListAiModelCatalogue.
+type ListAiModelCatalogueParamsProvider string
+
 // ListAiModelRatesParams defines parameters for ListAiModelRates.
 type ListAiModelRatesParams struct {
 	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
@@ -39957,6 +40021,9 @@ type ServerInterface interface {
 	// The governed tool surface (registry metadata) for the operator UI.
 	// (GET /agent-tools)
 	ListAgentTools(w http.ResponseWriter, r *http.Request)
+	// What a vendor serves right now, ranked, at the vendor's own asking price.
+	// (GET /ai-model-catalogue)
+	ListAiModelCatalogue(w http.ResponseWriter, r *http.Request, params ListAiModelCatalogueParams)
 	// List current AI model prices (latest per model), or one model's history.
 	// (GET /ai-model-rates)
 	ListAiModelRates(w http.ResponseWriter, r *http.Request, params ListAiModelRatesParams)
@@ -41568,6 +41635,12 @@ func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
 // The governed tool surface (registry metadata) for the operator UI.
 // (GET /agent-tools)
 func (_ Unimplemented) ListAgentTools(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What a vendor serves right now, ranked, at the vendor's own asking price.
+// (GET /ai-model-catalogue)
+func (_ Unimplemented) ListAiModelCatalogue(w http.ResponseWriter, r *http.Request, params ListAiModelCatalogueParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -45647,6 +45720,45 @@ func (siw *ServerInterfaceWrapper) ListAgentTools(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAgentTools(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAiModelCatalogue operation middleware
+func (siw *ServerInterfaceWrapper) ListAiModelCatalogue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAiModelCatalogueParams
+
+	// ------------- Required query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAiModelCatalogue(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67428,6 +67540,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent-tools", wrapper.ListAgentTools)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai-model-catalogue", wrapper.ListAiModelCatalogue)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai-model-rates", wrapper.ListAiModelRates)

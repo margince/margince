@@ -10841,6 +10841,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai-model-catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a vendor serves right now, ranked, at the vendor's own asking price.
+         * @description Admin/ops-only. Reads the vendor's public catalogue live and returns its highest-ranked
+         *     models by a published third-party measure, named in `ranked_by` so a screen can say what
+         *     "top" MEANS rather than asserting a bare "top ten" nobody can check.
+         *
+         *     THE PRICES ARE THE VENDOR'S, not this installation's. Nothing here has been through the
+         *     confirm-first path that writes `ai_model_rate`, so a caller renders these as proposed and
+         *     lets a sheet row win wherever one exists. One colour, one meaning: a number a machine
+         *     fetched is not a number this installation has agreed to.
+         *
+         *     IT FAILS OPEN. A vendor that is slow, down, or serving a shape this cannot read yields
+         *     `unavailable: true` and no rows rather than an error status, because first run must never
+         *     be blocked by somebody else's uptime. `unavailable` is what keeps that honest: an empty
+         *     list on its own cannot tell "the vendor is unreachable" from "the vendor serves nothing",
+         *     and a screen that cannot tell them apart says the wrong thing in one of the two cases.
+         *
+         *     Human session only (x-agent-access: human-only).
+         */
+        get: operations["listAiModelCatalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/profile-fields/{field}": {
         parameters: {
             query?: never;
@@ -11161,6 +11196,43 @@ export interface components {
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];
+        };
+        /**
+         * @description One model a vendor serves right now, at the vendor's own asking price. A PROPOSAL rather
+         *     than a rate: it carries no effective date because nothing dated it, and the two prices are
+         *     in the same USD-per-1M-tokens decimal strings as `AiModelRate` so one screen can put a
+         *     proposed price and a recorded one side by side without converting between them.
+         */
+        AiModelCatalogueEntry: {
+            /** @description The id to bind, spelled the vendor's way. */
+            model_id: string;
+            /** @description What the vendor calls it, for a reader who does not think in ids. */
+            name: string;
+            /** @description Omitted where the vendor does not publish one. */
+            context_length?: number;
+            input_per_mtok: string;
+            output_per_mtok: string;
+            /**
+             * @description This model's score under `ranked_by`, so a screen can show WHY a model is in the list
+             *     rather than asking a reader to trust the order. A decimal string for the same reason
+             *     the prices are: a score is displayed, never arithmetic.
+             */
+            rank_score?: string;
+        };
+        AiModelCatalogueResponse: {
+            /**
+             * @description The measure the order came from, in words a screen can print. "Top" is meaningless
+             *     without it, and the vendor's own list arrives in no useful order at all.
+             */
+            ranked_by: string;
+            /** @description True when the vendor could not be read. `data` is then empty and the caller falls back to the price sheet. */
+            unavailable: boolean;
+            /**
+             * Format: date-time
+             * @description When the vendor was last read. Absent when unavailable.
+             */
+            fetched_at?: string;
+            data: components["schemas"]["AiModelCatalogueEntry"][];
         };
         SetAiModelRateRequest: {
             provider: string;
@@ -42354,6 +42426,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RefreshAccepted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listAiModelCatalogue: {
+        parameters: {
+            query: {
+                /**
+                 * @description The vendor to ask. Only a vendor whose catalogue is PUBLIC and unauthenticated can be
+                 *     listed here, because this read runs before any key is sealed; that is OpenRouter alone
+                 *     today. A native vendor's catalogue needs the operator's own key and belongs on a
+                 *     different route, not behind a widened enum here.
+                 */
+                provider: "openrouter";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The vendor's ranked catalogue, or an honest statement that it could not be read. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelCatalogueResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

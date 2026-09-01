@@ -13,7 +13,13 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { suggestionsFor, useAiModelCatalogue } from "./ai-models";
+import {
+  suggestionsFor,
+  useAiModelCatalogue,
+  useVendorCatalogue,
+  type VendorCatalogue,
+  vendorSuggestions,
+} from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
 import { problemMessageOf, throwProblem } from "./common";
@@ -165,6 +171,31 @@ function StepForm({
 }
 
 /** The AI step: one vendor, one key, the two models it will serve. */
+/**
+ * What the chat field's list is made of, added to the field's own hint.
+ *
+ * Silent for a vendor with no public catalogue, because there the list IS the
+ * price sheet and the ordinary hint already says so. When there is a live list,
+ * it names the MEASURE: an order presented as "top ten" with no measure behind
+ * it is a claim the reader cannot check, and the measure is a third party's
+ * published one rather than anything this product decided.
+ */
+function chatListNote(
+  t: ReturnType<typeof useT>,
+  vendor: VendorCatalogue | undefined,
+): string {
+  if (vendor === undefined) {
+    return "";
+  }
+  if (vendor.unavailable) {
+    return t("firstRun.ai.rankedUnavailable");
+  }
+  if (vendor.models.length === 0) {
+    return "";
+  }
+  return t("firstRun.ai.rankedHint", { rankedBy: vendor.rankedBy });
+}
+
 function AiStep({
   onBusy,
   onIgnite,
@@ -186,6 +217,12 @@ function AiStep({
   // seeded sheet, so the two fields open with the vendor's own family in them
   // rather than with one id and no way to learn a second.
   const catalogue = useAiModelCatalogue();
+  // What the vendor is serving TODAY, which the sheet cannot know. Asked only
+  // of a vendor whose catalogue is public, which is OpenRouter alone, and only
+  // once the reader has chosen it.
+  const vendor = useVendorCatalogue(
+    choice === "openrouter" ? "openrouter" : undefined,
+  );
 
   // Switching vendor re-seeds the models, because the previous vendor's ids
   // mean nothing to this one — leaving them would offer a binding that cannot
@@ -310,18 +347,30 @@ function AiStep({
             preset below is that it is a starting point. */}
           <Field
             label={t("firstRun.ai.chatModel")}
-            hint={t("firstRun.ai.modelHint")}
+            hint={`${t("firstRun.ai.modelHint")} ${chatListNote(t, vendor.data)}`.trim()}
           >
             {(control) => (
               <ComboBox
                 {...control}
                 value={chatModel}
-                suggestions={suggestionsFor(
-                  catalogue.data,
-                  preset.provider,
-                  "chat",
-                  locale,
-                )}
+                // The sheet first, then what the vendor is serving today. In
+                // that order because the sheet's rows are the ones this
+                // installation can already price, and the live rows are the
+                // answer to a different question: what else is there.
+                suggestions={[
+                  ...suggestionsFor(
+                    catalogue.data,
+                    preset.provider,
+                    "chat",
+                    locale,
+                  ),
+                  ...vendorSuggestions(
+                    vendor.data,
+                    catalogue.data,
+                    preset.provider,
+                    locale,
+                  ),
+                ]}
                 disabled={busy}
                 onChange={setChatModel}
               />
@@ -350,6 +399,7 @@ function AiStep({
             has none — while the reader is still deciding. */}
           <ModelRatePlate
             catalogue={catalogue.data}
+            vendor={vendor.data}
             provider={preset.provider}
             chatModel={chatModel}
             embedModel={embedModel}
