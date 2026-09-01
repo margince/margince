@@ -27456,6 +27456,9 @@ type ListActivitiesParams struct {
 
 	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
+
+	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
 }
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
@@ -44785,6 +44788,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "occurred_before"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "occurred_before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "waiting_reply" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "waiting_reply", r.URL.Query(), &params.WaitingReply, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "waiting_reply"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "waiting_reply", Err: err})
 		}
 		return
 	}

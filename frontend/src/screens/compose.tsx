@@ -2263,11 +2263,11 @@ export function ComposeModal({
       setChosen(undefined);
     }
   }, [open]);
-  // Only where the choice is actually OFFERED. A person's or a deal's composer
-  // draws no conversation column, so there is nothing there to pick from and
-  // the resolved latest message stays its anchor, exactly as before.
-  const offeringThreads =
-    entityType === "organization" && !isChannelReply && !activityId;
+  // Offered on every record's account-started mail. A caller that anchored the
+  // send (a timeline Reply, a panel that resolved what is owed) has already
+  // chosen, so nothing is offered over its choice; a channel reply's
+  // conversation is the provider's, with nothing of ours to pick from.
+  const offeringThreads = !isChannelReply && !activityId;
   const answering =
     activityId ?? (offeringThreads ? chosen : latest.activity?.id);
   // Addressing the reply before a draft is asked for. A channel reply resolves
@@ -2368,8 +2368,11 @@ export function ComposeModal({
     !answering && entityType === "organization" && !isChannelReply;
   // What SHAPE the composer takes, split from what it GROUNDS. One flag used to
   // answer both, so a reply inherited the account path's box — and an account
-  // that had mail lost the drawer that path was given.
-  const asDrawer = entityType === "organization" && !isChannelReply;
+  // that had mail lost the drawer that path was given. The shape is every
+  // record's, not the account's: a mail written from a person, lead or deal
+  // keeps that record on screen beside it just as an account's does, so the
+  // same verb cannot change shape with the page it was pressed on.
+  const asDrawer = !isChannelReply;
   // The conversation rides beside the form only where there IS one and there is
   // room for a second column. A channel reply answers a live conversation the
   // provider owns, and has no thread of its own to draw.
@@ -2384,8 +2387,14 @@ export function ComposeModal({
     asDrawer && answeringCorrespondence && conversation.messages.length > 0;
   // The ways in, when the reader has not taken one. Nothing to offer is not a
   // column: an account with no mail gets the plain drawer it had before.
+  // While the lookup is still out, the column holds its place with the
+  // pending body — decided by the answer, the drawer opened narrow and
+  // snapped wide a beat later, a shape change under a reader already aiming
+  // at a field.
   const showChoices =
-    offeringThreads && !chosen && recent.conversations.length > 0;
+    offeringThreads &&
+    !chosen &&
+    (recent.pending || recent.conversations.length > 0);
   const splitColumns = showConversation || showChoices;
   // Where this send files, and the subject tag that travels with it. The
   // account path keeps its own picker (it chooses a project rather than

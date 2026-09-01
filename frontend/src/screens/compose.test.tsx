@@ -2599,15 +2599,19 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
+    // Waited for by its rows, not the region: the offer column holds its
+    // place with a pending body while the lookup is out, so the region
+    // existing does not yet mean there is anything to pick.
+    const choice = await screen.findByRole("button", { name: /Re: Q3/ });
     expect(
-      await screen.findByRole("region", { name: /continue a conversation/i }),
+      screen.getByRole("region", { name: /continue a conversation/i }),
     ).toBeTruthy();
     expect(
       screen.queryByRole("region", { name: /^this conversation$/i }),
     ).toBeNull();
 
     // Taking one turns the column into that conversation, with a way back.
-    await userEvent.click(screen.getByRole("button", { name: /Re: Q3/ }));
+    await userEvent.click(choice);
     expect(
       await screen.findByRole("region", { name: /this conversation/i }),
     ).toBeTruthy();

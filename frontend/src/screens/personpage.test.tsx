@@ -229,23 +229,23 @@ describe("a moment action that opens the composer", () => {
     expect(await intentValue()).toBe("follow up — it has gone quiet");
   });
 
-  it("opens an empty one for the generic Email verb, whatever a rung asked for before", async () => {
-    // The two buttons share one drawer, so the rung's reason has to be dropped
-    // on the way in: inherited, it would draft a follow-up for a reader who
-    // asked for a blank sheet.
+  it("opens the shared compose drawer for the generic Email verb, not the steering composer", async () => {
+    // Mail as the only way in goes to the drawer every record shares — the
+    // one that knows the record's conversations. The rung's labelled verb
+    // above keeps the steering composer, because it arrives carrying an
+    // intent the shared drawer has no field for.
     const user = userEvent.setup();
     mount("overview", { ...view, moment: quietMoment }, [mailAllowed]);
-
-    await user.click(
-      await screen.findByRole("button", { name: "Draft a follow-up" }),
-    );
-    expect(await intentValue()).toBe("follow up — it has gone quiet");
-    await user.keyboard("{Escape}");
 
     const header = await recordHeader();
     await user.click(within(header).getByRole("button", { name: "Email" }));
 
-    expect(await intentValue()).toBe("");
+    expect(
+      await screen.findByRole("dialog", { name: /Send this email/ }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("textbox", { name: "What should it be about?" }),
+    ).toBeNull();
   });
 });
 

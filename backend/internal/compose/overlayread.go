@@ -372,6 +372,11 @@ func (s Server) ListActivities(w http.ResponseWriter, r *http.Request, params cr
 			// a full day that never happened.
 			{"occurred_after", params.OccurredAfter != nil},
 			{"occurred_before", params.OccurredBefore != nil},
+			// The mirror carries no thread walk: no thread_key, no direction,
+			// no anti-join over its own history, so "still awaiting an answer"
+			// cannot be answered from it — refused rather than returning the
+			// whole mirrored set as though every row qualified.
+			{"waiting_reply", params.WaitingReply != nil},
 		},
 		params.Q, params.Cursor, params.Limit, overlayWireActivity,
 		func(data []crmcontracts.Activity, page crmcontracts.PageInfo) any {

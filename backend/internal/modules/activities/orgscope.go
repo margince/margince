@@ -314,6 +314,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
 	}
+	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
+		return "", nil, "", nil, err
+	}
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
 	}
@@ -342,6 +345,13 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 
 // filtersOnContent reports whether the list narrows on fields a withheld row
 // does not disclose.
+//
+// waiting_reply belongs here for the reason waiting.go's own gate comment
+// states: who wrote last and that nobody replied are both derived from
+// thread membership, not from the safe discover markers, so a withheld
+// message must drop out of the candidate set rather than surface as a row
+// with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
-	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "")
+	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
+		in.WaitingReplyAsOf != nil
 }
