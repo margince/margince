@@ -136,7 +136,7 @@ describe("PreferenceCenterScreen", () => {
   it("locks transactional and explains why instead of silently ignoring the click", async () => {
     stubCenter();
     render(<PreferenceCenterScreen token="tok-123" />);
-    const toggle = await screen.findByRole("switch", {
+    const toggle = await screen.findByRole("checkbox", {
       name: /deal & service/i,
     });
     expect(toggle).toBeDisabled();
@@ -148,7 +148,7 @@ describe("PreferenceCenterScreen", () => {
     stubCenter({ "PUT /public/preferences/tok-123": put });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("switch", { name: /product updates/i }),
+      await screen.findByRole("checkbox", { name: /product updates/i }),
     );
     expect(screen.getByText(/not saved yet/i)).toBeInTheDocument();
     expect(put).not.toHaveBeenCalled();
@@ -158,7 +158,7 @@ describe("PreferenceCenterScreen", () => {
     stubCenter();
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("switch", { name: /product updates/i }),
+      await screen.findByRole("checkbox", { name: /product updates/i }),
     );
     await userEvent.click(screen.getByRole("button", { name: /discard/i }));
     expect(screen.queryByText(/not saved yet/i)).not.toBeInTheDocument();
@@ -173,7 +173,7 @@ describe("PreferenceCenterScreen", () => {
     const shown = (await screen.findByTestId("wording-marketing_email"))
       .textContent;
     await userEvent.click(
-      screen.getByRole("switch", { name: /product updates/i }),
+      screen.getByRole("checkbox", { name: /product updates/i }),
     );
     await userEvent.click(
       screen.getByRole("button", { name: /save preferences/i }),
@@ -195,7 +195,7 @@ describe("PreferenceCenterScreen", () => {
     render(<PreferenceCenterScreen token="tok-123" />);
     const shown = (await screen.findByTestId("wording-events")).textContent;
     await userEvent.click(
-      await screen.findByRole("switch", { name: /^events$/i }),
+      await screen.findByRole("checkbox", { name: /^events$/i }),
     );
     await userEvent.click(
       screen.getByRole("button", { name: /save preferences/i }),
@@ -232,7 +232,7 @@ describe("PreferenceCenterScreen", () => {
     });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("switch", { name: /product updates/i }),
+      await screen.findByRole("checkbox", { name: /product updates/i }),
     );
     await userEvent.click(
       screen.getByRole("button", { name: /save preferences/i }),
@@ -282,16 +282,16 @@ describe("PreferenceCenterScreen", () => {
     stubCenter({ "PUT /public/preferences/tok-123": () => putPromise });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("switch", { name: /product updates/i }),
+      await screen.findByRole("checkbox", { name: /product updates/i }),
     );
     await userEvent.click(
       screen.getByRole("button", { name: /save preferences/i }),
     );
 
     expect(
-      screen.getByRole("switch", { name: /product updates/i }),
+      screen.getByRole("checkbox", { name: /product updates/i }),
     ).toBeDisabled();
-    expect(screen.getByRole("switch", { name: /^events$/i })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: /^events$/i })).toBeDisabled();
     expect(
       screen.getByRole("button", { name: /save preferences/i }),
     ).toBeDisabled();
@@ -300,7 +300,7 @@ describe("PreferenceCenterScreen", () => {
     resolvePut(jsonResponse(CENTER));
     await waitFor(() =>
       expect(
-        screen.getByRole("switch", { name: /product updates/i }),
+        screen.getByRole("checkbox", { name: /product updates/i }),
       ).toBeEnabled(),
     );
   });
@@ -392,5 +392,16 @@ describe("one-click unsubscribe (G-7)", () => {
     expect(put).not.toHaveBeenCalled();
     expect(screen.getByText(/not saved yet/i)).toBeInTheDocument();
     expect(screen.getByText(/explicit opt-in/i)).toBeInTheDocument();
+  });
+  // A Switch IS the write; a Checkbox states an intent something later
+  // submits. This page stages every change and commits them from the save
+  // bar, so role="switch" would tell a screen-reader user their choice had
+  // already taken effect while it was still only staged.
+  it("offers checkboxes, not switches, because the change is staged", async () => {
+    stubCenter();
+    render(<PreferenceCenterScreen token="tok-123" />);
+
+    expect((await screen.findAllByRole("checkbox")).length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole("switch")).toHaveLength(0);
   });
 });
