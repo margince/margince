@@ -74,6 +74,14 @@ func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	// The overnight brief ranks deal ids and keeps its figures behind its own
+	// endpoint, so its rows arrive naming a deal and saying nothing about it.
+	// Filled here, before the projection, so the money is on the row when the
+	// ordering reads it — enriching afterwards would rank the deal as unpriced
+	// and then print its price, which is the page disagreeing with itself.
+	if err := reader.nameTheMoney(ctx, &day); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
