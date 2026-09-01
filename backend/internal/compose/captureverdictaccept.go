@@ -23,7 +23,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -101,7 +100,7 @@ func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, row ca
 // exactly why an offer whose accept merely ADDS records is safe to leave sitting
 // in an inbox indefinitely.
 func counterpartyAcceptEffect(svc *approvals.Service, store *people.Store,
-	timeline *activities.Store, pending *capture.PendingStore, triage *domainTriageTrigger,
+	pending *capture.PendingStore, triage *domainTriageTrigger,
 ) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		var proposal counterpartyProposal
@@ -125,7 +124,7 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *people.Store,
 		var triageDomain string
 		if err := svc.RedeemAndApply(ctx, approvalID, counterpartyProposalKind, diffHash, func(tx pgx.Tx) error {
 			var applyErr error
-			triageDomain, applyErr = applyCounterpartyAccept(execCtx, tx, store, timeline, pending, proposal)
+			triageDomain, applyErr = applyCounterpartyAccept(execCtx, tx, store, pending, proposal)
 			return applyErr
 		}); err != nil {
 			return err
@@ -146,9 +145,9 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *people.Store,
 // It reports the domain still owed an organization verdict, for the caller to
 // queue once the redemption has committed.
 func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *people.Store,
-	timeline *activities.Store, pending *capture.PendingStore, proposal counterpartyProposal,
+	pending *capture.PendingStore, proposal counterpartyProposal,
 ) (string, error) {
-	created, err := createCounterpartyRecords(ctx, tx, store, timeline, counterpartyCreation{
+	created, err := createCounterpartyRecords(ctx, tx, store, counterpartyCreation{
 		Email:       proposal.Email,
 		DisplayName: proposal.DisplayName,
 		Domain:      proposal.Domain,

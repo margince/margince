@@ -39,6 +39,23 @@ import (
 // a replayed capture already promoted its row on the first pass. None of those
 // is an error, and none should fail an ensure that has otherwise succeeded.
 func namePersonAmongParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, personID ids.PersonID) error {
+	_, err := promoteParticipantsToPerson(ctx, tx, &activityID, personID)
+	return err
+}
+
+// promoteParticipantsToPerson is that update at either width: one activity when
+// activityID is set, every activity this person's addresses reach when it is
+// nil. ONE statement rather than two, because the capture path and the cohort
+// repair are the same promotion asked at different scopes — two spellings would
+// drift on the guards below, and each of those is why the write is safe.
+func promoteParticipantsToPerson(
+	ctx context.Context, tx pgx.Tx, activityID *ids.ActivityID, personID ids.PersonID,
+) (int64, error) {
+	var pin *ids.UUID
+	if activityID != nil {
+		id := activityID.UUID
+		pin = &id
+	}
 	// The WHERE clause carries the idempotence: a row that already names a
 	// person is left alone, so a second pass cannot repoint a participant that
 	// a merge or a human has since settled differently.
@@ -48,24 +65,32 @@ func namePersonAmongParticipants(ctx context.Context, tx pgx.Tx, activityID ids.
 	// already exists — capture knew the person up front, say, from a reply
 	// lookup — then promoting the address row would duplicate it. Leaving the
 	// address row unpromoted in that case is correct: it is a second address
-	// for a party already recorded, not a second party.
-	if _, err := tx.Exec(ctx, `
+	// for a party already recorded, not a second party. The cohort scan that
+	// looks for work carries this same guard, which is what lets it terminate:
+	// a row this refuses must not be offered again on every pass.
+	//
+	// Live addresses only. An abandoned alias names a party who is no longer
+	// reachable there, and naming a person by it claims a correspondence the
+	// address no longer carries.
+	tag, err := tx.Exec(ctx, `
 		UPDATE activity_participant ap
 		   SET person_id = $2
-		 WHERE ap.activity_id = $1
+		 WHERE ($1::uuid IS NULL OR ap.activity_id = $1)
 		   AND ap.person_id IS NULL
 		   AND ap.user_id IS NULL
 		   AND ap.address IS NOT NULL
 		   AND EXISTS (
 		       SELECT 1 FROM person_email pe
-		        WHERE pe.person_id = $2 AND lower(pe.email) = ap.address)
+		        WHERE pe.person_id = $2 AND pe.archived_at IS NULL
+		          AND lower(pe.email) = ap.address)
 		   AND NOT EXISTS (
 		       SELECT 1 FROM activity_participant other
 		        WHERE other.activity_id = ap.activity_id
 		          AND other.role = ap.role
 		          AND other.person_id = $2)`,
-		activityID, personID); err != nil {
-		return fmt.Errorf("people: naming the person among an activity's participants: %w", err)
+		pin, personID)
+	if err != nil {
+		return 0, fmt.Errorf("people: naming the person among an activity's participants: %w", err)
 	}
-	return nil
+	return tag.RowsAffected(), nil
 }
