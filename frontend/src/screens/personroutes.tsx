@@ -9,7 +9,7 @@
 // for exactly that reason.
 
 import type { components } from "../api/schema";
-import { Badge, Card } from "../design-system/atoms";
+import { Badge, Button, Card } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import "./personnetwork.css";
@@ -27,7 +27,10 @@ type Pluralize = ReturnType<typeof usePlural>;
  * head of this list, so drawing it twice would invite the two to disagree on
  * screen the moment one of them was rendered from stale data.
  */
-export function RoutesCard({ graph }: Readonly<{ graph: Graph }>) {
+export function RoutesCard({
+  graph,
+  onAsk,
+}: Readonly<{ graph: Graph; onAsk?: (route: RouteCandidate) => void }>) {
   const t = useT();
   const routes = graph.routes ?? [];
   // `routes` is optional in the contract and `route` is not, so a response from
@@ -51,7 +54,7 @@ export function RoutesCard({ graph }: Readonly<{ graph: Graph }>) {
           ) : (
             routes.map((route, index) => (
               <li className="pn-route-row" key={route.route_id}>
-                <RouteRow route={route} lead={index === 0} />
+                <RouteRow route={route} lead={index === 0} onAsk={onAsk} />
               </li>
             ))
           )}
@@ -94,7 +97,12 @@ function LegacyRouteRow({
 function RouteRow({
   route,
   lead,
-}: Readonly<{ route: RouteCandidate; lead: boolean }>) {
+  onAsk,
+}: Readonly<{
+  route: RouteCandidate;
+  lead: boolean;
+  onAsk?: (route: RouteCandidate) => void;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -102,18 +110,7 @@ function RouteRow({
   return (
     <>
       <p className="pn-route">
-        {/* The same two sentences the single-route card used, because they are
-            the same claim: naming the colleague and how they reach the contact.
-            A second wording for one fact is how two surfaces start disagreeing
-            about what a route is. */}
-        {route.through_display_name
-          ? t("person.graph.routeVia", {
-              name: route.via_display_name,
-              through: route.through_display_name,
-            })
-          : t("person.graph.routeDirect", {
-              name: route.via_display_name,
-            })}{" "}
+        <RouteLine route={route} />{" "}
         <Badge tone={lead ? "accent" : undefined} quiet={!lead}>
           {lead ? t("person.intro.best") : t("person.intro.alternative")}
         </Badge>
@@ -125,6 +122,38 @@ function RouteRow({
       <p className="pn-counts">
         {evidenceSentence(route.evidence, t, plural, locale)}
       </p>
+      {/* A route that cannot be asked for offers no button. Rendering one that
+          answers 409 would be a control that exists to fail. */}
+      {onAsk && route.availability === "available" ? (
+        <Button
+          variant={lead ? undefined : "ghost"}
+          onClick={() => onAsk(route)}
+        >
+          {t("person.intro.askAction")}
+        </Button>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * RouteLine names the colleague and how they reach the contact.
+ *
+ * One sentence, exported, because the routes list and the ask drawer both say
+ * it. A second wording for one fact is how two surfaces start disagreeing about
+ * what a route is — and the drawer is where the reader confirms the route they
+ * picked on the list, so the two must read alike.
+ */
+export function RouteLine({ route }: Readonly<{ route: RouteCandidate }>) {
+  const t = useT();
+  return (
+    <>
+      {route.through_display_name
+        ? t("person.graph.routeVia", {
+            name: route.via_display_name,
+            through: route.through_display_name,
+          })
+        : t("person.graph.routeDirect", { name: route.via_display_name })}
     </>
   );
 }
