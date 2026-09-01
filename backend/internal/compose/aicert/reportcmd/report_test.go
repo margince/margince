@@ -4,9 +4,11 @@
 package main
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -420,5 +422,56 @@ func TestSiteCoverageIgnoresASiblingSitesScenarios(t *testing.T) {
 	}
 	if !strings.Contains(out, "1/1") {
 		t.Errorf("the fx row should count only its own single scenario:\n%s", out)
+	}
+}
+
+// currentStamps is what the whole report is judged against, and it is the only
+// place the per-site split is made — so a bug here reports every row's coverage
+// wrongly at once, which is exactly what shipped before the split existed.
+func TestCurrentStampsAreSplitPerSiteAndFoldToTheTaskStamp(t *testing.T) {
+	census, err := compose.NewTaskCensus()
+	if err != nil {
+		t.Fatalf("building the task census: %v", err)
+	}
+	corpus, err := aicert.LoadCorpus("../corpus", census)
+	if err != nil {
+		t.Fatalf("LoadCorpus: %v", err)
+	}
+	stamps, perSite, err := currentStamps(context.Background(), corpus, census)
+	if err != nil {
+		t.Fatalf("currentStamps: %v", err)
+	}
+
+	// Every scenario reaches exactly its own site's bucket, and no other.
+	for _, sc := range corpus {
+		key := sc.Task + "/" + sc.Site
+		if _, present := perSite[key][sc.Name]; !present {
+			t.Errorf("scenario %q is missing from its own site bucket %q", sc.Name, key)
+		}
+		for other, bucket := range perSite {
+			if other == key {
+				continue
+			}
+			if _, leaked := bucket[sc.Name]; leaked {
+				t.Errorf("scenario %q leaked into %q — a site would count another site's work as its own", sc.Name, other)
+			}
+		}
+	}
+
+	// And the per-task stamp is still the fold of that task's scenarios, so a
+	// record written before per-scenario stamps is judged against the same value
+	// it always was.
+	byTask := map[string][]aicert.Scenario{}
+	for _, sc := range corpus {
+		byTask[sc.Task] = append(byTask[sc.Task], sc)
+	}
+	for task, scenarios := range byTask {
+		scoped, err := aicert.ScenarioStamps(context.Background(), scenarios, census)
+		if err != nil {
+			t.Fatalf("task %s: ScenarioStamps: %v", task, err)
+		}
+		if want := aicert.FoldScenarioStamps(scoped); stamps[task] != want {
+			t.Errorf("task %s: report stamp %s is not the fold of its scenarios (%s)", task, stamps[task], want)
+		}
 	}
 }
