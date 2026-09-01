@@ -153,6 +153,12 @@ type API interface {
 	// asks "extend THIS one", which is one call. A renewal that knows the id
 	// should not have to pay for the question it already has the answer to.
 	RenewSubscription(ctx context.Context, accessToken, id string, deadline time.Time) (Subscription, error)
+	// GetSubscription reads one subscription by id, so a renewal holding a
+	// handle can confirm it still points where the round means to deliver
+	// before extending it — asked of Microsoft rather than remembered, for the
+	// reason RenewWatch gives. ErrSubscriptionGone when Microsoft no longer
+	// knows it, same as a renewal.
+	GetSubscription(ctx context.Context, accessToken, id string) (Subscription, error)
 	// GetMIME fetches one message as its RFC822 bytes (the /$value stream).
 	GetMIME(ctx context.Context, accessToken, msgID string) (rfc822 []byte, err error)
 	// EstimateAfter returns the provider-side count of messages received on

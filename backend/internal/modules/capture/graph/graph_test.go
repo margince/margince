@@ -85,6 +85,13 @@ type fakeAPI struct {
 	renewID     string
 	renewResult Subscription
 	renewErr    error
+	// The read a renewal makes before extending. getSubURL left empty means the
+	// subscription points wherever the round is asking about, which is the
+	// "nothing has moved" case.
+	getSubCalls int
+	getSubID    string
+	getSubURL   string
+	getSubErr   error
 	subURL      string
 	subState    string
 	subDeadline time.Time
@@ -173,6 +180,27 @@ func (f *fakeAPI) RenewSubscription(
 		return Subscription{ID: id, Expiration: deadline}, nil
 	}
 	return f.renewResult, nil
+}
+
+// GetSubscription answers the read a renewal makes before extending. With no
+// getURL set it reports the endpoint the caller is asking about, which is the
+// "nothing has moved" case every renewal test but one is about.
+func (f *fakeAPI) GetSubscription(_ context.Context, _, id string) (Subscription, error) {
+	f.getSubCalls++
+	f.getSubID = id
+	// The real client refuses an id it cannot address and reports it as gone;
+	// a fake that answered anyway would let a caller skip that refusal.
+	if !isSubscriptionID(id) {
+		return Subscription{}, ErrSubscriptionGone
+	}
+	if f.getSubErr != nil {
+		return Subscription{}, f.getSubErr
+	}
+	url := f.getSubURL
+	if url == "" {
+		url = testNotifyURL
+	}
+	return Subscription{ID: id, NotificationURL: url}, nil
 }
 
 func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]string, string, error) {

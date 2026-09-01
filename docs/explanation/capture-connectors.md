@@ -73,12 +73,13 @@ type-asserts and skips a connector that doesn't:
   than surfacing as an error. Gmail implements none of it: a Pub/Sub watch is addressed by the mailbox
   and the topic, so there is no handle to remember.
 
-  The `Ref` is **opaque to everything outside the connector that minted it**, because it has to carry
-  whatever a renewal needs to know the stored subscription is still the right one to extend — for Graph
-  that is the subscription id and a *digest* of the notification endpoint it was registered against. A
-  digest rather than the endpoint: Microsoft signs nothing on a change notification, so the operator
-  token in that URL is the only thing admitting one, and `watch_ref` is an ordinary column that reaches
-  every database reader and every backup.
+  The `Ref` is **opaque to everything outside the connector that minted it**, which lets each connector
+  decide what a renewal needs to hold. For Graph it is the subscription id and nothing else: a renewal
+  reads the subscription back before extending it, so whether it still points at the endpoint being
+  renewed is Microsoft's answer rather than a remembered one. Nothing about the endpoint is written
+  down, which matters because Microsoft signs nothing on a change notification — the operator token in
+  that URL is the only thing admitting one, and `watch_ref` reaches every database reader and every
+  backup.
 
   The registry's half of the contract is to store it verbatim, to CLEAR it when the connection is
   rebound to a different account (a handle names a subscription in the mailbox it was made against),
@@ -247,10 +248,11 @@ link (`ErrDeltaGone`, HTTP 410) re-anchors to a bounded 7-day window. It impleme
 renewed by the worker every `6h`, `24h` ahead of its deadline. That deadline is under **three days**
 where Gmail's watch lasts seven, which is why the two passes carry different defaults rather than one.
 
-The subscription is addressed by an id Microsoft mints, and the connector stores it (with the endpoint
-it was registered against) as its `WatchRenewer` handle, so a renewal is one PATCH. Without a usable
-handle — a first registration, a connection older than the handle, a rebind that cleared it, or an
-endpoint that has since moved — the round ASKS instead: Microsoft lists the subscriptions this app
+The subscription is addressed by an id Microsoft mints, and the connector stores it as its
+`WatchRenewer` handle, so a renewal is a GET and a PATCH rather than a paged listing. The GET is what
+confirms the subscription still points at the notification URL being renewed; without a usable handle
+— a first registration, a connection older than the handle, a rebind that cleared it, or a
+subscription that points somewhere else — the round ASKS instead: Microsoft lists the subscriptions this app
 holds for this user, and the one pointing at our notification URL is ours, so a subscription left by an
 earlier deployment is adopted rather than duplicated. That listing is also the recovery path when
 Microsoft answers a stored handle with 404, which is what it does for a subscription dropped after

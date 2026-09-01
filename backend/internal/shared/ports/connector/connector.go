@@ -76,13 +76,14 @@ type WatchResult struct {
 	// WatchRenewer.RenewWatch, so a renewal addresses the subscription it made
 	// rather than going looking for it.
 	//
-	// Opaque, and not "the provider's id": it has to carry whatever a renewal
-	// needs in order to know the stored subscription is still the right one to
-	// extend. The Graph connector packs a DIGEST of the endpoint in beside the
-	// subscription id for that reason, and nothing outside the connector reads
-	// either half. A digest and not the endpoint itself: this column reaches
-	// every database reader and every backup, and a notification URL that
-	// carries an admission token is a credential.
+	// Opaque to everything outside the connector that minted it, which is what
+	// lets a connector decide for itself what a renewal needs to hold. It is
+	// also the reason the contract says nothing about the FORM: for Graph it is
+	// the subscription id and nothing else, because whether that subscription
+	// still points at the endpoint being renewed is a question Microsoft
+	// answers, and a stored answer would be a copy of a URL carrying the token
+	// that admits a notification. This column reaches every database reader and
+	// every backup, so what a handle does not have to hold, it does not hold.
 	//
 	// Empty where the provider has no such handle: a Gmail watch is addressed by
 	// the mailbox and the topic, and there is nothing to remember.

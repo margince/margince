@@ -382,12 +382,16 @@ func TestASubscriptionIsNotCreatedForACredentialNamingNoMailbox(t *testing.T) {
 // Watch has to make sure a subscription exists, and without a handle that means
 // walking GET /subscriptions — paged, once per mailbox, every cycle — to find
 // the one this installation made. The handle turns that into one call.
+// testNotifyURL is the endpoint every subscription test registers against, so a
+// fake reading a subscription back can report "nothing has moved" by default.
+const testNotifyURL = "https://api.example/webhooks/graph?token=t"
+
 func TestARenewalExtendsTheStoredSubscriptionWithoutListingAnything(t *testing.T) {
 	api := &fakeAPI{email: owner}
 	c := pinnedConn(api)
 
 	res, err := c.RenewWatch(context.Background(), authBytes(t),
-		"https://api.example/webhooks/graph?token=t", encodeWatchRef("sub-stored", "https://api.example/webhooks/graph?token=t"))
+		testNotifyURL, "sub-stored")
 	if err != nil {
 		t.Fatalf("RenewWatch: %v", err)
 	}
@@ -402,9 +406,9 @@ func TestARenewalExtendsTheStoredSubscriptionWithoutListingAnything(t *testing.T
 	if !res.ExpiresAt.Equal(want) {
 		t.Errorf("reported %v, want the deadline Microsoft honored", res.ExpiresAt)
 	}
-	if id, ok := decodeWatchRef(res.Ref, "https://api.example/webhooks/graph?token=t"); !ok || id != "sub-stored" {
-		t.Errorf("Ref = %q, want a handle on the id that was renewed — the registry stores this and "+
-			"the next renewal addresses it", res.Ref)
+	if res.Ref != "sub-stored" {
+		t.Errorf("Ref = %q, want the id that was renewed — the registry stores this and the next "+
+			"renewal addresses it", res.Ref)
 	}
 }
 
@@ -420,7 +424,7 @@ func TestARenewalWhoseSubscriptionIsGoneRegistersAFreshOne(t *testing.T) {
 	c := pinnedConn(api)
 
 	res, err := c.RenewWatch(context.Background(), authBytes(t),
-		"https://api.example/webhooks/graph?token=t", encodeWatchRef("sub-vanished", "https://api.example/webhooks/graph?token=t"))
+		testNotifyURL, "sub-vanished")
 	if err != nil {
 		t.Fatalf("RenewWatch on a subscription Microsoft has dropped: %v — the mailbox would stay "+
 			"on the poll for as long as the stored id kept failing", err)
@@ -433,7 +437,7 @@ func TestARenewalWhoseSubscriptionIsGoneRegistersAFreshOne(t *testing.T) {
 	}
 }
 
-// AND A HANDLE MADE AGAINST A DIFFERENT ENDPOINT is not renewed at all.
+// AND A HANDLE NAMING A SUBSCRIPTION THAT POINTS ELSEWHERE is not renewed.
 //
 // A renewal extends a deadline; it never re-states where the subscription
 // points. Before a handle existed, every renewal went through
@@ -443,12 +447,10 @@ func TestARenewalWhoseSubscriptionIsGoneRegistersAFreshOne(t *testing.T) {
 // keep Microsoft delivering to an endpoint nobody serves, and leave the new
 // webhook poll-only with nothing failing to say so.
 func TestARenewalWhoseEndpointMovedRegistersAtTheNewOne(t *testing.T) {
-	api := &fakeAPI{email: owner}
+	api := &fakeAPI{email: owner, getSubURL: "https://api.example/webhooks/graph?token=OLD"}
 	c := pinnedConn(api)
 
-	moved := "https://api.example/webhooks/graph?token=NEW"
-	res, err := c.RenewWatch(context.Background(), authBytes(t), moved,
-		encodeWatchRef("sub-at-old-endpoint", "https://api.example/webhooks/graph?token=t"))
+	res, err := c.RenewWatch(context.Background(), authBytes(t), testNotifyURL, "sub-at-old-endpoint")
 	if err != nil {
 		t.Fatalf("RenewWatch: %v", err)
 	}
@@ -460,65 +462,81 @@ func TestARenewalWhoseEndpointMovedRegistersAtTheNewOne(t *testing.T) {
 		t.Errorf("%d EnsureSubscription call(s), want one: it is the call that looks a subscription "+
 			"up BY the endpoint, and registers when none points there", api.subCalls)
 	}
-	if _, ok := decodeWatchRef(res.Ref, moved); !ok {
-		t.Errorf("Ref = %q, want a handle usable at the endpoint it was just made for — otherwise "+
-			"every later renewal repeats this round trip", res.Ref)
+	if res.Ref == "" {
+		t.Error("Ref is empty — the freshly registered subscription's id is what the next renewal " +
+			"addresses, and without it every cycle repeats the listing")
 	}
 }
 
-// AND AN UNREADABLE HANDLE is the same answer, which is what makes a connection
-// stored before handles existed cost one listing and no incident.
-func TestAnUnreadableHandleFallsBackRatherThanFailing(t *testing.T) {
-	for _, stored := range []string{"", "sub-1", "{}", `{"id":"sub-1"}`} {
-		t.Run("stored="+stored, func(t *testing.T) {
+// A RENEWAL READS THE SUBSCRIPTION BEFORE IT EXTENDS ONE, and reads it from
+// MICROSOFT rather than from anything stored beside the handle: the endpoint
+// carries the token that admits a notification, and watch_ref is an ordinary
+// column.
+func TestARenewalReadsTheSubscriptionBeforeExtendingIt(t *testing.T) {
+	api := &fakeAPI{email: owner}
+	c := pinnedConn(api)
+
+	if _, err := c.RenewWatch(context.Background(), authBytes(t), testNotifyURL, "sub-stored"); err != nil {
+		t.Fatalf("RenewWatch: %v", err)
+	}
+	if api.getSubCalls != 1 || api.getSubID != "sub-stored" {
+		t.Errorf("read the subscription %d time(s) naming %q, want one naming the stored id — "+
+			"without it a renewal cannot tell that the endpoint has not moved", api.getSubCalls, api.getSubID)
+	}
+}
+
+// AND A REF THAT CANNOT NAME A SUBSCRIPTION falls back rather than failing,
+// which is what makes a first registration — and a connection stored before
+// handles existed — cost one listing and no incident.
+func TestARefThatNamesNoSubscriptionFallsBackRatherThanFailing(t *testing.T) {
+	for name, stored := range map[string]string{
+		"empty":        "",
+		"a path step":  "..",
+		"a path":       "../../me/messages",
+		"needs escape": "sub 1/../x",
+	} {
+		t.Run(name, func(t *testing.T) {
 			api := &fakeAPI{email: owner}
 			c := pinnedConn(api)
-			if _, err := c.RenewWatch(context.Background(), authBytes(t),
-				"https://api.example/webhooks/graph?token=t", stored); err != nil {
+			if _, err := c.RenewWatch(context.Background(), authBytes(t), testNotifyURL, stored); err != nil {
 				t.Fatalf("RenewWatch: %v", err)
 			}
+			if api.getSubCalls != 0 {
+				t.Errorf("read a subscription %d time(s) for a ref that names none", api.getSubCalls)
+			}
 			if api.renewCalls != 0 || api.subCalls != 1 {
-				t.Errorf("renewed %d and ensured %d, want 0 and 1 — a handle that names no "+
-					"subscription at this endpoint answers nothing a renewal is asking",
+				t.Errorf("renewed %d and ensured %d, want 0 and 1 — a ref that names no "+
+					"subscription answers nothing a renewal is asking",
 					api.renewCalls, api.subCalls)
 			}
 		})
 	}
 }
 
-// THE STORED HANDLE DOES NOT CARRY THE NOTIFICATION URL.
+// THE STORED HANDLE CARRIES NOTHING BUT THE SUBSCRIPTION ID.
 //
-// Microsoft signs nothing on a change notification, so the operator token in
-// that URL is the only thing admitting one. The handle is stored in an ordinary
-// column that reaches every database reader and every backup, and a credential
-// does not belong there — the digest answers the one question a renewal asks,
-// which is whether two endpoints are the same one.
-func TestAStoredHandleCarriesNoNotificationURL(t *testing.T) {
+// Microsoft signs nothing on a change notification, so the operator token in the
+// notification URL is the only thing admitting one. watch_ref reaches every
+// database reader and every backup, and a renewal has no need to remember the
+// endpoint there: it asks Microsoft.
+func TestAStoredHandleCarriesNothingButTheID(t *testing.T) {
 	const url = "https://api.example/webhooks/graph?token=OPERATOR-SECRET"
-	stored := encodeWatchRef("sub-1", url)
+	api := &fakeAPI{email: owner, subResult: Subscription{ID: "sub-1", Expiration: pinned.Add(time.Hour)}}
+	c := pinnedConn(api)
 
-	for _, leak := range []string{url, "OPERATOR-SECRET", "api.example", "token="} {
-		if strings.Contains(stored, leak) {
+	res, err := c.Watch(context.Background(), authBytes(t), url)
+	if err != nil {
+		t.Fatalf("Watch: %v", err)
+	}
+	if res.Ref != "sub-1" {
+		t.Fatalf("Ref = %q, want the subscription id", res.Ref)
+	}
+	for _, leak := range []string{"OPERATOR-SECRET", "api.example", "token=", "https"} {
+		if strings.Contains(res.Ref, leak) {
 			t.Errorf("the stored handle %q carries %q — that column is not a place for the "+
-				"factor that admits a notification", stored, leak)
+				"factor that admits a notification, nor for anything an offline guess could "+
+				"be checked against", res.Ref, leak)
 		}
-	}
-	if id, ok := decodeWatchRef(stored, url); !ok || id != "sub-1" {
-		t.Errorf("decode = %q/%v, want the id back at the endpoint it was made for", id, ok)
-	}
-	if _, ok := decodeWatchRef(stored, url+"&extra=1"); ok {
-		t.Error("a handle made for one endpoint was accepted at another — a digest that does not " +
-			"discriminate is not doing the job the URL used to")
-	}
-}
-
-// AND A HANDLE IN THE SHAPE THAT CARRIED ONE is simply not renewable, so it
-// costs a listing and heals rather than needing to be found and cleared.
-func TestAHandleFromTheURLCarryingShapeIsNotRenewable(t *testing.T) {
-	const url = "https://api.example/webhooks/graph?token=t"
-	if _, ok := decodeWatchRef(`{"id":"sub-1","url":"`+url+`"}`, url); ok {
-		t.Error("a handle carrying a raw URL was accepted; it has no endpoint fingerprint, so the " +
-			"only safe reading is 'go the long way round'")
 	}
 }
 
@@ -532,7 +550,7 @@ func TestAFallbackDoesNotRefreshTheTokenTwice(t *testing.T) {
 	c.now = func() time.Time { return pinned }
 
 	if _, err := c.RenewWatch(context.Background(), authBytes(t),
-		"https://api.example/webhooks/graph?token=t", ""); err != nil {
+		testNotifyURL, ""); err != nil {
 		t.Fatalf("RenewWatch: %v", err)
 	}
 	if oauth.calls != 1 {
