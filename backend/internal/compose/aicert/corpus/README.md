@@ -55,3 +55,21 @@ its `Prepare`.
   (`corpusabstention_test.go`) runs each abstention scenario against both the
   answer it calls correct and the fabrication it exists to refuse, because a
   scenario that passes whatever the model does is worse than no scenario.
+- `TestEveryClosedAnswerKindCarriesAScenario`
+  (`corpusanswerkinds_test.go`) covers what the per-site census cannot: a site
+  whose model answers from a CLOSED vocabulary satisfies "has a scenario" with
+  ONE, leaving most of the vocabulary never once scored — and a kind nothing
+  scores is a branch of the prompt no model's answer has ever been read. Every
+  kind a site's shipped response-schema enum admits must be named by some
+  scenario's `expect.answer`.
+
+  Three properties worth knowing before authoring against it. The vocabulary is
+  read off the request the site's own code builds, never a list kept in the test,
+  so it cannot certify a copy of the enum. The unit is the **enum**, not the
+  site, because a schema can be shared — the onboarding conversation sites send
+  one `companyReadMessageSchema` and each narrows it in prose the gate cannot
+  read, so demanding every kind of every site would demand scenarios the prompt
+  forbids; per enum, a kind is covered when SOME site sharing it scores it. And
+  only an `accepted` scenario credits coverage: a refusal or an abstention names
+  a kind without ever asking a model to produce it, which is also the cheapest
+  way to silence a genuine miss.

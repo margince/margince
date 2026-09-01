@@ -11,7 +11,10 @@ package aicert
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"sort"
 	"strings"
 	"testing"
 
@@ -411,4 +414,88 @@ func censusOfPromptCases(t *testing.T, cases promptCases) *aitasks.Registry {
 	r.Register(cases.site)
 	r.BindCase(cases.site, cases)
 	return r
+}
+
+// The task stamp must be exactly the fold of the per-scenario stamps. Two
+// separate digest computations would be two answers to "what is this scenario's
+// stamp", free to drift until a record read current against one and stale
+// against the other — and the drift would be invisible, because each is
+// self-consistent.
+//
+// Holds the claim on ScenarioStamps.
+func TestScenarioStampsFoldIntoThePromptVersion(t *testing.T) {
+	census, err := compose.NewTaskCensus()
+	if err != nil {
+		t.Fatalf("building the task census: %v", err)
+	}
+	corpus, err := LoadCorpus("corpus", census)
+	if err != nil {
+		t.Fatalf("LoadCorpus(corpus): %v", err)
+	}
+	byTask := map[string][]Scenario{}
+	for _, sc := range corpus {
+		byTask[sc.Task] = append(byTask[sc.Task], sc)
+	}
+	if len(byTask) == 0 {
+		t.Fatal("the shipped corpus loaded zero tasks")
+	}
+
+	ctx := context.Background()
+	for task, scenarios := range byTask {
+		folded, err := PromptVersion(ctx, scenarios, census)
+		if err != nil {
+			t.Fatalf("task %s: PromptVersion: %v", task, err)
+		}
+		perScenario, err := ScenarioStamps(ctx, scenarios, census)
+		if err != nil {
+			t.Fatalf("task %s: ScenarioStamps: %v", task, err)
+		}
+		if len(perScenario) != len(scenarios) {
+			t.Errorf("task %s: %d scenario stamp(s) for %d scenario(s) — a stamp went unrecorded, and the task stamp folds whatever the map holds",
+				task, len(perScenario), len(scenarios))
+		}
+		ordered := make([]string, 0, len(perScenario))
+		for _, stamp := range perScenario {
+			ordered = append(ordered, stamp)
+		}
+		sort.Strings(ordered)
+		sum := sha256.Sum256([]byte(strings.Join(ordered, "")))
+		if want := "p" + hex.EncodeToString(sum[:16]); folded != want {
+			t.Errorf("task %s: PromptVersion = %s, but folding its own scenario stamps gives %s.\n"+
+				"The two have diverged, so a record can read current against one and stale against the other.",
+				task, folded, want)
+		}
+	}
+}
+
+// Two scenarios sharing a name would collide in the stamp map, so one would go
+// unrecorded — and the task stamp folds whatever the map holds, meaning two
+// different corpora could stamp identically. LoadCorpus does not forbid a
+// duplicate name, so ScenarioStamps does.
+func TestScenarioStampsRefusesTwoScenariosWithOneName(t *testing.T) {
+	census, err := compose.NewTaskCensus()
+	if err != nil {
+		t.Fatalf("building the task census: %v", err)
+	}
+	corpus, err := LoadCorpus("corpus", census)
+	if err != nil {
+		t.Fatalf("LoadCorpus(corpus): %v", err)
+	}
+	var one Scenario
+	for _, sc := range corpus {
+		if sc.Task == "capture_confidentiality_verdict" {
+			one = sc
+			break
+		}
+	}
+	if one.Name == "" {
+		t.Fatal("no confidentiality scenario to duplicate")
+	}
+	_, err = ScenarioStamps(context.Background(), []Scenario{one, one}, census)
+	if err == nil {
+		t.Fatal("two scenarios with one name were accepted; one stamp would have been silently dropped")
+	}
+	if !strings.Contains(err.Error(), one.Name) {
+		t.Errorf("the refusal must name the clashing scenario, got %q", err)
+	}
 }

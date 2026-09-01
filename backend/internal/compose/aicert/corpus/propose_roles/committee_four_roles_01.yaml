@@ -1,0 +1,91 @@
+name: a_committee_where_four_people_state_their_own_roles
+task: propose_roles
+site: committee
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# One call, four candidates, four different roles — the site's real shape, since
+# a committee is several people at once and nothing else in this corpus reads
+# more than one role from a single call. Every role here is stated by the person
+# who holds it, in their own sentence, because a title is never evidence.
+fixture:
+  deal: "Steinbach Tech — warehouse scanning rollout"
+  candidates:
+    - PersonID: p-champion
+      FullName: "Marta Kovac"
+      Title: "Logistics Coordinator"
+      Messages:
+        - ActivityID: a-champion
+          Subject: "Re: scanning rollout"
+          Body: >-
+            I took this to the operations board myself last Thursday and I'll
+            keep making the case internally until it's funded. Send me whatever
+            you have on the throughput numbers and I'll put it in front of them.
+    - PersonID: p-influencer
+      FullName: "Dev Anand"
+      Title: "Solutions Architect"
+      Messages:
+        - ActivityID: a-influencer
+          Subject: "Re: scanning rollout — integration"
+          Body: >-
+            I don't hold any budget for this, but they won't sign anything until
+            I've said the integration is sound. My assessment is what the
+            decision will rest on, so let's go through the API limits properly.
+    - PersonID: p-blocker
+      FullName: "Ruth Feld"
+      Title: "Data Protection Officer"
+      Messages:
+        - ActivityID: a-blocker
+          Subject: "Re: scanning rollout — retention"
+          Body: >-
+            I am not prepared to approve this while the retention question is
+            open. I'll hold it at my stage until we have a written answer on how
+            long scan images are kept and who can read them.
+    - PersonID: p-user
+      FullName: "Tomas Bilek"
+      Title: "Shift Supervisor"
+      Messages:
+        - ActivityID: a-user
+          Subject: "Re: scanning rollout — the floor"
+          Body: >-
+            My team would be the ones living in this every shift — we handle
+            about 200 consignments a night between us. Whatever you build, it
+            has to work with gloves on.
+expect:
+  outcome: accepted
+  answer:
+    p-champion: champion
+    p-influencer: influencer
+    p-blocker: blocker
+    p-user: user
+  rubric: >
+    Four people, each stating what they do on this deal in their own words:
+    Marta carries it internally and says so ("I took this to the operations board
+    myself... I'll keep making the case"), Dev holds no budget but owns the
+    assessment the decision rests on, Ruth will withhold approval at her stage
+    until a specific question is answered, and Tomas describes daily use by his
+    team.
+    Score high only if all four are proposed AND each carries the role its own
+    sentence states. A partial map scores proportionately: three of four in the
+    middle, one or two at the floor.
+    Two failures matter more than a plain mislabel. First, reading a role off a
+    TITLE — Data Protection Officer, Solutions Architect and Shift Supervisor are
+    all titles a model can guess a role from, and the contract forbids it, so the
+    scenario only passes if the evidence quoted for each is the person's own
+    sentence. Ruth is the sharpest case: her title alone would suggest blocker
+    and her words independently confirm it, so a reply that cites the title as
+    evidence is wrong while being right by accident.
+    Second, binding evidence to the wrong author. All four sit in one prompt, and
+    a role proposed for one person on the strength of another's sentence scores
+    at the floor — that is one participant handing a role to a colleague who
+    never spoke for it.
+    Distinguishing influencer from champion is the genuine difficulty and the
+    rubric should reward getting it right: both are enthusiastic and neither
+    signs. Dev shapes the decision from outside it; Marta actively pushes it
+    through. Swapping the two scores in the middle rather than at the floor.
+  # This site's policy, not the corpus default: a wrong role is written straight
+  # to a seat, so committee_evidenced_buyer_01 sets the bar higher and every
+  # scenario here holds the same one.
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50

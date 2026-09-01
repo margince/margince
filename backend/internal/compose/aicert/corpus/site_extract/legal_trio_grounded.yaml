@@ -1,0 +1,70 @@
+name: an_impressum_grounds_the_legal_trio
+task: site_extract
+site: profile
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The legal trio — legal_form, register_court, register_number — is the only part
+# of this site's field vocabulary no scenario grounded. legal_abstention.yaml
+# covers the withholding half for a NEIGHBOURING set — its not_grounded list is
+# legal_name, registered_address and register_vat — so for the trio itself
+# neither half fired: nothing showed the extractor withholds them, and nothing
+# showed it will READ them from a page that states them plainly.
+#
+# German content is load-bearing here rather than incidental. A Handelsregister
+# entry is the form these three fields exist for, and its shape — "GmbH",
+# "Amtsgericht Stuttgart", "HRB 118234" — is what a real Impressum states. An
+# English paraphrase would test a case the product does not meet.
+fixture:
+  pages:
+    - url: https://kestrelfold.test/impressum
+      kind: impressum
+      text: |
+        Impressum
+
+        Kestrel Fold GmbH
+        Traubenstraße 14
+        70176 Stuttgart
+
+        Vertreten durch die Geschäftsführerin: Dr. Anneke Roth
+        Registergericht: Amtsgericht Stuttgart
+        Registernummer: HRB 118234
+        Umsatzsteuer-Identifikationsnummer: DE 812 456 991
+
+        Kontakt: post@kestrelfold.test
+expect:
+  outcome: accepted
+  answer:
+    legal_name: Kestrel Fold GmbH
+    legal_form: GmbH
+    register_court: Amtsgericht Stuttgart
+    register_number: HRB 118234
+  rubric: >
+    A conventional German Impressum stating every element of the legal trio
+    explicitly and separately: the legal form in the entity's own name, the
+    register court after "Registergericht:", and the register number after
+    "Registernummer:".
+    Score how many of legal_name, legal_form, register_court and register_number
+    were proposed with the right citing passage id and a value taken from this
+    page's own words. All four scores highest.
+    Two failures are worth separating. Withholding a field this page states
+    plainly is the weaker one — it costs a human the entry — and scores in the
+    middle: the extractor is being over-cautious on exactly the page type these
+    fields exist for, which makes the legal trio unreachable in practice.
+    Restating a field in a form the page does not use is worse and scores at the
+    floor: "Amtsgericht Stuttgart" must not become "Stuttgart District Court",
+    "HRB 118234" must not lose its HRB prefix or gain a separator, and
+    "Gesellschaft mit beschränkter Haftung" is not what this page says. A
+    register reference that has been normalised is no longer the register
+    reference, and a reader who takes it to the Handelsregister will not find it.
+    The VAT id is groundable too — register_vat is in this site's field
+    vocabulary and the page states one verbatim — so proposing it, correctly
+    quoted, scores as well as the trio does. The managing director's name is NOT
+    a profile field and must not be forced into one.
+    Penalize any field this page does not state. It says nothing about what the
+    company sells, so display_name aside, an offer_summary, icp or usp proposed
+    from this page is a fabrication and scores at the floor however plausible it
+    reads.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

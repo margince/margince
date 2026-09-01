@@ -79,10 +79,12 @@ the thing you are measuring is already known to work.
 4. **`make check`.** The corpus gates now run your scenario against your case
    without a model: `TestEveryCorpusScenarioPreparesAgainstItsSite` catches a
    fixture of the wrong shape or an expectation the validator could never
-   satisfy, and `TestEachAbstentionScenarioCatchesTheFabricationItTargets` runs
+   satisfy, `TestEachAbstentionScenarioCatchesTheFabricationItTargets` runs
    every abstention scenario twice — once with the answer it calls correct and
    once with the fabrication it exists to refuse — because a scenario that passes
-   whatever the model does is worse than no scenario.
+   whatever the model does is worse than no scenario, and
+   `TestEveryClosedAnswerKindCarriesAScenario` names the kinds of your site's
+   answer enum that still have no accepted scenario (below).
 5. **Then spend**: `make e2e-ai TASK=<task>`, and read the band with
    `make e2e-ai-report`.
 
@@ -277,17 +279,29 @@ The run knobs (`MODEL=`, `JUDGE=`, `RUNS=`, `TRACE=`), the verdict
 math, and how to read a record are all in
 [certify-an-ai-model.md](certify-an-ai-model.md).
 
-## The two gates unique to what you wrote here
+## The gates unique to what you wrote here
 
 Everything a case or scenario can get wrong is caught by
 [add-an-ai-task.md § step 7](add-an-ai-task.md#steps), which lists the full
-checklist. Two are worth knowing by name while authoring, because they read the
+checklist. Three are worth knowing by name while authoring, because they read the
 *content* of a scenario rather than its presence:
 
 | Gate | Refuses |
 |---|---|
 | `TestEveryCorpusScenarioPreparesAgainstItsSite` | a fixture that is not the shape the site takes, or an expectation its validator could never satisfy — caught without a model, before a paid run |
 | `TestEachAbstentionScenarioCatchesTheFabricationItTargets` | an abstention scenario that grades the right answer and the fabrication it exists to catch the same way, and so would pass whatever the model did |
+| `TestEveryClosedAnswerKindCarriesAScenario` | a closed answer vocabulary with a kind no `accepted` scenario names — one scenario satisfies "this site has a corpus" while leaving most of the enum unscored |
+
+That third one is the one that will surprise you if your site answers from an
+enum. It reads the vocabulary off the response schema the site's own request
+carries, and it groups by **enum** rather than by site, because the onboarding
+conversation sites share one schema and each narrows it in prose the gate cannot
+read: a kind is covered when *some* site sharing that enum scores it, on
+whichever of them its own prompt permits. Only an `accepted` scenario counts — a
+refusal or an abstention names a kind without ever asking a model to produce it,
+so crediting one would leave that branch of the prompt ungraded while the gate
+went green. Author the missing kinds as accepted scenarios, never as an
+abstention that happens to mention them.
 
 ## Probe it before you commit it
 
