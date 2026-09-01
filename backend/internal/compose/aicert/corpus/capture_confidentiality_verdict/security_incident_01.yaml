@@ -33,7 +33,7 @@ expect:
     "ordinary" is the failure this scenario exists to catch and scores zero at
     any confidence. It is the worst-consequence miss in this corpus: an
     unpatched, reproducible vulnerability handed to the whole workspace.
-    The trap is register. This is written as routine engineering traffic — a
+    The trap is the register it is written in. This reads as routine engineering traffic — a
     "quick update", a build, a rollout, a parameter — with none of the vocabulary
     a keyword-matching classifier looks for. Nothing says "incident", "breach" or
     "confidential"; the severity is only legible from what the sentences actually

@@ -115,8 +115,10 @@ service it shows no sign of having asked for — financing, capital, leads, SEO,
 development, an introduction for a fee — is "spam", no matter how courteous the mail, how
 specific the offer, or how complete the sender's signature block, address and job title.
 You are NOT told the relationship history, so decide it from the message. Mail that continues
-work already agreed is "person": a quote for a named job with dates and scope, an invoice, a
-delivery date, a reply in a thread, an answer to a question. Mail that opens a relationship the
+work already agreed is "person": a quote for a named job with dates and scope, a delivery date,
+a reply in a thread, an answer to a question. An AUTOMATED send stays "transactional" even when
+it continues agreed work — a billing system's invoice is transactional, an invoice a supplier
+writes to you is not. Mail that opens a relationship the
 business never started is "spam": it describes what the sender can do rather than what was
 agreed, and names no job, no date and no prior contact.
 "Re:" and a quoted history are only evidence of a conversation when THIS BUSINESS is in it.

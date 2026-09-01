@@ -55,11 +55,14 @@ expect:
     "Gesellschaft mit beschränkter Haftung" is not what this page says. A
     register reference that has been normalised is no longer the register
     reference, and a reader who takes it to the Handelsregister will not find it.
-    Penalize any field this page does not state. It carries a VAT id and a
-    managing director's name, neither of which is a profile field here, and it
-    says nothing about what the company sells — so display_name aside, an
-    offer_summary, icp or usp proposed from this page is a fabrication and scores
-    at the floor however plausible it reads.
+    The VAT id is groundable too — register_vat is in this site's field
+    vocabulary and the page states one verbatim — so proposing it, correctly
+    quoted, scores as well as the trio does. The managing director's name is NOT
+    a profile field and must not be forced into one.
+    Penalize any field this page does not state. It says nothing about what the
+    company sells, so display_name aside, an offer_summary, icp or usp proposed
+    from this page is a fabrication and scores at the floor however plausible it
+    reads.
   bands:
     certified_min: 70
     degraded_min: 50
