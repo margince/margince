@@ -50,9 +50,10 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 		return connector.BackfillPageResult{}, err
 	}
 	access := refreshed.AccessToken
-	// The backfill walks the whole mailbox, Sent Items included — unlike the
-	// incremental delta, which is inbox-only — so this is where the T1
-	// correspondence evidence (ADR-0072 §1) is available to collect. Resolved
+	// The backfill walks the whole mailbox in one pass, so unlike the
+	// incremental delta — which follows the two folders separately and knows
+	// which one it is in — it has to ask which folder holds sent mail before
+	// it can collect the T1 correspondence evidence (ADR-0072 §1). Resolved
 	// BEFORE anything is captured: a page that cannot tell sent mail from
 	// received would stamp its whole window un-attested, and the natural key
 	// makes that permanent. Treated like any other provider fault — the page

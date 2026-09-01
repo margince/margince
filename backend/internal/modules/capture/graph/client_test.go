@@ -228,7 +228,7 @@ func TestProfileFallsBackToUPN(t *testing.T) {
 
 func TestDeltaInitWalksPagesFiltersTombstonesAndReturnsDeltaLink(t *testing.T) {
 	_, api := newTestClients(t)
-	ids, delta, err := api.DeltaInit(context.Background(), "access-2", time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC))
+	ids, delta, err := api.DeltaInit(context.Background(), "access-2", folderInbox, time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("DeltaInit: %v", err)
 	}
