@@ -21,8 +21,13 @@ import (
 // the TERMINAL no-record outcomes qualify (captured without a counterparty,
 // suppressed); a deferred sender may still be admitted and linked later, and
 // a connector-supplied link keeps the row readable through that record.
-func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, decision counterpartyDecision) error {
-	if decision.create || len(rec.Links) > 0 {
+// derivedLinks is what a link writer inside THIS transaction actually wrote —
+// a captured meeting filed under the people who were in it. It is a count of
+// links written rather than attempted, because this write is deterministic: a
+// row claimed to be linked and left unlinked would be workspace-readable with
+// nothing filing it anywhere.
+func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, decision counterpartyDecision, derivedLinks int) error {
+	if decision.create || len(rec.Links) > 0 || derivedLinks > 0 {
 		return nil
 	}
 	if decision.traceOutcome != TraceCaptured && decision.traceOutcome != TraceSuppressed {

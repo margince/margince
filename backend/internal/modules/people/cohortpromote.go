@@ -31,7 +31,10 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -69,7 +72,41 @@ func (s *Store) PromotePersonCohortTx(
 	if err != nil {
 		return CohortPromotion{}, err
 	}
-	return CohortPromotion{Linked: linked, Promoted: promoted}, nil
+	if len(linked) == 0 && promoted == 0 {
+		// Nothing moved. A repair that found nothing is not an event in this
+		// person's history, and auditing every replayed person.updated would
+		// bury the passes that did change something.
+		return CohortPromotion{}, nil
+	}
+	// A repair that moved rows is a change to which record a message belongs
+	// to, and that is exactly what the trail is for: mail appears on a contact's
+	// timeline without anybody clicking, and the audit row is the only place
+	// that says why. AuditEvent rather than Audit because there is no
+	// before-image to judge — the subject is the person whose cohort moved, not
+	// any one of the messages.
+	auditID, err := storekit.AuditEvent(ctx, tx, "update", entityPerson, canonical.UUID,
+		map[string]any{"cohort_linked": len(linked), "cohort_promoted": promoted})
+	if err != nil {
+		return CohortPromotion{}, fmt.Errorf("people: auditing a cohort repair: %w", err)
+	}
+	// One activity.updated per message that moved. The interaction graph folds
+	// its edges from participant rows on an activity event, so a repair that
+	// stayed silent would leave "who knows this contact" answering from the
+	// state before the mail arrived on their record — correct only until the
+	// next unrelated write happened to refold it.
+	for _, activity := range linked {
+		if err := storekit.EmitEvent(ctx, tx, auditID, activity, crmcontracts.PublicEventActivityUpdated{
+			ChangedFields: crmcontracts.PublicEventActivityChangedFields{
+				Relinked: &crmcontracts.PublicEventActivityRelinkedRef{
+					EntityType: entityPerson,
+					EntityId:   openapi_types.UUID(canonical.UUID),
+				},
+			},
+		}); err != nil {
+			return CohortPromotion{}, fmt.Errorf("people: publishing a cohort repair: %w", err)
+		}
+	}
+	return CohortPromotion{Linked: int64(len(linked)), Promoted: promoted}, nil
 }
 
 // linkCapturedCohort attaches every captured message from any of the person's
@@ -94,8 +131,8 @@ func (s *Store) PromotePersonCohortTx(
 // counterparty, so keying on the counterparty reproduces exactly what a
 // person-first ordering would have produced — and asks nothing of a kind that
 // never carries one.
-func linkCapturedCohort(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (int64, error) {
-	tag, err := tx.Exec(ctx, `
+func linkCapturedCohort(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
 		INSERT INTO activity_link (activity_id, entity_type, person_id)
 		SELECT a.id, 'person', $1
 		  FROM activity a
@@ -107,9 +144,22 @@ func linkCapturedCohort(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (
 		   AND NOT EXISTS (
 		       SELECT 1 FROM activity_link l
 		        WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
-		ON CONFLICT DO NOTHING`, personID)
+		ON CONFLICT DO NOTHING
+		RETURNING activity_id`, personID)
 	if err != nil {
-		return 0, fmt.Errorf("people: linking a person's captured cohort: %w", err)
+		return nil, fmt.Errorf("people: linking a person's captured cohort: %w", err)
 	}
-	return tag.RowsAffected(), nil
+	defer rows.Close()
+	var linked []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("people: linking a person's captured cohort: %w", err)
+		}
+		linked = append(linked, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("people: linking a person's captured cohort: %w", err)
+	}
+	return linked, nil
 }

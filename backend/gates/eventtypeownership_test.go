@@ -281,6 +281,7 @@ func modulesEmitting(sites []emitSite) []string {
 // module announces a fact that IS the first module's fact. None is a second
 // meaning for one name, which is what the rule protects.
 var sharedEventTypes = gatekit.Waive(map[string]string{
+	"activity.updated <- internal/modules/people": "the cohort repair files captured mail under the person it belongs to, which IS a relink — the same association change activities publishes for a human's relink, carrying the same typed Relinked ref. People emits it rather than handing the activity to activities because the repair is defined by person_email and the merge redirect, neither of which activities can read without importing a sibling; what the name MEANS is unchanged, and the interaction graph folds both the same way",
 	// Structure 0 — ai_task.state_changed is SHARED BY DESIGN, and it is the one
 	// type in this set where sharing is the feature rather than a tolerated
 	// exception.

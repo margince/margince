@@ -123,6 +123,33 @@ func TestTheCohortRepairFindsMailCapturedBeforeThePersonExisted(t *testing.T) {
 		}
 	}
 
+	// The repair leaves a trail. Mail appearing on a contact's timeline without
+	// anybody clicking is exactly the kind of change the audit row exists to
+	// explain, and the interaction graph refolds its edges off the activity
+	// events — a silent repair would leave "who knows this contact" answering
+	// from the state before the mail arrived.
+	var audits, published int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `
+			SELECT count(*) FROM audit_log
+			 WHERE entity_type = 'person' AND entity_id = $1 AND action = 'update'`,
+			res.PersonID).Scan(&audits); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM event_outbox
+			 WHERE envelope->'entity'->>'id' = ANY($1)`,
+			earlierIDStrings(earlier)).Scan(&published)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if audits == 0 {
+		t.Error("the repair moved rows and wrote no audit row: nothing explains why this mail appeared on the contact")
+	}
+	if published != len(earlier) {
+		t.Errorf("the repair published %d activity events, want %d — the interaction graph refolds on these", published, len(earlier))
+	}
+
 	// Idempotent, because the bus is at-least-once and the verdict path calls
 	// this on its own transaction as well.
 	var second CohortPromotion
@@ -301,4 +328,14 @@ func TestTheCohortRepairLeavesHandLoggedActivitiesAlone(t *testing.T) {
 	if linked, _ := e.cohortStateOf(ctx, t, manual, res.PersonID); linked {
 		t.Error("the repair linked a hand-logged activity; the cohort is captured mail, and a human's filing is not an address inference to redo")
 	}
+}
+
+// earlierIDStrings is the seeded activities as text, for matching the entity id
+// inside the outbox envelope.
+func earlierIDStrings(activities []ids.ActivityID) []string {
+	out := make([]string, 0, len(activities))
+	for _, a := range activities {
+		out = append(out, a.String())
+	}
+	return out
 }
