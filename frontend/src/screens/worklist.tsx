@@ -114,11 +114,14 @@ function WorklistRow({
           <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
           {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
         </p>
-        {/* The server's one supporting line — a deal's name on a notice whose
-            title has nowhere to put it (margince#3360), a hygiene group's
-            cause, whatever else a source has to add beyond its title. Sent on
-            every row that has one; only the notice source went unrendered. */}
-        {item.detail && (
+        {/* `detail` is not prose on every source: a relationship-decay row
+            carries a bare day COUNT there (attention/render.go's lapsedItem,
+            "the client writes 'quiet N days'"), which this row already says
+            properly through `because`. Only the `notice` source's detail is
+            a full sentence — the server sets it from the notice's own body,
+            the deal's name included — so only that source renders it here
+            rather than every source that happens to send one. */}
+        {item.source === "notice" && item.detail && (
           <p className="t-caption worklist-row-detail">{item.detail}</p>
         )}
         {item.batch?.sample && item.batch.sample.length > 0 && (

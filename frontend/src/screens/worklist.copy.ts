@@ -220,24 +220,25 @@ function paired(
   return comparator in PAIRED_COMPARATORS;
 }
 
-// waitingDaysSideText reads one side of a `waiting_days` tie-break.
+// waitingDaysSideDays reads one side of a `waiting_days` tie-break as a raw
+// day count, or null when the value carries nothing to convert (it is the
+// ordinary bucketed `days` value, not the tie-break's exact-instant one).
 //
 // The bucketed comparator always sends a `days` value. When two items tie on
 // the bucket, the server's own tie-break falls back to the exact instant each
 // occurred (a `date` value) — the true signal that broke the tie — but the
 // heading above this line promises a day count either way. Converting that
 // instant to days-since-then here keeps the line honest with its own heading,
-// instead of printing two clock times under "how many days".
-function waitingDaysSideText(
+// instead of printing two clock times under "how many days". Left as a raw
+// number rather than formatted text: the caller has to compare the two sides
+// before it can decide whether showing them is honest at all.
+function waitingDaysSideDays(
   value: WorklistValue | undefined,
-  locale: Locale,
-  zone: string,
   now: Date,
-): string | null {
-  if (value?.kind === "date" && value.date) {
-    return formatNumber(calendarDaysBetween(new Date(value.date), now), locale);
-  }
-  return valueText(value, locale, zone);
+): number | null {
+  return value?.kind === "date" && value.date
+    ? calendarDaysBetween(new Date(value.date), now)
+    : null;
 }
 
 // Why this row sits above the next one.
@@ -260,14 +261,27 @@ export function comparisonText(
   ) {
     return null;
   }
-  const mine =
-    comparison.comparator === "waiting_days"
-      ? waitingDaysSideText(comparison.mine, locale, zone, now)
-      : valueText(comparison.mine, locale, zone);
-  const theirs =
-    comparison.comparator === "waiting_days"
-      ? waitingDaysSideText(comparison.theirs, locale, zone, now)
-      : valueText(comparison.theirs, locale, zone);
+  if (comparison.comparator === "waiting_days") {
+    const mineDays = waitingDaysSideDays(comparison.mine, now);
+    const theirsDays = waitingDaysSideDays(comparison.theirs, now);
+    if (mineDays !== null && theirsDays !== null) {
+      // Both sides are the tie-break's exact-instant fallback. If they round
+      // to the same day at this display granularity, the comparator decided
+      // on a difference this line cannot show — printing equal numbers would
+      // claim a tie that never happened, so it falls back to the bare
+      // sentence instead, the same call the backend's own same-minute guard
+      // already makes one level finer (rank.go's `sameMinute`).
+      if (mineDays === theirsDays) {
+        return t(`worklist.above.${comparison.comparator}` as const);
+      }
+      return t(`worklist.above.${comparison.comparator}.pair` as const, {
+        mine: formatNumber(mineDays, locale),
+        theirs: formatNumber(theirsDays, locale),
+      });
+    }
+  }
+  const mine = valueText(comparison.mine, locale, zone);
+  const theirs = valueText(comparison.theirs, locale, zone);
   if (mine === null || theirs === null || !paired(comparison.comparator)) {
     return t(`worklist.above.${comparison.comparator}` as const);
   }

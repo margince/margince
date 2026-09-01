@@ -62,8 +62,8 @@ function backend(
      * The caller's own roles, off `/me` — admin by default, so the write
      * assertions in this suite exercise the same seat they always have. A
      * test naming `["ops"]` or `[]` here gets the read-only case, which is a
-     * different render (margince#3225) rather than the same one with fewer
-     * writes attempted.
+     * different render entirely rather than the same one with fewer writes
+     * attempted.
      */
     me?: readonly string[];
   }>,
@@ -536,11 +536,14 @@ describe("TeamsCard membership", () => {
     expect(await screen.findByText("the team was merged")).toBeTruthy();
   });
 
-  // margince#3225: an ops seat used to see the same checkboxes an admin does
-  // — enabled-looking, and refused the moment one was pressed. Team
-  // membership is admin surface, so a non-admin gets the read-only render
-  // instead: no checkbox to press, and the card states why once.
-  it("shows membership as read-only text to a seat that may not change it", async () => {
+  // Team membership is admin surface, so a non-admin gets no membership
+  // control and no membership LIST: the roster handler only sends `team_ids`
+  // to an admin caller (`WithRoles: isAdmin`), so a read-only render built
+  // from an ops seat's own roster read would show nobody as a member of
+  // anything — a false statement, not an honest withholding. The card states
+  // why once, and the disclosure body says the same thing rather than
+  // fabricate a list.
+  it("withholds membership entirely from a seat that may not read or change it", async () => {
     const { fetchMock, calls } = backend({
       teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
       users: ROSTER,
@@ -559,14 +562,17 @@ describe("TeamsCard membership", () => {
         "Named groups you can share records with. Being in a team grants no access on its own — customers, contacts, leads and deals are readable by everyone here. Managing teams is available to admins only.",
       ),
     ).toBeTruthy();
-    expect(screen.getByText("Ada Inside")).toBeTruthy();
-    expect(screen.getByText("Member")).toBeTruthy();
-    expect(screen.getByText("Bo Outside")).toBeTruthy();
+    expect(
+      screen.getByText("Membership is visible to admins only."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Ada Inside")).toBeNull();
+    expect(screen.queryByText("Bo Outside")).toBeNull();
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(screen.queryByRole("button", { name: /archive/i })).toBeNull();
 
-    // Pressing nothing means writing nothing: an ops seat that cannot see a
-    // control cannot press it into a 403.
+    // No membership read fires either: there is nothing in it this seat
+    // would be shown, so there is nothing to walk the roster for.
+    expect(calls.some((call) => call.path.endsWith("/users"))).toBe(false);
     expect(calls.some((call) => call.method === "PUT")).toBe(false);
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
     expect(calls.some((call) => call.method === "PATCH")).toBe(false);

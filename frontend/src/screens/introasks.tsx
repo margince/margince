@@ -23,10 +23,14 @@ import {
 type CompleteMutation = ReturnType<typeof useCompleteIntroRequest>;
 type CancelMutation = ReturnType<typeof useCancelIntroRequest>;
 
-// The statuses an ask can still be withdrawn from — the same set the server's
-// lifecycle table allows a `cancelled` move from. Kept here rather than
-// derived, because the two sides agreeing without sharing code is exactly the
-// kind of drift this file exists to avoid noticing too late.
+// The statuses an ask can still be withdrawn from — mirrors the
+// `{from, to: StatusCancelled, by: ActorRequester}` rows of the server's own
+// lifecycle table (backend/internal/modules/introductions/lifecycle.go). An
+// un-gated mirror: getting this wrong shows the button on a status the server
+// then refuses (harmless, since Cancel is version-checked either way) or
+// hides it on one it would have allowed — a missed withdraw, not a broken
+// one. `outcomeFor` below mirrors the same table's completion rows the same
+// way.
 const WITHDRAWABLE = new Set<IntroRequest["status"]>([
   "requested",
   "accepted",
@@ -51,10 +55,11 @@ export function IntroAsksCard({
   const viewerUserId = useViewerId();
   const asks = useIntroRequests(personId);
   const [deciding, setDeciding] = useState<IntroRequest | undefined>();
-  // Which row's outcome/withdraw button is in flight, so a failure badge
-  // lands beside the row that failed rather than every row in the list —
-  // the two mutations below are shared across the whole card, not per-row.
-  const [actingId, setActingId] = useState<string | undefined>();
+  // Shared across the whole card, not per-row — each mutation's own
+  // `.variables.id` is what AskRow reads to tell whether ITS row is the one
+  // a given pending state or failure belongs to, rather than a separate
+  // "which row is active" state that would have to be kept in step with two
+  // mutations by hand.
   const complete = useCompleteIntroRequest(personId);
   const cancel = useCancelIntroRequest(personId);
 
@@ -71,11 +76,9 @@ export function IntroAsksCard({
             key={ask.id}
             ask={ask}
             viewerUserId={viewerUserId}
-            acting={actingId === ask.id}
             complete={complete}
             cancel={cancel}
             onAnswer={() => setDeciding(ask)}
-            onActing={() => setActingId(ask.id)}
           />
         ))}
       </ul>
@@ -100,19 +103,15 @@ export function IntroAsksCard({
 function AskRow({
   ask,
   viewerUserId,
-  acting,
   complete,
   cancel,
   onAnswer,
-  onActing,
 }: Readonly<{
   ask: IntroRequest;
   viewerUserId: string | undefined;
-  acting: boolean;
   complete: CompleteMutation;
   cancel: CancelMutation;
   onAnswer: () => void;
-  onActing: () => void;
 }>) {
   const t = useT();
   // Only the colleague being asked may answer, and only while the ask is
@@ -123,6 +122,21 @@ function AskRow({
   const isRequester =
     viewerUserId !== undefined && ask.requester_user_id === viewerUserId;
   const outcome = outcomeFor(ask.status, mine, isRequester);
+  // Whether THIS row is the one each mutation's last call named — not just
+  // "some row is in flight", or a failed complete on one row would still
+  // read as failed on the next row the reader acts on, since the mutation
+  // object is shared across the whole card.
+  const completingThis = complete.variables?.id === ask.id;
+  const cancellingThis = cancel.variables?.id === ask.id;
+  // Complete and withdraw are mutually exclusive moves on the SAME row —
+  // once one lands the other's precondition is gone — so either one in
+  // flight for this row holds the other back too, not only its own button.
+  // Otherwise a press on each before the first answer returns fires both at
+  // once, and whichever the server processes second only ever meets a stale
+  // version.
+  const rowBusy =
+    (completingThis && complete.isPending) ||
+    (cancellingThis && cancel.isPending);
   return (
     <li className="pn-ask">
       <Badge quiet>{t(STATUS_LABEL[ask.status])}</Badge> {ask.internal_reason}
@@ -131,11 +145,8 @@ function AskRow({
       ) : null}
       {outcome ? (
         <Button
-          onClick={() => {
-            onActing();
-            complete.mutate({ id: ask.id, version: ask.version });
-          }}
-          disabled={acting && complete.isPending}
+          onClick={() => complete.mutate({ id: ask.id, version: ask.version })}
+          disabled={rowBusy}
         >
           {t(outcome)}
         </Button>
@@ -143,16 +154,22 @@ function AskRow({
       {isRequester && WITHDRAWABLE.has(ask.status) ? (
         <Button
           variant="ghost"
-          onClick={() => {
-            onActing();
-            cancel.mutate({ id: ask.id, version: ask.version });
-          }}
-          disabled={acting && cancel.isPending}
+          onClick={() => cancel.mutate({ id: ask.id, version: ask.version })}
+          disabled={rowBusy}
         >
           {t("person.intro.withdrawAction")}
         </Button>
       ) : null}
-      {acting ? <OutcomeErrors complete={complete} cancel={cancel} /> : null}
+      {completingThis && complete.isError ? (
+        <p role="alert">
+          <Badge tone="danger">{t("person.intro.completeFailed")}</Badge>
+        </p>
+      ) : null}
+      {cancellingThis && cancel.isError ? (
+        <p role="alert">
+          <Badge tone="danger">{t("person.intro.withdrawFailed")}</Badge>
+        </p>
+      ) : null}
     </li>
   );
 }
@@ -177,27 +194,6 @@ function outcomeFor(
     return "person.intro.completeNameDroppedAction";
   }
   return null;
-}
-
-function OutcomeErrors({
-  complete,
-  cancel,
-}: Readonly<{ complete: CompleteMutation; cancel: CancelMutation }>) {
-  const t = useT();
-  return (
-    <>
-      {complete.isError ? (
-        <p role="alert">
-          <Badge tone="danger">{t("person.intro.completeFailed")}</Badge>
-        </p>
-      ) : null}
-      {cancel.isError ? (
-        <p role="alert">
-          <Badge tone="danger">{t("person.intro.withdrawFailed")}</Badge>
-        </p>
-      ) : null}
-    </>
-  );
 }
 
 // Every status the contract admits has words here, so a state the server can

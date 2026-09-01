@@ -1,6 +1,12 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -141,10 +147,9 @@ it("renders nothing at all when nobody has asked", async () => {
   expect(screen.queryByText(en["person.intro.asksTitle"])).toBeNull();
 });
 
-// margince#3490: the colleague's answer and the requester's outcome both
-// worked and worked well — the record of what came of it was the one thing
-// nobody could reach. useCompleteIntroRequest/useCancelIntroRequest already
-// existed, unused anywhere in the app, until now.
+// The outcome (mark introduced / name used) and withdraw actions on an
+// answered ask, gated on the same actor rules the server's lifecycle table
+// enforces.
 
 it("offers either party the handshake once the colleague has accepted", async () => {
   mockFetch([ask({ status: "accepted" })]);
@@ -271,4 +276,85 @@ it("records the handshake the Mark introduced button names, sending it to the co
       ),
     ).toBe(true);
   });
+});
+
+// The two mutations are shared across the whole card, not one per row, so a
+// failed complete on one row must not read as failed on a DIFFERENT row the
+// reader acts on next — each row has to check whose id the failing mutation
+// actually named, not just whether something on the card is in an error
+// state.
+it("keeps a failed outcome on the row it belongs to, not the next row acted on", async () => {
+  const rows = [
+    ask({ id: "ir-1", status: "accepted", internal_reason: "row one" }),
+    ask({ id: "ir-2", status: "requested", internal_reason: "row two" }),
+  ];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/ir-1/complete")) {
+        return new Response(JSON.stringify({ detail: "conflict" }), {
+          status: 409,
+          headers: { "content-type": "application/problem+json" },
+        });
+      }
+      if (url.includes("/ir-2/cancel")) {
+        return new Response(JSON.stringify(rows[1]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.includes("/intro-requests")) {
+        return new Response(JSON.stringify({ data: rows }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.endsWith("/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u-requester" }, capabilities: {} }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("{}", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }),
+  );
+  renderCard();
+  const user = userEvent.setup();
+
+  function rowFor(reason: string): HTMLElement {
+    const li = screen.getByText(reason).closest("li");
+    if (!(li instanceof HTMLElement)) {
+      throw new Error(`no row found for "${reason}"`);
+    }
+    return li;
+  }
+
+  await screen.findByText("row one");
+  await user.click(
+    within(rowFor("row one")).getByText(
+      en["person.intro.completeIntroducedAction"],
+    ),
+  );
+  await waitFor(() => {
+    expect(
+      within(rowFor("row one")).getByText(en["person.intro.completeFailed"]),
+    ).toBeTruthy();
+  });
+
+  await user.click(
+    within(rowFor("row two")).getByText(en["person.intro.withdrawAction"]),
+  );
+  await waitFor(() => {
+    expect(
+      within(rowFor("row two")).queryByText(en["person.intro.completeFailed"]),
+    ).toBeNull();
+  });
+  // ir-1's own failure is still exactly where it happened.
+  expect(
+    within(rowFor("row one")).getByText(en["person.intro.completeFailed"]),
+  ).toBeTruthy();
 });

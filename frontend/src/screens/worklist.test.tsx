@@ -133,9 +133,8 @@ describe("what the ranked queue tells a reader", () => {
     expect(screen.getByText(/Philipp Hartwig/)).toBeTruthy();
   });
 
-  // margince#3360: the server already sent the deal's name in `detail` — the
-  // title has nowhere to put it (a notice's subject is never set), so the row
-  // rendered a bare "A deal you own changed stage" and nothing said which one.
+  // The server sends the deal's name in `detail` — the title has nowhere to
+  // put it, since a notice's subject is never set.
   it("renders the server's one supporting line, even when the title has no subject to name", async () => {
     stub(
       day({

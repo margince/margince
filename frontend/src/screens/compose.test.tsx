@@ -1748,15 +1748,23 @@ describe("TimelineActions", () => {
     );
   });
 
-  // margince#3447 and margince#3430 are one defect, seen from opposite sides:
-  // which audience control renders was keyed off `audience_reason`, but that
-  // field is null on an untouched CAPTURED row and non-null on a NARROWED
-  // hand-typed one — the exact opposite of what each case needs. thread_key is
-  // the field that actually means "this row belongs to a thread" either way.
-  it("offers the thread-level control on captured mail before it is ever narrowed (margince#3447)", () => {
+  // Which audience control a timeline row offers cannot be keyed off
+  // `audience_reason`: that field is null on an untouched CAPTURED row and
+  // non-null on a NARROWED hand-typed one — the opposite of what each case
+  // needs.
+  //
+  // thread_key alone is not the fix either: outboundmessage.go stamps a
+  // hand-typed REPLY with the RFC822 thread it answers too, so a rep's own
+  // threaded reply would carry one — and ThreadAudienceAction's own endpoint
+  // 404s on a thread_key with no capture_import row behind it
+  // (capture/threadverdict.go's inner join). captured_by's prefix is what
+  // actually says capture wrote the row — `connector:<name>:<uuid>`, never
+  // `human:<uuid>` or `agent:<id>` — in every direction.
+  it("offers the thread-level control on captured mail before it is ever narrowed", () => {
     const captured: Activity = {
       ...activity202,
       id: "a4",
+      captured_by: "connector:gmail:u1",
       thread_key: "thread:abc",
       audience_reason: undefined,
     };
@@ -1768,10 +1776,11 @@ describe("TimelineActions", () => {
     expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
   });
 
-  it("keeps the per-message control on hand-typed mail once narrowed (margince#3430)", () => {
+  it("keeps the per-message control on hand-typed mail once narrowed", () => {
     const narrowedHandTyped: Activity = {
       ...activity202,
       id: "a5",
+      captured_by: "human:u1",
       audience: "participants",
       audience_reason: "manual",
       thread_key: undefined,
@@ -1787,6 +1796,29 @@ describe("TimelineActions", () => {
     expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Keep private" })).toBeNull();
+  });
+
+  // The regression thread_key alone would have caused: a rep's own reply
+  // within an existing conversation is hand-typed, not captured, but it is
+  // threaded like everything else in that conversation.
+  it("keeps the per-message control on a hand-typed reply that carries a thread_key too", () => {
+    const threadedReply: Activity = {
+      ...activity202,
+      id: "a6",
+      captured_by: "human:u1",
+      thread_key: "thread:existing-conversation",
+      audience_reason: undefined,
+    };
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={threadedReply}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
   });
 });
 

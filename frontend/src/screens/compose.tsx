@@ -2921,16 +2921,20 @@ export function TimelineActions({
       <Button small onClick={() => setRelink(true)}>
         {t("compose.relink")}
       </Button>
-      {/* Captured mail's audience is derived, never a direct write — its own
-          thread_key is what says so, and it carries one on every row, narrowed
-          or not. `audience_reason` is the wrong signal to branch on here: it is
-          null on an UNTOUCHED captured row (margince#3447, the wrong per-message
-          dialog was offered first) and becomes non-null on a NARROWED hand-typed
-          one, which has no thread for ThreadAudienceAction to act on and so
-          renders nothing at all (margince#3430, the control vanished for good).
-          thread_key is the one field that means "this row belongs to a thread"
-          in both directions. */}
-      {activity.thread_key ? (
+      {/* Captured mail's audience is derived, never a direct write, and
+          ThreadAudienceAction's own endpoint refuses a thread_key with no
+          capture_import row behind it (capture/threadverdict.go). A hand-typed
+          REPLY carries a thread_key too — outboundmessage.go stamps every send
+          with the RFC822 thread it answers, imported or not — so thread_key
+          alone would route a rep's own threaded reply to the one control that
+          404s on it. `audience_reason` is no better a signal: it is null on an
+          untouched captured row (the wrong per-message dialog offered first)
+          and non-null on a narrowed hand-typed one, whose missing
+          capture_import row makes ThreadAudienceAction disappear for good.
+          captured_by's own prefix is what actually says "capture wrote this"
+          — `connector:<name>:<uuid>`, never `human:<uuid>` or `agent:<id>` —
+          so it is the one signal correct in every direction. */}
+      {(activity.captured_by ?? "").startsWith("connector:") ? (
         <ThreadAudienceAction
           activity={activity}
           entityType={entityType}

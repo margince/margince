@@ -214,13 +214,8 @@ describe("the contact record's tabs", () => {
   });
 });
 
-// The confirm/correct control for a field Margince read off a signature or a
-// card existed and worked, but was unreachable from this page — built on the
-// dead PersonScreen and never carried over here (margince#3184). Logging an
-// interaction directly from this page (margince#3526) shipped separately, in
-// #3529.
 describe("the overview tab's added capabilities", () => {
-  it("lets a reader confirm or correct a field Margince read off a signature (margince#3184)", async () => {
+  it("lets a reader confirm or correct a field Margince read off a signature", async () => {
     const withEnrichment: Person360 = {
       ...view,
       profile_fields: [

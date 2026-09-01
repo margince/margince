@@ -5779,7 +5779,8 @@ export const de = {
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "Noch keine Teams.",
   "users.teamMembersLabel": "Wer in diesem Team ist",
-  "users.teamMemberBadge": "Mitglied",
+  "users.teamMembersAdminOnly":
+    "Die Mitgliedschaft ist nur für Admins sichtbar.",
   "users.teamNobodyToAdd": "Noch keine Benutzer zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":

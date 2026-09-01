@@ -5,7 +5,6 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useHoldsAdminRole } from "../app/capability";
 import {
-  Badge,
   Button,
   Checkbox,
   Disclosure,
@@ -150,8 +149,8 @@ export function TeamsCard() {
   const me = useMe();
   // Team membership is admin surface, the same authority `UsersAdminCard`
   // gates on: an ops seat reads the roster below but does not change who is
-  // on a team. `probeSettled` (`me.isSuccess`) keeps the read-only line from
-  // flashing at an admin while /me is still in flight.
+  // on a team. `me.isSuccess` below keeps the read-only line from flashing
+  // at an admin while /me is still in flight.
   const canAdminister = useHoldsAdminRole();
   // The shared roster read, not a second query of this card's own. Both spell
   // the same list under the same cache key, so whichever mounted first decided
@@ -340,20 +339,30 @@ function TeamRow({
 // be a second answer to "who is in this team", and the two would disagree the
 // first time one of them was cached.
 //
-// `canAdminister` swaps the checkbox for plain text rather than merely
-// disabling it: an ops seat that can read this roster but not change it is a
-// permission denial, and design-system/README.md's "Absent, disabled, or
-// withheld" table names that a WITHHOLDING of the write affordance, stated
-// once at the card level (`TeamsCard`'s sub line) — not a control that looks
-// pressable and 403s (margince#3225).
+// `canAdminister` withholds the whole membership list rather than merely
+// disabling its checkboxes: an ops seat that may read this roster still gets
+// no `team_ids` on any entry in it (see the query gate below), so a list
+// built from that read would show nobody as a member of anything — a false
+// statement about the team, not an honest withholding. Both the write
+// affordance and the read it would need are the admin's, stated once at the
+// card level (`TeamsCard`'s sub line) rather than as a control that looks
+// pressable and 403s.
 function TeamMembers({
   team,
   canAdminister,
 }: Readonly<{ team: Team; canAdminister: boolean }>) {
   const t = useT();
   const qc = useQueryClient();
-  const users = useRoster("user", true);
-  const usersPartial = useRosterPartial("user", true);
+  // Membership is admin-only DATA, not only an admin-only write: the roster
+  // handler sends `team_ids` at all only when the caller is an admin
+  // (`WithRoles: isAdmin`, backend/internal/modules/identity/handlers_roster.go)
+  // — every entry a non-admin reads back carries none. A read-only list built
+  // from that response would show nobody as a member of anything, which is a
+  // false statement about the team rather than an honest withholding, so the
+  // read is skipped rather than attempted (design-system/README.md's
+  // "Absent, disabled, or withheld", permission-denial row).
+  const users = useRoster("user", canAdminister);
+  const usersPartial = useRosterPartial("user", canAdminister);
   // Both writes are the same endpoint under two methods, so they are one
   // mutation with the membership as a variable — never a closure over the row
   // being drawn, which react-query re-arms a render late.
@@ -378,6 +387,11 @@ function TeamMembers({
       qc.invalidateQueries({ queryKey: ["teams"] });
     },
   });
+
+  if (!canAdminister) {
+    return <p className="t-small">{t("users.teamMembersAdminOnly")}</p>;
+  }
+
   return (
     <QueryGate query={users}>
       {(list) => {
@@ -407,34 +421,21 @@ function TeamMembers({
                 <legend className="t-caption">
                   {t("users.teamMembersLabel")}
                 </legend>
-                {people.map((person) => {
-                  const member = (person.team_ids ?? []).includes(team.id);
-                  return canAdminister ? (
-                    <Checkbox
-                      key={person.id}
-                      className="t-body"
-                      label={person.display_name}
-                      checked={member}
-                      disabled={setMember.isPending}
-                      onChange={(event) =>
-                        setMember.mutate({
-                          userId: person.id,
-                          member: event.target.checked,
-                        })
-                      }
-                    />
-                  ) : (
-                    <p
-                      key={person.id}
-                      className="t-body users-team-member-readonly"
-                    >
-                      {person.display_name}
-                      {member && (
-                        <Badge quiet>{t("users.teamMemberBadge")}</Badge>
-                      )}
-                    </p>
-                  );
-                })}
+                {people.map((person) => (
+                  <Checkbox
+                    key={person.id}
+                    className="t-body"
+                    label={person.display_name}
+                    checked={(person.team_ids ?? []).includes(team.id)}
+                    disabled={setMember.isPending}
+                    onChange={(event) =>
+                      setMember.mutate({
+                        userId: person.id,
+                        member: event.target.checked,
+                      })
+                    }
+                  />
+                ))}
               </fieldset>
             )}
             {/* The editor claims to list who may be added, so a walk that
