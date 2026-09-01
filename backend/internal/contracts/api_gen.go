@@ -8273,6 +8273,7 @@ const (
 	PersonMomentRuleMeetingPrep      PersonMomentRule = "meeting_prep"
 	PersonMomentRuleMissingNextStep  PersonMomentRule = "missing_next_step"
 	PersonMomentRuleNothingNeeded    PersonMomentRule = "nothing_needed"
+	PersonMomentRuleOpenPromise      PersonMomentRule = "open_promise"
 	PersonMomentRuleOverduePromise   PersonMomentRule = "overdue_promise"
 	PersonMomentRulePublicSignal     PersonMomentRule = "public_signal"
 	PersonMomentRuleReEngaged        PersonMomentRule = "re_engaged"
@@ -8292,6 +8293,8 @@ func (e PersonMomentRule) Valid() bool {
 	case PersonMomentRuleMissingNextStep:
 		return true
 	case PersonMomentRuleNothingNeeded:
+		return true
+	case PersonMomentRuleOpenPromise:
 		return true
 	case PersonMomentRuleOverduePromise:
 		return true

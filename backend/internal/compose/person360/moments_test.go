@@ -185,6 +185,17 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 				DueAt:            ptr(at(6)),
 			}},
 		},
+		// Rung 5b wants an open task filed against them, and it must fire with
+		// no date on it — that is what the transcript reader files.
+		"open promise": {
+			NextSteps: &struct {
+				Data []crmcontracts.Activity `json:"data"`
+				Page crmcontracts.PageInfo   `json:"page"`
+			}{Data: []crmcontracts.Activity{{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+				Subject: ptr("Send the MCP whitepaper"), OccurredAt: at(1),
+			}}},
+		},
 		"nothing needed": {},
 	}
 	for name, page := range pages {
@@ -410,5 +421,69 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 	withholdLogActivity(as(map[string]principal.ObjectGrant{"person": {Read: true}, "activity": {Create: true}}), &writer)
 	if writer.RecommendedAction.State != crmcontracts.PersonMomentActionStateAvailable || writer.RecommendedAction.Destination == nil {
 		t.Errorf("a caller holding activity.create got %q with destination %v, want the action untouched", writer.RecommendedAction.State, writer.RecommendedAction.Destination)
+	}
+}
+
+// An open task with no date is still a promise. The transcript reader files
+// "I'll send you the whitepaper" without one, and the card used to fall past
+// every rung to "nothing is owed" while that task sat directly beneath it.
+func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
+	now := time.Now()
+	page := &crmcontracts.Person360{
+		NextSteps: &struct {
+			Data []crmcontracts.Activity `json:"data"`
+			Page crmcontracts.PageInfo   `json:"page"`
+		}{Data: []crmcontracts.Activity{
+			{Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: ptr("Book the workshop room"), OccurredAt: now.Add(-2 * time.Hour)},
+			{Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: ptr("Send the MCP whitepaper"), OccurredAt: now.Add(-48 * time.Hour)},
+		}},
+	}
+
+	moment := deriveMoment(now, page)
+	if moment.Rule != crmcontracts.PersonMomentRuleOpenPromise {
+		t.Fatalf("rule = %q, want open_promise — an open task is owed, dated or not", moment.Rule)
+	}
+	if moment.Headline != "You owe them: Send the MCP whitepaper" {
+		t.Errorf("headline = %q, want the OLDEST undated task named", moment.Headline)
+	}
+	if !strings.Contains(moment.WhyNow, "no date set") {
+		t.Errorf("why_now = %q, want it to say the promise carries no date", moment.WhyNow)
+	}
+	if got := (*moment.RecommendedAction.Destination.Prefill)["subject"]; got != "Send the MCP whitepaper" {
+		t.Errorf("composer subject = %q, want the promise itself", got)
+	}
+	if moment.FreshnessAt == nil || !moment.FreshnessAt.Equal(now.Add(-48*time.Hour)) {
+		t.Errorf("freshness = %v, want the day the promise was filed", moment.FreshnessAt)
+	}
+
+	// A task somebody specific holds is owed by that desk, not by whoever is
+	// reading the card.
+	assigned := page.NextSteps.Data[1]
+	assigned.AssigneeId = ptr(openapi_types.UUID(ids.NewV7()))
+	page.NextSteps.Data[1] = assigned
+	if got := deriveMoment(now, page).Headline; got != "Owed to them: Send the MCP whitepaper" {
+		t.Errorf("headline for an assigned task = %q, want it attributed to its holder", got)
+	}
+	page.NextSteps.Data[1].AssigneeId = nil
+
+	// A dated task outranks an undated one, however old the undated one is.
+	dated := page.NextSteps.Data[0]
+	dated.DueAt = ptr(now.Add(72 * time.Hour))
+	page.NextSteps.Data[0] = dated
+	if got := deriveMoment(now, page).Headline; got != "You owe them: Book the workshop room" {
+		t.Errorf("with a dated task present, headline = %q, want the dated one", got)
+	}
+	// A task logged from the record page is due at the end of today, and the
+	// card says so in words rather than counting zero days.
+	page.NextSteps.Data[0].DueAt = ptr(now.Add(2 * time.Hour))
+	if got := deriveMoment(now, page).WhyNow; got != "Due today." {
+		t.Errorf("why_now for a task due later today = %q, want \"Due today.\"", got)
+	}
+
+	// Done tasks never reach the section, so a page whose section is empty is
+	// the quiet state — and only then may the card say nothing is owed.
+	page.NextSteps.Data = nil
+	if got := deriveMoment(now, page).Rule; got != crmcontracts.PersonMomentRuleNothingNeeded {
+		t.Errorf("with no open task, rule = %q, want nothing_needed", got)
 	}
 }
