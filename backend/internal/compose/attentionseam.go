@@ -38,7 +38,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attentionApprovals reads the staged queue through the engine every approval
@@ -128,70 +127,6 @@ func (d attentionDuplicates) Describe(
 
 func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
 	return d.store.CountOpenDedupeCandidates(ctx)
-}
-
-// attentionTasks reads open tasks through the activities store. A task is an
-// activity of kind `task`, so this is the same read the task queue makes.
-type attentionTasks struct{ store *activities.Store }
-
-func (t attentionTasks) OpenForViewer(
-	ctx context.Context, until time.Time, limit int, scope attention.TaskScope,
-) ([]attention.Task, error) {
-	// The store answers "open and due by then" itself, so the limit bounds the
-	// rows that QUALIFY. This used to read ten times the lane and narrow
-	// afterwards, which put the bound on the wrong set: a pile of completed
-	// tasks filled the scan, the overdue promise underneath never reached the
-	// reader, and the day rendered clear while the work was still there.
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, Limit: &limit}
-	// Narrowed in the QUERY, so the store's own bound applies to the rows that
-	// qualify. Filtering the answer instead would let a colleague's twelve
-	// tasks fill the page and hide the reader's own overdue one behind them.
-	switch scope {
-	case attention.TasksMine:
-		actor, ok := principal.Actor(ctx)
-		if !ok || actor.UserID.IsZero() {
-			// No human, no "own work" to answer for. Reading every task and
-			// calling the result theirs is the widening this narrowing exists
-			// to prevent.
-			return nil, nil
-		}
-		// Exactly theirs. A task they wrote themselves carries their name from
-		// the moment it is written, so this needs no unassigned arm — and the
-		// arm it used to have is what put an automation's follow-up on every
-		// colleague's queue.
-		assignee := ids.From[ids.UserKind](actor.UserID)
-		in.OwnQueueOf = &assignee
-	case attention.TasksUnassigned:
-		in.UnassignedQueue = true
-	case attention.TasksVisible:
-		// Every open task the reader may see; the row-scope gate in the store
-		// is the only narrowing.
-	}
-	rows, _, err := t.store.ListActivities(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-	open := make([]attention.Task, 0, len(rows))
-	for _, row := range rows {
-		// The filter above answers only dated rows, so this skip is unreachable
-		// today. It is here because the alternative to a skip is a nil deref
-		// that panics the WHOLE day's page, and the guarantee lives in a WHERE
-		// clause one package away — too far for the next reader of this loop to
-		// see it.
-		if row.DueAt == nil {
-			continue
-		}
-		due := *row.DueAt
-		linkType, linkID := primaryLink(row)
-		open = append(open, attention.Task{
-			ID:       ids.UUID(row.Id),
-			Subject:  subjectOfActivity(row),
-			DueAt:    &due,
-			LinkType: linkType,
-			LinkID:   linkID,
-		})
-	}
-	return open, nil
 }
 
 // subjectOfActivity is the line a task shows. An activity always carries one

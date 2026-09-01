@@ -49,11 +49,18 @@ const worklistMaxPage = 100
 // The filter narrows what is CARRIED, never what is read: a source is read,
 // classified and then dropped, so the summary's figures describe the same day
 // whichever filter is applied.
-func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int) (crmcontracts.Worklist, error) {
+func (s *Service) Worklist(
+	ctx context.Context, scope, filter string, owner ids.UUID, limit int,
+) (crmcontracts.Worklist, error) {
 	// Resolved BEFORE the day is read: a reader asking for a scope they do not
 	// hold gets a refusal rather than a page assembled and then narrowed, and
 	// the read they were never entitled to make is not made.
 	resolved, err := resolveScope(ctx, scope)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	// Same rule, same moment: whose queue this is, refused rather than narrowed.
+	namedOwner, err := resolveOwner(ctx, owner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -65,6 +72,11 @@ func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int)
 	// taken from a page of ten would report ten over a hundred and fifty.
 	reader := s.countingDecisions()
 	switch {
+	// A named owner outranks the scope word: "their queue" is a narrower
+	// question than any of mine/team/all, and answering the wider one would
+	// hand back a page that looks like the rep's day and is not.
+	case !namedOwner.IsZero():
+		reader = reader.forOwner(namedOwner)
 	case mineOnly(resolved):
 		reader = reader.forReader()
 	case resolved == scopeUnassigned:
@@ -93,60 +105,6 @@ func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int)
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	return out, nil
-}
-
-// keepReadersOwn drops the rows belonging to somebody else.
-//
-// It runs over the CANDIDATES, before the page is cut, so a reader asking for
-// twenty-five of their own rows gets twenty-five where they exist. Narrowing
-// after the cut returned a short page while the reader's own work sat just
-// past it.
-//
-// It fails CLOSED. A call with no human behind it has no "own work" to answer
-// for, and a queue that handed such a caller every row it had read would be
-// widening a scope named `mine` — the opposite of what it says. An agent that
-// needs the day reads it under a scope it can actually hold.
-//
-// The narrowing itself is a display cut, not the security boundary: the lanes
-// are already row-scoped, so this changes what a wide-scoped reader is SHOWN
-// by default rather than what any store was asked. Pushing the filter into
-// each producer is the better shape and needs each to take an owner.
-func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return nil
-	}
-	kept := make([]ranked, 0, len(rows))
-	for _, row := range rows {
-		if ownedByReader(row.item, actor) {
-			kept = append(kept, row)
-		}
-	}
-	return kept
-}
-
-// keepUnowned keeps the rows that answer to nobody.
-//
-// The counterpart to keepReadersOwn, over the same evidence: a deal-bearing row
-// with an owner belongs to that person and not to this queue. A row with no
-// owner to check stays, which is what the scope is for.
-func keepUnowned(rows []ranked) []ranked {
-	kept := make([]ranked, 0, len(rows))
-	for _, row := range rows {
-		if row.item.Deal == nil || row.item.Deal.OwnerId == nil {
-			kept = append(kept, row)
-		}
-	}
-	return kept
-}
-
-// scopeOptions puts the resolver's answer on the wire.
-func scopeOptions(options []string) []crmcontracts.WorklistScopeOptions {
-	out := make([]crmcontracts.WorklistScopeOptions, 0, len(options))
-	for _, option := range options {
-		out = append(out, crmcontracts.WorklistScopeOptions(option))
-	}
-	return out
 }
 
 // worklistFrom projects an already-assembled day, so a test can drive the
@@ -237,6 +195,12 @@ func (s *Service) worklistFrom(
 	rows = dropDealsAlreadyWaiting(rows)
 
 	switch {
+	// Whose queue this is, applied to the rows the same way the lane applied it
+	// to the query. A deal-bearing row belonging to somebody else is not part
+	// of this person's day, and leaving it in would make a manager's answer to
+	// "show me Lena's queue" quietly include rows that are not hers.
+	case !s.taskOwner.IsZero():
+		rows = keepOwnedBy(rows, s.taskOwner)
 	case mineOnly(scope):
 		rows = keepReadersOwn(ctx, rows)
 	case scope == scopeUnassigned:

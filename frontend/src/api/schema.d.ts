@@ -36421,6 +36421,32 @@ export interface operations {
                 filter?: "all" | "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
                 /** @description How many ranked items to return. */
                 limit?: number;
+                /**
+                 * @description Whose queue to answer, when it is somebody else's. A manager reading a team
+                 *     exception is told which rep it belongs to, and the next question is always
+                 *     "show me their day" — without this they can only widen to `team`, which
+                 *     answers about everybody when they asked about one person.
+                 *
+                 *     Refused with 403 rather than quietly narrowed when the reader's own row scope
+                 *     does not reach past themselves. A narrowing here would be worse than
+                 *     elsewhere: the answer would look like the named rep's day while being the
+                 *     reader's own.
+                 *
+                 *     It narrows the shared, record-bearing work — their tasks and their deals. It
+                 *     does NOT reach their mailbox, their notices or their promises: those sources
+                 *     are bound to the acting user inside the modules that own them, exactly as
+                 *     they are under `team` and `all`. Reading somebody's queue is not reading
+                 *     their inbox.
+                 *
+                 *     Naming yourself is the same question the default answers, and needs no wider
+                 *     tier.
+                 *
+                 *     Sending it together with a `scope` other than `mine` is refused with 422. They
+                 *     are two answers to one question and nothing defines which wins; letting the
+                 *     owner take it silently would echo back the scope that had been ignored, so one
+                 *     rep's work would arrive labelled `"scope": "unassigned"`.
+                 */
+                owner?: string;
             };
             header?: never;
             path?: never;

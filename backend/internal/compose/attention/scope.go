@@ -83,6 +83,49 @@ func resolveScope(ctx context.Context, asked string) (string, error) {
 	return "", apperrors.ErrPermissionDenied
 }
 
+// resolveOwner answers whose queue this read is FOR, or refuses.
+//
+// A manager looking at a team exception needs to open the rep's own day — the
+// exception says whose it is, and the next question is always "show me their
+// queue". Without this they can only widen to `team`, which answers a question
+// about everybody when they asked about one person.
+//
+// The rule is the one resolveScope keeps: an ask the reader's row scope does
+// not reach is a 403, never a quiet narrowing. Narrowing here would be worse
+// than elsewhere, because the answer would look like the named rep's day while
+// being the reader's own.
+//
+// Reading somebody's queue is not reading their inbox. The per-user sources —
+// a mailbox, a notice, a promise — stay bound to the acting user inside the
+// modules that own them, exactly as they do under `team` and `all`, so what
+// this reaches is the shared record-bearing work assigned to that person. The
+// contract says so where the parameter is declared.
+func resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, error) {
+	if asked.IsZero() {
+		return ids.UUID{}, nil
+	}
+	owner := asked
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return ids.UUID{}, apperrors.ErrPermissionDenied
+	}
+	// Their own id needs no wider tier: "mine, spelled out" is the same
+	// question the default answers.
+	if owner == actor.UserID {
+		return owner, nil
+	}
+	// Somebody else's queue is a team-or-wider question. The tier is the whole
+	// test: whether that person is on the reader's team is a fact the row scope
+	// already decides for every record this read returns, and re-deriving it
+	// here would be a second answer to it.
+	switch actor.Permissions.RowScope {
+	case principal.RowScopeTeam, principal.RowScopeAll:
+		return owner, nil
+	default:
+		return ids.UUID{}, apperrors.ErrPermissionDenied
+	}
+}
+
 // mineOnly reports whether this read keeps only the reader's own work.
 //
 // WHAT A WIDER SCOPE CAN AND CANNOT DO, because the difference is not obvious
@@ -142,4 +185,94 @@ func waitingIsMine(waiting WaitingCustomer, ownedDeals map[ids.UUID]bool) bool {
 		return true
 	}
 	return ownedDeals[waiting.DealID]
+}
+
+// keepReadersOwn drops the rows belonging to somebody else.
+//
+// It runs over the CANDIDATES, before the page is cut, so a reader asking for
+// twenty-five of their own rows gets twenty-five where they exist. Narrowing
+// after the cut returned a short page while the reader's own work sat just
+// past it.
+//
+// It fails CLOSED. A call with no human behind it has no "own work" to answer
+// for, and a queue that handed such a caller every row it had read would be
+// widening a scope named `mine` — the opposite of what it says. An agent that
+// needs the day reads it under a scope it can actually hold.
+//
+// The narrowing itself is a display cut, not the security boundary: the lanes
+// are already row-scoped, so this changes what a wide-scoped reader is SHOWN
+// by default rather than what any store was asked. Pushing the filter into
+// each producer is the better shape and needs each to take an owner.
+func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return nil
+	}
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		if ownedByReader(row.item, actor) {
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// keepOwnedBy keeps only the rows POSITIVELY attributable to one named person.
+//
+// The opposite default from keepReadersOwn, and the difference is the whole
+// rule. That one keeps a row it cannot judge because the lane already bound it
+// to the acting reader: a notice addressed to them, their own mailbox, their
+// own promise. Under a named owner those same lanes are still bound to the
+// ACTING reader, so keeping what cannot be judged hands a manager their own
+// notices and meetings with somebody else's name on the page.
+//
+// Nothing crosses a scope boundary either way — every row here was already
+// readable. What is at stake is whether the answer is true: a page headed
+// "Lena's day" that is mostly the reader's own day is a worse failure than an
+// empty one, because nothing on it says so.
+//
+// So a row survives when it names this owner's deal, or when it came from the
+// task lane, which narrowed to them in its own query. Everything else is the
+// reader's, and this is not their page.
+//
+// That is also the honest limit of the scope, and the contract states it where
+// the parameter is declared: a manager opening a rep's queue sees the rep's
+// deals and tasks, never their mailbox.
+func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		if row.item.Source == sourceTask {
+			kept = append(kept, row)
+			continue
+		}
+		if row.item.Deal != nil && row.item.Deal.OwnerId != nil &&
+			ids.UUID(*row.item.Deal.OwnerId) == owner {
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// keepUnowned keeps the rows that answer to nobody.
+//
+// The counterpart to keepReadersOwn, over the same evidence: a deal-bearing row
+// with an owner belongs to that person and not to this queue. A row with no
+// owner to check stays, which is what the scope is for.
+func keepUnowned(rows []ranked) []ranked {
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		if row.item.Deal == nil || row.item.Deal.OwnerId == nil {
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// scopeOptions puts the resolver's answer on the wire.
+func scopeOptions(options []string) []crmcontracts.WorklistScopeOptions {
+	out := make([]crmcontracts.WorklistScopeOptions, 0, len(options))
+	for _, option := range options {
+		out = append(out, crmcontracts.WorklistScopeOptions(option))
+	}
+	return out
 }

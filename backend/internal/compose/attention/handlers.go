@@ -8,6 +8,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Handlers is the feed's HTTP surface: one read, no verbs.
@@ -67,7 +68,23 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 		}
 		scope = string(*params.Scope)
 	}
-	out, err := h.svc.Worklist(r.Context(), scope, filter, limit)
+	// The generated type already refused anything that is not a uuid, so an
+	// unparseable owner never reaches the resolver.
+	var owner ids.UUID
+	if params.Owner != nil {
+		// A named owner and a wider scope are two answers to one question, and
+		// nothing defines which wins. Letting the owner take it silently left
+		// the response echoing the scope that had been ignored — one rep's work
+		// labelled `"scope": "unassigned"`, which is the most misleading
+		// direction available. Refused, so the caller says which they meant.
+		if scope != "" && scope != scopeMine {
+			httperr.Write(w, r, httperr.Validation("owner", "conflicts_with_scope",
+				"asking for one person's queue and for a wider scope are different questions; send one"))
+			return
+		}
+		owner = ids.UUID(*params.Owner)
+	}
+	out, err := h.svc.Worklist(r.Context(), scope, filter, owner, limit)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

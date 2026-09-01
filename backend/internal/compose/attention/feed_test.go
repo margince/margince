@@ -81,13 +81,17 @@ type stubTasks struct {
 	until *time.Time
 	// scope records WHOSE tasks the lane asked for, so a test can prove the
 	// narrowing reaches the QUERY rather than trusting that a filter ran
-	// afterwards.
+	// afterwards. owner records WHICH person, where the scope names one.
 	scope TaskScope
+	owner ids.UUID
 }
 
-func (s *stubTasks) OpenForViewer(_ context.Context, until time.Time, _ int, scope TaskScope) ([]Task, error) {
+func (s *stubTasks) OpenForViewer(
+	_ context.Context, until time.Time, _ int, scope TaskScope, owner ids.UUID,
+) ([]Task, error) {
 	s.until = &until
 	s.scope = scope
+	s.owner = owner
 	return s.rows, s.err
 }
 

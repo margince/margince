@@ -113,6 +113,10 @@ const (
 	TasksMine
 	// TasksUnassigned is the open tasks assigned to nobody.
 	TasksUnassigned
+	// TasksOwnedBy is the open tasks assigned to one NAMED person — a manager
+	// opening the queue of the rep an exception named. The name rides beside
+	// the scope, because a scope value cannot carry one.
+	TasksOwnedBy
 )
 
 // Tasks is the open-task read, through the activities module.
@@ -122,7 +126,7 @@ const (
 // rows out of a page of twelve and leave the reader's own overdue task
 // unreachable behind them.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, until time.Time, limit int, scope TaskScope) ([]Task, error)
+	OpenForViewer(ctx context.Context, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
 }
 
 // Task is one piece of agreed work.
