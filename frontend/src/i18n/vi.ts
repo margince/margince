@@ -3047,8 +3047,6 @@ export const vi = {
   "agent.activity.offerDraft.stalled":
     "Việc soạn báo giá của bạn kéo dài bất thường. Có thể nó đã dừng.",
   "agent.panel.runningNow": "Đang chạy",
-  "agent.panel.finishedToday": "Đã xong hôm nay",
-  "agent.panel.stoppedEarly": "Vì sao nó dừng",
 
   "agents.connected": "Agent đã kết nối",
   "agents.connectedSub":

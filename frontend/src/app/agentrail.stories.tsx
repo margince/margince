@@ -194,9 +194,9 @@ export const Working: Story = {
   render: story({ ...HEALTHY, running: [occurrence({})] }),
 };
 
-/** Error: the overnight brief failed. It holds the orb until the panel that
- *  lists it has been opened, because a run that broke at four in the morning was
- *  seen by nobody. */
+/** Error: the overnight brief failed. It holds the orb until the panel has
+ *  been opened, because a run that broke at four in the morning was seen by
+ *  nobody. */
 export const RunFailed: Story = {
   render: story({
     ...HEALTHY,
