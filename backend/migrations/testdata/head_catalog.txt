@@ -501,6 +501,8 @@ public.ai_feedback.source text NOT NULL gen=- def=-
 public.ai_feedback.subject_id uuid NOT NULL gen=- def=-
 public.ai_feedback.subject_type text NOT NULL gen=- def=-
 public.ai_feedback.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.ai_feedback.value_captured_at timestamp with time zone gen=- def=-
+public.ai_feedback.value_shown text gen=- def=-
 public.ai_feedback.verdict text NOT NULL gen=- def=-
 public.ai_feedback.version bigint NOT NULL gen=- def=1
 public.ai_feedback_pkey CREATE UNIQUE INDEX ai_feedback_pkey ON public.ai_feedback USING btree (id)
