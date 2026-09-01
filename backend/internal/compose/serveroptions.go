@@ -409,7 +409,7 @@ func WithPublicBaseURL(base string) Option {
 		// are what refuse an unusable origin, and a readiness check here
 		// would deadlock a rollout on its own ingress.
 		s.originProbe = newPublicOriginProbe(base, newOriginProbeClient(), time.Now)
-		s.connectorHandlers.publicOrigin = s.originStatus
+		s.publicOrigin = s.originStatus
 		s.rebuildToolRegistry(pool)
 	}
 }

@@ -71,26 +71,6 @@ func requireOneClickBody(r *http.Request) error {
 		// did not send.
 		return requireEmptyBody(r)
 	}
-	// Some other content type. It is only a refusal if a body actually came
-	// with it: a client that announces JSON and then sends nothing has said
-	// nothing this endpoint disagrees with, and plenty do — the header is
-	// often set by a shared request helper rather than chosen per call.
-	// Refusing those would break the human path to protect a machine one.
-	return refuseIfBodyPresent(r)
-}
-
-// refuseIfBodyPresent admits an empty body under any content type and
-// refuses a non-empty one that is not an RFC 8058 form.
-func refuseIfBodyPresent(r *http.Request) error {
-	n, err := io.Copy(io.Discard, io.LimitReader(r.Body, oneClickBodyLimit+1))
-	if err != nil {
-		slog.DebugContext(r.Context(), "one-click unsubscribe body could not be drained", "error", err)
-		return nil
-	}
-	if n == 0 {
-		return nil
-	}
-	return httperr.Validation("body", "not_one_click", "a one-click unsubscribe carries the RFC 8058 form body")
 }
 
 // readOneClickBody reads the body bounded to the ceiling. It reads one

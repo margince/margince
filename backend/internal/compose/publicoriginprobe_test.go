@@ -138,12 +138,12 @@ func TestTheOriginStatusSurvivesAHandlerRebuild(t *testing.T) {
 	defer srv.Close()
 
 	s := &Server{}
-	s.connectorHandlers.publicOrigin = s.originStatus
+	s.publicOrigin = s.originStatus
 	// The origin is configured AFTER the handler was built, which is the
 	// order that used to lose it.
 	s.originProbe = newPublicOriginProbe(srv.URL, newOriginProbeClient(), time.Now)
 
-	status := s.connectorHandlers.publicOrigin(context.Background())
+	status := s.publicOrigin(context.Background())
 	if status.Origin != srv.URL {
 		t.Errorf("origin = %q, want %q — the handler lost the probe", status.Origin, srv.URL)
 	}
