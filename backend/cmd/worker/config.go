@@ -265,11 +265,11 @@ func registerDeepReadFlags(fs *flag.FlagSet, cfg *workerConfig) error {
 // and compose reads a non-positive interval as "no cadence given" and
 // registers no schedule at all — a role that meant to sweep silently never
 // would. Both readings are wrong for an operator's dial. These are strictly
-// scheduling PERIODS. Two duration flags are deliberately NOT in this set:
-// gmail-watch-renew-within is a renewal THRESHOLD (a lead time —
-// time.Now().Add(within) in DueWatches), so zero validly means "renew
-// missing or already-expired watches" and is checked separately (negative
-// only); and the deep-read / backfill caps are counts with a documented
+// scheduling PERIODS. The renewal THRESHOLDS are deliberately NOT in this set:
+// gmail-watch-renew-within and graph-watch-renew-within are lead times —
+// time.Now().Add(within) in DueWatches — so zero validly means "renew
+// missing or already-expired watches" and both are checked separately
+// (negative only); and the deep-read / backfill caps are counts with a documented
 // zero-means-default meaning, validated above. Zero and negative here are
 // boot errors, never silent defaults.
 func validateSchedulerIntervals(cfg workerConfig) error {
