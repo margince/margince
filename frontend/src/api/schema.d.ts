@@ -951,7 +951,8 @@ export interface paths {
         /**
          * The evidence sidecar for this person's enriched fields — each value with the verbatim snippet it was read from.
          * @description The person arm of the enrichment evidence ledger (`person_profile_field`): the
-         *     fields capture and site-read derive — title, phone, role, linkedin, org_name —
+         *     fields capture and site-read derive — title, phone, role, linkedin, org_name,
+         *     address, website —
          *     each carrying the **verbatim source snippet**, the source reference, confidence,
          *     and who set it (`agent:enrich` until a human edits, `human:*` after).
          *
@@ -15631,8 +15632,28 @@ export interface components {
          */
         PersonProfileField: {
             /** @enum {string} */
-            field: "title" | "phone" | "role" | "linkedin" | "org_name";
+            field: "title" | "phone" | "role" | "linkedin" | "org_name" | "address" | "website";
             value: string;
+            /**
+             * @description What this field held before a newer statement replaced it. The contact's own
+             *     signature or business card, carrying a later date than the value on record,
+             *     replaces what is older than it — including a value a colleague typed, because a
+             *     number stated last week outranks one typed in March. Present only where
+             *     something was actually replaced, and it is what the undo control restores.
+             */
+            superseded_value?: string | null;
+            /**
+             * Format: date-time
+             * @description When the replaced value was itself stated, so a reader can see which of the two is older.
+             */
+            superseded_observed_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the SOURCE stated this value — the mail's own date, not when the pass read
+             *     it. Recency is judged on this, so a re-delivered old message cannot outrank a
+             *     recent one.
+             */
+            observed_at?: string | null;
             /** @description The verbatim source text the value was read from — the reader checks the claim against its own source. */
             evidence_snippet: string;
             /** @description What was read, as `activity:<uuid>` for a signature or `site_read:<url>` for a page. */
@@ -15647,7 +15668,7 @@ export interface components {
             /** @description The stable identity of this field as a claim. Pass it to `POST /ai/feedback` as `claim_path` to correct or confirm the value — keyed on WHICH field, so the verdict survives the value being re-derived. */
             claim_key?: string;
             /**
-             * @description What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
+             * @description What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
              * @enum {string}
              */
             verdict?: "corrected" | "suppressed" | "confirmed";
@@ -15999,7 +16020,7 @@ export interface components {
              * @description Which profile field this fills. A closed set, so a claim cannot be stored under a name no reader looks for.
              * @enum {string}
              */
-            field: "title" | "phone" | "role" | "linkedin" | "org_name";
+            field: "title" | "phone" | "role" | "linkedin" | "org_name" | "address" | "website";
             value: string;
             source_quote: string;
             source_url: string;

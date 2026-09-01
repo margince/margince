@@ -261,3 +261,61 @@ func enrichEvidenceCount(t *testing.T, e *integration.Env, email string) int {
 	}
 	return n
 }
+
+// A human who corrected a field is promised no fresh inference replaces their
+// answer without a confirm. This is the case that promise is made of: they
+// correct the title, the contact then writes again stating something else, and
+// the pass must leave the correction alone.
+//
+// Recorded through ai.FeedbackStore, the writer the page itself uses, because
+// the ledger stores a HASH of the claim path — a fixture that inserted the row
+// by hand could spell the key any way at all and would prove nothing about
+// whether the pass can find a real one.
+func TestASignatureDoesNotOverwriteACorrectedField(t *testing.T) {
+	e := integration.Setup(t)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\n+49 30 1234567\nAcme GmbH"
+	person := seedEnrichPerson(t, e, "corrected@acme.example", body)
+
+	ctx := e.Admin()
+	if err := ai.NewFeedbackStore(InstallationDB(e.Pool)).Record(ctx, ai.RecordInput{
+		SubjectType: "person",
+		SubjectID:   person,
+		ClaimKind:   ai.ClaimProfileField,
+		ClaimPath:   ai.ProfileFieldClaimPath("title"),
+		Verdict:     ai.VerdictCorrected,
+		CorrectedValue: func() *string {
+			v := "Head of Engineering"
+			return &v
+		}(),
+	}); err != nil {
+		t.Fatalf("record the human's correction: %v", err)
+	}
+
+	brain := &signatureScriptBrain{fields: []map[string]any{
+		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
+	}}
+	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
+	if err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	var titleRows int
+	var title *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		c := context.Background()
+		if err := tx.QueryRow(c, `SELECT title FROM person WHERE id = $1`, person).Scan(&title); err != nil {
+			return err
+		}
+		return tx.QueryRow(c,
+			`SELECT count(*) FROM person_profile_field WHERE person_id = $1 AND field = 'title'`,
+			person).Scan(&titleRows)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if title != nil {
+		t.Errorf("person.title = %q — a corrected field was overwritten by a fresh inference", *title)
+	}
+	if titleRows != 0 {
+		t.Errorf("%d title evidence rows, want 0: the pass wrote over a human's ruling", titleRows)
+	}
+}

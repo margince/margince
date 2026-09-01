@@ -64,10 +64,17 @@ func relinkPersonReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	// replaces one — and the conflict target NAMES the uniqueness it relies
 	// on, so a future constraint on this table cannot silently start swallowing
 	// a different collision here.
+	// observed_at and the superseded_* buffer travel WITH the row. Re-homing is
+	// not a new statement, and letting the column take its default would date a
+	// two-year-old signature as today — the merged copy would then outrank the
+	// contact's own later mail, and a dropped buffer leaves a replaced value
+	// nobody can put back.
 	if _, err = tx.Exec(ctx, `
 		INSERT INTO person_profile_field
-		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
-		SELECT $2, field, value, evidence_snippet, source_ref, confidence, source, captured_by
+		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by,
+		   observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
+		SELECT $2, field, value, evidence_snippet, source_ref, confidence, source, captured_by,
+		       observed_at, superseded_value, superseded_captured_by, superseded_observed_at
 		  FROM person_profile_field WHERE person_id = $1
 		ON CONFLICT (person_id, field) DO NOTHING`, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink enrichment fields: %w", err)

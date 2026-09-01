@@ -1571,7 +1571,8 @@ paths:
       summary: The evidence sidecar for this person's enriched fields — each value with the verbatim snippet it was read from.
       description: |
         The person arm of the enrichment evidence ledger (`person_profile_field`): the
-        fields capture and site-read derive — title, phone, role, linkedin, org_name —
+        fields capture and site-read derive — title, phone, role, linkedin, org_name,
+        address, website —
         each carrying the **verbatim source snippet**, the source reference, confidence,
         and who set it (`agent:enrich` until a human edits, `human:*` after).
 
@@ -22531,8 +22532,27 @@ components:
         exists only where a verbatim snippet was captured.
       required: [field, value, evidence_snippet, source, captured_by, captured_at]
       properties:
-        field: { type: string, enum: [title, phone, role, linkedin, org_name] }
+        field: { type: string, enum: [title, phone, role, linkedin, org_name, address, website] }
         value: { type: string }
+        superseded_value:
+          type: [string, 'null']
+          description: |
+            What this field held before a newer statement replaced it. The contact's own
+            signature or business card, carrying a later date than the value on record,
+            replaces what is older than it — including a value a colleague typed, because a
+            number stated last week outranks one typed in March. Present only where
+            something was actually replaced, and it is what the undo control restores.
+        superseded_observed_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the replaced value was itself stated, so a reader can see which of the two is older.
+        observed_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When the SOURCE stated this value — the mail's own date, not when the pass read
+            it. Recency is judged on this, so a re-delivered old message cannot outrank a
+            recent one.
         evidence_snippet:
           type: string
           description: The verbatim source text the value was read from — the reader checks the claim against its own source.
@@ -22556,8 +22576,9 @@ components:
           description: >-
             What a human has already decided about this field, absent when nobody has. A
             `corrected` field shows their value in `value` and is never overwritten by a fresh
-            inference without a 🟡 confirm; `confirmed` carries the marker; `suppressed` means
-            the claim is not shown again.
+            inference without a 🟡 confirm — a correction outranks a later statement by the
+            contact themselves, which is the one thing recency does not decide;
+            `confirmed` carries the marker; `suppressed` means the claim is not shown again.
           enum: [corrected, suppressed, confirmed]
         verdict_note:
           type: [string, 'null']
@@ -23053,7 +23074,7 @@ components:
         field:
           type: string
           description: Which profile field this fills. A closed set, so a claim cannot be stored under a name no reader looks for.
-          enum: [title, phone, role, linkedin, org_name]
+          enum: [title, phone, role, linkedin, org_name, address, website]
         value: { type: string }
         source_quote: { type: string }
         source_url: { type: string }

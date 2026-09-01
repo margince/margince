@@ -3,13 +3,20 @@
 
 package compose
 
-// The signature-enrich pass (ai-operational-spec §2.9, ADR-0063):
-// connector-created people still missing title AND phone get ONE model
-// read of their latest inbound mail's signature block — evidence-or-omit
-// (the gateEvidence discipline: a field whose snippet is not verbatim in
-// the supplied lines is dropped in code, not trusted), confidence floor
-// 0.6, fill-only-empty on apply. The pass proposes fields; it never
-// overwrites a human's answer (GATE-AI-4).
+// The signature-enrich pass (ai-operational-spec §2.9, ADR-0063): a person whose
+// latest inbound mail this pass has not read yet gets ONE model read of its
+// signature block — evidence-or-omit (the gateEvidence discipline: a field whose
+// snippet is not verbatim in the supplied lines is dropped in code, not
+// trusted), confidence floor 0.6.
+//
+// What lands is decided by RECENCY, not by emptiness: a signature is the contact
+// stating their own details on a date, so a later one replaces what the record
+// holds — a colleague's typed value included, because a number stated last week
+// outranks one typed in March. The replaced value is kept for one click of undo.
+//
+// The single exception is a field a human CORRECTED: they read the machine's
+// answer and ruled on it, and correctedAt below is how this pass defers to that
+// ruling instead of re-inferring over it.
 
 import (
 	"context"
@@ -43,15 +50,20 @@ const (
 	enrichPassLimit = 100
 )
 
-// enrichFieldNames is the §2.9 closed vocabulary.
+// enrichFieldNames is the §2.9 closed vocabulary, shared with the card reader:
+// a signature and a business card state the same things about a person, and two
+// vocabularies would let which one arrived decide what could be recorded.
 var enrichFieldNames = map[string]bool{
 	"title": true, "phone": true, "role": true, "linkedin": true, "org_name": true,
+	"address": true, "website": true,
 }
 
 const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone, role,
-linkedin, org_name. Emit a field ONLY if the signature lines state it verbatim; the snippet
+linkedin, org_name, address, website. Emit a field ONLY if the signature lines state it verbatim; the snippet
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
-disclaimers, and marketing taglines. Phone numbers verbatim, never normalized.`
+disclaimers, and marketing taglines. Phone numbers verbatim, never normalized.
+Emit address as the single line the signature prints it on. Emit website only for the
+organization's own site; a social profile is never a website, and linkedin carries that one.`
 
 // signatureEnrichSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func signatureEnrichSystemFor(fence promptfence.Fence) string {
@@ -127,8 +139,8 @@ func unparseableReply(dropped []droppedFinding) bool {
 	return false
 }
 
-// enrichOne reads one candidate's signature block, gates the model's
-// fields against it, and applies the survivors fill-only-empty.
+// enrichOne reads one candidate's signature block, gates the model's fields
+// against it, and applies the survivors by recency.
 func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCandidate) error {
 	lines := signatureBlock(cand.Body)
 	if lines == "" {
@@ -170,6 +182,11 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCa
 		}
 		fields = append(fields, people.SignatureField{
 			Name: f.Field, Value: f.Value, Evidence: f.EvidenceSnippet, Confidence: float64(f.Confidence),
+			// The claim key the correction ledger stores for this field. The
+			// apply re-reads the ledger under its own lock and defers to any
+			// ruling it finds; computing the key here is what lets it, because
+			// the key is a hash only this module can build.
+			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath(f.Field)),
 		})
 	}
 	if len(fields) == 0 {
@@ -209,7 +226,11 @@ func signatureEnrichRequest(cand people.SignatureCandidate, lines string) model.
 	// would be reading in the prompt's own voice, which is the whole attack.
 	prompt.WriteString("Person (untrusted):\n")
 	prompt.WriteString(fence.Wrap(fmt.Sprintf("Name: %s\nEmail: %s", cand.FullName, cand.Email)) + "\n")
-	prompt.WriteString("Fields currently empty: [\"title\",\"phone\"]\n")
+	// Everything the vocabulary admits, and no statement about what the record
+	// already holds. The pass reads a signature to find out whether what it
+	// holds is still true, so naming the empty fields would ask the narrower
+	// question and miss the number that changed.
+	prompt.WriteString("Fields to extract when stated: [\"title\",\"phone\",\"role\",\"linkedin\",\"org_name\",\"address\",\"website\"]\n")
 	prompt.WriteString("Signature block (untrusted; the trailing lines of their last email):\n")
 	prompt.WriteString(fence.WrapAttr("source_id", cand.ActivityID.String(), lines) + "\n")
 	prompt.WriteString(`Return JSON: { "fields": [ { "field", "value", "evidence_snippet", "confidence" } ] }`)
@@ -271,7 +292,7 @@ func signatureEnrichSchema() json.RawMessage {
 		map[string]schema.Node{
 			laneFields: schema.Array(schema.Object(
 				map[string]schema.Node{
-					extractionFieldKey: schema.Enum("title", "phone", "role", "linkedin", "org_name"),
+					extractionFieldKey: schema.Enum("title", "phone", "role", "linkedin", "org_name", "address", "website"),
 					"value":            schema.String(),
 					"evidence_snippet": schema.String(),
 					"confidence":       schema.Number(),

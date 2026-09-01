@@ -33,12 +33,6 @@ func (s *Service) profileFieldsSection(ctx context.Context, tx pgx.Tx, personID 
 	return nil
 }
 
-// profileFieldClaimPath names one enriched field as a claim. It is a function
-// rather than a format string at each call site so the page that RENDERS the
-// key and the ledger that stores it cannot spell it differently — a mismatch
-// would silently lose every correction.
-func profileFieldClaimPath(field string) string { return "profile_field:" + field }
-
 // readProfileFields is every read of person_profile_field that RENDERS it to a
 // reader — the 360 section and the standalone sidecar endpoint both come
 // through here.
@@ -73,7 +67,8 @@ func (s *Service) readProfileFields(ctx context.Context, tx pgx.Tx, personID ids
 	rows, err := tx.Query(ctx, `
 		-- updated_at, not created_at: this is when the value took its CURRENT
 		-- form, which is the date the receipt should show after a human edit.
-		SELECT field, value, evidence_snippet, source_ref, confidence, source, captured_by, updated_at
+		SELECT field, value, evidence_snippet, source_ref, confidence, source, captured_by, updated_at,
+		       observed_at, superseded_value, superseded_observed_at
 		FROM person_profile_field
 		WHERE person_id = $1
 		ORDER BY field`, personID)
@@ -86,7 +81,8 @@ func (s *Service) readProfileFields(ctx context.Context, tx pgx.Tx, personID ids
 		var f crmcontracts.PersonProfileField
 		var field string
 		if err := rows.Scan(&field, &f.Value, &f.EvidenceSnippet, &f.SourceRef,
-			&f.Confidence, &f.Source, &f.CapturedBy, &f.CapturedAt); err != nil {
+			&f.Confidence, &f.Source, &f.CapturedBy, &f.CapturedAt,
+			&f.ObservedAt, &f.SupersededValue, &f.SupersededObservedAt); err != nil {
 			return nil, err
 		}
 		f.Field = crmcontracts.PersonProfileFieldField(field)
@@ -111,7 +107,7 @@ func (s *Service) applyFieldVerdicts(
 	}
 	for i := range fields {
 		f := &fields[i]
-		claim := profileFieldClaimPath(string(f.Field))
+		claim := ai.ProfileFieldClaimPath(string(f.Field))
 		f.ClaimKey = &claim
 		v, found := verdicts[ai.VerdictLookupKey(ai.ClaimProfileField, ai.ClaimKey(claim))]
 		if !found {
