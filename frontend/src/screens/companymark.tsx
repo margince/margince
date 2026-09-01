@@ -83,8 +83,26 @@ export function CompanyMark({
   const [picking, setPicking] = useState(false);
   // Each verb is disabled by the OTHER one's flight, never by its own: a button
   // that disables itself the moment it is pressed takes the focus with it, and
-  // the reader is left with no idea what happened or where they are.
+  // the reader is left with no idea what happened or where they are. Its own
+  // flight is guarded in the handler instead, so a double press or a held
+  // Enter cannot start a second request whose answer would race the first.
   const failure = upload.error ?? remove.error;
+  const removeMark = () => {
+    if (remove.isPending) {
+      return;
+    }
+    // A picker left open under a removal is a second writer: a file dropped
+    // while the DELETE is out lands in whichever order the two answer.
+    setPicking(false);
+    remove.mutate();
+  };
+  const uploadMark = (file: File) => {
+    setPicking(false);
+    if (upload.isPending) {
+      return;
+    }
+    upload.mutate(file);
+  };
 
   return (
     <div className="company-mark">
@@ -117,7 +135,7 @@ export function CompanyMark({
               <Button
                 small
                 variant="ghost"
-                onClick={() => remove.mutate()}
+                onClick={removeMark}
                 disabled={upload.isPending}
               >
                 {t("settings.companyMarkRemove")}
@@ -131,10 +149,7 @@ export function CompanyMark({
             hint={t("settings.companyMarkHint")}
             emptyLabel={t("settings.companyMarkEmpty")}
             accept={ACCEPTED_IMAGES}
-            onPick={(file) => {
-              setPicking(false);
-              upload.mutate(file);
-            }}
+            onPick={uploadMark}
           />
         )}
         {failure && (

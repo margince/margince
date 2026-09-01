@@ -70,9 +70,10 @@ it("draws the mark the company wears, and offers to replace or remove it", () =>
   expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
 });
 
-// The stub declares fetch's own parameters rather than none, because what each
-// case reads is the CALL: a zero-argument mock records zero-length calls, and
-// the assertions below would then be reaching into an empty tuple.
+// The stub declares fetch's own parameters so the recorded calls are TYPED as
+// fetch's argument tuple. The runtime records every argument either way; what a
+// zero-parameter mock loses is the type, and `const [path, init]` below would
+// then not compile.
 function stubFetch(answer: CompanyProfile) {
   const fetchStub = vi.fn(
     async (_input: RequestInfo | URL, _init?: RequestInit) =>
@@ -150,5 +151,35 @@ it("shows the server's refusal beside the control", async () => {
 
   expect(
     await screen.findByText(/not an image this server can read/),
+  ).toBeTruthy();
+});
+
+// The removal is judged by the server too, and its refusal lands in the same
+// place: a person who pressed Remove and saw nothing change would press it
+// again, and a second DELETE behind a refused first one is what the guard on
+// the handler exists to prevent.
+it("shows the server's refusal of a removal beside the control", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      Response.json(
+        {
+          type: "about:blank",
+          title: "Conflict",
+          status: 409,
+          code: "company_mark_locked",
+          detail: "the mark is being replaced by another write",
+        },
+        { status: 409 },
+      ),
+    ),
+  );
+  mark(WITH_MARK);
+
+  await user.click(screen.getByRole("button", { name: "Remove" }));
+
+  expect(
+    await screen.findByText(/being replaced by another write/),
   ).toBeTruthy();
 });

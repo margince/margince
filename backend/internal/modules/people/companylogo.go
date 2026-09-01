@@ -30,9 +30,10 @@ import (
 )
 
 // SetCompanyLogo points the anchor organization at bytes a person uploaded.
-// `named` is what the field's history shows for the change — the name of the
-// file they chose — and the row's origin stays empty, because an upload was
-// resolved from no page.
+// `named` is the name of the file they chose: it is what the field's history
+// shows for the change, and it is written as the row's origin, where a resolve
+// puts the page it read — the column says where a mark came from, whichever
+// writer put it there.
 //
 // Unlike the resolve path this never declines: a person replacing their own
 // company's mark is the write with the highest standing in this field, so it

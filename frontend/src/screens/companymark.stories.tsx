@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { CompanyMark } from "./companymark";
 import { installFetchStub, StoryProviders } from "./story-utils";
@@ -53,6 +54,14 @@ export const WearingItsOwnMark: Story = {
   ),
 };
 
+// The same row on the dark ground. Every derived colour is a color-mix of a
+// canonical token and follows the dark accent lift, so a mark and its two verbs
+// can read on light and lose contrast on dark without any test noticing.
+export const WearingItsOwnMarkDark: Story = {
+  ...WearingItsOwnMark,
+  globals: { theme: "dark" },
+};
+
 // Read-only: the mark is a fact about the company, so it is still shown. What
 // goes is the pair of verbs, rather than being drawn disabled — a control whose
 // only possible answer is a refusal is worse than no control.
@@ -93,5 +102,19 @@ export const TheServerRefusesTheImage: Story = {
         <CompanyMark {...args} />
       </StoryProviders>
     );
+  },
+  // Driven to the refusal rather than posed at it: the callout appears only
+  // after a file is offered and judged, so a frame that stopped at "Add a mark"
+  // would be the NoMarkYet story under a different name.
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Add a mark" }),
+    );
+    await userEvent.upload(
+      canvas.getByLabelText("Company mark"),
+      new File(["not an image"], "mark.png", { type: "image/png" }),
+    );
+    await canvas.findByRole("alert");
   },
 };

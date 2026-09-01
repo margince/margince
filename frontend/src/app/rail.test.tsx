@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  act,
   cleanup,
   fireEvent,
   screen,
@@ -589,6 +590,36 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(within(home).getByText("Demo GmbH")).toBeTruthy();
     expect(within(home).getByText("Powered by Margince")).toBeTruthy();
     expect(home.getAttribute("href")).toBe("#/home");
+  });
+
+  // The settings card writes a chosen mark straight into this cache entry. The
+  // rail has to be OBSERVING the entry rather than peeking at it once: a peek
+  // left the old face in the rail until something unrelated re-rendered the
+  // shell, so a person who had just uploaded a mark saw the monogram stay.
+  it("re-draws the head when a new mark is written into the company entry", async () => {
+    const client = newClient();
+    const profile = {
+      organization_id: "44444444-4444-4444-8444-444444444444",
+      display_name: "Demo GmbH",
+    };
+    client.setQueryData(["company"], profile);
+    const { container } = renderWith(
+      client,
+      <WorkspaceRail route={{ screen: "home" }} />,
+    );
+    expect(container.querySelector(".ws-chip img")).toBeNull();
+
+    act(() => {
+      client.setQueryData(["company"], {
+        ...profile,
+        logo_url: "/v1/organizations/44444444-4444-4444-8444-444444444444/logo",
+      });
+    });
+    await waitFor(() =>
+      expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
+        "/v1/organizations/44444444-4444-4444-8444-444444444444/logo",
+      ),
+    );
   });
 
   // The mark is the company's own, drawn from the site the onboarding read
