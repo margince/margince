@@ -14294,8 +14294,11 @@ export interface components {
          *     on the page says who was paid for it.
          */
         PersonProviderProfile: {
-            /** @enum {string} */
-            state: "not_connected" | "not_eligible" | "never_run" | "queued" | "in_progress" | "completed" | "no_match" | "stale" | "invalid_credentials" | "insufficient_credits" | "rate_limited" | "provider_error" | "submission_unknown" | "completed_claims_unwritten";
+            /**
+             * @description Why this provider's section reads the way it does. `nothing_to_look_up` is its own state rather than a kind of `not_eligible`: nothing forbids the purchase, the record simply carries no profile link and no company, so the provider has nothing to match on. The reader's next step is to add one of those, which is the next step for no other state here.
+             * @enum {string}
+             */
+            state: "not_connected" | "not_eligible" | "nothing_to_look_up" | "never_run" | "queued" | "in_progress" | "completed" | "no_match" | "stale" | "invalid_credentials" | "insufficient_credits" | "rate_limited" | "provider_error" | "submission_unknown" | "completed_claims_unwritten";
             /** @description Whose snapshot this is. Required: an entry in a list of providers that did not name itself would leave the reader unable to tell who to ask, or who was already paid. */
             provider: components["schemas"]["Provider"];
             /** Format: date-time */

@@ -31,6 +31,31 @@ import (
 // somebody fixed this morning is picked up tonight.
 const sweepRetryAfter = "1 day"
 
+// coveredByARun says "this contact needs no lookup right now". The sweep takes
+// it to pick what to queue and the countdown takes it to say how many are
+// left, so the number on the settings card is the work the sweep will do.
+//
+// They spelled it separately before and had already drifted: the sweep
+// re-queued a submission_unknown run once the cooldown passed while the count
+// treated it as settled for good, so the card read zero over contacts nobody
+// had looked up.
+//
+// `p` is the person and `r` the run inside the NOT EXISTS.
+//
+// The no_identifiers arm is what makes the page's own advice work. That skip
+// says the record carried no profile link and no company, and the section
+// tells the reader to add one — so holding them back for a full day would be
+// telling somebody to do something and then ignoring it until tomorrow.
+// `p.updated_at > r.created_at` is the cheapest honest test that the record
+// changed since we looked; the identifier check at queue time is what decides
+// whether it changed in a way that helps, so a passing contact that gained
+// only a phone number is skipped again for the price of one row.
+const coveredByARun = `
+	r.state IN ('queued', 'submitting', 'in_progress', 'completed', 'no_match')
+	OR (r.state IN ('skipped', 'failed', 'cancelled', 'submission_unknown')
+	    AND r.created_at > now() - interval '` + sweepRetryAfter + `'
+	    AND NOT (r.skip_reason = 'no_identifiers' AND p.updated_at > r.created_at))`
+
 // uncoveredSubjects names the contacts this tick should queue.
 //
 // Ordered oldest-first so the sweep converges: a contact passed over stays at
@@ -43,20 +68,9 @@ func (s *Store) uncoveredSubjects(ctx context.Context, tx pgx.Tx, name string, l
 		 WHERE p.archived_at IS NULL
 		   AND p.merged_into_id IS NULL
 		   AND NOT EXISTS (
-		       -- Live work, or an answer that settles the question. A completed
-		       -- run answered; a no-match run answered "nobody here", which is
-		       -- an answer and not a reason to ask again tomorrow.
 		       SELECT 1 FROM provider_run r
 		        WHERE r.person_id = p.id AND r.provider = $1
-		          AND (r.state IN ('queued', 'submitting', 'in_progress', 'completed', 'no_match')
-		               -- A refusal, a failure or a submission whose outcome was
-		               -- never learned holds the contact back only for as long
-		               -- as the cooldown. submission_unknown is terminal and
-		               -- nothing ever moves it, so treating it as an answer
-		               -- would exclude the contact for good — and it is not an
-		               -- answer, it is the absence of one.
-		               OR (r.state IN ('skipped', 'failed', 'cancelled', 'submission_unknown')
-		                   AND r.created_at > now() - interval '`+sweepRetryAfter+`')))
+		          AND (`+coveredByARun+`))
 		 ORDER BY p.created_at
 		 LIMIT $2`, name, limit)
 	if err != nil {
@@ -122,10 +136,7 @@ func (s *Store) backlogInTx(ctx context.Context, tx pgx.Tx, name string) (Backlo
 			   AND NOT EXISTS (
 			       SELECT 1 FROM provider_run r
 			        WHERE r.person_id = p.id AND r.provider = $1
-			          AND (r.state IN ('queued', 'submitting', 'in_progress', 'submission_unknown',
-			                           'completed', 'no_match')
-			               OR (r.state IN ('skipped', 'failed', 'cancelled')
-			                   AND r.created_at > now() - interval '`+sweepRetryAfter+`')))`,
+			          AND (`+coveredByARun+`))`,
 		name).Scan(&out.Remaining)
 	if err != nil {
 		return out, fmt.Errorf("integrations: counting the contacts still owed a lookup: %w", err)

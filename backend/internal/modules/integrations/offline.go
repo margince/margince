@@ -104,7 +104,24 @@ func (p *OfflineProvider) Descriptor() provider.Descriptor {
 			Cost:     map[provider.Pool]int{"email": 2},
 			Excludes: []provider.Category{"mobile"},
 		}},
-		Identifiers:  []string{"LinkedIn profile URL", "first and last name with company name or domain"},
+		Identifiers: []string{"LinkedIn profile URL", "first and last name with company name or domain"},
+		// The same two rules the real adapter declares, and the same as the
+		// Identifiers sentence above. A fake that accepted subjects the vendor
+		// rejects would let every dev stack and every test pass over the case
+		// this guard exists for.
+		MatchRules: []provider.MatchRule{
+			{AllOf: []provider.IdentifierField{provider.IdentifierLinkedInURL}},
+			{
+				AllOf: []provider.IdentifierField{
+					provider.IdentifierFirstName,
+					provider.IdentifierLastName,
+				},
+				AnyOf: []provider.IdentifierField{
+					provider.IdentifierCompanyName,
+					provider.IdentifierCompanyDomain,
+				},
+			},
+		},
 		EgressHost:   "api.surfe.com",
 		Verification: "credit-balance read",
 		TermsLinks:   []provider.Link{{Label: "Terms", URL: "https://surfe.com/terms"}},

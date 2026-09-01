@@ -216,6 +216,101 @@ func (s *Store) resolveProvider(ctx context.Context, named string) (string, erro
 	}
 }
 
+// refuseBeforeSpending answers every reason not to spend on this subject, in
+// the order that reads cheapest: the standing and wallet checks first, which
+// need nothing about the person, then the two that need their identifiers.
+//
+// It returns the skip reason to record, or "" to carry on. On the carry-on
+// path it also returns the input fingerprint, computed here because the
+// duplicate fence is defined over it — handing it back rather than recomputing
+// it keeps one answer to "what did we ask about this subject".
+//
+// Separated from queueOne because these refusals share a shape: each is a fact
+// about the subject's standing, the installation's wallet, or what the record
+// carries, and every one must be settled before a single credit is reserved.
+func (s *Store) refuseBeforeSpending(ctx context.Context, tx pgx.Tx, desc provider.Descriptor, conn admittedConnection, in provider.QueueInput, cats []provider.Category) (string, provider.SkipReason, error) {
+	const none = ""
+	refusal, err := s.refuseOnStanding(ctx, tx, conn, in)
+	if err != nil || refusal != "" {
+		return none, refusal, err
+	}
+	return s.refuseOnWhatTheRecordCarries(ctx, tx, desc, in, cats)
+}
+
+// refuseOnStanding answers the refusals that need nothing about the person:
+// whether we may contact them at all, and whether the installation should
+// spend right now.
+func (s *Store) refuseOnStanding(ctx context.Context, tx pgx.Tx, conn admittedConnection, in provider.QueueInput) (provider.SkipReason, error) {
+	// Consent, suppression, objection, erasure. Before anything else, because
+	// a subject we may not contact must not even be looked up.
+	verdict, err := s.fence(ctx, tx, in.PersonID)
+	if err != nil {
+		return "", err
+	}
+	if !verdict.Allowed {
+		return verdict.Reason, nil
+	}
+
+	// The rate ceiling and the freshness window (PI-PARAM-13/14).
+	if conn.dailyLimit != nil {
+		spent, err := s.runsSubmittedToday(ctx, tx, in.Provider)
+		if err != nil {
+			return "", err
+		}
+		if spent >= *conn.dailyLimit {
+			return provider.SkipRateLimited, nil
+		}
+	}
+	if conn.refreshAge != nil && in.Trigger.Automatic() {
+		fresh, err := s.hasFreshRun(ctx, tx, in.PersonID, in.Provider, *conn.refreshAge)
+		if err != nil {
+			return "", err
+		}
+		if fresh {
+			return provider.SkipAlreadyFresh, nil
+		}
+	}
+	return "", nil
+}
+
+// refuseOnWhatTheRecordCarries answers the two refusals that need the
+// subject's identifiers, and returns the fingerprint over them.
+func (s *Store) refuseOnWhatTheRecordCarries(ctx context.Context, tx pgx.Tx, desc provider.Descriptor, in provider.QueueInput, cats []provider.Category) (string, provider.SkipReason, error) {
+	const none = ""
+	idents, err := s.identifiers(ctx, tx, in.PersonID)
+	if err != nil {
+		return none, "", err
+	}
+
+	// Can this provider look the subject up at all? A record carrying neither
+	// a profile link nor a name with a company gives the vendor nothing to
+	// match on, and it answers with a rejection rather than an empty result.
+	// The platform can only read that rejection as a provider fault — which
+	// marks the whole CONNECTION broken, so one unlookupable contact makes
+	// every other lookup look unavailable.
+	//
+	// It applies to a human's request as well as the sweep's: the button
+	// cannot conjure an identifier, and a person who presses it deserves "there
+	// is nothing to look up" rather than a vendor error.
+	if !idents.Matchable(desc.MatchRules) {
+		return none, provider.SkipNoIdentifiers, nil
+	}
+	fingerprint := fingerprintOf(idents, cats)
+
+	// The duplicate fence, automatic runs only. A human asking explicitly
+	// knows something the duplicate signal does not.
+	if in.Trigger.Automatic() && s.cluster != nil {
+		dup, err := s.duplicateAlreadyBought(ctx, tx, in, fingerprint)
+		if err != nil {
+			return none, "", err
+		}
+		if dup {
+			return none, provider.SkipDuplicateSubjectCandidate, nil
+		}
+	}
+	return fingerprint, "", nil
+}
+
 // queueOne is the admission pipeline for one subject. Each refusal writes a
 // skipped run rather than nothing at all: a customer asking "why was this
 // person not enriched" deserves a row that answers, and a silent no-op cannot.
@@ -226,55 +321,15 @@ func (s *Store) queueOne(ctx context.Context, tx pgx.Tx, desc provider.Descripto
 		return provider.Run{}, err
 	}
 
-	// 1. Consent, suppression, objection, erasure. Before anything else,
-	//    because a subject we may not contact must not even be looked up.
-	verdict, err := s.fence(ctx, tx, in.PersonID)
+	// 1-4. Every reason not to spend, in one pass. The fingerprint comes back
+	//      with the verdict because the duplicate fence is defined over it and
+	//      step 5 writes it onto the run.
+	fingerprint, refusal, err := s.refuseBeforeSpending(ctx, tx, desc, conn, in, cats)
 	if err != nil {
 		return provider.Run{}, err
 	}
-	if !verdict.Allowed {
-		return s.insertSkipped(ctx, tx, conn, in, snapshot, cats, verdict.Reason)
-	}
-
-	// 2. The rate ceiling and the freshness window (PI-PARAM-13/14). Both are
-	//    reasons NOT to spend, so both precede the reservation.
-	if conn.dailyLimit != nil {
-		spent, err := s.runsSubmittedToday(ctx, tx, in.Provider)
-		if err != nil {
-			return provider.Run{}, err
-		}
-		if spent >= *conn.dailyLimit {
-			return s.insertSkipped(ctx, tx, conn, in, snapshot, cats, provider.SkipRateLimited)
-		}
-	}
-	if conn.refreshAge != nil && in.Trigger.Automatic() {
-		fresh, err := s.hasFreshRun(ctx, tx, in.PersonID, in.Provider, *conn.refreshAge)
-		if err != nil {
-			return provider.Run{}, err
-		}
-		if fresh {
-			return s.insertSkipped(ctx, tx, conn, in, snapshot, cats, provider.SkipAlreadyFresh)
-		}
-	}
-
-	// 3. The identifiers, and the fingerprint over them. Computed BEFORE the
-	//    duplicate check because that check is defined over the fingerprint.
-	idents, err := s.identifiers(ctx, tx, in.PersonID)
-	if err != nil {
-		return provider.Run{}, err
-	}
-	fingerprint := fingerprintOf(idents, cats)
-
-	// 4. The duplicate fence, automatic runs only. A human asking explicitly
-	//    knows something the duplicate signal does not.
-	if in.Trigger.Automatic() && s.cluster != nil {
-		dup, err := s.duplicateAlreadyBought(ctx, tx, in, fingerprint)
-		if err != nil {
-			return provider.Run{}, err
-		}
-		if dup {
-			return s.insertSkipped(ctx, tx, conn, in, snapshot, cats, provider.SkipDuplicateSubjectCandidate)
-		}
+	if refusal != "" {
+		return s.insertSkipped(ctx, tx, conn, in, snapshot, cats, refusal)
 	}
 
 	// 5. The run row, under the live-run index. A duplicate trigger for the

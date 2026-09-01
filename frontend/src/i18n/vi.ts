@@ -6848,6 +6848,8 @@ export const vi = {
     "Chưa kết nối nhà cung cấp dữ liệu nào, nên chưa mua gì cả.",
   "provider.profile.notEligible":
     "Liên hệ này không đủ điều kiện — họ đã phản đối, hoặc hồ sơ đã được lưu trữ.",
+  "provider.profile.nothingToLookUp":
+    "Không có thông tin nào để tra cứu liên hệ này. Hãy thêm URL LinkedIn hoặc công ty của họ, rồi việc tra cứu mới chạy được.",
   "provider.profile.neverRun": "Chưa ai tra cứu liên hệ này.",
   "provider.profile.queued": "Trong hàng đợi",
   "provider.profile.inProgress": "Đang tra cứu…",

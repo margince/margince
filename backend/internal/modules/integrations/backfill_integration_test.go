@@ -306,3 +306,73 @@ func seedCompletedRunWithoutClaims(t *testing.T, e *runsEnv) string {
 	}
 	return runID
 }
+
+// A contact declined for want of identifiers comes back as soon as the record
+// changes, without waiting out the cooldown.
+//
+// The section tells the reader to add a LinkedIn URL or a company. If the
+// sweep then ignored them until tomorrow, the page would be asking somebody to
+// do something and then not looking — which is worse than saying nothing,
+// because they have no way to tell whether it worked.
+//
+// The other refusals keep the full cooldown: a rate limit or a budget refusal
+// says nothing about the RECORD, so editing the record is no reason to retry.
+func TestARecordFixedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+	ctx := context.Background()
+
+	unfixed := e.plantSubjectSkippedFor(t, provider.SkipNoIdentifiers)
+	fixed := e.plantSubjectSkippedFor(t, provider.SkipNoIdentifiers)
+	rateLimited := e.plantSubjectSkippedFor(t, provider.SkipRateLimited)
+
+	if selected := e.sweepSelects(t); selected[unfixed] || selected[fixed] || selected[rateLimited] {
+		t.Fatal("a contact declined moments ago was re-selected: without a cooldown of some kind the " +
+			"sweep asks about the same contact every tick")
+	}
+
+	// One record is edited — somebody adds the profile link the page asked
+	// for. person.updated_at moves; the run's created_at does not.
+	if _, err := e.owner.Exec(ctx,
+		`UPDATE person SET updated_at = now() + interval '1 second' WHERE id = $1`, fixed); err != nil {
+		t.Fatal(err)
+	}
+	// And one contact declined for a reason that has nothing to do with the
+	// record is edited too, to prove the rule reads the REASON and not merely
+	// the edit.
+	if _, err := e.owner.Exec(ctx,
+		`UPDATE person SET updated_at = now() + interval '1 second' WHERE id = $1`, rateLimited); err != nil {
+		t.Fatal(err)
+	}
+
+	selected := e.sweepSelects(t)
+	if !selected[fixed] {
+		t.Error("a contact edited after being declined for want of identifiers was NOT re-selected: the " +
+			"page told the reader to add a profile link and then ignored them until tomorrow")
+	}
+	if selected[unfixed] {
+		t.Error("a contact nobody touched was re-selected, so the rule is not reading the edit at all " +
+			"and every unmatchable contact is asked about every tick")
+	}
+	if selected[rateLimited] {
+		t.Error("a contact declined by the RATE LIMIT was re-selected because somebody edited the record; " +
+			"editing a contact does not raise the vendor's ceiling, and this spends against it early")
+	}
+}
+
+// plantSubjectSkippedFor adds a contact whose one run was skipped for the
+// given reason, created now.
+func (e *runsEnv) plantSubjectSkippedFor(t *testing.T, reason provider.SkipReason) ids.PersonID {
+	t.Helper()
+	id := e.plantSubject(t)
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO provider_run
+		       (person_id, subject_kind, provider, trigger, state, skip_reason,
+		        connection_version, connection_epoch, configuration_snapshot,
+		        requested_categories, input_fingerprint, external_correlation_id)
+		VALUES ($1, 'person', $2, 'automatic_backfill', 'skipped', $3, 1, 1, '{}'::jsonb,
+		        ARRAY['linkedin_profile'], $4, gen_random_uuid())`,
+		id, e.provider, string(reason), "fp-"+string(reason)+"-"+id.String()); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}

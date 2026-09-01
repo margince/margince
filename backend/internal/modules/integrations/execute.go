@@ -181,6 +181,24 @@ func (s *Store) leaseForSubmit(ctx context.Context, tx pgx.Tx, name, runID strin
 	if err != nil {
 		return none, false, err
 	}
+	// The identifiers are read again HERE, so they are checked again here.
+	// admission asked the same question, but a record can lose a profile link
+	// or an employer between being queued and being sent — an edit, a merge, a
+	// retention pass — and the vendor answers an unmatchable request with a
+	// rejection the platform reads as a provider fault, marking the whole
+	// connection broken. That is the defect this guard exists to stop, and a
+	// check only at queue time leaves the window open.
+	//
+	// Skipped rather than cancelled: `skipped` is excluded from spend exactly
+	// as `cancelled` is, so the hold is released either way, and the reason is
+	// what the person page needs to say what changed.
+	desc, err := s.registry.Descriptor(name)
+	if err != nil {
+		return none, false, err
+	}
+	if !req.Identifiers.Matchable(desc.MatchRules) {
+		return none, false, s.markSkipped(ctx, tx, runID, provider.SkipNoIdentifiers)
+	}
 	cred, err := s.unseal(ctx, tx, conn.credentialRef)
 	if err != nil {
 		return none, false, err

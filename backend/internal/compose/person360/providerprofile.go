@@ -431,7 +431,12 @@ var skipStates = map[string]crmcontracts.PersonProviderProfileState{
 	// A consent decision, not an eligibility one. It reads as not_eligible
 	// today because the contract has no suppressed state; the difference is
 	// worth a spec change rather than a wrong word invented here.
-	"suppressed":       crmcontracts.PersonProviderProfileStateNotEligible,
+	"suppressed": crmcontracts.PersonProviderProfileStateNotEligible,
+	// Its own state, not a kind of not_eligible: nothing forbids this
+	// purchase. The record carries no profile link and no company, so the
+	// provider has nothing to match on — and the reader's next step is to add
+	// one of those, which is the next step for nothing else in this map.
+	"no_identifiers":   crmcontracts.PersonProviderProfileStateNothingToLookUp,
 	"budget_exhausted": crmcontracts.PersonProviderProfileStateInsufficientCredits,
 	"low_balance":      crmcontracts.PersonProviderProfileStateInsufficientCredits,
 	"rate_limited":     crmcontracts.PersonProviderProfileStateRateLimited,

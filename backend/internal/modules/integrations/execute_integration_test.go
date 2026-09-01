@@ -616,3 +616,74 @@ func TestAPartialAnswerChargesOnlyForWhatCameBack(t *testing.T) {
 			"contact and charges only for a match, so the hold is released", charged(actual))
 	}
 }
+
+// A subject that loses its identifiers between being queued and being sent is
+// declined at the door, not put to the provider.
+//
+// The window is real: a record can be edited, merged or anonymized while its
+// run sits queued. Admission checked matchability, but the submission re-reads
+// the identifiers from the domain — so a check only at queue time leaves
+// exactly this gap, and what goes through it is the unmatchable request the
+// vendor rejects, which the platform then reads as a provider fault and uses
+// to mark the whole connection broken.
+func TestASubjectThatLosesItsIdentifiersIsNeverSubmitted(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+	sealCredential(t, e)
+	run := queueFor(t, e, e.mine.String())
+	if run.State != provider.RunQueued {
+		t.Fatalf("run is %s, want queued: the window under test opens only for a run that was admitted", run.State)
+	}
+
+	// The record loses its company between admission and submission.
+	e.store.WithDomain(
+		func(context.Context, pgx.Tx, string) (FenceVerdict, error) {
+			return FenceVerdict{Allowed: true}, nil
+		},
+		nil,
+		func(context.Context, pgx.Tx, string) (provider.PersonIdentifiers, error) {
+			return provider.PersonIdentifiers{FirstName: "Anna", LastName: "Muster"}, nil
+		},
+	)
+
+	before := e.fake.Calls()
+	if err := e.store.ExecuteSubmit(e.ctx, run.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.fake.Calls(); got != before {
+		t.Errorf("the adapter was called %d time(s) for a subject it cannot match on; that request comes "+
+			"back a rejection and marks the connection broken for every other contact", got-before)
+	}
+
+	state, _, inflight := runRow(t, e, run.ID)
+	if state != string(provider.RunSkipped) {
+		t.Fatalf("run is %s, want skipped", state)
+	}
+	if inflight != nil {
+		t.Error("the run is marked in flight, but nothing was ever sent")
+	}
+
+	var reason *string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT skip_reason FROM provider_run WHERE id = $1`, run.ID).Scan(&reason); err != nil {
+		t.Fatal(err)
+	}
+	if reason == nil || *reason != string(provider.SkipNoIdentifiers) {
+		t.Errorf("skip_reason is %v, want no_identifiers: the page reads it to say what the record is "+
+			"missing, and a bare cancellation says nothing anybody can act on", reason)
+	}
+
+	// The hold must not survive. `skipped` is excluded from spend exactly as
+	// `cancelled` is, so a run that bought nothing charges nothing.
+	var spend int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM provider_run_reservation r
+		  JOIN provider_run run ON run.id = r.run_id
+		 WHERE r.run_id = $1 AND run.state <> 'skipped' AND run.state <> 'cancelled'`,
+		run.ID).Scan(&spend); err != nil {
+		t.Fatal(err)
+	}
+	if spend != 0 {
+		t.Errorf("%d reservation(s) still count against the ceiling for a run that never left the "+
+			"building, so the customer's monthly budget is spent on nothing", spend)
+	}
+}

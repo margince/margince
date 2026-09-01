@@ -6922,6 +6922,8 @@ export const de = {
     "Es ist kein Datenanbieter verbunden, also wurde nichts gekauft.",
   "provider.profile.notEligible":
     "Für diesen Kontakt nicht zulässig — er hat widersprochen, oder der Datensatz ist archiviert.",
+  "provider.profile.nothingToLookUp":
+    "Es gibt nichts, womit sich dieser Kontakt nachschlagen ließe. Tragen Sie die LinkedIn-URL oder das Unternehmen ein, dann kann die Suche laufen.",
   "provider.profile.neverRun":
     "Diesen Kontakt hat noch niemand nachgeschlagen.",
   "provider.profile.queued": "In der Warteschlange",
