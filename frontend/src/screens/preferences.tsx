@@ -16,10 +16,11 @@ import { problemMessageOf, throwProblem } from "./common";
 import {
   type Draft,
   dirtyKeys,
-  displayOn,
   initialDraft,
   labelOf,
   type PurposeView,
+  rowIsOn,
+  stateLineKey,
   toChoices,
 } from "./preferences.logic";
 import { PublicPage } from "./publicpage";
@@ -226,7 +227,14 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
             ...old,
             purposes: old.purposes.map((purpose) =>
               withdrawnKeys.has(purpose.key)
-                ? { ...purpose, state: "withdrawn" as const }
+                ? {
+                    ...purpose,
+                    state: "withdrawn" as const,
+                    // `choice` too, and not only `state`: the row is drawn
+                    // from the choice, so echoing the raw state alone left
+                    // a just-unsubscribed row still showing as on.
+                    choice: "opted_out" as const,
+                  }
                 : purpose,
             ),
           },
@@ -307,7 +315,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
           <PreferenceRow
             key={purpose.key}
             purpose={purpose}
-            on={draft[purpose.key] ?? displayOn(purpose.state)}
+            on={rowIsOn(purpose, draft)}
             wording={wordingByKey[purpose.key]}
             t={t}
             disabled={writePending}
@@ -432,9 +440,7 @@ function PreferenceRow({
         <p className="t-caption" data-testid={`wording-${purpose.key}`}>
           {wording}
         </p>
-        <p className="t-caption pref-state">
-          {on ? t("prefs.subscribed") : t("prefs.notSubscribed")}
-        </p>
+        <p className="t-caption pref-state">{t(stateLineKey(purpose, on))}</p>
         {purpose.locked && (
           <p className="t-caption pref-locked-why">{t("prefs.lockedWhy")}</p>
         )}
