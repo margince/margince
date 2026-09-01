@@ -422,7 +422,18 @@ describe("the details that cost credits", () => {
     },
   ];
 
-  function mountWithCatalog(profile: Profile, run: () => Response) {
+  function mountWithCatalog(
+    profile: Profile,
+    run: () => Response,
+    // Which categories the admin has switched on. The default is all three,
+    // which is what almost every case wants; a case about the SELECTION says
+    // so here rather than building a second stub beside this one.
+    categories: Record<string, boolean> = {
+      linkedin_profile: true,
+      professional_email: true,
+      mobile: true,
+    },
+  ) {
     const posted: unknown[] = [];
     installFetchStub({
       "GET /me": meRoute({ person: ["read", "update"] }),
@@ -434,13 +445,7 @@ describe("the details that cost credits", () => {
               status: "connected",
               credential_present: true,
               catalog,
-              configuration: {
-                categories: {
-                  linkedin_profile: true,
-                  professional_email: true,
-                  mobile: true,
-                },
-              },
+              configuration: { categories },
               credits: { pools: {} },
               version: 1,
               created_at: "2026-08-20T09:00:00Z",

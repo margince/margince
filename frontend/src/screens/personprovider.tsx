@@ -293,12 +293,20 @@ function BuyPriced({
   const connection = connections.data?.connections.find(
     (c) => c.provider === profile.provider,
   );
-  // Only what this connection actually carries: a category an admin switched
-  // off is not one to offer, and the server would refuse it anyway.
+  // Only what this connection actually carries, asked of EVERY category the
+  // press would send — not just the one on the button.
+  //
+  // A category with a prerequisite sends both, so a connection with the mobile
+  // switched on and the work email switched off would otherwise show a
+  // two-credit button whose request the server refuses every time. The comment
+  // that used to sit here said "the server would refuse it anyway"; that only
+  // stays true if this asks about the same set the press does.
+  const enabled = (category: string) =>
+    connection?.configuration.categories?.[category] ?? false;
   const buyable = (connection?.catalog ?? []).filter(
     (entry) =>
       !entry.free &&
-      (connection?.configuration.categories?.[entry.category] ?? false) &&
+      boughtWith(entry).every(enabled) &&
       !alreadyHeld(profile, entry.category),
   );
   if (buyable.length === 0 || !canEnrichNow(profile.state, running)) {

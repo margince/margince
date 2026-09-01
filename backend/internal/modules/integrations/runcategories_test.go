@@ -233,3 +233,68 @@ func TestAProviderWithoutPrerequisitesBuysWhatItLikes(t *testing.T) {
 		t.Errorf("got %v, want just the one category asked for", got)
 	}
 }
+
+// A run naming NO categories takes the connection's selection — and that
+// selection has to survive the same rules, because an admin ticking boxes on a
+// settings card is not asked to know which the provider only issues alongside
+// another.
+//
+// The defect: the guard above sat behind an early return for the empty request,
+// so a connection selecting only the mobile queued exactly the broken
+// mobile-only run through the API's own documented default.
+func TestTheConnectionsOwnSelectionIsNarrowedToWhatCanBeAsked(t *testing.T) {
+	desc := pricedDescriptor()
+	desc.RequiresAnswerTo = map[provider.Category]provider.Category{
+		"mobile": "professional_email",
+	}
+	// The admin ticked the mobile and the free ones, and left the work email
+	// off — a configuration nothing forbids.
+	conn := connectionBuying("linkedin_profile", "mobile")
+
+	got, err := runCategories(desc, conn, provider.QueueInput{Trigger: provider.TriggerManual})
+	if err != nil {
+		t.Fatalf("a plain lookup was refused over a category nobody typed: %v", err)
+	}
+	for _, c := range got {
+		if c == "mobile" {
+			t.Errorf("got %v — the mobile is still asked for without the email it needs, which is the "+
+				"request that comes back completed and empty", got)
+		}
+	}
+	if len(got) != 1 || got[0] != "linkedin_profile" {
+		t.Errorf("got %v, want just linkedin_profile: what the provider CAN answer must survive", got)
+	}
+}
+
+// Dropping must not empty the request. A connection whose every selection
+// depends on something it does not select is refused, because a request naming
+// no categories is one the provider answers with a refusal — and that flips the
+// connection's status, breaking every later lookup over one configuration.
+func TestAConnectionWhoseWholeSelectionIsUnaskableIsRefused(t *testing.T) {
+	desc := pricedDescriptor()
+	desc.RequiresAnswerTo = map[provider.Category]provider.Category{
+		"mobile": "professional_email",
+	}
+	conn := connectionBuying("mobile")
+
+	_, err := runCategories(desc, conn, provider.QueueInput{Trigger: provider.TriggerManual})
+	if !errors.Is(err, ErrCategoryNotPermitted) {
+		t.Fatalf("err = %v, want a refusal: dispatching the empty remainder sends a request naming no "+
+			"categories, and the refusal that comes back marks the connection broken", err)
+	}
+}
+
+// A selection with no dependencies at all is returned untouched, so the
+// narrowing above cannot quietly shrink an ordinary connection.
+func TestAnUnencumberedSelectionIsReturnedWhole(t *testing.T) {
+	desc := pricedDescriptor()
+	conn := connectionBuying("linkedin_profile", "professional_email", "mobile")
+
+	got, err := runCategories(desc, conn, provider.QueueInput{Trigger: provider.TriggerManual})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Errorf("got %v, want all three — a provider declaring no prerequisites loses nothing", got)
+	}
+}

@@ -95,3 +95,79 @@ func TestAProviderMayDeclareNoMatchRules(t *testing.T) {
 			"provider that does not use it: %v", err)
 	}
 }
+
+// requiresChain is the shipped fake with a prerequisite graph replaced, which
+// is the shape an adapter author reaches by declaring one by hand.
+type requiresChain struct {
+	provider.Adapter
+	requires map[provider.Category]provider.Category
+}
+
+func (r requiresChain) Descriptor() provider.Descriptor {
+	d := r.Adapter.Descriptor()
+	d.RequiresAnswerTo = r.requires
+	return d
+}
+
+// A prerequisite chain or cycle is refused where the author declares it.
+//
+// Every reader of RequiresAnswerTo walks ONE hop: the price of a purchase, the
+// set the button sends, the check that refuses a lone request, the free-set
+// derivation. Over a chain that is wrong in the direction that costs money —
+// A's button quotes and sends A+B, and the server refuses it for missing C —
+// and a cycle has no ordering that satisfies "answer first" at all.
+func TestAPrerequisiteChainIsRefusedAtRegistration(t *testing.T) {
+	t.Parallel()
+
+	// The shipped fake registers as it is, so the cases below are not passing
+	// over a descriptor refused for some other reason.
+	shipped := NewOfflineProvider(0, time.Now).Descriptor()
+	if len(shipped.RequiresAnswerTo) == 0 {
+		t.Fatal("the shipped fake declares no prerequisite, so no dev stack or test exercises this rule")
+	}
+	if _, err := NewRegistry(NewOfflineProvider(0, time.Now)); err != nil {
+		t.Fatalf("the shipped adapter is refused by its own rule: %v", err)
+	}
+
+	for _, c := range []struct {
+		name     string
+		requires map[provider.Category]provider.Category
+		names    string
+	}{
+		{
+			name: "a chain",
+			requires: map[provider.Category]provider.Category{
+				"mobile":             "professional_email",
+				"professional_email": "linkedin_profile",
+			},
+			names: "linkedin_profile",
+		},
+		{
+			name: "a two-step cycle",
+			requires: map[provider.Category]provider.Category{
+				"mobile":             "professional_email",
+				"professional_email": "mobile",
+			},
+			names: "professional_email",
+		},
+		{
+			name:     "a category needing itself",
+			requires: map[provider.Category]provider.Category{"mobile": "mobile"},
+			names:    "its own prerequisite",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := NewRegistry(requiresChain{
+				Adapter: NewOfflineProvider(0, time.Now), requires: c.requires,
+			})
+			if err == nil {
+				t.Fatal("an adapter declaring a prerequisite graph deeper than one hop registered: every " +
+					"reader walks one hop, so its purchases are priced and requested short")
+			}
+			if !strings.Contains(err.Error(), c.names) {
+				t.Errorf("the refusal does not name what is wrong, so an author cannot act on it: %v", err)
+			}
+		})
+	}
+}

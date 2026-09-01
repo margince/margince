@@ -47,7 +47,31 @@ func runCategories(desc provider.Descriptor, conn admittedConnection, in provide
 	}
 	requested := in.Categories
 	if len(requested) == 0 {
-		return permitted, nil
+		// The caller named nothing, so the connection's own selection is the
+		// request — and it has to survive the same two rules, because an admin
+		// choosing categories on a settings card is not asked to know which of
+		// them the provider only issues alongside another.
+		//
+		// DROPPED rather than refused, unlike the named path below. Nobody made
+		// a mistake here: the caller asked for "whatever this connection buys",
+		// and answering that with a 422 about a category they never typed would
+		// make the plain lookup button unusable on a connection an admin is
+		// perfectly entitled to configure. What is dropped could not have been
+		// answered anyway — a mobile lookup with no email to anchor it comes
+		// back empty and is charged for.
+		issuable := askable(desc, permitted)
+		if len(issuable) == 0 {
+			// Everything the connection selects depends on something it does
+			// not. Dispatching the empty remainder would send a request naming
+			// no categories, which the provider answers with a refusal — and a
+			// refusal flips the connection's status, breaking every later
+			// lookup over one configuration choice. The same reason the
+			// automatic path above refuses rather than sending nothing.
+			return nil, fmt.Errorf(
+				"%w: every category this connection selects is one the provider only issues alongside another it does not select",
+				ErrCategoryNotPermitted)
+		}
+		return issuable, nil
 	}
 	allowed := make(map[provider.Category]bool, len(permitted))
 	for _, c := range permitted {
@@ -69,6 +93,41 @@ func runCategories(desc provider.Descriptor, conn admittedConnection, in provide
 		return nil, err
 	}
 	return out, nil
+}
+
+// askable drops from a set the categories the provider would not issue for it:
+// a fallback whose trigger is absent, and one whose prerequisite is absent.
+//
+// The set is otherwise kept in order and whole. Dropping is right only where
+// nobody chose the combination — see the caller — and it is the same question
+// requireCascadeTriggers and requirePrerequisites ask, answered by removal
+// instead of refusal.
+func askable(desc provider.Descriptor, categories []provider.Category) []provider.Category {
+	present := make(map[provider.Category]bool, len(categories))
+	for _, c := range categories {
+		present[c] = true
+	}
+	drop := map[provider.Category]bool{}
+	for _, cascade := range desc.Cascades {
+		if present[cascade.Category] && !present[cascade.After] {
+			drop[cascade.Category] = true
+		}
+	}
+	for category, prerequisite := range desc.RequiresAnswerTo {
+		if present[category] && !present[prerequisite] {
+			drop[category] = true
+		}
+	}
+	if len(drop) == 0 {
+		return categories
+	}
+	out := make([]provider.Category, 0, len(categories))
+	for _, c := range categories {
+		if !drop[c] {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // requirePrerequisites refuses a category asked for without the one that has

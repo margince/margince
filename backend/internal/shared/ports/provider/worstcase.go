@@ -130,6 +130,13 @@ func PoolsInLockOrder(cost map[Pool]int) []Pool {
 // A cascade's cost counts. A category that is free to request but triggers a
 // charged fallback is not free, and calling it so would put a spend behind a
 // switch labelled "costs nothing".
+//
+// A prerequisite's cost counts for the same reason, and more directly: a
+// category the provider only issues alongside another cannot be requested
+// without it at all, so its true price includes that one. Free without this,
+// such a category would be bought automatically for every new contact and
+// charge the prerequisite's pool each time — a spend nobody authorized,
+// against a switch that promised none.
 func (d Descriptor) Free() []Category {
 	charged := map[Category]bool{}
 	for category, pools := range d.CostTable {
@@ -144,6 +151,11 @@ func (d Descriptor) Free() []Category {
 			if n > 0 {
 				charged[cascade.Category] = true
 			}
+		}
+	}
+	for category, prerequisite := range d.RequiresAnswerTo {
+		if charged[prerequisite] {
+			charged[category] = true
 		}
 	}
 	free := []Category{}
