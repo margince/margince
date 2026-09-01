@@ -98,16 +98,17 @@ var defaults = map[string]Document{
 	},
 	"manager": {
 		Objects: managerObjects,
-		// Own scope, not team: membership of a team is not by itself permission
-		// to rewrite a teammate's records. Writing somebody else's customer
-		// record takes an explicit share — a record_grant naming the user or
-		// one of their teams — or an unbounded seat.
+		// Team scope: a Team Lead manages their team, so they read and work the
+		// records of everyone sharing a live team with them without a share
+		// being arranged first. This is the manager grid above, bounded to the
+		// team rather than the organization — `management` is the same grid
+		// unbounded.
 		//
-		// The team ARM survives in the write predicate and is not dead: a
-		// record_grant may name a team, and an operator may still author a
-		// custom role at team scope. What changed is only what the seeded
-		// roles claim by default.
-		RowScope: principal.RowScopeOwn,
+		// Membership resolves through team_membership and live teams only, so a
+		// Team Lead who belongs to no team reaches exactly their own rows. A
+		// record_grant naming a user or a team stays the mechanism for sharing
+		// ACROSS teams, and for every seat that is not this one.
+		RowScope: principal.RowScopeTeam,
 	},
 	"rep": {
 		// Reps create and work records but never delete them — except

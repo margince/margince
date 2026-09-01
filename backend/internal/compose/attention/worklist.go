@@ -60,7 +60,7 @@ func (s *Service) Worklist(
 		return crmcontracts.Worklist{}, err
 	}
 	// Same rule, same moment: whose queue this is, refused rather than narrowed.
-	namedOwner, err := resolveOwner(ctx, owner)
+	namedOwner, err := s.resolveOwner(ctx, owner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}

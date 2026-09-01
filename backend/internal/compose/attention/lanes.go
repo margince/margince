@@ -129,6 +129,19 @@ type Tasks interface {
 	OpenForViewer(ctx context.Context, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
 }
 
+// Teammates answers whether a named user is on a team with the reader.
+//
+// The reader is the authenticated caller and is not passed: the module behind
+// this takes it from the principal, so the question can only ever be asked
+// about an edge the asker is themselves an end of.
+//
+// Asked only when a TEAM-scoped reader names somebody else's queue. An
+// unbounded reader reaches every row and needs no such question; an own-scoped
+// reader is refused before it is asked.
+type Teammates interface {
+	SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error)
+}
+
 // Task is one piece of agreed work.
 type Task struct {
 	ID      ids.UUID

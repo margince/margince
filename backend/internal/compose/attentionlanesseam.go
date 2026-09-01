@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -399,6 +400,20 @@ func (f attentionDealFacts) Figures(
 		}
 	}
 	return out, nil
+}
+
+// attentionTeammates answers the membership question through the identity
+// module, which owns team_membership. The typed ids stay inside that module;
+// the projection speaks raw uuids, exactly as the row-scope seams do.
+type attentionTeammates struct{ svc *identity.Service }
+
+// newAttentionTeammates builds the membership lane over the identity module.
+func newAttentionTeammates(pool *pgxpool.Pool) attentionTeammates {
+	return attentionTeammates{svc: identity.NewService(pool)}
+}
+
+func (t attentionTeammates) SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error) {
+	return t.svc.SharesLiveTeamWithCaller(ctx, ids.From[ids.UserKind](other))
 }
 
 // attentionTasks reads open tasks through the activities store. A task is an

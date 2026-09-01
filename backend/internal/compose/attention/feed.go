@@ -105,6 +105,12 @@ type Service struct {
 	// routine contact decision joins. Nil means every address reads as a
 	// person's, which under-groups rather than hiding anything.
 	machine MachineSender
+	// teammates answers whether a team-scoped reader may open a named person's
+	// queue. Unlike the lanes above it, nil does NOT mean "absent lane": it
+	// means the question has no answer, and resolveOwner refuses rather than
+	// admits. A lane whose absence widened a scope would be a security hole
+	// wearing the shape of a missing feature.
+	teammates Teammates
 	// decisionDepth is how many staged decisions a read takes. The lane feed's
 	// page is a prefetch for a surface that answers one at a time; the ranked
 	// queue takes a census, because a batch row that says "10" over a pile of
@@ -196,6 +202,18 @@ func (s *Service) WithMachineSender(is MachineSender) *Service {
 // before this seam existed — a smaller card, never a wrong one.
 func (s *Service) WithDealFacts(f DealFacts) *Service {
 	s.dealFacts = f
+	return s
+}
+
+// WithTeammates binds the membership question a team-scoped reader's named-owner
+// ask is decided by. An option for the reason WithWaiting is one.
+//
+// Unbound, a team-scoped reader naming somebody else is REFUSED — the opposite
+// of how the optional lanes above degrade, and deliberately so: those answer
+// "this installation has no such lane", while this one answers "may I", and an
+// unanswerable may-I is a no.
+func (s *Service) WithTeammates(t Teammates) *Service {
+	s.teammates = t
 	return s
 }
 

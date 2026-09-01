@@ -22,9 +22,11 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -216,6 +218,53 @@ func (s *Service) recordTeamChange(ctx context.Context, tx pgx.Tx, actor Identit
 		payload.UserId = &u
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, teamID, payload)
+}
+
+// SharesLiveTeamWithCaller reports whether the named user is on a team with the
+// AUTHENTICATED caller.
+//
+// The caller's own id comes from the principal rather than from an argument, so
+// this cannot be asked about two other people. That is the gate: the answer
+// discloses one edge of the organization chart, and the only edge a reader is
+// entitled to probe is one they are themselves an end of. A caller with no
+// human behind it is refused — an agent or a system pass has no teammates, and
+// answering "false" would read as a fact rather than as an absence.
+//
+// Live teams only, matching how row scope resolves membership: an archived team
+// keeps its rows so a restore brings them back, but while archived it grants
+// nothing, and an answer of true here would hand a reader authority the
+// row-scope predicate does not agree with.
+//
+// The parent_team_id hierarchy is NOT walked, again matching row scope. A lead
+// of a parent team reaches a child team's members by belonging to the child
+// team too. Walking it here alone would make this answer wider than the
+// predicate that decides what the reader then reads.
+func (s *Service) SharesLiveTeamWithCaller(ctx context.Context, other ids.UserID) (bool, error) {
+	// Refuses an agent seat and a Deal Room buyer. It admits the system and
+	// connector principals, which is why the seated-identity check follows: a
+	// background pass has no place on the chart to answer from.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return false, err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+		return false, apperrors.ErrPermissionDenied
+	}
+	me := ids.From[ids.UserKind](actor.UserID)
+	// Asking about themselves needs no query: a reader is their own teammate,
+	// and the caller need not special-case it.
+	if me == other {
+		return true, nil
+	}
+	var shares bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT EXISTS (
+		         SELECT 1 FROM team_membership ma
+		           JOIN team_membership mb ON mb.team_id = ma.team_id AND mb.user_id = $2
+		           JOIN team t ON t.id = ma.team_id AND t.archived_at IS NULL
+		          WHERE ma.user_id = $1)`, me, other).Scan(&shares)
+	})
+	return shares, err
 }
 
 // validTeamName trims and bounds a team name.

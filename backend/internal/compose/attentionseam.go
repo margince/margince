@@ -426,5 +426,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// The figures behind a deal a row names but does not carry — the
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
-		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())})
+		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
+		// Whether a team-scoped reader may open a named person's queue. Bound
+		// unconditionally: unbound, that reader is refused, so a seam that
+		// dropped this would present as a Team Lead unable to open their own
+		// rep's day rather than as one able to open a stranger's.
+		WithTeammates(newAttentionTeammates(pool))
 }
