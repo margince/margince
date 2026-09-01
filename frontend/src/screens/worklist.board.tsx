@@ -18,8 +18,9 @@ import { type TeamBoardMember, useTeamBoard } from "./worklist.queries";
 //
 // It rides in the same shape rather than beside the table, because it is the
 // same question — how much work is sitting there — asked of the one holder who
-// is not a person. Its id is empty, which is what tells the press there is
-// nobody's day to open.
+// is not a person. Its id is empty, and pressing it opens the `unassigned`
+// scope rather than a person's day: the work is real and somebody has to pick
+// it up, so the row leads to the queue that shows it.
 type BoardRow = Readonly<{
   id: string;
   name: string;
@@ -76,7 +77,11 @@ function count(value: number) {
 // of the screen every morning.
 export function TeamBoard({
   onOwner,
-}: Readonly<{ onOwner: (userId: string) => void }>) {
+  onUnassigned,
+}: Readonly<{
+  onOwner: (userId: string) => void;
+  onUnassigned: () => void;
+}>) {
   const t = useT();
   const board = useTeamBoard(true);
   // A board that could not be read says so. It never reads as an empty team:
@@ -106,13 +111,18 @@ export function TeamBoard({
                 t("worklist.board.nobody"),
               )}
               rowKey={(row) => row.id || "unassigned"}
-              // Pressing a row opens that person's day. The unassigned row has
-              // no day to open, so it is not a link — a row that looks
-              // pressable and does nothing is worse than a plain one.
+              // Every row goes somewhere: a person's row opens their day, and
+              // the unassigned row opens the scope that holds unowned work.
+              //
+              // DataTable draws every row as pressable once onRowClick is set —
+              // it has no per-row opt-out — so a row that led nowhere would look
+              // exactly like one that led somewhere and do nothing when pressed.
               onRowClick={(row) => {
-                if (row.id !== "") {
-                  onOwner(row.id);
+                if (row.id === "") {
+                  onUnassigned();
+                  return;
                 }
+                onOwner(row.id);
               }}
               columns={[
                 {
