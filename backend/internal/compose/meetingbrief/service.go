@@ -10,6 +10,7 @@ package meetingbrief
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -150,14 +151,39 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	// to "what language is AI writing in" — the admin's setting — and a brief
 	// that asked the browser instead would be the single surface disagreeing
 	// with every other one.
-	sections, writtenBy := Write(ctx, s.lane, in, identity.BaseLanguageForPrompt(ctx, s.pool))
-	// The plan gets its OWN ranked set rather than the one the sections
+	// The two halves are written CONCURRENTLY. They share a lane and nothing
+	// else: the sections say what is known, the plan says what to do, and
+	// running them in sequence would make a reader wait for the first before
+	// the second even started. Each degrades to its own floor, so one slow or
+	// failing call cannot take the other down.
+	//
+	// The plan gets its OWN ranked claim set rather than the one the sections
 	// consumed. `take` marks a claim as spoken so no section repeats another,
 	// and the plan is not a tenth section: it is the same facts read for what
 	// to DO about them, so the promise the goal names is also the promise the
 	// objective aims at. Sharing one set would have the plan silently skip
 	// whatever the sections had already used.
-	plan := wirePlan(DeterministicPlan(in, rankClaims(in)), in)
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	floor := DeterministicPlan(in, rankClaims(in))
+	var (
+		sections    []Section
+		writtenBy   crmcontracts.WrittenBy
+		planWritten Plan
+		planBy      crmcontracts.WrittenBy
+		both        sync.WaitGroup
+	)
+	both.Add(2)
+	go func() {
+		defer both.Done()
+		sections, writtenBy = Write(ctx, s.lane, in, lang)
+	}()
+	go func() {
+		defer both.Done()
+		planWritten, planBy = WritePlan(ctx, s.lane, in, floor, lang)
+	}()
+	both.Wait()
+	plan := wirePlan(planWritten, in)
+	plan.GeneratedBy = planBy
 	var filed *ids.UUID
 	if in.Project != nil {
 		id, err := ids.Parse(in.Project.ID)
