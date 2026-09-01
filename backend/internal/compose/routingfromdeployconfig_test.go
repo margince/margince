@@ -96,11 +96,25 @@ func TestRoutingFromDeployConfigRefusesAConfigThatBindsNothing(t *testing.T) {
 	}
 }
 
-// A declared binding that cannot be parsed is the file's error and is reported
-// as one, rather than read as "nothing declared".
-func TestRoutingFromDeployConfigReportsAMalformedBinding(t *testing.T) {
-	_, err := RoutingFromDeployConfig(writeConfig(t, "seeds:\n  ai_routing:\n    profile: eu_hosted\n    tiers:\n      local_small: { provider: nonsense_provider, model: x }\n"), runtimeenv.Development)
+// A declared binding the parser REFUSES is reported as the file's error, not read
+// as "nothing declared" — the two send an operator to opposite fixes.
+//
+// The case is an incomplete block: ai_routing without an embeddings lane, which
+// ParseRouting rejects. Note what this does NOT test — an unknown provider name
+// is not refused here at all, because ValidateTierBinding only enforces the
+// profile rule and a bad provider surfaces later, when SelectBrain tries to build
+// a client. An earlier version of this test asserted "unknown provider" and
+// passed on THIS error instead, which is a test passing for a reason it did not
+// name.
+func TestRoutingFromDeployConfigReportsARefusedBinding(t *testing.T) {
+	_, err := RoutingFromDeployConfig(writeConfig(t, "seeds:\n  ai_routing:\n    profile: eu_hosted\n    tiers:\n      local_small: { provider: openai_compatible, model: x, base_url: https://broker.example/api }\n"), runtimeenv.Development)
 	if err == nil {
-		t.Fatal("a binding naming an unknown provider was accepted")
+		t.Fatal("a routing block with no embeddings lane was accepted; the router requires one and would have failed at assembly")
+	}
+	if !strings.Contains(err.Error(), "seeds.ai_routing") {
+		t.Errorf("the error must name the key whose contents were refused, got %q", err)
+	}
+	if strings.Contains(err.Error(), "declares no seeds.ai_routing") {
+		t.Errorf("a block that IS declared but invalid must not be reported as absent, got %q", err)
 	}
 }

@@ -132,7 +132,8 @@ A company NAME in the display name with no human named anywhere is "organization
 Between those two the LOCAL PART decides: an address named for a function — support@, info@,
 sales@, office@, service@, kontakt@ or a team — is "role_mailbox", and anything else signed only
 with the company's own name is "organization_sender". This tiebreak decides only between those
-two: automated service mail is "transactional" whatever its address looks like.
+two kinds, and it is about the ADDRESS, not the sender: mail a machine generated is
+"transactional" however its address reads, and a human answering from a shared desk is not.
 If this business replied only to decline — "not interested", "please remove me", "unsubscribe" —
 that reply is not a relationship. Judge the ORIGINAL sender: unsolicited commercial mail stays
 "spam" or "newsletter" no matter who answered it.
