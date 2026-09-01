@@ -44,6 +44,31 @@ func accountMailAt(t *testing.T, owner *pgx.Conn, ws ids.UUID, subject string, a
 	return id
 }
 
+// accountMeetingAt seeds a meeting. A meeting carries no direction — nobody
+// sends one — and, since 1788000100, may carry no organization link either:
+// the only way it reaches an account is through the people who were in it.
+func accountMeetingAt(t *testing.T, owner *pgx.Conn, subject string, at time.Time) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := owner.Exec(context.Background(), `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
+		VALUES ($1, 'meeting', $2, $3, $3, 'manual', 'human:x')`,
+		id, subject, at); err != nil {
+		t.Fatalf("seeding meeting %q: %v", subject, err)
+	}
+	return id
+}
+
+// attend puts a person on an event as a PARTICIPANT and nothing else — no
+// activity_link, which is the shape the account walk used to miss entirely.
+func attend(t *testing.T, owner *pgx.Conn, activity, person ids.UUID) {
+	t.Helper()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity_participant (activity_id, person_id, role) VALUES ($1, $2, 'attendee')`,
+		activity, person); err != nil {
+		t.Fatalf("seeding participant: %v", err)
+	}
+}
+
 // employ ties a person to an organization as a current employee, in the role
 // the graph draws them in.
 func employ(t *testing.T, e *integration.Env, person, org ids.UUID, title string) {
@@ -168,6 +193,55 @@ func TestAccountTimelineReachesMailThroughItsContactsAndDeals(t *testing.T) {
 	}
 	if !containsActivity(section, viaContact) {
 		t.Errorf("the 360 activities section omits mail filed against a current employee: %v", section)
+	}
+}
+
+// A COMPANY IS REACHED THROUGH THE PEOPLE WHO WERE IN THE ROOM. A meeting may
+// carry no organization link, and capture puts the far side on the invitation
+// rather than in activity_link — so a walk that starts only from the links
+// answers an account's afternoon with nothing in it.
+//
+// The exclusions the linked arm already makes hold here too: a former
+// employee's meeting is not this account's, and neither is one whose only
+// attendee works somewhere else.
+func TestAccountTimelineReachesAMeetingThroughSomebodyInTheRoom(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+
+	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	other := e.SeedOrg(t, "Globex", &e.Rep1)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+
+	employee := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	employAt(t, e, employee, org, nil)
+	leaver := e.SeedPerson(t, "Sam Leaver", &e.Rep1)
+	ended := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	employAt(t, e, leaver, org, &ended)
+	stranger := e.SeedPerson(t, "Kim Elsewhere", &e.Rep1)
+	employAt(t, e, stranger, other, nil)
+
+	withEmployee := accountMeetingAt(t, owner, "the quarterly review", org360Clock.Add(-1*time.Hour))
+	attend(t, owner, withEmployee, employee)
+	withLeaver := accountMeetingAt(t, owner, "a call with somebody who has left", org360Clock.Add(-2*time.Hour))
+	attend(t, owner, withLeaver, leaver)
+	withStranger := accountMeetingAt(t, owner, "another account's meeting", org360Clock.Add(-3*time.Hour))
+	attend(t, owner, withStranger, stranger)
+
+	listed, _ := accountTimeline(rep, t, e, org, 25, "")
+	if !containsActivity(listed, withEmployee) {
+		t.Errorf("the account timeline omits a meeting whose only person is on the invitation (%v): %v",
+			withEmployee, listed)
+	}
+	for _, unwanted := range []struct {
+		id   ids.UUID
+		what string
+	}{
+		{withLeaver, "a meeting attended only by somebody who has LEFT the company"},
+		{withStranger, "a meeting attended only by a contact at another account"},
+	} {
+		if containsActivity(listed, unwanted.id) {
+			t.Errorf("the account timeline includes %s (%v): %v", unwanted.what, unwanted.id, listed)
+		}
 	}
 }
 
