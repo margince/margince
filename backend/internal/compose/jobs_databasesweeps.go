@@ -28,8 +28,11 @@ import (
 //     approval expiry, intro expiry, approval auto-apply. One row does the whole
 //     installation, so there is no child kind to enqueue.
 //
-// It also pulls in the AI-activity and brief-generate groups, which are their
-// own functions because they are longer, not because they are gated differently.
+// It also pulls in the AI-activity and brief-generate groups. Those are their
+// own functions because their WORKERS need collaborators the rest of this group
+// does not — a projection store, and the brief engine plus the identity service
+// — not because they are gated differently: the gating is the same nothing, and
+// that is why they belong here rather than behind a condition of their own.
 func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool})
 	addDeclaredWorker[CloseDateWorkspaceArgs](reg, &closeDateWorkspaceWorker{corrector: NewCloseDateCorrector(pool, log)})
