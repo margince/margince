@@ -30,6 +30,9 @@ import type { Locale } from "../i18n";
 
 type ModelRate = components["schemas"]["AiModelRate"];
 
+/** One vendor's answer about what it serves, as the wire carries it. */
+export type AvailableModels = components["schemas"]["AvailableModelList"];
+
 /** The lane a field binds: what a tier picker asks for, what the embed row does. */
 export type ModelLane = ModelRate["lane"];
 
@@ -113,4 +116,81 @@ export function suggestionsFor(
     .filter((r) => r.provider === provider && r.lane === lane)
     .map((r) => ({ value: r.model_id, hint: priceHint(r, locale) }))
     .sort((a, b) => stable(a.value, b.value));
+}
+
+/**
+ * What the VENDOR says it serves, for the field that binds a lane to it.
+ *
+ * The sheet below answers what this installation can PRICE, which is a
+ * different and older question: it is a table somebody maintains, so a model
+ * released after the last edit was simply absent and a reader concluded the
+ * product could not reach it. This asks the vendor.
+ *
+ * Enabled only while a field is open, and keyed on the provider: it is a real
+ * round-trip to a vendor, and every lane on the page firing one at mount would
+ * spend an installation's credentials on screens nobody is looking at.
+ *
+ * NEVER throws, for the same reason the sheet does not: the field binds any id
+ * the reader types, and a vendor being down must not take the form with it. The
+ * server already says so — a vendor it could not ask is a 200 carrying the
+ * reason — and this only has to survive the transport failing too.
+ */
+export function useAvailableModels(provider: string, enabled: boolean) {
+  return useQuery({
+    enabled: enabled && provider !== "",
+    queryKey: ["ai-available-models", provider],
+    // A vendor's catalog does not change while somebody fills in a form, and
+    // the call costs a round-trip on the operator's own credential.
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    queryFn: async (): Promise<AvailableModels> => {
+      const { data, error } = await api.GET("/ai/available-models/{provider}", {
+        params: { path: { provider } },
+      });
+      if (error || !data) {
+        return { provider, models: [], unavailable: "unreachable" };
+      }
+      return data;
+    },
+  });
+}
+
+/**
+ * The suggestions one field offers: what the vendor serves, priced from the
+ * sheet where the sheet knows it.
+ *
+ * The union, not one or the other. The vendor is the authority on what EXISTS
+ * and the sheet on what it COSTS, and a reader needs both — an id the sheet
+ * still lists but the vendor has retired is worth keeping visible (it may be
+ * what this lane is bound to today), and one the vendor serves that nothing has
+ * priced is the case the UNPRICED pill was built for.
+ *
+ * Vendor order first, because a vendor that dates its models returns them
+ * newest first and that is the order somebody looking for "the new one" wants;
+ * the sheet's leftovers follow, sorted, so the tail is stable.
+ */
+export function offeredModels(
+  available: AvailableModels | undefined,
+  catalogue: ModelCatalogue,
+  provider: string,
+  lane: ModelLane,
+  locale: Locale,
+): readonly ComboBoxSuggestion[] {
+  const priced = new Map(
+    (catalogue ?? [])
+      .filter((r) => r.provider === provider && r.lane === lane)
+      .map((r) => [r.model_id, priceHint(r, locale)]),
+  );
+  const fromVendor = (available?.models ?? [])
+    // A vendor that says what a model is FOR is taken at its word; one that
+    // says nothing is offered on every lane, because guessing would either hide
+    // a usable model or offer an embedder to a chat tier.
+    .filter((m) => m.lane === undefined || m.lane === lane)
+    .map((m) => ({ value: m.id, hint: priced.get(m.id) }));
+  const seen = new Set(fromVendor.map((s) => s.value));
+  const fromSheet = [...priced.entries()]
+    .filter(([id]) => !seen.has(id))
+    .map(([value, hint]) => ({ value, hint }))
+    .sort((a, b) => stable(a.value, b.value));
+  return [...fromVendor, ...fromSheet];
 }

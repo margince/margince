@@ -57,10 +57,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "googleApp.clientId",
   "googleApp.clientSecret",
   "googleApp.clientIdPlaceholder",
-  // "Embeddings" is the vocabulary of the routing document itself, which this
-  // form renders raw beside `premium` and `gemini`. The host placeholder is a
-  // URL, which is the same string in every language.
-  "aiRouting.embeddings.label",
+  // A URL, which is the same string in every language.
   "aiRouting.baseUrl.placeholder",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",

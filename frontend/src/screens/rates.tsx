@@ -43,7 +43,7 @@ function trimDecimal(value: string): string {
 // approvals inbox (the job runs in the background — nothing to poll here). The
 // button stays available so an admin can trigger another refresh; success and
 // failure both surface next to it.
-function RefreshFromSources({
+export function RefreshFromSources({
   path,
 }: Readonly<{
   path: "/fx-rates/propose-refresh" | "/ai-model-rates/propose-refresh";

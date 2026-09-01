@@ -7209,6 +7209,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/available-models/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * What one vendor says it serves today (admin/ops).
+         * @description Asks the VENDOR what it currently serves, so the routing form offers models that exist
+         *     rather than only the ones somebody last hand-entered on the price sheet.
+         *
+         *     AVAILABILITY only — never price. Of the vendors this product speaks to, only an
+         *     OpenAI-wire broker publishes prices on its list endpoint, and reading those would make
+         *     this a second answer to a question `/ai-model-rates` already owns as an effective-dated
+         *     record. A model listed here that the sheet cannot price is bindable and reports UNPRICED.
+         *
+         *     The vendor is named; the ENDPOINT is not. The host comes from the stored binding for
+         *     that vendor, or from the adapter's compiled default — never from the request — because
+         *     the AI outbound client carries no egress allowlist.
+         *
+         *     A vendor that cannot be asked is NOT an error: the response is 200 with `unavailable`
+         *     naming the state, because none of these should break the form. The model field takes
+         *     any id the vendor serves whether or not it appears here.
+         *
+         *     `lane` is stated only where the vendor states it. Gemini publishes
+         *     `supportedGenerationMethods`, so its embedders are told apart from its chat models; the
+         *     other vendors return one undifferentiated list and a caller that needs the distinction
+         *     must not guess, because an embedder bound to a chat tier cannot serve a call.
+         */
+        get: operations["listAvailableModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/provider-keys/{provider}": {
         parameters: {
             query?: never;
@@ -12641,6 +12683,29 @@ export interface components {
         };
         AiProviderKeyList: {
             providers: components["schemas"]["AiProviderKeyStatus"][];
+        };
+        /** @description One vendor's own answer about what it serves. `models` is empty exactly when `unavailable` is set — the two never disagree. */
+        AvailableModelList: {
+            /** @description The routing name of the vendor that was asked. */
+            provider: string;
+            models: components["schemas"]["AvailableModel"][];
+            /**
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+             * @enum {string}
+             */
+            unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
+        };
+        /** @description One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on. */
+        AvailableModel: {
+            /** @description The string a binding names, exactly as the vendor spells it. */
+            id: string;
+            /** @description The vendor's own human label, absent where it publishes none. */
+            display_name?: string;
+            /**
+             * @description What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+             * @enum {string}
+             */
+            lane?: "chat" | "embeddings";
         };
         /** @description What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
@@ -37813,6 +37878,31 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listAvailableModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the vendor serves, or why it could not be asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailableModelList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     setAiProviderKey: {

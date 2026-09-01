@@ -5077,7 +5077,9 @@ export const vi = {
   "prefs.undoExplicit":
     "Đăng ký lại là một sự đồng ý rõ ràng — chúng tôi không âm thầm bật lại. Hãy lưu bên dưới để ghi nhận sự chấp thuận của bạn, hoặc bỏ thay đổi.",
 
-  "auto.sub": "một danh mục đóng — chọn một loại, đặt tham số, bật lên",
+  "auto.tier.runs": "tự chạy",
+  "auto.tier.approval": "chờ duyệt",
+  "auto.sub": "Xanh tự chạy. Hổ phách chuyển vào hộp chờ duyệt.",
   "auto.readOnly": "Chế độ chỉ đọc — bạn không có quyền thay đổi tự động hoá.",
   "auto.catalog": "Thư viện khởi đầu",
   "auto.catalogSub": "tập hợp đóng các loại tự động hoá",
@@ -6149,11 +6151,56 @@ export const vi = {
   "firstRun.ai.modelHint":
     "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
+  "aiSettings.sub": "Văn bản của bản cài đặt này đi đâu, và tốn bao nhiêu.",
+  "aiSettings.tabs": "Phần nào của cài đặt AI đang mở",
+  "aiSettings.tab.routing": "Định tuyến",
+  "aiSettings.tab.providers": "Nhà cung cấp",
+  "aiSettings.tab.automations": "Tự động hoá",
+  "aiSettings.tab.usage": "Mức dùng",
+  "aiSettings.tab.logs": "Nhật ký",
+  "aiSettings.withheld": "Không thuộc quyền xem của bạn",
+  "aiSettings.pending": "Đang đọc…",
+  "aiSettings.spend.label": "Chi tiêu tháng này",
+  "aiSettings.spend.value": "{spent} trên {budget} token",
+  "aiSettings.spend.estimated": "≈ {amount} ước tính",
+  "aiSettings.providers.label": "Nhà cung cấp",
+  "aiSettings.providers.value": "{count} đã có khoá",
+  "aiSettings.providers.missing": "{count} đã gán nhưng chưa có khoá",
+  "aiSettings.providers.lastCall": "lần gọi cuối {elapsed}",
+  "aiSettings.discardTitle": "Bỏ các thay đổi định tuyến?",
+  "aiSettings.discardBody":
+    "Các ràng buộc bạn đổi chưa được lưu. Rời tab này sẽ bỏ chúng.",
+  "aiSettings.discard": "Bỏ",
+  "elapsed.justNow": "vừa xong",
+  "elapsed.minutes": "{minutes} phút trước",
+  "elapsed.hours": "{hours} giờ trước",
+  "elapsed.days": "{days} ngày trước",
+  "aiRouting.lane.local_small": "Phân loại hàng loạt, trên phần cứng của bạn",
+  "aiRouting.lane.cheap_cloud":
+    "Việc thường ngày — làm giàu, tóm tắt, phân loại",
+  "aiRouting.lane.premium": "Bất cứ thứ gì khách hàng sẽ đọc",
+  "aiRouting.lane.frontier": "Suy luận khó nhất, dùng dè dặt",
+  "aiRouting.lane.local_large": "Việc nặng hơn, không được rời máy chủ của bạn",
+  "aiRouting.lane.embeddings": "Tìm kiếm và truy hồi trên dữ liệu của bạn",
+  "aiRouting.lanes.title": "Làn chat",
+  "aiRouting.lanes.sub": "Rẻ nhất trước. Tác vụ chọn làn; làn chọn mô hình.",
+  "aiRouting.priceSheet": "Bảng giá",
+  "aiRouting.provider.label": "Nhà cung cấp",
+  "aiRouting.change": "Đổi",
+  "aiRouting.done": "Xong",
+  "aiRouting.noKey": "chưa có khoá",
+  "aiRouting.unpriced": "chưa định giá",
+  "aiRouting.effect": "Thay đổi có hiệu lực từ lần gọi kế tiếp.",
   "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
   "aiProviderKeys.sub":
     "Thông tin xác thực mà bản cài đặt này dùng để gọi từng nhà cung cấp mô hình. Khóa được niêm phong trong kho khóa và không bao giờ hiển thị lại — hãy thay thế nếu bạn cần đổi.",
-  "aiProviderKeys.configured": "Đã lưu khóa",
-  "aiProviderKeys.absent": "Chưa có khóa",
+  "aiProviderKeys.keyless": "không cần khoá",
+  "aiProviderKeys.field": "Khoá API",
+  "aiProviderKeys.save": "Lưu khoá",
+  "aiProviderKeys.adminOnly":
+    "Chỉ quản trị viên hoặc ops mới đổi được thông tin xác thực nhà cung cấp.",
+  "aiProviderKeys.configured": "đã cấu hình",
+  "aiProviderKeys.absent": "chưa đặt",
   "aiProviderKeys.configuredHint":
     "Đã niêm phong trong kho khóa. Không thể đọc lại — dán khóa mới để thay thế. Khóa cũng có thể đến qua {envVar}.",
   "aiProviderKeys.absentHint":
@@ -6171,10 +6218,15 @@ export const vi = {
   "aiRouting.withheld":
     "Chỉ người có quyền thay đổi liên kết mô hình mới thấy bản cài đặt này dùng những mô hình nào.",
   "aiRouting.title": "Định tuyến mô hình",
+  "aiRouting.sheetAsOf":
+    "Danh sách mô hình là bảng giá tính đến {date}. Mọi ID mới hơn mà nhà cung cấp của bạn phục vụ cũng dùng được — cứ gõ vào.",
+  "aiRouting.sheetUnknown":
+    "Danh sách mô hình lấy từ bảng giá, mà bạn không có quyền đọc. Mọi ID nhà cung cấp của bạn phục vụ đều dùng được — cứ gõ vào.",
   "aiRouting.sub":
     "Mô hình nào phục vụ từng bậc. Thay đổi có hiệu lực mà không cần khởi động lại; mọi tiến trình sẽ nhận trong vòng một phút.",
   "aiRouting.unbound":
     "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Bản triển khai khai báo ràng buộc đầu tiên tại seeds.ai_routing trong margince.yaml.",
+  "aiRouting.profile.card": "Hồ sơ triển khai",
   "aiRouting.profile.label": "Vị trí",
   "aiRouting.profile.help":
     "Nơi chạy suy luận. Sovereign nghĩa là không có dữ liệu ra ngoài: chỉ mô hình trên máy chủ của bạn, bị từ chối khi lưu chứ không phải ở lần gọi đầu tiên.",
@@ -6184,11 +6236,20 @@ export const vi = {
   "aiRouting.dimensions.label": "Độ rộng vector",
   "aiRouting.dimensions.help":
     "Để trống để dùng mặc định của nhà cung cấp. Giá trị ngoài khoảng 1 đến 2000 sẽ bị từ chối.",
-  "aiRouting.embeddings.label": "Embeddings",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
     "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
+  "aiRouting.models.noKey":
+    "Chỉ hiện bảng giá — nhà cung cấp này chưa có khoá nên không thể hỏi nó phục vụ những gì. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
+  "aiRouting.models.noEndpoint":
+    "Chỉ hiện bảng giá — điền host ở trên rồi mới hỏi được nhà cung cấp này. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
+  "aiRouting.models.profileForbids":
+    "Chỉ hiện bảng giá — hồ sơ triển khai này không cho phép tiếp cận nhà cung cấp đó.",
+  "aiRouting.models.notPublished":
+    "Chỉ hiện bảng giá — nhà cung cấp này không công bố danh sách mô hình.",
+  "aiRouting.models.unreachable":
+    "Chỉ hiện bảng giá — nhà cung cấp này không phản hồi. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
   "aiRouting.model.label": "Mô hình",
   "aiRouting.model.help":
     "Danh sách là những mô hình mà bản cài đặt này biết giá, trên mỗi triệu token, đầu vào → đầu ra. Mọi ID khác mà nhà cung cấp của bạn phục vụ cũng dùng được — hãy nhập vào.",

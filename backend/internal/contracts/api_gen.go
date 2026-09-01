@@ -1834,6 +1834,51 @@ func (e AutomationRunTier) Valid() bool {
 	}
 }
 
+// Defines values for AvailableModelLane.
+const (
+	AvailableModelLaneChat       AvailableModelLane = "chat"
+	AvailableModelLaneEmbeddings AvailableModelLane = "embeddings"
+)
+
+// Valid indicates whether the value is a known member of the AvailableModelLane enum.
+func (e AvailableModelLane) Valid() bool {
+	switch e {
+	case AvailableModelLaneChat:
+		return true
+	case AvailableModelLaneEmbeddings:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AvailableModelListUnavailable.
+const (
+	NoEndpoint     AvailableModelListUnavailable = "no_endpoint"
+	NoKey          AvailableModelListUnavailable = "no_key"
+	NotPublished   AvailableModelListUnavailable = "not_published"
+	ProfileForbids AvailableModelListUnavailable = "profile_forbids"
+	Unreachable    AvailableModelListUnavailable = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the AvailableModelListUnavailable enum.
+func (e AvailableModelListUnavailable) Valid() bool {
+	switch e {
+	case NoEndpoint:
+		return true
+	case NoKey:
+		return true
+	case NotPublished:
+		return true
+	case ProfileForbids:
+		return true
+	case Unreachable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BackfillPreviewEstimateQuality.
 const (
 	BackfillPreviewEstimateQualityHeuristic BackfillPreviewEstimateQuality = "heuristic"
@@ -9711,16 +9756,16 @@ func (e SetActivityDispositionRequestDisposition) Valid() bool {
 
 // Defines values for SetAiModelRateRequestLane.
 const (
-	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
-	SetAiModelRateRequestLaneEmbeddings SetAiModelRateRequestLane = "embeddings"
+	Chat       SetAiModelRateRequestLane = "chat"
+	Embeddings SetAiModelRateRequestLane = "embeddings"
 )
 
 // Valid indicates whether the value is a known member of the SetAiModelRateRequestLane enum.
 func (e SetAiModelRateRequestLane) Valid() bool {
 	switch e {
-	case SetAiModelRateRequestLaneChat:
+	case Chat:
 		return true
-	case SetAiModelRateRequestLaneEmbeddings:
+	case Embeddings:
 		return true
 	default:
 		return false
@@ -15931,6 +15976,35 @@ type AutomationRunTier string
 type AutonomySettings struct {
 	Data []KindAutonomy `json:"data"`
 }
+
+// AvailableModel One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+type AvailableModel struct {
+	// DisplayName The vendor's own human label, absent where it publishes none.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// Id The string a binding names, exactly as the vendor spells it.
+	Id string `json:"id"`
+
+	// Lane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+	Lane *AvailableModelLane `json:"lane,omitempty"`
+}
+
+// AvailableModelLane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+type AvailableModelLane string
+
+// AvailableModelList One vendor's own answer about what it serves. `models` is empty exactly when `unavailable` is set — the two never disagree.
+type AvailableModelList struct {
+	Models []AvailableModel `json:"models"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
+}
+
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
 type BackfillPreview struct {
@@ -42345,6 +42419,9 @@ type ServerInterface interface {
 	// Enqueue an async model-cost refresh (stages 🟡 proposals).
 	// (POST /ai-model-rates/propose-refresh)
 	ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request)
+	// What one vendor says it serves today (admin/ops).
+	// (GET /ai/available-models/{provider})
+	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -44064,6 +44141,12 @@ func (_ Unimplemented) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 // Enqueue an async model-cost refresh (stages 🟡 proposals).
 // (POST /ai-model-rates/propose-refresh)
 func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What one vendor says it serves today (admin/ops).
+// (GET /ai/available-models/{provider})
+func (_ Unimplemented) ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -48513,6 +48596,38 @@ func (siw *ServerInterfaceWrapper) ProposeAiModelRateRefresh(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ProposeAiModelRateRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAvailableModels operation middleware
+func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAvailableModels(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71181,6 +71296,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai-model-rates/propose-refresh", wrapper.ProposeAiModelRateRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)

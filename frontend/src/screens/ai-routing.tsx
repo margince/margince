@@ -1,22 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
-import { Button, EmptyState, Field, TextInput } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ComboBox } from "../design-system/combobox";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Select } from "../design-system/select";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { stable } from "../format/collate";
-import { useLocale, useT } from "../i18n";
+import { formatUsdPerMTok } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
+import type { AvailableModels } from "./ai-models";
 import {
   type ModelCatalogue,
   type ModelLane,
-  suggestionsFor,
+  offeredModels,
   useAiModelCatalogue,
+  useAvailableModels,
 } from "./ai-models";
+import { useProviderKeys } from "./ai-provider-keys";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { RefreshFromSources } from "./rates";
+import "./ai-settings.css";
 
 // Which vendor this installation's text is sent to (ai-operational-spec §1.4).
 //
@@ -53,7 +66,12 @@ const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
 // through it, so the endpoint is the binding rather than a tweak to it.
 const OPENAI_WIRE = "openai_compatible";
 
-function useRouting(enabled: boolean) {
+// The key the embedding lane is opened under. Not a tier name, and it cannot
+// collide with one: the tier vocabulary is the task contract's and this is the
+// one lane that is not in it.
+const EMBEDDINGS_LANE = "\u0000embeddings";
+
+export function useRouting(enabled: boolean) {
   return useQuery({
     enabled,
     queryKey: ["ai-routing"],
@@ -83,7 +101,22 @@ function useReplaceRouting() {
   });
 }
 
-export function AiRoutingCard() {
+export function AiRoutingCard({
+  onDirtyChange,
+  onPriceSheet,
+}: Readonly<{
+  // The page above owns the strip a reader leaves this card by, and the draft
+  // below is a document rather than a field that saves itself. The app's own
+  // unsaved guard watches addresses and every tab on this page shares one, so
+  // the card says whether it is holding work and the page decides what to do
+  // about a move. Optional: the card is composed on its own in a story and in
+  // the tests, where there is nothing to tell.
+  onDirtyChange?: (dirty: boolean) => void;
+  // Where the prices behind these bindings are read. A link rather than a
+  // second copy of the sheet: it is one table, and the lane rows only need to
+  // say which model each binds.
+  onPriceSheet?: () => void;
+}>) {
   const t = useT();
   // The read grant gates the QUERY, not only the form. This tab opens on other
   // grants, so a seat can reach the page without `ai_routing:read` — and asking
@@ -93,23 +126,29 @@ export function AiRoutingCard() {
   const canManage = useCanWrite("ai_routing", "update");
   const query = useRouting(canSee);
 
-  return (
-    <Panel title={t("aiRouting.title")}>
-      <PanelBody className="form-stack">
-        <p className="t-caption">{t("aiRouting.sub")}</p>
-        {canSee ? (
-          <QueryGate query={query}>
-            {(routing) => (
-              <RoutingForm routing={routing} canManage={canManage} />
-            )}
-          </QueryGate>
-        ) : (
+  if (!canSee) {
+    return (
+      <Panel title={t("aiRouting.title")} sub={t("aiRouting.sub")}>
+        <PanelBody>
           <EmptyState>
             <p className="t-small">{t("aiRouting.withheld")}</p>
           </EmptyState>
-        )}
-      </PanelBody>
-    </Panel>
+        </PanelBody>
+      </Panel>
+    );
+  }
+
+  return (
+    <QueryGate query={query}>
+      {(routing) => (
+        <RoutingForm
+          routing={routing}
+          canManage={canManage}
+          onDirtyChange={onDirtyChange}
+          onPriceSheet={onPriceSheet}
+        />
+      )}
+    </QueryGate>
   );
 }
 
@@ -142,7 +181,14 @@ function orderedTiers(tiers: Routing["tiers"] | undefined): string[] {
 function RoutingForm({
   routing,
   canManage,
-}: Readonly<{ routing: Routing; canManage: boolean }>) {
+  onDirtyChange,
+  onPriceSheet,
+}: Readonly<{
+  routing: Routing;
+  canManage: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
+  onPriceSheet?: () => void;
+}>) {
   const t = useT();
   const replace = useReplaceRouting();
   // One read for every row on the card. No grant check in front of it: this
@@ -150,11 +196,23 @@ function RoutingForm({
   // hook answers an empty list rather than throwing when the sheet's own grant
   // is withheld — a field with nothing to suggest, which is what it was before.
   const catalogue = useAiModelCatalogue();
+  // Which vendors hold a credential, joined into the rows below. The lanes and
+  // the keys used to be two cards on one scroll, so a lane pointing at an
+  // unkeyed vendor was visible by reading both; behind a tab strip it would not
+  // be visible at all, and a lane that fails closed at call time has to say so
+  // where it is bound. Same grant as this card, so no second denial to answer.
+  const keys = useProviderKeys(true);
   // The stored document is the starting point, and the reader's edits live
   // here until they save. Keyed on the routing version so a binding another
   // role changed replaces an untouched form rather than being overwritten by
   // it — see the key at the call site.
   const [draft, setDraft] = useState<Routing>(routing);
+  // Which lane is open for editing. One at a time: a lane row is a reading,
+  // and every row expanded at once is the form this card used to be.
+  const [editing, setEditing] = useState<string | null>(null);
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(routing);
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
 
   // Defensive on a field the contract marks required: a client that dies on an
   // unexpected shape takes the whole settings page with it, and the shape it
@@ -170,52 +228,133 @@ function RoutingForm({
 
   const setTier = (tier: string, next: TierBinding) =>
     setDraft((d) => ({ ...d, tiers: { ...d.tiers, [tier]: next } }));
+  const busy = !canManage || replace.isPending;
+  const unkeyed = unkeyedProviders(keys.data?.providers);
 
   return (
     <>
-      <Field
-        label={t("aiRouting.profile.label")}
-        hint={t("aiRouting.profile.help")}
+      {/* The constraint FIRST, on its own card: it decides which vendors the
+          lanes under it may name, so a reader meets the rule before the
+          bindings it governs.
+
+          No panel title. The card holds ONE decision and the row already names
+          it, so a header band would print the same words twice, one above the
+          other — which is what it did. */}
+      <Panel>
+        <PanelBody>
+          <SettingList>
+            <SettingRow
+              label={t("aiRouting.profile.card")}
+              description={t("aiRouting.profile.help")}
+              control={(control) => (
+                <Select
+                  {...control}
+                  className="settingrow-measure"
+                  value={draft.profile}
+                  disabled={busy}
+                  options={PROFILES.map((p) => ({
+                    value: p,
+                    label: t(`aiRouting.profile.${p}`),
+                  }))}
+                  onChange={(value) =>
+                    setDraft((d) => ({
+                      ...d,
+                      profile: value as Routing["profile"],
+                    }))
+                  }
+                />
+              )}
+            />
+          </SettingList>
+        </PanelBody>
+      </Panel>
+
+      <Panel
+        title={t("aiRouting.lanes.title")}
+        sub={t("aiRouting.lanes.sub")}
+        titleAction={
+          onPriceSheet ? (
+            <button
+              type="button"
+              className="link-button"
+              onClick={onPriceSheet}
+            >
+              {t("aiRouting.priceSheet")}
+            </button>
+          ) : undefined
+        }
+        footer={
+          // What the model lists below are, and how to move them on.
+          //
+          // The picker offers what the price sheet holds, and the sheet is a
+          // SNAPSHOT somebody took on a day — it does not follow a vendor's
+          // releases. Undated, it reads as "these are the models", and a reader
+          // looking for something announced last month concludes the product
+          // cannot reach it. The date says what it actually is, and the refresh
+          // is the way past it, here rather than only on a tab the reader is not
+          // on when the question occurs to them.
+          <div className="ai-sheet-age">
+            <span className="t-caption">
+              {sheetAsOf(catalogue.data)
+                ? t("aiRouting.sheetAsOf", {
+                    date: sheetAsOf(catalogue.data) ?? "",
+                  })
+                : t("aiRouting.sheetUnknown")}
+            </span>
+            {canManage && (
+              <RefreshFromSources path="/ai-model-rates/propose-refresh" />
+            )}
+          </div>
+        }
       >
-        {(control) => (
-          <Select
-            {...control}
-            value={draft.profile}
-            disabled={!canManage || replace.isPending}
-            options={PROFILES.map((p) => ({
-              value: p,
-              label: t(`aiRouting.profile.${p}`),
-            }))}
-            onChange={(value) =>
-              setDraft((d) => ({ ...d, profile: value as Routing["profile"] }))
-            }
+        {tiers.map((tier) => (
+          <LaneRow
+            key={tier}
+            lane="chat"
+            name={tier}
+            binding={draft.tiers[tier]}
+            catalogue={catalogue.data}
+            unkeyed={unkeyed}
+            disabled={busy}
+            open={editing === tier}
+            onOpen={() => setEditing(editing === tier ? null : tier)}
+            onChange={(next) => setTier(tier, next)}
           />
-        )}
-      </Field>
+        ))}
+        {/* The embed lane, which the form used to leave out entirely — so a
+            reader could re-point every chat tier and still be sending their
+            retrieval to the vendor they had just moved away from, with nothing
+            on screen saying so. It binds SEPARATELY on purpose: retrieval has to
+            survive a chat-budget exhaustion, and the model is a different one
+            even on the same vendor.
 
-      {tiers.map((tier) => (
-        <TierRow
-          key={tier}
-          tier={tier}
-          binding={draft.tiers[tier]}
+            Its name is the document's own word, raw, exactly as the tier names
+            above it are: the name column is one vocabulary read down one edge,
+            and a translated word among five identifiers reads as a different
+            KIND of thing rather than as the same thing in the reader's
+            language. */}
+        <LaneRow
+          lane="embeddings"
+          name="embeddings"
+          testId="ai-routing-embeddings"
+          binding={draft.embeddings}
           catalogue={catalogue.data}
-          disabled={!canManage || replace.isPending}
-          onChange={(next) => setTier(tier, next)}
+          unkeyed={unkeyed}
+          disabled={busy}
+          open={editing === EMBEDDINGS_LANE}
+          onOpen={() =>
+            setEditing(editing === EMBEDDINGS_LANE ? null : EMBEDDINGS_LANE)
+          }
+          onChange={(embeddings) => setDraft((d) => ({ ...d, embeddings }))}
+          extra={
+            <EmbeddingWidthField
+              binding={draft.embeddings}
+              disabled={busy}
+              onChange={(embeddings) => setDraft((d) => ({ ...d, embeddings }))}
+            />
+          }
         />
-      ))}
-
-      {/* The embed lane, which the form used to leave out entirely — so a
-          reader could re-point every chat tier and still be sending their
-          retrieval to the vendor they had just moved away from, with nothing on
-          screen saying so. It binds SEPARATELY on purpose: retrieval has to
-          survive a chat-budget exhaustion, and the model is a different one even
-          on the same vendor. */}
-      <EmbeddingsRow
-        binding={draft.embeddings}
-        catalogue={catalogue.data}
-        disabled={!canManage || replace.isPending}
-        onChange={(embeddings) => setDraft((d) => ({ ...d, embeddings }))}
-      />
+      </Panel>
 
       {replace.isError && (
         <Callout tone="danger" live="alert">
@@ -227,14 +366,17 @@ function RoutingForm({
           {t("aiRouting.saved")}
         </Callout>
       )}
-      <Button
-        onClick={() => replace.mutate(draft)}
-        pending={replace.isPending}
-        busyLabel={t("aiRouting.saving")}
-        reason={canManage ? undefined : t("aiRouting.adminOnly")}
-      >
-        {t("aiRouting.save")}
-      </Button>
+      <div className="card-actions">
+        <Button
+          onClick={() => replace.mutate(draft)}
+          pending={replace.isPending}
+          busyLabel={t("aiRouting.saving")}
+          reason={canManage ? undefined : t("aiRouting.adminOnly")}
+        >
+          {t("aiRouting.save")}
+        </Button>
+        <p className="t-caption">{t("aiRouting.effect")}</p>
+      </div>
     </>
   );
 }
@@ -268,6 +410,9 @@ function AdapterFields<
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  // Asked of the VENDOR, and only while these fields are open — this is a real
+  // round-trip on the installation's own credential, not a table read.
+  const available = useAvailableModels(binding.provider, true);
   return (
     <>
       <Field label={label}>
@@ -281,21 +426,29 @@ function AdapterFields<
           />
         )}
       </Field>
-      {/* The models this installation can PRICE, which is a different and more
-          useful question than the models the vendor publishes: one outside the
-          sheet serves calls and reports UNPRICED, and nobody notices until a
-          usage report comes back with a week missing. Still a text box, because
-          the server accepts any id its vendor offers and the sheet is a
-          starting point rather than a permitted list. */}
+      {/* What the vendor serves, priced from the sheet where the sheet knows
+          it. The list used to be the sheet ALONE, which answers what this
+          installation can price rather than what exists — so a model released
+          after somebody last edited that table was simply absent, and a reader
+          looking for it concluded the product could not reach it.
+
+          Still a text box. The server takes any id its vendor serves, a vendor
+          ships a model on a Tuesday, and neither the vendor's list nor the
+          sheet is a permitted set. */}
       <Field
         label={t("aiRouting.model.label")}
-        hint={t("aiRouting.model.help")}
+        hint={
+          available.data?.unavailable
+            ? modelSourceNote(available.data.unavailable, t)
+            : t("aiRouting.model.help")
+        }
       >
         {(control) => (
           <ComboBox
             {...control}
             value={binding.model}
-            suggestions={suggestionsFor(
+            suggestions={offeredModels(
+              available.data,
               catalogue,
               binding.provider,
               lane,
@@ -334,95 +487,329 @@ function AdapterFields<
   );
 }
 
-// The embeddings lane. Its own row rather than a TierRow, because the two
-// shapes differ in both directions: this one takes `dimensions` and no `input`,
-// and a widened row that accepted either field on either lane would offer a
-// setting the server refuses.
-function EmbeddingsRow({
+// One lane, read as a row and edited in place.
+//
+// The row is the READING — which lane, which vendor, which model, and what is
+// wrong with that pairing — and the fields open under it only when a reader asks
+// to change one. The card was six lanes' worth of fields opened at once, which is
+// three screens of controls to answer the question "where does premium go".
+//
+// The two pills are the whole reason a reader can be shown a binding without also
+// being shown the key card and the price sheet. Both are joins, and both stay
+// silent rather than guessing: a key list that has not arrived claims nothing, and
+// an empty price sheet means the reader cannot read it rather than that nothing on
+// this installation is priced.
+function LaneRow<
+  B extends { provider: string; model: string; base_url?: string },
+>({
+  name,
+  lane,
   binding,
   catalogue,
+  unkeyed,
+  disabled,
+  open,
+  onOpen,
+  onChange,
+  extra,
+  testId,
+}: Readonly<{
+  name: string;
+  lane: ModelLane;
+  binding: B;
+  catalogue: ModelCatalogue;
+  unkeyed: ReadonlySet<string> | null;
+  disabled: boolean;
+  open: boolean;
+  onOpen: () => void;
+  onChange: (next: B) => void;
+  // A control this lane has and the others do not — the embedding width. It
+  // rides in the opened body rather than in `AdapterFields`, which asks the one
+  // question both lanes answer.
+  extra?: ReactNode;
+  testId?: string;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <PanelRow>
+      {/* The lane's addressable region: the summary line AND the fields it
+          opens, so "the premium lane" names one thing whether it is folded or
+          not. Inside the row rather than on it, because `PanelRow` owns the
+          row's own geometry and takes no attributes of its own. */}
+      <div data-testid={testId ?? `ai-routing-tier-${name}`}>
+        <div className="ai-lane">
+          {/* The lane's own id, and under it what the lane is FOR.
+              The id stays because it is the routing document's vocabulary and
+              what an operator greps for; the gloss is there because `premium`
+              and `frontier` do not say which is dearer, and `local_small` says
+              nothing at all to somebody meeting this page for the first time.
+              A lane this build does not know gets no gloss rather than an
+              invented one. */}
+          <span className="ai-lane-name">
+            <span className="ai-lane-id t-mono">{name}</span>
+            {laneGloss(name, t) && (
+              <span className="ai-lane-gloss">{laneGloss(name, t)}</span>
+            )}
+          </span>
+          {/* The binding itself, as ONE flex item. Grouped rather than laid
+              out beside the name as five siblings, because a row that wraps
+              wraps at whatever item runs out of room — which put the Change
+              button alone on a second line while the model beside it still had
+              space. Wrapping now happens INSIDE this group, and the two things
+              that anchor the row keep their edges. */}
+          <span className="ai-lane-binding">
+            {/* Filled, not `quiet`. Quiet draws a status DOT, and the vendor is
+                not a status — the pills that follow it are, and a dot in front
+                of the vendor would put three status marks on a row carrying one
+                fact and two warnings. */}
+            <Badge>{binding.provider}</Badge>
+            <span className="ai-lane-model t-mono">{binding.model}</span>
+            {/* WHERE the OpenAI-wire adapter is pointed. It is not a detail of
+                the binding, it IS the vendor: `openai_compatible` names a
+                protocol, and every broker on it — OpenRouter, Together, a
+                self-hosted gateway — reads identically on this row without the
+                host. Only this adapter has one, so nothing else grows it. */}
+            {binding.base_url ? (
+              <span className="ai-lane-host t-mono">
+                {hostOf(binding.base_url)}
+              </span>
+            ) : null}
+            {unkeyed?.has(binding.provider) && (
+              <Badge tone="warn">{t("aiRouting.noKey")}</Badge>
+            )}
+            {isUnpriced(catalogue, binding.provider, binding.model, lane) ? (
+              <Badge tone="warn">{t("aiRouting.unpriced")}</Badge>
+            ) : (
+              // What this lane costs to call, where the sheet can say. It is
+              // the reason the ladder is ordered the way it is, and reading it
+              // used to mean leaving for the price table and finding this model
+              // in a list of two hundred.
+              <span className="ai-lane-price">
+                {priceLabel(
+                  catalogue,
+                  binding.provider,
+                  binding.model,
+                  lane,
+                  locale,
+                )}
+              </span>
+            )}
+          </span>
+          {/* Never refused, even to a reader who may not save. The row is a
+            summary and the body under it is the rest of the binding — the host
+            an OpenAI-wire vendor is reached at, the width the embedder asks for
+            — so refusing to OPEN it would hide facts from somebody whose job is
+            to report them. The fields inside carry the refusal, and so does
+            Save. */}
+          <span className="ai-lane-open">
+            <Button onClick={onOpen} aria-expanded={open}>
+              {open ? t("aiRouting.done") : t("aiRouting.change")}
+            </Button>
+          </span>
+        </div>
+        {open && (
+          <div className="form-row">
+            <AdapterFields
+              label={t("aiRouting.provider.label")}
+              lane={lane}
+              binding={binding}
+              catalogue={catalogue}
+              disabled={disabled}
+              onChange={onChange}
+            />
+            {extra}
+          </div>
+        )}
+      </div>
+    </PanelRow>
+  );
+}
+
+// The width this lane asks the provider for, which only it has. Blank means the
+// compiled default rather than zero: the contract reads an omitted value and a 0
+// the same way, so an empty box must send neither a 0 nor a NaN.
+function EmbeddingWidthField({
+  binding,
   disabled,
   onChange,
 }: Readonly<{
   binding: Routing["embeddings"];
-  catalogue: ModelCatalogue;
   disabled: boolean;
   onChange: (next: Routing["embeddings"]) => void;
 }>) {
   const t = useT();
   return (
-    <div className="form-row" data-testid="ai-routing-embeddings">
-      <AdapterFields
-        label={t("aiRouting.embeddings.label")}
-        lane="embeddings"
-        binding={binding}
-        catalogue={catalogue}
-        disabled={disabled}
-        onChange={onChange}
-      />
-      {/* The width this lane asks the provider for, which only it has. Blank
-          means the compiled default rather than zero: the contract reads an
-          omitted value and a 0 the same way, so an empty box must send neither
-          a 0 nor a NaN. */}
-      <Field
-        label={t("aiRouting.dimensions.label")}
-        hint={t("aiRouting.dimensions.help")}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            type="number"
-            inputMode="numeric"
-            value={binding.dimensions?.toString() ?? ""}
-            disabled={disabled}
-            onChange={(e) => {
-              const raw = e.target.value.trim();
-              const parsed = Number.parseInt(raw, 10);
-              onChange({
-                ...binding,
-                dimensions:
-                  raw === "" || Number.isNaN(parsed) ? undefined : parsed,
-              });
-            }}
-          />
-        )}
-      </Field>
-    </div>
+    <Field
+      label={t("aiRouting.dimensions.label")}
+      hint={t("aiRouting.dimensions.help")}
+    >
+      {(control) => (
+        <TextInput
+          {...control}
+          type="number"
+          inputMode="numeric"
+          value={binding.dimensions?.toString() ?? ""}
+          disabled={disabled}
+          onChange={(e) => {
+            const raw = e.target.value.trim();
+            const parsed = Number.parseInt(raw, 10);
+            onChange({
+              ...binding,
+              dimensions:
+                raw === "" || Number.isNaN(parsed) ? undefined : parsed,
+            });
+          }}
+        />
+      )}
+    </Field>
   );
 }
 
-// One tier's binding: which adapter serves it, and which of that adapter's
-// models. Two controls rather than one, because the model id is the vendor's
-// vocabulary and no list this app holds could stay current with it.
+// The vendors this installation names but holds no credential for — or null
+// while nobody knows.
 //
-// The tier name is rendered RAW, like the provider name beside it. Both are the
-// routing document's own vocabulary — an operator editing this reads `premium`
-// and `gemini` in the same file — and translating an identifier would need a
-// key built at runtime, which the narrow MessageKey type refuses for the good
-// reason that a typo in one would otherwise ship.
-function TierRow({
-  tier,
-  binding,
-  catalogue,
-  disabled,
-  onChange,
-}: Readonly<{
-  tier: string;
-  binding: TierBinding;
-  catalogue: ModelCatalogue;
-  disabled: boolean;
-  onChange: (next: TierBinding) => void;
-}>) {
-  return (
-    <div className="form-row" data-testid={`ai-routing-tier-${tier}`}>
-      <AdapterFields
-        label={tier}
-        lane="chat"
-        binding={binding}
-        catalogue={catalogue}
-        disabled={disabled}
-        onChange={onChange}
-      />
-    </div>
+// Null is not "none". A list that has not arrived, or one a reader may not have,
+// must not draw a row as keyed: a lane that fails closed at call time and reads
+// as fine here is the exact thing the pill exists to prevent.
+function unkeyedProviders(
+  providers: readonly { provider: string; configured: boolean }[] | undefined,
+): ReadonlySet<string> | null {
+  if (!providers) {
+    return null;
+  }
+  return new Set(providers.filter((p) => !p.configured).map((p) => p.provider));
+}
+
+// Whether the price sheet can cost a call on this binding.
+//
+// An EMPTY sheet answers no. The reader who cannot read `ai_model_rate` gets an
+// empty list from the catalogue hook by design, and marking every lane unpriced
+// on the strength of that would report a fault in the installation where the
+// truth is only that the sheet is not theirs.
+function isUnpriced(
+  catalogue: ModelCatalogue,
+  provider: string,
+  model: string,
+  lane: ModelLane,
+): boolean {
+  if (!catalogue || catalogue.length === 0) {
+    return false;
+  }
+  return !catalogue.some(
+    (rate) =>
+      rate.provider === provider &&
+      rate.model_id === model &&
+      rate.lane === lane,
   );
+}
+
+// The host part of a base URL, for a row that has room for the address but not
+// for the whole endpoint. Falls back to the string as given: a value an
+// operator typed that does not parse is still what this lane is pointed at, and
+// hiding it would leave the row claiming a vendor with no address at all.
+function hostOf(baseUrl: string): string {
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return baseUrl;
+  }
+}
+
+// What each lane in the ladder is FOR, in words rather than in its id.
+//
+// An explicit switch rather than a key built from the tier name: the message
+// catalog's type is a closed union, and a runtime-composed key would compile as
+// any old string and ship a typo. It also means a tier the task contract grows
+// later renders with no gloss — correct, because nobody has written one, and a
+// missing sentence is better than a guessed one.
+function laneGloss(name: string, t: ReturnType<typeof useT>): string | null {
+  switch (name) {
+    case "local_small":
+      return t("aiRouting.lane.local_small");
+    case "cheap_cloud":
+      return t("aiRouting.lane.cheap_cloud");
+    case "premium":
+      return t("aiRouting.lane.premium");
+    case "frontier":
+      return t("aiRouting.lane.frontier");
+    case "local_large":
+      return t("aiRouting.lane.local_large");
+    case "embeddings":
+      return t("aiRouting.lane.embeddings");
+    default:
+      return null;
+  }
+}
+
+// This binding's price, short enough to sit on the row: what goes in, what comes
+// out, per million tokens. Empty where the sheet cannot say — the `unpriced`
+// pill is what a reader sees instead, and printing a zero here would be the one
+// thing this product is careful never to say by accident.
+function priceLabel(
+  catalogue: ModelCatalogue,
+  provider: string,
+  model: string,
+  lane: ModelLane,
+  locale: Locale,
+): string {
+  const rate = (catalogue ?? []).find(
+    (r) => r.provider === provider && r.model_id === model && r.lane === lane,
+  );
+  if (!rate) {
+    return "";
+  }
+  const input = formatUsdPerMTok(rate.input_per_mtok, locale);
+  if (lane === "embeddings") {
+    return input;
+  }
+  return `${input} → ${formatUsdPerMTok(rate.output_per_mtok, locale)}`;
+}
+
+// The day the price sheet was last written, which is the day its model list was
+// last true.
+//
+// The NEWEST effective date across the sheet, not the oldest: a sheet is
+// re-priced row by row, so the freshest row is the last time anybody looked. A
+// sheet the reader cannot read answers null, and the caller says so rather than
+// printing a date it does not have.
+//
+// Rendered as the wire's own ISO day, like every other effective date in this
+// product (the price sheet's own column does the same). It is a CALENDAR day
+// rather than an instant, so putting it through a zone could shift it by one —
+// and this is an operator reading a date they will compare against the sheet
+// beside it, not prose.
+function sheetAsOf(catalogue: ModelCatalogue): string | null {
+  return (catalogue ?? []).reduce<string | null>(
+    (latest, rate) =>
+      latest === null || rate.effective_date > latest
+        ? rate.effective_date
+        : latest,
+    null,
+  );
+}
+
+// Why the list a reader is looking at came only from the price sheet.
+//
+// Said in the field's own hint rather than as an error: the box still binds
+// anything typed into it, and every one of these is a state of the installation
+// somebody can act on — paste a key, fill in a host, start the local server —
+// or one they cannot, which is worth knowing before they go looking for a model
+// that will not appear.
+function modelSourceNote(
+  unavailable: NonNullable<AvailableModels["unavailable"]>,
+  t: ReturnType<typeof useT>,
+): string {
+  switch (unavailable) {
+    case "no_key":
+      return t("aiRouting.models.noKey");
+    case "no_endpoint":
+      return t("aiRouting.models.noEndpoint");
+    case "profile_forbids":
+      return t("aiRouting.models.profileForbids");
+    case "not_published":
+      return t("aiRouting.models.notPublished");
+    default:
+      return t("aiRouting.models.unreachable");
+  }
 }
