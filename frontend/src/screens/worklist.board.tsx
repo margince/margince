@@ -9,9 +9,10 @@
 // whole point of showing counts rather than rows. The board is where a lead
 // decides who to look at; the queue is where they look.
 
-import { DataTable, Disclosure, SurfaceState } from "../design-system/atoms";
+import { DataTable, Disclosure } from "../design-system/atoms";
+import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { useTeamBoard, type TeamBoardMember } from "./worklist.queries";
+import { type TeamBoardMember, useTeamBoard } from "./worklist.queries";
 
 // A row of the board, with the unassigned pile carried as one of them.
 //

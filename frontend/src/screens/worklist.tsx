@@ -9,13 +9,13 @@ import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { TeamBoard } from "./worklist.board";
 import {
   completenessText,
   pillCount,
   sourceUnavailableText,
 } from "./worklist.copy";
 import { FocusCard, focusOf } from "./worklist.focus";
-import { TeamBoard } from "./worklist.board";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {

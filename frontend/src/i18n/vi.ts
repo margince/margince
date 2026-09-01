@@ -7402,7 +7402,8 @@ export const vi = {
   "worklist.board.atRisk": "Giao dịch có rủi ro",
   "worklist.board.overdue": "Quá hạn",
   "worklist.board.nobody": "Chưa có ai",
-  "worklist.board.truncated": "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+  "worklist.board.truncated":
+    "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
   "worklist.filter.label": "Loại công việc",
   "worklist.filter.all": "Tất cả",
   "worklist.filter.customer_waiting": "Khách đang chờ",

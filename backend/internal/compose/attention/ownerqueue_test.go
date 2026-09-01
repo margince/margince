@@ -57,10 +57,14 @@ func TestANamedOwnersQueueCarriesTheirWaitingCustomersAndNotTheReadersOwn(t *tes
 		stubBriefing{}, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	svc.waiting = waitingOwnedBy{
-		{ActivityID: ids.NewV7(), Subject: "the rep's customer",
-			Since: readInstant.Add(-2 * 24 * time.Hour), OwnerID: theRep},
-		{ActivityID: ids.NewV7(), Subject: "the manager's own customer",
-			Since: readInstant.Add(-2 * 24 * time.Hour), OwnerID: theManager},
+		{
+			ActivityID: ids.NewV7(), Subject: "the rep's customer",
+			Since: readInstant.Add(-2 * 24 * time.Hour), OwnerID: theRep,
+		},
+		{
+			ActivityID: ids.NewV7(), Subject: "the manager's own customer",
+			Since: readInstant.Add(-2 * 24 * time.Hour), OwnerID: theManager,
+		},
 	}
 	svc.teammates = teammatesSaying(true)
 

@@ -7478,7 +7478,8 @@ export const de = {
   "worklist.board.atRisk": "Gefährdete Deals",
   "worklist.board.overdue": "Überfällig",
   "worklist.board.nobody": "Noch niemand",
-  "worklist.board.truncated": "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.board.truncated":
+    "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
   "worklist.filter.customer_waiting": "Kunde wartet",
