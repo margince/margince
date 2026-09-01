@@ -175,24 +175,6 @@ func createOrganizationInTx(ctx context.Context, tx pgx.Tx, in CreateOrganizatio
 		return crmcontracts.Organization{}, err
 	}
 
-	// The people already on this company's domains get their employment edge
-	// now. They accumulated while nobody had a company for the domain: capture
-	// creates the person and deliberately leaves the employer undecided, so by
-	// the time a human records the company its whole roster is sitting there
-	// attached to nothing. Without this the account shows one contact —
-	// whichever sender writes next and earns an edge from their own ensure —
-	// and the health card blames the whole relationship on that one person.
-	//
-	// The same plant the domain-triage verdict runs, so the human path and the
-	// machine path wire the same backlog. It never reassigns anybody a human
-	// already placed. The triage path reaches createOrganization directly and
-	// plants for itself, so nothing here plants twice.
-	for _, domain := range in.Domains {
-		if _, err := plantDomainEmployment(ctx, tx, domain.Domain, id); err != nil {
-			return crmcontracts.Organization{}, fmt.Errorf("attach the domain's people to the new company: %w", err)
-		}
-	}
-
 	// A description supplied at create is authored the same way an edited one
 	// is, and has to say so for the same reason: the site read asks
 	// field_provenance whose sentence it is before replacing it, and a create

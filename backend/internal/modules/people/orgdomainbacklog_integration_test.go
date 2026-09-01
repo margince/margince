@@ -5,13 +5,19 @@
 
 package people
 
-// Typing a company in attaches the people already on its domain.
+// The sweep attaches the people already on a company's domain.
 //
 // They accumulate while nobody has a company for the domain: capture creates
-// each person and deliberately leaves the employer undecided, so by the time a
-// human enters the company its whole roster is sitting there attached to
-// nothing. The domain-triage verdict already wired that backlog; the human path
-// did not, and it is the path a rep actually uses.
+// each person and deliberately leaves the employer undecided, so by the time the
+// company exists its whole roster is sitting there attached to nothing. The
+// domain-triage verdict wired that backlog for the domain it judged; a company a
+// human types in reached nobody.
+//
+// It is a SWEEP and not a write on the create, deliberately. Attaching a person
+// to a company is a write about the PERSON, and the human naming a company holds
+// no authority over contacts they may not see — a rep scoped to their own
+// records would otherwise plant employment for a colleague's private contact as
+// a side effect of typing in a company name.
 //
 // What it cost is visible on the account page rather than in an error: the
 // company shows one contact — whichever sender writes next and gets an edge from
@@ -47,7 +53,7 @@ func (e *dedupeEnv) employerOf(ctx context.Context, t *testing.T, person ids.Per
 	return org
 }
 
-func TestCreatingACompanyAttachesThePeopleAlreadyOnItsDomain(t *testing.T) {
+func TestTheSweepAttachesACompanysPeopleThatNoWriteReaches(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -66,7 +72,8 @@ func TestCreatingACompanyAttachesThePeopleAlreadyOnItsDomain(t *testing.T) {
 		t.Fatal("a person was attached to a company before one existed; the test proves nothing")
 	}
 
-	// Now a human types the company in, naming the domain.
+	// A human types the company in, naming the domain. The create itself plants
+	// nothing — it has no authority to.
 	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
 		DisplayName: "Backlog GmbH",
 		Domains:     []OrgDomainInput{{Domain: "backlog.test", IsPrimary: true}},
@@ -75,18 +82,48 @@ func TestCreatingACompanyAttachesThePeopleAlreadyOnItsDomain(t *testing.T) {
 		t.Fatalf("creating the company: %v", err)
 	}
 
+	// The sweep sees the company owed its people, and attaches them.
+	owed, err := e.store.DomainsOwedTheirPeople(ctx, 50)
+	if err != nil {
+		t.Fatalf("listing the domains owed their people: %v", err)
+	}
+	var found bool
+	for _, d := range owed {
+		if d.OrganizationID.UUID == ids.UUID(org.Id) && d.Domain == "backlog.test" {
+			found = true
+			if _, err := e.store.AttachDomainBacklog(ctx, d); err != nil {
+				t.Fatalf("attaching the backlog: %v", err)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("the sweep does not offer %s, whose domain has contacts attached to nothing", org.Id)
+	}
+
 	for _, person := range []struct {
 		name string
 		id   ids.PersonID
 	}{{"first", first.PersonID}, {"second", second.PersonID}} {
 		employer := e.employerOf(ctx, t, person.id)
 		if employer == nil {
-			t.Errorf("%s contact has no employer after the company was created — "+
+			t.Errorf("%s contact has no employer after the sweep ran — "+
 				"the account shows one contact and the health card blames the relationship on one person", person.name)
 			continue
 		}
 		if *employer != ids.UUID(org.Id) {
 			t.Errorf("%s contact works at %s, want the company just created %s", person.name, *employer, org.Id)
+		}
+	}
+
+	// And the sweep drains: a company whose people are attached is not offered
+	// again, or every nightly tick rewrites the same rows.
+	after, err := e.store.DomainsOwedTheirPeople(ctx, 50)
+	if err != nil {
+		t.Fatalf("listing again: %v", err)
+	}
+	for _, d := range after {
+		if d.OrganizationID.UUID == ids.UUID(org.Id) {
+			t.Errorf("the sweep still offers %s after attaching its people; the selection does not drain", org.Id)
 		}
 	}
 }

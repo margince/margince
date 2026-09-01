@@ -1160,6 +1160,36 @@ kinds:
       unit in the overlay lane. A signal is an optimization and the poller heals
       whatever it misses, so a slow one is dropped rather than waited on.
 
+  link_reconcile:
+    role: dispatcher
+    go_type: LinkReconcileArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 24h
+    fans_out_to: link_reconcile_workspace
+    fan_out_unit: workspace
+    reason: >-
+      Nightly. The cohort-promote consumer already repairs an ordering as it
+      happens, so this is the backstop for the deliveries it did not get — a
+      consumer down while a backfill ran, and every message captured before that
+      consumer existed. Daily because the damage is invisible on every surface
+      until it is repaired: a company page simply reports a contact went quiet.
+
+  link_reconcile_workspace:
+    role: worker
+    go_type: LinkReconcileWorkspaceArgs
+    queue: default
+    timeout: 10m
+    max_attempts: 3
+    opts_owner: fan_out
+    args:
+      Workspace: id
+    reason: >-
+      linkReconcilePeoplePerTick (200) contacts, each one bounded repair
+      transaction of its own so a lock or a concurrent merge costs that contact
+      and not the pass. A caught-up workspace costs one query and writes nothing.
+
   participant_backfill:
     role: dispatcher
     go_type: ParticipantBackfillArgs

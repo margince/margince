@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "c630f11fd404a20608ec05cfb8964fd56aec009817d46a35d16967f440c016d8"
+const jobContractHash = "3d1197a8b2e970c9bf1c42373fef0076f95347398f080311ec8f87d9bf73435c"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -75,6 +75,8 @@ type declaredJobArgs interface {
 		IdempotencyRetentionArgs |
 		IdempotencyRetentionWorkspaceArgs |
 		KnowledgeIngestArgs |
+		LinkReconcileArgs |
+		LinkReconcileWorkspaceArgs |
 		LinkedInRematchArgs |
 		LinkedInRematchWorkspaceArgs |
 		OrgNamePromotionArgs |
@@ -154,6 +156,7 @@ var (
 	_ jobs.FleetWide = GmailWatchArgs{}
 	_ jobs.FleetWide = GraphEdgeReconcileArgs{}
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
+	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
 	_ jobs.FleetWide = OrgNamePromotionArgs{}
 	_ jobs.FleetWide = OverlayReconcileArgs{}
@@ -195,6 +198,7 @@ var (
 	_ jobs.WorkspaceScoped = GraphEdgeWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = IdempotencyRetentionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
+	_ jobs.WorkspaceScoped = LinkReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = LinkedInRematchWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OrgNamePromotionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayReconcileWorkspaceArgs{}
