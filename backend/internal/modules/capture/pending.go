@@ -322,29 +322,42 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 	return out, nil
 }
 
-// Resolve closes a claimed row with its verdict. The CAS on `pending` AND on the
-// caller's own claim is what makes a racing second worker — or a replayed job,
-// or one whose lease expired while it was still running — a no-op rather than a
-// second creation: it reports whether THIS call was the one that resolved the
-// row, and only that caller may act on the verdict.
+// Resolve closes a claimed row with its verdict, recording no sender kind.
 //
-// It takes the claimed row rather than an id so the token cannot be lost or
-// mismatched on the way here.
+// The no-opinion path: a registry rule or an erasure resolves a row without
+// concluding what kind of correspondent the address is. byOwner is false for the
+// same reason — none of these callers is a person deciding about a sender.
 func (s *PendingStore) Resolve(ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, reason string) (bool, error) {
-	return s.ResolveAs(ctx, tx, p, status, "", reason)
+	return s.ResolveAs(ctx, tx, p, status, "", reason, false)
 }
 
-// ResolveAs is Resolve that also records WHAT KIND of sender the row turned out
-// to be. An empty kind leaves the column untouched, which is what a caller with
-// no opinion — a registry rule, an erasure — should say rather than guessing.
-func (s *PendingStore) ResolveAs(ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, kind, reason string) (bool, error) {
+// ResolveAs closes a claimed row with its verdict and the KIND of sender it
+// turned out to be. An empty kind leaves the column untouched, which is what a
+// caller with no opinion — a registry rule, an erasure — should say rather than
+// guessing.
+//
+// The CAS on `pending` AND on the caller's own claim is what makes a racing
+// second worker — or a replayed job, or one whose lease expired while it was
+// still running — a no-op rather than a second creation: it reports whether
+// THIS call was the one that resolved the row, and only that caller may act on
+// the verdict. It takes the claimed row rather than an id so the token cannot be
+// lost or mismatched on the way here.
+//
+// byOwner records WHICH AUTHORITY answered. The purge of personal mail reads it
+// to decide how long to wait before destroying, so a caller that is not a person
+// acting deliberately passes false — the classifier, a sweep, a registry rule.
+func (s *PendingStore) ResolveAs(
+	ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, kind, reason string, byOwner bool,
+) (bool, error) {
 	tag, err := tx.Exec(ctx, `
 		UPDATE capture_pending_counterparty
 		   SET status = $2, disposition_reason = NULLIF($3, ''),
 		       kind = COALESCE(NULLIF($5, ''), kind),
+		       resolved_by_owner = $6,
 		       resolved_at = now(), next_attempt_at = NULL,
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
-		 WHERE id = $1 AND status = 'pending' AND claimed_by = $4`, p.ID, status, reason, p.Claim, kind)
+		 WHERE id = $1 AND status = 'pending' AND claimed_by = $4`,
+		p.ID, status, reason, p.Claim, kind, byOwner)
 	if err != nil {
 		return false, fmt.Errorf("capture: resolving disposition %s: %w", p.ID, err)
 	}

@@ -3933,6 +3933,7 @@ export const vi = {
   "senders.recordYes": "Có",
   "senders.recordNo": "Không",
   "senders.byYou": "— bạn đã quyết định",
+  "senders.deletesOn": "Thư cũ nhất sẽ bị xoá vào {date}",
   "senders.markBusiness": "Công việc",
   "senders.keepOut": "Chặn",
   "senders.withdraw": "Hoàn tác",

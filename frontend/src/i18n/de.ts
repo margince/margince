@@ -3971,6 +3971,7 @@ export const de = {
   "senders.recordYes": "Ja",
   "senders.recordNo": "Nein",
   "senders.byYou": "— von Ihnen entschieden",
+  "senders.deletesOn": "Älteste Nachricht wird am {date} gelöscht",
   "senders.markBusiness": "Geschäftlich",
   "senders.keepOut": "Aussperren",
   "senders.withdraw": "Zurücknehmen",
