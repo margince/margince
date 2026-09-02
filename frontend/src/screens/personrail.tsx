@@ -5,7 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan } from "../app/capability";
+import { useCan, useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
@@ -184,16 +184,25 @@ function PersonHoldSection({ view }: Readonly<{ view: Person360 }>) {
 // --- How this contact is filed -----------------------------------------
 
 /**
- * The contact's tags, drawn by the SHARED panel in the rail's section chrome.
+ * The contact's tags, drawn by the SHARED panel.
  *
  * The three questions the server asks before it writes are asked here too: the
  * object grant, this record's own editability, and — inside the panel — whether
  * the vocabulary is visible at all.
+ *
+ * Exported for its own test: mounting the whole rail to ask whether the tag
+ * verb appears would fail for eight unrelated reasons, and a test that instead
+ * passed `canEdit` straight to the panel would prove only that the panel obeys
+ * its prop — never that this mount computes it.
  */
-function PersonTagsSection({ view }: Readonly<{ view: Person360 }>) {
+export function PersonTagsSection({ view }: Readonly<{ view: Person360 }>) {
   const person = view.person;
   const readOnlyReason = usePersonReadOnlyReason(person);
-  const canUpdate = useCan("person", "update");
+  // useCanWriteRecord, not useCan: applying a tag writes to the record, so the
+  // verb owes the seat ceiling and this row's own `writable` as well as the
+  // object grant. A rep holding `person.update` still may not tag a colleague's
+  // contact, and the read-only reason above does not answer that half.
+  const canUpdate = useCanWriteRecord("person", person);
   if (!person.id) {
     return null;
   }
@@ -202,7 +211,6 @@ function PersonTagsSection({ view }: Readonly<{ view: Person360 }>) {
       entityType="person"
       entityID={person.id}
       canEdit={canUpdate && !readOnlyReason}
-      chrome="section"
     />
   );
 }

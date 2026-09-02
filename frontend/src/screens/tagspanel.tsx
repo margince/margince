@@ -12,6 +12,7 @@ import { TagPill } from "../design-system/tagpill";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { AddTagDialog } from "./tagpicker";
 import type { RecordTag, TaggableType } from "./tags.queries";
 import { useRecordTags, useRemoveTag } from "./tags.queries";
 import "./tagspanel.css";
@@ -23,6 +24,9 @@ import "./tagspanel.css";
  * Four visible, then "+N more". A record with twenty tags would otherwise push
  * everything below it off the screen, and the rail is where a reader looks for
  * the things they can act on rather than for a full inventory.
+ *
+ * The panel carries its own add verb rather than leaving it to each host, so a
+ * record type cannot ship with tags a reader can see and no way to add one.
  */
 const VISIBLE_TAGS = 4;
 
@@ -30,21 +34,17 @@ export function TagsPanel({
   entityType,
   entityID,
   canEdit,
-  chrome = "card",
 }: Readonly<{
   entityType: TaggableType;
   entityID: string;
   /** Whether this reader may change the record. Applying a tag writes to the
    * RECORD, so a reader who may only look at it sees the words and no verbs. */
   canEdit: boolean;
-  /** The frame this host draws its rail in. The company rail is a column of
-   * cards, the person rail is ONE card of sections — the same tags inside two
-   * different chromes rather than two components that drift. */
-  chrome?: "card" | "section";
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
+  const [adding, setAdding] = useState(false);
   const read = useRecordTags(entityType, entityID);
 
   // The frame stands while the read is in flight. This panel sits in the record
@@ -58,7 +58,7 @@ export function TagsPanel({
   }
   if (read.isPending) {
     return (
-      <TagsFrame chrome={chrome} title={t("tags.panelTitle")}>
+      <TagsFrame title={t("tags.panelTitle")}>
         <p className="tagspanel-note">{t("tags.loading")}</p>
       </TagsFrame>
     );
@@ -69,7 +69,7 @@ export function TagsPanel({
   // fact about the record that nobody established.
   if (read.data.withheld) {
     return (
-      <TagsFrame chrome={chrome} title={t("tags.panelTitle")}>
+      <TagsFrame title={t("tags.panelTitle")}>
         <p className="tagspanel-note">{t("tags.withheld")}</p>
       </TagsFrame>
     );
@@ -85,7 +85,6 @@ export function TagsPanel({
 
   return (
     <TagsFrame
-      chrome={chrome}
       title={t("tags.panelTitle")}
       sub={tags.length > 0 ? t("tags.panelSub") : undefined}
     >
@@ -117,38 +116,43 @@ export function TagsPanel({
           )}
         </div>
       )}
+      {canEdit && (
+        <div className="tagspanel-actions">
+          <AddTagButton onOpen={() => setAdding(true)} />
+        </div>
+      )}
+      {/* `canEdit` again, not `adding` alone: a seat downgrade, an archive or an
+          ownership change while the picker is open takes the button away, and a
+          dialog that outlived it would still submit. */}
+      {canEdit && adding && (
+        <AddTagDialog
+          entityType={entityType}
+          entityID={entityID}
+          current={tags}
+          onClose={() => setAdding(false)}
+        />
+      )}
     </TagsFrame>
   );
 }
 
 /**
- * The frame around the tags, in whichever shape the host rail uses.
+ * The frame around the tags: a rail card, the same as every card beside it.
  *
- * The company rail is a column of sibling cards, so the tags are one more card.
- * The person rail is ONE card whose contents are headed sections, so a second
- * card inside it would draw a box in a box. Same contents either way — the
- * alternative was a second panel component, and the two would have drifted the
- * first time an empty state changed.
+ * The person rail once drew these as a bare headed section instead. It sat
+ * between two cards — the correspondence control above, recent activity below —
+ * so the one section in the column read as unstyled rather than as a deliberate
+ * second shape.
  */
 function TagsFrame({
-  chrome,
   title,
   sub,
   children,
 }: Readonly<{
-  chrome: "card" | "section";
   title: string;
   sub?: string;
   children: ReactNode;
 }>) {
-  if (chrome === "section") {
-    return (
-      <section className="pe-rail-section">
-        <h3 className="pe-rail-heading">{title}</h3>
-        {children}
-      </section>
-    );
-  }
   return (
     <Panel title={title} sub={sub}>
       <PanelBody>{children}</PanelBody>
@@ -229,8 +233,15 @@ function TagOnRecord({
   );
 }
 
-/** The add-tag verb, which the caller places where the record page wants it. */
-export function AddTagButton({ onOpen }: Readonly<{ onOpen: () => void }>) {
+/**
+ * The add-tag verb.
+ *
+ * Private to this file. Applying a word needs the record's CURRENT tags, so the
+ * dialog can offer each one once — and this panel is what holds that read. A
+ * caller placing the verb itself had to fetch the same list a second time to
+ * feed the dialog, and a caller that forgot placed no verb at all.
+ */
+function AddTagButton({ onOpen }: Readonly<{ onOpen: () => void }>) {
   const t = useT();
   return (
     <Button small variant="ghost" onClick={onOpen}>

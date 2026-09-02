@@ -20,7 +20,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
-import { useCan } from "../app/capability";
+import { useCanWriteRecord } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -3600,7 +3600,11 @@ function DealLead({
  * may see the vocabulary at all.
  */
 function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
-  const canUpdate = useCan("deal", "update");
+  // useCanWriteRecord, not useCan: applying a tag writes to the deal, so the
+  // verb owes the seat ceiling and this row's own `writable` alongside the
+  // object grant — a grant by itself would offer the picker on a colleague's
+  // deal, and to a read seat the server refuses before RBAC is consulted.
+  const canUpdate = useCanWriteRecord("deal", deal);
   const overlay = useSorMode() === "overlay";
   return (
     <TagsPanel
