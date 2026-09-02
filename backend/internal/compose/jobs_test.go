@@ -47,7 +47,7 @@ func TestJobKindsAreStable(t *testing.T) {
 // best-effort with no requested scope; a portal that gates one of them
 // (HubSpot 403s leads and emails on a starter portal, confirmed against a live
 // developer account) must skip only that class, never abort the classes we do
-// hold scope for. A portal-wide failure (an outage or quota exhaustion) still
+// hold scope for. A portal-wide failure (an outage or volume budget exhaustion) still
 // aborts even a best-effort class.
 func TestOverlaySweepAbortsToleratesBestEffortClassInaccessibility(t *testing.T) {
 	cases := []struct {

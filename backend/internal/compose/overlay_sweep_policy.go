@@ -48,7 +48,7 @@ func scopeBackedOverlayClass(objectClass string) bool {
 // downscoped. A best-effort class (leads and the engagement classes, swept
 // with no requested scope) never breaks the classes we can sync — but it still
 // aborts on a CONNECTION-WIDE condition: budget exhaustion (continuing to spend
-// against an exhausted quota is pointless) or ErrConnectionGone (a disconnect
+// against an exhausted volume budget is pointless) or ErrConnectionGone (a disconnect
 // racing the sweep — the connection no longer exists, so the on-demand
 // reconciler must see this to collapse it to ErrModeNotOverlay, and the poller
 // must not reset backoff on a dead connection). Every per-OBJECT failure — a

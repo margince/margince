@@ -36,7 +36,7 @@ func TestDispatchCountsASuccessfulSendAgainstEveryMeteringPolicy(t *testing.T) {
 }
 
 // A message that never reached the provider consumed none of the mailbox's
-// quota. Counting a deferral would shrink the window every time the chain was
+// volume budget. Counting a deferral would shrink the window every time the chain was
 // merely consulted.
 func TestDispatchCountsNothingAgainstAPolicyWhenTheSendIsPostponed(t *testing.T) {
 	meter := &recordingPolicy{}

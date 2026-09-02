@@ -317,7 +317,6 @@ internal/modules/agents/outputshapes.go#const block at const schemaObject
 internal/modules/agents/outputshapes.go#const envelopeDataMember
 internal/modules/agents/outputshapes_test.go#func TestDeclaredOutputSchemasMatchTheCommittedRendering
 internal/modules/agents/outputshapes_test.go#func renderDeclaredSchemas
-internal/modules/agents/quotarelease.go#type QuotaReleaseRequest.Proposal
 internal/modules/agents/recordtyped.go#const block at const typeLead
 internal/modules/agents/registration.go#func envelopedSpec
 internal/modules/agents/registration.go#func unitOwned
@@ -334,6 +333,7 @@ internal/modules/agents/tools_project360_result.go#type Project360PhaseHistory
 internal/modules/agents/tools_resolve.go#var resolveKinds
 internal/modules/agents/tools_tags.go#func decodeTagging
 internal/modules/agents/tools_tags.go#func taggingSchema
+internal/modules/agents/volumerelease.go#type VolumeReleaseRequest.Proposal
 internal/modules/ai/feedback.go#const fieldSubjectType
 internal/modules/ai/feedback.go#type RecordInput.ClaimPath
 internal/modules/ai/railemit_test.go#func TestADegradedCallSaysWhyEvenWithNoSentinel
@@ -562,8 +562,8 @@ internal/modules/signals/signal.go#func OfOrganizationWhere
 internal/modules/signals/warmroom.go#func RankRouteIn
 internal/modules/signals/warmroom.go#func RouteInEdges
 internal/modules/webhooks/store.go#const fieldEventTypes
-internal/platform/agentquota/counter.go#func CounterFor
-internal/platform/agentquota/meter_test.go#var governedCounters
+internal/platform/agentvolume/counter.go#func CounterFor
+internal/platform/agentvolume/meter_test.go#var governedCounters
 internal/platform/auth/capturePrivacyCoverage_test.go#func TestEveryTableThatCanHoldAnOwnerRowIsOwnerPrivate
 internal/platform/auth/edgeread.go#const relationshipObject
 internal/platform/auth/fieldmask.go#func StampWritable

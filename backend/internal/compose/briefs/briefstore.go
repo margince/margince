@@ -267,16 +267,8 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 		if err != nil {
 			return err
 		}
-		err = tx.QueryRow(ctx, `
-			SELECT id, user_id, generated_at, as_of, local_day, candidate_count, revenue_norm_minor,
-			       revenue_norm_currency, coalesce(narrative, ''), annotated_at
-			FROM brief_run
-			WHERE user_id = $1 AND local_day = $2`, userID, day).
-			Scan(&run.ID, &run.UserID, &run.GeneratedAt, &run.AsOf, &run.LocalDay, &run.CandidateCount,
-				&run.RevenueNormMinor, &run.RevenueNormCurrency, &run.Narrative, &run.AnnotatedAt)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		run, err = scanRun(tx.QueryRow(ctx, runSelect+`
+			WHERE user_id = $1 AND local_day = $2`, userID, day))
 		if err != nil {
 			return err
 		}
@@ -288,6 +280,32 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 		run.Items, err = readRunItems(ctx, tx, run.ID)
 		return err
 	})
+	if err != nil {
+		return BriefRun{}, err
+	}
+	return run, nil
+}
+
+// runSelect is the run's own columns, in one place.
+//
+// Shared by the day read above and the mail claim's read of one run by id
+// (briefmail.go): two spellings of a column list is how one of them comes to
+// miss a column the other added, and the miss is silent — the struct simply
+// carries a zero.
+const runSelect = `
+	SELECT id, user_id, generated_at, as_of, local_day, candidate_count, revenue_norm_minor,
+	       revenue_norm_currency, coalesce(narrative, ''), annotated_at
+	FROM brief_run`
+
+// scanRun reads one runSelect row, answering ErrNotFound for no row.
+func scanRun(row pgx.Row) (BriefRun, error) {
+	var run BriefRun
+	err := row.Scan(&run.ID, &run.UserID, &run.GeneratedAt, &run.AsOf, &run.LocalDay,
+		&run.CandidateCount, &run.RevenueNormMinor, &run.RevenueNormCurrency,
+		&run.Narrative, &run.AnnotatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return BriefRun{}, apperrors.ErrNotFound
+	}
 	if err != nil {
 		return BriefRun{}, err
 	}

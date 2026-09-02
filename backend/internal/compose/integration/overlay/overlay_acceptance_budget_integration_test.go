@@ -125,7 +125,7 @@ func TestAcceptance_AC_OV_3_MirrorReadMeetsBudget(t *testing.T) {
 // TestAcceptance_AC_OV_7_ForceFreshDegrades proves design.md's AC-OV-7
 // (OVA-EVT-3): once the OVB meter reports the shed band, a force-fresh
 // read degrades to mirror-with-staleness (Authoritative:false, zero
-// additional quota spent — proven by the meter's own Consumed count
+// additional volume budget spent — proven by the meter's own Consumed count
 // staying unchanged, the only way FreshnessReader.Read could ever reach
 // the live incumbent) and emits mirror.budget_degraded on the bus — never
 // silently. Driven through compose.Dispatcher (the real production

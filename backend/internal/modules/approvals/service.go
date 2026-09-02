@@ -69,10 +69,10 @@ type Service struct {
 	// decision nobody will make again.
 	declines map[string]DeclinedEffect
 	expiries map[string]ExpiredEffect
-	// quota is the volume meter an approved step-up widens (quotarelease.go).
+	// volume budget is the volume meter an approved step-up widens (volumerelease.go).
 	// Nil in a composition that serves no agents, where a step-up can never be
 	// staged in the first place.
-	quota QuotaReleaser
+	quota VolumeReleaser
 	// log carries the cause of a follow-on effect that failed AFTER its own
 	// decision committed (bundle.go). The wire names which member did not land
 	// and nothing about why — internals are not a client's — so this logger is

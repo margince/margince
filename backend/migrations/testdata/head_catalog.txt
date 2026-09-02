@@ -877,6 +877,8 @@ public.brief_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/mar
 public.brief_run.annotated_at timestamp with time zone gen=- def=-
 public.brief_run.as_of timestamp with time zone NOT NULL gen=- def=-
 public.brief_run.brief_run_candidate_count_check CHECK ((candidate_count >= 0))
+public.brief_run.brief_run_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))
+public.brief_run.brief_run_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL)))
 public.brief_run.brief_run_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))
 public.brief_run.brief_run_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (annotated_at IS NOT NULL)))
 public.brief_run.brief_run_pkey PRIMARY KEY (id)
@@ -887,6 +889,8 @@ public.brief_run.candidate_count integer NOT NULL gen=- def=-
 public.brief_run.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.brief_run.id uuid NOT NULL gen=- def=uuidv7()
 public.brief_run.local_day date NOT NULL gen=- def=-
+public.brief_run.mail_attempted_at timestamp with time zone gen=- def=-
+public.brief_run.mail_error text gen=- def=-
 public.brief_run.narrative text gen=- def=-
 public.brief_run.revenue_norm_currency text NOT NULL gen=- def=''::text
 public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
@@ -1084,6 +1088,7 @@ public.capture_pending_counterparty.next_attempt_at timestamp with time zone gen
 public.capture_pending_counterparty.owner_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.proposal_id uuid gen=- def=-
 public.capture_pending_counterparty.resolved_at timestamp with time zone gen=- def=-
+public.capture_pending_counterparty.resolved_by_owner boolean NOT NULL gen=- def=false
 public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::text
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
@@ -4682,7 +4687,7 @@ public.uq_site_read_org_inflight CREATE UNIQUE INDEX uq_site_read_org_inflight O
 public.uq_site_read_triage_inflight CREATE UNIQUE INDEX uq_site_read_triage_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'domain_triage'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_site_read_ws_id CREATE UNIQUE INDEX uq_site_read_ws_id ON public.site_read USING btree (id)
 public.uq_stage_position CREATE UNIQUE INDEX uq_stage_position ON public.stage USING btree (pipeline_id, "position") WHERE (archived_at IS NULL)
-public.uq_tag_name CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name))
+public.uq_tag_name CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name)) WHERE (archived_at IS NULL)
 public.uq_team_weekly_review_rep CREATE UNIQUE INDEX uq_team_weekly_review_rep ON public.team_weekly_review_rep USING btree (team_weekly_review_id, user_id)
 public.uq_team_weekly_review_team_week CREATE UNIQUE INDEX uq_team_weekly_review_team_week ON public.team_weekly_review USING btree (team_id, local_week_start)
 public.uq_transcript_read_inflight CREATE UNIQUE INDEX uq_transcript_read_inflight ON public.transcript_read USING btree (activity_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))

@@ -145,7 +145,7 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// it; a passport that can lift its own window has none. Both verdicts, not
 	// just the release: the lender is who this card was raised for, and an agent
 	// answering it at all takes the question away from them.
-	if kind == KindQuotaRelease {
+	if kind == KindVolumeRelease {
 		return fmt.Errorf("a volume step-up is answered by the person who lent this credential, not by it: %w",
 			apperrors.ErrPermissionDenied)
 	}

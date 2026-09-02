@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// recordingSpender is the quota meter as this module sees it.
+// recordingSpender is the volume meter as this module sees it.
 type recordingSpender struct {
 	tokens int
 	calls  int

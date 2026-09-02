@@ -1333,7 +1333,7 @@ export const en = {
   "approval.kind.send_email": "Send an email",
   "approval.kind.held_draft": "Review a drafted email",
   "approval.kind.book_meeting": "Book a meeting",
-  "approval.kind.quota_release": "Let an agent continue",
+  "approval.kind.volume_release": "Let an agent continue",
   "approval.kind.coldstart": "Fill in a new account",
   "approval.kind.enrich": "Enrich from the web",
   "approval.kind.deepread": "Read the company site",
@@ -4006,6 +4006,7 @@ export const en = {
   "senders.recordYes": "Yes",
   "senders.recordNo": "No",
   "senders.byYou": "— you decided",
+  "senders.deletesOn": "Oldest message deleted on {date}",
   "senders.markBusiness": "Business",
   "senders.keepOut": "Keep out",
   "senders.withdraw": "Undo",
@@ -7592,11 +7593,12 @@ export const en = {
   "worklist.pane.lastOutbound": "We last wrote",
   "worklist.pane.never": "Never",
   "worklist.focus.title": "Do this next",
+  "worklist.nextup.title": "And then",
   "worklist.focus.verb.decide": "Decide",
   "worklist.focus.verb.merge": "Review the pair",
   "worklist.focus.verb.complete": "Complete it",
   "worklist.focus.verb.act": "Act on it",
-  // Required by the template's key type, never produced: worthFocusing
+  // Required by the template's key type, never produced: worthActingOn
   // excludes primary_action "acknowledge" before this key is ever built.
   "worklist.focus.verb.acknowledge": "Acknowledge",
   "worklist.focus.verb.open": "Open it",

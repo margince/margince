@@ -1971,12 +1971,28 @@ func (stubs) ArchiveTag(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 	httperr.NotImplemented(w, r, "ArchiveTag")
 }
 
+func (stubs) GetTag(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetTag")
+}
+
+func (stubs) UpdateTag(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateTagParams) {
+	httperr.NotImplemented(w, r, "UpdateTag")
+}
+
 func (stubs) RemoveTag(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RemoveTag")
 }
 
 func (stubs) ApplyTag(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ApplyTag")
+}
+
+func (stubs) MergeTags(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "MergeTags")
+}
+
+func (stubs) RestoreTag(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreTag")
 }
 
 func (stubs) CreateTask(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateTaskParams) {

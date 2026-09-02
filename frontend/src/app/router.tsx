@@ -156,6 +156,16 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   leads: 2,
   deals: WHOLE_ADDRESS,
   projects: WHOLE_ADDRESS,
+  // #/worklist/<owner> and #/worklist/unassigned are real addresses the home
+  // team board navigates to, and App.tsx hands that segment to the screen as
+  // `opensOn`. The screen reads it in useState INITIALISERS, so the remount is
+  // what applies it: lower this and a manager clicking a colleague's name keeps
+  // reading their OWN queue under that colleague's address, with no error and
+  // nothing on screen to say so.
+  //
+  // Held by screens/worklist.identity.test.tsx. Selecting a row here is local
+  // state and never touches the address, which is what makes lowering this look
+  // free — the pane is not what the depth is protecting.
   worklist: WHOLE_ADDRESS,
   // #/reports/<report> — the picker chooses a view of one screen, so switching
   // reports re-renders the panel instead of throwing the screen away.

@@ -18,6 +18,15 @@ import {
 // It is asserted here rather than in screens/personpage.test.tsx because the key
 // lives above every screen: that suite mounts the page with a `tab` prop and can
 // never see the router decide.
+//
+// KNOWN GAP, #3675: these two cases pass alone and fail when another App suite
+// has run first. The person page then never leaves "Loading…" — the address is
+// right and the record's name resolves, so the /360 read is what does not
+// settle, and something above this file is holding a react-query cache across
+// suites that `renderApp`'s fresh client does not clear. It is not this file's
+// stubs: it reproduces on an unmodified tree. Until that is found, treat a
+// failure here as the leak rather than as a broken identity key, and check by
+// running this file alone.
 
 type Person360 = components["schemas"]["Person360"];
 
@@ -41,22 +50,40 @@ function person(id: string, name: string): Person360 {
   };
 }
 
-// The session harness's stub, with the one read the record page cannot render
+// The session harness's stub, with the reads the record page cannot render
 // without answered on top of it. Everything else still 503s into its own error
 // state — this suite is about which DOM nodes survive a navigation.
+//
+// TWO reads, not one. The page asks for the person itself before it asks for the
+// 360 projection, and a suite that answered only the second sat at "Loading…"
+// forever: no header, no tab strip, and both cases failing on their first
+// `waitFor` rather than on the node comparison they exist for. That is a whole
+// screen this file cannot draw, so it is stubbed here rather than left to the
+// harness — the harness deliberately 503s everything it is not asked about.
 function personFetch() {
   const session = sessionOnlyFetch();
   return async (input: Request | string | URL) => {
     const url = String(input instanceof Request ? input.url : input);
-    const match = /\/v1\/people\/(p-\d+)\/360$/.exec(url);
-    if (match) {
-      return new Response(
-        JSON.stringify(person(match[1], `Person ${match[1]}`)),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+    const whole = /\/v1\/people\/(p-\d+)\/360$/.exec(url);
+    if (whole) {
+      return json(person(whole[1], `Person ${whole[1]}`));
+    }
+    // The record itself, which the page reads for its header. Anchored to the
+    // end so it cannot swallow /360, /brief or /consent — those keep 503ing
+    // into panels of their own, which is what this suite wants.
+    const bare = /\/v1\/people\/(p-\d+)$/.exec(url);
+    if (bare) {
+      return json({ id: bare[1], full_name: `Person ${bare[1]}`, ...CAPTURED });
     }
     return session(input);
   };
+}
+
+function json(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 // The one element every case below compares across a navigation: the RECORD's
@@ -71,8 +98,18 @@ function recordHead(): Element {
   return found;
 }
 
+// The strip ITSELF, from the component that draws the tabs — not the slot the
+// page chrome reserves for it.
+//
+// `.record-tabs` in composed.tsx is that slot: a wrapper the record head puts
+// around whatever tabs it is handed. The tabs live inside it under
+// `recordtabs.tsx`'s own classes, and a query for `.record-tabs button` matches
+// nothing at all. This file asked for the wrapper and for buttons inside it, so
+// it compared a node that survives everything and then failed to find a current
+// tab — which is how both cases died on their first `waitFor` rather than on the
+// identity comparison they exist for.
 function tabStrip(): Element {
-  const found = document.querySelector(".record-tabs");
+  const found = document.querySelector(".recordtabs-strip");
   if (!found) {
     throw new Error("the contact record's tab strip never rendered");
   }
@@ -84,7 +121,9 @@ function tabStrip(): Element {
 // waiting on it is what makes the node comparisons below claims about a move
 // that HAPPENED rather than one still in flight.
 function currentTab(): string {
-  const on = document.querySelector('.record-tabs button[aria-pressed="true"]');
+  const on = document.querySelector(
+    '.recordtabs-strip button[aria-pressed="true"]',
+  );
   if (!on) {
     throw new Error("no tab is current");
   }

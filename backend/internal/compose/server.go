@@ -39,7 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
@@ -209,16 +209,16 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// doc). Fail-closed until WithOverlayMeter Rebinds it with the live
 		// Redis client + config.
 		overlayMeter: failClosedOverlayMeter(),
-		// Fail-closed until WithAgentQuota Rebinds it: a role serving the agent
+		// Fail-closed until WithAgentVolume Rebinds it: a role serving the agent
 		// surface with no Redis cannot tell whether an agent has passed its
 		// read bound, and answers that it has.
-		quotaMeter: agentquota.New(nil, agentquota.Limits{}, agentquota.DefaultWindow),
+		volumeMeter: agentvolume.New(nil, agentvolume.Limits{}, agentvolume.DefaultWindow),
 	}
 	// After the literal, because the decision path takes the SAME meter pointer
 	// the gate and the registry take: a step-up refused against one counter and
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
-	srv.approvalsHandlers = approvalsHandlersWithEffects(pool, srv.quotaMeter, log)
+	srv.approvalsHandlers = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
 	// The day's surface reads the SAME approvals engine the inbox decides
 	// through, so a card here and a row there are one queue rather than two
 	// readings of it.

@@ -34,6 +34,7 @@ import {
 } from "./home.queries";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
+import { HomeTeamBoard } from "./home.teamboard";
 import { TodaySection } from "./home.today";
 import { WeeklySection } from "./home.weekly";
 import { useWorklist } from "./worklist.queries";
@@ -378,6 +379,12 @@ export function HomeScreen() {
       {/* Before the readings, because a strip of numbers a reader cannot
           trust is worse than one they can qualify. */}
       {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
+      {/* Who on the team is carrying what — a lead's first question, on the
+          page they open first. Behind its own disclosure, so their own day
+          still leads: it is the SECOND thing they came for. */}
+      <HomeTeamBoard
+        offered={worklistQuery.data?.scope_options?.includes("team") ?? false}
+      />
       <HomeReadingsStrip
         decisions={decisionReadings}
         open={openReading}

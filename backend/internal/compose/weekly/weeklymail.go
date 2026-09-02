@@ -85,7 +85,7 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	// needs it: a model wrote it, and a model is exactly the source somebody can
 	// steer into emitting a newline followed by a line that looks like ours.
 	if review.Narrative != "" {
-		b.WriteString(oneLine(review.Narrative) + "\n\n")
+		b.WriteString(mailcopy.OneLine(review.Narrative) + "\n\n")
 	}
 
 	c := review.Counts
@@ -151,37 +151,17 @@ func writeDealLines(b *strings.Builder, deals []DealLine, words mailcopy.Copy) {
 	}
 }
 
-// oneLine collapses any run of line breaks and other control separators into
-// single spaces, so a stored string cannot forge structure in the message.
-//
-// EVERY rendered string goes through this, not only the ones that look
-// dangerous. The body is a line-oriented format a human reads as authoritative,
-// so any value reaching it that can hold a newline can write a line that looks
-// like ours — a fake count, a fake heading, a "From:" that reads as a header.
-// Deal labels, stage names and the model's own sentence are each typed or
-// generated somewhere that does not reject a newline, and asking every caller
-// to remember is how one of them comes not to.
-//
-// mailer.Send refuses line breaks in the recipient and the subject, which are
-// the header fields. The body is this file's to keep honest.
-func oneLine(text string) string {
-	return strings.Join(strings.FieldsFunc(text, func(r rune) bool {
-		return r == '\n' || r == '\r' || r == '\v' || r == '\f' ||
-			r == '\u0085' || r == '\u2028' || r == '\u2029'
-	}), " ")
-}
-
 // mailDealLine is one deal, as the week recorded it.
 //
 // The LABEL is what was frozen when the review was written, never a lookup: a
 // deal renamed or deleted since still reads here as it did that week, which is
 // the same promise the panel makes.
 func mailDealLine(line DealLine, words mailcopy.Copy) string {
-	parts := []string{oneLine(line.Label), outcomeWord(line.Outcome, words)}
+	parts := []string{mailcopy.OneLine(line.Label), outcomeWord(line.Outcome, words)}
 	if line.ToStageLabel != "" {
 		// A stage name is stored with no single-line validation, so it is the
 		// same species of input as the label beside it.
-		parts = append(parts, oneLine(line.ToStageLabel))
+		parts = append(parts, mailcopy.OneLine(line.ToStageLabel))
 	}
 	// Money is a pair or it is absent — the same rule the wire follows. A bare
 	// amount is a number nobody can read.

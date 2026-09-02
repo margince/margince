@@ -65,7 +65,7 @@ func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, 
 	}
 	// The effect is charged on BOTH arms — the field split forwards to the
 	// same handler through its own path — and on NEITHER when the handler
-	// refused. A quota counts what an agent did, so a rejected mutation that
+	// refused. A volume budget counts what an agent did, so a rejected mutation that
 	// spent a write would let a caller exhaust its own allowance on requests
 	// that changed nothing, which is a bound nobody wrote.
 	// The meter sits OUTSIDE the recorder, so the handler's WriteJSON finds

@@ -27,6 +27,8 @@
 // (backend/gates/mailcopy_test.go)
 package mailcopy
 
+import "strings"
+
 // Language is a base language this installation can send in. The set is the
 // contract's `base_language` enum, and English is what an installation that
 // names none is treated as speaking.
@@ -126,4 +128,43 @@ type Copy struct {
 	WeeklyOutcomeWon   string
 	WeeklyOutcomeLost  string
 	WeeklyOutcomeMoved string
+
+	// The morning brief. Shorter than the weekly on purpose: it arrives every
+	// working day, so it names the top of the queue and links to the rest
+	// rather than restating a day a reader is about to open anyway.
+	MorningSubject string
+	MorningHeading string
+	// MorningTop heads the ranked lines. MorningAndMore is the "%d more"
+	// tail when the queue runs past the cap.
+	MorningTop     string
+	MorningAndMore string
+	// MorningQuiet is the whole body when the queue is empty and the rep asked
+	// to hear about quiet days anyway. Nothing else is sent in that case: a
+	// heading over an empty list reads as a message that failed to render.
+	MorningQuiet   string
+	MorningOpenDay string
+}
+
+// OneLine collapses any run of line breaks and other control separators into
+// single spaces, so a stored string cannot forge structure in a message.
+//
+// EVERY rendered string goes through this, not only the ones that look
+// dangerous. A mail body is a line-oriented format a human reads as
+// authoritative, so any value reaching it that can hold a newline can write a
+// line that looks like ours — a fake count, a fake heading, a "From:" that
+// reads as a header. Deal labels, stage names and a model's own sentence are
+// each typed or generated somewhere that does not reject a newline, and asking
+// every caller to remember is how one of them comes not to.
+//
+// Here rather than in one sender, because there are two now: the weekly
+// retrospective and the morning brief. A second copy of this is a second thing
+// to remember to fix.
+//
+// mailer.Send refuses line breaks in the recipient and the subject, which are
+// the header fields. The body is the sender's to keep honest.
+func OneLine(text string) string {
+	return strings.Join(strings.FieldsFunc(text, func(r rune) bool {
+		return r == '\n' || r == '\r' || r == '\v' || r == '\f' ||
+			r == '\u0085' || r == '\u2028' || r == '\u2029'
+	}), " ")
 }

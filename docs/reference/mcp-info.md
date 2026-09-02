@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 59 |
+| Tools | 60 |
 | Resources | 9 |
-| Tool catalog | 170.0 KB |
+| Tool catalog | 171.6 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 44404 |
+| Approx. wire tokens | 44813 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 81.4 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 39.6 KB | 23% | Yes, every step |
-| Input schemas | 36.6 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 12.5 KB | 7% | Partly |
-| **Description + input schema** | **76.1 KB** | **44%** | **the recurring cost** |
+| Output schemas | 82.4 KB | 48% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 39.9 KB | 23% | Yes, every step |
+| Input schemas | 36.7 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 12.7 KB | 7% | Partly |
+| **Description + input schema** | **76.5 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,7 +57,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (59)
+### Tools (60)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -82,6 +82,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
 | [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
+| [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
@@ -3904,6 +3905,153 @@ Learn about an organization by reading its public website, and propose what was 
 {
   "properties": {
     "data": {
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### get_tag
+
+**Get a tag**
+
+Read one tag and how many people, companies and deals carry it. The counts cover those three record types only. They say how much retiring or merging the word would touch; the records themselves come from list_records. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "tag_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tag_id"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "archived": {
+          "type": "boolean"
+        },
+        "color": {
+          "type": "string"
+        },
+        "companies": {
+          "type": "integer"
+        },
+        "deals": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "people": {
+          "type": "integer"
+        },
+        "tag_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "companies",
+        "deals",
+        "name",
+        "people",
+        "tag_id"
+      ],
       "type": "object"
     },
     "evidence": {
