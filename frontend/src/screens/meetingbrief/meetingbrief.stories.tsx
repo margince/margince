@@ -3,10 +3,10 @@ import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
 import { PersonMeetingBrief } from "./drawer";
 import {
   briefEmpty,
+  briefManager,
   briefModel,
   briefOmitted,
   briefReady,
-  briefManager,
   briefScoped,
   briefWithPlan,
   meetingFacts,
