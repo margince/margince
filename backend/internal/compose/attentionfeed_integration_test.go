@@ -403,9 +403,9 @@ func TestThePlannedLaneCapKeepsTheMostOverdueNotTheNewestLogged(t *testing.T) {
 	stale := "The promise that slipped three weeks ago"
 	logOpenTaskLoggedAt(t, e, stale, now.Add(-21*24*time.Hour), now.Add(-30*24*time.Hour))
 
-	// Twelve tasks logged an hour ago, each due sooner than it was filed. Under
-	// occurred_at DESC these are individually "newer" than the stale promise and
-	// fill the whole cap on their own.
+	// Twelve tasks logged an hour ago, due later today. Under occurred_at DESC
+	// these are individually "newer" than the stale promise and fill the whole
+	// cap on their own.
 	for i := range 12 {
 		logOpenTaskLoggedAt(t, e, fmt.Sprintf("Filed this morning %d", i), now.Add(time.Hour), now.Add(-time.Hour))
 	}

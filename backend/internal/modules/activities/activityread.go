@@ -207,10 +207,12 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		page = storekit.Page{HasMore: true}
-		// No cursor for the open-and-due order: one is never decoded against
-		// it (errOpenAndDueByWithCursor), so encoding one here would hand out
-		// a page token nothing can correctly resume.
+		// The open-and-due order has no cursor to hand out — one is never
+		// decoded against it (errOpenAndDueByWithCursor) — so it reports no
+		// resumable page at all rather than a HasMore a caller has no way to
+		// act on. Rows beyond the cap still exist; CountOpenForViewer is the
+		// query that answers how many.
+		page = storekit.Page{HasMore: in.OpenAndDueBy == nil}
 		if in.OpenAndDueBy == nil {
 			last := activities[len(activities)-1]
 			next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
