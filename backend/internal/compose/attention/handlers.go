@@ -49,6 +49,21 @@ func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// GetHiddenBacklog answers what the queue is NOT showing, and which rule holds
+// it back.
+//
+// No parameters, for the reason the team board has none: whose queue is being
+// measured comes from the principal, so a reader cannot ask what is hidden from
+// somebody else.
+func (h Handlers) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+	out, err := h.svc.HiddenBacklog(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // GetWorklist answers the same day as one ranked queue.
 //
 // It reads through the same assembler GetAttention does, so a lane added there

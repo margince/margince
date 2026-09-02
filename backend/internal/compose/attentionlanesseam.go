@@ -249,6 +249,27 @@ type attentionWaiting struct {
 // The instant comes from the caller so the whole read is one snapshot. Asking
 // the clock again here would let the anti-joins judge against a moment the rest
 // of the day was not read at.
+// Hidden asks the module what its own hiding rules are keeping off the queue.
+//
+// A pass-through: the arithmetic is five reads of the eligibility query and
+// belongs beside that query, not here. What this seam does is what every seam
+// here does — carry the answer across in compose's own vocabulary.
+func (w attentionWaiting) Hidden(
+	ctx context.Context, asOf time.Time,
+) (attention.HiddenWork, error) {
+	got, err := w.store.HiddenWaiting(ctx, asOf)
+	if err != nil {
+		return attention.HiddenWork{}, err
+	}
+	return attention.HiddenWork{
+		Shown:       got.Shown,
+		SetAside:    got.SetAside,
+		NotSales:    got.NotSales,
+		PastHorizon: got.PastHorizon,
+		Unlinked:    got.Unlinked,
+	}, nil
+}
+
 func (w attentionWaiting) Unanswered(
 	ctx context.Context, asOf time.Time,
 ) ([]attention.WaitingCustomer, bool, error) {

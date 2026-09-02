@@ -6694,6 +6694,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the queue is not showing, and which rule is holding it back.
+         * @description The Worklist is designed to look finite: a rep works it to the bottom and the day
+         *     is done. Five rules make a waiting customer disappear from it, and nothing on the
+         *     page can say whether any of them is hiding real work — a rep who marks every hard
+         *     reply `not_sales` produces a page identical to a rep with a clean queue. The
+         *     failure is invisible by construction, which is the one shape of defect a finite
+         *     queue cannot report on itself.
+         *
+         *     This is the counter-reading. Each figure is the SAME eligibility query the queue
+         *     runs, with ONE hiding rule relaxed, so a difference is attributable rather than a
+         *     single number nobody can act on: a reader is told which rule to look at.
+         *
+         *     THE TARGET IS ZERO, and every figure is a defect rather than a statistic. Two of
+         *     the rules are somebody's choice and two are nobody's — see each field.
+         *
+         *     Counted under the CALLER's own visibility, like `/worklist/team`'s counts are: a
+         *     figure summing rows the reader may not open would publish work they have no
+         *     access to. So this answers "how much is hidden from YOU", which is the only
+         *     honest reading available without giving one person a licence to read another's
+         *     records.
+         */
+        get: operations["getHiddenBacklog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/digest": {
         parameters: {
             query?: never;
@@ -26838,6 +26876,63 @@ export interface components {
             more_available: boolean;
         };
         /**
+         * @description How much waiting work each hiding rule is keeping off one reader's queue, at one
+         *     instant. Every count is of THREADS, matching what the queue counts: a customer who
+         *     wrote three times is waiting once.
+         */
+        HiddenBacklog: {
+            /**
+             * Format: date-time
+             * @description The instant every figure below was read at.
+             */
+            as_of: string;
+            /**
+             * @description What the queue itself would carry. Here so the others read as a proportion
+             *     rather than as bare volumes — three hidden against four shown is a broken
+             *     queue, and three against three hundred is a rep tidying up.
+             */
+            shown: number;
+            /**
+             * @description Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
+             *     least alarming of the four: a snooze lifts on its own moment, so this includes
+             *     work that will come back without anybody remembering it. `not_mine` does not
+             *     lift at all.
+             */
+            set_aside: number;
+            /**
+             * @description Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
+             *     the judgement worth watching: it hides the thread from the WHOLE workspace and
+             *     never lifts, so one rep's mistake removes a customer from everybody's day
+             *     permanently.
+             */
+            not_sales: number;
+            /**
+             * @description Work older than the queue's horizon with no open deal behind it. NOBODY CHOSE
+             *     THIS. A customer who wrote four months ago and was never answered is exactly
+             *     the failure a sales queue exists to prevent, and the horizon removes them on a
+             *     date with no rep having judged anything.
+             *
+             *     Bounded at a year: past that a message is history by any reading, and an
+             *     unbounded scan would answer a different question at the cost of a full table
+             *     read.
+             */
+            past_horizon: number;
+            /**
+             * @description Inbound mail that qualifies in every other way and is attached to no record the
+             *     workspace sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+             *     is right — a rep's dentist is not a customer — and it is also where a real
+             *     customer lands when capture failed to link their thread. Its own figure for
+             *     that reason rather than folded into a total.
+             */
+            unlinked: number;
+            /**
+             * @description True when nothing is being held back. The guardrail's target, sent as its own
+             *     field because a number only ever read beside other numbers becomes decoration —
+             *     this is what a check asserts on.
+             */
+            clear: boolean;
+        };
+        /**
          * @description One thing to do, with the reason it sits where it sits.
          *
          *     `level` is the hard product rule and `score` orders inside it; a client renders
@@ -38309,6 +38404,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamBoard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getHiddenBacklog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What is being held back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HiddenBacklog"];
                 };
             };
             401: components["responses"]["Unauthorized"];

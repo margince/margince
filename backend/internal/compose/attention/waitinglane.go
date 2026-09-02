@@ -38,6 +38,34 @@ type Waiting interface {
 	// also what a smaller, complete installation returns. A caller counting rows
 	// against the bound would read the truncated scan as complete.
 	Unanswered(ctx context.Context, asOf time.Time) (rows []WaitingCustomer, cut bool, err error)
+	// Hidden answers what the queue's own hiding rules are keeping off this
+	// reader's page, one rule at a time.
+	//
+	// On the same seam as the lane it measures rather than on one of its own:
+	// the figures are differences between runs of the query behind Unanswered,
+	// so a second seam would let an installation bind a queue and a guardrail
+	// that disagree about who is waiting.
+	Hidden(ctx context.Context, asOf time.Time) (HiddenWork, error)
+}
+
+// HiddenWork is how much waiting work each rule is holding back, and whether
+// anything is.
+//
+// The module's own struct restated here rather than imported, like every other
+// type across this seam: compose owns the wire shape and modules own their
+// storage, and a projection reaching into a module's struct is the edge the
+// architecture forbids.
+type HiddenWork struct {
+	Shown       int
+	SetAside    int
+	NotSales    int
+	PastHorizon int
+	Unlinked    int
+}
+
+// Clear reports that nothing is being held back — the guardrail's target.
+func (h HiddenWork) Clear() bool {
+	return h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0
 }
 
 // WaitingCustomer is one message nobody has answered.
@@ -107,4 +135,37 @@ type waitingRead struct {
 	rows []WaitingCustomer
 	read bool
 	cut  bool
+}
+
+// HiddenBacklog answers what the queue is not showing this reader.
+//
+// A projection over the seam and nothing more: the arithmetic is the module's,
+// because the figures are differences between runs of ITS query and computing
+// them here would need this package to hold a second copy of the eligibility
+// rules.
+//
+// An unbound seam answers a clear backlog rather than an error. An installation
+// that does not read the mail stream has no waiting queue to hide work from, so
+// "nothing is held back" is the true answer rather than a degraded one.
+func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog, error) {
+	asOf := s.now()
+	if s.waiting == nil {
+		return crmcontracts.HiddenBacklog{AsOf: asOf, Clear: true}, nil
+	}
+	work, err := s.waiting.Hidden(ctx, asOf)
+	if err != nil {
+		return crmcontracts.HiddenBacklog{}, err
+	}
+	return crmcontracts.HiddenBacklog{
+		AsOf:        asOf,
+		Shown:       work.Shown,
+		SetAside:    work.SetAside,
+		NotSales:    work.NotSales,
+		PastHorizon: work.PastHorizon,
+		Unlinked:    work.Unlinked,
+		// Derived from the same struct the figures came from, so the flag and
+		// the numbers cannot disagree — a client reading `clear` over four
+		// non-zero counts is the one lie this endpoint must not tell.
+		Clear: work.Clear(),
+	}, nil
 }
