@@ -442,6 +442,43 @@ transcript shows, this issue is the existing finding rather than a new one."\
     || unreported=1
 fi
 
+# --- merge-attest.yml -----------------------------------------------------------
+#
+# The arm the two above cannot cover. They answer "is main red", and by then the
+# breakage has already cost somebody a rebase; this one answers "did what just
+# landed have a verdict behind it", at push time, before anyone has paid for it.
+#
+# One issue per OFFENDING PULL REQUEST rather than per lane, because that is the
+# unit somebody can act on — and because a standing "merges are landing unproven"
+# issue would collect every case under one title and be closed once, which is how
+# a recurring finding becomes a stale one.
+
+if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
+  report "A merge landed on main without a verdict behind it${MERGE_VERDICT_PR:+ (#$MERGE_VERDICT_PR)}" bug \
+"${MERGE_VERDICT_WHY:-a merge landed on \`main\` without a green required check; the run below says which}
+
+Found by the push-time check on \`main\`: $RUN_URL
+
+**This is not an accusation of bad faith, and not a request to remove bypass.**
+There are real cases for it — an infrastructure outage that reds every pull
+request, a revert that has to land now. What there was no case for is the fact
+being invisible: the pull request closes green-looking in the list,
+\`main-health\` is two-hourly and goes on reporting the last green it saw, and
+the next signal anybody gets is somebody else's pull request going red against a
+base they did not break. That is how #2504's four merges were found — twice,
+independently, each finder spending a rebase and a full local lane to rule their
+own diff out.
+
+**What to do with this issue.** If the tree is fine, say why the bypass was
+right and close it; the record is the point. If it is not, \`main\` is red now
+and this issue names the commit, which is roughly two hours earlier than
+\`main-health\` would have.
+
+Prevention is a branch-protection decision (#2496), not something this alarm
+can or should do."\
+    || unreported=1
+fi
+
 if [[ "$unreported" -ne 0 ]]; then
   echo "FAIL: at least one finding could not be filed — the run above names what was broken, but an issue for it does not exist" >&2
   exit 1
