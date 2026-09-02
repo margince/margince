@@ -122,6 +122,12 @@ func (s *Store) AddCommitment(ctx context.Context, now time.Time, in NewCommitme
 		if err != nil {
 			return err
 		}
+		// Inside the transaction, because visibility is a row read: a grant
+		// revoked between the probe and the insert must not leave the link
+		// written.
+		if err := ensureLinkVisible(ctx, tx, in.LinkedRecordType, in.LinkedRecordID); err != nil {
+			return err
+		}
 		if len(plan.Commitments) >= planCap {
 			return &values.ParseError{
 				Field: "label", Code: "plan_full",
@@ -212,5 +218,62 @@ func checkLink(recordType string, id ids.UUID) error {
 			Message: "a linked record needs both its type and its id",
 		}
 	}
+	if recordType == "" {
+		return nil
+	}
+	if _, ok := linkTables[recordType]; !ok {
+		return &values.ParseError{
+			Field: "linked_record_type", Code: "unknown",
+			Message: "a commitment links a deal, a lead, a person, an organization or a project",
+		}
+	}
 	return nil
+}
+
+// linkTables maps a commitment's link type to the table the row lives in.
+//
+// A compile-time map rather than the request's own word, because the value is
+// interpolated into a statement by auth.EnsureVisibleLive: linked_record_type
+// arrives in a request body, and this tree formats an identifier into SQL only
+// as a literal or through a catalog. The migration's CHECK constraint holds the
+// same five words at the other end — two writers of one list, so a sixth type
+// added there and not here is refused rather than written.
+var linkTables = map[string]string{
+	"deal":         "deal",
+	"lead":         "lead",
+	"person":       "person",
+	"organization": "organization",
+	"project":      "project",
+}
+
+// ensureLinkVisible refuses a link to a record the caller cannot open.
+//
+// It is NOT an existence gate over ordinary contacts, and claiming so would
+// overstate it: all five linkable types are identity tables (auth/tableclass.go),
+// workspace-readable by design, so a colleague's deal or person is already
+// open to every seat. Two narrower things are being refused, and both are real.
+//
+// The unpromoted capture. A row a connector invented is visibility='owner' —
+// the capturing user's alone until a human promotes it — and capture privacy
+// does not yield to row_scope=all, so not even an admin reads one. Without this
+// probe a commitment launders it: paste the id, and the rep's own plan hands
+// back a row out of a colleague's inbox.
+//
+// The erased subject. This is the LIVE probe rather than the plain one because
+// Art. 17 anonymizes a person in place and stamps archived_at while leaving
+// owner_id alone, so the tombstone still satisfies its original owner's
+// predicate. A plain probe answers "yes, still yours" for a record every live
+// read path now refuses, and the commitment would go on naming a person the
+// installation has certified destroyed.
+func ensureLinkVisible(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID) error {
+	if recordType == "" {
+		return nil
+	}
+	table, ok := linkTables[recordType]
+	if !ok {
+		// checkLink refused this before the transaction opened; reaching here
+		// means a caller skipped it, and guessing a table would be worse.
+		return fmt.Errorf("weeklyplan: no table for link type %q", recordType)
+	}
+	return auth.EnsureVisibleLive(ctx, tx, table, id)
 }
