@@ -5,6 +5,7 @@ import { Panel } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { waitingRows } from "./brief.sentence";
 import type { Worklist } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 
@@ -31,22 +32,6 @@ import "./brief.donext.css";
 const LEAD = 3;
 
 /**
- * What the DECK above already answers.
- *
- * On the Worklist an approval is one row of one ranked order, and drawing it
- * there is right. On Home it is not: the decisions deck is a surface of its own
- * further up the same page, holding the same approvals and posting to the same
- * endpoint — so a row here put one decision in front of a reader twice, each
- * copy answerable, on a page whose whole claim is that it states an order once.
- *
- * Excluded by SOURCE rather than by id-matching the deck: the deck's own
- * contents are a separate read that can be pending, empty or refused while this
- * one is ready, and a rule that depended on it would draw a different page
- * depending on which read landed first.
- */
-const DECK_ANSWERS = "approval";
-
-/**
  * The head of the ranked queue, expanded.
  *
  * A prefix, deliberately: the whole queue is the Worklist's page, and a rep who
@@ -63,8 +48,10 @@ export function DoNext({
   // answer that carried no queue crashed the whole page — the same mistake the
   // team gate above made, and a page that throws is a worse answer than one
   // that draws nothing.
-  const waiting =
-    day?.queue?.filter((item) => item.source !== DECK_ANSWERS) ?? [];
+  // The SAME rows the opening sentence is composed from — one spelling of
+  // "what this page is answerable for", so the sentence cannot name a row this
+  // section did not draw.
+  const waiting = waitingRows(day);
   const rows = waiting.slice(0, LEAD);
   return (
     <section id="brief-donext" aria-label={t("brief.donext.title")}>

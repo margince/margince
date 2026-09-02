@@ -2294,6 +2294,16 @@ export const de = {
   // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
   // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
   "brief.donext.title": "Als Nächstes",
+  // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
+  // Seite zeigt — nie von einem Modell geschrieben.
+  "brief.eyebrow": "Dein Morgen",
+  "brief.sentence.clear": "Heute Morgen wartet nichts auf dich.",
+  "brief.sentence.one": "Zuerst: {lead}",
+  "brief.sentence.oneWithCost": "Zuerst: {lead} — {consequence}",
+  "brief.sentence.many": "Zuerst: {lead} Danach {rest} weitere.",
+  "brief.sentence.manyWithCost":
+    "Zuerst: {lead} — {consequence} Danach {rest} weitere.",
+
   "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
   "brief.donext.loading": "Was auf dich wartet, wird gelesen",
   "brief.donext.clear": "Gerade wartet nichts auf dich.",
