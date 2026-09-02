@@ -355,6 +355,13 @@ binding, and whether the record is **current**, **partial**, **stale** or
 different claims: staleness is a lie, absence is honest, and a `partial` is right
 about everything it says and silent about the rest.
 
+The same judgement as a committed page — every site, the scenarios it is scored
+against with a link to each case, a table per binding, and for a stale record
+the scenario that moved under it — is
+[reference/ai-certification.md](../reference/ai-certification.md). It is
+generated from the same three trees and, unlike the report, fails when the
+committed copy no longer matches them.
+
 **A record is stamped per scenario, and the task stamp is the fold of those.**
 `aicert.ScenarioStamps` digests each scenario on its own — the scenario whole,
 the request the site's own code builds from it, and the request the grader is

@@ -15225,6 +15225,7 @@ export interface components {
         };
         /** @description A contact. Mirrors the `person` table. */
         Person: {
+            tags?: components["schemas"]["RowTag"][];
             /** Format: uuid */
             id: string;
             first_name?: string | null;
@@ -15460,6 +15461,7 @@ export interface components {
         };
         /** @description A company. Mirrors the `organization` table. */
         Organization: {
+            tags?: components["schemas"]["RowTag"][];
             /** @description Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows. */
             linkedin_url?: string | null;
             /** @description The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact organization_domain already owns is the duplication ADR-0085 closes. Not accepted on write. */
@@ -18639,6 +18641,7 @@ export interface components {
         };
         /** @description A deal. Mirrors the `deal` table. */
         Deal: {
+            tags?: components["schemas"]["RowTag"][];
             /** Format: uuid */
             id: string;
             name: string;
@@ -21433,6 +21436,18 @@ export interface components {
             description?: string | null;
         };
         /**
+         * @description A tag as a list ROW carries it: the word and its colour, nothing else. The full
+         *     assignment — who applied it, when — comes from the record's own tags read, because a
+         *     page of fifty rows does not need fifty assignments to draw a chip.
+         */
+        RowTag: {
+            /** Format: uuid */
+            tag_id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+        };
+        /**
          * @description What one record carries. `withheld` says the caller could not read the vocabulary,
          *     which is why `data` is empty — a reader has to be able to tell that from a record
          *     with no tags on it.
@@ -22461,7 +22476,7 @@ export interface components {
         };
         SearchResult: {
             /** @enum {string} */
-            type: "person" | "organization" | "deal" | "activity" | "lead" | "project";
+            type: "person" | "organization" | "deal" | "activity" | "lead" | "project" | "tag";
             /** Format: uuid */
             id: string;
             /** @description Display label (name/subject). */
@@ -28262,8 +28277,21 @@ export interface operations {
                 unassigned?: boolean;
                 /** @description Full-text query over name/title (tsvector). */
                 q?: string;
-                /** @description Filter by tag name. */
-                tag?: string;
+                /**
+                 * @description Narrow to the records carrying these tags. Repeat the parameter for several.
+                 *
+                 *     By ID, not by name: a name is what a person types and an admin can rename, so a
+                 *     saved view holding one would silently start selecting a different slice the day
+                 *     somebody corrects a spelling.
+                 */
+                tag_id?: string[];
+                /**
+                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one
+                 *     of them, `all` a record carrying every one, `none` a record carrying not one.
+                 *
+                 *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+                 */
+                tag_mode?: "any" | "all" | "none";
                 /**
                  * @description People who work at this account, by their CURRENT PRIMARY employment edge
                  *     (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
@@ -29682,6 +29710,21 @@ export interface operations {
                 /** @description How many people work there (DM-VOCAB-2). */
                 size_band?: "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
                 q?: string;
+                /**
+                 * @description Narrow to the records carrying these tags. Repeat the parameter for several.
+                 *
+                 *     By ID, not by name: a name is what a person types and an admin can rename, so a
+                 *     saved view holding one would silently start selecting a different slice the day
+                 *     somebody corrects a spelling.
+                 */
+                tag_id?: string[];
+                /**
+                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one
+                 *     of them, `all` a record carrying every one, `none` a record carrying not one.
+                 *
+                 *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+                 */
+                tag_mode?: "any" | "all" | "none";
             };
             header?: never;
             path?: never;
@@ -31279,6 +31322,21 @@ export interface operations {
                 partner_sourced?: boolean;
                 /** @description Deals a partner brought (`sourced`) or merely helped (`influenced`). */
                 partner_attribution?: "sourced" | "influenced";
+                /**
+                 * @description Narrow to the records carrying these tags. Repeat the parameter for several.
+                 *
+                 *     By ID, not by name: a name is what a person types and an admin can rename, so a
+                 *     saved view holding one would silently start selecting a different slice the day
+                 *     somebody corrects a spelling.
+                 */
+                tag_id?: string[];
+                /**
+                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one
+                 *     of them, `all` a record carrying every one, `none` a record carrying not one.
+                 *
+                 *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+                 */
+                tag_mode?: "any" | "all" | "none";
             };
             header?: never;
             path?: never;
@@ -36764,7 +36822,7 @@ export interface operations {
                 /** @description The search query. */
                 q: string;
                 /** @description Restrict to these object types (default all). */
-                types?: ("person" | "organization" | "deal" | "activity" | "lead" | "project")[];
+                types?: ("person" | "organization" | "deal" | "activity" | "lead" | "project" | "tag")[];
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset

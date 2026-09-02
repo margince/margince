@@ -87,7 +87,7 @@ function headerSaid(): string {
 afterEach(cleanup);
 
 describe("the account's work in flight", () => {
-  it("lists a deal and a project under their own subheads", () => {
+  it("lists a deal under its own subhead", () => {
     draw(
       view({
         deals: {
@@ -96,16 +96,13 @@ describe("the account's work in flight", () => {
           won_lifetime: { amount_minor: 0, currency: "EUR" },
           lost_count: 0,
         },
-        projects: [project],
       }),
     );
 
     expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Projects" })).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Fleet retrofit 2026" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "DEP-12" })).toBeTruthy();
   });
 
   it("names who owes what, by when, from the deal's own overdue task", () => {
@@ -172,18 +169,23 @@ describe("the account's work in flight", () => {
   it("quotes a commitment rather than asserting over it", () => {
     draw(
       view({
-        projects: [
-          {
-            ...project,
-            attention: {
-              kind: "commitment_theirs",
-              title: "we'll confirm the depot slot once facilities sign off",
-              who: "Ida Keller",
-              due_at: null,
-              source_activity_id: "a-1",
+        deals: {
+          data: [
+            {
+              ...deal,
+              attention: {
+                kind: "commitment_theirs",
+                title: "we'll confirm the depot slot once facilities sign off",
+                who: "Ida Keller",
+                due_at: null,
+                source_activity_id: "a-1",
+              },
             },
-          },
-        ],
+          ],
+          page,
+          won_lifetime: { amount_minor: 0, currency: "EUR" },
+          lost_count: 0,
+        },
       }),
     );
 
@@ -194,33 +196,6 @@ describe("the account's work in flight", () => {
       screen.getByText(
         /Ida Keller said: ‘we'll confirm the depot slot once facilities sign off’/,
       ),
-    ).toBeTruthy();
-  });
-
-  it("says a never-touched project has never been touched, not that it is quiet since never", () => {
-    draw(view({ projects: [{ ...project, quiet: true }] }));
-
-    // The server measures a never-touched project's quiet from the day it was
-    // opened, and the payload carries no created_at. One template over
-    // last_activity_at would print the relative formatter's "never" into a
-    // "since" slot.
-    expect(
-      screen.getByText("Nothing has ever been filed against this project."),
-    ).toBeTruthy();
-    expect(screen.queryByText(/since never/i)).toBeNull();
-  });
-
-  it("dates the silence when the project has been touched before", () => {
-    draw(
-      view({
-        projects: [
-          { ...project, quiet: true, last_activity_at: "2026-05-20T09:00:00Z" },
-        ],
-      }),
-    );
-
-    expect(
-      screen.getByText(/Nothing has been filed against this project since/),
     ).toBeTruthy();
   });
 
@@ -272,12 +247,12 @@ describe("what the work card's header may say", () => {
                 due_at: "2026-07-02T09:00:00Z",
               },
             },
+            { ...deal, deal_id: "d-2", name: "Depot pilot" },
           ],
           page,
           won_lifetime: { amount_minor: 0, currency: "EUR" },
           lost_count: 0,
         },
-        projects: [project],
       }),
     );
 
@@ -304,52 +279,36 @@ describe("what the work card's header may say", () => {
     expect(headerSaid()).toContain("1+ in flight");
   });
 
-  it("states no count at all when a section was withheld", () => {
+  it("states no count at all when the deals section was withheld", () => {
     draw(
       view({
-        deals: {
-          data: [deal],
-          page,
-          won_lifetime: { amount_minor: 0, currency: "EUR" },
-          lost_count: 0,
-        },
-        projects: undefined,
-        projects_page: undefined,
-        sections_omitted: ["projects"],
+        deals: undefined,
+        sections_omitted: ["deals"],
       }),
     );
 
-    // "1 in flight" to a reader who can see the deals and not the projects is
-    // a false statement about the account, not a partial one.
+    // "1 in flight" to a reader who may not see the deals at all is a false
+    // statement about the account, not a partial one — the card counts only
+    // what it draws.
     expect(headerSaid()).not.toMatch(/in flight/);
   });
 });
 
-describe("a half of the card the reader may not have", () => {
-  it("withholds that group and still draws the other", () => {
+describe("the deals half the reader may not have", () => {
+  it("says the group is hidden rather than drawing it empty", () => {
     draw(
       view({
-        deals: {
-          data: [deal],
-          page,
-          won_lifetime: { amount_minor: 0, currency: "EUR" },
-          lost_count: 0,
-        },
-        projects: undefined,
-        projects_page: undefined,
-        sections_omitted: ["projects"],
+        deals: undefined,
+        sections_omitted: ["deals"],
       }),
     );
 
     expect(
-      screen.getByRole("button", { name: "Fleet retrofit 2026" }),
-    ).toBeTruthy();
-    expect(
       screen.getByText("Hidden — your role cannot read this"),
     ).toBeTruthy();
-    // Never the empty state: "no projects in flight" is a claim about the
-    // account that this reader's payload does not support.
-    expect(screen.queryByText("No projects in flight.")).toBeNull();
+    // Never the empty state: "no open deals" is a claim about the account
+    // that this reader's payload does not support.
+    expect(screen.queryByText("No open deals.")).toBeNull();
   });
 
   it("says the statuses are incomplete rather than letting bare rows read as settled", () => {

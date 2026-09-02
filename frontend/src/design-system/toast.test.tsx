@@ -69,9 +69,6 @@ function Bodied({ sticky = false }: Readonly<{ sticky?: boolean }>) {
         toast.show(
           <span>
             Jonas Petersen is now a contact:{" "}
-            {/* biome-ignore lint/a11y/useValidAnchor: a stand-in for the
-                record link the real caller renders; where it points is not
-                what this suite is about. */}
             <a href="#/contacts/p-1">Jana Brandt</a>
           </span>,
           { sticky },

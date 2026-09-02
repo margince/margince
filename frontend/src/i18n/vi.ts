@@ -224,6 +224,7 @@ export const vi = {
   "search.group.deal": "Deal",
   "search.group.activity": "Hoạt động",
   "search.group.lead": "Lead",
+  "search.group.tag": "Tag",
   "search.tier.mirrored": "từ hệ thống đã kết nối",
   "search.tier.unverified": "chưa xác minh",
 
@@ -260,7 +261,7 @@ export const vi = {
   "deal.archived": "đã lưu trữ",
   "record.notShown": "Không hiển thị",
   "record.timelineLoading": "Đang tải lịch sử của bản ghi này…",
-  "record.timeline": "Timeline",
+  "record.timeline": "Lịch sử",
   "record.edit": "Sửa",
   "record.save": "Lưu",
   "record.saveDone": "Đã lưu “{name}”",
@@ -822,7 +823,7 @@ export const vi = {
   "co.strip.fin.loading": "Đang tải…",
   "co.strip.unpriced": "Không có giá trị quy đổi được",
   "co.strip.pricedPartly": "{priced}/{total} thương vụ có giá trị",
-  "co.strip.health": "Quan hệ",
+  "co.strip.health": "Trao đổi",
   "co.strip.healthOneSided": "Một chiều",
   "co.strip.healthBalanced": "Trao đổi cân bằng",
   "co.strip.replyShare": "{percent}% cuộc trao đổi là từ họ",
@@ -1045,6 +1046,8 @@ export const vi = {
   "finance.title": "Tài chính",
   "finance.titleHistorical": "Tài chính · lịch sử",
   "finance.none": "Chưa ghi nhận gì.",
+  "finance.syncing":
+    "Đang đồng bộ với nguồn kế toán. Số liệu sẽ hiện sau lần quét đầu tiên.",
   "finance.noConnection":
     "Chưa kết nối nguồn tài chính — hãy kết nối để thấy khách hàng này đã được xuất hóa đơn bao nhiêu và có trả đúng hạn không",
   "finance.unmapped":
@@ -1165,7 +1168,7 @@ export const vi = {
   "commercial.offer.expired": "Hết hạn",
   "commercial.offer.superseded": "Đã thay thế",
   "co.section.restricted": "Đã ẩn — vai trò của bạn không đọc được phần này",
-  "co.next.title": "Bước tiếp theo",
+  "co.next.title": "Công việc",
   "co.next.empty": "Không có công việc nào đang mở trên tài khoản này.",
   "co.next.overdue": "Quá hạn",
   "co.next.due": "Hạn {when}",
@@ -1186,23 +1189,13 @@ export const vi = {
   "co.work.count": "{count} \u0111ang tri\u1ec3n khai",
   "co.work.countAtLeast": "{count}+ \u0111ang tri\u1ec3n khai",
   "co.work.deals": "Th\u01b0\u01a1ng v\u1ee5",
-  "co.work.projects": "D\u1ef1 \u00e1n",
   "co.work.noDealsDetail":
     "Deal là nơi ghi giá trị và ngày chốt. Tạo một deal khi đã có thứ để theo đuổi.",
-  "co.work.noProjectsDetail":
-    "Dự án giữ phần triển khai: người tham gia, các deal bên dưới và ngày phải hoàn thành.",
   "co.work.noDeals":
     "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 n\u00e0o \u0111ang m\u1edf.",
-  "co.work.noProjects":
-    "Kh\u00f4ng c\u00f3 d\u1ef1 \u00e1n n\u00e0o \u0111ang tri\u1ec3n khai.",
   "co.work.closes": "ch\u1ed1t {date}",
-  "co.work.targetEnd": "d\u1ef1 ki\u1ebfn k\u1ebft th\u00fac {date}",
   "co.work.stalled":
     "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho th\u01b0\u01a1ng v\u1ee5 n\u00e0y trong 60 ng\u00e0y qua.",
-  "co.work.quiet":
-    "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y t\u1eeb {when}.",
-  "co.work.neverTouched":
-    "Ch\u01b0a t\u1eebng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y.",
   "co.work.overdueTask":
     "{who} \u0111\u00e1ng l\u1ebd ph\u1ea3i \u2018{title}\u2019 tr\u01b0\u1edbc {date} nh\u01b0ng ch\u01b0a l\u00e0m.",
   "co.work.overdueTaskUnnamed":
@@ -1402,6 +1395,7 @@ export const vi = {
   "co.rail.people.title": "Người liên hệ chính",
   "co.rail.people.empty": "Chưa có liên hệ nào. Không có ai để viết thư.",
   "co.rail.people.add": "Thêm liên hệ",
+  "co.rail.people.inTouch": "Đã liên hệ với họ",
   "co.rail.details.all": "Tất cả trường",
   "co.commercial.title": "Thương mại",
   "co.commercial.lostFigure": "Deal đã thua",
@@ -1459,6 +1453,10 @@ export const vi = {
   "chronology.changes": "Thay đổi",
   "filter.label": "Thu hẹp danh sách",
   "chronology.all": "Tất cả",
+  "chronology.conversations": "Hội thoại",
+  "chronology.conversationsEmpty": "Chưa có hội thoại nào với họ.",
+  "convo.yourMove": "Đến lượt bạn",
+  "convo.waitingOnThem": "Chờ họ trả lời",
   "chronology.changesEmpty":
     "Chưa trường nào của bản ghi này thay đổi kể từ khi được tạo.",
   "chronology.allEmpty": "Chưa có gì xảy ra trên bản ghi này.",
@@ -1741,6 +1739,7 @@ export const vi = {
   "co.recent.dir.both": "cả hai bên",
   "co.recent.minutes": "{count} phút",
   "co.recent.re": "về một deal",
+  "co.recent.reNamed": "về {name}",
   "co.tags.title": "Tag",
   "co.timeline.empty": "Chưa ghi nhận gì trên tài khoản này.",
   "co.overlayFallback":

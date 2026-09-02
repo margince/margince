@@ -145,6 +145,14 @@ func branchEntities(t *testing.T, values []ast.Expr) []string {
 			if !ok {
 				continue
 			}
+			// A text-only branch answers the name search and nothing else, so
+			// it is not an anchor a context read can be taken from: a word has
+			// no neighbours to return. Skipped here rather than listed in the
+			// contract enum, because a client naming one would be asking for
+			// the context of something that has none.
+			if branchIsTextOnly(branch) {
+				continue
+			}
 			for _, field := range branch.Elts {
 				kv, ok := field.(*ast.KeyValueExpr)
 				if !ok {
@@ -167,4 +175,21 @@ func branchEntities(t *testing.T, values []ast.Expr) []string {
 		}
 	}
 	return out
+}
+
+// branchIsTextOnly reports whether a searchBranches element sets textOnly.
+func branchIsTextOnly(branch *ast.CompositeLit) bool {
+	for _, field := range branch.Elts {
+		kv, ok := field.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		key, ok := kv.Key.(*ast.Ident)
+		if !ok || key.Name != "textOnly" {
+			continue
+		}
+		value, ok := kv.Value.(*ast.Ident)
+		return ok && value.Name == "true"
+	}
+	return false
 }

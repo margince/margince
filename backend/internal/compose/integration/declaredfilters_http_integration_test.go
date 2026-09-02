@@ -90,8 +90,26 @@ func TestThePersonListNarrowsByTagOnTheWire(t *testing.T) {
 		t.Fatalf("applying the tag = %d, want 201", status)
 	}
 
-	onlyRecord(t, e, "/v1/people?tag=VIP", tagged, "the tagged person")
-	onlyRecord(t, e, "/v1/people?tag=vip", tagged, "the tagged person, asked for in another case")
+	// By ID on the wire. The two case-variant assertions that used to sit here
+	// tested a NAME parameter that no longer exists: a saved view holding a
+	// name started selecting a different slice the day an admin corrected a
+	// spelling, so the wire takes ids.
+	onlyRecord(t, e, "/v1/people?tag_id="+tag, tagged, "the tagged person")
+
+	// The mode reaches the store too, not only the ids: `none` has to answer
+	// with the person who does NOT carry the tag.
+	var page struct {
+		Data []struct {
+			ID       string `json:"id"`
+			FullName string `json:"full_name"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/people?tag_id="+tag+"&tag_mode=none", nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("listing with tag_mode=none = %d, want 200", status)
+	}
+	if len(page.Data) != 1 || page.Data[0].FullName != "Untagged Person" {
+		t.Fatalf("tag_mode=none returned %+v, want only the untagged person", page.Data)
+	}
 }
 
 func TestTheOrganizationListNarrowsByDomainOnTheWire(t *testing.T) {

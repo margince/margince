@@ -1227,6 +1227,17 @@
   gap: var(--space-1);
 }
 
+/* The rail's person row: face, identity, and the colleague routes on the
+   right edge, on ONE line. The container rule rides with its children — the
+   People refactor deleted it beside the section that moved and left these
+   rows stacking as bare blocks. */
+.co-person-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 /* Stacked blocks, not a flex gap: the two lines are close enough that the
    scale's own floor (--space-1) would push them apart, and the font's own
    leading already separates them. */
@@ -1247,6 +1258,17 @@
 }
 .co-person-routes {
   margin-left: auto;
+}
+.co-person-routes-list {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+}
+/* The stack reads as information, not as a verb: the aside still opens on
+   hover, click and focus, but a pointer cursor would promise a navigation
+   the trigger does not make. */
+.co-person-routes .popover-trigger {
+  cursor: default;
 }
 
 /* A signal row: a coloured dot the row's severity comes from, the finding,

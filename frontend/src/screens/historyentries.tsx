@@ -439,7 +439,9 @@ export function RecordHistory({
   } else {
     body = (
       <>
-        <ul className="timeline">
+        {/* `timeline-plain`: these rows carry their date inline rather than
+            in the chronicle's gutter, so they opt out of its column grid. */}
+        <ul className="timeline timeline-plain">
           {historyRows(entries).map((row) =>
             row.kind === "pair" ? (
               <ReversalPairRow

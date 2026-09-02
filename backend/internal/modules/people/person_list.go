@@ -9,7 +9,6 @@ package people
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -50,10 +49,12 @@ type ListPeopleInput struct {
 	// CustomFilters carries the request's cf_* query parameters —
 	// equality matches against active custom columns (storekit listquery).
 	CustomFilters map[string]string
-	// Tag narrows to the people carrying one tag, by name. The tag
-	// vocabulary belongs to another module, so this is a link predicate
-	// rather than a column — see personTagClause.
-	Tag *string
+	// TagIDs narrows to the people carrying these tags, combined by TagMode.
+	// The tag vocabulary belongs to another module, so this is a link
+	// predicate rather than a column; storekit.TagFilterClause renders it, and
+	// the company and deal lists call the same function.
+	TagIDs  []ids.UUID
+	TagMode storekit.TagMode
 	// OrganizationID narrows to the people employed there today. Employment is
 	// an edge, not a column on person, so this is a link predicate too — see
 	// personEmployerClause.
@@ -71,33 +72,13 @@ var personListFields = map[string]string{
 	lastActivityColumn: storekit.KindTimestamp,
 }
 
-// personTagClause narrows the page to the people carrying one tag, or ""
-// when the caller named none.
+// personTagClause narrows the page to the people carrying the named tags.
 //
-// Tags live in another module's tables, which this one may not import — but
-// the predicate is SQL, and a tagged person is a row in `taggable` whatever
-// package writes it. Matching is on the FOLDED name because that is what the
-// vocabulary is unique by.
-//
-// `uq_tag_name` binds LIVE rows only, so a name can be held by one live tag and
-// any number of retired ones, and the clause names the live one. Without that
-// restriction, filtering by a word somebody re-coined after a merge would also
-// return the people carrying the older, retired tag of the same spelling —
-// records the reader would have no way to explain.
-//
-// EXISTS rather than a join: a person carries many tags, and a join would
-// return them once per matching link — rows the keyset cursor would then page
-// over as if they were distinct people.
-func personTagClause(tag *string, arg func(any) int) string {
-	if tag == nil {
-		return ""
-	}
-	return storekit.SQLf(`EXISTS (
-		SELECT 1 FROM taggable tg
-		  JOIN tag t ON t.id = tg.tag_id
-		WHERE tg.entity_type = $%d AND tg.entity_id = person.id
-		  AND lower(t.name) = $%d AND t.archived_at IS NULL)`,
-		arg(personEntity), arg(foldTagName(*tag)))
+// The predicate is storekit's, shared with the company and deal lists: three
+// copies of a NOT EXISTS is three chances for `none` to mean something subtly
+// different on one surface.
+func personTagClause(ctx context.Context, tagIDs []ids.UUID, mode storekit.TagMode, arg func(any) int) string {
+	return storekit.TagFilterClause(ctx, personEntity, "person.id", tagIDs, mode, arg)
 }
 
 // personEmployerClause narrows the page to the people who work at one account
@@ -142,11 +123,6 @@ func personEmployerClause(ctx context.Context, orgID *ids.OrganizationID, arg fu
 		  AND rel.organization_id = $%d)`, arg(*orgID)), nil
 }
 
-// foldTagName matches how the tag vocabulary is stored and compared: names
-// are trimmed on write and unique under lower(), so a caller's spacing and
-// case decide nothing about which tag they named.
-func foldTagName(name string) string { return strings.ToLower(strings.TrimSpace(name)) }
-
 // ListPeople is the row-scoped person list read: quick-find, owner, tag and
 // custom-field filters, keyset pagination under the validated sort.
 func (s *Store) ListPeople(ctx context.Context, in ListPeopleInput) ([]crmcontracts.Person, storekit.Page, error) {
@@ -172,7 +148,7 @@ func (s *Store) ListPeople(ctx context.Context, in ListPeopleInput) ([]crmcontra
 			if err != nil {
 				return nil, err
 			}
-			if clause := personTagClause(in.Tag, arg); clause != "" {
+			if clause := personTagClause(ctx, in.TagIDs, in.TagMode, arg); clause != "" {
 				where = append(where, clause)
 			}
 			employer, err := personEmployerClause(ctx, in.OrganizationID, arg)

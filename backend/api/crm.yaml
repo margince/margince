@@ -767,10 +767,27 @@ paths:
           in: query
           schema: { type: string }
           description: Full-text query over name/title (tsvector).
-        - name: tag
+        - name: tag_id
           in: query
-          schema: { type: string }
-          description: Filter by tag name.
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a person types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
         - name: organization_id
           in: query
           schema: { type: string, format: uuid }
@@ -2206,6 +2223,27 @@ paths:
         - name: q
           in: query
           schema: { type: string }
+        - name: tag_id
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a person types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
       responses:
         '200':
           description: A page of organizations.
@@ -3835,6 +3873,27 @@ paths:
           in: query
           schema: { type: string, enum: [sourced, influenced] }
           description: Deals a partner brought (`sourced`) or merely helped (`influenced`).
+        - name: tag_id
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a person types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
       responses:
         '200':
           description: A page of deals.
@@ -8159,7 +8218,7 @@ paths:
           in: query
           schema:
             type: array
-            items: { type: string, enum: [person, organization, deal, activity, lead, project] }
+            items: { type: string, enum: [person, organization, deal, activity, lead, project, tag] }
           style: form
           explode: false
           description: Restrict to these object types (default all).
@@ -22045,6 +22104,10 @@ components:
       description: A contact. Mirrors the `person` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        # The live tags this row carries, capped: a chip strip shows a few and
+        # says "+N", so a row does not need every word to draw one. Archived
+        # tags are omitted — a retired word is not drawn on a list.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         id: { type: string, format: uuid }
         first_name: { type: [string, 'null'] }
         last_name: { type: [string, 'null'] }
@@ -22325,6 +22388,10 @@ components:
       description: A company. Mirrors the `organization` table.
       required: [id, display_name, source, captured_by, created_at, updated_at]
       properties:
+        # The live tags this row carries, capped: a chip strip shows a few and
+        # says "+N", so a row does not need every word to draw one. Archived
+        # tags are omitted — a retired word is not drawn on a list.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
@@ -26510,6 +26577,10 @@ components:
       description: A deal. Mirrors the `deal` table.
       required: [id, name, pipeline_id, stage_id, status, source, captured_by, created_at, updated_at]
       properties:
+        # The live tags this row carries, capped: a chip strip shows a few and
+        # says "+N", so a row does not need every word to draw one. Archived
+        # tags are omitted — a retired word is not drawn on a list.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         id: { type: string, format: uuid }
         name: { type: string }
         amount_minor: { type: [integer, 'null'], format: int64 }
@@ -29386,6 +29457,18 @@ components:
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
         description: { type: [string, 'null'] }
 
+    RowTag:
+      type: object
+      description: |
+        A tag as a list ROW carries it: the word and its colour, nothing else. The full
+        assignment — who applied it, when — comes from the record's own tags read, because a
+        page of fifty rows does not need fifty assignments to draw a chip.
+      required: [tag_id, name]
+      properties:
+        tag_id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+
     RecordTagsResponse:
       type: object
       description: |
@@ -30842,7 +30925,10 @@ components:
       type: object
       required: [type, id]
       properties:
-        type: { type: string, enum: [person, organization, deal, activity, lead, project] }
+        # `tag` is a WORD, not a record: finding it is the step before finding
+        # the records that carry it, and without it a reader has to know the
+        # vocabulary already.
+        type: { type: string, enum: [person, organization, deal, activity, lead, project, tag] }
         id: { type: string, format: uuid }
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }

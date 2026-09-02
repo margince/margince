@@ -9526,6 +9526,30 @@ func (e RetentionScope) Valid() bool {
 	}
 }
 
+// Defines values for RowTagColor.
+const (
+	RowTagColorAmber RowTagColor = "amber"
+	RowTagColorRose  RowTagColor = "rose"
+	RowTagColorSlate RowTagColor = "slate"
+	RowTagColorTeal  RowTagColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the RowTagColor enum.
+func (e RowTagColor) Valid() bool {
+	switch e {
+	case RowTagColorAmber:
+		return true
+	case RowTagColorRose:
+		return true
+	case RowTagColorSlate:
+		return true
+	case RowTagColorTeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RunReportRequestAggregatesFn.
 const (
 	RunReportRequestAggregatesFnAvg           RunReportRequestAggregatesFn = "avg"
@@ -9765,6 +9789,7 @@ const (
 	SearchResultTypeOrganization SearchResultType = "organization"
 	SearchResultTypePerson       SearchResultType = "person"
 	SearchResultTypeProject      SearchResultType = "project"
+	SearchResultTypeTag          SearchResultType = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchResultType enum.
@@ -9781,6 +9806,8 @@ func (e SearchResultType) Valid() bool {
 	case SearchResultTypePerson:
 		return true
 	case SearchResultTypeProject:
+		return true
+	case SearchResultTypeTag:
 		return true
 	default:
 		return false
@@ -10476,22 +10503,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	TagDetailColorAmber TagDetailColor = "amber"
-	TagDetailColorRose  TagDetailColor = "rose"
-	TagDetailColorSlate TagDetailColor = "slate"
-	TagDetailColorTeal  TagDetailColor = "teal"
+	Amber TagDetailColor = "amber"
+	Rose  TagDetailColor = "rose"
+	Slate TagDetailColor = "slate"
+	Teal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case TagDetailColorAmber:
+	case Amber:
 		return true
-	case TagDetailColorRose:
+	case Rose:
 		return true
-	case TagDetailColorSlate:
+	case Slate:
 		return true
-	case TagDetailColorTeal:
+	case Teal:
 		return true
 	default:
 		return false
@@ -12255,49 +12282,49 @@ func (e WorklistItemCategory) Valid() bool {
 
 // Defines values for WorklistItemConsequence.
 const (
-	BuyerWaits            WorklistItemConsequence = "buyer_waits"
-	CustomerNeverReceived WorklistItemConsequence = "customer_never_received"
-	DataDrifts            WorklistItemConsequence = "data_drifts"
-	DealDrifts            WorklistItemConsequence = "deal_drifts"
-	DealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
-	LegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
-	MailboxBlind          WorklistItemConsequence = "mailbox_blind"
-	MeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
-	None                  WorklistItemConsequence = "none"
-	PromiseBreaks         WorklistItemConsequence = "promise_breaks"
-	TaskSlips             WorklistItemConsequence = "task_slips"
-	WorkBlocked           WorklistItemConsequence = "work_blocked"
-	YouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
+	WorklistItemConsequenceBuyerWaits            WorklistItemConsequence = "buyer_waits"
+	WorklistItemConsequenceCustomerNeverReceived WorklistItemConsequence = "customer_never_received"
+	WorklistItemConsequenceDataDrifts            WorklistItemConsequence = "data_drifts"
+	WorklistItemConsequenceDealDrifts            WorklistItemConsequence = "deal_drifts"
+	WorklistItemConsequenceDealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
+	WorklistItemConsequenceLegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
+	WorklistItemConsequenceMailboxBlind          WorklistItemConsequence = "mailbox_blind"
+	WorklistItemConsequenceMeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
+	WorklistItemConsequenceNone                  WorklistItemConsequence = "none"
+	WorklistItemConsequencePromiseBreaks         WorklistItemConsequence = "promise_breaks"
+	WorklistItemConsequenceTaskSlips             WorklistItemConsequence = "task_slips"
+	WorklistItemConsequenceWorkBlocked           WorklistItemConsequence = "work_blocked"
+	WorklistItemConsequenceYouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemConsequence enum.
 func (e WorklistItemConsequence) Valid() bool {
 	switch e {
-	case BuyerWaits:
+	case WorklistItemConsequenceBuyerWaits:
 		return true
-	case CustomerNeverReceived:
+	case WorklistItemConsequenceCustomerNeverReceived:
 		return true
-	case DataDrifts:
+	case WorklistItemConsequenceDataDrifts:
 		return true
-	case DealDrifts:
+	case WorklistItemConsequenceDealDrifts:
 		return true
-	case DealSlipsPastClose:
+	case WorklistItemConsequenceDealSlipsPastClose:
 		return true
-	case LegalDeadlineMissed:
+	case WorklistItemConsequenceLegalDeadlineMissed:
 		return true
-	case MailboxBlind:
+	case WorklistItemConsequenceMailboxBlind:
 		return true
-	case MeetingUnprepared:
+	case WorklistItemConsequenceMeetingUnprepared:
 		return true
-	case None:
+	case WorklistItemConsequenceNone:
 		return true
-	case PromiseBreaks:
+	case WorklistItemConsequencePromiseBreaks:
 		return true
-	case TaskSlips:
+	case WorklistItemConsequenceTaskSlips:
 		return true
-	case WorkBlocked:
+	case WorklistItemConsequenceWorkBlocked:
 		return true
-	case YouBelieveItHappened:
+	case WorklistItemConsequenceYouBelieveItHappened:
 		return true
 	default:
 		return false
@@ -13243,6 +13270,27 @@ func (e ListDealsParamsPartnerAttribution) Valid() bool {
 	}
 }
 
+// Defines values for ListDealsParamsTagMode.
+const (
+	ListDealsParamsTagModeAll  ListDealsParamsTagMode = "all"
+	ListDealsParamsTagModeAny  ListDealsParamsTagMode = "any"
+	ListDealsParamsTagModeNone ListDealsParamsTagMode = "none"
+)
+
+// Valid indicates whether the value is a known member of the ListDealsParamsTagMode enum.
+func (e ListDealsParamsTagMode) Valid() bool {
+	switch e {
+	case ListDealsParamsTagModeAll:
+		return true
+	case ListDealsParamsTagModeAny:
+		return true
+	case ListDealsParamsTagModeNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListDealDocumentsParamsCategory.
 const (
 	ListDealDocumentsParamsCategoryContract          ListDealDocumentsParamsCategory = "contract"
@@ -13645,6 +13693,27 @@ func (e ListOrganizationsParamsSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for ListOrganizationsParamsTagMode.
+const (
+	ListOrganizationsParamsTagModeAll  ListOrganizationsParamsTagMode = "all"
+	ListOrganizationsParamsTagModeAny  ListOrganizationsParamsTagMode = "any"
+	ListOrganizationsParamsTagModeNone ListOrganizationsParamsTagMode = "none"
+)
+
+// Valid indicates whether the value is a known member of the ListOrganizationsParamsTagMode enum.
+func (e ListOrganizationsParamsTagMode) Valid() bool {
+	switch e {
+	case ListOrganizationsParamsTagModeAll:
+		return true
+	case ListOrganizationsParamsTagModeAny:
+		return true
+	case ListOrganizationsParamsTagModeNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListOrganizationContactsParamsSort.
 const (
 	LastInteraction      ListOrganizationContactsParamsSort = "last_interaction"
@@ -13837,6 +13906,27 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 	case ListPeopleParamsCapturedByKindHuman:
 		return true
 	case ListPeopleParamsCapturedByKindSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListPeopleParamsTagMode.
+const (
+	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
+	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
+	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
+)
+
+// Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
+func (e ListPeopleParamsTagMode) Valid() bool {
+	switch e {
+	case ListPeopleParamsTagModeAll:
+		return true
+	case ListPeopleParamsTagModeAny:
+		return true
+	case ListPeopleParamsTagModeNone:
 		return true
 	default:
 		return false
@@ -14058,6 +14148,7 @@ const (
 	SearchParamsTypesOrganization SearchParamsTypes = "organization"
 	SearchParamsTypesPerson       SearchParamsTypes = "person"
 	SearchParamsTypesProject      SearchParamsTypes = "project"
+	SearchParamsTypesTag          SearchParamsTypes = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchParamsTypes enum.
@@ -14074,6 +14165,8 @@ func (e SearchParamsTypes) Valid() bool {
 	case SearchParamsTypesPerson:
 		return true
 	case SearchParamsTypesProject:
+		return true
+	case SearchParamsTypesTag:
 		return true
 	default:
 		return false
@@ -19145,6 +19238,7 @@ type Deal struct {
 	// Stalled Derived — no activity past the threshold (absolute duration).
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
+	Tags      *[]RowTag  `json:"tags,omitempty"`
 	UpdatedAt time.Time  `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
@@ -23028,6 +23122,7 @@ type Organization struct {
 
 	// Strength Deterministic org-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.
 	Strength  *RelationshipStrength `json:"strength,omitempty"`
+	Tags      *[]RowTag             `json:"tags,omitempty"`
 	UpdatedAt time.Time             `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
@@ -24982,6 +25077,7 @@ type Person struct {
 
 	// Strength Deterministic relationship-strength (features/07 §4). Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.
 	Strength *RelationshipStrength `json:"strength,omitempty"`
+	Tags     *[]RowTag             `json:"tags,omitempty"`
 
 	// Title Denormalized current title; authoritative title is on the employment relationship.
 	Title     *string   `json:"title,omitempty"`
@@ -27383,6 +27479,18 @@ type Role struct {
 type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 }
+
+// RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
+// assignment — who applied it, when — comes from the record's own tags read, because a
+// page of fifty rows does not need fifty assignments to draw a chip.
+type RowTag struct {
+	Color *RowTagColor       `json:"color,omitempty"`
+	Name  string             `json:"name"`
+	TagId openapi_types.UUID `json:"tag_id"`
+}
+
+// RowTagColor defines model for RowTag.Color.
+type RowTagColor string
 
 // RowVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 // Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -31818,6 +31926,19 @@ type ListDealsParams struct {
 
 	// PartnerAttribution Deals a partner brought (`sourced`) or merely helped (`influenced`).
 	PartnerAttribution *ListDealsParamsPartnerAttribution `form:"partner_attribution,omitempty" json:"partner_attribution,omitempty"`
+
+	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
+	//
+	// By ID, not by name: a name is what a person types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
+	//
+	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+	TagMode *ListDealsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 }
 
 // ListDealsParamsStatus defines parameters for ListDeals.
@@ -31825,6 +31946,9 @@ type ListDealsParamsStatus string
 
 // ListDealsParamsPartnerAttribution defines parameters for ListDeals.
 type ListDealsParamsPartnerAttribution string
+
+// ListDealsParamsTagMode defines parameters for ListDeals.
+type ListDealsParamsTagMode string
 
 // CreateDealParams defines parameters for CreateDeal.
 type CreateDealParams struct {
@@ -32793,6 +32917,19 @@ type ListOrganizationsParams struct {
 	// SizeBand How many people work there (DM-VOCAB-2).
 	SizeBand *ListOrganizationsParamsSizeBand `form:"size_band,omitempty" json:"size_band,omitempty"`
 	Q        *string                          `form:"q,omitempty" json:"q,omitempty"`
+
+	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
+	//
+	// By ID, not by name: a name is what a person types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
+	//
+	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+	TagMode *ListOrganizationsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 }
 
 // ListOrganizationsParamsCapturedByKind defines parameters for ListOrganizations.
@@ -32806,6 +32943,9 @@ type ListOrganizationsParamsRelationshipType string
 
 // ListOrganizationsParamsSizeBand defines parameters for ListOrganizations.
 type ListOrganizationsParamsSizeBand string
+
+// ListOrganizationsParamsTagMode defines parameters for ListOrganizations.
+type ListOrganizationsParamsTagMode string
 
 // CreateOrganizationParams defines parameters for CreateOrganization.
 type CreateOrganizationParams struct {
@@ -33432,8 +33572,18 @@ type ListPeopleParams struct {
 	// Q Full-text query over name/title (tsvector).
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
-	// Tag Filter by tag name.
-	Tag *string `form:"tag,omitempty" json:"tag,omitempty"`
+	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
+	//
+	// By ID, not by name: a name is what a person types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
+	//
+	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+	TagMode *ListPeopleParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 
 	// OrganizationId People who work at this account, by their CURRENT PRIMARY employment edge
 	// (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
@@ -33444,6 +33594,9 @@ type ListPeopleParams struct {
 
 // ListPeopleParamsCapturedByKind defines parameters for ListPeople.
 type ListPeopleParamsCapturedByKind string
+
+// ListPeopleParamsTagMode defines parameters for ListPeople.
+type ListPeopleParamsTagMode string
 
 // CreatePersonParams defines parameters for CreatePerson.
 type CreatePersonParams struct {
@@ -37758,6 +37911,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "status")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["updated_at"]; found {
 		err = json.Unmarshal(raw, &a.UpdatedAt)
 		if err != nil {
@@ -37996,6 +38157,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 	object["status"], err = json.Marshal(a.Status)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'status': %w", err)
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
+		}
 	}
 
 	object["updated_at"], err = json.Marshal(a.UpdatedAt)
@@ -40340,6 +40508,14 @@ func (a *Organization) UnmarshalJSON(b []byte) error {
 		delete(object, "strength")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["updated_at"]; found {
 		err = json.Unmarshal(raw, &a.UpdatedAt)
 		if err != nil {
@@ -40577,6 +40753,13 @@ func (a Organization) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
+		}
+	}
+
 	object["updated_at"], err = json.Marshal(a.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
@@ -40797,6 +40980,14 @@ func (a *Person) UnmarshalJSON(b []byte) error {
 		delete(object, "strength")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["title"]; found {
 		err = json.Unmarshal(raw, &a.Title)
 		if err != nil {
@@ -40975,6 +41166,13 @@ func (a Person) MarshalJSON() ([]byte, error) {
 		object["strength"], err = json.Marshal(a.Strength)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'strength': %w", err)
+		}
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
 		}
 	}
 
@@ -55926,6 +56124,32 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "tag_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_mode", r.URL.Query(), &params.TagMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDeals(w, r, params)
 	}))
@@ -60872,6 +61096,32 @@ func (siw *ServerInterfaceWrapper) ListOrganizations(w http.ResponseWriter, r *h
 		return
 	}
 
+	// ------------- Optional query parameter "tag_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_mode", r.URL.Query(), &params.TagMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListOrganizations(w, r, params)
 	}))
@@ -63884,15 +64134,28 @@ func (siw *ServerInterfaceWrapper) ListPeople(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// ------------- Optional query parameter "tag" -------------
+	// ------------- Optional query parameter "tag_id" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag", r.URL.Query(), &params.Tag, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_id"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_mode", r.URL.Query(), &params.TagMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
 		}
 		return
 	}

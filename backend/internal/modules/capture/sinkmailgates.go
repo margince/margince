@@ -134,7 +134,7 @@ func (s *Sink) internalDomainTx(ctx context.Context, tx pgx.Tx, domain string) (
 // and so is any second outbound. The test is the WORDS, not the direction or
 // the order: a rule that demoted every reply would have refused a prospect who
 // wrote first and got answered, which is the most ordinary shape there is.
-func (s *Sink) correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	normalized := normalizeEmail(email)
 	if normalized == "" {
 		return false, nil
@@ -276,4 +276,24 @@ func transactionalInput(cp connector.Counterparty) TransactionalInput {
 		Localpart:       local,
 		ListUnsubscribe: cp.ListUnsubscribe,
 	}
+}
+
+// CorrespondsWith reports whether this workspace has provably written to an
+// address — the T1 signal, read back on the verdict side.
+//
+// The verdict engine needs it because a `newsletter` or `spam` answer suppresses
+// the sender's whole DOMAIN, and that effect is workspace-wide and standing.
+// While only unjudged strangers reached the ledger this could not misfire; once
+// a sender the workspace corresponds with can be asked about, an answer of
+// `newsletter` about one marketing blast would refuse a company the business
+// actively works with.
+//
+// It delegates to the ladder's own T1 gate rather than asking the simpler
+// question this effect first asked. The two must agree, and they differ in a
+// case that matters here: a SINGLE outbound whose text declines ("not
+// interested") is not correspondence. A spammer who drew that one reply would
+// otherwise be spared the domain suppression by the very message telling them
+// to stop.
+func (s *PendingStore) CorrespondsWith(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	return correspondencePositiveTx(ctx, tx, email)
 }

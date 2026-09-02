@@ -87,10 +87,25 @@ export default meta;
 
 type Story = StoryObj<typeof ConsentSection>;
 
+// ConsentSection always mounts ConfirmDetailsAction underneath the rows
+// (P-8/P-9), and that control's useCanWrite("person", "update") call reaches
+// GET /me unconditionally, regardless of which consent state this story is
+// about. So every story in this file routes it, granted a full rep seat that
+// may write the person, since none of the states below is itself the story
+// about the write gate (ConfirmDetails* below are).
+const MAY_WRITE = {
+  user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
+  authorization: {
+    seat_type: "full",
+    objects: { person: { read: true, update: true } },
+  },
+};
+
 export const Default: Story = {
   render: section({
     "GET /consent-purposes": () => jsonResponse(PURPOSES),
     "GET /people/person-1/consent": () => jsonResponse(CONSENT),
+    "GET /me": () => jsonResponse(MAY_WRITE),
   }),
 };
 
@@ -99,6 +114,7 @@ export const ProofLogOpen: Story = {
   render: section({
     "GET /consent-purposes": () => jsonResponse(PURPOSES),
     "GET /people/person-1/consent": () => jsonResponse(CONSENT),
+    "GET /me": () => jsonResponse(MAY_WRITE),
   }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -122,6 +138,7 @@ export const Empty: Story = {
       jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
     "GET /people/person-1/consent": () =>
       jsonResponse({ state: [], events: [] }),
+    "GET /me": () => jsonResponse(MAY_WRITE),
   }),
 };
 
@@ -130,20 +147,13 @@ export const LoadError: Story = {
     "GET /consent-purposes": () => jsonResponse(PURPOSES),
     "GET /people/person-1/consent": () =>
       jsonResponse({ title: "internal error", status: 500 }, 500),
+    "GET /me": () => jsonResponse(MAY_WRITE),
   }),
 };
 
 // The per-person ask, under the per-purpose rows. It is a MUTATING control, so
 // it is drawn only for a caller who may write the person — which is why every
 // story below states a seat and a grant rather than leaving /me to the default.
-const MAY_WRITE = {
-  user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
-  authorization: {
-    seat_type: "full",
-    objects: { person: { read: true, update: true } },
-  },
-};
-
 const ROWS: RouteMap = {
   "GET /consent-purposes": () => jsonResponse(PURPOSES),
   "GET /people/person-1/consent": () => jsonResponse(CONSENT),
