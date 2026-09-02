@@ -23658,6 +23658,8 @@ export interface components {
             target_entity_type?: string | null;
             /** Format: uuid */
             target_entity_id?: string | null;
+            /** @description What the target record was CALLED when this proposal was staged, where its type has a name at all. Resolved at staging time and frozen: the record may be renamed, archived or merged before anyone opens the inbox, and a caption re-resolved then would name something the approver was never shown. Absent means the type carries no name, or the row had already gone — a card then says nothing rather than "unknown". */
+            target_label?: string | null;
             /** @description The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036). */
             target_version?: number | null;
             /** @description Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect. */

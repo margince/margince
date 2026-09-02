@@ -659,6 +659,7 @@ public.approval.status text NOT NULL gen=- def='pending'::text
 public.approval.summary text gen=- def=-
 public.approval.target_entity_id uuid gen=- def=-
 public.approval.target_entity_type text gen=- def=-
+public.approval.target_label text gen=- def=-
 public.approval.target_version bigint gen=- def=-
 public.approval.trg_approval_updated CREATE TRIGGER trg_approval_updated BEFORE UPDATE ON public.approval FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.approval.updated_at timestamp with time zone NOT NULL gen=- def=now()

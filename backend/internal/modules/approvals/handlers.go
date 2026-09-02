@@ -262,6 +262,7 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 	if a.TargetType != nil {
 		out.TargetEntityType = a.TargetType
 	}
+	out.TargetLabel = a.TargetLabel
 	if a.TargetID != nil {
 		v := openapi_types.UUID(*a.TargetID)
 		out.TargetEntityId = &v

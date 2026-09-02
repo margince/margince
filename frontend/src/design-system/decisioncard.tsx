@@ -703,9 +703,16 @@ function readPayload(
 // The headline is the drafted SUBJECT where there is one, because that is the
 // line that differs: the server's summary names only the addressee, so a queue
 // of drafts to the same handful of people reads as one sentence over and over.
-// The summary then explains it underneath — and only underneath a subject, since
-// with no subject the summary IS the headline and printing it twice reads as two
-// facts.
+//
+// Failing that it is the RECORD'S NAME, where the server recorded one. Half the
+// stageable kinds carry no typed payload, and the summaries their paths compose
+// name the target by uuid — "automation wants to assign_owner on deal
+// 01a03781-9083-…". A reader asked to approve that decides on the verb alone.
+// The name answers "which record" in the one line they are certain to read.
+//
+// The summary then explains whichever of those two the headline was — and only
+// underneath one, since with neither the summary IS the headline and printing it
+// twice reads as two facts.
 function DecisionHead({
   approval,
   draft,
@@ -725,7 +732,8 @@ function DecisionHead({
   provenance?: Provenance;
   confidence?: ConfidenceLevel;
 }>) {
-  const headline = draft.subject ?? approval.summary ?? null;
+  const named = draft.subject ?? approval.target_label ?? null;
+  const headline = named ?? approval.summary ?? null;
   return (
     <>
       <div className="dcard-meta">
@@ -748,7 +756,7 @@ function DecisionHead({
           {headline}
         </p>
       )}
-      {draft.subject && approval.summary && (
+      {named && approval.summary && (
         <p className="t-small approval-why">{approval.summary}</p>
       )}
     </>
