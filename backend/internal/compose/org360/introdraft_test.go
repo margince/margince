@@ -253,9 +253,9 @@ func TestARecordValueCannotOpenAParagraphInTheTemplate(t *testing.T) {
 func TestTheIntroPromptAsksForTheNamesTheCheckerRequires(t *testing.T) {
 	t.Parallel()
 	for _, required := range []string{
-		"Address the colleague by name",
-		"name the person you want to meet",
-		`Write a short subject line in the "subject" field`,
+		"Address the colleague by name: open with their first name",
+		"name the person you want to meet in full",
+		`Write a short subject line in the "subject" field, naming the person you want to meet`,
 	} {
 		if !strings.Contains(introSystem, required) {
 			t.Fatalf("the prompt never asks the model to %q, but parseIntroDraft refuses a draft that omits it", required)
