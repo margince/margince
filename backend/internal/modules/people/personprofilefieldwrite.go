@@ -195,5 +195,48 @@ func writePersonProfileField(ctx context.Context, tx pgx.Tx, personID ids.Person
 	if err != nil {
 		return false, fmt.Errorf("people: profile field evidence row (%s): %w", row.Field, err)
 	}
-	return tag.RowsAffected() > 0, nil
+	landed := tag.RowsAffected() > 0
+	if landed && row.Field == fieldLinkedin {
+		if err := fillEmptyLinkedinSlot(ctx, tx, personID, row.Value); err != nil {
+			return false, err
+		}
+	}
+	return landed, nil
+}
+
+// fillEmptyLinkedinSlot carries a landed linkedin evidence row into the social
+// slot the rest of the product reads. person_social is where the person rail,
+// the provider identifier resolver and the SAR export look for a LinkedIn
+// handle — an evidence row alone leaves every one of them answering "none"
+// while the page's own research section displays the URL, and the provider
+// lookup then refuses the contact as having nothing to match on.
+//
+// Additive only, through the same writer the LinkedIn-match apply and the
+// bought-claim apply use: a handle already on the record is somebody's
+// statement and a machine fill is not grounds to replace it. A value that is
+// not a LinkedIn URL stays evidence-only — the social slot's contract is a
+// profile link, and the same host check gates the vCard import's slot.
+func fillEmptyLinkedinSlot(ctx context.Context, tx pgx.Tx, personID ids.PersonID, value string) error {
+	if !isLinkedinURL(value) {
+		return nil
+	}
+	// The row probe, restated here rather than inherited: every caller funnels
+	// through writePersonProfileField, whose entry points each probe the row,
+	// but this write reaches person_social and the person row itself, and the
+	// slot fill must not become writable from a future caller that forgot. A
+	// subject the principal cannot write is a skipped fill, not a fault — the
+	// evidence row landed under the caller's own gate.
+	if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	_, landed, err := insertSocialHandle(ctx, tx, personID.UUID, socialLinkedIn, value)
+	if err != nil || !landed {
+		return err
+	}
+	// The slot is part of the person aggregate: the bump invalidates If-Match
+	// tokens held by browsers that never saw it, for touchPerson's reason.
+	return touchPerson(ctx, tx, personID.UUID)
 }
