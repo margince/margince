@@ -1390,6 +1390,7 @@ export const vi = {
   "co.rail.people.title": "Người liên hệ chính",
   "co.rail.people.empty": "Chưa có liên hệ nào. Không có ai để viết thư.",
   "co.rail.people.add": "Thêm liên hệ",
+  "co.rail.people.inTouch": "Đã liên hệ với họ",
   "co.rail.details.all": "Tất cả trường",
   "co.commercial.title": "Thương mại",
   "co.commercial.lostFigure": "Deal đã thua",

@@ -1259,6 +1259,11 @@
 .co-person-routes {
   margin-left: auto;
 }
+.co-person-routes-list {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+}
 
 /* A signal row: a coloured dot the row's severity comes from, the finding,
    then when it was seen. Mirrors person360.css's own .pe-signal/.pe-dot pair,

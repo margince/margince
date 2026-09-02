@@ -1396,6 +1396,7 @@ export const de = {
   "co.rail.people.empty":
     "Noch keine Kontakte. Niemand, dem man schreiben kann.",
   "co.rail.people.add": "Kontakt hinzufügen",
+  "co.rail.people.inTouch": "Bereits mit ihnen in Kontakt",
   "co.rail.details.all": "Alle Felder",
   "co.commercial.title": "Kommerziell",
   "co.commercial.lostFigure": "Verlorene Deals",

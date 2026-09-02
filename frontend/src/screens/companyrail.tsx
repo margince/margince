@@ -8,6 +8,7 @@ import { AvatarStack } from "../design-system/avatarstack";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Popover } from "../design-system/popover";
 import {
   type SectionState,
   SurfaceState,
@@ -414,6 +415,7 @@ function PeopleSection({
 }
 
 function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
+  const t = useT();
   const colleagues = contact.routes?.top ?? [];
   return (
     <>
@@ -450,16 +452,33 @@ function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
       </span>
       {colleagues.length > 0 && (
         <span className="co-person-routes">
-          {/* The stack has no text of its own, so the names it draws as
-              faces are read again here for anyone not reading them as
-              monograms. A plain <span> carries no accessible name for an
-              aria-label to attach to. */}
-          <span className="sr-only">
-            {colleagues.map((route) => route.display_name).join(", ")}
-          </span>
-          <AvatarStack
-            people={colleagues.map((route) => ({ name: route.display_name }))}
-          />
+          {/* A bare monogram is a mark only its owner recognises, so the
+              stack opens to the sentence it stands for: which colleagues are
+              already in touch with this person. Hover for a passing reader,
+              click and focus for everyone a hover never reaches; the sr-only
+              names double as the trigger's accessible name. */}
+          <Popover
+            onHover
+            label={
+              <>
+                <span className="sr-only">
+                  {colleagues.map((route) => route.display_name).join(", ")}
+                </span>
+                <AvatarStack
+                  people={colleagues.map((route) => ({
+                    name: route.display_name,
+                  }))}
+                />
+              </>
+            }
+          >
+            <p className="t-caption">{t("co.rail.people.inTouch")}</p>
+            <ul className="co-person-routes-list">
+              {colleagues.map((route) => (
+                <li key={route.display_name}>{route.display_name}</li>
+              ))}
+            </ul>
+          </Popover>
         </span>
       )}
     </>

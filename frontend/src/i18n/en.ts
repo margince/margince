@@ -1447,6 +1447,7 @@ export const en = {
   "co.rail.people.title": "Their key people",
   "co.rail.people.empty": "No contacts yet. Nobody to write to.",
   "co.rail.people.add": "Add a contact",
+  "co.rail.people.inTouch": "Already in touch with them",
   "co.rail.details.all": "All fields",
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
