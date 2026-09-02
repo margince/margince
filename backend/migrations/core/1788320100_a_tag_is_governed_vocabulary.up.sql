@@ -20,6 +20,12 @@
 --    arrives. A constraint added first would fail the migration on the
 --    installation that has data, which is the one that matters.
 
+-- Bounded: every ALTER below takes an ACCESS EXCLUSIVE lock on a table the
+-- product writes while people are working — tag on every create, taggable on
+-- every apply. Waiting forever behind an open transaction would stall the
+-- deploy and every writer behind it.
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE tag ADD COLUMN description text;
 
 ALTER TABLE taggable
