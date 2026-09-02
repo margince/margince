@@ -102,7 +102,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 			excluded = &n
 			where = append(where, maskClauses...)
 		}
-		sql, args, err := bindReportTokens(ctx, tx, frame, reportSQL(spec, selects, where, groupBy), args)
+		sql, args, err := bindReportTokens(ctx, frame, reportSQL(spec, selects, where, groupBy), args)
 		if err != nil {
 			return err
 		}
@@ -335,7 +335,7 @@ const (
 // a concurrent settings write land between them, and the answer then reports
 // a total cut in one zone under the name of another.
 func bindReportTokens(
-	ctx context.Context, tx pgx.Tx, frame reportFrame, sql string, args []any,
+	ctx context.Context, frame reportFrame, sql string, args []any,
 ) (string, []any, error) {
 	args = slices.Clone(args)
 	arg := func(v any) int { args = append(args, v); return len(args) }

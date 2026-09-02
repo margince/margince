@@ -59,7 +59,7 @@ func countMaskExcluded(ctx context.Context, tx pgx.Tx, frame reportFrame, spec r
 	where := strings.Join(baseWhere, " AND ")
 	sql := fmt.Sprintf("SELECT count(*) FILTER (WHERE NOT (%s)) FROM %s WHERE %s",
 		strings.Join(maskClauses, " AND "), spec.fromClause(), where)
-	sql, args, err := bindReportTokens(ctx, tx, frame, sql, args)
+	sql, args, err := bindReportTokens(ctx, frame, sql, args)
 	if err != nil {
 		return 0, err
 	}
