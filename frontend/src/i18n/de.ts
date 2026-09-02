@@ -2289,6 +2289,14 @@ export const de = {
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Nächste Woche planen",
+  // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
+  // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
+  "brief.donext.title": "Als Nächstes",
+  "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
+  "brief.donext.loading": "Was auf dich wartet, wird gelesen",
+  "brief.donext.clear": "Gerade wartet nichts auf dich.",
+  "brief.donext.rest": "{count} weitere in der Arbeitsliste",
+
   // Die Woche eines Teams, eingefroren beim Abschluss. Zwei Wochen sind
   // vergleichbar, weil keine sich unter dem Vergleich bewegt.
   "teamweekly.title": "Die Woche des Teams",
