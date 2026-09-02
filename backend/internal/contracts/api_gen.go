@@ -29597,6 +29597,28 @@ type Worklist struct {
 	// is where the queue says which. Empty only when no source was read at all.
 	Reach []WorklistReach `json:"reach"`
 
+	// Readings The day's four OUTCOME figures, for the strip above the queue: what money is
+	// drifting, who is waiting on an answer, how much new business is in hand, and how
+	// much routine work is queued behind a decision.
+	//
+	// These are not the filter pills. `counts` says how many items of a kind the queue
+	// holds; these say what those items MEAN for the day, which is why one of them is a
+	// sum of money rather than a tally. Both are on the page because a rep asks two
+	// different questions — "what is there" and "what is at stake".
+	//
+	// Every figure describes the same set `counts.considered` describes: what this read
+	// weighed AFTER the scope narrowing and BEFORE the category filter, the fold and the
+	// page cut. That is the only set for which the numbers are stable — computed over
+	// the page, the strip would shrink as a reader walked the queue and read as work
+	// disappearing; computed after the filter, opening a pill would empty the other
+	// three.
+	//
+	// `more_available` carries the same honesty `WorklistCount` carries, for the same
+	// reason: a source read to its work bound makes every figure here a FLOOR rather
+	// than a total, and a strip stating "3 buyers waiting" over a scan that stopped
+	// early tells a rep the opposite of the truth.
+	Readings WorklistReadings `json:"readings"`
+
 	// Scope Whose work this read answered for.
 	Scope WorklistScope `json:"scope"`
 
@@ -30020,6 +30042,65 @@ type WorklistReach struct {
 
 // WorklistReachSource Which producer these numbers are about. The same vocabulary as an item source.
 type WorklistReachSource string
+
+// WorklistReadings The day's four OUTCOME figures, for the strip above the queue: what money is
+// drifting, who is waiting on an answer, how much new business is in hand, and how
+// much routine work is queued behind a decision.
+//
+// These are not the filter pills. `counts` says how many items of a kind the queue
+// holds; these say what those items MEAN for the day, which is why one of them is a
+// sum of money rather than a tally. Both are on the page because a rep asks two
+// different questions — "what is there" and "what is at stake".
+//
+// Every figure describes the same set `counts.considered` describes: what this read
+// weighed AFTER the scope narrowing and BEFORE the category filter, the fold and the
+// page cut. That is the only set for which the numbers are stable — computed over
+// the page, the strip would shrink as a reader walked the queue and read as work
+// disappearing; computed after the filter, opening a pill would empty the other
+// three.
+//
+// `more_available` carries the same honesty `WorklistCount` carries, for the same
+// reason: a source read to its work bound makes every figure here a FLOOR rather
+// than a total, and a strip stating "3 buyers waiting" over a scan that stopped
+// early tells a rep the opposite of the truth.
+type WorklistReadings struct {
+	// BuyerReplies How many customers have written and are waiting on an answer.
+	BuyerReplies int `json:"buyer_replies"`
+
+	// MoreAvailable True when any source behind any figure here was read to its work bound, so
+	// every number above is a floor. Set once for the strip rather than per reading:
+	// the four are read as one row, and a reader who cannot trust one of them cannot
+	// trust the row.
+	MoreAvailable bool `json:"more_available"`
+
+	// Prospecting How much new business is in hand and owed a first response.
+	Prospecting int `json:"prospecting"`
+
+	// RevenueAtRiskMinor What the drifting deals are worth, summed over the deals this read weighed, in
+	// the currency `revenue_currency` names.
+	//
+	// Null when no deal at risk could be priced — no amount recorded, or no stored
+	// rate for its currency. Null is not zero: zero says the pipeline is safe, and
+	// absence says nobody can tell. A deal the estate cannot price is left OUT of
+	// the sum rather than counted as nothing, so a partly priced day reports what it
+	// could price and says so through `revenue_currency`.
+	RevenueAtRiskMinor *int64 `json:"revenue_at_risk_minor"`
+
+	// RevenueCurrency The currency `revenue_at_risk_minor` is stated in — the installation's base
+	// currency, once the amounts went through the conversion seam.
+	//
+	// Null when they did not, which makes the sum a total of raw minor units in no
+	// one currency. A client must not format a figure whose units it cannot name:
+	// with this absent the amount is not money yet, and drawing it as money is the
+	// error the conversion seam exists to prevent.
+	RevenueCurrency *string `json:"revenue_currency,omitempty"`
+
+	// Review How much routine work is queued behind a decision. Counted before the fold, so
+	// a hundred alike approvals read as a hundred here even where the queue draws
+	// them as one row — the strip says how much work there is, and the queue says
+	// how much reading it costs.
+	Review int `json:"review"`
+}
 
 // WorklistReason One fact behind an item's rank, as a typed pair rather than a sentence: the
 // product ships three languages and a sentence composed here would reach a German

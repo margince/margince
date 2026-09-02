@@ -7601,6 +7601,18 @@ export const en = {
   "worklist.board.nobody": "Nobody yet",
   "worklist.board.truncated":
     "There is more work than this could count. These are floors, not totals.",
+  "worklist.readings.label": "What today is worth",
+  "worklist.readings.revenue": "Revenue at risk",
+  "worklist.readings.revenue.detail": "Across the deals drifting today",
+  "worklist.readings.revenue.unpriced": "No deal at risk could be priced",
+  "worklist.readings.replies": "Buyer replies",
+  "worklist.readings.replies.detail": "Customers waiting on an answer",
+  "worklist.readings.prospecting": "Prospecting",
+  "worklist.readings.prospecting.detail": "New business owed a first reply",
+  "worklist.readings.review": "Review",
+  "worklist.readings.review.detail": "Routine work queued behind a decision",
+  "worklist.readings.truncated":
+    "There is more work than this could count. These are floors, not totals.",
   "worklist.filter.label": "Kind of work",
   "worklist.filter.all": "All",
   "worklist.filter.customer_waiting": "Customer waiting",

@@ -7453,6 +7453,21 @@ export const vi = {
   "worklist.board.nobody": "Chưa có ai",
   "worklist.board.truncated":
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+  "worklist.readings.label": "Hôm nay có gì đang bị đe dọa",
+  "worklist.readings.revenue": "Doanh thu bị đe dọa",
+  "worklist.readings.revenue.detail": "Trên các thương vụ đang trôi hôm nay",
+  "worklist.readings.revenue.unpriced":
+    "Không thương vụ rủi ro nào định giá được",
+  "worklist.readings.replies": "Khách phản hồi",
+  "worklist.readings.replies.detail": "Khách đang chờ một câu trả lời",
+  "worklist.readings.prospecting": "Tìm kiếm khách hàng",
+  "worklist.readings.prospecting.detail":
+    "Cơ hội mới đang chờ phản hồi đầu tiên",
+  "worklist.readings.review": "Xem xét",
+  "worklist.readings.review.detail":
+    "Việc thường lệ đang chờ sau một quyết định",
+  "worklist.readings.truncated":
+    "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
   "worklist.filter.label": "Loại công việc",
   "worklist.filter.all": "Tất cả",
   "worklist.filter.customer_waiting": "Khách đang chờ",

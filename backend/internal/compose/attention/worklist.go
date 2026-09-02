@@ -289,6 +289,10 @@ func (s *Service) worklistFrom(
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
 		Counts: countsOf(considered, shown, bounded),
+		// The outcome figures beside the per-kind tallies, over the same
+		// snapshot: what the day's work is worth rather than how much of it
+		// there is.
+		Readings: readingsOf(considered, bounded),
 	}
 	if filter != "" {
 		narrowed := crmcontracts.WorklistFilter(filter)
