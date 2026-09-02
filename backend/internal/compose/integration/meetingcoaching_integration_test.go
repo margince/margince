@@ -64,7 +64,7 @@ func coachingRoom(t *testing.T, e *Env, seated ids.UUID) ids.UUID {
 	return meeting
 }
 
-func coachingOn(t *testing.T, e *Env, ctx context.Context, meeting ids.UUID) *crmcontracts.MeetingPlanCoaching {
+func coachingOn(ctx context.Context, t *testing.T, e *Env, meeting ids.UUID) *crmcontracts.MeetingPlanCoaching {
 	t.Helper()
 	brief, err := meetingBriefService(e).Get(ctx, meeting)
 	if err != nil {
@@ -82,7 +82,7 @@ func TestALeadReadingATeammatesMeetingIsCoached(t *testing.T) {
 	meeting := coachingRoom(t, e, e.Rep2)
 	// Rep1 and Rep2 share Team1.
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, coachPerms())
-	if coachingOn(t, e, ctx, meeting) == nil {
+	if coachingOn(ctx, t, e, meeting) == nil {
 		t.Error("a lead reading their teammate's meeting was not coached")
 	}
 }
@@ -176,7 +176,7 @@ func TestARepIsNeverCoachedEvenOnATeammatesMeeting(t *testing.T) {
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, repPerms())
-	if coachingOn(t, e, ctx, meeting) != nil {
+	if coachingOn(ctx, t, e, meeting) != nil {
 		t.Error("a rep sharing a team with the seated colleague was coached")
 	}
 }
@@ -188,7 +188,7 @@ func TestASeatedLeadIsStillCoached(t *testing.T) {
 	meeting := coachingRoom(t, e, e.Rep2)
 	seatUserInRoom(t, owner, meeting, e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, coachPerms())
-	if coachingOn(t, e, ctx, meeting) == nil {
+	if coachingOn(ctx, t, e, meeting) == nil {
 		t.Error("a lead who is in the room was not coached; being seated is not a disqualifier")
 	}
 }
@@ -214,7 +214,7 @@ func TestALeadAloneInTheRoomIsNotCoached(t *testing.T) {
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, coachPerms())
-	if coachingOn(t, e, ctx, meeting) != nil {
+	if coachingOn(ctx, t, e, meeting) != nil {
 		t.Error("a lead alone in the room was coached about themselves")
 	}
 }
