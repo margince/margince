@@ -390,6 +390,7 @@ export function LogActivityAction({
   initialKind,
   openOnMount,
   triggerLabel,
+  disabled,
   disabledReasonId,
   onClose,
 }: Readonly<{
@@ -407,6 +408,11 @@ export function LogActivityAction({
   // own verb; two buttons both reading "Log activity" is a toolbar that has
   // stopped telling the reader anything.
   triggerLabel?: MessageKey;
+  // Blocks the press while carrying no explanation — for a caller whose grant
+  // has not resolved yet. Claiming a refusal the server has not decided is
+  // worse than a control that is briefly quiet; separate from
+  // `disabledReasonId` so a caller can hold the two apart.
+  disabled?: boolean;
   // The sentence that refuses this verb, already on the page. A record that
   // takes no new activity must still SHOW the verb it will not accept — a
   // reader who cannot tell "this record is archived" from "this build has no
@@ -428,7 +434,12 @@ export function LogActivityAction({
   return (
     <>
       {!openOnMount && (
-        <Button small reasonId={disabledReasonId} onClick={() => setOpen(true)}>
+        <Button
+          small
+          disabled={disabled}
+          reasonId={disabledReasonId}
+          onClick={() => setOpen(true)}
+        >
           {t(triggerLabel ?? "log.title")}
         </Button>
       )}

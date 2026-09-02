@@ -120,7 +120,6 @@ function mount(
   },
 ) {
   installFetchStub({
-    ...extraRoutes,
     "GET /me": meRoute(allow, { seat: "full" }),
     "GET /people/p-1/360": () => jsonResponse(page),
     "GET /people/p-1/brief": () =>
@@ -140,6 +139,9 @@ function mount(
           },
         ],
       }),
+    // Last, so a spec that needs to override a read above (e.g. a /me that
+    // never resolves, for a pending-grant spec) can.
+    ...extraRoutes,
   });
   render(
     <StoryProviders>
@@ -737,6 +739,30 @@ describe("logging an activity", () => {
     expect(addTask.getAttribute("aria-describedby")).toBe(
       logActivity.getAttribute("aria-describedby"),
     );
+  });
+
+  // A guard that has not answered yet refuses nothing: while /me is still in
+  // flight, useCanWrite reads false the same way it would for a caller
+  // without the grant — so without this, both buttons would flash the
+  // "You do not have permission" sentence on every page load, before the
+  // verdict is even in.
+  it("stays quiet — disabled, no claimed refusal — while the grant is still in flight", async () => {
+    mount("overview", view, [], {
+      "GET /me": () => new Promise<Response>(() => {}),
+    });
+
+    const header = await recordHeader();
+    const addTask = within(header).getByRole("button", { name: "Add task" });
+    const logActivity = within(header).getByRole("button", {
+      name: /Log activity/,
+    });
+    expect(addTask).toHaveProperty("disabled", true);
+    expect(logActivity).toHaveProperty("disabled", true);
+    expect(
+      within(header).queryByText(
+        "You do not have permission to log activities on this record.",
+      ),
+    ).toBeNull();
   });
 
   // The button names a verb, opens the same form Log activity does — started

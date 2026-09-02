@@ -14,7 +14,13 @@ import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
-import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
+import {
+  provenanceOf,
+  throwProblem,
+  useMe,
+  useSorMode,
+  useViewerId,
+} from "./common";
 import { DecisionsChip } from "./companyapprovals";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { ComposeModal } from "./compose";
@@ -107,9 +113,16 @@ export function CompanyPrimaryActions({
   // states for the identical verb. Independent of `archived`: a live record a
   // seat may not write to is refused for this reason, not that one, and the
   // two must not be merged into one sentence that names the wrong cause.
+  const me = useMe();
   const canLog = useCanWrite("activity", "create");
   const logRefusedId = useId();
-  const logRefused = archived ?? (canLog ? undefined : logRefusedId);
+  // A guard that has not answered yet refuses nothing: claiming a refusal
+  // `/me` has not decided is worse than a control that is briefly quiet — the
+  // same rule personpage.tsx's writeRefusal states for the identical shape.
+  const logGrantKnown = me.data?.authorization !== undefined;
+  const logRefused =
+    archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
+  const logPending = !archived && !logGrantKnown;
   // LogActivityAction's own trigger renders nothing in overlay, so the two
   // buttons below are already absent there — but this caption is drawn by
   // the caller, not by them, and would otherwise be left explaining buttons
@@ -122,7 +135,7 @@ export function CompanyPrimaryActions({
           {t("record.archivedReadOnly")}
         </p>
       )}
-      {!archived && !canLog && !overlay && (
+      {!archived && logGrantKnown && !canLog && !overlay && (
         <p className="t-caption" id={logRefusedId}>
           {t("record.logActivityRefused")}
         </p>
@@ -136,6 +149,7 @@ export function CompanyPrimaryActions({
       <LogActivityAction
         entityType="organization"
         entityId={org.id}
+        disabled={logPending}
         disabledReasonId={logRefused}
       />
       <LogActivityAction
@@ -143,6 +157,7 @@ export function CompanyPrimaryActions({
         entityId={org.id}
         initialKind="task"
         triggerLabel="log.addTask"
+        disabled={logPending}
         disabledReasonId={logRefused}
       />
     </>
