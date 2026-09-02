@@ -2218,7 +2218,8 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     if (!(scoreCard instanceof HTMLElement)) {
       throw new Error("the score reading is not a card in the readings row");
     }
-    await userEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       within(scoreCard).getByRole("button", { name: "How it stands" }),
     );
     await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(2));
