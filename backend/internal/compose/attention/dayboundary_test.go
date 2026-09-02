@@ -170,9 +170,11 @@ func TestADayWhoseMidnightDoesNotExistEndsAtItsFirstInstant(t *testing.T) {
 		for _, day := range daysWithNoLocalMidnight(loc) {
 			found++
 			t.Run(name+"/"+day.Format(time.DateOnly), func(t *testing.T) {
-				// Asked from mid-afternoon the day BEFORE, so the boundary
-				// under test is that day's own end.
-				asOf := day.AddDate(0, 0, -1).Add(15 * time.Hour)
+				// Mid-afternoon LOCAL on the day BEFORE, so the boundary under
+				// test is that day's own end. Local rather than 15:00 UTC:
+				// these zones sit hours apart, and the same instant is morning
+				// in one and evening in another.
+				asOf := time.Date(day.Year(), day.Month(), day.Day(), 15, 0, 0, 0, loc).AddDate(0, 0, -1)
 				local := startOfNextDay(asOf.In(loc), loc).In(loc)
 				if !sameDate(local, day) {
 					t.Fatalf("the day ends at %s, which is not the start of %s", local, day.Format(time.DateOnly))
