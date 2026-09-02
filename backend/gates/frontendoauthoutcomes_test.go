@@ -25,7 +25,9 @@ package gates
 // others move.
 
 import (
+	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -148,19 +150,22 @@ var (
 func TestEveryReaderFacingProblemCodeHasClientCopy(t *testing.T) {
 	t.Parallel()
 
+	// WALKED, not listed. Reading one directory would see the call that is
+	// there today and miss the one added in a subpackage tomorrow — a census
+	// that fails short reports PASS with nothing to notice, which is the one
+	// way a gate must not break.
 	consts := map[string]string{}
 	var wanted []string
-	entries, err := os.ReadDir("internal/compose")
-	if err != nil {
-		t.Fatalf("reading compose: %v", err)
-	}
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
-			continue
+	if err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
-		source, readErr := os.ReadFile("internal/compose/" + e.Name())
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		source, readErr := os.ReadFile(path)
 		if readErr != nil {
-			t.Fatalf("reading %s: %v", e.Name(), readErr)
+			return readErr
 		}
 		text := string(source)
 		for _, m := range codeConstDecl.FindAllStringSubmatch(text, -1) {
@@ -169,18 +174,22 @@ func TestEveryReaderFacingProblemCodeHasClientCopy(t *testing.T) {
 		for _, m := range unavailableCall.FindAllStringSubmatch(text, -1) {
 			wanted = append(wanted, m[1])
 		}
+		return nil
+	}); err != nil {
+		t.Fatalf("walking internal: %v", err)
 	}
 	// NOT a skip. compose reaches for this helper today, so an empty read means
 	// the detection stopped seeing it — and a census that can fail short
 	// reports PASS with nothing to notice.
 	if len(wanted) == 0 {
-		t.Fatal("no httperr.Unavailable call was found in internal/compose — the detection has gone blind")
+		t.Fatal("no httperr.Unavailable call was found under internal/ — the detection has gone blind")
 	}
 
 	mapping, err := os.ReadFile(problemCodeMapping)
 	if err != nil {
 		t.Fatalf("reading the problem mapping: %v", err)
 	}
+	slices.Sort(wanted)
 	for _, w := range slices.Compact(wanted) {
 		code := strings.Trim(w, `"`)
 		if resolved, ok := consts[w]; ok {
