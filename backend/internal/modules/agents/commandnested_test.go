@@ -35,7 +35,6 @@ func TestListTagAndLineItemCommandsStageAndAdmitOutsideTheRecordSeam(t *testing.
 		call           GovernedCall
 		wantTargetType string
 	}{
-		{"add_list_member", NewAddListMemberCall(unreadableProvider{}, AddListMemberCommand{ID: id}), "list"},
 		{"apply_tag", NewApplyTagCall(unreadableProvider{}, ApplyTagCommand{ID: id}), "tag"},
 		{"add_offer_line_item", NewAddOfferLineItemCall(unreadableProvider{}, AddOfferLineItemCommand{ID: id}), "offer"},
 		{

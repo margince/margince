@@ -125,8 +125,13 @@ func project360Documents(rows []crmcontracts.Attachment) []Project360Document {
 func project360Commitments(rows []crmcontracts.Project360Commitment, asOf time.Time) []CommitmentItem {
 	out := make([]CommitmentItem, 0, len(rows))
 	for _, c := range rows {
+		// The project page reads open TASKS, so every row here is task-sourced.
+		// Naming that rather than leaving it blank is what lets a reader tell
+		// this answer apart from one that also carries extracted commitments.
+		taskID := ids.UUID(c.ActivityId)
 		promise := OpenCommitment{
-			TaskID: ids.UUID(c.ActivityId), Subject: c.Subject, DueAt: c.DueAt,
+			Source: CommitmentFromTask, TaskID: &taskID,
+			Subject: c.Subject, DueAt: c.DueAt,
 			AssigneeID: (*ids.UUID)(c.AssigneeId), AssigneeName: orBlank(c.AssigneeName),
 		}
 		out = append(out, promise.wire(asOf))

@@ -433,33 +433,6 @@ func (e AddConsumerMailDomainRequestKind) Valid() bool {
 	}
 }
 
-// Defines values for AddListMemberRequestEntityType.
-const (
-	AddListMemberRequestEntityTypeDeal         AddListMemberRequestEntityType = "deal"
-	AddListMemberRequestEntityTypeLead         AddListMemberRequestEntityType = "lead"
-	AddListMemberRequestEntityTypeOrganization AddListMemberRequestEntityType = "organization"
-	AddListMemberRequestEntityTypePerson       AddListMemberRequestEntityType = "person"
-	AddListMemberRequestEntityTypeProject      AddListMemberRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the AddListMemberRequestEntityType enum.
-func (e AddListMemberRequestEntityType) Valid() bool {
-	switch e {
-	case AddListMemberRequestEntityTypeDeal:
-		return true
-	case AddListMemberRequestEntityTypeLead:
-		return true
-	case AddListMemberRequestEntityTypeOrganization:
-		return true
-	case AddListMemberRequestEntityTypePerson:
-		return true
-	case AddListMemberRequestEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for AdvanceDealRequestStatus.
 const (
 	AdvanceDealRequestStatusLost AdvanceDealRequestStatus = "lost"
@@ -4078,51 +4051,6 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	}
 }
 
-// Defines values for CreateListRequestEntityType.
-const (
-	CreateListRequestEntityTypeDeal         CreateListRequestEntityType = "deal"
-	CreateListRequestEntityTypeLead         CreateListRequestEntityType = "lead"
-	CreateListRequestEntityTypeOrganization CreateListRequestEntityType = "organization"
-	CreateListRequestEntityTypePerson       CreateListRequestEntityType = "person"
-	CreateListRequestEntityTypeProject      CreateListRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the CreateListRequestEntityType enum.
-func (e CreateListRequestEntityType) Valid() bool {
-	switch e {
-	case CreateListRequestEntityTypeDeal:
-		return true
-	case CreateListRequestEntityTypeLead:
-		return true
-	case CreateListRequestEntityTypeOrganization:
-		return true
-	case CreateListRequestEntityTypePerson:
-		return true
-	case CreateListRequestEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreateListRequestListType.
-const (
-	CreateListRequestListTypeDynamic CreateListRequestListType = "dynamic"
-	CreateListRequestListTypeStatic  CreateListRequestListType = "static"
-)
-
-// Valid indicates whether the value is a known member of the CreateListRequestListType enum.
-func (e CreateListRequestListType) Valid() bool {
-	switch e {
-	case CreateListRequestListTypeDynamic:
-		return true
-	case CreateListRequestListTypeStatic:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CreateOrganizationFactRequestCategory.
 const (
 	CreateOrganizationFactRequestCategoryCompany  CreateOrganizationFactRequestCategory = "company"
@@ -6100,78 +6028,6 @@ func (e LicenseEntitlementState) Valid() bool {
 	}
 }
 
-// Defines values for ListEntityType.
-const (
-	ListEntityTypeDeal         ListEntityType = "deal"
-	ListEntityTypeLead         ListEntityType = "lead"
-	ListEntityTypeOrganization ListEntityType = "organization"
-	ListEntityTypePerson       ListEntityType = "person"
-	ListEntityTypeProject      ListEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListEntityType enum.
-func (e ListEntityType) Valid() bool {
-	switch e {
-	case ListEntityTypeDeal:
-		return true
-	case ListEntityTypeLead:
-		return true
-	case ListEntityTypeOrganization:
-		return true
-	case ListEntityTypePerson:
-		return true
-	case ListEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListListType.
-const (
-	ListListTypeDynamic ListListType = "dynamic"
-	ListListTypeStatic  ListListType = "static"
-)
-
-// Valid indicates whether the value is a known member of the ListListType enum.
-func (e ListListType) Valid() bool {
-	switch e {
-	case ListListTypeDynamic:
-		return true
-	case ListListTypeStatic:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListMemberEntityType.
-const (
-	ListMemberEntityTypeDeal         ListMemberEntityType = "deal"
-	ListMemberEntityTypeLead         ListMemberEntityType = "lead"
-	ListMemberEntityTypeOrganization ListMemberEntityType = "organization"
-	ListMemberEntityTypePerson       ListMemberEntityType = "person"
-	ListMemberEntityTypeProject      ListMemberEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListMemberEntityType enum.
-func (e ListMemberEntityType) Valid() bool {
-	switch e {
-	case ListMemberEntityTypeDeal:
-		return true
-	case ListMemberEntityTypeLead:
-		return true
-	case ListMemberEntityTypeOrganization:
-		return true
-	case ListMemberEntityTypePerson:
-		return true
-	case ListMemberEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for MeResponsePassportScopes.
 const (
 	MeResponsePassportScopesActWithApproval    MeResponsePassportScopes = "act_with_approval"
@@ -6856,7 +6712,6 @@ const (
 	Organization360SectionsOmittedDeals            Organization360SectionsOmitted = "deals"
 	Organization360SectionsOmittedHealth           Organization360SectionsOmitted = "health"
 	Organization360SectionsOmittedLastTouch        Organization360SectionsOmitted = "last_touch"
-	Organization360SectionsOmittedListMemberships  Organization360SectionsOmitted = "list_memberships"
 	Organization360SectionsOmittedMoments          Organization360SectionsOmitted = "moments"
 	Organization360SectionsOmittedNextMeeting      Organization360SectionsOmitted = "next_meeting"
 	Organization360SectionsOmittedNextSteps        Organization360SectionsOmitted = "next_steps"
@@ -6880,8 +6735,6 @@ func (e Organization360SectionsOmitted) Valid() bool {
 	case Organization360SectionsOmittedHealth:
 		return true
 	case Organization360SectionsOmittedLastTouch:
-		return true
-	case Organization360SectionsOmittedListMemberships:
 		return true
 	case Organization360SectionsOmittedMoments:
 		return true
@@ -7272,19 +7125,19 @@ func (e OrganizationBriefSectionKind) Valid() bool {
 
 // Defines values for OrganizationBriefSentenceNature.
 const (
-	Assessment     OrganizationBriefSentenceNature = "assessment"
-	Fact           OrganizationBriefSentenceNature = "fact"
-	Recommendation OrganizationBriefSentenceNature = "recommendation"
+	OrganizationBriefSentenceNatureAssessment     OrganizationBriefSentenceNature = "assessment"
+	OrganizationBriefSentenceNatureFact           OrganizationBriefSentenceNature = "fact"
+	OrganizationBriefSentenceNatureRecommendation OrganizationBriefSentenceNature = "recommendation"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationBriefSentenceNature enum.
 func (e OrganizationBriefSentenceNature) Valid() bool {
 	switch e {
-	case Assessment:
+	case OrganizationBriefSentenceNatureAssessment:
 		return true
-	case Fact:
+	case OrganizationBriefSentenceNatureFact:
 		return true
-	case Recommendation:
+	case OrganizationBriefSentenceNatureRecommendation:
 		return true
 	default:
 		return false
@@ -9286,27 +9139,6 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	case QualifyingEventRecordKindInboundMessage:
 		return true
 	case QualifyingEventRecordKindInquiry:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for QuotaAttainmentBand.
-const (
-	Accent QuotaAttainmentBand = "accent"
-	Behind QuotaAttainmentBand = "behind"
-	Met    QuotaAttainmentBand = "met"
-)
-
-// Valid indicates whether the value is a known member of the QuotaAttainmentBand enum.
-func (e QuotaAttainmentBand) Valid() bool {
-	switch e {
-	case Accent:
-		return true
-	case Behind:
-		return true
-	case Met:
 		return true
 	default:
 		return false
@@ -13525,33 +13357,6 @@ func (e ListLeadsParamsSlaState) Valid() bool {
 	}
 }
 
-// Defines values for ListListsParamsEntityType.
-const (
-	ListListsParamsEntityTypeDeal         ListListsParamsEntityType = "deal"
-	ListListsParamsEntityTypeLead         ListListsParamsEntityType = "lead"
-	ListListsParamsEntityTypeOrganization ListListsParamsEntityType = "organization"
-	ListListsParamsEntityTypePerson       ListListsParamsEntityType = "person"
-	ListListsParamsEntityTypeProject      ListListsParamsEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListListsParamsEntityType enum.
-func (e ListListsParamsEntityType) Valid() bool {
-	switch e {
-	case ListListsParamsEntityTypeDeal:
-		return true
-	case ListListsParamsEntityTypeLead:
-		return true
-	case ListListsParamsEntityTypeOrganization:
-		return true
-	case ListListsParamsEntityTypePerson:
-		return true
-	case ListListsParamsEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GetOnboardingCompanyProposalParamsLocale.
 const (
 	OnboardingProposalLocaleDE GetOnboardingCompanyProposalParamsLocale = "de"
@@ -14676,15 +14481,6 @@ type AddDealRoomDocumentRequest struct {
 	Title                *string                `json:"title,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
-
-// AddListMemberRequest defines model for AddListMemberRequest.
-type AddListMemberRequest struct {
-	EntityId   openapi_types.UUID             `json:"entity_id"`
-	EntityType AddListMemberRequestEntityType `json:"entity_type"`
-}
-
-// AddListMemberRequestEntityType defines model for AddListMemberRequest.EntityType.
-type AddListMemberRequestEntityType string
 
 // Address Structured postal address.
 type Address struct {
@@ -18692,22 +18488,6 @@ type CreateLeadSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// CreateListRequest defines model for CreateListRequest.
-type CreateListRequest struct {
-	Definition *map[string]interface{}     `json:"definition,omitempty"`
-	EntityType CreateListRequestEntityType `json:"entity_type"`
-	ListType   *CreateListRequestListType  `json:"list_type,omitempty"`
-	Name       string                      `json:"name"`
-	OwnerId    *openapi_types.UUID         `json:"owner_id,omitempty"`
-	TeamId     *openapi_types.UUID         `json:"team_id,omitempty"`
-}
-
-// CreateListRequestEntityType defines model for CreateListRequest.EntityType.
-type CreateListRequestEntityType string
-
-// CreateListRequestListType defines model for CreateListRequest.ListType.
-type CreateListRequestListType string
-
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// BuyerOrgId Defaults to the deal's organization.
@@ -18852,21 +18632,6 @@ type CreateProjectRequest struct {
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
-}
-
-// CreateQuotaRequest Exactly one of owner_id/team_id must be non-null — supplying both or neither is a 422
-// validation_error carrying a distinct, machine-branchable details.errors[].code
-// (owner_xor_team_required), not the generic per-field validation code (see
-// createQuota's 422 examples). Not expressed as an OpenAPI 3.1 oneOf here — a prose
-// note plus a 422 on mismatch, matching how CreateCustomFieldRequest documents its
-// conditional currency/options requirement (CF-T01).
-type CreateQuotaRequest struct {
-	Currency    string              `json:"currency"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	PeriodEnd   openapi_types.Date  `json:"period_end"`
-	PeriodStart openapi_types.Date  `json:"period_start"`
-	TargetMinor int64               `json:"target_minor"`
-	TeamId      *openapi_types.UUID `json:"team_id,omitempty"`
 }
 
 // CreateRecordGrantRequest defines model for CreateRecordGrantRequest.
@@ -20245,26 +20010,23 @@ type FilterVocabularyFieldReferences string
 // record. The type decides the operators, which is why it is here.
 type FilterVocabularyFieldType string
 
-// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported), or a `list_id` (a dynamic list whose definition is exported). The slice is always row-scoped to the caller through the one filter engine.
+// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`) or a `view_id` (a saved view whose filter state is exported). The slice is always row-scoped to the caller through the one filter engine.
 type FilteredExportRequest struct {
 	// Filter The canonical §13.5 predicate tree (nested and/or groups over typed leaves). Required with `object`.
 	Filter *map[string]interface{}     `json:"filter,omitempty"`
 	Format FilteredExportRequestFormat `json:"format"`
 
-	// ListId Export the definition of a dynamic list. Mutually exclusive with object/view_id.
-	ListId *openapi_types.UUID `json:"list_id,omitempty"`
-
-	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
+	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
 	Object *FilteredExportRequestObject `json:"object,omitempty"`
 
-	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
+	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object.
 	ViewId *openapi_types.UUID `json:"view_id,omitempty"`
 }
 
 // FilteredExportRequestFormat defines model for FilteredExportRequest.Format.
 type FilteredExportRequestFormat string
 
-// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
+// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
 type FilteredExportRequestObject string
 
 // FinanceInvoice One mirrored invoice, in the currency it was issued in.
@@ -21889,53 +21651,6 @@ type LinkedInReachResponse struct {
 	UnresolvedConnections int `json:"unresolved_connections"`
 }
 
-// List A static membership set or a dynamic segment. Mirrors the `list` table.
-type List struct {
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
-	CreatedAt  *time.Time `json:"created_at,omitempty"`
-
-	// Definition Dynamic — validated query plan; static — null.
-	Definition *map[string]interface{} `json:"definition,omitempty"`
-	EntityType ListEntityType          `json:"entity_type"`
-	Id         openapi_types.UUID      `json:"id"`
-	ListType   ListListType            `json:"list_type"`
-	Name       string                  `json:"name"`
-	OwnerId    *openapi_types.UUID     `json:"owner_id,omitempty"`
-	TeamId     *openapi_types.UUID     `json:"team_id,omitempty"`
-	UpdatedAt  *time.Time              `json:"updated_at,omitempty"`
-}
-
-// ListEntityType defines model for List.EntityType.
-type ListEntityType string
-
-// ListListType defines model for List.ListType.
-type ListListType string
-
-// ListListResponse defines model for ListListResponse.
-type ListListResponse struct {
-	Data []List   `json:"data"`
-	Page PageInfo `json:"page"`
-}
-
-// ListMember defines model for ListMember.
-type ListMember struct {
-	AddedBy    *string              `json:"added_by,omitempty"`
-	CreatedAt  *time.Time           `json:"created_at,omitempty"`
-	EntityId   openapi_types.UUID   `json:"entity_id"`
-	EntityType ListMemberEntityType `json:"entity_type"`
-	Id         openapi_types.UUID   `json:"id"`
-	ListId     openapi_types.UUID   `json:"list_id"`
-}
-
-// ListMemberEntityType defines model for ListMember.EntityType.
-type ListMemberEntityType string
-
-// ListMemberListResponse defines model for ListMemberListResponse.
-type ListMemberListResponse struct {
-	Data []ListMember `json:"data"`
-	Page PageInfo     `json:"page"`
-}
-
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	Email    openapi_types.Email `json:"email"`
@@ -22758,7 +22473,7 @@ type OfferListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
-// OfferTemplate A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like Quota/CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema.
+// OfferTemplate A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema.
 type OfferTemplate struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
 	CreatedAt  time.Time          `json:"created_at"`
@@ -23124,8 +22839,7 @@ type Organization360 struct {
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
 	// LastOutboundAt When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
-	LastOutboundAt  *time.Time `json:"last_outbound_at,omitempty"`
-	ListMemberships *[]List    `json:"list_memberships,omitempty"`
+	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
 
 	// Moment The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's people — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
 	// The schema is `PersonMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
@@ -26846,97 +26560,6 @@ type QuickCapturePersonResult struct {
 	Person Person `json:"person"`
 }
 
-// Quota A per-owner or per-team revenue target for one period (RD-DDL-2). Exactly one of
-// owner_id/team_id is non-null (CHECK constraint) — never both, never neither;
-// createQuota/updateQuota document and enforce this (422 owner_xor_team_required).
-// target_minor is always human-set: no AI-guessed quota, no default, no
-// server-computed fallback (RD-PARAM-3). Deliberately carries no
-// source/captured_by/created_by provenance columns — unlike custom_field's
-// created_by (CF-T01), RD-DDL-2's column list has none. Attainment is a separate
-// read (getQuotaAttainment, RD-WIRE-3) — this schema never carries attainment
-// fields itself.
-type Quota struct {
-	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
-	CreatedAt  time.Time          `json:"created_at"`
-	Currency   string             `json:"currency"`
-	Id         openapi_types.UUID `json:"id"`
-
-	// OwnerId Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	PeriodEnd   openapi_types.Date  `json:"period_end"`
-	PeriodStart openapi_types.Date  `json:"period_start"`
-
-	// TargetMinor Human-set revenue target, integer minor units (RD-PARAM-3) — never an AI-guessed or server-computed field.
-	TargetMinor int64 `json:"target_minor"`
-
-	// TeamId Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-	TeamId    *openapi_types.UUID `json:"team_id,omitempty"`
-	UpdatedAt time.Time           `json:"updated_at"`
-
-	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
-	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
-	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
-	Version *RowVersion `json:"version,omitempty"`
-}
-
-// QuotaAttainment RD-WIRE-3 / RD-FORM-2 — server-computed attainment for one quota, decomposed for
-// "explain this number": attainment = Σ(closed-won base_value_minor in the quota's
-// period) ÷ target_minor, base-currency converted, in integer minor units. Never
-// client-summed — contributing_deals always sums to closed_won_minor. Rides as a
-// sub-resource of the quota (mirrors /organizations/{id}/hierarchy-rollup's
-// "computed read with decomposition" shape) rather than an inline field on Quota or
-// a GET ?include= expansion — chosen once, applied consistently; the plain Quota
-// response (list or single-get) never carries attainment fields. A failed or absent
-// computation is an honest error (getQuotaAttainment's 422 responses), never a
-// cached or invented figure (RD-AC-4).
-type QuotaAttainment struct {
-	// AsOfDate The date this attainment was computed.
-	AsOfDate openapi_types.Date `json:"as_of_date"`
-
-	// AttainmentPct closed_won_minor ÷ target_minor × 100 (RD-FORM-2). Uncapped raw value — e.g. 113 for the worked example — display capping (the ring visual stops at a full circle) is a RD-PARAM-4 UI concern, not this field's.
-	AttainmentPct float32 `json:"attainment_pct"`
-
-	// Band Server-computed display band (RD-PARAM-4): met >= 100%, accent 60-99%, behind < 60%. The client never recomputes this from raw attainment_pct.
-	Band QuotaAttainmentBand `json:"band"`
-
-	// ClosedWonMinor Σ base_value_minor over closed-won deals in the quota's period (RD-FORM-2).
-	ClosedWonMinor int64 `json:"closed_won_minor"`
-
-	// ContributingDeals Per-deal decomposition for "Explain This Number"; sums to closed_won_minor.
-	ContributingDeals []QuotaAttainmentDeal `json:"contributing_deals"`
-
-	// Currency The workspace base currency — every money figure here (closed_won_minor, target_minor, gap_minor) is denominated in it, NOT in Quota.currency.
-	Currency string `json:"currency"`
-
-	// GapMinor Signed gap to target — closed_won_minor minus target_minor (RD-FORM-2's worked example: +33.872,00 EUR once closed-won exceeds target); positive once attainment exceeds 100%, negative while short of target.
-	GapMinor int64 `json:"gap_minor"`
-
-	// PacePct Percent of the quota period elapsed at as_of_date (RD-PARAM-4 pace indicator): 0 before period_start, 100 at/after period_end, linear between. Carries period progress ONLY — comparing it against attainment_pct (ahead/behind pace) is the consumer's step, not encoded in this field.
-	PacePct float32            `json:"pace_pct"`
-	QuotaId openapi_types.UUID `json:"quota_id"`
-
-	// TargetMinor The BASE-CONVERTED target this attainment is measured against — Quota.target_minor converted into the workspace base currency at the as_of_date FX rate. It equals Quota.target_minor only when the quota is set in the base currency; a cross-currency quota's echo differs, so gap arithmetic never mixes currencies.
-	TargetMinor int64 `json:"target_minor"`
-}
-
-// QuotaAttainmentBand Server-computed display band (RD-PARAM-4): met >= 100%, accent 60-99%, behind < 60%. The client never recomputes this from raw attainment_pct.
-type QuotaAttainmentBand string
-
-// QuotaAttainmentDeal One row of RD-FORM-2's per-deal breakdown — a closed-won deal counted toward this quota's attainment.
-type QuotaAttainmentDeal struct {
-	// BaseValueMinor This deal's counted amount toward closed_won_minor (base currency, minor units).
-	BaseValueMinor int64              `json:"base_value_minor"`
-	DealId         openapi_types.UUID `json:"deal_id"`
-}
-
-// QuotaListResponse defines model for QuotaListResponse.
-type QuotaListResponse struct {
-	Data []Quota  `json:"data"`
-	Page PageInfo `json:"page"`
-}
-
 // RaiseNoticeRequest defines model for RaiseNoticeRequest.
 type RaiseNoticeRequest struct {
 	// Kind What a coaching notice is about. A closed vocabulary, because a notice addressed to a
@@ -28103,6 +27726,16 @@ type SetSignatureEnrichmentRequest struct {
 	Enabled *bool `json:"enabled"`
 }
 
+// ShareCaptureHoldHistoryResponse defines model for ShareCaptureHoldHistoryResponse.
+type ShareCaptureHoldHistoryResponse struct {
+	// Released How many of the caller's own imports stopped being held for this reason. Not the same
+	// as how many messages the workspace can now read: a message a colleague also holds
+	// stays limited, because the audience is the strictest answer across every seat that
+	// imported it. Zero means every message the caller's holds caught is held for some
+	// other reason too, or was captured before the product recorded more than one reason.
+	Released int `json:"released"`
+}
+
 // SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
 type SignInProvider struct {
 	// Enabled Whether this installation currently offers it on the login screen.
@@ -29140,16 +28773,6 @@ type UpdateProjectRequest struct {
 // UpdateProviderConnectionRequest defines model for UpdateProviderConnectionRequest.
 type UpdateProviderConnectionRequest struct {
 	Configuration ProviderConfigurationPatch `json:"configuration"`
-}
-
-// UpdateQuotaRequest Merge-PATCH (API-CONV-1). Re-validates owner-XOR-team after the merge is applied — patching the row into a both-set or neither-set state is refused with the same 422 owner_xor_team_required shape as createQuota, not silently accepted. Switching a quota between owner- and team-scoped is archive-and-recreate: merge-PATCH cannot express the null clear (omitted and null are the same wire shape), so a PATCH can only reassign within the side the row already carries.
-type UpdateQuotaRequest struct {
-	Currency    *string             `json:"currency,omitempty"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	PeriodEnd   *openapi_types.Date `json:"period_end,omitempty"`
-	PeriodStart *openapi_types.Date `json:"period_start,omitempty"`
-	TargetMinor *int64              `json:"target_minor,omitempty"`
-	TeamId      *openapi_types.UUID `json:"team_id,omitempty"`
 }
 
 // UpdateRelationshipRequest defines model for UpdateRelationshipRequest.
@@ -32397,33 +32020,6 @@ type ExplainLeadScoreParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
-// ListListsParams defines parameters for ListLists.
-type ListListsParams struct {
-	EntityType *ListListsParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
-
-	// IncludeArchived Include soft-deleted (archived) rows. Default false.
-	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
-}
-
-// ListListsParamsEntityType defines parameters for ListLists.
-type ListListsParamsEntityType string
-
-// ListListMembersParams defines parameters for ListListMembers.
-type ListListMembersParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
 type GetMyAiActivityParams struct {
 	// Kinds Restrict both arrays to these kinds of AI work, applied BEFORE the bounds.
@@ -34092,82 +33688,6 @@ type ListBuyerRoomThreadsParams struct {
 	DocumentId *openapi_types.UUID `form:"document_id,omitempty" json:"document_id,omitempty"`
 }
 
-// ListQuotasParams defines parameters for ListQuotas.
-type ListQuotasParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
-	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
-	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
-	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
-	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
-
-	// IncludeArchived Include soft-deleted (archived) rows. Default false.
-	IncludeArchived *IncludeArchived    `form:"include_archived,omitempty" json:"include_archived,omitempty"`
-	OwnerId         *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
-	TeamId          *openapi_types.UUID `form:"team_id,omitempty" json:"team_id,omitempty"`
-}
-
-// CreateQuotaParams defines parameters for CreateQuota.
-type CreateQuotaParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// UpdateQuotaParams defines parameters for UpdateQuota.
-type UpdateQuotaParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
-	// the last-seen entity `version`. If the row's current `version` differs, the write is
-	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
-	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
-	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
-	IfMatch *IfMatch `json:"If-Match,omitempty"`
-}
-
 // ListRecordGrantsParams defines parameters for ListRecordGrants.
 type ListRecordGrantsParams struct {
 	RecordType  *ListRecordGrantsParamsRecordType  `form:"record_type,omitempty" json:"record_type,omitempty"`
@@ -35479,12 +34999,6 @@ type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
 // PromoteLeadJSONRequestBody defines body for PromoteLead for application/json ContentType.
 type PromoteLeadJSONRequestBody = PromoteLeadRequest
 
-// CreateListJSONRequestBody defines body for CreateList for application/json ContentType.
-type CreateListJSONRequestBody = CreateListRequest
-
-// AddListMemberJSONRequestBody defines body for AddListMember for application/json ContentType.
-type AddListMemberJSONRequestBody = AddListMemberRequest
-
 // SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
 type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
 
@@ -35688,12 +35202,6 @@ type OpenBuyerRoomThreadJSONRequestBody = OpenDealRoomThreadRequest
 
 // ReplyBuyerRoomThreadJSONRequestBody defines body for ReplyBuyerRoomThread for application/json ContentType.
 type ReplyBuyerRoomThreadJSONRequestBody = PostDealRoomCommentRequest
-
-// CreateQuotaJSONRequestBody defines body for CreateQuota for application/json ContentType.
-type CreateQuotaJSONRequestBody = CreateQuotaRequest
-
-// UpdateQuotaJSONRequestBody defines body for UpdateQuota for application/json ContentType.
-type UpdateQuotaJSONRequestBody = UpdateQuotaRequest
 
 // CreateRecordGrantJSONRequestBody defines body for CreateRecordGrant for application/json ContentType.
 type CreateRecordGrantJSONRequestBody = CreateRecordGrantRequest
@@ -43764,6 +43272,9 @@ type ServerInterface interface {
 	// Keep one party's mail to the people on it.
 	// (POST /capture/counterparty-holds)
 	CreateCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request)
+	// Re-open the mail the caller's counterparty holds already caught.
+	// (POST /capture/counterparty-holds/share-history)
+	ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request)
 	// Lift a counterparty hold.
 	// (DELETE /capture/counterparty-holds/{id})
 	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
@@ -44277,24 +43788,6 @@ type ServerInterface interface {
 	// Explain This Score — the weighted-factor decomposition behind a lead's score.
 	// (GET /leads/{id}/score)
 	ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams)
-	// List lists (static + dynamic segments).
-	// (GET /lists)
-	ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams)
-	// Create a list (static set or dynamic segment).
-	// (POST /lists)
-	CreateList(w http.ResponseWriter, r *http.Request)
-	// Archive a list.
-	// (DELETE /lists/{id})
-	ArchiveList(w http.ResponseWriter, r *http.Request, id Id)
-	// Get a list by id.
-	// (GET /lists/{id})
-	GetList(w http.ResponseWriter, r *http.Request, id Id)
-	// List a list's members — explicit rows for a static list, or the live filter evaluation for a dynamic segment.
-	// (GET /lists/{id}/members)
-	ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams)
-	// Add a member to a static list.
-	// (POST /lists/{id}/members)
-	AddListMember(w http.ResponseWriter, r *http.Request, id Id)
 	// Get the current authenticated principal (user or agent).
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
@@ -44826,24 +44319,6 @@ type ServerInterface interface {
 	// Reply in a thread as the buyer.
 	// (POST /public/rooms/threads/{threadId}/comments)
 	ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID)
-	// List quotas (cursor-paginated).
-	// (GET /quotas)
-	ListQuotas(w http.ResponseWriter, r *http.Request, params ListQuotasParams)
-	// Create a quota (owner XOR team revenue target for one period).
-	// (POST /quotas)
-	CreateQuota(w http.ResponseWriter, r *http.Request, params CreateQuotaParams)
-	// Archive (soft-delete) a quota.
-	// (DELETE /quotas/{id})
-	ArchiveQuota(w http.ResponseWriter, r *http.Request, id Id)
-	// Get a quota by id.
-	// (GET /quotas/{id})
-	GetQuota(w http.ResponseWriter, r *http.Request, id Id)
-	// Update a quota (partial).
-	// (PATCH /quotas/{id})
-	UpdateQuota(w http.ResponseWriter, r *http.Request, id Id, params UpdateQuotaParams)
-	// Server-computed attainment for this quota (RD-WIRE-3), decomposed per closed-won deal.
-	// (GET /quotas/{id}/attainment)
-	GetQuotaAttainment(w http.ResponseWriter, r *http.Request, id Id)
 	// List manual per-record grants, filtered by record or by subject (A52/ADR-0039).
 	// (GET /record-grants)
 	ListRecordGrants(w http.ResponseWriter, r *http.Request, params ListRecordGrantsParams)
@@ -45723,6 +45198,12 @@ func (_ Unimplemented) ListCaptureCounterpartyHolds(w http.ResponseWriter, r *ht
 // Keep one party's mail to the people on it.
 // (POST /capture/counterparty-holds)
 func (_ Unimplemented) CreateCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-open the mail the caller's counterparty holds already caught.
+// (POST /capture/counterparty-holds/share-history)
+func (_ Unimplemented) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -46749,42 +46230,6 @@ func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Reque
 // Explain This Score — the weighted-factor decomposition behind a lead's score.
 // (GET /leads/{id}/score)
 func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List lists (static + dynamic segments).
-// (GET /lists)
-func (_ Unimplemented) ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Create a list (static set or dynamic segment).
-// (POST /lists)
-func (_ Unimplemented) CreateList(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Archive a list.
-// (DELETE /lists/{id})
-func (_ Unimplemented) ArchiveList(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Get a list by id.
-// (GET /lists/{id})
-func (_ Unimplemented) GetList(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List a list's members — explicit rows for a static list, or the live filter evaluation for a dynamic segment.
-// (GET /lists/{id}/members)
-func (_ Unimplemented) ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Add a member to a static list.
-// (POST /lists/{id}/members)
-func (_ Unimplemented) AddListMember(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47847,42 +47292,6 @@ func (_ Unimplemented) OpenBuyerRoomThread(w http.ResponseWriter, r *http.Reques
 // Reply in a thread as the buyer.
 // (POST /public/rooms/threads/{threadId}/comments)
 func (_ Unimplemented) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List quotas (cursor-paginated).
-// (GET /quotas)
-func (_ Unimplemented) ListQuotas(w http.ResponseWriter, r *http.Request, params ListQuotasParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Create a quota (owner XOR team revenue target for one period).
-// (POST /quotas)
-func (_ Unimplemented) CreateQuota(w http.ResponseWriter, r *http.Request, params CreateQuotaParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Archive (soft-delete) a quota.
-// (DELETE /quotas/{id})
-func (_ Unimplemented) ArchiveQuota(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Get a quota by id.
-// (GET /quotas/{id})
-func (_ Unimplemented) GetQuota(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Update a quota (partial).
-// (PATCH /quotas/{id})
-func (_ Unimplemented) UpdateQuota(w http.ResponseWriter, r *http.Request, id Id, params UpdateQuotaParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Server-computed attainment for this quota (RD-WIRE-3), decomposed per closed-won deal.
-// (GET /quotas/{id}/attainment)
-func (_ Unimplemented) GetQuotaAttainment(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52220,6 +51629,26 @@ func (siw *ServerInterfaceWrapper) CreateCaptureCounterpartyHold(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateCaptureCounterpartyHold(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ShareCaptureCounterpartyHoldHistory operation middleware
+func (siw *ServerInterfaceWrapper) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ShareCaptureCounterpartyHoldHistory(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -59261,247 +58690,6 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExplainLeadScore(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListLists operation middleware
-func (siw *ServerInterfaceWrapper) ListLists(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListListsParams
-
-	// ------------- Optional query parameter "entity_type" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "include_archived" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListLists(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateList operation middleware
-func (siw *ServerInterfaceWrapper) CreateList(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateList(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ArchiveList operation middleware
-func (siw *ServerInterfaceWrapper) ArchiveList(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveList(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetList operation middleware
-func (siw *ServerInterfaceWrapper) GetList(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetList(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListListMembers operation middleware
-func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListListMembersParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListListMembers(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// AddListMember operation middleware
-func (siw *ServerInterfaceWrapper) AddListMember(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.AddListMember(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67503,334 +66691,6 @@ func (siw *ServerInterfaceWrapper) ReplyBuyerRoomThread(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
-// ListQuotas operation middleware
-func (siw *ServerInterfaceWrapper) ListQuotas(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListQuotasParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "sort" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "include_archived" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "owner_id" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_id", r.URL.Query(), &params.OwnerId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_id"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "team_id" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "team_id", r.URL.Query(), &params.TeamId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team_id"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team_id", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListQuotas(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateQuota operation middleware
-func (siw *ServerInterfaceWrapper) CreateQuota(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params CreateQuotaParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateQuota(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ArchiveQuota operation middleware
-func (siw *ServerInterfaceWrapper) ArchiveQuota(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveQuota(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetQuota operation middleware
-func (siw *ServerInterfaceWrapper) GetQuota(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetQuota(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UpdateQuota operation middleware
-func (siw *ServerInterfaceWrapper) UpdateQuota(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params UpdateQuotaParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "If-Match" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
-		var IfMatch IfMatch
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
-			return
-		}
-
-		params.IfMatch = &IfMatch
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateQuota(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetQuotaAttainment operation middleware
-func (siw *ServerInterfaceWrapper) GetQuotaAttainment(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetQuotaAttainment(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListRecordGrants operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordGrants(w http.ResponseWriter, r *http.Request) {
 
@@ -73196,6 +72056,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/capture/counterparty-holds", wrapper.CreateCaptureCounterpartyHold)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/counterparty-holds/share-history", wrapper.ShareCaptureCounterpartyHoldHistory)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)
 	})
 	r.Group(func(r chi.Router) {
@@ -73707,24 +72570,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/score", wrapper.ExplainLeadScore)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lists", wrapper.ListLists)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/lists", wrapper.CreateList)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/lists/{id}", wrapper.ArchiveList)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lists/{id}", wrapper.GetList)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lists/{id}/members", wrapper.ListListMembers)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/lists/{id}/members", wrapper.AddListMember)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetCurrentPrincipal)
@@ -74256,24 +73101,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/rooms/threads/{threadId}/comments", wrapper.ReplyBuyerRoomThread)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/quotas", wrapper.ListQuotas)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/quotas", wrapper.CreateQuota)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/quotas/{id}", wrapper.ArchiveQuota)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/quotas/{id}", wrapper.GetQuota)
-	})
-	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/quotas/{id}", wrapper.UpdateQuota)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/quotas/{id}/attainment", wrapper.GetQuotaAttainment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-grants", wrapper.ListRecordGrants)

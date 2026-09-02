@@ -1717,9 +1717,7 @@ export const de = {
     "{field} ist als \u201e{value}\u201c erfasst. Ihn zu entfernen bedeutet: Das ist kein Fakt über die Firma. Ein späteres Lesen der Website kann ihn erneut erfassen.",
   "co.facts.showAll": "Alle {count} anzeigen",
   "co.facts.showLess": "Weniger anzeigen",
-  "co.tags.lists": "Listen",
   "co.tags.tags": "Tags",
-  "co.tags.noLists": "Auf keiner Liste.",
   "co.tags.noTags": "Keine Tags vergeben.",
   "co.project.new": "Neues Projekt",
   "co.deal.new": "Neuer Deal",
@@ -1730,11 +1728,6 @@ export const de = {
   "co.tags.pick": "Tag-Name",
   "co.tags.overCap":
     "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
-  "co.lists.added": "Zu „{name}“ hinzugefügt",
-  "co.lists.add": "Zu Liste hinzufügen",
-  "co.lists.pick": "Listenname",
-  "co.lists.overCap":
-    "Es gibt mehr Listen, als angezeigt werden können; eine Liste, die hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Listen aufzuräumen, bevor eine neue angelegt wird.",
   "co.recent.title": "Was zuletzt passiert ist",
   "co.recent.emptyDetail":
     "Sobald Sie eine E-Mail senden, einen Anruf festhalten oder sich treffen, steht der Austausch hier, mit dem, was jede Seite getan hat.",
@@ -1753,7 +1746,7 @@ export const de = {
   "co.recent.dir.both": "beide Seiten",
   "co.recent.minutes": "{count} Min.",
   "co.recent.re": "zu einem Deal",
-  "co.tags.title": "Listen & Tags",
+  "co.tags.title": "Tags",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
   "co.overlayFallback":
     "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",
@@ -2279,7 +2272,6 @@ export const de = {
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.asOf": "Stand {at}",
-  "home.refresh": "Briefing aktualisieren",
   "home.refreshing": "Sortiere neu…",
   "home.generate": "Briefing jetzt holen",
   "home.noneBody":
@@ -2976,6 +2968,9 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
+  "brief.coverage.summary": "Einige Quellen haben mehr, als diese Seite zeigt",
+  "brief.coverage.bounded":
+    "{shown} von mindestens {considered} gelesenen angezeigt",
   "delivery.morningLabel": "Ihr Tagesbriefing",
   "delivery.morningHelp":
     "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf Ihrer Briefing-Seite steht es ohnehin.",
@@ -6097,81 +6092,6 @@ export const de = {
   "countdown.minutesSeconds": "{minutes}m {seconds}s",
   "countdown.expired": "Abgelaufen",
 
-  // Quotas & Zielerreichung (RD-T06): menschlich gesetzte Umsatzziele mit
-  // serverseitig berechneter Zielerreichung, im Reports-Segment „Quotas“.
-  "quotas.tab": "Quotas",
-  // Der Titel des Auswahl-Panels. Die Segmentleiste direkt darüber sagt schon
-  // „Quotas“, deshalb benennt dieser Titel, was die LISTE enthält — eine Zeile
-  // je Inhaber oder Team mit einem Ziel — statt die Seite zu wiederholen.
-  "quotas.selector.title": "Wer eine Quota hat",
-  "quotas.sub": "Umsatzziele — menschlich gesetzt, Zielerreichung berechnet",
-  "quotas.role.owner": "Individuelle Quota",
-  "quotas.role.team": "Team-Quota",
-  "quotas.periodRange": "{start} – {end}",
-  "quotas.empty.title": "Keine Quota gesetzt",
-  "quotas.empty.body":
-    "Eine Quota ist ein Ziel, das ein Mensch setzt — Inhaber oder Team, Zeitraum, Betrag. Wir raten es nicht. Setzen Sie ein Ziel, um die Zielerreichung aus gewonnenen Deals zu verfolgen.",
-  "quotas.empty.cta": "Ziel setzen",
-  "quotas.attained": "erreicht",
-  "quotas.closedWon": "Gewonnen in diesem Zeitraum",
-  "quotas.target": "Ziel",
-  "quotas.gap": "Abstand zum Ziel",
-  "quotas.baseCurrencyNote":
-    "Beträge in der Basiswährung der Organisation ({currency}).",
-  "quotas.pace.ahead":
-    "Vor dem Plan — {pct}% erreicht bei {pace}% des Zeitraums.",
-  "quotas.pace.behind":
-    "Hinter dem Plan — {pct}% erreicht bei {pace}% des Zeitraums.",
-  "quotas.pace.met": "Ziel erreicht — {pct}% erreicht.",
-  "quotas.computed": "serverseitig berechnet",
-  "quotas.contributing.title": "Was zur Zielerreichung zählt",
-  "quotas.contributing.subtitle": "gewonnene Deals · Basiswert im Zeitraum",
-  "quotas.contributing.deal": "Deal",
-  "quotas.contributing.amount": "Gezählter Betrag",
-  "quotas.contributing.total": "Gezählte Summe",
-  "quotas.contributing.caption":
-    "Basiswährung · offene / verlorene / ausgeschlossene Deals ausgenommen",
-  "quotas.explain.formula":
-    "Zielerreichung = Σ(Basiswert gewonnener Deals) ÷ Ziel, auf den Cent",
-  "quotas.explain.closedWon": "gewonnen = {sum} ({count} Deals im Zeitraum)",
-  "quotas.explain.target": "Ziel = {target} (menschlich gesetzt)",
-  "quotas.explain.result": "Zielerreichung = {sum} ÷ {target} = {pct}%",
-  "quotas.explain.exclusions":
-    "offene / verlorene / ausgeschlossene Deals ausgenommen; nur sauberer Kern",
-  "quotas.scopeNote.title": "Was diese Quota bewusst ist",
-  "quotas.scopeNote.flag": "gekennzeichnet, nicht verborgen",
-  "quotas.scopeNote.body":
-    "Das Ziel ist menschlich gesetzt — die KI erfindet keine Quota-Zahl. Die Zielerreichung wird aus dem Basiswert gewonnener Deals berechnet und ist vollständig auditierbar. Es gibt kein KI-gesetztes Ziel, kein Forecast-zu-Quota und keine Provisions-Engine.",
-  "quotas.target.title": "Ziel des Zeitraums",
-  "quotas.target.new": "Ziel setzen",
-  "quotas.target.edit": "Ziel bearbeiten",
-  "quotas.target.save": "Ziel speichern",
-  "quotas.target.note":
-    "Das Bearbeiten schreibt einen menschlich getippten Wert und protokolliert die Änderung. Die Zielerreichung wird neu berechnet.",
-  "quotas.target.sideFixed":
-    "Die Inhaber-/Team-Seite einer Quota ist fest — zum Wechseln archivieren und neu anlegen.",
-  "quotas.side.label": "Zugewiesen an",
-  "quotas.side.owner": "Inhaber",
-  "quotas.side.team": "Team",
-  "quotas.owner": "Inhaber",
-  "quotas.team": "Team",
-  "quotas.pickOwner": "Inhaber auswählen…",
-  "quotas.pickTeam": "Team auswählen…",
-  "quotas.amountHint":
-    "Ganze Einheiten der unten gewählten Währung. Keine Dezimalstellen.",
-  "quotas.periodStart": "Zeitraum-Beginn",
-  "quotas.periodEnd": "Zeitraum-Ende",
-  "quotas.amount": "Zielbetrag",
-  "quotas.currency": "Währung",
-  "quotas.err.targetZero": "Diese Quota hat noch kein Ziel",
-  "quotas.err.computeFailed": "Zielerreichung konnte nicht berechnet werden",
-  "quotas.err.ownerXorTeam": "Wählen Sie genau eines: Inhaber oder Team.",
-  "quotas.saveDone": "Quota gespeichert",
-  "quotas.archiveDone": "Quota archiviert",
-  "quotas.archive.title": "Quota archivieren",
-  "quotas.archive.confirm":
-    "Das Archivieren entfernt diese Quota aus der Liste und stoppt die Verfolgung der Zielerreichung. Archivierte Quotas können nicht bearbeitet werden.",
-
   "installationSettings.orgTitle": "Installation",
   "installationSettings.orgSub":
     "Wie diese Installation heißt und in welcher Zeitzone jede Auswertungsperiode berechnet wird.",
@@ -7313,10 +7233,6 @@ export const de = {
   "filters.pickRecord": "Eintrag wählen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert wählen",
-  "filters.saveList": "Als Liste speichern",
-  "filters.saveListTitle": "Diesen Filter als dynamische Liste speichern",
-  "filters.listName": "Listenname",
-  "filters.saveListConfirm": "Liste erstellen",
   "filters.exportCsv": "Als CSV exportieren",
   "filters.exportJson": "Als JSON exportieren",
 

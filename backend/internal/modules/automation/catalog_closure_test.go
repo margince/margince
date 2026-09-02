@@ -18,7 +18,7 @@ var (
 		"no_activity_for_n_days", "date_field_approaching", "inbound_reply", "task_overdue",
 	}
 	pinnedActions = []ActionType{
-		"create_task", "notify", "assign_owner", "add_to_list",
+		"create_task", "notify", "assign_owner",
 		"set_field", "draft_email", "request_approval",
 	}
 )

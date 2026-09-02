@@ -21,6 +21,9 @@ package compose
 
 import (
 	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -30,8 +33,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -45,26 +50,140 @@ import (
 // seam and the tool withholds the claims a bounded read cannot support.
 const handoffScanLimit = 50
 
+// commitmentAboutPerson is the entity type a promise's "about" row carries when
+// the record it names is a contact.
+//
+// Its own constant rather than flipsource.go's flipObjectPerson: that one names
+// an object in the system-of-record FLIP, and borrowing it here would tie two
+// vocabularies together that are free to move apart.
+const commitmentAboutPerson = "person"
+
 // commitmentLister serves the open-promise set from the activities module's
 // own gated read.
 func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
-	store := activities.NewStore(InstallationDB(pool))
+	db := InstallationDB(pool)
+	tasks := activities.NewStore(db)
+	claims := people.NewStore(db)
 	return func(ctx context.Context, in agents.CommitmentQuery) (agents.CommitmentSweep, error) {
-		query := activities.ListOpenTasksInput{AssigneeID: in.AssigneeID, Limit: in.Limit}
+		now := clockNow()
+		// ONE bound for the merged answer, resolved here rather than left to
+		// each source's own default. The two disagree — the task read defaults
+		// to fifty and the claim read to two hundred — so a caller who omits
+		// the argument would get whatever the two happened to add up to, and
+		// be told nothing was cut.
+		asked := agents.CommitmentSweepLimit(in.Limit)
+		query := activities.ListOpenTasksInput{
+			AssigneeID: in.AssigneeID, Limit: asked,
+			// The bound cuts before the merge does, so the store has to keep
+			// the promise the ranking is about rather than the oldest ones.
+			MostRecentlySlippedFirst: true,
+		}
 		if in.WithinProjectID != nil {
 			project := ids.From[ids.ProjectKind](*in.WithinProjectID)
 			query.WithinProjectID = &project
 		}
-		tasks, truncated, err := store.ListOpenTasks(ctx, query)
+		filed, filedMore, err := tasks.ListOpenTasks(ctx, query)
 		if err != nil {
 			return agents.CommitmentSweep{}, err
 		}
+		said, saidMore, err := extractedCommitments(ctx, pool, claims, in, asked)
+		if err != nil {
+			return agents.CommitmentSweep{}, err
+		}
+		promises, cut := rankPromises(now, asCommitments(filed), asExtracted(said), asked)
 		return agents.CommitmentSweep{
-			AsOf:        clockNow(),
-			Commitments: asCommitments(tasks),
-			Truncated:   truncated,
+			AsOf:        now,
+			Commitments: promises,
+			Truncated:   filedMore || saidMore || cut,
 		}, nil
 	}
+}
+
+// extractedCommitments reads the promises made in conversations, or none where
+// the caller narrowed to something a claim cannot answer.
+//
+// A CLAIM CARRIES NO ASSIGNEE and no project. It records what was SAID, in a
+// message filed against a person — so "this owner's promises" and "this
+// project's promises" are questions the claim table cannot answer, and a claim
+// admitted under either filter would be a row the caller did not ask for.
+// Returning none is the honest answer; the tool's own copy says the narrowed
+// answer covers recorded tasks alone.
+func extractedCommitments(
+	ctx context.Context, pool *pgxpool.Pool, store *people.Store,
+	in agents.CommitmentQuery, limit int,
+) ([]people.OrgCommitment, bool, error) {
+	if in.AssigneeID != nil || in.WithinProjectID != nil {
+		return nil, false, nil
+	}
+	var out []people.OrgCommitment
+	var more bool
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		out, more, err = store.OpenCommitmentsAcrossWorkspace(ctx, tx, limit)
+		return err
+	})
+	return out, more, err
+}
+
+// rankPromises merges the two sources into ONE answer, ordered by the rule
+// every surface uses, and cuts it to what the caller asked for.
+//
+// The merge is what makes this tool's answer the same answer the screens give.
+// Read task-only, it reported a promise made in a meeting and never typed as
+// absent — and a model told "these are the open commitments" repeats that as
+// fact. Ranking them together in kernel/owedwork is the same ordering the
+// contact and company cards apply, so an agent and a reader looking at one
+// account agree about what is most overdue.
+func rankPromises(now time.Time, filed, said []agents.OpenCommitment, limit int) ([]agents.OpenCommitment, bool) {
+	items := make([]owedwork.Item, 0, len(filed)+len(said))
+	for _, promise := range filed {
+		items = append(items, owedwork.Item{
+			Ref: promise, Source: owedwork.FromTask,
+			DueAt: promise.DueAt, FiledAt: promise.FiledAt,
+		})
+	}
+	for _, promise := range said {
+		items = append(items, owedwork.Item{
+			Ref: promise, Source: owedwork.FromClaim,
+			DueAt: promise.DueAt, FiledAt: promise.FiledAt,
+		})
+	}
+	out := make([]agents.OpenCommitment, 0, len(items))
+	for _, item := range owedwork.Sorted(items, now) {
+		promise, ok := item.Ref.(agents.OpenCommitment)
+		if !ok {
+			continue
+		}
+		out = append(out, promise)
+	}
+	if len(out) > limit {
+		return out[:limit], true
+	}
+	return out, false
+}
+
+// asExtracted carries the claim rows across the seam. A rename and nothing
+// else: the store decided which rows, and the tool decides what state each is
+// in.
+func asExtracted(claims []people.OrgCommitment) []agents.OpenCommitment {
+	out := make([]agents.OpenCommitment, 0, len(claims))
+	for _, claim := range claims {
+		claimID, activityID := claim.ID, claim.ActivityID
+		out = append(out, agents.OpenCommitment{
+			Source: agents.CommitmentFromConversation,
+			// A claim names no owner: it records what was said, not who was
+			// handed it, so the answer says nobody owns it rather than naming
+			// the person it was promised TO as though they owed it.
+			ClaimID: &claimID, SourceActivityID: &activityID,
+			Quote: claim.SourceQuote, Subject: claim.Body, DueAt: claim.DueAt,
+			FiledAt: claim.OccurredAt,
+			About: []agents.CommitmentAbout{{
+				EntityType: commitmentAboutPerson,
+				EntityID:   claim.PersonID.UUID, Name: claim.PersonName,
+			}},
+		})
+	}
+	return out
 }
 
 // asCommitments carries the store rows across the seam. It is a rename and
@@ -73,6 +192,7 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 func asCommitments(tasks []activities.OpenTask) []agents.OpenCommitment {
 	out := make([]agents.OpenCommitment, 0, len(tasks))
 	for _, t := range tasks {
+		taskID := t.ID
 		about := make([]agents.CommitmentAbout, 0, len(t.About))
 		for _, a := range t.About {
 			about = append(about, agents.CommitmentAbout{
@@ -80,7 +200,9 @@ func asCommitments(tasks []activities.OpenTask) []agents.OpenCommitment {
 			})
 		}
 		out = append(out, agents.OpenCommitment{
-			TaskID: t.ID, Subject: t.Subject, DueAt: t.DueAt,
+			Source: agents.CommitmentFromTask,
+			TaskID: &taskID, Subject: t.Subject, DueAt: t.DueAt,
+			FiledAt:    t.CreatedAt,
 			AssigneeID: t.AssigneeID, AssigneeName: t.AssigneeName, About: about,
 		})
 	}

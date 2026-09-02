@@ -81,6 +81,11 @@ const (
 	audienceReasonCounterparty = "counterparty"
 	// The sender said so in the subject line.
 	audienceReasonConfidentialMarker = "explicitly_confidential"
+	// The thread already carried a holding verdict — a classifier's, or the
+	// owner's own. Never the audience's DECIDING reason, because a holding
+	// verdict already narrows through verdict_status; recorded so a widening
+	// can tell "held only by a counterparty hold" from "held anyway".
+	audienceReasonInheritedVerdict = "inherited_verdict"
 )
 
 const audienceWorkspace = "workspace"

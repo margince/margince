@@ -65,7 +65,6 @@ body:
         - overlay
         - people
         - privacy
-        - quotas
         - search
         - signals
         - webhooks

@@ -223,7 +223,7 @@ type catalogueCounts struct {
 
 // seedCatalogue writes what the installation sells and the surfaces it files
 // records under: the rate card, the quotes drawn from it, the tags, lists,
-// custom fields, projects and quotas, and the edges tying each partner to the
+// custom fields and projects, and the edges tying each partner to the
 // accounts it works on.
 //
 // The partner edges sit here rather than with the partner companies, which

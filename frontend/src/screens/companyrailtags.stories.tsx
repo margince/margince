@@ -6,11 +6,9 @@ import type { components } from "../api/schema";
 import { TagsSection } from "./companyrailtags";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// TagsSection carries two independently-governed halves — lists and tags —
-// each stating its own withheld/empty/ready rather than one verdict speaking
-// for both. The withheld story below is the only place a reader sees BOTH
-// halves say so at once, and with them the add-tag/add-to-list verbs gone:
-// each verb renders only once its own half has answered.
+// TagsSection states its own withheld/empty/ready. The withheld story below
+// is where a reader sees it say so, and with it the add-tag verb gone: the
+// verb renders only once the section has answered.
 
 const meta: Meta = {
   title: "Records/Company rail/Tags",
@@ -41,15 +39,6 @@ const ready = {
     { id: "t-1", workspace_id: "w-1", name: "Key account" },
     { id: "t-2", workspace_id: "w-1", name: "Renewal Q3" },
   ],
-  list_memberships: [
-    {
-      id: "l-1",
-      workspace_id: "w-1",
-      name: "Q3 renewals",
-      entity_type: "organization",
-      list_type: "static",
-    },
-  ],
 } as unknown as View;
 
 // Both halves withheld — the shape a role scoped away from tags AND lists
@@ -58,8 +47,7 @@ const ready = {
 const withheld = {
   ...ready,
   tags: undefined,
-  list_memberships: undefined,
-  sections_omitted: ["tags", "list_memberships"],
+  sections_omitted: ["tags"],
 } as unknown as View;
 
 function Tags({ view }: Readonly<{ view: View }>) {

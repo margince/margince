@@ -244,9 +244,11 @@ func deriveAudienceTx(
 // home, and these two writers were given none. The alternative shape is a
 // column recording the hold with the reason derived from it for display.
 //
-// What keeps it sound for now is that the column has five writers, all in this
+// What keeps it sound for now is that the column has six writers, all in this
 // tree: the capture sink's insert and its link-less update, SetAudience, this
-// function, and the migration that introduced the column. A new writer that set
+// function, ClearCounterpartyHoldTx below, and the migration that introduced
+// the column. The sixth is the only one that CLEARS rather than sets, and it is
+// scoped to the one value it is entitled to remove — see its own comment. A new writer that set
 // the reason for display alone would break it, which is why the vocabulary is
 // closed and TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay holds the two
 // modules' spellings together.
@@ -404,4 +406,33 @@ func manualDecisionStands(
 		return true, nil
 	}
 	return audienceRank[stored] >= audienceRank[derived], nil
+}
+
+// ClearCounterpartyHoldTx removes a row-level counterparty hold from the
+// activities a seat's widening pass re-opened, and only from those.
+//
+// It lives here because activities owns the activity table; capture reaches it
+// through the same function-typed seam it already uses for the recompute, which
+// compose wires. A copy of this UPDATE inside capture is what the
+// table-ownership gate refuses, and refuses for the reason this function's
+// predicate demonstrates: the column has more than one writer and each one has
+// to know which values are its own to clear.
+//
+// Scoped by VALUE, not by id alone. audience_reason also records a workspace
+// floor, a sender's confidential marker, and a human's manual narrowing through
+// SetAudience — clearing it unconditionally would republish messages nobody
+// asked about. The predicate is what makes this a counterparty-only widening
+// rather than a general un-hold.
+func ClearCounterpartyHoldTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.ActivityID) error {
+	if len(activityIDs) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE activity
+		   SET audience_reason = NULL
+		 WHERE id = ANY($1) AND audience_reason = $2`,
+		activityIDs, ReasonCounterparty); err != nil {
+		return fmt.Errorf("activities: clearing the counterparty hold from re-opened rows: %w", err)
+	}
+	return nil
 }

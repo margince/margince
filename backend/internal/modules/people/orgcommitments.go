@@ -230,3 +230,87 @@ func orgCommitmentsLimit(asked int) int {
 	}
 	return asked
 }
+
+// OpenCommitmentsAcrossWorkspace reads the promises WE made, wherever they were
+// made, most urgent first.
+//
+// FOR THE REVIEW SURFACE, which asks the workspace-wide question the two reads
+// above ask of one record. It is the same rows under the same gates; only the
+// subject widens, from "this account" or "this person" to "everything the
+// caller may see".
+//
+// NO EDGE GATE, unlike the account read. That one reaches through the
+// employment edge to decide which promises belong to a company, which discloses
+// an endpoint pair. This one asks for the caller's visible promises directly:
+// the claim names its person, the person row scope decides whether that person
+// is theirs to see, and no relationship row is read at all.
+//
+// The order is the ranking's, for the reason the account read states: overdue
+// first with the latest slip at the top, so a bound cannot truncate away the
+// promise the answer is about.
+func (s *Store) OpenCommitmentsAcrossWorkspace(
+	ctx context.Context, tx pgx.Tx, limit int,
+) ([]OrgCommitment, bool, error) {
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		return nil, false, err
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, false, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, false, err
+	}
+	if activityScope == "" {
+		activityScope = sqlAlwaysVisible
+	}
+	personScope, err := auth.ScopeClauseFor(ctx, "person", "pr", arg)
+	if err != nil {
+		return nil, false, err
+	}
+	if personScope == "" {
+		personScope = sqlAlwaysVisible
+	}
+	capped := orgCommitmentsLimit(limit)
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT c.id, c.person_id, coalesce(pr.full_name, ''), c.body, c.source_quote,
+		       c.source_activity_id, c.due_at, a.occurred_at
+		  FROM conversation_claim c
+		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN person pr ON pr.id = c.person_id AND pr.archived_at IS NULL
+		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
+		   AND c.archived_at IS NULL
+		   AND (%[1]s) AND (%[2]s)
+		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,
+		          CASE WHEN c.due_at < now() THEN c.due_at END DESC,
+		          c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id
+		 LIMIT %[3]d`,
+		activityScope, personScope, capped+1), args...)
+	if err != nil {
+		return nil, false, fmt.Errorf("read the workspace's open commitments: %w", err)
+	}
+	defer rows.Close()
+
+	var out []OrgCommitment
+	for rows.Next() {
+		var row OrgCommitment
+		if err := rows.Scan(&row.ID, &row.PersonID, &row.PersonName, &row.Body, &row.SourceQuote,
+			&row.ActivityID, &row.DueAt, &row.OccurredAt); err != nil {
+			return nil, false, fmt.Errorf("scan a workspace commitment: %w", err)
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, fmt.Errorf("read the workspace's open commitments: %w", err)
+	}
+	// One row past the cap was fetched to ANSWER whether more exist, and it is
+	// dropped rather than served: a caller asking for fifty gets fifty, and is
+	// told there are more. Counting the rows returned against the cap cannot
+	// tell "exactly fifty" from "fifty and more".
+	if len(out) > capped {
+		return out[:capped], true, nil
+	}
+	return out, false, nil
+}

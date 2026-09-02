@@ -88,6 +88,33 @@ type ListOpenTasksInput struct {
 	// Limit bounds the sweep. A caller passing zero or less gets
 	// openTasksDefaultLimit rather than an unbounded read.
 	Limit int
+	// MostRecentlySlippedFirst orders the overdue promises by the deadline
+	// that passed LAST rather than by the earliest deadline.
+	//
+	// It exists because the LIMIT decides what a caller can see. A caller that
+	// RANKS the rows — asking which promise slipped most recently — and reads
+	// them earliest-first gets a page holding the oldest promises, with the one
+	// that slipped yesterday truncated away: it then names the least
+	// recoverable promise on the record, and the read looks like it worked. A
+	// caller that DISPLAYS a queue wants the earliest deadline at the top and
+	// leaves this false.
+	MostRecentlySlippedFirst bool
+}
+
+// openTasksOrder is how one sweep is ranked, and the choice is the caller's
+// because the LIMIT below it decides what they can see.
+//
+// `now()` rather than a bound instant in the slipped ordering: the clause only
+// SEPARATES late from not-late for the sort, and every caller re-judges each
+// row against one instant of its own. A row landing on the wrong side at the
+// boundary changes its position in an over-long list, never the verdict shown.
+func openTasksOrder(slippedFirst bool) string {
+	if slippedFirst {
+		return `(a.due_at IS NOT NULL AND a.due_at < now()) DESC,
+		         CASE WHEN a.due_at < now() THEN a.due_at END DESC,
+		         a.due_at ASC NULLS LAST, a.created_at ASC, a.id ASC`
+	}
+	return `a.due_at ASC NULLS LAST, a.id ASC`
 }
 
 // openTasksDefaultLimit and openTasksMaxLimit bound one sweep. The read is a
@@ -148,7 +175,7 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 		// NULLS LAST is the ascending default and is spelled anyway: an
 		// undated promise sorts after every dated one, and that is a product
 		// decision rather than a property of the index it happens to match.
-		sprintf(` ORDER BY a.due_at ASC NULLS LAST, a.id ASC LIMIT %d`, limit+1), args...)
+		sprintf(` ORDER BY %s LIMIT %d`, openTasksOrder(in.MostRecentlySlippedFirst), limit+1), args...)
 	if err != nil {
 		return nil, false, err
 	}

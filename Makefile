@@ -26,8 +26,12 @@ ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
   test-selfdir pkg-freeze test-desktop-launcher changelog-sections \
   test-changelog-sections test-dev-postgres-container test-e2e-llm-check
 
-# How wide the gate fan-out runs. 4 is what the CI runner has and what
-# backend/Makefile's own fan-out already uses; a bigger machine can raise it.
+# How wide the gate fan-out runs: the machine's online core count, so a 4-core
+# CI runner and an 18-core laptop each get the width they have without anybody
+# setting a flag. `getconf _NPROCESSORS_ONLN` answers on both macOS and Linux;
+# the fallback covers a platform where it does not, at the width the CI runner
+# has. Override per run (`GATE_JOBS=2 make check-backend`) to leave cores free
+# for other sessions checking at the same time.
 #
 # Four gates writing at once interleaves their output, which make 4.0's
 # --output-sync would fix and the 3.81 macOS ships would not. The flag is left
@@ -37,7 +41,7 @@ ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
 # already names itself in its own OK:/FAIL: line, with make naming the target
 # again on the way out. Set it by hand (`make check-backend MAKEFLAGS=…`) on a
 # run whose interleaving you need untangled.
-GATE_JOBS ?= 4
+GATE_JOBS ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
 
 # Where the demo dataset lives. It is a SEPARATE, private repo (it carries real
 # company names and crawled pages), cloned beside this one by convention. The
@@ -116,7 +120,21 @@ help:
 ## Idempotent; extend here as new setup steps are needed. A fresh worktree can
 ## run `make check` / `make dev` immediately after.
 install: fe-install tools hooks
-	@echo "install: worktree ready (frontend deps + gate tools + hooks)"
+	@# Fill the machine-wide Go module cache now, while nothing else needs it.
+	@# Every `go` command that still has something to download takes the single
+	@# flock at $$GOMODCACHE/cache/lock, so the first gate run in a fresh
+	@# worktree can sit silently behind a parallel session's download with
+	@# nothing on screen saying why. Downloading per module at setup time makes
+	@# the gate runs lock-free. fixtures/ is excluded for the reason
+	@# scripts/check-lint-modules.sh states: those units resolve only inside a
+	@# test-composed workspace, so `go mod download` cannot run there.
+	@set -e; for mod in $$(git ls-files '*go.mod' \
+	  | sed -e 's#/go\.mod$$##' -e 's#^go\.mod$$#.#' \
+	  | grep -v '^fixtures/'); do \
+	  echo "install: go mod download ($$mod)"; \
+	  (cd "$$mod" && go mod download); \
+	done
+	@echo "install: worktree ready (frontend deps + gate tools + hooks + module cache)"
 
 ## check-backend — the backend half of the gate: the root deterministic script
 ## gates plus the backend gate (build, vet, lint, arch-lint, unit + fitness

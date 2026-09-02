@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { ListAction, TagAction } from "./companyactions";
+import { TagAction } from "./companyactions";
 
 // How a typed tag name resolves to ONE tag. The interesting behaviour is the
 // request sequence — which reads happen before the write, and what the action
@@ -80,10 +80,6 @@ async function submitName(verb: string, action: ReactNode, name: string) {
 
 async function addTagNamed(name: string) {
   return submitName("Add tag", <TagAction orgId="o-1" />, name);
-}
-
-async function addToListNamed(name: string) {
-  return submitName("Add to list", <ListAction orgId="o-1" />, name);
 }
 
 afterEach(() => {
@@ -251,76 +247,5 @@ describe("Add tag resolves a typed name to one tag", () => {
       await screen.findByText("the tag is enforced by a rule"),
     ).toBeTruthy();
     expect(calls.some((call) => call.method === "DELETE")).toBe(true);
-  });
-});
-
-// The same shape one catalog over: `/lists` is bounded and cursorless too, and
-// `list` carries no uniqueness on its name — so an over-cap create there gets
-// no 409 at all, just a second list nobody asked for under a name the page
-// could not show.
-describe("Add to list reads the same overflow signal", () => {
-  it("refuses a create the catalog could not have ruled out", async () => {
-    const calls = stub((call) => {
-      if (call.path.endsWith("/lists") && call.method === "GET") {
-        return json({
-          data: [{ id: "l-1", name: "Other", list_type: "static" }],
-          page: { has_more: true },
-        });
-      }
-      return json({ id: "l-9" }, 201);
-    });
-
-    await addToListNamed("Key accounts");
-
-    expect(
-      await screen.findByText(/more lists than can be shown/i),
-    ).toBeTruthy();
-    expect(
-      calls.some((c) => c.method === "POST" && c.path.endsWith("/lists")),
-    ).toBe(false);
-  });
-
-  // The already-a-member arm: the same reading as the tag's 409, and it earns
-  // its own assertion because it is the one path here that reports success from
-  // a refusal status.
-  it("treats a company already on the list as the state that was asked for", async () => {
-    stub((call) => {
-      if (call.path.endsWith("/lists") && call.method === "GET") {
-        return json({
-          data: [{ id: "l-1", name: "Key accounts", list_type: "static" }],
-          page,
-        });
-      }
-      return json({ title: "conflict" }, 409);
-    });
-
-    await addToListNamed("Key accounts");
-
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      en["co.lists.added"].replace("{name}", "Key accounts"),
-    );
-    expect(screen.queryByText(/conflict/i)).toBeNull();
-  });
-
-  it("creates the new list while the catalog fits inside its cap", async () => {
-    const calls = stub((call) => {
-      if (call.path.endsWith("/lists") && call.method === "GET") {
-        return json({
-          data: [{ id: "l-1", name: "Other", list_type: "static" }],
-          page,
-        });
-      }
-      if (call.path.endsWith("/lists") && call.method === "POST") {
-        return json({ id: "l-9" }, 201);
-      }
-      return json({ id: "m-1" }, 201);
-    });
-
-    await addToListNamed("Key accounts");
-
-    expect(
-      calls.some((c) => c.method === "POST" && c.path.endsWith("/lists")),
-    ).toBe(true);
-    expect(calls.at(-1)?.path).toContain("/lists/l-9/members");
   });
 });

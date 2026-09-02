@@ -650,10 +650,20 @@ GOLANGCI_LINT_VERSION ?= v2.12.2
 # keep the version identical to the pin in that script; bump both together.
 OASDIFF_VERSION ?= v1.22.0
 tools: ## Install every gate binary at its pinned version (fresh-machine bootstrap)
-	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-	$(GO) install github.com/fe3dback/go-arch-lint@$(GO_ARCH_LINT_VERSION)
-	$(GO) install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
-	$(GO) install github.com/oasdiff/oasdiff@$(OASDIFF_VERSION)
+	@# Built into a staging directory BESIDE the destination, then moved into
+	@# place. `go install` writes the binary at its final path directly, so two
+	@# worktrees bootstrapping at once race on the same four files — the loser
+	@# sees a half-written or busy binary. rename(2) replaces atomically, and
+	@# only within one filesystem, which is why the staging directory sits in
+	@# GOPATH/bin rather than under $$TMPDIR.
+	@set -e; bin="$$($(GO) env GOPATH)/bin"; mkdir -p "$$bin"; \
+	stage="$$(mktemp -d "$$bin/.tools-stage.XXXXXX")"; \
+	trap 'rm -rf "$$stage"' EXIT; \
+	GOBIN="$$stage" $(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
+	GOBIN="$$stage" $(GO) install github.com/fe3dback/go-arch-lint@$(GO_ARCH_LINT_VERSION); \
+	GOBIN="$$stage" $(GO) install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION); \
+	GOBIN="$$stage" $(GO) install github.com/oasdiff/oasdiff@$(OASDIFF_VERSION); \
+	for tool in "$$stage"/*; do mv -f "$$tool" "$$bin/$$(basename "$$tool")"; done
 	@echo "gate binaries ready in $$($(GO) env GOPATH)/bin — 'make check' finds them there; add it to PATH only for direct use"
 
 # `git rev-parse --git-path hooks` honors core.hooksPath, so this works

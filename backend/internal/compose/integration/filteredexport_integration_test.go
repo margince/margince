@@ -353,25 +353,6 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 		t.Fatalf("create saved view → %d, want 201", status)
 	}
 
-	var dynamic struct {
-		ID string `json:"id"`
-	}
-	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
-		"name": "Commit segment", "entity_type": "deal", "list_type": "dynamic",
-		"definition": commitFilter,
-	}, nil, &dynamic); status != http.StatusCreated {
-		t.Fatalf("create dynamic list → %d, want 201", status)
-	}
-
-	var static struct {
-		ID string `json:"id"`
-	}
-	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
-		"name": "Hand-picked deals", "entity_type": "deal", "list_type": "static",
-	}, nil, &static); status != http.StatusCreated {
-		t.Fatalf("create static list → %d, want 201", status)
-	}
-
 	var viewless struct {
 		ID string `json:"id"`
 	}
@@ -395,23 +376,15 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 		t.Fatalf("create view with a null filter → %d, want 201 — the write surface reads null as cleared", status)
 	}
 
-	// Both stored sources export. No deal matches, so the honest answer is a
+	// The stored source exports. No deal matches, so the honest answer is a
 	// header row — the same shape the object path gives for an empty slice,
 	// which is what "one engine" has to mean here.
-	for _, c := range []struct {
-		name string
-		body AnyMap
-	}{
-		{"by view_id", AnyMap{"view_id": view.ID, "format": "csv"}},
-		{"by list_id", AnyMap{"list_id": dynamic.ID, "format": "csv"}},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			rows := exportCSV(t, e, c.body)
-			if len(rows) != 1 {
-				t.Fatalf("got %d rows, want a header row only", len(rows))
-			}
-		})
-	}
+	t.Run("by view_id", func(t *testing.T) {
+		rows := exportCSV(t, e, AnyMap{"view_id": view.ID, "format": "csv"})
+		if len(rows) != 1 {
+			t.Fatalf("got %d rows, want a header row only", len(rows))
+		}
+	})
 
 	// The refusals, each naming the field the caller actually sent.
 	for _, c := range []struct {
@@ -419,7 +392,6 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 		body  AnyMap
 		field string
 	}{
-		{"a static list has members, not a filter", AnyMap{"list_id": static.ID, "format": "csv"}, "list_id"},
 		{"a view carrying no filter state", AnyMap{"view_id": viewless.ID, "format": "csv"}, "view_id"},
 		{"a view whose filter is explicitly null", AnyMap{"view_id": cleared.ID, "format": "csv"}, "view_id"},
 		{"a view_id that is not a uuid", AnyMap{"view_id": "not-a-uuid", "format": "csv"}, "view_id"},

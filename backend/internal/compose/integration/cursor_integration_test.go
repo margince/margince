@@ -38,14 +38,6 @@ func TestMalformedCursorAnswersMalformedCursorEverywhere(t *testing.T) {
 
 	apptest.BootstrapWorkspaceSession(t, e, "Cursor Probe", "admin@cursor.test", "Admin")
 
-	// /lists/{id}/members needs a real list to point at.
-	var list AnyMap
-	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
-		"name": "Probe", "entity_type": "person",
-	}, nil, &list); status != http.StatusCreated {
-		t.Fatalf("create list = %d %v", status, list)
-	}
-
 	// Not valid base64url, so every decoder rejects it.
 	const garbage = "cursor=%21%21garbage%21%21"
 	endpoints := []string{
@@ -56,7 +48,6 @@ func TestMalformedCursorAnswersMalformedCursorEverywhere(t *testing.T) {
 		"/v1/activities?" + garbage,
 		"/v1/leads?" + garbage,
 		"/v1/relationships?" + garbage,
-		"/v1/lists/" + list["id"].(string) + "/members?" + garbage,
 		"/v1/search?q=probe&" + garbage,
 		"/v1/dedupe/candidates?" + garbage,
 		"/v1/data-subject-requests?" + garbage,

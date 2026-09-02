@@ -14,7 +14,7 @@ import "testing"
 //
 // This seeder sent one. The whole run died on the first project, after the
 // companies, people and paper were already written, which is the shape of
-// failure this test exists to keep out: the phases AFTER projects — quotas,
+// failure this test exists to keep out: the phases AFTER projects —
 // consent, lifecycle, relationship types and the owner assignment that runs
 // last — never happened at all.
 func TestProjectCreateBodySendsNoKey(t *testing.T) {
