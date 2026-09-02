@@ -716,3 +716,186 @@ func TestTheLateTaskCardKeepsItsDismissalKey(t *testing.T) {
 		t.Errorf("rule = %q, want overdue_promise — one rung covers both sources", moment.Rule)
 	}
 }
+
+// A promise read out of a conversation is owed whether or not anybody typed it
+// as a task. Before the two sources shared one reader this rung looked only at
+// the task list, so a person owing nothing but an extracted commitment was
+// told "nothing needs you today" while the commitments card beneath the fold
+// listed the promise.
+func TestAnUpcomingCommitmentIsTheMomentWithNoTaskFiled(t *testing.T) {
+	now := time.Now()
+	due := now.Add(3 * 24 * time.Hour)
+	said := now.Add(-48 * time.Hour)
+	page := &crmcontracts.Person360{
+		Claims: &[]crmcontracts.ConversationClaim{{
+			Kind:             crmcontracts.CommitmentOurs,
+			Status:           crmcontracts.ConversationClaimStatusOpen,
+			Body:             "Send the security questionnaire",
+			SourceQuote:      "Ich schicke Ihnen den Fragebogen diese Woche.",
+			SourceActivityId: openapi_types.UUID(ids.NewV7()),
+			DueAt:            &due,
+			OccurredAt:       &said,
+		}},
+	}
+
+	moment := deriveMoment(readerCtx(), now, page)
+
+	if moment.Rule != crmcontracts.PersonMomentRuleOpenPromise {
+		t.Fatalf("rule = %q, want open_promise; a commitment nobody typed as a task is still owed", moment.Rule)
+	}
+	if moment.Headline != "You owe them: Send the security questionnaire" {
+		t.Errorf("headline = %q, want the promise itself", moment.Headline)
+	}
+	if moment.Evidence[0].Snippet == nil {
+		t.Error("the card carries no quote; the sentence the promise was made in is what a claim has")
+	}
+	if moment.WhyNow != "Due in 3 days." {
+		t.Errorf("why-now = %q, want the deadline still ahead", moment.WhyNow)
+	}
+}
+
+// The not-yet-due rung ranks its two sources by date alone, exactly as the
+// overdue rung above it does. A nearer task beats a further commitment and the
+// reverse, so which table a promise sits in never decides what a reader is
+// shown next.
+func TestTheNearestUpcomingPromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
+	now := time.Now()
+	said := now.Add(-48 * time.Hour)
+	pageWith := func(claimDays, taskDays int) *crmcontracts.Person360 {
+		claimDue := now.Add(time.Duration(claimDays) * 24 * time.Hour)
+		taskDue := now.Add(time.Duration(taskDays) * 24 * time.Hour)
+		return &crmcontracts.Person360{
+			Claims: &[]crmcontracts.ConversationClaim{{
+				Kind:             crmcontracts.CommitmentOurs,
+				Status:           crmcontracts.ConversationClaimStatusOpen,
+				Body:             "Send the questionnaire",
+				SourceQuote:      "Diese Woche.",
+				SourceActivityId: openapi_types.UUID(ids.NewV7()),
+				DueAt:            &claimDue,
+				OccurredAt:       &said,
+			}},
+			NextSteps: &struct {
+				Data []crmcontracts.Activity `json:"data"`
+				Page crmcontracts.PageInfo   `json:"page"`
+			}{Data: []crmcontracts.Activity{{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+				Subject: ptr("Book the workshop"), OccurredAt: said, DueAt: &taskDue,
+			}}},
+		}
+	}
+
+	if got := deriveMoment(readerCtx(), now, pageWith(9, 2)).Headline; got != "You owe them: Book the workshop" {
+		t.Errorf("headline = %q, want the task, whose deadline is nearer", got)
+	}
+	if got := deriveMoment(readerCtx(), now, pageWith(2, 9)).Headline; got != "You owe them: Send the questionnaire" {
+		t.Errorf("headline = %q, want the claim, whose deadline is nearer", got)
+	}
+}
+
+// Two promises read out of ONE message must be dismissable apart. A dismissal
+// is one row per (reader, person, claim key), so a key naming only the rung
+// would let putting the first away silence the second — a promise the reader
+// never dismissed and is never told about.
+//
+// The fingerprint cannot separate them: it hashes the source row and its
+// moment and ignores the words, which both claims share.
+func TestTwoPromisesFromOneMessageDismissApart(t *testing.T) {
+	now := time.Now()
+	said := now.Add(-24 * time.Hour)
+	source := openapi_types.UUID(ids.NewV7())
+	due := now.Add(48 * time.Hour)
+	claim := func(body string) crmcontracts.ConversationClaim {
+		return crmcontracts.ConversationClaim{
+			Id:               openapi_types.UUID(ids.NewV7()),
+			Kind:             crmcontracts.CommitmentOurs,
+			Status:           crmcontracts.ConversationClaimStatusOpen,
+			Body:             body,
+			SourceQuote:      "Ich schicke Ihnen die Unterlagen.",
+			SourceActivityId: source,
+			DueAt:            &due,
+			OccurredAt:       &said,
+		}
+	}
+
+	nda := openClaimCard(now, claim("Send the NDA"))
+	quote := openClaimCard(now, claim("Send the quote"))
+
+	if nda.ClaimKey == quote.ClaimKey {
+		t.Errorf("both promises carry claim key %q; dismissing one would silence the other", nda.ClaimKey)
+	}
+	if nda.EvidenceFingerprint != quote.EvidenceFingerprint {
+		t.Error("the fingerprints differ, so this test no longer covers the case it was written for: " +
+			"two claims sharing one source message and moment")
+	}
+}
+
+// A dismissal silences ONE card, not the record. A reader who puts one promise
+// away must still be told about the next: stopping at the first rung and
+// answering "nothing needs you today" says something false about every promise
+// below the dismissed one.
+//
+// The rung has to resolve this, not the ladder around it. A rung speaks for a
+// SET — three open promises, one card — so passing over the rung would hide the
+// other two along with the one that was dismissed.
+func TestDismissingOnePromiseShowsTheNext(t *testing.T) {
+	now := time.Now()
+	said := now.Add(-24 * time.Hour)
+	source := openapi_types.UUID(ids.NewV7())
+	claim := func(body string, dueInDays int) crmcontracts.ConversationClaim {
+		due := now.Add(time.Duration(dueInDays) * 24 * time.Hour)
+		return crmcontracts.ConversationClaim{
+			Id:               openapi_types.UUID(ids.NewV7()),
+			Kind:             crmcontracts.CommitmentOurs,
+			Status:           crmcontracts.ConversationClaimStatusOpen,
+			Body:             body,
+			SourceQuote:      "Ich schicke Ihnen beides.",
+			SourceActivityId: source,
+			DueAt:            &due,
+			OccurredAt:       &said,
+		}
+	}
+	page := &crmcontracts.Person360{
+		Claims: &[]crmcontracts.ConversationClaim{claim("Send the NDA", 2), claim("Send the quote", 5)},
+	}
+
+	first := deriveMoment(readerCtx(), now, page)
+	if first.Headline != "You owe them: Send the NDA" {
+		t.Fatalf("headline = %q, want the nearer promise first", first.Headline)
+	}
+
+	// The reader puts that one away. The second promise is untouched.
+	next := deriveMomentPast(readerCtx(), now, page, func(m crmcontracts.PersonMoment) bool {
+		return m.ClaimKey == first.ClaimKey
+	})
+	if next.Rule == crmcontracts.PersonMomentRuleNothingNeeded {
+		t.Fatal("dismissing one promise reported the contact as needing nothing, " +
+			"while a second promise is still open")
+	}
+	if next.Headline != "You owe them: Send the quote" {
+		t.Errorf("headline = %q, want the promise the reader has not dismissed", next.Headline)
+	}
+}
+
+// With every promise dismissed there IS nothing left, and the quiet success
+// state is the honest answer rather than a card the reader already put away.
+func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
+	now := time.Now()
+	said := now.Add(-24 * time.Hour)
+	due := now.Add(48 * time.Hour)
+	page := &crmcontracts.Person360{
+		Claims: &[]crmcontracts.ConversationClaim{{
+			Id:               openapi_types.UUID(ids.NewV7()),
+			Kind:             crmcontracts.CommitmentOurs,
+			Status:           crmcontracts.ConversationClaimStatusOpen,
+			Body:             "Send the NDA",
+			SourceQuote:      "Ich schicke die NDA.",
+			SourceActivityId: openapi_types.UUID(ids.NewV7()),
+			DueAt:            &due,
+			OccurredAt:       &said,
+		}},
+	}
+	got := deriveMomentPast(readerCtx(), now, page, func(crmcontracts.PersonMoment) bool { return true })
+	if got.Rule != crmcontracts.PersonMomentRuleNothingNeeded {
+		t.Errorf("rule = %q, want nothing_needed once every card is dismissed", got.Rule)
+	}
+}
