@@ -63,7 +63,9 @@ func TestTheContractOffersExactlyWhatTheEngineServes(t *testing.T) {
 		}
 		// The other direction: every property the schema declares must be one
 		// the engine actually reads.
-		for _, prop := range declaredProperties(schema) {
+		declared := declaredProperties(schema)
+		requireNonEmptyCensus(t, "RunReportRequest property", declared)
+		for _, prop := range declared {
 			if !servedPlanArguments[prop] {
 				t.Errorf("RunReportRequest offers %q and the engine does not serve it — "+
 					"a caller following the contract writes a plan the runtime refuses",
@@ -91,7 +93,12 @@ func runReportRequestSchema(t *testing.T, doc string) string {
 }
 
 // declaredProperties lists the top-level property names of the schema block.
-var propertyLine = regexp.MustCompile(`(?m)^        (\w+):`)
+//
+// The name pattern is deliberately wider than an identifier: `\w+` would skip a
+// property whose name carries punctuation (`as-of-date`), and a census that
+// skips its subject reports PASS with nothing to notice. Anything YAML admits
+// as a plain key is matched, so a name this gate cannot see does not exist.
+var propertyLine = regexp.MustCompile(`(?m)^        ([A-Za-z0-9_.-]+):`)
 
 func declaredProperties(schema string) []string {
 	body := schema
@@ -103,4 +110,17 @@ func declaredProperties(schema string) []string {
 		out = append(out, m[1])
 	}
 	return out
+}
+
+// requireNonEmptyCensus fails a census that recognized nothing. An empty result
+// is the one outcome that looks identical to agreement: every comparison below
+// holds vacuously, the gate reports PASS, and the drift it exists to catch
+// walks straight through.
+func requireNonEmptyCensus(t *testing.T, what string, found []string) {
+	t.Helper()
+	if len(found) == 0 {
+		t.Fatalf("the %s census recognized nothing — the schema was renamed or "+
+			"reindented under this test's pattern, and every assertion below "+
+			"would pass without comparing anything", what)
+	}
 }

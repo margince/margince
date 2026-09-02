@@ -47,19 +47,34 @@ type reportFrame struct {
 	FiscalYearStartMonth int
 }
 
+// readReportFrame reads the three installation settings that place a number.
+//
+// Called ONCE per transaction and threaded to everything that needs them, so
+// the values bound into a statement are the same ones its answer is labelled
+// with. Reading them again further down would be a second read under READ
+// COMMITTED, where a concurrent settings write can land in between.
+func readReportFrame(ctx context.Context, tx pgx.Tx) (reportFrame, error) {
+	var frame reportFrame
+	var err error
+	if frame.Timezone, err = identity.TimezoneOf(ctx, tx); err != nil {
+		return reportFrame{}, err
+	}
+	if frame.BaseCurrency, err = identity.BaseCurrencyOf(ctx, tx); err != nil {
+		return reportFrame{}, err
+	}
+	if frame.FiscalYearStartMonth, err = identity.FiscalYearStartMonthOf(ctx, tx); err != nil {
+		return reportFrame{}, err
+	}
+	return frame, nil
+}
+
 func (e *reportEngine) fetchRows(ctx context.Context, report string, spec reportSpec, req reportRequest, groupBy, selects, columns []string) ([]map[string]any, *int, reportFrame, error) {
 	var rows []map[string]any
 	var excluded *int
 	var frame reportFrame
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
-		if frame.Timezone, err = identity.TimezoneOf(ctx, tx); err != nil {
-			return err
-		}
-		if frame.BaseCurrency, err = identity.BaseCurrencyOf(ctx, tx); err != nil {
-			return err
-		}
-		if frame.FiscalYearStartMonth, err = identity.FiscalYearStartMonthOf(ctx, tx); err != nil {
+		if frame, err = readReportFrame(ctx, tx); err != nil {
 			return err
 		}
 		if err := requireFilterScopes(ctx, tx, spec, req.Filters); err != nil {
@@ -80,14 +95,14 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 			return err
 		}
 		if masked {
-			n, err := countMaskExcluded(ctx, tx, spec, where, maskClauses, args)
+			n, err := countMaskExcluded(ctx, tx, frame, spec, where, maskClauses, args)
 			if err != nil {
 				return err
 			}
 			excluded = &n
 			where = append(where, maskClauses...)
 		}
-		sql, args, err := bindReportTokens(ctx, tx, reportSQL(spec, selects, where, groupBy), args)
+		sql, args, err := bindReportTokens(ctx, tx, frame, reportSQL(spec, selects, where, groupBy), args)
 		if err != nil {
 			return err
 		}
@@ -262,18 +277,18 @@ func wireValue(v any) any {
 }
 
 // quoteIdent admits caller-chosen aggregate aliases into the SQL text safely:
-// strict identifier shape, or the plan is rejected.
+// strict identifier shape, or a fixed literal that cannot carry an injection.
 //
-// It returns an error rather than a fallback name. An earlier version answered
-// a bad alias with the literal "result", which is silent when one alias is
-// wrong and actively wrong when two are: both collapse to the same column, the
-// row map keeps whichever the driver scanned last, and the caller receives one
-// measure's number under another measure's name with nothing raised anywhere.
-func quoteIdent(name string) (string, error) {
+// The fallback is safe to reuse across two aggregates in one plan, which looks
+// wrong and is not: the SQL alias is never read back. scanReportRows maps each
+// value by POSITION into the caller-facing column names built alongside these
+// selects, so two aggregates that both fall back still arrive under their own
+// distinct names.
+func quoteIdent(name string) string {
 	if !identShape.MatchString(name) {
-		return "", &FieldNotAllowedError{Field: name, Slot: slotAggregates}
+		return "result"
 	}
-	return name, nil
+	return name
 }
 
 var identShape = regexp.MustCompile(`^[a-z][a-z0-9_]{0,62}$`)
@@ -314,11 +329,13 @@ const (
 // mention a token: Postgres rejects a parameter the statement never
 // references, so a shared slice would break the queries that do not use it.
 //
-// Each value is resolved only when the statement actually asks for it, so a
-// report that never buckets by date neither reads the zone setting nor takes
-// its gate.
+// The frame comes in already resolved rather than being read here, so the
+// values bound into the statement are the SAME ones the result is labelled
+// with. Reading the settings twice inside one READ COMMITTED transaction lets
+// a concurrent settings write land between them, and the answer then reports
+// a total cut in one zone under the name of another.
 func bindReportTokens(
-	ctx context.Context, tx pgx.Tx, sql string, args []any,
+	ctx context.Context, tx pgx.Tx, frame reportFrame, sql string, args []any,
 ) (string, []any, error) {
 	args = slices.Clone(args)
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -326,28 +343,15 @@ func bindReportTokens(
 	// the statement both compares (= 1) and does arithmetic with. Rendering it
 	// as text and letting Postgres infer the type back is the kind of shortcut
 	// that works until a comparison silently becomes a text one.
-	bindValue := func(token string, resolve func() (any, error)) error {
+	bindValue := func(token string, value any) {
 		if !strings.Contains(sql, token) {
-			return nil
-		}
-		value, err := resolve()
-		if err != nil {
-			return err
+			return
 		}
 		sql = strings.ReplaceAll(sql, token, fmt.Sprintf("$%d", arg(value)))
-		return nil
 	}
-	if err := bindValue(reportZoneToken, func() (any, error) { return identity.TimezoneOf(ctx, tx) }); err != nil {
-		return "", nil, err
-	}
-	if err := bindValue(reportBaseCurrencyToken, func() (any, error) { return identity.BaseCurrencyOf(ctx, tx) }); err != nil {
-		return "", nil, err
-	}
-	if err := bindValue(reportFiscalStartMonthToken, func() (any, error) {
-		return identity.FiscalYearStartMonthOf(ctx, tx)
-	}); err != nil {
-		return "", nil, err
-	}
+	bindValue(reportZoneToken, frame.Timezone)
+	bindValue(reportBaseCurrencyToken, frame.BaseCurrency)
+	bindValue(reportFiscalStartMonthToken, frame.FiscalYearStartMonth)
 	bindScope := func(token string, resolve func() (string, error)) error {
 		if !strings.Contains(sql, token) {
 			return nil

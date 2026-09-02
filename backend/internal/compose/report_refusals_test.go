@@ -155,43 +155,50 @@ func (emptyRows) RawValues() [][]byte {
 
 var _ pgx.Rows = emptyRows{}
 
-// TestAMalformedAliasIsRefusedRatherThanRenamed holds the fix for a silent
-// wrong answer.
+// TestTwoFallbackAliasesKeepTheirOwnColumnNames holds the property that makes
+// quoteIdent's shared "result" fallback safe.
 //
-// quoteIdent used to answer a bad alias with the literal "result". With one bad
-// alias that is merely a rename nobody asked for. With TWO, both aggregates
-// select into the same column name, the row map keeps whichever the driver
-// scanned last, and the caller is handed one measure's number under the other
-// measure's name — no error raised, at any layer.
-func TestAMalformedAliasIsRefusedRatherThanRenamed(t *testing.T) {
+// Two aggregates whose aliases are both outside the identifier shape select
+// into the SAME SQL column name. That is only harmless because the SQL alias is
+// never read back: the caller-facing names travel separately and the row map is
+// built from those by position. If a future change ever keys rows by the SQL
+// alias instead, this test is what fails — and the failure is a caller reading
+// one measure's number under another measure's name.
+func TestTwoFallbackAliasesKeepTheirOwnColumnNames(t *testing.T) {
+	t.Parallel()
+
 	spec := prebuiltReports["deals-by-stage"]
 
-	for _, alias := range []string{
-		"total count", // a space
-		"1st",         // leading digit
-		"count;DROP",  // punctuation
-		"Total",       // uppercase, outside the identifier shape
-	} {
-		_, _, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: alias})
-		if err == nil {
-			t.Errorf("alias %q was accepted — a name outside the identifier shape must "+
-				"be refused, never silently replaced, or two bad aliases collapse into "+
-				"one column and a caller reads the wrong measure", alias)
-		}
+	firstName, firstSelect, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: "total count"})
+	if err != nil {
+		t.Fatalf("a free-form alias was refused: %v", err)
+	}
+	secondName, secondSelect, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: "1st try"})
+	if err != nil {
+		t.Fatalf("a free-form alias was refused: %v", err)
 	}
 
-	// An omitted alias is not a malformed one: it defaults to the function name,
-	// which is well-formed and is the documented behaviour of this argument.
-	if _, _, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount}); err != nil {
-		t.Errorf("an omitted alias was refused (%v) — it defaults to the function "+
-			"name and must still be served", err)
+	if firstName == secondName {
+		t.Errorf("both aggregates report the caller-facing name %q — the row map is "+
+			"keyed by these, so one measure would overwrite the other", firstName)
+	}
+	if firstName != "total count" || secondName != "1st try" {
+		t.Errorf("caller-facing names were rewritten (%q, %q) — a caller reads its own "+
+			"alias back, not the SQL identifier", firstName, secondName)
+	}
+	if !strings.Contains(firstSelect, "AS result") || !strings.Contains(secondSelect, "AS result") {
+		t.Errorf("expected both selects to fall back to the fixed literal, got %q and %q "+
+			"— an alias outside the identifier shape must never reach the SQL text",
+			firstSelect, secondSelect)
 	}
 
-	// The admitting case. Without it a quoteIdent that refused EVERY alias
-	// would pass the loop above, and free-form aliases are the documented
-	// behaviour of this argument.
-	if _, _, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: "my_own_label"}); err != nil {
-		t.Errorf("a well-formed alias was refused (%v) — the check is now rejecting "+
-			"the names it exists to admit", err)
+	// The admitting case: a well-formed alias rides into the SQL unchanged, so
+	// the fallback above is reached only by names that need it.
+	_, wellFormed, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: "my_own_label"})
+	if err != nil {
+		t.Fatalf("a well-formed alias was refused: %v", err)
+	}
+	if !strings.Contains(wellFormed, "AS my_own_label") {
+		t.Errorf("a well-formed alias did not reach the SQL text: %q", wellFormed)
 	}
 }

@@ -27341,7 +27341,7 @@ type ReportResult struct {
 	// AsOf The instant this result was computed. A report is a reading taken at a time, and without it two screens showing different numbers look like a bug rather than two moments.
 	AsOf time.Time `json:"as_of"`
 
-	// BaseCurrency The ISO-4217 currency every money column is expressed in.
+	// BaseCurrency The installation's configured base currency, as an ISO-4217 code. It labels the frame, not the columns: a money column carries each record's OWN currency, which is why every money report groups by `currency`. Converting to this one is the frozen-FX roll-up, a capability this endpoint does not serve.
 	BaseCurrency string   `json:"base_currency"`
 	Columns      []string `json:"columns"`
 
@@ -27569,9 +27569,8 @@ type RowVersion = int64
 // (the per-report allowed dimension/measure list in data-model.md §13 / contract README).
 // An out-of-vocabulary field returns `422 code: report_field_not_allowed`. `additionalProperties`
 // is open only to admit *values*, never to admit arbitrary SQL identifiers.
-// **`/reports/{report}` path param:** a value matching the UUID format resolves to a saved
-// report; any other value resolves against the prebuilt-report key catalog (README "Prebuilt
-// reports"). A prebuilt key is never a UUID, so there is no collision.
+// **`/reports/{report}` path param:** a prebuilt-report key (README "Prebuilt
+// reports"). Saved reports are not served; a UUID here is refused.
 type RunReportRequest struct {
 	Aggregates *[]struct {
 		As    *string                      `json:"as,omitempty"`

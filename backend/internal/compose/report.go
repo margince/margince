@@ -373,21 +373,13 @@ func aggregateSelect(spec reportSpec, agg reportAggregate) (name, sel string, er
 	}
 	switch agg.Fn {
 	case aggFnCount:
-		alias, err := quoteIdent(name)
-		if err != nil {
-			return "", "", err
-		}
-		return name, fmt.Sprintf("count(*) AS %s", alias), nil
+		return name, fmt.Sprintf("count(*) AS %s", quoteIdent(name)), nil
 	case aggFnSum, aggFnAvg, aggFnMin, aggFnMax:
 		expr, ok := spec.measures[agg.Field]
 		if !ok {
 			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
 		}
-		alias, err := quoteIdent(name)
-		if err != nil {
-			return "", "", err
-		}
-		return name, fmt.Sprintf("%s(%s) AS %s", agg.Fn, expr, alias), nil
+		return name, fmt.Sprintf("%s(%s) AS %s", agg.Fn, expr, quoteIdent(name)), nil
 	default:
 		return "", "", &FieldNotAllowedError{Field: "fn=" + agg.Fn}
 	}
