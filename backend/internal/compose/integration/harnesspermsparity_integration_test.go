@@ -42,6 +42,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -125,6 +126,7 @@ func declaredSeatFixtures(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("parsing %s: %v", harnessPermsFile, err)
 	}
+	pkg := principalIdent(t, file)
 	var names []string
 	for _, decl := range file.Decls {
 		gen, ok := decl.(*ast.GenDecl)
@@ -136,13 +138,10 @@ func declaredSeatFixtures(t *testing.T) []string {
 			if !ok {
 				continue
 			}
-			if !mayBeASeatFixture(value) {
-				continue
-			}
-			for _, name := range value.Names {
+			for i, name := range value.Names {
 				// The blank identifier names nothing a suite can act
 				// through, so it is not a fixture whatever it is assigned.
-				if name.Name == "_" {
+				if name.Name == "_" || !mayBeASeatFixture(value, i, pkg) {
 					continue
 				}
 				names = append(names, name.Name)
@@ -153,8 +152,8 @@ func declaredSeatFixtures(t *testing.T) []string {
 	return names
 }
 
-// mayBeASeatFixture reports whether a var declaration in harnessperms.go could
-// be a seat fixture, which is not the same question as whether it IS one.
+// mayBeASeatFixture reports whether one NAME in a var declaration could be a
+// seat fixture, which is not the same question as whether it IS one.
 //
 // It answers by EXCLUSION — a composite literal of some other type is not a
 // fixture, so a shared ObjectGrant parked in this file does not have to be
@@ -163,27 +162,67 @@ func declaredSeatFixtures(t *testing.T) []string {
 // literal, and admitting only literals would have exempted the one fixture in
 // the file that is assembled rather than written out. Deciding this properly
 // needs the type checker, and the package does not depend on one; excluding
-// what is provably not a fixture is what can be done without it, and it errs
-// toward demanding registration rather than toward granting exemption.
-func mayBeASeatFixture(spec *ast.ValueSpec) bool {
+// what is provably not a fixture is what can be done without it, and every
+// judgement below errs toward demanding registration.
+//
+// PER NAME, not per declaration: `var A, B = principal.Permissions{…},
+// principal.ObjectGrant{…}` declares one fixture and one thing that is not,
+// and excluding the whole spec would drop A silently — an exemption by
+// omission, which is what this census exists to refuse.
+func mayBeASeatFixture(spec *ast.ValueSpec, index int, principalPkg string) bool {
 	if spec.Type != nil {
-		return isPermissionsType(spec.Type)
+		return isPermissionsType(spec.Type, principalPkg)
 	}
-	for _, value := range spec.Values {
-		if literal, ok := value.(*ast.CompositeLit); ok && !isPermissionsType(literal.Type) {
-			return false
-		}
+	// The multi-return form (`var a, b = f()`) has no per-name value to
+	// inspect, so it is asked for.
+	if len(spec.Values) != len(spec.Names) {
+		return true
 	}
-	return true
+	literal, ok := spec.Values[index].(*ast.CompositeLit)
+	return !ok || isPermissionsType(literal.Type, principalPkg)
 }
 
-func isPermissionsType(expr ast.Expr) bool {
+func isPermissionsType(expr ast.Expr, principalPkg string) bool {
 	selector, ok := expr.(*ast.SelectorExpr)
 	if !ok {
 		return false
 	}
 	pkg, ok := selector.X.(*ast.Ident)
-	return ok && pkg.Name == "principal" && selector.Sel.Name == "Permissions"
+	return ok && pkg.Name == principalPkg && selector.Sel.Name == "Permissions"
+}
+
+// principalPackage is the import path of the package whose Permissions type
+// every fixture here has.
+const principalPackage = "github.com/margince/margince/backend/internal/shared/kernel/principal"
+
+// principalIdent is the identifier harnessperms.go qualifies that package by.
+//
+// Resolved rather than assumed. Matching the bare name `principal` would read
+// an aliased import as some other package, and every Permissions literal in
+// the file would then be excluded — silently, with no test failing, which is
+// exactly the escape this census exists to close. A file that does not import
+// the package at all, or that dot-imports it so no qualifier survives to
+// match, is not a file this gate can reason about, and it says so rather than
+// passing on an empty census.
+func principalIdent(t *testing.T, file *ast.File) string {
+	t.Helper()
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || path != principalPackage {
+			continue
+		}
+		if spec.Name == nil {
+			return "principal"
+		}
+		if name := spec.Name.Name; name != "." && name != "_" {
+			return name
+		}
+		t.Fatalf("%s imports %s as %q, which leaves no qualifier to match — this gate "+
+			"reads the fixtures' type off the source", harnessPermsFile, principalPackage, spec.Name.Name)
+	}
+	t.Fatalf("%s does not import %s, whose Permissions type every fixture in it has — "+
+		"an empty census would pass while governing nothing", harnessPermsFile, principalPackage)
+	return ""
 }
 
 // seatRole is the seeded role a fixture stands in for. A fixture naming none
