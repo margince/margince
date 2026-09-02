@@ -162,7 +162,7 @@ export const vi = {
   "autonomy.auto": "tự động thực thi",
   "autonomy.confirm": "xác nhận trước",
 
-  "nav.home": "Trang chủ",
+  "nav.home": "Bản tóm tắt",
   "nav.contacts": "Contact",
   "nav.companies": "Công ty",
   "nav.leads": "Lead",

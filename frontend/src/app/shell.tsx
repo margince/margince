@@ -642,7 +642,7 @@ export function PageTitle({
   const unitNamesPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
   // A screen that heads ITSELF. Home greets the reader by name in its own h1,
-  // so the shell printing "Start" above it named the page twice at heading
+  // so the shell printing the nav label above it named the page twice at heading
   // level — a document outline with two top-level headings, which is exactly
   // what the branches above exist to prevent for records and units.
   //
