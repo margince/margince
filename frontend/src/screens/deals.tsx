@@ -126,15 +126,18 @@ import {
   listQueryFromParams,
   mergeScreenDials,
   paramsFromListQuery,
+  useTagChips,
   withListPage,
   withoutScreenDials,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import type { Project } from "./projects.form";
+import { tagsColumn } from "./recordlist";
 import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
+import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
 import { groupChronology } from "./timelinegroups";
 
@@ -270,6 +273,13 @@ function dealsQueryParams(f: DealFilters) {
     partner_org_id: filters.partner_org_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
+    // Several ids and their mode, out of the one comma-joined string the
+    // address carries them in. Spelled by the shared encoder rather than here,
+    // so this board and the three lists cannot read one address two ways.
+    ...tagQueryParams(
+      parseTagIDs(filters.tag_id),
+      parseTagMode(filters.tag_mode),
+    ),
   };
 }
 
@@ -343,7 +353,13 @@ function useStageTotals(f: DealFilters) {
     // single-currency stage left the old sum standing, which is the mixed-
     // currency refusal not happening.
     queryKey: ["deals", "by-stage-totals", f],
-    enabled: !f.overlay,
+    // Not while a tag narrows the board. The report's filter vocabulary has no
+    // tag field — sending one is a 422 — so the totals would count deals the
+    // board is not showing, and a column header reporting more than the cards
+    // under it is a number the reader has no way to reconcile. Withheld is the
+    // honest answer, and buildStageTotals already draws the no-sum column for
+    // the mixed-currency case.
+    enabled: !f.overlay && parseTagIDs(f.filters.tag_id).length === 0,
     queryFn: async () => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },
@@ -499,6 +515,7 @@ export function toBoardDeal(deal: Deal, naming: CompanyNaming): BoardDeal {
     ageMs: Math.max(0, Date.now() - new Date(since).getTime()),
     stalled: deal.stalled ?? false,
     archived: deal.archived_at != null,
+    tags: deal.tags,
   };
 }
 
@@ -1331,6 +1348,7 @@ function dealColumns(
       cell: (deal) => deal.name,
       fixed: true,
     },
+    tagsColumn<Deal>(t),
     {
       // The company the deal is with. Withheld is not empty: the wire sends a
       // null `organization_id` and names the field in `masked_fields` when the
@@ -2454,6 +2472,7 @@ export function DealsScreen({
     />
   );
   const dealChips = dealFilterChips(stages, t);
+  const tagChips = useTagChips();
   const rowSelection = dealRowSelection({
     view,
     liveSelection,
@@ -2517,7 +2536,7 @@ export function DealsScreen({
         // changes every row without touching `filters`. Naming it here is
         // what puts the reader back on page 1.
         scopeKey={effectivePipeline?.id ?? ""}
-        dataChips={dealChips}
+        dataChips={[...dealChips, ...tagChips]}
         dataViews={savedViews}
         selection={rowSelection}
         chips={dealSurfaceChips({

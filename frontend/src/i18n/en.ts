@@ -1791,6 +1791,12 @@ export const en = {
   "co.recent.re": "on a deal",
   "co.recent.reNamed": "on {name}",
   "tags.archived": "archived",
+  "tags.columnHeader": "Tags",
+  "tags.filterAll": "Any tag",
+  "tags.moreUncounted": "more",
+  "tags.moreUncountedTip":
+    "Including {names}. Open the record for the full set.",
+  "tags.columnHeaderPartial": "Tags (partial list)",
   "tags.loading": "Loading tags…",
   "tags.panelTitle": "Tags",
   "tags.panelSub": "Open a tag, or use its menu to manage this assignment",

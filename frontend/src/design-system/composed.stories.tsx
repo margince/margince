@@ -181,7 +181,16 @@ const boardColumns: BoardMoneyColumn[] = [
     weightedMinor: 4_500,
     currency: "EUR",
     deals: [
-      boardDeal("d1", "Contoso renewal", 12_000, 3),
+      // How a deal is FILED, on the card: the same chip strip a list row draws,
+      // so a reader moving between the board and the table reads one thing one
+      // way rather than learning two.
+      boardDeal("d1", "Contoso renewal", 12_000, 3, {
+        tags: [
+          { tag_id: "t-1", name: "Key Account", color: "amber" },
+          { tag_id: "t-2", name: "Churn Risk", color: "rose" },
+          { tag_id: "t-3", name: "DACH", color: "teal" },
+        ],
+      }),
       boardDeal("d2", "Fabrikam expansion", 33_000, 9, { stalled: true }),
     ],
   },

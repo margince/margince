@@ -26,6 +26,8 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, useMe, useSorMode } from "./common";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
+import { withoutStrandedTagMode } from "./tagfilter";
+import { useTagVocabulary } from "./tags.queries";
 
 // The shared list foundation (P-14): every list screen sends the rich
 // q/sort/cursor/include_archived/filter vocabulary instead of a flat
@@ -1010,7 +1012,11 @@ export function ListTable<Row>({
       } else {
         delete filters[key];
       }
-      return { ...prev, filters };
+      // A mode with no tag left to combine goes with it. Nothing draws it and
+      // nothing sends it, so it would sit in the address as a dial the reader
+      // cannot see to clear and then narrow the list the next time they pick a
+      // word.
+      return { ...prev, filters: withoutStrandedTagMode(filters) };
     });
 
   return (
@@ -1216,6 +1222,62 @@ function matchesView(
  * team rather than a guess about which of them was meant; `viewerTeamOptions`
  * builds those.
  */
+/**
+ * The tag dial: which word narrows this list.
+ *
+ * ONE word, not several. This surface holds one value per filter key — a chip
+ * whose row is already applied is dropped from the "add filter" menu, and
+ * `setFilter` assigns rather than appends — so a second tag would replace the
+ * first, not join it. The endpoint takes several ids and a mode that combines
+ * them, and the encoder in `tagfilter.ts` speaks that shape; what is missing is
+ * a surface that can hold two values, which is a change to the filter bar
+ * rather than to tags. Offering an any/all/none dial over a filter that can
+ * only ever hold one word would be a control that cannot do what it says.
+ *
+ * By ID, never by name. A name is what a person types and an admin can rename,
+ * so a saved view holding one would quietly start selecting a different slice
+ * the day somebody corrects a spelling.
+ */
+export function useTagChips(): readonly ListChip[] {
+  const t = useT();
+  const vocabulary = useTagVocabulary();
+  // Whether a tag is narrowing this list RIGHT NOW, read from the address
+  // rather than passed in: the address is where an applied filter lives on
+  // every one of these screens, and a caller that forgot the argument would
+  // get the dropped dial silently.
+  // Any scope's, not just the unscoped one: a list drawn beside another carries
+  // its dials under a `<scope>.` prefix, and a bare lookup would drop the chip
+  // on exactly the screens that have two lists.
+  const [params] = useUrlParams();
+  const applied = [...params.keys()].some(
+    (key) => (key === "tag_id" || key.endsWith(".tag_id")) && params.get(key),
+  );
+  const words = vocabulary.data?.tags ?? [];
+  // A dial with no options is dropped ONLY when nothing is filtering. An empty
+  // list here is three different answers — still loading, a workspace with no
+  // words, and a caller who may not read the vocabulary — and the request
+  // carries the applied id whichever it is. Dropping the row then leaves the
+  // list narrowed by a filter with no control to clear it, which is a reader
+  // staring at an empty page with nothing on screen explaining why.
+  if (words.length === 0 && !applied) {
+    return [];
+  }
+  return [
+    {
+      key: "tag_id",
+      // The label says the list is short when the catalog was cut. The
+      // vocabulary read is capped and has no cursor, so past the cap a word
+      // that exists is indistinguishable from one that does not — and a reader
+      // who cannot find a word in a dial concludes the workspace lacks it.
+      label: vocabulary.data?.truncated
+        ? t("tags.columnHeaderPartial")
+        : t("tags.columnHeader"),
+      allLabel: t("tags.filterAll"),
+      options: words.map((tag) => ({ value: tag.id, label: tag.name })),
+    },
+  ];
+}
+
 export function useOwnerChips(): readonly ListChip[] {
   const t = useT();
   const me = useMe();
