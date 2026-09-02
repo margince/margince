@@ -19819,6 +19819,14 @@ components:
         record_exists:
           type: boolean
           description: Whether a contact actually exists for this address.
+        deletes_at:
+          type: string
+          format: date-time
+          description: |
+            When this sender's oldest message is destroyed. Present only for a `personal` verdict
+            you have not overruled — every other kind is withheld rather than destroyed, and
+            deciding this sender is business cancels the deletion. Later mail from the same sender
+            runs its own window, so this date names the next message to go rather than all of them.
 
     ThreadAudienceOutcome:
       type: object

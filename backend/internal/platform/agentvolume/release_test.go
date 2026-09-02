@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package agentquota
+package agentvolume
 
 import (
 	"strings"
@@ -11,9 +11,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The two quotas the spec ends WITH THE WINDOW cannot be widened from inside
+// The two counters the spec ends WITH THE WINDOW cannot be widened from inside
 // it. A release of egress would reopen the exfiltration endpoint the moment it
-// closed; a release of calls would lift the ceiling every other quota sits
+// closed; a release of calls would lift the ceiling every other volume budget sits
 // under. Both are caller defects, answered as errors rather than as quiet
 // successes — a release that silently did nothing would read, at the approval
 // screen, exactly like one that worked.

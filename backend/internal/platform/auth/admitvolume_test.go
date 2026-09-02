@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -20,19 +20,19 @@ import (
 // It records which counters were ASKED, because half the properties here are
 // about a counter never being consulted at all.
 type spentQuota struct {
-	exceeded map[agentquota.Counter]agentquota.Reading
-	asked    []agentquota.Counter
+	exceeded map[agentvolume.Counter]agentvolume.Reading
+	asked    []agentvolume.Counter
 }
 
-func (s *spentQuota) Read(_ context.Context, c agentquota.Counter) agentquota.Reading {
+func (s *spentQuota) Read(_ context.Context, c agentvolume.Counter) agentvolume.Reading {
 	s.asked = append(s.asked, c)
 	if reading, ok := s.exceeded[c]; ok {
 		return reading
 	}
-	return agentquota.Reading{Counter: c, Limit: 100}
+	return agentvolume.Reading{Counter: c, Limit: 100}
 }
 
-func (s *spentQuota) askedFor(c agentquota.Counter) bool {
+func (s *spentQuota) askedFor(c agentvolume.Counter) bool {
 	for _, asked := range s.asked {
 		if asked == c {
 			return true
@@ -43,14 +43,14 @@ func (s *spentQuota) askedFor(c agentquota.Counter) bool {
 
 // over builds a meter that reports one counter crossed and every other with
 // headroom — the shape every rung of the ladder is tested against.
-func over(c agentquota.Counter, observed, limit int) *spentQuota {
-	return &spentQuota{exceeded: map[agentquota.Counter]agentquota.Reading{
+func over(c agentvolume.Counter, observed, limit int) *spentQuota {
+	return &spentQuota{exceeded: map[agentvolume.Counter]agentvolume.Reading{
 		c: {Counter: c, Observed: observed, Limit: limit, Exceeded: true, Bucket: 7},
 	}}
 }
 
 func quotaGate(q *spentQuota) *Gate {
-	return NewGate(&stubAuthority{seat: principal.SeatFull}, WithQuota(q))
+	return NewGate(&stubAuthority{seat: principal.SeatFull}, WithVolumeMeter(q))
 }
 
 var (
@@ -64,7 +64,7 @@ var (
 // ErrBudgetExceeded), so a client branches on the registry rather than on
 // prose.
 func TestAReadIsRefusedOnceTheAgentHasPassedItsReadBound(t *testing.T) {
-	gate := quotaGate(over(agentquota.Reads, 2001, 2000))
+	gate := quotaGate(over(agentvolume.Reads, 2001, 2000))
 
 	_, err := gate.Admit(agentCtx(principal.ScopeRead), readSpec, noResolve)
 
@@ -84,13 +84,13 @@ func TestAReadIsRefusedOnceTheAgentHasPassedItsReadBound(t *testing.T) {
 // the send ceiling that actually guards exfiltration.
 func TestEachQuotaRefusesOnlyTheCallsItGoverns(t *testing.T) {
 	cases := []struct {
-		counter agentquota.Counter
+		counter agentvolume.Counter
 		refused mcp.ToolSpec
 		allowed []mcp.ToolSpec
 	}{
-		{agentquota.Reads, readSpec, []mcp.ToolSpec{writeSpec, egressSpec}},
-		{agentquota.Writes, writeSpec, []mcp.ToolSpec{readSpec, egressSpec}},
-		{agentquota.Egress, egressSpec, []mcp.ToolSpec{readSpec, writeSpec}},
+		{agentvolume.Reads, readSpec, []mcp.ToolSpec{writeSpec, egressSpec}},
+		{agentvolume.Writes, writeSpec, []mcp.ToolSpec{readSpec, egressSpec}},
+		{agentvolume.Egress, egressSpec, []mcp.ToolSpec{readSpec, writeSpec}},
 	}
 	for _, c := range cases {
 		gate := quotaGate(over(c.counter, 500, 100))
@@ -106,7 +106,7 @@ func TestEachQuotaRefusesOnlyTheCallsItGoverns(t *testing.T) {
 	}
 }
 
-// scopeFor gives the caller exactly the scope its tool needs, so a quota test
+// scopeFor gives the caller exactly the scope its tool needs, so a volume test
 // never accidentally proves the scope check instead.
 func scopeFor(spec mcp.ToolSpec) principal.Scope { return spec.RequiredScope }
 
@@ -114,39 +114,39 @@ func scopeFor(spec mcp.ToolSpec) principal.Scope { return spec.RequiredScope }
 // through the gate rather than by calling the derivation, because the derivation
 // being right is worth nothing if the gate consults a different one: a surface
 // that asked "does it write?" first would leave the 20-call send ceiling
-// permanently unspent while the 200-call write quota absorbed every send.
+// permanently unspent while the 200-call write volume budget absorbed every send.
 func TestASendIsJudgedAgainstTheSendCeilingAndNotTheWriteOne(t *testing.T) {
-	quota := over(agentquota.Writes, 500, 200)
+	quota := over(agentvolume.Writes, 500, 200)
 
 	if _, err := quotaGate(quota).Admit(agentCtx(principal.ScopeSend), egressSpec, noResolve); err != nil {
 		t.Fatalf("a send was refused by the WRITE quota: %v", err)
 	}
-	if quota.askedFor(agentquota.Writes) {
+	if quota.askedFor(agentvolume.Writes) {
 		t.Error("the write quota was consulted for an egress-flagged tool; the send ceiling is the one that governs it")
 	}
-	if !quota.askedFor(agentquota.Egress) {
+	if !quota.askedFor(agentvolume.Egress) {
 		t.Error("the egress quota was never consulted for an egress-flagged tool")
 	}
 }
 
-// BYO-STEP-4's suspension is the ceiling every other quota sits under, so it is
+// BYO-STEP-4's suspension is the ceiling every other counter sits under, so it is
 // asked FIRST — and a suspended caller is refused for every verb rather than
 // being told which of its allowances still has headroom.
 func TestASuspendedPassportIsRefusedForEveryVerbAndLearnsNothingElse(t *testing.T) {
 	for _, spec := range []mcp.ToolSpec{readSpec, writeSpec, egressSpec} {
-		quota := over(agentquota.Calls, 1001, 1000)
+		quota := over(agentvolume.Calls, 1001, 1000)
 
 		_, err := quotaGate(quota).Admit(agentCtx(scopeFor(spec)), spec, noResolve)
 
-		var refusal *QuotaExceededError
+		var refusal *VolumeExceededError
 		if !errors.As(err, &refusal) {
 			t.Fatalf("%s under suspension → %v, want a quota refusal", spec.Name, err)
 		}
-		if refusal.Reading.Counter != agentquota.Calls {
+		if refusal.Reading.Counter != agentvolume.Calls {
 			t.Errorf("%s under suspension was refused on %s, not on the call ceiling", spec.Name, refusal.Reading.Counter)
 		}
-		if quota.askedFor(agentquota.CounterFor(spec)) {
-			t.Errorf("a suspended caller learned the state of its %s allowance", agentquota.CounterFor(spec))
+		if quota.askedFor(agentvolume.CounterFor(spec)) {
+			t.Errorf("a suspended caller learned the state of its %s allowance", agentvolume.CounterFor(spec))
 		}
 	}
 }
@@ -154,24 +154,24 @@ func TestASuspendedPassportIsRefusedForEveryVerbAndLearnsNothingElse(t *testing.
 // The ladder's two halves must be tellable apart by a TYPE, not by prose: one
 // refusal has somewhere to go — the surface stages the question for the human
 // who lent the Passport — and the other does not. A caller matching on wording
-// would eventually stage a release for a quota nothing can release.
+// would eventually stage a release for a counter nothing can release.
 func TestARefusalSaysWhetherAHumanCanAnswerIt(t *testing.T) {
-	releasable := map[agentquota.Counter]bool{
-		agentquota.Reads: true, agentquota.Writes: true,
-		agentquota.Egress: false, agentquota.Calls: false,
+	releasable := map[agentvolume.Counter]bool{
+		agentvolume.Reads: true, agentvolume.Writes: true,
+		agentvolume.Egress: false, agentvolume.Calls: false,
 	}
 	for counter, want := range releasable {
 		spec := readSpec
 		switch counter {
-		case agentquota.Writes:
+		case agentvolume.Writes:
 			spec = writeSpec
-		case agentquota.Egress:
+		case agentvolume.Egress:
 			spec = egressSpec
-		case agentquota.Reads, agentquota.Calls, agentquota.Cost:
+		case agentvolume.Reads, agentvolume.Calls, agentvolume.Cost:
 		}
 		_, err := quotaGate(over(counter, 500, 100)).Admit(agentCtx(scopeFor(spec)), spec, noResolve)
 
-		var refusal *QuotaExceededError
+		var refusal *VolumeExceededError
 		if !errors.As(err, &refusal) {
 			t.Fatalf("%s past its bound → %v, want a typed quota refusal", counter, err)
 		}
@@ -190,8 +190,8 @@ func TestARefusalSaysWhetherAHumanCanAnswerIt(t *testing.T) {
 // asking until the window rolls. A client told "ask a human" about a send
 // ceiling waits forever.
 func TestAHardStopTellsTheAgentNoApprovalWillLiftIt(t *testing.T) {
-	_, hard := quotaGate(over(agentquota.Egress, 21, 20)).Admit(agentCtx(principal.ScopeSend), egressSpec, noResolve)
-	_, soft := quotaGate(over(agentquota.Reads, 2001, 2000)).Admit(agentCtx(principal.ScopeRead), readSpec, noResolve)
+	_, hard := quotaGate(over(agentvolume.Egress, 21, 20)).Admit(agentCtx(principal.ScopeSend), egressSpec, noResolve)
+	_, soft := quotaGate(over(agentvolume.Reads, 2001, 2000)).Admit(agentCtx(principal.ScopeRead), readSpec, noResolve)
 
 	if !strings.Contains(hard.Error(), "no approval lifts it") {
 		t.Errorf("a hard stop does not say that no approval lifts it: %q", hard)
@@ -207,11 +207,11 @@ func TestAHardStopTellsTheAgentNoApprovalWillLiftIt(t *testing.T) {
 	}
 }
 
-// A caller who may not run the verb at all must not learn that a quota exists,
+// A caller who may not run the verb at all must not learn that a volume budget exists,
 // let alone how much of it is spent. Scope is checked first, and the meter is
 // never asked.
 func TestAnOutOfScopeCallerNeverLearnsTheQuotaExists(t *testing.T) {
-	quota := over(agentquota.Reads, 9999, 2000)
+	quota := over(agentvolume.Reads, 9999, 2000)
 
 	_, err := quotaGate(quota).Admit(agentCtx(principal.ScopeWrite), readSpec, noResolve)
 
@@ -223,12 +223,12 @@ func TestAnOutOfScopeCallerNeverLearnsTheQuotaExists(t *testing.T) {
 	}
 }
 
-// A read seat is refused for a write BEFORE any quota is consulted, so the two
+// A read seat is refused for a write BEFORE any volume budget is consulted, so the two
 // refusals cannot be confused: one is a licensing ceiling no approval lifts, the
 // other a volume threshold a human can release.
 func TestTheSeatCeilingIsAnsweredBeforeTheQuota(t *testing.T) {
-	quota := over(agentquota.Writes, 500, 200)
-	gate := NewGate(&stubAuthority{seat: principal.SeatRead}, WithQuota(quota))
+	quota := over(agentvolume.Writes, 500, 200)
+	gate := NewGate(&stubAuthority{seat: principal.SeatRead}, WithVolumeMeter(quota))
 
 	_, err := gate.Admit(agentCtx(principal.ScopeWrite), writeSpec, noResolve)
 
@@ -250,8 +250,8 @@ func TestACallUnderEveryBoundIsAdmitted(t *testing.T) {
 	}
 	// WHICH two, not how many: a regression that asked Reads twice — dropping
 	// the call ceiling entirely — would satisfy a count and lose the ceiling
-	// every other quota sits under.
-	if len(quota.asked) != 2 || quota.asked[0] != agentquota.Calls || quota.asked[1] != agentquota.Reads {
+	// every other counter sits under.
+	if len(quota.asked) != 2 || quota.asked[0] != agentvolume.Calls || quota.asked[1] != agentvolume.Reads {
 		t.Errorf("one read consulted %v; it owes the call ceiling FIRST and then its own counter", quota.asked)
 	}
 }
@@ -259,7 +259,7 @@ func TestACallUnderEveryBoundIsAdmitted(t *testing.T) {
 // A human never enters this path at all — the gate returns before any agent
 // check — so a busy agent cannot lock its own operator out of the product.
 func TestAHumanIsNeverRefusedByAQuota(t *testing.T) {
-	quota := over(agentquota.Reads, 9999, 2000)
+	quota := over(agentvolume.Reads, 9999, 2000)
 	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep"})
 
@@ -289,14 +289,14 @@ func TestAGateWithNoQuotaDoesNotEnforceOne(t *testing.T) {
 // same records through /v1 — one credential, two doors, one of them unbounded,
 // which is exactly what ADR-0055 says must not be possible.
 func TestTheRestReadPathRefusesOnTheSameBound(t *testing.T) {
-	quota := over(agentquota.Reads, 2001, 2000)
+	quota := over(agentvolume.Reads, 2001, 2000)
 
 	err := quotaGate(quota).AdmitRead(agentCtx(principal.ScopeRead))
 
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
 		t.Fatalf("a REST agent read past the bound → %v, want ErrBudgetExceeded", err)
 	}
-	if len(quota.asked) != 1 || quota.asked[0] != agentquota.Reads {
+	if len(quota.asked) != 1 || quota.asked[0] != agentvolume.Reads {
 		t.Errorf("a REST read consulted %v, want the read counter alone", quota.asked)
 	}
 }
@@ -306,12 +306,12 @@ func TestTheRestReadPathRefusesOnTheSameBound(t *testing.T) {
 // surface this request never touched, and the two doors would then disagree
 // about what a call is.
 func TestARestReadIsNotChargedAgainstTheToolCallCeiling(t *testing.T) {
-	quota := over(agentquota.Calls, 5000, 1000)
+	quota := over(agentvolume.Calls, 5000, 1000)
 
 	if err := quotaGate(quota).AdmitRead(agentCtx(principal.ScopeRead)); err != nil {
 		t.Fatalf("a REST read was suspended by the TOOL call ceiling: %v", err)
 	}
-	if quota.askedFor(agentquota.Calls) {
+	if quota.askedFor(agentvolume.Calls) {
 		t.Error("the tool-call ceiling was consulted for a REST read")
 	}
 }
@@ -326,7 +326,7 @@ func TestARestReadUnderTheBoundIsAdmitted(t *testing.T) {
 // A human's REST read is never touched by the agent bound — their authority is
 // RBAC at the store, and a busy agent must not lock its operator out of the UI.
 func TestAHumansRestReadIsNeverRefusedByTheBound(t *testing.T) {
-	quota := over(agentquota.Reads, 9999, 2000)
+	quota := over(agentvolume.Reads, 9999, 2000)
 	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep"})
 

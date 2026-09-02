@@ -13285,6 +13285,14 @@ export interface components {
             overruled: boolean;
             /** @description Whether a contact actually exists for this address. */
             record_exists: boolean;
+            /**
+             * Format: date-time
+             * @description When this sender's oldest message is destroyed. Present only for a `personal` verdict
+             *     you have not overruled — every other kind is withheld rather than destroyed, and
+             *     deciding this sender is business cancels the deletion. Later mail from the same sender
+             *     runs its own window, so this date names the next message to go rather than all of them.
+             */
+            deletes_at?: string;
         };
         /** @description What an owner's decision about a thread reached. */
         ThreadAudienceOutcome: {

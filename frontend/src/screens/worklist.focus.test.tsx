@@ -8,7 +8,7 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { FocusCard, focusOf } from "./worklist.focus";
 
-// worthFocusing's promises: a routable top row is promoted, and `acknowledge`
+// worthActingOn's promises: a routable top row is promoted, and `acknowledge`
 // never is — it names no record to route to, the same invariant
 // WorklistRow's own VERB_DESTINATION table holds for it.
 

@@ -85,7 +85,7 @@ func TestTheSendersPageShowsWhatWasDecidedAndByWhom(t *testing.T) {
 	seedPendingDisposition(t, e, corrected, "webmail.example", seedCapturedMail(t, e, corrected, "Hallo"))
 	setDecision(t, e, e.Rep1, corrected, capture.OverrideBusiness)
 
-	list, err := capture.SendersFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool))
+	list, err := capture.SendersFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.DefaultPersonalPurgeWindows())
 	if err != nil {
 		t.Fatalf("listing senders: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestASeatSeesOnlyTheirOwnSenders(t *testing.T) {
 	seedPendingDisposition(t, e, mine, "example.test", seedCapturedMail(t, e, mine, "Betreff"))
 	setDecision(t, e, e.Rep1, mine, capture.OverrideKeepOut)
 
-	list, err := capture.SendersFor(purgeCtx(e, e.Rep2), InstallationDB(e.Pool))
+	list, err := capture.SendersFor(purgeCtx(e, e.Rep2), InstallationDB(e.Pool), capture.DefaultPersonalPurgeWindows())
 	if err != nil {
 		t.Fatalf("listing a colleague's senders: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestAnOverrideDoesNotRevealAColleaguesVerdict(t *testing.T) {
 	// Rep2 writes an override for the same address — their own row, always
 	// permitted — and reads their page.
 	setDecision(t, e, e.Rep2, sender, capture.OverrideBusiness)
-	list, err := capture.SendersFor(purgeCtx(e, e.Rep2), InstallationDB(e.Pool))
+	list, err := capture.SendersFor(purgeCtx(e, e.Rep2), InstallationDB(e.Pool), capture.DefaultPersonalPurgeWindows())
 	if err != nil {
 		t.Fatalf("listing senders: %v", err)
 	}

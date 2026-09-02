@@ -17,8 +17,10 @@ import {
 } from "./worklist.copy";
 import { FocusCard, focusOf } from "./worklist.focus";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
+import { NextUp, nextUpOf } from "./worklist.nextup";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
+  UNASSIGNED,
   useWorklist,
   type Worklist,
   type WorklistFilter,
@@ -194,6 +196,10 @@ function WorklistBody({
   const t = useT();
   const missing = day.sources_unavailable;
   const focus = focusOf(day.queue);
+  // What follows it, bounded, in the server's own order. These rows may all be
+  // one kind of work — worklist.nextup.tsx says why that is the ranking's to
+  // fix rather than this page's.
+  const next = nextUpOf(day.queue, focus);
   // The row the pane is about. Resolved from the id rather than held as the
   // item itself: a refetch replaces every row object, and a held one would go
   // on describing a version of the day that is no longer on screen.
@@ -241,6 +247,10 @@ function WorklistBody({
           the queue below: removing it would make the rank numbers lie and the
           counts disagree with the page. */}
       {focus && <FocusCard item={focus} />}
+      {/* And then? A finite list a reader can see the end of, so a morning has a
+          shape rather than a backlog. Drawn only under a focus card: without
+          one there is no "next", only the queue. */}
+      {focus && <NextUp items={next} />}
       {day.queue.length === 0 ? (
         // One line, not a panel. No card is drawn to report a zero.
         <p className="t-body worklist-clear">
@@ -331,16 +341,32 @@ function PageZonesWhenPaned({
 }
 
 // The Worklist screen.
-export function WorklistScreen() {
+export function WorklistScreen({
+  opensOn,
+}: Readonly<{
+  // What the address asked for, from `#/worklist/<segment>`: a user id opens
+  // that person's queue, and the literal "unassigned" opens the unowned pile.
+  // Both are doors a team board row needs — a row that could only reach this
+  // page would ask the reader to pick the same thing a second time.
+  //
+  // It SEEDS the dials and nothing more. They stay state afterwards and the
+  // address does not follow them, for the reason the dials give below: an
+  // address carrying one of four would describe a fraction of what is on screen.
+  opensOn?: string;
+}> = {}) {
   const t = useT();
   // The dials are state rather than a stored preference: a scope is a question
   // about right now, and a remembered one would answer a different question
   // than the reader asked on their next visit.
-  const [scope, setScope] = useState<WorklistScope>("mine");
+  const [scope, setScope] = useState<WorklistScope>(
+    opensOn === UNASSIGNED ? UNASSIGNED : "mine",
+  );
   const [filter, setFilter] = useState<WorklistFilter>("all");
   // Whose queue, when it is not the reader's own. Empty means their own day,
   // which is what every seat sees and the only thing most seats may ask for.
-  const [owner, setOwner] = useState("");
+  const [owner, setOwner] = useState(
+    opensOn && opensOn !== UNASSIGNED ? opensOn : "",
+  );
   // Which row the context pane is about. Local state, not the address: the
   // page's other dials are state too, and putting one of the four in the URL
   // would make the address describe a fraction of what the reader is looking

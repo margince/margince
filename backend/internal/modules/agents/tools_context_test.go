@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -177,8 +177,8 @@ func TestASearchIsChargedPerRecord(t *testing.T) {
 	if charger.reads() != 4 {
 		t.Errorf("charged %d for a 4-record page, want 4 — a page must not cost one", charger.reads())
 	}
-	if charger.times[agentquota.Reads] != 1 {
-		t.Errorf("the bound was consulted %d times, want one charge for the whole answer", charger.times[agentquota.Reads])
+	if charger.times[agentvolume.Reads] != 1 {
+		t.Errorf("the bound was consulted %d times, want one charge for the whole answer", charger.times[agentvolume.Reads])
 	}
 }
 

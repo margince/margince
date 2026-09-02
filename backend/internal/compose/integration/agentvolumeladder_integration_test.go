@@ -22,7 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -30,29 +30,29 @@ import (
 
 // ladderApp is the app under live counters at thresholds a test can actually
 // cross, plus the meter so a test can put a window into the state it is about.
-func ladderApp(t *testing.T, slug string, limits agentquota.Limits) (*apptest.AppEnv, *agentquota.Meter) {
+func ladderApp(t *testing.T, slug string, limits agentvolume.Limits) (*apptest.AppEnv, *agentvolume.Meter) {
 	t.Helper()
 	// The DEFAULT window, not a short one: these tests spend, stage, approve and
 	// re-read on the REAL clock, and a one-hour bucket resets under any run that
 	// crosses the top of the hour — a flake that would read as the release
 	// having failed.
-	meter := agentquota.New(budgettest.Client(t), limits, agentquota.DefaultWindow)
+	meter := agentvolume.New(budgettest.Client(t), limits, agentvolume.DefaultWindow)
 	// The CONNECTOR composition, because half the ladder only exists behind
-	// /mcp: the REST door refuses on the quota but has no tool to name, so the
+	// /mcp: the REST door refuses on the volume budget but has no tool to name, so the
 	// step-up it would stage has no question in it. The hosted transport is
 	// where a refusal becomes something a human can answer.
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
 		return []compose.Option{
 			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),
-			compose.WithAgentQuota(meter),
+			compose.WithAgentVolume(meter),
 		}
 	})
-	apptest.BootstrapWorkspaceSession(t, e, "Quota Ladder", slug+"@fable.test", "Admin")
+	apptest.BootstrapWorkspaceSession(t, e, "Volume Ladder", slug+"@fable.test", "Admin")
 	return e, meter
 }
 
 // spendCounter charges one counter against one passport, as the surface would.
-func spendCounter(t *testing.T, e *apptest.AppEnv, meter *agentquota.Meter, passport ids.UUID, c agentquota.Counter, n int) {
+func spendCounter(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, passport ids.UUID, c agentvolume.Counter, n int) {
 	t.Helper()
 	var ws ids.UUID
 	if err := e.Owner.QueryRow(t.Context(), `SELECT id FROM workspace LIMIT 1`).Scan(&ws); err != nil {
@@ -74,7 +74,7 @@ func pendingStepUp(t *testing.T, e *apptest.AppEnv) (id ids.ApprovalID, passport
 	t.Helper()
 	err := e.Owner.QueryRow(t.Context(), `
 		SELECT id, passport_id, coalesce(summary, '') FROM approval
-		 WHERE kind = $1 AND status = 'pending'`, approvals.KindQuotaRelease).Scan(&id, &passport, &summary)
+		 WHERE kind = $1 AND status = 'pending'`, approvals.KindVolumeRelease).Scan(&id, &passport, &summary)
 	if err != nil {
 		t.Fatalf("reading the staged step-up: %v", err)
 	}
@@ -100,10 +100,10 @@ func callTool(t *testing.T, e *apptest.AppEnv, bearer map[string]string, tool st
 // the human who lent the passport, their approval widens THAT window, and the
 // same passport reads again — through the same door, with nothing else changed.
 func TestAReadPastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.T) {
-	e, meter := ladderApp(t, "ladder-read", agentquota.Limits{Reads: 100})
+	e, meter := ladderApp(t, "ladder-read", agentvolume.Limits{Reads: 100})
 	bearer, passport := passportWithID(t, e, "reading agent", "read")
 	seedPeople(t, e, 2)
-	spendCounter(t, e, meter, passport, agentquota.Reads, 120)
+	spendCounter(t, e, meter, passport, agentvolume.Reads, 120)
 
 	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusTooManyRequests {
 		t.Fatalf("a read past its threshold → %d, want 429", status)
@@ -139,10 +139,10 @@ func TestAReadPastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.
 // more allowance, so the agent that spends it is refused again and its human is
 // asked again.
 func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
-	e, meter := ladderApp(t, "ladder-once", agentquota.Limits{Reads: 100})
+	e, meter := ladderApp(t, "ladder-once", agentvolume.Limits{Reads: 100})
 	bearer, passport := passportWithID(t, e, "reading agent", "read")
 	seedPeople(t, e, 2)
-	spendCounter(t, e, meter, passport, agentquota.Reads, 120)
+	spendCounter(t, e, meter, passport, agentvolume.Reads, 120)
 	callTool(t, e, bearer, "search_records", AnyMap{"query": "Metered"})
 	id, _, _ := pendingStepUp(t, e)
 	if status := e.Call(t, "POST", "/v1/approvals/"+id.String()+"/approve", nil, nil, nil); status != http.StatusOK {
@@ -150,7 +150,7 @@ func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 	}
 
 	// The released allowance is spent too.
-	spendCounter(t, e, meter, passport, agentquota.Reads, 100)
+	spendCounter(t, e, meter, passport, agentvolume.Reads, 100)
 
 	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusTooManyRequests {
 		t.Errorf("a second crossing after one release → %d, want 429: approving once granted a standing permission", status)
@@ -161,9 +161,9 @@ func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 // thing the meter will do, so staging it would put a question in front of a
 // human whose answer changes nothing — and leave the agent waiting for it.
 func TestASpentEgressCeilingAsksNobodyAnything(t *testing.T) {
-	e, meter := ladderApp(t, "ladder-egress", agentquota.Limits{Egress: 1})
+	e, meter := ladderApp(t, "ladder-egress", agentvolume.Limits{Egress: 1})
 	bearer, passport := passportWithID(t, e, "sending agent", "read", "send")
-	spendCounter(t, e, meter, passport, agentquota.Egress, 5)
+	spendCounter(t, e, meter, passport, agentvolume.Egress, 5)
 
 	callTool(t, e, bearer, "send_email", AnyMap{
 		"to": "someone@example.com", "subject": "s", "body": "b",
@@ -171,7 +171,7 @@ func TestASpentEgressCeilingAsksNobodyAnything(t *testing.T) {
 
 	var staged int
 	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT count(*) FROM approval WHERE kind = $1`, approvals.KindQuotaRelease).Scan(&staged); err != nil {
+		`SELECT count(*) FROM approval WHERE kind = $1`, approvals.KindVolumeRelease).Scan(&staged); err != nil {
 		t.Fatalf("counting staged step-ups: %v", err)
 	}
 	if staged != 0 {

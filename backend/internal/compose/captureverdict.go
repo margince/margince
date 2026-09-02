@@ -305,7 +305,7 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 	var acted bool
 	var triageDomain string
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		won, err := e.pending.ResolveAs(ctx, tx, row, verdict, kind, verdictReason)
+		won, err := e.pending.ResolveAs(ctx, tx, row, verdict, kind, verdictReason, ownerSaidSo)
 		if err != nil || !won {
 			return err
 		}

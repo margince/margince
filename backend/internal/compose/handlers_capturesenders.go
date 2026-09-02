@@ -24,7 +24,7 @@ type captureSenderHandlers struct {
 
 // ListCaptureSenders answers every decision made about the caller's senders.
 func (h captureSenderHandlers) ListCaptureSenders(w http.ResponseWriter, r *http.Request) {
-	decisions, err := capture.SendersFor(r.Context(), h.db)
+	decisions, err := capture.SendersFor(r.Context(), h.db, capture.DefaultPersonalPurgeWindows())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -119,6 +119,10 @@ func toContractSenderDecision(d capture.SenderDecision) crmcontracts.CaptureSend
 		Address:      d.Address,
 		Overruled:    d.Overruled(),
 		RecordExists: d.RecordExists,
+	}
+	if !d.DeletesAt.IsZero() {
+		at := d.DeletesAt
+		out.DeletesAt = &at
 	}
 	if d.Kind != "" {
 		kind := d.Kind

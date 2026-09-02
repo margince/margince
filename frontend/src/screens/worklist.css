@@ -106,6 +106,18 @@
   margin-top: var(--space-2);
 }
 
+/* What follows the focus card. A plain list of titles: the evidence is on the
+   card above and the rows below, and a third copy would be a third surface to
+   keep in agreement about one deal. */
+.worklist-nextup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 /* The band heading, above the first row of its run.
    Inside the list item rather than between them, because an <ol> may hold only
    <li> children — a heading placed as a sibling would be invalid structure that
