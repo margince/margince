@@ -103,12 +103,9 @@ export function CompanyRail({
     // second labelled region inside it would give a reader two names for one
     // column.
     <div className="co-rail">
-      {/* Both summaries stand on EVERY tab, the open one included: the rail
-          is the reader's anchor while they move between tabs, and each card
-          shows only the top RAIL_ROW_LIMIT rows — a summary beside a tab is
-          not a duplicate of it, a full copy would be. */}
-      <DealsSection view={view} loading={loading} onTab={onTab} />
-      <PeopleSection view={view} loading={loading} onTab={onTab} />
+      {/* Details lead the column: the account's own fields are the first
+          thing a reader orients by, and they draw from the page's already-
+          resolved record while the composite read below is still arriving. */}
       <Panel
         title={t("co.details.title")}
         titleAction={
@@ -126,6 +123,12 @@ export function CompanyRail({
           <DetailsGrid organization={view?.organization ?? org} />
         </PanelBody>
       </Panel>
+      {/* Both summaries stand on EVERY tab, the open one included: the rail
+          is the reader's anchor while they move between tabs, and each card
+          shows only the top RAIL_ROW_LIMIT rows — a summary beside a tab is
+          not a duplicate of it, a full copy would be. */}
+      <DealsSection view={view} loading={loading} onTab={onTab} />
+      <PeopleSection view={view} loading={loading} onTab={onTab} />
       <CompanyHoldSection organization={view?.organization ?? org} />
       <TagsSection view={view} orgId={orgId} loading={loading} />
     </div>
