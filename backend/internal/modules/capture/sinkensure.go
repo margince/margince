@@ -208,7 +208,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// sender, not only those a suppression rule matched — since T4 defers the
 	// ambiguous class, the answer now decides create-versus-defer for ordinary
 	// senders too, which is worth a query per captured message.
-	corresponded, err := s.correspondencePositiveTx(ctx, tx, cp.Email)
+	corresponded, err := correspondencePositiveTx(ctx, tx, cp.Email)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -285,7 +285,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		}
 		return decision.traced(TraceDeferred, deferReason), nil
 	}
-	if err := s.askWhoseRecord(ctx, tx, row, alreadyKnown); err != nil {
+	if err := s.askWhoseRecord(ctx, tx, row); err != nil {
 		return counterpartyDecision{}, err
 	}
 	return decision, nil

@@ -17,6 +17,7 @@ package capture
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -38,23 +39,54 @@ import (
 // promotes, and the strongest evidence a sender is a counterparty would produce
 // the most private record.
 //
-// alreadyKnown means the ledger has already answered about this address, so
-// there is nothing to ask: re-opening it would spend a model call to re-derive a
-// decision that stands, and would re-ask an `advisor` answer whose whole point
-// is that the record stays the owner's.
-func (s *Sink) askWhoseRecord(ctx context.Context, tx pgx.Tx, row dispositionRow, alreadyKnown bool) error {
-	if alreadyKnown {
-		return nil
+// The question is asked while the record is still the OWNER's, and asked again
+// on every later message until something answers it. What stops the re-asking is
+// the answer, never the asking: a resolved row makes this a no-op, and an open
+// one is absorbed by the ledger's live-row index.
+//
+// It deliberately does NOT key on "the ladder already knows this address". The
+// person the create is about makes their own address known — priorDispositionTx
+// reads a correspondence-backed person as `real` — so that condition is true
+// from the moment the record exists, and using it would cancel the question
+// rather than delay it whenever the ceiling refused the first one. The record
+// would then stay the mailbox owner's for good, which is the defect this whole
+// path exists to close, reachable by anyone able to fill the queue with fresh
+// addresses.
+func (s *Sink) askWhoseRecord(ctx context.Context, tx pgx.Tx, row dispositionRow) error {
+	answered, err := s.dispositionAnswered(ctx, tx, row.Email)
+	if err != nil || answered {
+		return err
 	}
 	row.Status = PendingStatusPending
 	// The ceiling's answer is deliberately dropped. On the deferred tier a cap
 	// means the message stands unjudged and the member is told so; here the
-	// record is created either way, and the only loss is that it stays the
-	// owner's until a later message re-opens the question.
+	// record is created either way, and the only cost is that it stays the
+	// owner's until the next message asks again — which is why asking is keyed
+	// on the answer rather than on the attempt.
 	if _, err := recordDisposition(ctx, tx, row); err != nil {
 		return err
 	}
 	return nil
+}
+
+// dispositionAnswered reports whether the ledger holds a settled verdict for
+// this address — any terminal status, not only the ones that create a record.
+//
+// `advisor` is the reason this asks about the ROW rather than about the person's
+// visibility: that answer resolves to `real` and deliberately leaves the record
+// owner-scoped, so a check for "still owner-scoped" would re-ask it on every
+// later message and give the classifier repeated chances to overturn a decision
+// whose whole point is that the contact stays private.
+func (s *Sink) dispositionAnswered(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	var answered bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM capture_pending_counterparty
+		   WHERE email = $1 AND resolved_at IS NOT NULL)`,
+		normalizeEmail(email)).Scan(&answered); err != nil {
+		return false, fmt.Errorf("capture: reading whether this sender has been judged: %w", err)
+	}
+	return answered, nil
 }
 
 // deferAmbiguous is T4: a first-time sender nothing about this address yet calls

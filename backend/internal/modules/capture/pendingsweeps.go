@@ -26,7 +26,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -245,38 +244,6 @@ const noiseMailScope = `
 	    SELECT 1 FROM person_email pe JOIN person pr ON pr.id = pe.person_id
 	     WHERE pe.email = p.email AND pr.archived_at IS NULL
 	       AND pe.from_correspondence)`
-
-// CorrespondsWith reports whether this workspace has provably written to an
-// address — the T1 signal, read back on the verdict side.
-//
-// The verdict engine needs it because a `newsletter` or `spam` answer suppresses
-// the sender's whole DOMAIN, and that effect is workspace-wide and standing.
-// While only unjudged strangers reached the ledger this could not misfire; once
-// a sender the workspace corresponds with can be asked about, an answer of
-// `newsletter` about one marketing blast would refuse a company the business
-// actively works with.
-// The predicate is spelled out here rather than reusing the sweep's fragment.
-// That fragment is written against a joined `p.email`, so binding it to a
-// parameter would mean rewriting its text at runtime — and a query this reader
-// assembles by substitution is one no gate can read, including the retention
-// gate that has to see the exclusion below.
-func (s *PendingStore) CorrespondsWith(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	normalized := normalizeEmail(email)
-	if normalized == "" {
-		return false, nil
-	}
-	var corresponds bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM activity c
-		   WHERE c.counterparty_email = $1
-		     AND c.direction = 'outbound' AND c.counterparty_outbound_attested
-		     AND `+auth.ActivityAvailableClause("c")+`)`,
-		normalized).Scan(&corresponds); err != nil {
-		return false, fmt.Errorf("capture: reading whether the workspace corresponds with a sender: %w", err)
-	}
-	return corresponds, nil
-}
 
 // noiseVerdictReach bounds how far past its own verdict a `noise` disposition
 // may reach forward in time.

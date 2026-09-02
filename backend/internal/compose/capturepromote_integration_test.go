@@ -16,6 +16,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
@@ -246,21 +247,112 @@ func TestADomainTheWorkspaceCorrespondsWithIsNeverRefusedACompany(t *testing.T) 
 	// crawl, admission is the standing decision about whether the domain may
 	// ever become a company. Asserting on status passes whatever the verdict
 	// did, which is a test that cannot fail.
+	if admission := domainAdmission(t, e, "supplier.example"); admission == people.DomainSuppressed {
+		t.Error("a newsletter verdict refused a company the workspace corresponds with — " +
+			"hiding the blast is right, refusing the supplier on the strength of it is not")
+	}
+}
+
+func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
+	// The ceiling must delay the question, never cancel it. Once the person
+	// exists, the ladder reads their address as already-known on every later
+	// message — so a create whose question the cap refused has no second chance
+	// unless the enqueue is retried for a record still owner-scoped. Without
+	// that retry the contact is permanently invisible to colleagues, which is
+	// the defect this whole suite exists to close, reachable by anyone who can
+	// fill the queue with fresh addresses.
+	e := integration.Setup(t)
+	const sender = "capped@partner.example"
+
+	// Fill this domain's share of the ceiling with other senders' open
+	// questions, so the create below finds no room to ask.
+	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
+		other := fmt.Sprintf("filler%d@partner.example", i)
+		seedAttestedOutbound(t, e, fmt.Sprintf("filler-out-%d", i), other)
+		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("filler-in-%d", i), other)
+	}
+
+	seedAttestedOutbound(t, e, "capped-out-1", sender)
+	captureInboundThroughRealSink(t, e, e.Rep1, "capped-in-1", sender)
+	if _, found := personVisibility(t, e, sender); !found {
+		t.Fatal("the T1 rung created no person for a corresponded sender")
+	}
+
+	// The queue drains: the fillers are answered and their slots come back.
+	runVerdict(t, e, &scriptedVerdictBrain{})
+
+	// They write again, and the question that was refused must now be asked.
+	captureInboundThroughRealSink(t, e, e.Rep1, "capped-in-2", sender)
+	dispositionID, queued := openDisposition(t, e, sender)
+	if !queued {
+		t.Fatal("a contact whose verdict the ceiling refused was never asked about again — " +
+			"the cap cancelled the question instead of delaying it, and the record " +
+			"stays the mailbox owner's for good")
+	}
+
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	runVerdict(t, e, brain)
+	if visibility, _ := personVisibility(t, e, sender); visibility != "workspace" {
+		t.Errorf("after the delayed verdict the contact is %q, want workspace", visibility)
+	}
+}
+
+func TestASingleDecliningReplyDoesNotSpareASpammersDomain(t *testing.T) {
+	// The correspondence test the domain guard uses has to be the ladder's own,
+	// not a simpler "did we ever send here". A founder who answers unsolicited
+	// mail with "not interested" produces exactly one attested outbound, and
+	// reading that as correspondence would let the reply that told a spammer to
+	// stop be the thing that protects their domain.
+	e := integration.Setup(t)
+	const sender = "angebote@spam.example"
+
+	seedDecliningOutbound(t, e, "decline-out-1", sender)
+	captureInboundThroughRealSink(t, e, e.Rep1, "decline-in-1", sender)
+
+	dispositionID, queued := openDisposition(t, e, sender)
+	if !queued {
+		t.Fatal("no verdict was opened for this sender")
+	}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	runVerdict(t, e, brain)
+
+	if admission := domainAdmission(t, e, "spam.example"); admission != people.DomainSuppressed {
+		t.Errorf("the domain admission is %q, want suppressed — a single declining reply "+
+			"is not correspondence, and must not spare the sender's domain", admission)
+	}
+}
+
+// seedDecliningOutbound is seedAttestedOutbound for the one shape the T1 gate
+// excludes: a lone outbound whose own words end the conversation.
+func seedDecliningOutbound(t *testing.T, e *integration.Env, sourceID, counterparty string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (kind, subject, body, direction, source_system, source_id,
+			                      source, captured_by, counterparty_email, counterparty_outbound_attested)
+			VALUES ('email', 'Re: Angebot', 'Kein Interesse, bitte austragen.', 'outbound', 'gmail', $1,
+			        'gmail:'||$1, 'connector:gmail', $2, true)`, sourceID, counterparty)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the declining reply to %s: %v", counterparty, err)
+	}
+}
+
+// domainAdmission reads the standing decision about a domain, "" when none.
+func domainAdmission(t *testing.T, e *integration.Env, domain string) string {
+	t.Helper()
 	var admission string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(context.Background(),
 			`SELECT coalesce(admission, '') FROM organization_domain_disposition WHERE domain = $1`,
-			"supplier.example").Scan(&admission)
+			domain).Scan(&admission)
 		if err == pgx.ErrNoRows {
 			admission = ""
 			return nil
 		}
 		return err
 	}); err != nil {
-		t.Fatalf("reading the domain admission: %v", err)
+		t.Fatalf("reading the admission of %s: %v", domain, err)
 	}
-	if admission == people.DomainSuppressed {
-		t.Error("a newsletter verdict refused a company the workspace corresponds with — " +
-			"hiding the blast is right, refusing the supplier on the strength of it is not")
-	}
+	return admission
 }
