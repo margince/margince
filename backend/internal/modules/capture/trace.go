@@ -105,6 +105,12 @@ const (
 	// looking for: "why is there no contact for this?" answered with "it was
 	// captured" is the confident wrong answer this reason set exists to prevent.
 	TraceReasonRoleMailbox = "role_mailbox"
+	// TraceReasonPrivateThread is mail on a thread the confidentiality
+	// classifier judged personal — the mailbox owner's own life rather than the
+	// workspace's business. The message commits and keeps its audience, so the
+	// naive trace is `captured`, and the record it did not create is what a
+	// member would be looking for.
+	TraceReasonPrivateThread = "private_thread"
 	// TraceReasonInvisibleIncumbent is a replayed message whose incumbent row
 	// lies outside the reader's row scope. It is refused as an error from inside
 	// the capture transaction, so its trace CANNOT be written there.

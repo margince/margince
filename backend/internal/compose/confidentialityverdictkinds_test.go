@@ -73,3 +73,20 @@ func TestExactlyOneConfidentialityKindOpensAThread(t *testing.T) {
 			"because a wrong opening answer publishes correspondence and a wrong hold costs one click", opening)
 	}
 }
+
+// The classifier names the personal kind and the tier ladder acts on it, from
+// two packages that may not import each other: compose owns the vocabulary the
+// model answers in, capture owns the column it is stored in.
+//
+// Two spellings of one word is exactly the drift that let a founder's aunt be
+// judged personal twenty times and filed as a business contact anyway — the two
+// lanes never spoke. They speak now, so the word has to mean the same thing at
+// both ends, and a rename on either side fails here rather than silently
+// turning the refusal off.
+func TestBothLanesSpellThePersonalKindTheSameWay(t *testing.T) {
+	t.Parallel()
+	if confidentialityPersonal != capture.ThreadKindPersonal {
+		t.Fatalf("the classifier answers %q and the ladder acts on %q — a thread judged personal "+
+			"would still mint its author as a contact", confidentialityPersonal, capture.ThreadKindPersonal)
+	}
+}
