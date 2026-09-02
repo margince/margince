@@ -72,6 +72,42 @@ func (s *Service) endOfDay(ctx context.Context, asOf time.Time) (time.Time, erro
 		}
 		loc = resolved
 	}
-	local := asOf.In(loc)
-	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1), nil
+	return startOfNextDay(asOf.In(loc), loc), nil
+}
+
+// startOfNextDay is the first instant of the day after local's, in loc.
+//
+// NOT local midnight constructed directly, because in some zones it does not
+// exist. Havana and Santiago spring forward AT midnight, and Go normalises the
+// missing 00:00 BACKWARD — to 23:00 on the previous date, an hour before the day
+// this bounds has even ended, so the last hour's work would fall off today's
+// lane. Beirut springs forward at midnight too and normalises FORWARD, to 01:00,
+// which is right by luck rather than by rule.
+//
+// So the rule is asked directly: the first instant whose local date is
+// tomorrow's. Noon is the anchor because no zone shifts its clock at midday, so
+// "tomorrow" is never ambiguous to begin with, and the walk back from it stops
+// at the transition on the days there is one. At most a few hundred steps, once
+// per assembly, and exact on every day of the year rather than on most of them.
+func startOfNextDay(local time.Time, loc *time.Location) time.Time {
+	noon := time.Date(local.Year(), local.Month(), local.Day(), 12, 0, 0, 0, loc).AddDate(0, 0, 1)
+	year, month, day := noon.Date()
+	if midnight := time.Date(year, month, day, 0, 0, 0, 0, loc); sameDate(midnight, noon) {
+		return midnight
+	}
+	first := noon
+	for {
+		earlier := first.Add(-time.Minute)
+		if !sameDate(earlier, noon) {
+			return first
+		}
+		first = earlier
+	}
+}
+
+// sameDate compares two instants by the LOCAL calendar date they fall on.
+func sameDate(a, b time.Time) bool {
+	ay, am, ad := a.Date()
+	by, bm, bd := b.Date()
+	return ay == by && am == bm && ad == bd
 }

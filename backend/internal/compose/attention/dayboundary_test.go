@@ -141,3 +141,54 @@ func TestAZoneSeamAnsweringNoLocationIsAnErrorNotAPanic(t *testing.T) {
 		t.Error("a nil location produced a boundary; the next call would have panicked instead")
 	}
 }
+
+// A DAY WHOSE MIDNIGHT DOES NOT EXIST still ends when it ends.
+//
+// Some zones spring forward AT midnight, so 00:00 is not a time that day. Go's
+// normalisation then answers a neighbouring instant, and which way it leans is
+// not the same everywhere: Havana and Santiago normalise BACKWARD, to 23:00 on
+// the previous date — an hour before the day being bounded has ended, so the
+// last hour's work falls off the lane. Beirut normalises forward, to 01:00,
+// which happens to be right.
+//
+// The boundary must be the first instant of the next date in every case.
+func TestADayWhoseMidnightDoesNotExistEndsAtItsFirstInstant(t *testing.T) {
+	for _, tc := range []struct {
+		zone string
+		// day is the local date whose midnight does not exist.
+		day time.Time
+	}{
+		{"America/Havana", time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC)},
+		{"America/Santiago", time.Date(2026, 9, 6, 0, 0, 0, 0, time.UTC)},
+		{"Asia/Beirut", time.Date(2026, 3, 29, 0, 0, 0, 0, time.UTC)},
+	} {
+		t.Run(tc.zone, func(t *testing.T) {
+			loc, err := time.LoadLocation(tc.zone)
+			if err != nil {
+				t.Fatalf("loading %s: %v", tc.zone, err)
+			}
+			// Precondition: the day really has no local midnight, or this
+			// asserts nothing about the case it is named for.
+			naive := time.Date(tc.day.Year(), tc.day.Month(), tc.day.Day(), 0, 0, 0, 0, loc)
+			if naive.Hour() == 0 && naive.Day() == tc.day.Day() {
+				t.Fatalf("%s has a local midnight on %s, so this proves nothing", tc.zone, tc.day.Format(time.DateOnly))
+			}
+
+			// Asked from mid-afternoon the day BEFORE, so the boundary under
+			// test is that day's own end.
+			asOf := time.Date(tc.day.Year(), tc.day.Month(), tc.day.Day(), 15, 0, 0, 0, loc).AddDate(0, 0, -1)
+			got := startOfNextDay(asOf.In(loc), loc)
+
+			local := got.In(loc)
+			if local.Year() != tc.day.Year() || local.Month() != tc.day.Month() || local.Day() != tc.day.Day() {
+				t.Fatalf("the day ends at %s, which is not the start of %s", local, tc.day.Format(time.DateOnly))
+			}
+			// The first instant of that date: a minute earlier is still the
+			// day before, which is what "first" means.
+			if before := local.Add(-time.Minute); before.Day() == local.Day() {
+				t.Errorf("%s is not the FIRST instant of %s — a minute earlier is still the same date, "+
+					"so the boundary cuts the previous day short", local, tc.day.Format(time.DateOnly))
+			}
+		})
+	}
+}
