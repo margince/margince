@@ -682,22 +682,23 @@ describe("CompanyRail", () => {
           data: [
             {
               deal_id: "d-1",
-              name: "Tokyo rollout",
-              status: "open",
-              stage_name: "Proposal",
-              // The largest raw minor-unit figure on the account, in the
-              // WRONG sense: yen minor units dwarf euro ones on digit count
-              // alone. Ranked by amount it would lead; ranked honestly the
-              // server's own order stands.
-              amount: { amount_minor: 900_000, currency: "JPY" },
-              stalled: false,
-            },
-            {
-              deal_id: "d-2",
+              // The SMALLER raw minor-unit figure stands first in the
+              // server's order, so a naive cross-currency amount sort would
+              // move Tokyo above it — which is exactly the regression this
+              // fixture exists to catch. Yen minor units dwarf euro ones on
+              // digit count alone; ranked honestly the server's order stands.
               name: "Berlin expansion",
               status: "open",
               stage_name: "Discovery",
               amount: { amount_minor: 100_000, currency: "EUR" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-2",
+              name: "Tokyo rollout",
+              status: "open",
+              stage_name: "Proposal",
+              amount: { amount_minor: 900_000, currency: "JPY" },
               stalled: false,
             },
             {
@@ -729,8 +730,8 @@ describe("CompanyRail", () => {
       .map((link) => link.textContent);
     expect(names).toEqual([
       "Support renewal",
-      "Tokyo rollout",
       "Berlin expansion",
+      "Tokyo rollout",
     ]);
   });
 
