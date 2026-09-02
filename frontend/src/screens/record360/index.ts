@@ -37,6 +37,7 @@ export {
 } from "./spine";
 export { ThreadFailed } from "./threadfailed";
 export { timelineSpineSource } from "./timelinespine";
+export { TimelineThread } from "./timelinethread";
 export { FoundMove, TodayPanel, TodoRow, WithheldNotice } from "./today";
 export {
   type Grounding,

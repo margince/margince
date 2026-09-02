@@ -80,11 +80,9 @@ import {
   CallCard,
   RecordReading,
   RecordReadingPair,
-  RecordSpine,
-  ThreadFailed,
+  TimelineThread,
   TodayPanel,
   TodoRow,
-  timelineSpineSource,
 } from "./record360";
 import { RecordEmailAside } from "./recordemail";
 import { ShareAction } from "./share";
@@ -996,9 +994,11 @@ function LeadScoreCard({
 function LeadCall({
   lead,
   thread,
+  overlay,
 }: Readonly<{
   lead: Lead;
   thread: RecordTimeline;
+  overlay: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -1010,22 +1010,11 @@ function LeadCall({
       because={standing.because}
       restsOn={standing.restsOn}
     >
-      {thread.isError ? (
-        // A failed read is not an empty thread: the call stands, and the
-        // reader is told the thread is missing rather than shown a lead nobody
-        // has written to.
-        <ThreadFailed onRetry={thread.refetch} />
-      ) : (
-        <RecordSpine
-          source={timelineSpineSource(
-            thread.activities,
-            // The page has no server `as_of` for a lead, so the thread is read
-            // at the moment it is drawn, in the reader's own clock.
-            new Date().toISOString(),
-            thread.hasNextPage,
-          )}
-        />
-      )}
+      {/* The timeline is a read the mirror refuses, so in overlay the query
+          never runs and its page is empty — which the thread would draw as a
+          lead nobody has written to. The call stands; under it the reader is
+          told the history lives in the incumbent. */}
+      {overlay ? <OverlayUnavailable /> : <TimelineThread thread={thread} />}
     </CallCard>
   );
 }
@@ -1441,7 +1430,7 @@ function LeadOverviewPane({
           under them the two sections a reader consults rather than reads —
           why it scores what it scores, and what the rep knows about it. */}
       <RecordReading>
-        <LeadCall lead={lead} thread={thread} />
+        <LeadCall lead={lead} thread={thread} overlay={overlay} />
         <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
           {leadTodoRows(lead, t, locale)}
         </TodayPanel>
