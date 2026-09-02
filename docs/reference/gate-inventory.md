@@ -82,7 +82,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (84)
+## Census (85)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -157,6 +157,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
+| `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
 | `requiredbodyids_test.go` | H3 | Every contract request body that declares a required id must be accounted for. |
 | `restrictedreaders_test.go` | H2 | A record held under a statutory retention obligation is unavailable in EVERY ordinary read path (A165/ADR-0114 §2): lists, timelines, search, exports, embeddings, agent grounding. |
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook — at the root, and in any directory that needs one of its own. |

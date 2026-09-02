@@ -50,8 +50,12 @@ const leadColumns = `id, full_name, email, title, company_name, candidate_org_ke
 	         OR (a.kind = 'meeting' AND a.meeting_status IN ('booked','held')))
 	  ORDER BY CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 0
 	                WHEN a.kind = 'meeting' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1),
+	-- The last-touch clock, so it excludes system remediation for the same
+	-- reason last_activity_of_person does: work the product files ABOUT a lead
+	-- is not the lead engaging.
 	(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL),
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
+	     AND a.origin <> 'system_remediation'),
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done),
 	-- The next open task, as the pair it is: its title and its deadline

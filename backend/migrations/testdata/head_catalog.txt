@@ -9,14 +9,15 @@ public.activity.activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NU
 public.activity.activity_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE SET NULL (host_user_id)
 public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind)
 public.activity.activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text]))))
-public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience))) EXECUTE FUNCTION trg_activity_last_activity()
+public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_last_activity()
 public.activity.activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 'meeting'::text)))
 public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval)) WITH &&) WHERE (((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL)))
 public.activity.activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text]))))
 public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL)))
 public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
+public.activity.activity_origin_check CHECK ((origin = ANY (ARRAY['human'::text, 'agent'::text, 'system_remediation'::text])))
 public.activity.activity_pkey PRIMARY KEY (id)
-public.activity.activity_project_last_activity CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience))) EXECUTE FUNCTION trg_activity_project_last_activity()
+public.activity.activity_project_last_activity CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_project_last_activity()
 public.activity.activity_refuse_restricted_mutation CREATE TRIGGER activity_refuse_restricted_mutation BEFORE DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()
 public.activity.activity_restricted_is_archived CHECK (((restricted_at IS NULL) OR (archived_at IS NOT NULL)))
 public.activity.activity_restriction_complete CHECK ((((restricted_at IS NULL) AND (restricted_reason IS NULL) AND (restricted_until IS NULL)) OR ((restricted_at IS NOT NULL) AND (restricted_reason IS NOT NULL) AND (restricted_until IS NOT NULL))))
@@ -49,6 +50,7 @@ public.activity.kind text NOT NULL gen=- def=-
 public.activity.language text gen=- def=-
 public.activity.meeting_status text gen=- def=-
 public.activity.occurred_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity.origin text NOT NULL gen=- def='human'::text
 public.activity.raw jsonb gen=- def=-
 public.activity.redacted_fields text[] NOT NULL gen=- def='{}'::text[]
 public.activity.remind_at timestamp with time zone gen=- def=-
@@ -2551,6 +2553,7 @@ public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
+     AND a.origin <> 'system_remediation'
    WHERE l.deal_id = did
 
 public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=- 
@@ -2560,6 +2563,7 @@ public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=-
       FROM activity_link l
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
+       AND a.origin <> 'system_remediation'
      WHERE l.organization_id = oid
     UNION ALL
     -- Filed against one of its deals.
@@ -2568,6 +2572,7 @@ public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=-
       JOIN activity_link l ON l.deal_id = d.id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
+       AND a.origin <> 'system_remediation'
      WHERE d.organization_id = oid
     UNION ALL
     -- Filed against a contact it currently employs.
@@ -2576,6 +2581,7 @@ public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=-
       JOIN activity_link l ON l.person_id = r.person_id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
+       AND a.origin <> 'system_remediation'
      WHERE r.organization_id = oid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
   ) arms
@@ -2585,6 +2591,7 @@ public.last_activity_of_person(pid uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
+     AND a.origin <> 'system_remediation'
    WHERE l.person_id = pid
 
 public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=- 
@@ -2592,6 +2599,7 @@ public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
+     AND a.origin <> 'system_remediation'
    WHERE l.project_id = pid
 
 public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
