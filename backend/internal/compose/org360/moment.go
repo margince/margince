@@ -71,12 +71,30 @@ func (a *assembly) readMoment() error {
 		// must never say by accident. The page already carries this flag for
 		// the attention facts; a reader who sees it knows the card is speaking
 		// about less than the whole account.
-		withheld := true
-		a.out.AttentionWithheld = &withheld
+		markAttentionWithheld(a.out)
 	}
-	moment := accountMoment(a.now, a.out, claims)
+	// The card's OWN task read, not the section's rows. The section shows the
+	// twenty-five earliest deadlines; this ranks over the set and asks which
+	// promise slipped most recently, and on an account owing more than a page
+	// of tasks the row that answers it is exactly the one the page dropped.
+	tasks, filed, err := openTaskPromises(a.ctx, a.tx, a.orgID, a.now, a.opts, orgMomentScanCap)
+	if err != nil {
+		return err
+	}
+	moment := accountMoment(a.now, tasks, filed, claims)
 	a.out.Moment = &moment
 	return nil
+}
+
+// markAttentionWithheld says the page is speaking about less than the account.
+//
+// A promise the caller may not see is dropped by the read's own scope clauses,
+// so the card would otherwise show whatever remains — or the quiet state — and
+// a quiet card reads as "this account owes nothing". That is the one thing it
+// must never say by accident, so the omission is stated rather than absorbed.
+func markAttentionWithheld(out *crmcontracts.Organization360) {
+	withheld := true
+	out.AttentionWithheld = &withheld
 }
 
 // orgMomentScanCap bounds the promise read behind the card. Wide, because the
@@ -87,8 +105,8 @@ const orgMomentScanCap = 200
 
 // accountMoment is the card itself: the promise that most needs answering, or
 // the quiet state when there is none.
-func accountMoment(now time.Time, page *crmcontracts.Organization360, claims []people.OrgCommitment) crmcontracts.PersonMoment {
-	items := accountPromises(page, claims)
+func accountMoment(now time.Time, tasks []crmcontracts.Organization360NextStep, filed []time.Time, claims []people.OrgCommitment) crmcontracts.PersonMoment {
+	items := accountPromises(tasks, filed, claims)
 	if slipped, ok := owedwork.MostRecentlySlipped(items, now); ok {
 		return promiseCard(now, slipped, true)
 	}
@@ -108,14 +126,17 @@ func accountMoment(now time.Time, page *crmcontracts.Organization360, claims []p
 // an extracted commitment and a task about the same thing are two unlinked
 // rows. A promise recorded both ways may appear as two, which is the honest
 // answer until that link is written.
-func accountPromises(page *crmcontracts.Organization360, claims []people.OrgCommitment) []owedwork.Item {
+func accountPromises(tasks []crmcontracts.Organization360NextStep, filed []time.Time, claims []people.OrgCommitment) []owedwork.Item {
 	var items []owedwork.Item
-	if page.NextSteps != nil {
-		for _, step := range page.NextSteps.Data {
-			items = append(items, owedwork.Item{
-				Ref: step, Source: owedwork.FromTask, DueAt: step.DueAt,
-			})
+	for i, step := range tasks {
+		item := owedwork.Item{Ref: step, Source: owedwork.FromTask, DueAt: step.DueAt}
+		// The filing moment breaks ties between two promises sharing a due
+		// date, and the contact page ranks on it too. Leaving it zero here
+		// would make the same two promises rank differently on the two pages.
+		if i < len(filed) {
+			item.FiledAt = filed[i]
 		}
+		items = append(items, item)
 	}
 	for _, claim := range claims {
 		items = append(items, owedwork.Item{

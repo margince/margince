@@ -108,16 +108,35 @@ func (s *Store) OpenCommitmentsForOrganization(
 	if edgeScope == "" {
 		edgeScope = sqlAlwaysVisible
 	}
-	// Person scope is SELECTED rather than filtered on, for the reason the
-	// doc comment gives: a dropped row and an account with nothing outstanding
-	// are indistinguishable on the card, so the read reports the difference.
+	// Person scope FILTERS here rather than being projected beside each row.
+	// The edge gate above already excludes a promise whose person this caller
+	// may not see — auth.RelationshipEndpointScope requires the endpoint be
+	// visible — so a projected "visible" column would be true on every row it
+	// ever saw, and would read like a safety net that has never fired.
+	// Filtering says the same thing honestly; the count below is what tells the
+	// caller something was withheld.
+	//
+	// THE ORDER IS THE RANKING'S, NOT A DISPLAY'S, because the LIMIT below
+	// decides what the ranking can see. Overdue first, latest slip at the top
+	// — which is the promise the card names — then the rest by nearest
+	// deadline. Ordered the other way, an account owing more than one page of
+	// late promises would truncate away the one that slipped yesterday and
+	// keep the ancient ones, so the card would name the least recoverable
+	// promise on the record and the read would look like it worked.
+	//
+	// `now()` rather than a bound instant: this clause only SEPARATES late
+	// from not-late for the sort, and the caller re-judges every row against
+	// one instant of its own. A row landing on the wrong side of the split at
+	// the boundary changes its position in an over-long list, never the
+	// verdict shown.
 	//
 	// DISTINCT ON (c.id) is not needed — a claim is one row — but a person
 	// with two live employment edges at one account would duplicate it, so the
 	// edge is existence-tested rather than joined.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.person_id, coalesce(pr.full_name, ''), c.body, c.source_quote,
-		       c.source_activity_id, c.due_at, a.occurred_at, (%[2]s) AS person_visible
+		       c.source_activity_id, c.due_at, a.occurred_at,
+		       count(*) OVER () AS admitted
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN person pr ON pr.id = c.person_id AND pr.archived_at IS NULL
@@ -129,8 +148,10 @@ func (s *Store) OpenCommitmentsForOrganization(
 		            AND r.organization_id = $%[1]d
 		            AND `+EmploymentIsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 		            AND (%[4]s))
-		   AND (%[3]s)
-		 ORDER BY c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id
+		   AND (%[3]s) AND (%[2]s)
+		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,
+		          CASE WHEN c.due_at < now() THEN c.due_at END DESC,
+		          c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id
 		 LIMIT %[5]d`,
 		orgPos, personScope, activityScope, edgeScope, orgCommitmentsLimit(limit)), args...)
 	if err != nil {
@@ -139,24 +160,64 @@ func (s *Store) OpenCommitmentsForOrganization(
 	defer rows.Close()
 
 	var out []OrgCommitment
-	complete := true
+	admitted := 0
 	for rows.Next() {
 		var row OrgCommitment
-		var personVisible bool
 		if err := rows.Scan(&row.ID, &row.PersonID, &row.PersonName, &row.Body, &row.SourceQuote,
-			&row.ActivityID, &row.DueAt, &row.OccurredAt, &personVisible); err != nil {
+			&row.ActivityID, &row.DueAt, &row.OccurredAt, &admitted); err != nil {
 			return nil, false, fmt.Errorf("scan an account commitment: %w", err)
-		}
-		if !personVisible {
-			complete = false
-			continue
 		}
 		out = append(out, row)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, false, fmt.Errorf("read the account's open commitments: %w", err)
 	}
-	return out, complete, nil
+	// COMPLETENESS IS A SECOND COUNT, not a flag on a row. The scope clauses
+	// above sit inside the query's own EXISTS and WHERE, so a promise this
+	// caller may not see never becomes a row here — there is nothing to mark.
+	// Projecting a "visible" column beside each row would compile, return true
+	// on every row it ever saw, and read like a safety net that has never once
+	// fired.
+	//
+	// So the read asks the database a second question instead: how many of this
+	// account's open promises exist at all. Fewer admitted than exist means
+	// something was withheld, and the card can say it is speaking about less
+	// than the account rather than reporting silence as "nothing outstanding".
+	total, err := countOrgCommitments(ctx, tx, orgID)
+	if err != nil {
+		return nil, false, err
+	}
+	return out, admitted >= total, nil
+}
+
+// countOrgCommitments is how many open promises this account carries, asked
+// WITHOUT the caller's row scope.
+//
+// Deliberately unscoped, and it returns a NUMBER and nothing else — no name, no
+// body, no quote, no id. Comparing it with what the scoped read admitted is the
+// only way to tell "this account owes nothing" from "you may not see what it
+// owes", and those two must never render the same. The cost is that the number
+// weakly reflects that promises exist the reader cannot open, which is exactly
+// what the card has to admit to avoid claiming an account is clear.
+func countOrgCommitments(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (int, error) {
+	var total int
+	err := tx.QueryRow(ctx, `
+		SELECT count(*)
+		  FROM conversation_claim c
+		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN person pr ON pr.id = c.person_id AND pr.archived_at IS NULL
+		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
+		   AND c.archived_at IS NULL
+		   AND EXISTS (
+		         SELECT 1 FROM relationship r
+		          WHERE r.person_id = pr.id AND r.kind = 'employment'
+		            AND r.organization_id = $1
+		            AND `+EmploymentIsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL)`,
+		orgID).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("count the account's open commitments: %w", err)
+	}
+	return total, nil
 }
 
 // orgCommitmentsLimit bounds one sweep, the way every sibling read bounds its
