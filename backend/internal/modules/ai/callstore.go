@@ -9,10 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -93,9 +95,21 @@ type Call struct {
 	// and the trace falls back to the tier's configured binding.
 	ServedModel          string
 	ServedIdentitySource string
-	Degraded             bool
-	ErrorSentinel        string
-	AgentRunID           *ids.UUID
+	// ServedProvider is the upstream that generated the completion when a
+	// broker sat between us and it (model.Response.ServedProvider), empty on a
+	// direct vendor. Persisted beside ServedIdentitySource rather than folded
+	// into it: the source says how much to trust ServedModel, and this says who
+	// served — a broker answers the second confidently while the first stays
+	// "echo", so one field cannot carry both.
+	ServedProvider string
+	// FinishReason is the provider's normalized stop reason, empty when none was
+	// reported. Recorded because a truncated answer and a complete one are
+	// otherwise the same row, and the difference decides whether a schema
+	// failure was the model's fault or the output budget's.
+	FinishReason  string
+	Degraded      bool
+	ErrorSentinel string
+	AgentRunID    *ids.UUID
 	// ConfigHash points at the ai_call_config row describing the task
 	// contract, routing config, and prompt version that produced this
 	// attempt. Nil when the serving Router never installed a config
@@ -201,50 +215,95 @@ func (m *CallMeter) Record(ctx context.Context, attempts []Call) error {
 	})
 }
 
+// aiCallBindings pairs each ai_call column this writer fills with the value
+// bound to it, and the statement's column list, its placeholders and its bind
+// list are derived from the result — the same shape voice_profile_version's
+// writer uses two files over.
+//
+// Paired rather than written as three parallel lists because nothing checks
+// that a statement's columns, placeholders and arguments agree: this table
+// takes thirty-one of them, and the failure mode of a miscount is not a
+// compile error but a value landing in the neighbouring column.
+// The column names here are schema identifiers. Two of them happen to be
+// spelled the same as a log key in tracing.go and a request-field name in
+// ratewrite.go, which is a coincidence of English rather than a shared concept:
+// a constant spanning the three would tie a column's name to a validation
+// message, and renaming either would then have to argue with the other.
+//
+//nolint:goconst // "provider"/"model_id" here are ai_call columns, unrelated to the same words used as a log key and a wire field name elsewhere in this package
+func aiCallBindings(c Call) []boundColumn {
+	// kind and served_identity_source carry a CHECK constraint, not just a SQL
+	// DEFAULT — every column is listed explicitly, so an unset Go zero-value
+	// would reach the constraint as '""' rather than falling back to the
+	// schema's default. Mirror the schema's own defaults here so a caller that
+	// does not care about these fields (most non-router test fixtures) still
+	// writes a valid row.
+	kind := c.Kind
+	if kind == "" {
+		kind = callKindCompletion
+	}
+	servedSource := c.ServedIdentitySource
+	if servedSource == "" {
+		servedSource = servedIdentitySourceConfigured
+	}
+	contextScopes := c.ContextScopes
+	if contextScopes == nil {
+		contextScopes = []string{}
+	}
+	// error_sentinel is nullable and an absent sentinel is NULL, not ''. The
+	// statement used to spell that as NULLIF on the placeholder; with the
+	// placeholders derived it is decided here instead, where the rest of this
+	// row's optional values are already decided.
+	var errorSentinel *string
+	if c.ErrorSentinel != "" {
+		errorSentinel = &c.ErrorSentinel
+	}
+	return []boundColumn{
+		{"correlation_id", c.CorrelationID},
+		{"task", string(c.Task)},
+		{"tier", string(c.Tier)},
+		{"provider", c.Provider},
+		{"model_id", c.ModelID},
+		{"request_fingerprint", c.RequestFingerprint},
+		{"context_scopes", contextScopes},
+		{"context_fingerprint", c.ContextFingerprint},
+		{"context_bytes", c.ContextBytes},
+		{"context_tokens_estimate", c.ContextTokensEstimate},
+		{"tokens_in", c.TokensIn},
+		{"tokens_out", c.TokensOut},
+		{"reasoning_tokens", c.ReasoningTokens},
+		{"cached_tokens", c.CachedTokens},
+		{"cache_write_tokens", c.CacheWriteTokens},
+		{"latency_ms", c.LatencyMS},
+		{"cache_hit", c.CacheHit},
+		{"degraded", c.Degraded},
+		{"error_sentinel", errorSentinel},
+		{"agent_run_id", c.AgentRunID},
+		{"logical_call_id", c.LogicalCallID},
+		{"attempt", c.Attempt},
+		{"is_terminal", c.IsTerminal},
+		{"attempt_reason", c.AttemptReason},
+		{"kind", kind},
+		{"served_model", c.ServedModel},
+		{"served_identity_source", servedSource},
+		{"served_provider", c.ServedProvider},
+		{"finish_reason", c.FinishReason},
+		{"cache_off", c.CacheOff},
+		{"config_hash", c.ConfigHash},
+	}
+}
+
 // recordAttempts writes every buffered attempt of one logical call, and the
 // ai_call_payload row of whichever attempt carries content.
 func (m *CallMeter) recordAttempts(ctx context.Context, tx pgx.Tx, attempts []Call) error {
 	for _, c := range attempts {
-		// kind and served_identity_source carry a CHECK constraint, not
-		// just a SQL DEFAULT — the columns are always listed explicitly
-		// below, so an unset Go zero-value would reach the constraint as
-		// '""', not fall back to the schema's default. Mirror the
-		// schema's own defaults here so a caller that does not care
-		// about these fields (most non-router test fixtures) still
-		// writes a valid row.
-		kind := c.Kind
-		if kind == "" {
-			kind = callKindCompletion
-		}
-		servedSource := c.ServedIdentitySource
-		if servedSource == "" {
-			servedSource = servedIdentitySourceConfigured
-		}
-		contextScopes := c.ContextScopes
-		if contextScopes == nil {
-			contextScopes = []string{}
-		}
+		bound := aiCallBindings(c)
+		args := valuesOf(bound)
 		var callID ids.UUID
-		err := tx.QueryRow(
-			ctx, `
-			INSERT INTO ai_call (
-			  correlation_id, task, tier, provider, model_id,
-			  request_fingerprint, context_scopes, context_fingerprint,
-			  context_bytes, context_tokens_estimate,
-			  tokens_in, tokens_out, reasoning_tokens,
-			  cached_tokens, cache_write_tokens, latency_ms, cache_hit, degraded, error_sentinel, agent_run_id,
-			  logical_call_id, attempt, is_terminal, attempt_reason, kind,
-			  served_model, served_identity_source, cache_off, config_hash)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NULLIF($19,''),$20,
-			  $21,$22,$23,$24,$25,$26,$27,$28,$29)
-			RETURNING id`,
-			c.CorrelationID, string(c.Task), string(c.Tier), c.Provider, c.ModelID,
-			c.RequestFingerprint, contextScopes, c.ContextFingerprint,
-			c.ContextBytes, c.ContextTokensEstimate, c.TokensIn, c.TokensOut, c.ReasoningTokens,
-			c.CachedTokens, c.CacheWriteTokens, c.LatencyMS, c.CacheHit, c.Degraded, c.ErrorSentinel, c.AgentRunID,
-			c.LogicalCallID, c.Attempt, c.IsTerminal, c.AttemptReason, kind,
-			c.ServedModel, servedSource, c.CacheOff, c.ConfigHash,
-		).Scan(&callID)
+		err := tx.QueryRow(ctx, storekit.SQLf(
+			`INSERT INTO ai_call (%s) VALUES (%s) RETURNING id`,
+			strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args))),
+			args...).Scan(&callID)
 		if err != nil {
 			return fmt.Errorf("ai: recording call: %w", err)
 		}
