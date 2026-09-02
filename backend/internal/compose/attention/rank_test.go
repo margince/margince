@@ -280,28 +280,29 @@ func TestADateComparisonIsNeverOfferedBetweenInstantsThatReadAlike(t *testing.T)
 	}
 }
 
-// Occurrence publishes a DAY COUNT, and two instants close enough to round to
-// the same day count must not be offered as though the (equal) count decided
-// anything a reader could check.
+// Occurrence publishes a DAY COUNT, and two instants that round to the same
+// day count must not be offered as though the (equal) count decided anything
+// a reader could check — even hours apart, which the old minute-resolution
+// guard would have let through as two different-looking clock times.
 func TestOccurrenceOffersNoValuesWhenTheTwoInstantsReadAlike(t *testing.T) {
 	base := rankInstant.Add(-90*24*time.Hour + 12*time.Hour)
 	first := candidate("a", levelWaiting)
 	first.occurredAt = base
 	second := candidate("b", levelWaiting)
-	second.occurredAt = base.Add(13 * time.Second)
+	second.occurredAt = base.Add(5 * time.Hour)
 
 	got := rankAll([]ranked{first, second})
 
 	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
-		t.Fatal("the row offers two identical-looking times as its reason")
+		t.Fatal("the row offers two day counts that would print the same number as its reason")
 	}
 }
 
 // The occurrence step is the fallback every non-waiting source falls through
-// to once nothing else separated a pair. It published the two rows' raw
-// occurredAt INSTANTS under the contract's waiting_days comparator — a reader
-// shown a date, not a day count, under a heading about days. It must publish
-// the same shape the comparator name promises: a day count each side.
+// to once nothing else separated a pair. It must publish the shape its
+// comparator name promises — a day count each side — rather than the two
+// rows' raw occurredAt instants, which would show a reader a date under a
+// heading about days.
 func TestOccurrenceReportsDaysNotDates(t *testing.T) {
 	older := candidate("older", levelWaiting)
 	older.occurredAt = rankInstant.Add(-10 * 24 * time.Hour)
@@ -325,6 +326,36 @@ func TestOccurrenceReportsDaysNotDates(t *testing.T) {
 	}
 	if *above.Mine.Days != 10 || *above.Theirs.Days != 2 {
 		t.Fatalf("mine=%d theirs=%d, wanted 10 and 2", *above.Mine.Days, *above.Theirs.Days)
+	}
+}
+
+// The occurrence step reads ranked.asOf, and production stamps it in exactly
+// one place — worklistFrom, right before rankAll — rather than at each row's
+// classifier. This drives the real production entry point rather than
+// rankAll directly, so a caller that stopped stamping it breaks here: with no
+// asOf, occurredDaysOf clamps every row to zero days and the step stops
+// publishing values, which reads exactly like a passing suite until this
+// test is the one that reaches the wiring.
+func TestTheRealPipelineStampsAsOfBeforeRanking(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		Bounces: lane(
+			item("older", "bounce", withOccurred(rankInstant.Add(-10*24*time.Hour))),
+			item("newer", "bounce", withOccurred(rankInstant.Add(-2*24*time.Hour))),
+		),
+	}
+
+	out := pricedWorklist(t, stubFX{base: "EUR"}, day)
+
+	above := out.Queue[0].AboveNext
+	if above == nil || above.Comparator != crmcontracts.WorklistComparisonComparatorWaitingDays {
+		t.Fatalf("above = %+v, wanted a waiting_days comparator naming the occurrence gap", above)
+	}
+	if above.Mine == nil || above.Mine.Days == nil || *above.Mine.Days != 10 {
+		t.Fatalf("mine = %+v, wanted a 10-day count — asOf did not reach the occurrence step through the real pipeline", above.Mine)
+	}
+	if above.Theirs == nil || above.Theirs.Days == nil || *above.Theirs.Days != 2 {
+		t.Fatalf("theirs = %+v, wanted 2 days", above.Theirs)
 	}
 }
 

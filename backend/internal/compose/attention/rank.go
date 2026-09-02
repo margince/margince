@@ -141,6 +141,17 @@ type ranked struct {
 	crowded bool
 }
 
+// stampAsOf marks every row with the instant the page was read at, in one
+// place rather than by each classifier — so a row born from any lane or fold
+// carries the same reference the occurrence step needs to turn its occurredAt
+// into a day count.
+func stampAsOf(rows []ranked, asOf time.Time) []ranked {
+	for i := range rows {
+		rows[i].asOf = asOf
+	}
+	return rows
+}
+
 // rankAll orders the day and explains itself.
 //
 // The explanation is produced HERE, during the sort, rather than by re-comparing
@@ -284,15 +295,13 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 }
 
 // occurredDaysOf turns an occurrence instant into the age the occurrence step
-// reports, against the same asOf the row was classified with. Clamped at
-// zero for the reason classifyWaiting's own age clamp is: a row read before
-// its own occurredAt, under clock skew between two reads of one page, is not
-// a wait from the future.
+// reports, against the same asOf the row was classified with — deadline.DaysPast
+// read backwards, since "whole days past" and "whole days ago" are the same
+// arithmetic on two instants. Zero for a row read before its own occurredAt,
+// under clock skew between two reads of one page: that is not a wait from the
+// future.
 func occurredDaysOf(occurred, asOf time.Time) int {
-	days := int(asOf.Sub(occurred).Hours() / 24)
-	if days < 0 {
-		return 0
-	}
+	days, _ := deadline.DaysPast(&occurred, asOf)
 	return days
 }
 

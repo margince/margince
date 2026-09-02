@@ -4,11 +4,13 @@
 package activities
 
 // Which ORDER BY a timeline read gets: newest-first for the general read, and
-// due-soonest for the one caller asking "what is open and due" — the dial
-// margince#3287 needed so a capped page keeps the most urgent rows rather
-// than the most recently logged ones.
+// due-soonest for the one caller asking "what is open and due" — the dial a
+// capped page needs so it keeps the most urgent rows rather than the most
+// recently logged ones. And the cursor a resumed read carries: it is keyed to
+// whichever order actually ran, so the two may never disagree.
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -28,5 +30,21 @@ func TestEveryOtherTimelineReadStaysNewestFirst(t *testing.T) {
 	want := " ORDER BY a.occurred_at DESC, a.id DESC"
 	if got != want {
 		t.Fatalf("order clause = %q, want %q", got, want)
+	}
+}
+
+// A cursor from the recency read cannot resume an open-and-due read: it is
+// keyed to (occurred_at, id), the query would run ordered by (due_at, id),
+// and applying one axis's cursor to the other axis's order returns silently
+// wrong rows rather than the next page.
+func TestACursorFromTheRecencyOrderCannotResumeAnOpenAndDueRead(t *testing.T) {
+	until := time.Now()
+	cursor := "anything"
+	_, _, _, _, err := listActivitiesFilter(unscopedCtx(), ListActivitiesInput{
+		OpenAndDueBy: &until,
+		Cursor:       &cursor,
+	})
+	if !errors.Is(err, errOpenAndDueByWithCursor) {
+		t.Fatalf("combining OpenAndDueBy with a Cursor → %v, want errOpenAndDueByWithCursor", err)
 	}
 }

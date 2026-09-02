@@ -38,7 +38,6 @@ export function WorklistRow({
   item,
   position,
   owner,
-  asOf,
   selected,
   onSelect,
   onReview,
@@ -48,12 +47,6 @@ export function WorklistRow({
   // Whose queue this row is on, empty for the reader's own. A row can only be
   // handed to somebody else from a page that is already about somebody else.
   owner: string;
-  // When the server took this snapshot. The waiting_days tie-break's elapsed
-  // days are computed against THIS, not the render's own wall clock — a cached
-  // read rendered later, or a client clock that has drifted from the
-  // server's, must not silently change what the row says about an order the
-  // server already decided as of a fixed instant.
-  asOf: string;
   // Whether the pane beside the queue is about this row.
   //
   // BOTH CALLBACKS ARE OPTIONAL, because one surface has no pane. The Brief
@@ -78,13 +71,7 @@ export function WorklistRow({
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null)
     .join(" · ");
-  const above = comparisonText(
-    item.above_next,
-    t,
-    locale,
-    zone,
-    new Date(asOf),
-  );
+  const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
   return (
     <PanelRow

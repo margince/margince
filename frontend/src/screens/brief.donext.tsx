@@ -94,7 +94,6 @@ export function DoNext({
                     // only from a page that is already about somebody else, and
                     // this page is about the person reading it.
                     owner=""
-                    asOf={day.as_of}
                     // No pane and no filter on this surface, so the rank draws
                     // as a number rather than as a control that opens nothing.
                     // WorklistRow leaves both out when they are absent.

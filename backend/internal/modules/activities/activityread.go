@@ -132,17 +132,23 @@ type ListActivitiesInput struct {
 // it was logged. A cap applied over the wrong order keeps the tasks most
 // recently filed; capping THIS order keeps the tasks nearest their deadline,
 // which is what a page capped at a dozen can actually afford to drop.
-//
-// OpenAndDueBy is set from exactly one caller (openTasksDueBy), and that
-// caller never sets Cursor — the keyset clause above stays built for the
-// occurred_at order because nothing pairs the two today. A caller that
-// combined them would need to widen it.
 func orderClause(in ListActivitiesInput) string {
 	if in.OpenAndDueBy != nil {
 		return " ORDER BY a.due_at ASC, a.id ASC"
 	}
 	return " ORDER BY a.occurred_at DESC, a.id DESC"
 }
+
+// errOpenAndDueByWithCursor is refused rather than built into SQL. The keyset
+// cursor above is always keyed to the recency order (a.occurred_at, a.id) —
+// it has to be, since that is the only order a Cursor is ever decoded
+// against. Pairing it with OpenAndDueBy, which runs the query under a
+// different order (a.due_at ASC), would resume on an axis the query is not
+// sorted by and silently return the wrong rows rather than the next page.
+// No caller does this today; the guard is here so the day one tries, it
+// fails loudly instead of paginating wrongly.
+var errOpenAndDueByWithCursor = errors.New(
+	"activities: a cursor built for the recency order cannot resume an open-and-due read")
 
 // ListActivities is the timeline read: newest first, optionally scoped to
 // one entity through activity_link (the indexed 360-view join).
@@ -201,12 +207,18 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		last := activities[len(activities)-1]
-		next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
-		if err != nil {
-			return nil, storekit.Page{}, err
+		page = storekit.Page{HasMore: true}
+		// No cursor for the open-and-due order: one is never decoded against
+		// it (errOpenAndDueByWithCursor), so encoding one here would hand out
+		// a page token nothing can correctly resume.
+		if in.OpenAndDueBy == nil {
+			last := activities[len(activities)-1]
+			next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
+			if err != nil {
+				return nil, storekit.Page{}, err
+			}
+			page.NextCursor = next
 		}
-		page = storekit.Page{HasMore: true, NextCursor: next}
 	}
 	if err := attachLinks(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err

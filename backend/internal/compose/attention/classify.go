@@ -237,10 +237,7 @@ const waitingDaysCeiling = 30
 // an empty composer would be worse than no button.
 func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	subject := waiting.Subject
-	days := int(asOf.Sub(waiting.Since).Hours() / 24)
-	if days < 0 {
-		days = 0
-	}
+	days := occurredDaysOf(waiting.Since, asOf)
 	// Stale and unfunded: the row belongs to review, not to today.
 	level := levelWaiting
 	stale := days > waitingStaleDays && !waiting.HasOpenDeal
@@ -358,27 +355,6 @@ func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 		kept = append(kept, row)
 	}
 	return kept
-}
-
-// classifyBriefItem: what the overnight run put at the top of the day. It is a
-// suggestion about where to start rather than something waiting on the reader,
-// so it sits with agreed work — but it belongs ON the queue, because a lane the
-// ranking never sees is a lane the reader was told to read separately, which is
-// the arrangement this endpoint exists to end.
-func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
-	stampDeadline(&row, item.DueAt, asOf)
-	if overdueAt(item.DueAt, asOf) {
-		row.Because = append(row.Because, reason("overdue", nil))
-	} else if item.DueAt != nil {
-		row.Because = append(row.Because, reason("due_today", nil))
-	}
-	return ranked{
-		item:       row,
-		deadlineAt: deadlineOf(item.DueAt),
-		overdue:    overdueAt(item.DueAt, asOf),
-		occurredAt: occurredOf(item, asOf),
-	}
 }
 
 // classifyTask: work already agreed. Overdue is the fact that moves it; a task
