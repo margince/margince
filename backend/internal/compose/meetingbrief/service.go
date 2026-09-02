@@ -67,6 +67,10 @@ type Service struct {
 	// lane rewrites the deterministic floor in Margince's voice when a
 	// deployment binds one. Nil is the floor, which is not an error state.
 	lane Completer
+	// teammates answers whether the reader shares a live team with somebody in
+	// the room, which is half the coaching rule. Nil is a composition that
+	// wired no coaching, and projects none.
+	teammates Teammates
 }
 
 // NewService binds the brief to the reads it is written from.
@@ -201,6 +205,17 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	both.Wait()
 	plan := wirePlan(planWritten, in)
 	plan.GeneratedBy = planBy
+	// Coaching is attached OVER the finished plan, never generated beside it.
+	// The plan above was built blind to who is reading it, so a lead and their
+	// rep are looking at the same meeting and the lead is looking at one more
+	// thing — which is the property the "same facts" test holds.
+	coached, err := s.coachingProjected(ctx, in.Seats)
+	if err != nil {
+		return crmcontracts.MeetingBrief{}, nil, err
+	}
+	if coached {
+		plan.ManagerCoaching = wireCoaching(coachingFor(planWritten, in))
+	}
 	var filed *ids.UUID
 	if in.Project != nil {
 		id, err := ids.Parse(in.Project.ID)
@@ -286,6 +301,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var roomHidden bool
 	var history []HistoryIn
 	var excerpts []ExcerptIn
+	var seats []ids.UUID
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The requested project is gated BEFORE the meeting is read, because
 		// the meeting read already narrows by it (the attendees' last-touch
@@ -322,6 +338,10 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		if err != nil {
 			return err
 		}
+		seats, err = s.readSeats(ctx, tx, activityID)
+		if err != nil {
+			return err
+		}
 		excerpts, err = s.readExcerpts(ctx, tx,
 			excerptTargets(clusterThreads(threadsOf(history))))
 		if err != nil {
@@ -354,6 +374,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	in.RoomHidden = roomHidden
 	in.History = history
 	in.Excerpts = excerpts
+	in.Seats = seats
 	if len(room.Attendees) == 0 {
 		// Nobody in the room this caller may see. The header still stands, and
 		// assembling a 360 for a person nobody named would be a read of a

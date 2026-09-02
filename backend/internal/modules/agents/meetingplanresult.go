@@ -26,6 +26,23 @@ type MeetingPlanResult struct {
 	Arc        []MeetingPlanMoment    `json:"account_arc,omitempty"`
 	Advance    MeetingPlanAdvancePart `json:"advance"`
 	Unknowns   []MeetingPlanGap       `json:"unknowns,omitempty"`
+	// Coaching is present only when the reading principal is a lead looking at
+	// a teammate's meeting. An agent inherits its human's seat, so an agent
+	// acting for a rep never sees it.
+	Coaching *MeetingPlanCoachingPart `json:"manager_coaching,omitempty"`
+}
+
+// MeetingPlanCoachingPart is the coaching layer, as an agent reads it. It
+// carries no evidence of its own: every fact it rests on is in the plan beside
+// it, and a citation here would claim a record supports a reading of the REP
+// rather than of the account.
+type MeetingPlanCoachingPart struct {
+	Focus       string              `json:"focus"`
+	FailureMode string              `json:"failure_mode"`
+	ListenFor   string              `json:"listen_for"`
+	WatchFor    string              `json:"watch_for"`
+	InterveneIf string              `json:"intervene_if"`
+	Paths       []MeetingPlanBranch `json:"paths,omitempty"`
 }
 
 // MeetingPlanRiskPart is the watch-out and what to do about it.

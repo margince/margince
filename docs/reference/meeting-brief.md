@@ -76,6 +76,32 @@ and never a fact about the writer. A model omitting a field does not produce
 one. This is what lets a reader trust that an empty `unknowns` means the record
 answered, rather than that nobody looked.
 
+## The coaching layer
+
+`plan.manager_coaching` is present only for a lead reading a teammate's meeting.
+Two questions decide it, in this order — the same order
+`notices.RaiseCoachNotice` asks them:
+
+1. **May this seat coach at all?** `auth.RequireCoach` — a human (not an agent,
+   not a Deal Room buyer) holding `admin`, `management` or `manager`. A `rep` is
+   excluded deliberately: a rep on a team would otherwise coach their teammates.
+2. **Is there anybody here to coach?** A live team shared with a colleague
+   seated in the meeting, through the same membership seam the Worklist reads.
+   Being seated yourself is not a disqualifier — a lead in the room coaching
+   their rep through it is the ordinary case.
+
+Both refusals mean "you get the rep's brief", not an error: the caller asked for
+a brief and a brief is what they may have. A membership check that BREAKS does
+fail the read, because a broken check answering "no coaching" is
+indistinguishable from a correct denial.
+
+**Coaching adds a reading, never a fact.** The base plan is built once, blind to
+who is reading it, and the layer is attached over the finished plan — so a lead
+and their rep are looking at the same meeting and the lead is looking at one
+more thing. `TestTheLeadAndTheRepReadTheSameMeeting` walks the plan struct
+reflectively and compares every field but the coaching, so a field added later
+is covered without anyone remembering to add it there.
+
 ## How the evidence is read
 
 Two passes, because one query cannot both be cheap over a year and carry

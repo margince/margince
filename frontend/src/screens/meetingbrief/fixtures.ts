@@ -224,3 +224,38 @@ export const briefWithPlan: MeetingBrief = {
     ],
   },
 };
+
+// The same brief a lead sees.
+//
+// Built by ADDING one object to the rep's, never by writing a second plan: the
+// server builds the base coaching-blind and attaches the layer over it, and a
+// fixture assembled the other way would let this surface's tests pass while
+// production showed a lead different facts.
+export const briefManager: MeetingBrief = {
+  ...briefWithPlan,
+  plan: {
+    ...(briefWithPlan.plan as NonNullable<MeetingBrief["plan"]>),
+    manager_coaching: {
+      focus:
+        "Whether the rep leaves with the outcome the plan names, or settles for a pleasant conversation.",
+      failure_mode:
+        "Defending the history instead of owning it and naming a date.",
+      listen_for:
+        "A quantified consequence in their words, and who owns it today.",
+      watch_for:
+        "The rep answering before asking. Count the questions they get to.",
+      intervene_if:
+        "A date, a price or a resource is promised that nobody on our side has agreed.",
+      paths: [
+        {
+          label: "It becomes a price negotiation",
+          play: "Anchor on the outcome agreed, not the list.",
+        },
+        {
+          label: "A new stakeholder appears",
+          play: "Stop selling and qualify them.",
+        },
+      ],
+    },
+  },
+};

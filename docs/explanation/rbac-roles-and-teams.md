@@ -210,6 +210,15 @@ A **team** (`team` table) is a named group; **`team_membership`** joins users to
 Teams do **not** carry their own permissions — a team is not a role. (A role *assignment* can be
 scoped to a team, but the grants still come from the role.)
 
+3. **They answer "may I speak into this colleague's work?"** — a question row scope cannot answer,
+   because it is not about which rows may be read. Two surfaces ask it: raising a coaching notice
+   into somebody's Worklist, and the coaching layer on their meeting brief. Both ask it the same
+   way and in the same order — `auth.RequireCoach` for the SEAT (a human holding `admin`,
+   `management` or `manager`; `rep` is excluded deliberately, or a rep on a team would coach their
+   teammates), then a live shared team for the EDGE, through one membership seam so the two cannot
+   drift. Membership resolves through `team_membership` and live teams only; the parent hierarchy
+   is not walked, matching row scope.
+
 ## A user with no role sees nothing
 
 `role_assignment` links a user to a role. **A user with zero role assignments has zero object

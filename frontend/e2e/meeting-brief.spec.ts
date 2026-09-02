@@ -219,6 +219,75 @@ test.describe("with a preparation plan", () => {
   });
 });
 
+test.describe("for a lead reading a teammate's meeting", () => {
+  test("AC-meeting-brief-15: the coaching leads, and the rep's own brief is under it", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "manager" });
+    const coach = await boxOf(page, ".panel-accent");
+    const advance = await boxOf(page, ".mb-advance");
+    expect(coach.y).toBeLessThan(advance.y);
+    await expect(
+      page.getByRole("heading", { name: copy("person.meeting.coach.title") }),
+    ).toBeVisible();
+    // It says which view this is: a lead who cannot tell they are reading the
+    // manager view cannot tell what their rep is seeing.
+    await expect(
+      page.getByText(copy("person.meeting.coach.eyebrow")),
+    ).toBeVisible();
+  });
+
+  test("AC-meeting-brief-16: the lead sees every section the rep sees", async ({
+    page,
+  }) => {
+    // Its own page per read. Reopening the drawer over a page that already had
+    // one leaves the first drawer's controls mid-transition, and the animation
+    // guard is right to refuse to measure a box that is still moving.
+    const headingsFor = async (variant: MockApiOptions["meetingBrief"]) => {
+      const own = await page.context().newPage();
+      await own.emulateMedia({ reducedMotion: "reduce" });
+      await mockApi(own, { meetingBrief: variant });
+      await own.goto("/#/contacts/p-anna/meetings");
+      await own
+        .getByRole("button", { name: copy("person.meeting.brief") })
+        .click();
+      await expect(own.locator(DRAWER)).toBeVisible();
+      const headings = await own
+        .locator(".modal-drawer-wide h3")
+        .allTextContents();
+      await own.close();
+      return headings;
+    };
+    const repHeadings = await headingsFor("plan");
+    const leadHeadings = await headingsFor("manager");
+    for (const heading of repHeadings) {
+      expect(leadHeadings, `the lead is missing "${heading}"`).toContain(
+        heading,
+      );
+    }
+  });
+
+  test("AC-meeting-brief-17: a rep sees no coaching on their own meeting", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "plan" });
+    await expect(
+      page.getByText(copy("person.meeting.coach.title")),
+    ).toHaveCount(0);
+  });
+
+  test("AC-meeting-brief-18: the manager view has no accessibility violations", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "manager" });
+    expect(await pageOverflow(page)).toEqual([]);
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

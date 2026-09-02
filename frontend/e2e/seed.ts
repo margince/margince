@@ -2,6 +2,7 @@ import type { Page, Route } from "@playwright/test";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
 import {
   briefEmpty,
+  briefManager,
   briefOmitted,
   briefWithPlan,
 } from "../src/screens/meetingbrief/fixtures";
@@ -913,7 +914,7 @@ export type MockApiOptions = Readonly<{
   oidcProviders?: ReadonlyArray<{ key: string; label: string }>;
   // Which meeting brief the drawer gets. The default is the everyday one,
   // carrying a withheld source so the AC that reads it has something to read.
-  meetingBrief?: "rep" | "plan" | "empty" | "failed";
+  meetingBrief?: "rep" | "plan" | "manager" | "empty" | "failed";
 }>;
 
 export async function mockApi(
@@ -1461,6 +1462,8 @@ export async function mockApi(
           );
         case "plan":
           return json(briefWithPlan);
+        case "manager":
+          return json(briefManager);
         default:
           return json(briefOmitted);
       }

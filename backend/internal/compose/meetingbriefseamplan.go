@@ -81,6 +81,21 @@ func agentMeetingPlan(plan *crmcontracts.MeetingPlan) *agents.MeetingPlanResult 
 			Summary: agentBriefLine(moment.Summary),
 		})
 	}
+	if coaching := plan.ManagerCoaching; coaching != nil {
+		part := &agents.MeetingPlanCoachingPart{
+			Focus:       coaching.Focus,
+			FailureMode: coaching.FailureMode,
+			ListenFor:   coaching.ListenFor,
+			WatchFor:    coaching.WatchFor,
+			InterveneIf: coaching.InterveneIf,
+		}
+		for _, path := range coaching.Paths {
+			part.Paths = append(part.Paths, agents.MeetingPlanBranch{
+				Label: path.Label, Play: path.Play,
+			})
+		}
+		out.Coaching = part
+	}
 	for _, unknown := range plan.Unknowns {
 		out.Unknowns = append(out.Unknowns, agents.MeetingPlanGap{
 			Kind: string(unknown.Kind), Question: unknown.Question,
