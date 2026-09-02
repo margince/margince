@@ -50,8 +50,10 @@ still runs and still answers — it just comes back with no proof attached, and 
 > again to take effect. Vite hot-reloads the SPA but not the Go api, so a stale api keeps answering
 > happily and the feature breaks exactly like a bug in your own work.
 
-Both flags are also plain command-line flags (`--vat-check-base-url`, `--vat-check-requester`) on the
-worker, for a deployment that configures processes rather than environments.
+Both are also plain command-line flags on a deployment that configures processes rather than
+environments: `--vat-check-base-url` on **both** the api and the worker (the worker makes the request,
+the api decides whether to queue one at all — set it on only one role and the other silently disagrees),
+`--vat-check-requester` on the worker alone.
 
 ## Give a company a VAT number
 

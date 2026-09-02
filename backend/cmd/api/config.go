@@ -47,6 +47,7 @@ type apiConfig struct {
 	connectorStateKey     string
 	webhookKey            string
 	metricsToken          string
+	vatCheckBaseURL       string
 	oauthAccessTokenTTL   time.Duration
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
 	// (OPS-CFG-2) rather than at each of the three places that used to ask.
@@ -108,6 +109,7 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	env.String(fs, &cfg.connectorStateKey, "connector-state-key", "MARGINCE_CONNECTOR_STATE_KEY", "", "HMAC key (>=32 bytes) signing the OAuth connect `state`; required for the Gmail and Graph connect flows")
 	env.String(fs, &cfg.webhookKey, "webhook-key", "MARGINCE_WEBHOOK_KEY", "", "base64 32-byte key sealing outbound-webhook signing secrets; enables the mutating /webhook-subscriptions surface, and (with --inline-relay) the cg:webhooks delivery consumer. Empty = those paths answer 503 and no inline delivery runs. Re-attempting a parked delivery is the worker role's River job, never this one's.")
 	env.String(fs, &cfg.metricsToken, "metrics-token", "MARGINCE_METRICS_TOKEN", "", "shared secret /metrics requires as a Bearer credential; empty (the default) answers 404 for /metrics rather than serving per-workspace job telemetry with no authentication at all")
+	env.String(fs, &cfg.vatCheckBaseURL, "vat-check-base-url", "MARGINCE_VAT_CHECK_BASE_URL", "", "same variable the worker reads to reach VIES; read here only to decide whether this role queues a consultation at all. Set on both roles together, or a stated VAT number goes unverified and /vat-check answers 404")
 	// A malformed TTL is CARRIED rather than returned, so it can be reported
 	// beside a missing DSN instead of hiding it for a boot. Returning here
 	// would put this fault ahead of every other one by accident of ordering —
