@@ -124,6 +124,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// consent never imports its sibling.
 		consentHandlers: consent.NewHandlers(InstallationDB(pool)).
 			WithEraser(privacy.NewEraser(InstallationDB(pool))).
+			WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 			WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 				return identity.InstallationNameForPublicPage(ctx, pool)
 			})),
