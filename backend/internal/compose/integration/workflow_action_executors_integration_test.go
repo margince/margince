@@ -17,6 +17,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -192,99 +193,54 @@ func TestDraftEmailFiringLandsTheComposedDraftOnTheRunRecord(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	if err := engine.HandleEvent(ctx, kevents.Envelope{
+	fireErr := engine.HandleEvent(ctx, kevents.Envelope{
 		EventID: ids.NewV7(), Type: "deal.stage_changed",
 		OccurredAt: time.Now().UTC(),
 		Entity:     kevents.EntityRef{Type: "deal", ID: dealID},
-	}); err != nil {
-		t.Fatal(err)
+	})
+	// The refusal reaches the CALLER as well as the run record. Both matter and
+	// they are not the same report: the run row is what an operator reads
+	// afterwards, and this error is what the dispatcher sees now.
+	if fireErr == nil {
+		t.Fatal("an ownerless automation composed a draft — a message nobody can release")
+	}
+	if !strings.Contains(fireErr.Error(), "has no owner") {
+		t.Fatalf("HandleEvent = %v, want it to name the missing owner", fireErr)
 	}
 
 	var status string
-	var appliedJSON []byte
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(
 			context.Background(),
-			`SELECT status, applied FROM workflow_run WHERE handler = 'task11a_draft_email_probe'`,
-		).Scan(&status, &appliedJSON)
+			`SELECT status FROM workflow_run WHERE handler = 'task11a_draft_email_probe'`,
+		).Scan(&status)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	// Drafting composes and then holds its SEND for a human, so the run parks.
-	if status != "requires_approval" {
-		t.Fatalf("run status = %q, want requires_approval — the send waits for a human", status)
+	// AN OWNERLESS FIRING DRAFTS NOTHING, which is what shipped: a drafted
+	// message goes out under one person's name and is released by that person,
+	// so an automation with nobody to be refuses at compose time rather than
+	// producing a draft nobody can release (automation.MissingDraftOwnerError).
+	//
+	// This probe is registered with RegisterSystemWorkflow and every such
+	// firing is ownerless by construction — engine.HandleEvent builds its event
+	// from an envelope, which carries no owner, and OwnerID is populated only
+	// from an automation INSTANCE. So the run fails, and the assertions below
+	// about the composed draft and the waiting approval are unreachable for a
+	// system workflow today.
+	//
+	// WHAT THAT COSTS is recorded rather than quietly dropped: workflow_run's
+	// `applied` column is asserted against a real database HERE and nowhere
+	// else, and the regression it guards — recordApplyOutcome's staged arm
+	// writing only `detail`, so an automation reports having drafted a reply
+	// while holding nothing to show for it — is now unguarded there. Restoring
+	// it needs a firing that carries an owner, which needs the owner question
+	// settled: #3605 has the two readings.
+	if status != "failed" {
+		t.Fatalf("run status = %q, want failed — an automation with no owner refuses to draft", status)
 	}
-
-	// The composed draft must be findable IN the run record even though the
-	// firing suspended. This is the regression worth a real database: the
-	// staged arm of recordApplyOutcome wrote only `detail` for its whole life,
-	// so the moment draft_email began staging, the artifact it had just
-	// produced would have been dropped — run history reporting that an
-	// automation drafted a reply while holding nothing to show for it.
-	// workflow.Action carries no json tags, so it serializes into
-	// workflow_run.applied with its Go field names; Go matches those keys to
-	// these exported fields case-insensitively without a tag.
-	var appliedActions []struct {
-		Kind string
-		Args struct {
-			Subject string `json:"draft_subject"`
-			Body    string `json:"draft_body"`
-		}
-	}
-	if err := json.Unmarshal(appliedJSON, &appliedActions); err != nil {
-		t.Fatalf("decoding workflow_run.applied: %v", err)
-	}
-	if len(appliedActions) != 1 {
-		t.Fatalf("workflow_run.applied has %d actions, want exactly 1", len(appliedActions))
-	}
-	got := appliedActions[0]
-	if got.Kind != string(workflow.ActionDraftEmail) {
-		t.Errorf("applied action Kind = %q, want draft_email", got.Kind)
-	}
-	if got.Args.Subject != "Re: next step" || got.Args.Body != "Following up on our last conversation." {
-		t.Fatalf("workflow_run.applied draft = (subject=%q, body=%q), want the composed draft durably persisted", got.Args.Subject, got.Args.Body)
-	}
-
-	// And the other half: a real approval row is waiting, carrying everything
-	// its release needs. The run parking is only half the contract — a parked
-	// run with no inbox item behind it is a firing that stopped and told
-	// nobody. Asserted against the row the real service wrote, not against the
-	// request the engine handed it.
-	var kind, proposed string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT kind, proposed_change::text FROM approval
-			  WHERE target_entity_id = $1 AND status = 'pending'`, dealID).Scan(&kind, &proposed)
-	}); err != nil {
-		t.Fatalf("reading the staged approval: %v", err)
-	}
-	if kind != automation.HeldDraftKind {
-		t.Errorf("staged kind = %q, want %q", kind, automation.HeldDraftKind)
-	}
-	var staged struct {
-		AnchorActivityID string `json:"anchor_activity_id"`
-		To               string `json:"to"`
-		Subject          string `json:"subject"`
-		Body             string `json:"body"`
-		ConsentPurpose   string `json:"consent_purpose"`
-	}
-	if err := json.Unmarshal([]byte(proposed), &staged); err != nil {
-		t.Fatalf("decoding the staged proposal: %v", err)
-	}
-	// Every field the release reads. It is handed the proposed change, the diff
-	// hash and the approval id — never the approval's target — so anything
-	// missing here is a message that cannot be sent at the moment somebody
-	// approves it, which is the worst place to find out.
-	if staged.To != draftProbeRecipient {
-		t.Errorf("staged to = %q, want %q", staged.To, draftProbeRecipient)
-	}
-	if staged.ConsentPurpose != "business_correspondence" {
-		t.Errorf("staged consent_purpose = %q, want the declared purpose", staged.ConsentPurpose)
-	}
-	if staged.AnchorActivityID != dealID.String() {
-		t.Errorf("staged anchor = %q, want the fired target %q", staged.AnchorActivityID, dealID)
-	}
-	if staged.Subject != "Re: next step" || staged.Body != "Following up on our last conversation." {
-		t.Errorf("staged message = (%q, %q), want the composed draft", staged.Subject, staged.Body)
-	}
+	// The run row records the automation and that it failed; the SENTENCE
+	// naming the owner rides the returned error, asserted above. An operator
+	// reading run history therefore sees which automation stopped but not yet
+	// why — worth knowing when the owner question is settled.
 }
