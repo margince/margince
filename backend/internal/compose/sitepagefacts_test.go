@@ -667,3 +667,57 @@ func TestDeclaringACompanionCostsAContradiction(t *testing.T) {
 		t.Fatalf("the borrowed-title claim must be recorded as dropped: %+v", dropped)
 	}
 }
+
+// A TESTIMONIAL THAT PRINTS AN ADDRESS IS STILL A TESTIMONIAL.
+//
+// The published-email floor proves CONTACTABILITY, not affiliation. A wall that
+// prints the quoted person's own address clears it and still yields a lead
+// filed as a contact at the quoting company — which their own job title
+// disproves on the same line, and which then propagates into whatever the
+// account page says.
+func TestAQuotedCustomerWhoPrintsTheirOwnAddressIsStillNotALead(t *testing.T) {
+	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindHome, seedURL,
+		"What our clients say: Marc Costea, CEO at Qilin.Cloud, marc@qilin.example, calls it amazing. "+
+			"Our founder Anna Muster runs the practice, anna@acme.example.")
+	reply := `{"facts":[],"people":[
+		{"n":"Marc Costea","r":"CEO","q":"Marc Costea, CEO at Qilin.Cloud","m":"marc@qilin.example","e":"s0"},
+		{"n":"Anna Muster","r":"founder","q":"Our founder Anna Muster","m":"anna@acme.example","e":"s0"}]}`
+	res, dropped := gatePageFacts(reply, page, menu, idx)
+	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
+		t.Fatalf("only the site's own person may be proposed: %+v", res.people)
+	}
+	if reasons := dropReasons(dropped); reasons["Marc Costea"] != dropEmailOffSiteDomain {
+		t.Fatalf("the quoted customer must drop for the domain, not by luck: %+v", dropped)
+	}
+}
+
+// AND THE SITE'S OWN PEOPLE ARE NOT DROPPED WITH THEM, across the subdomains a
+// site actually uses: the comparison is registrable domains, which is the same
+// "same site" test the crawler's own off-domain gate applies.
+func TestAnAddressOnASubdomainOfTheSiteIsStillTheSiteS(t *testing.T) {
+	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindTeam, "https://www.acme.example/team",
+		"Anna Muster is our Chief Executive Officer, anna@mail.acme.example.")
+	reply := `{"facts":[],"people":[
+		{"n":"Anna Muster","r":"Chief Executive Officer","q":"Anna Muster is our Chief Executive Officer","m":"anna@mail.acme.example","e":"s0"}]}`
+	res, dropped := gatePageFacts(reply, page, menu, idx)
+	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
+		t.Fatalf("a www page and a mail subdomain are one site: %+v people=%+v", dropped, res.people)
+	}
+}
+
+// THE COST OF THE RULE, stated as a test so it is a decision rather than a
+// surprise: a member of staff who publishes a personal address becomes
+// unproposable, and the drop census says which rule took them.
+func TestAStaffMemberWithAPersonalAddressIsUnproposableAndSaysSo(t *testing.T) {
+	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindTeam, seedURL+"/team",
+		"Bernd Beispiel leads sales as Head of Sales, bernd.beispiel@gmail.example.")
+	reply := `{"facts":[],"people":[
+		{"n":"Bernd Beispiel","r":"Head of Sales","q":"Bernd Beispiel leads sales as Head of Sales","m":"bernd.beispiel@gmail.example","e":"s0"}]}`
+	res, dropped := gatePageFacts(reply, page, menu, idx)
+	if len(res.people) != 0 {
+		t.Fatalf("a personal address cannot vouch for the affiliation: %+v", res.people)
+	}
+	if reasons := dropReasons(dropped); reasons["Bernd Beispiel"] != dropEmailOffSiteDomain {
+		t.Fatalf("the drop must name the rule that took him: %+v", dropped)
+	}
+}

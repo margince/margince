@@ -11,7 +11,12 @@ package compose
 // copies out of the page — checked verbatim, then checked for reaching over
 // somebody else — rather than from where the two strings happen to sit.
 
-import "strings"
+import (
+	"net/url"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/freemail"
+)
 
 // attributionQuote checks the model's claim that the page gives THIS person
 // THIS role, and returns the page's own words that say so.
@@ -231,6 +236,24 @@ func gatePagePeople(parsed pageFactsReply, page crawlPage, idx snippetIndex, dro
 			drop(lanePeople, name, role, dropNoPublishedEmail)
 			continue
 		}
+		// And it has to be an address on THIS site's own domain, because the
+		// proposal files the person at the company whose site was read.
+		//
+		// A printed address proves contactability, not affiliation. A "what our
+		// clients say" wall that prints the quoted person's own address yields a
+		// lead filed as a contact at the quoting company — which their own
+		// quoted job title disproves on the same line, and which then propagates
+		// into whatever the account page says about that company.
+		//
+		// The cost is named rather than hidden: a member of staff who publishes
+		// a personal address becomes unproposable, and the drop census says so
+		// by its own reason. That is the trade taken deliberately — a missing
+		// lead is recoverable by hand, a wrong affiliation is not obviously
+		// wrong to whoever reads it next.
+		if !addressOnSiteDomain(publishedEmail, page.URL) {
+			drop(lanePeople, name, role, dropEmailOffSiteDomain)
+			continue
+		}
 		person := sitePerson{
 			Name:            name,
 			Role:            role,
@@ -261,4 +284,29 @@ func gatePagePeople(parsed pageFactsReply, page crawlPage, idx snippetIndex, dro
 		out = append(out, person)
 	}
 	return out
+}
+
+// addressOnSiteDomain reports whether a printed address belongs to the site the
+// page came from, compared as REGISTRABLE domains.
+//
+// eTLD+1 on both sides, so a page at www.acme.de accepts jane@acme.de and a
+// page at acme.de accepts an address on mail.acme.de — the same "same site"
+// test the crawler's own off-domain gate applies. Two customers of one
+// co.uk-style suffix are not the same site, which publicsuffix settles rather
+// than a suffix count would.
+//
+// Anything unparseable answers false. An address or a URL this cannot read is
+// not one it can vouch for, and the proposal it would admit is the one this
+// check exists to refuse.
+func addressOnSiteDomain(email, pageURL string) bool {
+	_, domain, found := strings.Cut(email, "@")
+	if !found || domain == "" {
+		return false
+	}
+	parsed, err := url.Parse(pageURL)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	site := freemail.Registrable(parsed.Hostname())
+	return site != "" && freemail.Registrable(domain) == site
 }

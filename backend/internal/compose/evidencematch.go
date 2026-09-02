@@ -90,6 +90,10 @@ const (
 	dropConfidenceRange   = "confidence_out_of_range"
 	dropNameRoleUnlinked  = "name_role_not_in_snippet"
 	dropNoPublishedEmail  = "no_published_email"
+	// dropEmailOffSiteDomain marks a published person whose printed address
+	// belongs to somebody else's domain — the testimonial case, where the page
+	// prints a customer's own address and the read would file them as staff.
+	dropEmailOffSiteDomain = "email_off_site_domain"
 	// dropAlreadyOnFile marks a published person the workspace already
 	// holds — a contact who has been emailing us for months does not
 	// become a decision because a crawler found their name.
