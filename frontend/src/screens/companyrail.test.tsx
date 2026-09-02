@@ -674,6 +674,66 @@ describe("CompanyRail", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the server's order past the attention split when the amounts span currencies", () => {
+    stub();
+    renderRail({
+      view: view({
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Tokyo rollout",
+              status: "open",
+              stage_name: "Proposal",
+              // The largest raw minor-unit figure on the account, in the
+              // WRONG sense: yen minor units dwarf euro ones on digit count
+              // alone. Ranked by amount it would lead; ranked honestly the
+              // server's own order stands.
+              amount: { amount_minor: 900_000, currency: "JPY" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-2",
+              name: "Berlin expansion",
+              status: "open",
+              stage_name: "Discovery",
+              amount: { amount_minor: 100_000, currency: "EUR" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-3",
+              name: "Support renewal",
+              status: "open",
+              stage_name: "Renewal",
+              amount: { amount_minor: 50_000, currency: "EUR" },
+              stalled: true,
+            },
+          ],
+          page: emptyPage,
+          won_lifetime: { amount_minor: 0, currency: null },
+          lost_count: 0,
+        },
+      }),
+    });
+    const dealsPanel = screen
+      .getByText("Active deals")
+      .closest("section, .panel");
+    if (!(dealsPanel instanceof HTMLElement)) {
+      throw new Error("the deals panel has no wrapper");
+    }
+    // The stalled deal leads on attention; behind it the two clean deals keep
+    // the order the server sent, because a mixed-currency amount compare is
+    // no compare at all.
+    const names = within(dealsPanel)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(names).toEqual([
+      "Support renewal",
+      "Tokyo rollout",
+      "Berlin expansion",
+    ]);
+  });
+
   it("shows only the top RAIL_ROW_LIMIT contacts while the header names the full count", () => {
     stub();
     renderRail({

@@ -208,7 +208,7 @@ function DealsSection({
   const t = useT();
   const { locale } = useLocale();
   const deals = view?.deals;
-  const rows = [...(deals?.data ?? [])].sort(byDealWeight);
+  const rows = rankedDeals(deals?.data ?? []);
   const state = sectionState(
     view,
     "deals",
@@ -284,21 +284,34 @@ function DealsCreateVerb({
 }
 
 // The rail's own ranking: a deal that needs a move outranks one that does
-// not, and past that the money decides — but only between amounts in ONE
-// currency, because minor units of different currencies are not comparable
-// and a raw compare would rank ¥ over € on digit count. Across currencies
-// the sort is stable, so the server's own order — the one every other deal
-// surface shows — is what stands rather than an accident of the compare.
-function byDealWeight(a: Deal, b: Deal): number {
+// not, and past that the money decides — but only when every priced deal on
+// the account shares one KNOWN currency, because minor units of different or
+// unrecorded currencies are not comparable and a raw compare would rank ¥
+// over € on digit count. The decision is made ONCE over the whole list, not
+// inside the comparator: a pairwise "these two do not compare" while other
+// pairs still reorder is a non-transitive comparator, and Array.sort answers
+// that with an arbitrary order rather than the server's. When the amounts do
+// not compare, the stable sort keeps the server's own order — the one every
+// other deal surface shows — past the attention split.
+function rankedDeals(rows: readonly Deal[]): Deal[] {
+  const currencies = new Set(
+    rows.flatMap((deal) =>
+      deal.amount?.currency ? [deal.amount.currency] : [],
+    ),
+  );
+  const amountsComparable =
+    currencies.size <= 1 &&
+    rows.every(
+      (deal) => deal.amount?.amount_minor == null || deal.amount.currency,
+    );
   const needsMove = (deal: Deal) => (deal.attention || deal.stalled ? 1 : 0);
-  const moved = needsMove(b) - needsMove(a);
-  if (moved !== 0) {
-    return moved;
-  }
-  if (a.amount?.currency !== b.amount?.currency) {
-    return 0;
-  }
-  return (b.amount?.amount_minor ?? 0) - (a.amount?.amount_minor ?? 0);
+  return [...rows].sort((a, b) => {
+    const moved = needsMove(b) - needsMove(a);
+    if (moved !== 0 || !amountsComparable) {
+      return moved;
+    }
+    return (b.amount?.amount_minor ?? 0) - (a.amount?.amount_minor ?? 0);
+  });
 }
 
 // One flag a deal can carry ahead of its stage and close date: an overdue

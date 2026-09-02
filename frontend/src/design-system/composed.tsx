@@ -1346,7 +1346,11 @@ export function TimelineRow({
         ) : (
           <span className="tl-title">{entry.title}</span>
         )}
-        {entry.body && (
+        {/* Never for a withheld entry: the title above already says the
+            content is for participants only, and a row must not show the
+            words it just refused. The server withholds bodies upstream; this
+            is the row keeping its own promise whatever it is handed. */}
+        {entry.body && !entry.withheld && (
           <TimelineText text={entry.body} email={entry.kind === "email"} />
         )}
         {entry.detail}

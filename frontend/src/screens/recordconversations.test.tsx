@@ -189,12 +189,18 @@ describe("a withheld newest message", () => {
     ).toBeNull();
 
     // Opened, the newest member draws through the ordinary TimelineRow,
-    // which is where the withheld sentence actually lives.
+    // which is where the withheld sentence actually lives — and the member
+    // row keeps the same promise the preview kept: the withheld body never
+    // renders, collapsed or expanded, while the sibling's body still does.
     await user.click(screen.getByRole("button", { name: "Open" }));
 
     expect(
       await screen.findByText("Content for participants only"),
     ).toBeTruthy();
+    expect(
+      screen.queryByText("only participants may read this line"),
+    ).toBeNull();
+    expect(screen.getByText("the opening message")).toBeTruthy();
   });
 });
 
