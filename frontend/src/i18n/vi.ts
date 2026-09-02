@@ -2278,6 +2278,16 @@ export const vi = {
   // Phần đầu của danh sách đã xếp hạng, trên trang mở đầu tiên — cùng những
   // dòng mà Danh sách công việc hiển thị, theo thứ tự máy chủ đã quyết định.
   "brief.donext.title": "Làm tiếp theo",
+  // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
+  // không do mô hình viết.
+  "brief.eyebrow": "Buổi sáng của bạn",
+  "brief.sentence.clear": "Sáng nay không có gì đang chờ bạn.",
+  "brief.sentence.one": "Trước tiên: {lead}",
+  "brief.sentence.oneWithCost": "Trước tiên: {lead} — {consequence}",
+  "brief.sentence.many": "Trước tiên: {lead} Rồi {rest} mục nữa.",
+  "brief.sentence.manyWithCost":
+    "Trước tiên: {lead} — {consequence} Rồi {rest} mục nữa.",
+
   "brief.donext.sub": "Một thứ tự, từ danh sách công việc của bạn.",
   "brief.donext.loading": "Đang đọc những gì đang chờ bạn",
   "brief.donext.clear": "Hiện không có gì đang chờ bạn.",

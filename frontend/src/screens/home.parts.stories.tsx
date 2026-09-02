@@ -91,12 +91,48 @@ const GLANCE_GO = {
   onGoToWatch: () => undefined,
 };
 
+// A day with work in it, for the opening sentence. The sentence names the FIRST
+// row through the same helpers the queue prints it with, so a story that passed
+// no queue would show the block without the thing it exists to say.
+const GLANCE_DAY = {
+  as_of: "2026-06-10T06:00:00Z",
+  scope: "mine",
+  scope_options: ["mine"],
+  queue: [
+    {
+      id: "g1",
+      source: "waiting_customer",
+      category: "customer_waiting",
+      title: "Aster Handel",
+      because: [],
+      actions: ["open"],
+      dispositions: [],
+      overdue: false,
+    },
+    {
+      id: "g2",
+      source: "task",
+      category: "housekeeping",
+      title: "Send the Weber quote",
+      because: [],
+      actions: ["open"],
+      dispositions: [],
+      overdue: false,
+    },
+  ],
+  counts: [],
+  reach: [],
+  sources_unavailable: [],
+  summary: { total: 2, urgent: 1 },
+} as unknown as Parameters<typeof HomeGlance>[0]["day"];
+
 // The full briefing: six sentences, each led by the figure that is also the way
 // to what it counts. What to look at — the numerals share one column, so the
 // sentences start on a single x rather than wherever their own digits ended.
 export const Glance: Story = {
   render: part(
     <HomeGlance
+      day={GLANCE_DAY}
       firstName="Lena"
       now={NOW_DATE}
       decisions={{ pending: 6, expiringToday: 2 }}
@@ -117,6 +153,7 @@ export const Glance: Story = {
 export const GlanceCalm: Story = {
   render: part(
     <HomeGlance
+      day={GLANCE_DAY}
       firstName="Lena"
       now={NOW_DATE}
       decisions={{ pending: 0, expiringToday: 0 }}
@@ -133,6 +170,7 @@ export const GlanceCalm: Story = {
 export const GlanceCapped: Story = {
   render: part(
     <HomeGlance
+      day={GLANCE_DAY}
       firstName="Lena"
       now={NOW_DATE}
       decisions={{ pending: 6, expiringToday: 2 }}
@@ -154,6 +192,7 @@ export const GlanceCapped: Story = {
 export const GlanceUnread: Story = {
   render: part(
     <HomeGlance
+      day={GLANCE_DAY}
       firstName={null}
       now={NOW_DATE}
       decisions={{ pending: 4, expiringToday: 0 }}

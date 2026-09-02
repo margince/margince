@@ -2331,6 +2331,16 @@ export const en = {
   // The head of the ranked queue, on the page a rep opens first. The same rows
   // the Worklist draws, in the order the server decided.
   "brief.donext.title": "Do next",
+  // The Brief's opening sentence, composed from the rows the page is showing —
+  // never model-written, so it cannot say what the rows contradict.
+  "brief.eyebrow": "Your morning",
+  "brief.sentence.clear": "Nothing is waiting on you this morning.",
+  "brief.sentence.one": "First: {lead}",
+  "brief.sentence.oneWithCost": "First: {lead} — {consequence}",
+  "brief.sentence.many": "First: {lead} Then {rest} more.",
+  "brief.sentence.manyWithCost":
+    "First: {lead} — {consequence} Then {rest} more.",
+
   "brief.donext.sub": "One order, from your worklist.",
   "brief.donext.loading": "Reading what waits on you",
   "brief.donext.clear": "Nothing is waiting on you right now.",

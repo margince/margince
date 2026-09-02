@@ -378,6 +378,7 @@ export function HomeScreen() {
   return (
     <div className="wrap">
       <HomeGlance
+        day={worklistQuery.data}
         firstName={firstNameOf(me.data?.user?.display_name)}
         now={new Date(nowMs)}
         decisions={decisionReadings}

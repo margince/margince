@@ -321,6 +321,10 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
         <HomeGlance
           firstName={firstName}
           now={new Date(2026, 6, 5, hour, 30, 0)}
+          // These cases are about the GREETING's hour. An unread day is the
+          // right value for them: the sentence is then absent, and the greeting
+          // is what the assertion reads.
+          day={undefined}
           decisions={null}
           brief={null}
           overnight={null}
@@ -362,6 +366,7 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
         <HomeGlance
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
+          day={undefined}
           decisions={null}
           brief={null}
           overnight={null}
