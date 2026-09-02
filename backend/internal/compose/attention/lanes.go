@@ -129,19 +129,6 @@ type Tasks interface {
 	OpenForViewer(ctx context.Context, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
 }
 
-// Teammates answers whether a named user is on a team with the reader.
-//
-// The reader is the authenticated caller and is not passed: the module behind
-// this takes it from the principal, so the question can only ever be asked
-// about an edge the asker is themselves an end of.
-//
-// Asked only when a TEAM-scoped reader names somebody else's queue. An
-// unbounded reader reaches every row and needs no such question; an own-scoped
-// reader is refused before it is asked.
-type Teammates interface {
-	SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error)
-}
-
 // Task is one piece of agreed work.
 type Task struct {
 	ID      ids.UUID
@@ -288,7 +275,16 @@ type Commitment struct {
 // Optional exactly as Commitments is: nil means this feed does not do deal risk,
 // which is a different fact from a pipeline with nothing wrong in it.
 type AtRisk interface {
-	Quiet(ctx context.Context) ([]RiskyDeal, error)
+	// The bool reports that the read was CUT — the lane scanned to its own bound
+	// and deals may sit past it.
+	//
+	// It travels beside the rows rather than being inferred from their number,
+	// because this lane FILTERS after it scans: it returns only what is quiet or
+	// overdue out of a bounded sweep, so ten rows can be the survivors of a full
+	// fifty. A caller counting rows against the bound would read a truncated
+	// scan with few survivors as a complete one — under-reporting, which is the
+	// one direction a work figure must never fail in.
+	Quiet(ctx context.Context) ([]RiskyDeal, bool, error)
 }
 
 // RiskyDeal is one deal the pipeline should worry about, and the ground it is
@@ -346,35 +342,6 @@ type QuietRelationship struct {
 	// LastAt is when they last spoke, so the card can date the silence rather
 	// than only measure it.
 	LastAt time.Time
-}
-
-// Waiting is who has written to this workspace and had no reply.
-//
-// Its own reader rather than a filter over AtRisk, because a fresh inbound
-// makes a deal LESS quiet: deriving "waiting" from "quiet" loses the newest
-// cases, which are the ones a rep most needs. It also reaches a person with no
-// deal at all, whom the deal-shaped lanes never see.
-type Waiting interface {
-	Unanswered(ctx context.Context, asOf time.Time) ([]WaitingCustomer, error)
-}
-
-// WaitingCustomer is one message nobody has answered.
-type WaitingCustomer struct {
-	// ActivityID is the message itself — what a reply would be drafted to.
-	ActivityID ids.UUID
-	Subject    string
-	// Since is when they wrote. The wait is measured from it, and it is what
-	// the card says out loud.
-	Since time.Time
-	// The record the thread is filed under, most specific first. Any may be
-	// zero: a message from a stranger names nobody.
-	PersonID       ids.UUID
-	OrganizationID ids.UUID
-	DealID         ids.UUID
-	// HasOpenDeal reports whether money this reader can see is still on this
-	// thread. It is what keeps a long wait in execution instead of sending it
-	// to review.
-	HasOpenDeal bool
 }
 
 // DealFacts answers the figures behind deals a row names but does not carry.

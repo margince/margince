@@ -28114,6 +28114,58 @@ type Team struct {
 	UpdatedAt    *time.Time          `json:"updated_at,omitempty"`
 }
 
+// TeamBoard Who on the team is carrying what. One row per live teammate, plus the work that
+// reached nobody.
+type TeamBoard struct {
+	// AsOf The instant every count below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Members The live human seats sharing a live team with the caller, the caller included,
+	// ordered by display name. Never empty: a caller on no team is their own single
+	// row, because "only you" and "nobody" are different answers and the second reads
+	// as an outage.
+	Members []TeamBoardMember `json:"members"`
+
+	// Truncated True when a count was read to its work bound, so the real figure may be higher
+	// than what is shown. The waiting-customer read scans a bounded number of threads
+	// across the whole installation, so a busy installation reports a floor — and says
+	// so here rather than presenting a floor as a total.
+	Truncated bool `json:"truncated"`
+
+	// Unassigned Three counts of work somebody owes, all read under the CALLER's visibility rather
+	// than the teammate's — so this is how much of their load the reader can see.
+	Unassigned TeamBoardCounts `json:"unassigned"`
+}
+
+// TeamBoardCounts Three counts of work somebody owes, all read under the CALLER's visibility rather
+// than the teammate's — so this is how much of their load the reader can see.
+type TeamBoardCounts struct {
+	// AtRisk Open deals gone quiet or already past their expected close date.
+	AtRisk int `json:"at_risk"`
+
+	// Overdue Open tasks whose due moment has already passed.
+	Overdue int `json:"overdue"`
+
+	// Waiting Customers who wrote and have had no reply, attributed by the record the thread is
+	// filed under: deal, then lead, then person, then organization, first owner found.
+	// The same eligibility the ranked queue applies, so the board and the day agree.
+	Waiting int `json:"waiting"`
+}
+
+// TeamBoardMember One teammate and the work they are answerable for.
+type TeamBoardMember struct {
+	// Counts Three counts of work somebody owes, all read under the CALLER's visibility rather
+	// than the teammate's — so this is how much of their load the reader can see.
+	Counts TeamBoardCounts `json:"counts"`
+
+	// DisplayName The teammate, as the roster names them.
+	DisplayName string `json:"display_name"`
+
+	// UserId Whose row this is. It is what `GET /worklist?owner=` takes, which is the
+	// drill-down the board routes to.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // TeamListResponse defines model for TeamListResponse.
 type TeamListResponse struct {
 	Data []Team   `json:"data"`
@@ -34436,8 +34488,15 @@ type GetWorklistParams struct {
 	// it at any tier: nothing in it belongs to a colleague, which is what unassigned
 	// means. It exists because `mine` is exact — a task with no assignee is no
 	// longer folded into every reader's own queue, so it needs a queue of its own or
-	// the product would have stopped mentioning it. Tasks only: a message has no
-	// assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
+	// the product would have stopped mentioning it.
+	//
+	// It carries unanswered mail too, and that is the case it matters most for. A
+	// message has no assignee, so its owner is the owner of the record it is filed
+	// under — deal, then lead, then person, then organization, first owner found. A
+	// thread no owned record attributes to anybody is the customer nobody is looking
+	// at, which is exactly what this queue is opened to find. Such a message stays
+	// reachable from `mine` as well, on the ground that an unowned customer writing
+	// in is everybody's until somebody takes them.
 	//
 	// WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
 	// going quiet, meetings and duplicate pairs are read under the caller's row
@@ -44440,6 +44499,9 @@ type ServerInterface interface {
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
+	// One row per teammate — who is carrying what, so a lead can see where to help.
+	// (GET /worklist/team)
+	GetTeamBoard(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -47713,6 +47775,12 @@ func (_ Unimplemented) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Requ
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One row per teammate — who is carrying what, so a lead can see where to help.
+// (GET /worklist/team)
+func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71565,6 +71633,28 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetTeamBoard operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamBoard(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -73312,6 +73402,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)
 	})
 
 	return r

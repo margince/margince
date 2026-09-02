@@ -27,6 +27,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The hard priority bands. A level is a claim about WHAT KIND of work an item
@@ -93,6 +94,16 @@ type ranked struct {
 	waitingRank int
 	strength    int
 	occurredAt  time.Time
+	// owner is who this row answers to, for the sources that carry an owner but
+	// no deal on the wire.
+	//
+	// The scope filters judge a deal-bearing row by its deal's owner, which a
+	// waiting message does not have: the message names a person, not a deal, and
+	// its ownership is the ownership of the record it is filed under. The lane
+	// resolves that walk, and this is where the answer rides so the SAME filters
+	// can judge it. Zero means the row names nobody, which for a wait is an
+	// unowned customer rather than a missing answer.
+	owner ids.UUID
 	// foldedFrom names the sources of the rows this one stands for, once per
 	// member. A folded group is shown INSTEAD of its members, so a count of
 	// what the reader can see has to attribute it back to them — otherwise

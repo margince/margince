@@ -21,6 +21,8 @@ export type WorklistCategory = WorklistItem["category"];
 export type WorklistDisposition = NonNullable<
   WorklistItem["dispositions"]
 >[number];
+export type TeamBoard = components["schemas"]["TeamBoard"];
+export type TeamBoardMember = components["schemas"]["TeamBoardMember"];
 
 export const worklistKey = ["worklist"] as const;
 
@@ -48,6 +50,32 @@ export function useWorklist(
           query: owner ? { owner, filter } : { scope, filter },
         },
       });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
+// Who on the team is carrying what.
+//
+// Its own read rather than a widening of the queue above, because that queue
+// assembles ONE person's day: the per-user sources were never read for anybody
+// else, so no scope could produce a colleague's rows. This answers counts, and
+// pressing a row opens that person's day through the owner above — which is the
+// drill-down the board exists to route to.
+//
+// `enabled` carries the reader's tier, taken from the queue's own scope_options
+// so the two cannot disagree. A seat that may not ask for `team` is refused this
+// endpoint as well, and fetching anyway would put a 403 behind a surface the
+// reader was never shown a way into.
+export function useTeamBoard(enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: [...worklistKey, "team"],
+    queryFn: async (): Promise<TeamBoard> => {
+      const { data, error } = await api.GET("/worklist/team", {});
       if (error) {
         throwProblem(error);
       }
