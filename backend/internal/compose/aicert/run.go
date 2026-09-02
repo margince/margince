@@ -137,7 +137,7 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 				return runOutcome{}, errors.Join(err, lastErr)
 			}
 		}
-		outcome, err := runOnce(ctx, candidate, candidateRec, judge, judgeRec, sc, task, census, log, trace, run)
+		outcome, err := runOnce(ctx, candidate, candidateRec, judge, judgeRec, sc, task, census, log, trace, run, attempt)
 		if err == nil {
 			return outcome, nil
 		}
@@ -146,7 +146,11 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 		}
 		lastErr = err
 	}
-	return runOutcome{}, fmt.Errorf("every bound tier failed on all %d attempts: %w", runAttempts, lastErr)
+	return runOutcome{}, fmt.Errorf(
+		"every bound tier failed on all %d attempts — re-run the same command once the provider is reachable: "+
+			"every run already scored replays from the resume journal for six hours, so a restart pays only for what is left: %w",
+		runAttempts, lastErr,
+	)
 }
 
 // worthRedriving reports whether err is the router having exhausted its ladder
@@ -224,7 +228,7 @@ type runOutcome struct {
 // scenario: the request is the one the site's own code issues and the verdict
 // is the one the site's own validator reaches, so a run measures what ships
 // instead of a corpus author's description of it.
-func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecorder, judge *ai.Router, judgeRec *traceRecorder, sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, run int) (runOutcome, error) {
+func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecorder, judge *ai.Router, judgeRec *traceRecorder, sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, run, attempt int) (runOutcome, error) {
 	factory, bound := census.CaseFor(task, sc.Site)
 	if !bound {
 		return runOutcome{}, fmt.Errorf("no certification case is bound to site %s/%s", task, sc.Site)
@@ -234,7 +238,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 		return runOutcome{}, fmt.Errorf("preparing the case: %w", err)
 	}
 
-	caseTrace, pooled, err := driveCandidate(ctx, prepared, candidate, candidateRec, task, sc, run, trace, log)
+	caseTrace, pooled, err := driveCandidate(ctx, prepared, candidate, candidateRec, task, sc, run, attempt, trace, log)
 	if err != nil {
 		return runOutcome{}, err
 	}
@@ -279,7 +283,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	if err != nil {
 		return runOutcome{}, fmt.Errorf("judge: %w", err)
 	}
-	traceCalls(ctx, trace, "judge", task, sc, run, judgeCalls, log)
+	traceCalls(ctx, trace, "judge", task, sc, run, attempt, judgeCalls, log)
 
 	return runOutcome{
 		RunResult: RunResult{
@@ -310,18 +314,28 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 // calls were not all served by one model is refused here rather than pooled: it
 // has no single (provider, model) heading to be certified under.
 func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidate *ai.Router, candidateRec *traceRecorder,
-	task ai.Task, sc Scenario, run int, trace *payloadTrace, log *slog.Logger,
+	task ai.Task, sc Scenario, run, attempt int, trace *payloadTrace, log *slog.Logger,
 ) (aitasks.Trace, runCalls, error) {
 	mark := candidateRec.mark()
 	caseTrace, err := prepared.Run(ctx, routedCompleter{router: candidate, task: task})
 	if err != nil {
+		// A failed case still SPENT: the calls it made before the fault are
+		// billed, and driveRun may now discard the whole attempt. Tracing them
+		// on the way out is the only record an operator gets of what that
+		// attempt cost and what it was asking for when it died.
+		if made, terr := candidateRec.terminalsSince(mark); terr == nil {
+			traceCalls(ctx, trace, "candidate", task, sc, run, attempt, made, log)
+		} else {
+			log.WarnContext(ctx, "aicert: could not read back the failed attempt's own calls — its spend goes untraced",
+				"task", string(task), "scenario", sc.Name, "run", run, "attempt", attempt, "err", terr)
+		}
 		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", err)
 	}
 	calls, err := candidateRec.terminalsSince(mark)
 	if err != nil {
 		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", err)
 	}
-	traceCalls(ctx, trace, "candidate", task, sc, run, calls, log)
+	traceCalls(ctx, trace, "candidate", task, sc, run, attempt, calls, log)
 	pooled, err := poolRunCalls(calls)
 	if err != nil {
 		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", err)

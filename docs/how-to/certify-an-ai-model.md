@@ -221,19 +221,17 @@ its task stamp — `current` or `stale`, never `partial` — and reads `-` under
 
 - **`full_invocation`** — the run drives the whole production invocation, so
   certifying it certifies the site.
-- **`single_turn`** — the scenario seeds the window and grades the one reply
-  that follows; the surrounding conversation or tool loop is supplied, not
-  exercised. The turns it leaves out are their own answers.
+- **`single_turn`** — the scenario seeds the window and grades the one reply that
+  follows; the surrounding conversation or tool loop is supplied, not exercised.
 - **`single_call`** — the run makes ONE of the calls the site makes for one
   invocation. Where the site re-asks a below-floor item, asks again after an
   unreadable answer, or fans out over pages, the answer the product serves is
   assembled from calls the run never made, by a fold equally unmeasured.
 
 **Every row is one (provider, model, env) binding.** A `certified` band
-green-lights that deployment and says nothing about another one, which is why the
-binding sits in the row rather than in the file name only. The report is a view
-for a human release decision, not a gate: it always exits 0, because the lane it
-reports on is paid, manual and BYOK-gated.
+green-lights that deployment and says nothing about another, which is why the
+binding sits in the row. The report is a view for a human release decision, not a
+gate: it always exits 0, because the lane it reports on is paid and manual.
 
 ## 4. See the prompts — trace request/response for tuning
 
@@ -284,27 +282,30 @@ to leak. `TRACE=<dir>` picks a directory; `TRACE=` (empty) turns it off.
 ## 5. When the network drops mid-run
 
 A record covers a whole task, so a fault anywhere in one used to discard every
-run already paid for: seven scenarios at three repeats is twenty-one real model
-calls lost to the twenty-second. Two things now stand in the way.
+run already paid for — twenty-one real model calls lost to the twenty-second.
+Two things now stand in the way.
 
 **The run is re-driven** when the router comes back having failed on every bound
 tier — three attempts, waiting 2s then 8s. Only an exhausted ladder is retried: a
-validator failure or a caps miss is a *measurement*, and an exhausted provider
-account is a human's to fix. It is re-driven whole, because a site may turn a
-multi-turn conversation or a tool loop and there is no resuming one mid-way.
+validator failure or a caps miss is a *measurement*, and an exhausted account is
+a human's to fix. It is re-driven whole, because a site may turn a multi-turn
+conversation or a tool loop and there is no resuming one mid-way.
 
 **Every scored run is journaled** to `.tmp/aicert/resume/` as it is scored, so a
-restart replays what it can (`… (18 run(s) replayable)`) instead of paying again.
-A journaled run stands in for a fresh one only when nothing it measured can have
+restart replays what it can (`… run(s) replayable`) instead of paying again. A
+journaled run stands in for a fresh one only when nothing it measured can have
 moved: the **same candidate binding, judge, profile, corpus version, scenario
-stamp and repeat index**, and **within six hours**. Edit a prompt and that
-scenario's stamp moves, so its runs are measured again; certify another model and
-nothing is shared. A replayed run passes the same served-identity and degrade
-gates a live one does, so a resumed record is the same measurement.
+stamp, binary and repeat index**, and **within six hours**. Edit a prompt and
+that scenario's stamp moves; rebuild after tightening a site's validator and the
+binary moves, which the stamp does *not* cover — either way those runs are
+measured again. A replayed run passes the same served-identity and degrade gates
+a live one does, so a resumed record is the same measurement.
 
 On by default and gitignored, like the trace. `RESUME=<dir>` relocates it;
-`RESUME=` measures everything fresh. A journal cut off mid-write — the case it
-exists for — still replays every whole run before the cut.
+`RESUME=` measures everything fresh. A journal cut off mid-write still replays
+every whole run before the cut. One run owns a directory at a time — parallel
+`TASK=` runs each need their own `RESUME=<dir>`, and a killed run leaves a
+`.lock` to delete.
 
 ## How the verdict is decided
 
@@ -337,8 +338,7 @@ are the run's totals.
   lane gives both candidate and judge headroom so a thinking burst doesn't starve
   the answer into `MAX_TOKENS`. Leave room for it in a tight `caps.max_tokens`.
 - **Markdown-fenced JSON** is tolerated: the lane unfences as production does.
-- Records are committed artifacts — the proof travels with the code. Re-running
-  refreshes latency/token numbers (network noise); the verdict is durable.
+- Records are committed artifacts — the proof travels with the code.
 
 ## When certification passes but the field does not
 
