@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package agentquota
+package agentvolume
 
 import (
 	"context"
@@ -98,7 +98,7 @@ func (m *Meter) WithCostCeiling(c CostCeiling) *Meter {
 // boot-time injection point compose uses WITHOUT itself naming a Redis client
 // (that dependency stays in the cmd/platform tiers). newServer constructs a
 // fail-closed meter and shares that ONE pointer with every charge point; a
-// WithAgentQuota option rebinds it from the live meter once the Redis client and
+// WithAgentVolume option rebinds it from the live meter once the Redis client and
 // the deployment config are known, so every holder sees the live meter without
 // re-plumbing. Called at server assembly, before any request is served, so it
 // never races a charge — the same discipline overlaybudget.Meter.RebindFrom
@@ -124,7 +124,7 @@ func (m *Meter) Window() time.Duration { return m.window }
 
 // Reading is what the meter knows about one Passport's window for one counter.
 type Reading struct {
-	// Counter is which quota this reading is of, so a refusal can name it
+	// Counter is which volume budget this reading is of, so a refusal can name it
 	// rather than describing it.
 	Counter Counter
 	// Observed is what has been charged in this window so far.
@@ -253,7 +253,7 @@ func (m *Meter) Consume(ctx context.Context, c Counter, n int) error {
 	}
 	key := m.countKey(ws, agent, c, m.Bucket())
 	if err := addScript.Run(ctx, m.rdb, []string{key}, n, m.ttlSeconds()).Err(); err != nil {
-		return fmt.Errorf("agentquota: recording %d against %s: %w", n, c, err)
+		return fmt.Errorf("agentvolume: recording %d against %s: %w", n, c, err)
 	}
 	return nil
 }
@@ -329,7 +329,7 @@ func (m *Meter) observe(ctx context.Context, ws ids.UUID, agent string, c Counte
 		return 0, 0, err
 	}
 	if len(values) != 2 {
-		return 0, 0, fmt.Errorf("agentquota: reading %s returned %d values, want 2", c, len(values))
+		return 0, 0, fmt.Errorf("agentvolume: reading %s returned %d values, want 2", c, len(values))
 	}
 	observed, err = asCount(values[0])
 	if err != nil {
@@ -355,19 +355,19 @@ func asCount(v any) (int, error) {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return 0, fmt.Errorf("agentquota: counter value is %T, not a string", v)
+		return 0, fmt.Errorf("agentvolume: counter value is %T, not a string", v)
 	}
 	n, err := strconv.Atoi(s)
 	if err != nil {
 		// Atoi, not Sscanf: Sscanf reads "12abc" as 12 and reports no error,
 		// which is precisely the "neither absent nor an integer" case above.
-		return 0, fmt.Errorf("agentquota: counter value %q is not a number: %w", s, err)
+		return 0, fmt.Errorf("agentvolume: counter value %q is not a number: %w", s, err)
 	}
 	if n < 0 {
 		// This meter only ever INCRBYs by a positive amount, so a negative
 		// counter is not a count — and reading one as headroom is the direction
 		// that matters: it puts an agent under a bound it has already passed.
-		return 0, fmt.Errorf("agentquota: counter value %d is negative; this meter never writes one", n)
+		return 0, fmt.Errorf("agentvolume: counter value %d is negative; this meter never writes one", n)
 	}
 	return n, nil
 }

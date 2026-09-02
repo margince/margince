@@ -7,7 +7,7 @@ package compose
 //
 // Registering an object into the vocabulary is half a capability: it lets a
 // role document grant it and /me report the holder's grant. Before this, that
-// was ALL it did — the core gate decides scope ∧ seat ∧ tier ∧ quota and knows
+// was ALL it did — the core gate decides scope ∧ seat ∧ tier ∧ volume and knows
 // nothing about objects, so `x-rbac-object` gated nothing and a screen that
 // hid its controls on the /me answer was hiding them from a principal who
 // could still reach the same operation through the agent.

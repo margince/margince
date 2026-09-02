@@ -1331,7 +1331,7 @@ export const en = {
   "approval.kind.send_email": "Send an email",
   "approval.kind.held_draft": "Review a drafted email",
   "approval.kind.book_meeting": "Book a meeting",
-  "approval.kind.quota_release": "Let an agent continue",
+  "approval.kind.volume_release": "Let an agent continue",
   "approval.kind.coldstart": "Fill in a new account",
   "approval.kind.enrich": "Enrich from the web",
   "approval.kind.deepread": "Read the company site",

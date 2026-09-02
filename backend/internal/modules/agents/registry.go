@@ -66,13 +66,13 @@ type Registry struct {
 	// tierFloor carries the contract's per-record-type tier declarations, which
 	// a verb's own tier cannot express (tierfloor.go, #982).
 	tierFloor TierFloor
-	// quota is the MCP-SESS-* meter this surface CHARGES. The gate holds the
+	// volume budget is the MCP-SESS-* meter this surface CHARGES. The gate holds the
 	// same meter and does the refusing; the split is deliberate — a bound is
 	// enforced where admission is decided and paid where records and effects
 	// leave.
-	quota QuotaCharger
+	volume VolumeCharger
 	// cost answers the SOFT budget-share counter, whose only effect is a
-	// warning on the answer (quota.go).
+	// warning on the answer (volume.go).
 	cost CostShareReader
 	// claims is what makes `idempotency_key` mean something. Nil refuses a
 	// keyed call rather than running it unprotected (idempotency.go).
@@ -163,7 +163,7 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 	ctx = admitted
-	if stepUp := releasableQuotaRefusal(err); stepUp != nil {
+	if stepUp := releasableVolumeRefusal(err); stepUp != nil {
 		return nil, 0, r.stageStepUp(ctx, stepUp)
 	}
 	// The call ceiling is charged where the call is known to RUN, and only

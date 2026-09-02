@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package agentquota
+package agentvolume
 
 // Confirm-and-continue: the §2.4 ladder's release, and the only thing that ever
 // widens a window from inside it.
@@ -41,14 +41,14 @@ func (m *Meter) Release(ctx context.Context, ws, passport ids.UUID, c Counter, b
 	// defect reads the same whether or not Redis is up. The other order hides a
 	// wiring fault in exactly the deployment where one is most likely.
 	if !c.Releasable() {
-		return false, fmt.Errorf("agentquota: %s is not a releasable quota", c)
+		return false, fmt.Errorf("agentvolume: %s is not a releasable counter", c)
 	}
 	if ws == (ids.UUID{}) || passport == (ids.UUID{}) {
-		return false, fmt.Errorf("agentquota: releasing %s needs both a workspace and a passport", c)
+		return false, fmt.Errorf("agentvolume: releasing %s needs both a workspace and a passport", c)
 	}
 	current := m.Bucket()
 	if bucket > current {
-		return false, fmt.Errorf("agentquota: cannot release %s for a window that has not started", c)
+		return false, fmt.Errorf("agentvolume: cannot release %s for a window that has not started", c)
 	}
 	if bucket < current {
 		// Judged with the other argument facts, ABOVE the meter's reachability:
@@ -65,7 +65,7 @@ func (m *Meter) Release(ctx context.Context, ws, passport ids.UUID, c Counter, b
 	}
 	key := m.releaseKey(ws, passport.String(), c, bucket)
 	if err := addScript.Run(ctx, m.rdb, []string{key}, 1, m.ttlSeconds()).Err(); err != nil {
-		return false, fmt.Errorf("agentquota: recording a release of %s: %w", c, err)
+		return false, fmt.Errorf("agentvolume: recording a release of %s: %w", c, err)
 	}
 	return true, nil
 }

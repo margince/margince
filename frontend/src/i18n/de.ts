@@ -1287,7 +1287,7 @@ export const de = {
   "approval.kind.send_email": "E-Mail senden",
   "approval.kind.held_draft": "Entworfene E-Mail prüfen",
   "approval.kind.book_meeting": "Termin buchen",
-  "approval.kind.quota_release": "Einen Agenten weiterarbeiten lassen",
+  "approval.kind.volume_release": "Einen Agenten weiterarbeiten lassen",
   "approval.kind.coldstart": "Neuen Account befüllen",
   "approval.kind.enrich": "Aus dem Web anreichern",
   "approval.kind.deepread": "Unternehmensseite lesen",

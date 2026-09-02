@@ -175,8 +175,8 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 	// the reason serverProposed states, and a step-up is always agent-minted.
 	// It widens the window the staging named, from that row's own passport
 	// (quotarelease.go).
-	if approve && a.Kind == KindQuotaRelease {
-		if err := s.applyQuotaRelease(ctx, a); err != nil {
+	if approve && a.Kind == KindVolumeRelease {
+		if err := s.applyVolumeRelease(ctx, a); err != nil {
 			return s.recordEffectFailure(ctx, id,
 				"the agent's window could not be widened, so the approval has not taken effect",
 				fmt.Errorf("approved, but widening the agent's window failed: %w", err))
@@ -300,7 +300,7 @@ func landEditedPayload(
 	if edited == nil {
 		return nil
 	}
-	if a.Kind == KindQuotaRelease {
+	if a.Kind == KindVolumeRelease {
 		return &InvalidEditError{Cause: errors.New("a step-up is answered yes or no, not edited")}
 	}
 	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)

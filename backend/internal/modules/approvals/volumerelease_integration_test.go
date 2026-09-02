@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -47,11 +47,11 @@ func (e *stagingEnv) asAgent(t *testing.T) context.Context {
 }
 
 // stageStepUp puts one step-up in the inbox, exactly as the tool surface does.
-func (e *stagingEnv) stageStepUp(t *testing.T, counter agentquota.Counter) ids.ApprovalID {
+func (e *stagingEnv) stageStepUp(t *testing.T, counter agentvolume.Counter) ids.ApprovalID {
 	passport := ids.NewV7()
 	t.Helper()
-	proposal := agentquota.NewReleaseProposal(
-		agentquota.Reading{Counter: counter, Observed: 2431, Limit: 2000, Allowance: 2000, Bucket: 42},
+	proposal := agentvolume.NewReleaseProposal(
+		agentvolume.Reading{Counter: counter, Observed: 2431, Limit: 2000, Allowance: 2000, Bucket: 42},
 		passport, "search_records")
 	payload, err := json.Marshal(proposal)
 	if err != nil {
@@ -62,7 +62,7 @@ func (e *stagingEnv) stageStepUp(t *testing.T, counter agentquota.Counter) ids.A
 		t.Fatal(err)
 	}
 	id, staged, err := e.svc.StageUnlessDeclined(e.asAgent(t), StageInput{
-		Kind: KindQuotaRelease, ProposedChange: payload, DiffHash: string(identity),
+		Kind: KindVolumeRelease, ProposedChange: payload, DiffHash: string(identity),
 		Summary: "continue?", JoinPending: true, Identity: identity,
 	})
 	if err != nil || !staged {
@@ -77,12 +77,12 @@ func (e *stagingEnv) stageStepUp(t *testing.T, counter agentquota.Counter) ids.A
 // nor recorded as decided.
 func TestAStepUpCannotBeEditedIntoADifferentQuestion(t *testing.T) {
 	e := setupStaging(t)
-	id := e.stageStepUp(t, agentquota.Reads)
+	id := e.stageStepUp(t, agentvolume.Reads)
 	// The possible edit, not an impossible one: writes is releasable too, so
 	// the meter would have accepted it. What makes it wrong is that nobody was
 	// shown it.
-	edited, err := json.Marshal(agentquota.ReleaseProposal{
-		Counter: agentquota.Writes, Observed: 1, Limit: 2, Allowance: 2, Bucket: "42",
+	edited, err := json.Marshal(agentvolume.ReleaseProposal{
+		Counter: agentvolume.Writes, Observed: 1, Limit: 2, Allowance: 2, Bucket: "42",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -104,11 +104,11 @@ func TestAStepUpCannotBeEditedIntoADifferentQuestion(t *testing.T) {
 	}
 	// jsonb round-trips with its own spacing, so the check is on the decoded
 	// value rather than on bytes a formatter owns.
-	kept, err := agentquota.DecodeReleaseProposal(after.ProposedChange)
+	kept, err := agentvolume.DecodeReleaseProposal(after.ProposedChange)
 	if err != nil {
 		t.Fatalf("the stored payload no longer decodes: %v", err)
 	}
-	if kept.Counter != agentquota.Reads {
+	if kept.Counter != agentvolume.Reads {
 		t.Errorf("the refused edit rewrote the payload to %s", kept.Counter)
 	}
 }
@@ -117,7 +117,7 @@ func TestAStepUpCannotBeEditedIntoADifferentQuestion(t *testing.T) {
 // kind — a step-up nobody can approve is a control with no release.
 func TestAStepUpIsStillApprovableWithoutAnEdit(t *testing.T) {
 	e := setupStaging(t)
-	id := e.stageStepUp(t, agentquota.Reads)
+	id := e.stageStepUp(t, agentvolume.Reads)
 
 	// No meter composed, so the release itself reports the absence loudly —
 	// which is the point: the DECISION was reached, and only the effect could

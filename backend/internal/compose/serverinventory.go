@@ -34,7 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -345,22 +345,22 @@ type Server struct {
 	// correctness requirement.
 	// Always non-nil (newServer constructs it unconditionally, fail-closed
 	// with no Redis): a role that never calls WithOverlayMeter answers shed
-	// for every force-fresh read (never spends live quota it cannot
+	// for every force-fresh read (never spends live volume budget it cannot
 	// account for), and a role with no vault never reaches GetOverlayBudget
 	// at all. WithOverlayMeter Rebinds this shared pointer to the live
 	// Redis-backed meter at boot.
 	overlayMeter *overlaybudget.Meter
-	// quotaMeter is the MCP-SESS-READS bound this role enforces on agent
+	// volumeMeter is the MCP-SESS-READS bound this role enforces on agent
 	// the five MCP-SESS-* counters, shared by everything that must agree about
 	// them: the admission gate that REFUSES on them, both doors' registries that
 	// CHARGE them, the approvals service that WIDENS one when a lender says
 	// continue, and the model path that charges the soft cost share.
 	//
 	// Always non-nil (newServer constructs it unconditionally, fail-closed
-	// with no Redis), and WithAgentQuota Rebinds this ONE pointer to the live
+	// with no Redis), and WithAgentVolume Rebinds this ONE pointer to the live
 	// Redis-backed meter at boot — so no option order can leave the gate
 	// enforcing a different counter from the one the registry pays into.
-	quotaMeter *agentquota.Meter
+	volumeMeter *agentvolume.Meter
 	// retrievalEmbedder is this role's embed lane for REQUEST-TIME ranking —
 	// the same ModelPath.Embedder the background reindex and drift sweep use,
 	// bound here so the hybrid arm's vector half is available to a caller and

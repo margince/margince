@@ -30,7 +30,7 @@ import (
 	"github.com/margince/margince/composition"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -117,12 +117,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	opts = append(opts, surfaceOpts...)
 
 	// The per-Passport volume meter, built once and shared: the admission gate
-	// and the tool registry take it through WithAgentQuota, and the model path
+	// and the tool registry take it through WithAgentVolume, and the model path
 	// takes it below so a model call charges the agent that caused it. This is
 	// the role that serves agent principals, so leaving it fail-closed would
 	// refuse every agent read an api with Redis configured could count.
-	quotaMeter := agentquota.New(rdb, agentquota.Limits{}, agentquota.DefaultWindow)
-	overlayOpts, err := overlayOptions(cfg, deployCfg, rdb, quotaMeter, pool, logger, stdout)
+	volumeMeter := agentvolume.New(rdb, agentvolume.Limits{}, agentvolume.DefaultWindow)
+	overlayOpts, err := overlayOptions(cfg, deployCfg, rdb, volumeMeter, pool, logger, stdout)
 	if err != nil {
 		return err
 	}
@@ -137,10 +137,10 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	defer stopRelay()
 	opts = append(opts, relayOpts...)
 
-	// The model path comes back already bound to quotaMeter (MCP-SESS-COST);
+	// The model path comes back already bound to volumeMeter (MCP-SESS-COST);
 	// boot.go carries why that binding belongs with the path, not here.
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context
-	modelOpts, modelPath, err := modelAndHandoffOptions(ctx, cfg, deployCfg, pool, logger, quotaMeter)
+	modelOpts, modelPath, err := modelAndHandoffOptions(ctx, cfg, deployCfg, pool, logger, volumeMeter)
 	if err != nil {
 		return err
 	}

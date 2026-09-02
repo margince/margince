@@ -70,7 +70,7 @@ type Store struct {
 	// freezeRate resolves what a contract's currency converts at, on the day
 	// it activates. Injected because the reading belongs to the module that
 	// owns fx_rate, and contracts takes a seam rather than that module —
-	// the shape quotas' BaseCurrencyFunc already uses.
+	// the shape counters' BaseCurrencyFunc already uses.
 	//
 	// REQUIRED by the constructor. A store built without one would activate
 	// foreign-currency contracts carrying no frozen rate at all, which is the

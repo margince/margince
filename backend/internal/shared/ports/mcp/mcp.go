@@ -6,7 +6,7 @@
 // its autonomy tier, and JSON-schema in/out bound to a crm.yaml operation.
 // The registry's admission gate — scope ∧ tier (∧ the read/full seat
 // ceiling) — runs BEFORE Handle, so per-call policy lives in the typed
-// model, never ad-hoc inside a handler. (Per-agent quota/budget is
+// model, never ad-hoc inside a handler. (Per-agent volume budget is
 // specified but not yet enforced here; it joins this gate when the budget
 // layer lands.)
 package mcp

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -19,7 +19,7 @@ import (
 type recordingReleaser struct {
 	ws       ids.UUID
 	passport ids.UUID
-	counter  agentquota.Counter
+	counter  agentvolume.Counter
 	bucket   int64
 	calls    int
 	err      error
@@ -30,21 +30,21 @@ type recordingReleaser struct {
 	widened bool
 }
 
-func (r *recordingReleaser) Release(_ context.Context, ws, passport ids.UUID, c agentquota.Counter, bucket int64) (bool, error) {
+func (r *recordingReleaser) Release(_ context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64) (bool, error) {
 	r.calls++
 	r.ws, r.passport, r.counter, r.bucket = ws, passport, c, bucket
 	return r.widened, r.err
 }
 
 // stepUpRow is a staged step-up as the decision path reads it back.
-func stepUpRow(t *testing.T, passport ids.UUID, proposal agentquota.ReleaseProposal) row {
+func stepUpRow(t *testing.T, passport ids.UUID, proposal agentvolume.ReleaseProposal) row {
 	t.Helper()
 	raw, err := json.Marshal(proposal)
 	if err != nil {
 		t.Fatal(err)
 	}
 	id := ids.From[ids.PassportKind](passport)
-	return row{Kind: KindQuotaRelease, PassportID: &id, ProposedChange: raw}
+	return row{Kind: KindVolumeRelease, PassportID: &id, ProposedChange: raw}
 }
 
 func releaseCtx(ws ids.UUID) context.Context {
@@ -58,12 +58,12 @@ func releaseCtx(ws ids.UUID) context.Context {
 func TestAReleaseWidensTheAgentsWindowAndNotTheApproversContext(t *testing.T) {
 	ws, passport := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID
 	meter := &recordingReleaser{widened: true}
-	svc := NewService(nil).WithQuotaReleaser(meter)
-	a := stepUpRow(t, passport, agentquota.ReleaseProposal{
-		Counter: agentquota.Reads, Observed: 2431, Limit: 2000, Bucket: "42", Tool: "search_records",
+	svc := NewService(nil).WithVolumeReleaser(meter)
+	a := stepUpRow(t, passport, agentvolume.ReleaseProposal{
+		Counter: agentvolume.Reads, Observed: 2431, Limit: 2000, Bucket: "42", Tool: "search_records",
 	})
 
-	if err := svc.applyQuotaRelease(releaseCtx(ws), a); err != nil {
+	if err := svc.applyVolumeRelease(releaseCtx(ws), a); err != nil {
 		t.Fatal(err)
 	}
 
@@ -73,7 +73,7 @@ func TestAReleaseWidensTheAgentsWindowAndNotTheApproversContext(t *testing.T) {
 	if meter.ws != ws {
 		t.Errorf("released workspace %s, want %s", meter.ws, ws)
 	}
-	if meter.counter != agentquota.Reads || meter.bucket != 42 {
+	if meter.counter != agentvolume.Reads || meter.bucket != 42 {
 		t.Errorf("released %s in window %d, want reads in 42", meter.counter, meter.bucket)
 	}
 }
@@ -84,28 +84,28 @@ func TestAReleaseWidensTheAgentsWindowAndNotTheApproversContext(t *testing.T) {
 // from. Their decision still stands as the record that they said yes.
 func TestAReleaseThatWidenedNothingIsNotAnError(t *testing.T) {
 	meter := &recordingReleaser{widened: false} // the rolled-window answer
-	svc := NewService(nil).WithQuotaReleaser(meter)
+	svc := NewService(nil).WithVolumeReleaser(meter)
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
-		agentquota.ReleaseProposal{Counter: agentquota.Reads, Bucket: "1"})
+		agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "1"})
 
-	if err := svc.applyQuotaRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err != nil {
+	if err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err != nil {
 		t.Errorf("a release into a rolled window reported an error: %v", err)
 	}
 }
 
-// A payload naming a quota no human can release is refused. It matters because
+// A payload naming a volume budget no human can release is refused. It matters because
 // the staged payload is EDITABLE — the modify-then-approve arm pins entity
 // references, and this payload has none — so "egress" is a value an approver
 // can type into a question that was asked about reads.
 func TestAnEditedPayloadCannotTurnAStepUpIntoAHardStopRelease(t *testing.T) {
 	meter := &recordingReleaser{}
-	svc := NewService(nil).WithQuotaReleaser(meter)
+	svc := NewService(nil).WithVolumeReleaser(meter)
 
-	for _, counter := range []agentquota.Counter{agentquota.Egress, agentquota.Calls, agentquota.Cost} {
+	for _, counter := range []agentvolume.Counter{agentvolume.Egress, agentvolume.Calls, agentvolume.Cost} {
 		a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
-			agentquota.ReleaseProposal{Counter: counter, Bucket: "1"})
+			agentvolume.ReleaseProposal{Counter: counter, Bucket: "1"})
 
-		err := svc.applyQuotaRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a)
+		err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a)
 
 		if err == nil {
 			t.Errorf("an edited payload released %s, which no rung of the ladder allows", counter)
@@ -121,11 +121,11 @@ func TestAnEditedPayloadCannotTurnAStepUpIntoAHardStopRelease(t *testing.T) {
 // window for an unreadable one would widen a window nobody was shown.
 func TestAStagedWindowThatIsNotAWindowReleasesNothing(t *testing.T) {
 	meter := &recordingReleaser{}
-	svc := NewService(nil).WithQuotaReleaser(meter)
+	svc := NewService(nil).WithVolumeReleaser(meter)
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
-		agentquota.ReleaseProposal{Counter: agentquota.Reads, Bucket: "not-a-window"})
+		agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "not-a-window"})
 
-	if err := svc.applyQuotaRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err == nil {
+	if err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err == nil {
 		t.Error("an unreadable window was released against whatever window happened to be current")
 	}
 	if meter.calls != 0 {
@@ -138,14 +138,14 @@ func TestAStagedWindowThatIsNotAWindowReleasesNothing(t *testing.T) {
 // succeed — which is exactly the failure this refuses loudly.
 func TestAStepUpWithNoPassportIsRefusedRatherThanReleasedAgainstTheApprover(t *testing.T) {
 	meter := &recordingReleaser{}
-	svc := NewService(nil).WithQuotaReleaser(meter)
-	raw, err := json.Marshal(agentquota.ReleaseProposal{Counter: agentquota.Reads, Bucket: "1"})
+	svc := NewService(nil).WithVolumeReleaser(meter)
+	raw, err := json.Marshal(agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "1"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	applyErr := svc.applyQuotaRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID),
-		row{Kind: KindQuotaRelease, ProposedChange: raw})
+	applyErr := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID),
+		row{Kind: KindVolumeRelease, ProposedChange: raw})
 
 	if applyErr == nil || !strings.Contains(applyErr.Error(), "no passport") {
 		t.Fatalf("a passportless step-up → %v, want a refusal naming the missing passport", applyErr)
@@ -161,9 +161,9 @@ func TestAStepUpWithNoPassportIsRefusedRatherThanReleasedAgainstTheApprover(t *t
 func TestApprovingAStepUpWithNoMeterComposedFails(t *testing.T) {
 	svc := NewService(nil)
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
-		agentquota.ReleaseProposal{Counter: agentquota.Reads, Bucket: "1"})
+		agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "1"})
 
-	if err := svc.applyQuotaRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err == nil {
+	if err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err == nil {
 		t.Error("a service with no meter reported a release it could not have made")
 	}
 }
@@ -173,11 +173,11 @@ func TestApprovingAStepUpWithNoMeterComposedFails(t *testing.T) {
 // lets them try again rather than believe the agent is free to continue.
 func TestAMeterFailureReachesTheDecidingHuman(t *testing.T) {
 	meter := &recordingReleaser{err: errors.New("redis is unreachable")}
-	svc := NewService(nil).WithQuotaReleaser(meter)
+	svc := NewService(nil).WithVolumeReleaser(meter)
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
-		agentquota.ReleaseProposal{Counter: agentquota.Reads, Bucket: "1"})
+		agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "1"})
 
-	err := svc.applyQuotaRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a)
+	err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a)
 
 	if err == nil {
 		t.Fatal("a meter failure was swallowed; the human is told the agent may continue when it may not")
@@ -193,7 +193,7 @@ func TestAMeterFailureReachesTheDecidingHuman(t *testing.T) {
 // as a unit test over the real predicate rather than a paraphrase of it.
 func TestAStepUpIsDecidedByTheLenderAlone(t *testing.T) {
 	lender := ids.New[ids.UserKind]().UUID
-	a := row{Kind: KindQuotaRelease, OnBehalfOf: ptr(ids.From[ids.UserKind](lender))}
+	a := row{Kind: KindVolumeRelease, OnBehalfOf: ptr(ids.From[ids.UserKind](lender))}
 	// Every object grant there is, held by someone who is not the lender.
 	admin := principal.Principal{
 		UserID: ids.New[ids.UserKind]().UUID,
@@ -225,7 +225,7 @@ func TestAStepUpIsDecidedByTheLenderAlone(t *testing.T) {
 func TestAStepUpWithNoLenderIsDecidableByNobody(t *testing.T) {
 	anyone := principal.Principal{UserID: ids.New[ids.UserKind]().UUID}
 
-	got, err := decidable(context.Background(), nil, anyone, row{Kind: KindQuotaRelease})
+	got, err := decidable(context.Background(), nil, anyone, row{Kind: KindVolumeRelease})
 	if err != nil {
 		t.Fatal(err)
 	}

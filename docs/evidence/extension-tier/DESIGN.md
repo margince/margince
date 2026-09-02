@@ -124,7 +124,7 @@ Against the mistakes above, and inside §2.0's trust model:
   handler-bearing and contract-only verbs alike (`pkg/extension/verb.go:validateGovernance`).
   **This guarantee was not in the design and exists because its absence shipped:** notes's
   store-signing-key declared neither object nor action, so the serving adapter's object check never
-  ran and the operation was admitted on scope ∧ seat ∧ tier ∧ quota alone — which, for a
+  ran and the operation was admitted on scope ∧ seat ∧ tier ∧ volume budget alone — which, for a
   cookie-session human, is any authenticated seat. The acceptance re-run (finding R1) had a read-only
   seat replace the installation's signing key on both the REST route and the agent transport. The rule
   closes the class for every future unit rather than patching the one unit.

@@ -161,7 +161,7 @@ func TestGetDecodesOKAndMapsSentinels(t *testing.T) {
 	if _, err := Get(context.Background(), client, srv.URL, "tok", "/garbage", nil, &out); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("Get /garbage (undecodable) err = %v, want ErrUnreachable", err)
 	}
-	// A 429 and a quota-403 are retryable rate limits, NOT rejected auth — the
+	// A 429 and a volume budget-403 are retryable rate limits, NOT rejected auth — the
 	// registry must back off and honor Retry-After, not park the connection.
 	var rl *connector.RateLimitedError
 	if _, err := Get(context.Background(), client, srv.URL, "tok", "/toomany", nil, &out); !errors.As(err, &rl) {

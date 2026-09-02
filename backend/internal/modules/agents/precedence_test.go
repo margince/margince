@@ -99,11 +99,11 @@ func TestSplitHumanOwnedEdges(t *testing.T) {
 // recordingApprovals captures staging and redemption for assertions.
 type recordingApprovals struct {
 	staged    []StageRequest
-	steppedUp []QuotaReleaseRequest
+	steppedUp []VolumeReleaseRequest
 	redeemed  []string // "id tool hash"
 	redeemErr error
 	// stepUpDeclined replays the human who has already said no to this
-	// question: nothing is staged, it is reported, and the quota refusal has to
+	// question: nothing is staged, it is reported, and the volume budget refusal has to
 	// stand on its own rather than becoming an error about staging.
 	stepUpDeclined bool
 	stepUpErr      error
@@ -118,7 +118,7 @@ func (r *recordingApprovals) StageCall(_ context.Context, in StageRequest) (ids.
 	return ids.New[ids.ApprovalKind](), r.alreadyApproved, nil
 }
 
-func (r *recordingApprovals) StageQuotaRelease(_ context.Context, in QuotaReleaseRequest) (ids.ApprovalID, bool, error) {
+func (r *recordingApprovals) StageVolumeRelease(_ context.Context, in VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	r.steppedUp = append(r.steppedUp, in)
 	switch {
 	case r.stepUpErr != nil:

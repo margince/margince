@@ -149,7 +149,7 @@ func (w *overlayRefetchWorker) refetchAndIngest(wsCtx context.Context, conn over
 	inc := w.newIncumbent(conn.Region, string(token))
 	// Reserve one REST unit BEFORE the live read (OVB-AC-2/AC-5), so this lane's
 	// incumbent calls are accounted for like every other. On shed skip the
-	// re-fetch: never spend live quota we cannot account for. Dropping it costs
+	// re-fetch: never spend live volume budget we cannot account for. Dropping it costs
 	// nothing durable either way, though for different reasons per producer — a
 	// webhook is an optimization the watermark poller heals within its interval,
 	// while a re-projection is NOT something the poller heals (it is

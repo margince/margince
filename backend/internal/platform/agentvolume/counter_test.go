@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package agentquota
+package agentvolume
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 )
 
 // spec builds the two fields the derivation reads. Nothing else about a tool
-// decides which quota it spends, which is the property under test.
+// decides which volume budget it spends, which is the property under test.
 func spec(scope principal.Scope, egress bool) mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "t", Title: "T", Description: "d", Version: "1",
@@ -23,8 +23,8 @@ func spec(scope principal.Scope, egress bool) mcp.ToolSpec {
 
 // The ordering defect this derivation exists to avoid: every egress tool on
 // this surface also mutates, so a derivation that asks "does it write?" first
-// charges send_email against the 200-call write quota and leaves the 20-call
-// egress quota — the tightest one on the surface, guarding the exfiltration
+// charges send_email against the 200-call write volume budget and leaves the 20-call
+// egress volume budget — the tightest one on the surface, guarding the exfiltration
 // endpoint — permanently unspent. Written as a table because the whole point is
 // that no tool NAME appears in the answer.
 func TestAnEgressToolSpendsTheEgressQuotaEvenThoughItAlsoWrites(t *testing.T) {
@@ -46,10 +46,10 @@ func TestAnEgressToolSpendsTheEgressQuotaEvenThoughItAlsoWrites(t *testing.T) {
 	}
 }
 
-// Which quotas a human can widen mid-window IS the §2.4 ladder, and getting it
+// Which counters a human can widen mid-window IS the §2.4 ladder, and getting it
 // backwards is the difference between a visible gated event and an unbounded
 // one. Egress is the exfiltration endpoint and calls is the ceiling under which
-// every other quota sits — releasing either would release the control itself.
+// every other volume budget sits — releasing either would release the control itself.
 func TestOnlyTheStepUpQuotasCanBeReleasedByAHuman(t *testing.T) {
 	releasable := map[Counter]bool{
 		Reads: true, Writes: true,
