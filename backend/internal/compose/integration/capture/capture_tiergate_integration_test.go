@@ -332,6 +332,60 @@ func TestCaptureTierGateAsksAboutARoleMailboxOnlyOnce(t *testing.T) {
 	}
 }
 
+// Inviting somebody to a meeting is not writing to them.
+//
+// Google Calendar sends an invitation FROM the organizer with the attendee in
+// To, and Gmail files a copy in Sent — so the shape is indistinguishable from
+// ordinary outbound mail, and T1 read every attendee as an address the
+// workspace writes to. A founder's spouse, his language teacher and his own
+// second address all became contacts this way.
+//
+// The message is kept: the meeting is a real fact about the owner's week, and
+// the attendees stay recorded as participants, which is what they are. What is
+// withheld is the contact.
+func TestCaptureTierGateMintsNoContactForACalendarInvite(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, syncSent := env.e, env.syncSent
+
+	// The invite goes out from Sent, exactly as the provider files it — the same
+	// attestation that makes an ordinary outbound message T1 evidence.
+	syncSent(t, map[string]bool{"cal1@myco.example": true},
+		calendarInvite("attendee@partner.example", "cal1@myco.example"))
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = 'attendee@partner.example'`); n != 0 {
+		t.Fatalf("%d persons for a meeting attendee, want 0 — an invitation is not correspondence", n)
+	}
+	// The evidence itself must not be stamped: an invitation vouches for
+	// nobody, so a LATER message from that address cannot inherit T1's spare.
+	if n := countRows(t, e, `
+		SELECT count(*) FROM activity
+		WHERE counterparty_email = 'attendee@partner.example'
+		  AND counterparty_outbound_attested`); n != 0 {
+		t.Fatalf("%d attested outbound activities for an invitation, want 0 — groupware composed it", n)
+	}
+	// No ledger question either: a question about an attendee is one the verdict
+	// engine would have to spend a model call answering, about somebody who was
+	// never a counterparty.
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		WHERE email = 'attendee@partner.example'`); n != 0 {
+		t.Fatalf("%d ledger questions about an attendee, want 0 — nobody asked to be a contact", n)
+	}
+	// And the meeting itself is kept.
+	if n := countRows(t, e, `
+		SELECT count(*) FROM activity WHERE source_id = 'cal1@myco.example'`); n != 1 {
+		t.Fatalf("%d activities for the invitation, want 1 — the meeting is not lost", n)
+	}
+	if n := countRows(t, e, `
+		SELECT count(*) FROM activity_participant ap
+		 JOIN activity a ON a.id = ap.activity_id
+		WHERE a.source_id = 'cal1@myco.example' AND lower(ap.address) = 'attendee@partner.example'`); n != 1 {
+		t.Fatalf("%d participant rows for the attendee, want 1 — they were on the meeting", n)
+	}
+}
+
 func TestCaptureTierGateSuppressesAMachineLocalpartWithoutLosingTheMessage(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
