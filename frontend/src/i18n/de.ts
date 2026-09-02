@@ -7534,6 +7534,20 @@ export const de = {
   "worklist.board.nobody": "Noch niemand",
   "worklist.board.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.readings.label": "Was heute auf dem Spiel steht",
+  "worklist.readings.revenue": "Umsatz in Gefahr",
+  "worklist.readings.revenue.detail": "Über die heute treibenden Deals",
+  "worklist.readings.revenue.unpriced": "Kein gefährdeter Deal war bewertbar",
+  "worklist.readings.replies": "Kundenantworten",
+  "worklist.readings.replies.detail": "Kunden warten auf eine Antwort",
+  "worklist.readings.prospecting": "Neugeschäft",
+  "worklist.readings.prospecting.detail":
+    "Neugeschäft, das eine erste Antwort schuldet",
+  "worklist.readings.review": "Prüfung",
+  "worklist.readings.review.detail":
+    "Routinearbeit, die hinter einer Entscheidung wartet",
+  "worklist.readings.truncated":
+    "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
   "worklist.filter.customer_waiting": "Kunde wartet",

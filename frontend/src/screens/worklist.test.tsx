@@ -65,6 +65,13 @@ function day(over: Partial<Worklist> = {}): Worklist {
     sources_unavailable: [],
     reach: [],
     counts: [],
+    readings: {
+      revenue_at_risk_minor: null,
+      buyer_replies: 0,
+      prospecting: 0,
+      review: 0,
+      more_available: false,
+    },
     ...over,
   };
 }

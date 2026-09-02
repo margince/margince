@@ -128,13 +128,15 @@ func (s *Service) Worklist(
 	// left the second half seeing no named owner: it fell through to "mine" and
 	// returned the READER's own day under the named person's heading, which is
 	// the one way this page can be wrong that its reader cannot detect.
-	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads, cursor)
-	if waitingErr != nil {
-		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
-	}
-	if leadsErr != nil {
-		out.SourcesUnavailable = append(out.SourcesUnavailable, *leadsErr)
-	}
+	//
+	// The two refusals travel INTO the projection rather than onto the finished
+	// page. Appended afterwards they reached the reader's warning list but not
+	// the readings, so a rep refused the who-is-waiting lane was shown "0
+	// customers waiting on an answer" as an exact figure — above the warning
+	// that contradicted it.
+	out := reader.worklistFrom(
+		ctx, day, resolved, filter, limit, waiting, leads, cursor,
+		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr})
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	return out, nil
@@ -145,6 +147,11 @@ func (s *Service) Worklist(
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
 	waiting waitingRead, leads leadRead, cursor worklistCursor,
+	// The refusals from the two sources read BESIDE the assembled day. They
+	// arrive here rather than being appended to the finished page because the
+	// readings have to see them: a refused waiting or leads lane is exactly the
+	// case where a tally would otherwise print a confident zero.
+	besideTheDay []*crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
@@ -270,6 +277,24 @@ func (s *Service) worklistFrom(
 	shown, more, reached := pageFrom(rows, limit, cursor)
 	ordered := rankAll(shown)
 	bands := bandsOf(ordered)
+	// What never answered, assembled ONCE and used twice: the page names these
+	// lanes to the reader, and the readings below refuse to state exact figures
+	// over them. Two derivations of one list could disagree about whether the
+	// day was wholly seen.
+	//
+	// Both halves are needed, and missing the second half is the defect this
+	// shape exists to prevent. `unavailable(day)` reads the assembled day's own
+	// omitted lanes; the who-is-waiting and owed-leads sources are read BESIDE
+	// that day and are absent from it. Those two are precisely what
+	// `buyer_replies` and `prospecting` count, so leaving them out let a refused
+	// lane print a confident zero — the one direction these figures must never
+	// fail in.
+	missing := unavailable(day)
+	for _, refusal := range besideTheDay {
+		if refusal != nil {
+			missing = append(missing, *refusal)
+		}
+	}
 	out := crmcontracts.Worklist{
 		AsOf:  day.AsOf,
 		Queue: ordered,
@@ -280,7 +305,7 @@ func (s *Service) worklistFrom(
 		// cannot disagree, and threading it would change a signature twenty-odd
 		// callers spell.
 		Summary:            summarize(ordered, materialBarOf(day, s.money)),
-		SourcesUnavailable: unavailable(day),
+		SourcesUnavailable: missing,
 		// `considered` is every candidate this read weighed, `shown` what
 		// survived folding and the cut. Both are already in hand, so no figure
 		// here costs a query that could disagree with the page it describes.
@@ -289,6 +314,17 @@ func (s *Service) worklistFrom(
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
 		Counts: countsOf(considered, shown, bounded),
+		// The outcome figures beside the per-kind tallies, over the same
+		// snapshot: what the day's work is worth rather than how much of it
+		// there is.
+		//
+		// It takes the SAME withheld list the page publishes, so the strip cannot
+		// state a clear day over a lane this reader was refused. Sharing the value
+		// also shares its DSR suppression, which is correct here rather than
+		// merely convenient: DSR rows classify as `system` and feed none of the
+		// four readings, so a suppressed DSR lane hides no work these figures
+		// count. A lane whose rows DID feed one would have to be named.
+		Readings: readingsOf(considered, bounded, missing),
 	}
 	if filter != "" {
 		narrowed := crmcontracts.WorklistFilter(filter)
