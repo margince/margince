@@ -27,11 +27,13 @@ import { OnboardingBackread } from "./onboarding-backread";
 // costs nothing, reading the history spends budget.
 
 // The OAuth outcomes that no retry can clear: the provider refused the grant,
-// or its API was never enabled for this deployment. Keyed off the server's
-// outcome segment, and pointing at the same copy Settings renders so the two
-// surfaces cannot drift apart.
+// its API was never enabled for this deployment, or it refused this
+// deployment's client credentials. Keyed off the server's outcome segment, and
+// pointing at the same copy Settings renders so the two surfaces cannot drift
+// apart.
 const PERMANENT_FAILURE_BODY: Record<string, MessageKey | undefined> = {
   misconfigured: "connectors.oauthMisconfigured",
+  bad_client: "connectors.oauthBadClient",
   rejected: "connectors.oauthRejected",
 };
 

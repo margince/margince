@@ -477,6 +477,8 @@ export const de = {
   "common.error": "Konnten diese Ansicht nicht laden.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
+  "common.assistantUnavailable":
+    "Der Assistent hat nicht geantwortet und kann das hier nicht entwerfen. Eine Administratorin oder ein Administrator kann die Modellbindung unter Einstellungen → KI prüfen. Nötig ist er nicht — die Angaben lassen sich von Hand eintragen.",
   "common.gatewayUnavailable":
     "Der Server hat diese Anfrage nicht rechtzeitig abgeschlossen. Sie läuft möglicherweise noch — warte einen Moment, bevor du es erneut versuchst, sonst läuft dieselbe Arbeit zweimal.",
   "common.permissionDenied":
@@ -4128,6 +4130,8 @@ export const de = {
     "Der Anbieter hat die Verbindung abgelehnt. Bestätige alle angefragten Berechtigungen und versuche es dann erneut.",
   "connectors.oauthMisconfigured":
     "Diese Installation kann die Verbindung noch nicht abschließen — die API des Anbieters ist dafür nicht aktiviert. Ein Administrator muss sie aktivieren; das Server-Log nennt die betroffene API.",
+  "connectors.oauthBadClient":
+    "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Administrator sollte Client-ID und Secret unter Einstellungen → Allgemein prüfen; ein erneuter Verbindungsversuch behebt es nicht von selbst.",
   "connectors.dismissOutcome": "Schließen",
 
   // Das "Verbindung hinzufügen"-Element (Task 1): ein Button in der Kopfzeile

@@ -481,6 +481,8 @@ export const vi = {
   "common.error": "Không tải được màn hình này.",
   "common.errorNoCause":
     "Yêu cầu thất bại. Không có nguyên nhân nào được báo về.",
+  "common.assistantUnavailable":
+    "Trợ lý chưa phản hồi nên không thể soạn giúp bạn phần này. Quản trị viên có thể kiểm tra liên kết mô hình trong Cài đặt → AI. Không bắt buộc phải có trợ lý — bạn có thể tự nhập các thông tin này.",
   "common.gatewayUnavailable":
     "Máy chủ chưa hoàn tất yêu cầu này kịp thời. Có thể nó vẫn đang chạy — hãy đợi một lát trước khi thử lại, nếu không cùng một công việc sẽ chạy hai lần.",
   "common.permissionDenied":
@@ -4089,6 +4091,8 @@ export const vi = {
     "Nhà cung cấp từ chối kết nối. Hãy chấp nhận mọi quyền mà nhà cung cấp yêu cầu, rồi thử kết nối lại.",
   "connectors.oauthMisconfigured":
     "Bản triển khai này chưa hoàn tất được kết nối đó — API của nhà cung cấp chưa được bật cho bản này. Cần quản trị viên bật lên; nhật ký máy chủ nêu rõ API nào.",
+  "connectors.oauthBadClient":
+    "Nhà cung cấp đã từ chối thông tin xác thực ứng dụng của bản triển khai này. Quản trị viên cần kiểm tra Client ID và secret trong Cài đặt → Chung; kết nối lại sẽ không tự khắc phục.",
   "connectors.dismissOutcome": "Bỏ qua",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
