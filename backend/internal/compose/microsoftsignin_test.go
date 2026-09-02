@@ -369,6 +369,13 @@ func TestTheRoutingAuthorityWidensNoFurtherThanTheListDoes(t *testing.T) {
 		"blank and repeated entries are typos, not policy": {
 			testTenant + ", ," + testTenant, testTenant,
 		},
+		// One id like any other by the rule above, and the one id that must not
+		// take it: an installation signing in personal accounts alone would
+		// otherwise route through the guid rather than the alias Microsoft
+		// documents for them.
+		"personal accounts alone take their alias": {
+			microsoftConsumerTenant, microsoftConsumerAuthority,
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := (MicrosoftSignInConfig{Tenant: tc.tenant}).routingAuthority(); got != tc.want {

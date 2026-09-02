@@ -82,6 +82,13 @@ const (
 	// personal accounts, so a private account is turned away at Microsoft's own
 	// screen instead of after a round trip.
 	microsoftWorkAuthority = "organizations"
+	// microsoftConsumerAuthority is the alias for the consumer tenant, used
+	// when personal accounts are the ONLY thing listed.
+	//
+	// The alias rather than the guid it stands for: Microsoft documents the two
+	// as equivalent, and an installation that can only sign in personal
+	// accounts is not the place to find out whether every endpoint agrees.
+	microsoftConsumerAuthority = "consumers"
 )
 
 // MicrosoftSignInConfig carries what WithMicrosoftSignIn needs.
@@ -153,6 +160,13 @@ func (cfg MicrosoftSignInConfig) tenants() []string {
 func (cfg MicrosoftSignInConfig) routingAuthority() string {
 	ids := cfg.tenants()
 	if len(ids) == 1 {
+		// The consumer tenant alone takes its ALIAS. It is one id like any
+		// other, so the rule above would route through the guid — which
+		// Microsoft documents as equivalent and which there is no reason to
+		// rely on when the alias says the same thing and cannot be misread.
+		if ids[0] == microsoftConsumerTenant {
+			return microsoftConsumerAuthority
+		}
 		return ids[0]
 	}
 	for _, id := range ids {
