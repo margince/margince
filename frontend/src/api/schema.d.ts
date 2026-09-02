@@ -5273,7 +5273,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                /** @description Report key (prebuilt) or a saved-report id. */
+                /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
                 report: string;
             };
             cookie?: never;
@@ -5298,7 +5298,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                /** @description Report key (prebuilt) or a saved-report id. */
+                /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
                 report: string;
             };
             cookie?: never;
@@ -22461,9 +22461,8 @@ export interface components {
          *     (the per-report allowed dimension/measure list in data-model.md §13 / contract README).
          *     An out-of-vocabulary field returns `422 code: report_field_not_allowed`. `additionalProperties`
          *     is open only to admit *values*, never to admit arbitrary SQL identifiers.
-         *     **`/reports/{report}` path param:** a value matching the UUID format resolves to a saved
-         *     report; any other value resolves against the prebuilt-report key catalog (README "Prebuilt
-         *     reports"). A prebuilt key is never a UUID, so there is no collision.
+         *     **`/reports/{report}` path param:** a prebuilt-report key (README "Prebuilt
+         *     reports"). Saved reports are not served; a UUID here is refused.
          */
         RunReportRequest: {
             /** @description Typed predicates (period, status, owner, ...) — keys must be in the report vocabulary. */
@@ -22473,18 +22472,24 @@ export interface components {
             group_by?: string[];
             aggregates?: {
                 /** @enum {string} */
-                fn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
+                fn: "count" | "sum" | "avg" | "min" | "max";
                 field?: string | null;
                 as?: string | null;
             }[];
-            /**
-             * Format: date
-             * @description Snapshot / historical reporting via deal_stage_history.
-             */
-            as_of_date?: string | null;
         };
         ReportResult: {
             report: string;
+            /**
+             * Format: date-time
+             * @description The instant this result was computed. A report is a reading taken at a time, and without it two screens showing different numbers look like a bug rather than two moments.
+             */
+            as_of: string;
+            /** @description The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone. */
+            timezone: string;
+            /** @description The installation's configured base currency, as an ISO-4217 code. It labels the frame, not the columns: a money column carries each record's OWN currency, which is why every money report groups by `currency`. Converting to this one is the frozen-FX roll-up, a capability this endpoint does not serve. */
+            base_currency: string;
+            /** @description The month the installation's financial year opens, so a quarter in this result can be placed without assuming it starts in January. */
+            fiscal_year_start_month: number;
             /** @description The validated query plan that was executed (shown before/after run). */
             plan: {
                 [key: string]: unknown;
@@ -36849,7 +36854,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Report key (prebuilt) or a saved-report id. */
+                /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
                 report: string;
             };
             cookie?: never;
@@ -36893,7 +36898,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Report key (prebuilt) or a saved-report id. */
+                /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
                 report: string;
             };
             cookie?: never;
