@@ -80,13 +80,9 @@ afterEach(() => {
 });
 
 describe("the tag vocabulary card", () => {
-  it("draws the workspace's words with how much carries them", async () => {
+  it("draws the workspace's words", async () => {
     mount([KEY_ACCOUNT]);
     expect(await screen.findByText("Key Account")).toBeInTheDocument();
-    // 4 people + 2 companies + 1 deal, counted within what this reader sees.
-    await waitFor(() =>
-      expect(screen.getByText(/7 records/)).toBeInTheDocument(),
-    );
   });
 
   // A retired word is restored HERE, so a list that hid it would leave the
@@ -130,6 +126,68 @@ describe("the tag vocabulary card", () => {
     expect(
       await screen.findByText(/Close to a word this organization already has/),
     ).toBeInTheDocument();
+  });
+
+  // The count is three row-scoped queries per tag on the server, so drawing it
+  // for every row would spend hundreds opening the card to answer a question
+  // about the one word being retired.
+  it("counts a word's records only when asked", async () => {
+    const user = userEvent.setup();
+    const detail = vi.fn(() =>
+      jsonResponse({
+        ...KEY_ACCOUNT,
+        usage: { people: 4, companies: 2, deals: 1 },
+      }),
+    );
+    mount([KEY_ACCOUNT], ADMIN, { "GET /tags/t-1": detail });
+    await screen.findByText("Key Account");
+    expect(detail).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: en["tagAdmin.countUsage"] }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText(/7 records/)).toBeInTheDocument(),
+    );
+  });
+
+  // A row read back without a version takes no write: an unpinned PATCH is
+  // last-write-wins, landing on top of an edit it never saw and reporting
+  // success to both editors. The refusal has to reach the DIALOG — the same
+  // throw from a click handler escapes into React and takes the page down.
+  it("refuses to save a word that came back with no version, in the dialog", async () => {
+    const user = userEvent.setup();
+    const { version: _dropped, ...unversioned } = KEY_ACCOUNT;
+    mount([unversioned]);
+    await user.click(
+      await screen.findByRole("button", { name: en["tagAdmin.edit"] }),
+    );
+    // Said before the press, not after it: there is nothing the reader can
+    // retype to fix this, so offering the verb would be offering a refusal.
+    expect(
+      await screen.findByText(en["tagAdmin.noVersion"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: en["tagAdmin.save"] }),
+    ).toBeDisabled();
+  });
+
+  // The settings entry unions five data-model reads, so this card is mounted
+  // for a seat holding one of the OTHER four. Asking anyway is a request whose
+  // only answer is 403, and an empty list would read as "no tags here".
+  it("says the vocabulary is withheld rather than asking for it", async () => {
+    const tags = vi.fn(() =>
+      jsonResponse({
+        data: [KEY_ACCOUNT],
+        page: { has_more: false, next_cursor: null },
+      }),
+    );
+    mount([KEY_ACCOUNT], { custom_field: ["read"] }, { "GET /tags": tags });
+    expect(
+      await screen.findByText(en["tagAdmin.withheld"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(en["tagAdmin.empty"])).toBeNull();
+    expect(tags).not.toHaveBeenCalled();
   });
 
   // Merge is the one verb that cannot be undone, and the released name is the

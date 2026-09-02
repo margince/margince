@@ -25,14 +25,34 @@ export function nearMatches(
   }
   return vocabulary.filter((tag) => {
     const other = normalizeForCompare(tag.name);
-    // Not `includes` in one direction only: "EV" typed against an existing "EV
-    // programme" and "EV programme" typed against an existing "EV" are the same
-    // near-duplicate seen from its two ends.
+    if (other === "") {
+      return false;
+    }
+    // Both directions: "EV" typed against an existing "EV programme" and "EV
+    // programme" typed against an existing "EV" are the same near-duplicate
+    // seen from its two ends.
     return (
-      other !== "" &&
-      (other === needle || other.includes(needle) || needle.includes(other))
+      other === needle ||
+      containsWhole(other, needle) ||
+      containsWhole(needle, other)
     );
   });
+}
+
+/**
+ * Whether `haystack` contains `needle` as WHOLE WORDS, not as a substring.
+ *
+ * A plain `includes` makes a short word match everything: a vocabulary holding
+ * a tag named "a" warns on every proposed name containing that letter, and a
+ * warning that fires on everything is one an admin learns to click past — which
+ * costs the real near-duplicates it exists to catch.
+ */
+function containsWhole(haystack: string, needle: string): boolean {
+  const words = haystack.split(" ");
+  const sought = needle.split(" ");
+  return words.some((_, at) =>
+    sought.every((word, offset) => words[at + offset] === word),
+  );
 }
 
 /**

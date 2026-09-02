@@ -3,8 +3,7 @@
 
 import { useState } from "react";
 
-import { requireVersion } from "../api/version";
-import { useCanWrite } from "../app/capability";
+import { useCan, useCanWrite } from "../app/capability";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -41,10 +40,15 @@ import "./tagadmin.css";
  */
 export function TagVocabularyCard() {
   const t = useT();
+  // The tab opens on ANY data-model read, so this card is mounted for a seat
+  // holding `custom_field:read` and no tag grant at all. Asking anyway is a
+  // request whose only possible answer is 403 — and a withheld card says so
+  // rather than vanishing, which is the rail's own rule.
+  const canRead = useCan("tag", "read");
   const canCreate = useCanWrite("tag", "create");
   const canEdit = useCanWrite("tag", "update");
   const canArchive = useCanWrite("tag", "delete");
-  const catalog = useTagCatalog();
+  const catalog = useTagCatalog(canRead);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Tag | null>(null);
   const [merging, setMerging] = useState<Tag | null>(null);
@@ -69,43 +73,59 @@ export function TagVocabularyCard() {
     >
       <PanelBody>
         <p className="settings-panel-sub">{t("tagAdmin.sub")}</p>
+        {!canRead && <p className="tagadmin-note">{t("tagAdmin.withheld")}</p>}
         {failure?.error != null && (
           <Callout tone="danger">{problemMessageOf(failure.error, t)}</Callout>
         )}
-        <SettingList>
-          <SettingRow
-            label={t("tagAdmin.listLabel")}
-            layout="stack"
-            control={
-              <QueryGate query={catalog}>
-                {(answer) => {
-                  const words = answer.data ?? [];
-                  if (words.length === 0) {
+        {canRead && (
+          <SettingList>
+            <SettingRow
+              label={t("tagAdmin.listLabel")}
+              layout="stack"
+              control={
+                <QueryGate query={catalog}>
+                  {(answer) => {
+                    const words = answer.data ?? [];
+                    if (words.length === 0) {
+                      return (
+                        <p className="tagadmin-note">{t("tagAdmin.empty")}</p>
+                      );
+                    }
                     return (
-                      <p className="tagadmin-note">{t("tagAdmin.empty")}</p>
+                      <>
+                        {/* The catalog is capped and carries no cursor. An admin
+                          shown a cut list would coin a duplicate of a word past
+                          the cap, and merge could not name it as a target. */}
+                        {answer.page.has_more && (
+                          <Callout tone="warn">
+                            {t("tagAdmin.truncated")}
+                          </Callout>
+                        )}
+                        <ul
+                          className="tagadmin-list"
+                          data-testid="tag-vocabulary"
+                        >
+                          {words.map((tag) => (
+                            <TagVocabularyRow
+                              key={tag.id}
+                              tag={tag}
+                              canEdit={canEdit}
+                              canArchive={canArchive}
+                              onEdit={() => setEditing(tag)}
+                              onMerge={() => setMerging(tag)}
+                              onArchive={() => archive.mutate(tag.id)}
+                              onRestore={() => restore.mutate(tag.id)}
+                            />
+                          ))}
+                        </ul>
+                      </>
                     );
-                  }
-                  return (
-                    <ul className="tagadmin-list" data-testid="tag-vocabulary">
-                      {words.map((tag) => (
-                        <TagVocabularyRow
-                          key={tag.id}
-                          tag={tag}
-                          canEdit={canEdit}
-                          canArchive={canArchive}
-                          onEdit={() => setEditing(tag)}
-                          onMerge={() => setMerging(tag)}
-                          onArchive={() => archive.mutate(tag.id)}
-                          onRestore={() => restore.mutate(tag.id)}
-                        />
-                      ))}
-                    </ul>
-                  );
-                }}
-              </QueryGate>
-            }
-          />
-        </SettingList>
+                  }}
+                </QueryGate>
+              }
+            />
+          </SettingList>
+        )}
       </PanelBody>
       {adding && (
         <TagDialog
@@ -157,7 +177,13 @@ function TagVocabularyRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const detail = useTagDetail(tag.id);
+  // Asked for one word at a time, when a reader asks. The count is three
+  // row-scoped queries per tag on the server — the visibility rule is per
+  // table, so it cannot be one grouped pass — and drawing it for every row
+  // would spend six hundred queries opening a card in a workspace with two
+  // hundred words, to answer a question about the one word being retired.
+  const [wanted, setWanted] = useState(false);
+  const detail = useTagDetail(wanted ? tag.id : undefined);
   const usage = detail.data?.usage;
   const carried =
     usage === undefined
@@ -169,11 +195,22 @@ function TagVocabularyRow({
     <li className="tagadmin-row">
       <TagPill name={tag.name} tone={tag.color} archived={archived} />
       <span className="tagadmin-usage t-small">
-        {carried === undefined
-          ? // Not "0": the count has not arrived, and a zero drawn while it is
-            // in flight is a claim about the vocabulary nobody made.
-            t("tagAdmin.usagePending")
-          : t("tagAdmin.usage", { count: formatNumber(carried, locale) })}
+        {carried !== undefined ? (
+          t("tagAdmin.usage", { count: formatNumber(carried, locale) })
+        ) : detail.isError ? (
+          // A count that failed says so. Left as "Counting…" it waits forever,
+          // and a reader deciding whether to retire a word is told nothing
+          // while appearing to be told something.
+          t("tagAdmin.usageFailed")
+        ) : wanted ? (
+          // Not "0" while it is in flight: a zero drawn before the answer is a
+          // claim about the vocabulary nobody made.
+          t("tagAdmin.usagePending")
+        ) : (
+          <Button small variant="ghost" onClick={() => setWanted(true)}>
+            {t("tagAdmin.countUsage")}
+          </Button>
+        )}
       </span>
       <span className="tagadmin-verbs">
         {canEdit && !archived && (
@@ -201,7 +238,22 @@ function TagVocabularyRow({
   );
 }
 
+/** How many close words a warning names before it stops listing them. */
+const NEAR_MATCHES_NAMED = 5;
+
 const PALETTE: readonly TagColor[] = ["teal", "amber", "rose", "slate"];
+
+/**
+ * A Select's answer as a colour, or none.
+ *
+ * The control hands back a string. Asserting it would let a value the palette
+ * does not hold reach the API, where the server refuses it — a refusal the
+ * reader cannot act on, for a choice they did not make.
+ */
+function asTagColor(value: string): TagColor | "" {
+  const found = PALETTE.find((tone) => tone === value);
+  return found ?? "";
+}
 
 /**
  * Coining a word, or correcting one.
@@ -223,11 +275,18 @@ function TagDialog({
 }>) {
   const t = useT();
   const [name, setName] = useState(existing?.name ?? "");
-  const [color, setColor] = useState<string>(existing?.color ?? "");
+  // Narrowed, not asserted: the Select hands back a string, and a value that is
+  // not one of the four would reach the API as a colour the server refuses.
+  const [color, setColor] = useState<TagColor | "">(existing?.color ?? "");
   const create = useCreateTag();
   const update = useUpdateTag();
   const pending = create.isPending || update.isPending;
   const failure = create.error ?? update.error;
+  // A row that came back with no version cannot be written at all, and this
+  // tier knows why. Without its own sentence the refusal reaches the reader as
+  // "the request failed, no cause reported" — true, and useless: there is
+  // nothing they can retype to fix it, and reopening the page is what does.
+  const unversioned = existing !== undefined && existing.version === undefined;
   // Never the word being edited: a rename that keeps most of its own spelling
   // would otherwise warn that it collides with itself.
   const others = vocabulary.filter((tag) => tag.id !== existing?.id);
@@ -242,21 +301,18 @@ function TagDialog({
       update.mutate(
         {
           id: existing.id,
-          // Never a default: a row read back without a version takes no write,
-          // because an unpinned PATCH is last-write-wins and lands on top of an
-          // edit it never saw while reporting success to both editors.
-          version: requireVersion(existing.version),
+          version: existing.version,
           name: trimmed,
           // "none" clears, because an absent field and a null field decode to
           // the same thing in the request type.
-          color: color === "" ? "none" : (color as TagColor),
+          color: color === "" ? "none" : color,
         },
         { onSuccess: onClose },
       );
       return;
     }
     create.mutate(
-      { name: trimmed, color: color === "" ? undefined : (color as TagColor) },
+      { name: trimmed, color: color === "" ? undefined : color },
       { onSuccess: onClose },
     );
   };
@@ -267,9 +323,15 @@ function TagDialog({
       onClose={onClose}
       title={existing ? t("tagAdmin.editTitle") : t("tagAdmin.addTitle")}
       confirmLabel={existing ? t("tagAdmin.save") : t("tagAdmin.create")}
-      confirmDisabled={name.trim() === ""}
+      confirmDisabled={name.trim() === "" || unversioned}
       pending={pending}
-      error={failure != null ? problemMessageOf(failure, t) : undefined}
+      error={
+        unversioned
+          ? t("tagAdmin.noVersion")
+          : failure != null
+            ? problemMessageOf(failure, t)
+            : undefined
+      }
       onConfirm={submit}
     >
       <Field label={t("tagAdmin.nameLabel")}>
@@ -287,7 +349,7 @@ function TagDialog({
           <Select
             {...control}
             value={color}
-            onChange={(next) => setColor(next)}
+            onChange={(next) => setColor(asTagColor(next))}
             options={[
               { value: "", label: t("tagAdmin.colorNone") },
               ...PALETTE.map((tone) => ({ value: tone, label: tone })),
@@ -298,7 +360,12 @@ function TagDialog({
       {near.length > 0 && (
         <Callout tone="warn">
           {t("tagAdmin.nearMatch", {
-            names: near.map((tag) => tag.name).join(", "),
+            // Capped: a warning naming forty words is one an admin scrolls
+            // past, which costs the near-duplicate it exists to catch.
+            names: near
+              .slice(0, NEAR_MATCHES_NAMED)
+              .map((tag) => tag.name)
+              .join(", "),
           })}
         </Callout>
       )}

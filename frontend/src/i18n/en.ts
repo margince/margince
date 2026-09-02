@@ -1821,6 +1821,14 @@ export const en = {
   "tagAdmin.mergedTitle": "Merged",
   "tagAdmin.mergedBody":
     "{moved} records moved to the surviving tag. {collapsed} already carried both, so their duplicate was dropped.",
+  "tagAdmin.countUsage": "Count records",
+  "tagAdmin.noVersion":
+    "This tag was read without a version, so it cannot be saved. Reopen the page and try again.",
+  "tagAdmin.withheld":
+    "You do not have access to this organization's tag vocabulary.",
+  "tagAdmin.truncated":
+    "This list is shortened. Words past the limit are not shown here and cannot be edited or merged into.",
+  "tagAdmin.usageFailed": "Count unavailable",
   "tagAdmin.done": "Done",
   "tags.archived": "archived",
   "tags.columnHeader": "Tags",

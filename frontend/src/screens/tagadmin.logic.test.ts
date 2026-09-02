@@ -36,6 +36,14 @@ describe("warning about a near-duplicate word", () => {
     expect(names("EV")).toEqual(["EV programme"]);
   });
 
+  // A warning that fires on everything is one an admin learns to click past,
+  // which costs the real near-duplicates it exists to catch.
+  it("does not let a one-letter word match every name that contains it", () => {
+    expect(nearMatches("Trade Fair 2026", [{ id: "t-9", name: "a" }])).toEqual(
+      [],
+    );
+  });
+
   it("says nothing about a word that is genuinely new", () => {
     expect(names("Trade Fair")).toEqual([]);
   });

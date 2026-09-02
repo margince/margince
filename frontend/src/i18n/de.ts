@@ -1773,6 +1773,14 @@ export const de = {
   "tagAdmin.mergedTitle": "Zusammengeführt",
   "tagAdmin.mergedBody":
     "{moved} Datensätze übernommen. {collapsed} trugen bereits beide; das doppelte Tag wurde entfernt.",
+  "tagAdmin.countUsage": "Datensätze zählen",
+  "tagAdmin.noVersion":
+    "Dieses Tag wurde ohne Version gelesen und kann nicht gespeichert werden. Seite neu laden und erneut versuchen.",
+  "tagAdmin.withheld":
+    "Sie haben keinen Zugriff auf das Tag-Vokabular dieser Organisation.",
+  "tagAdmin.truncated":
+    "Diese Liste ist gekürzt. Wörter jenseits der Grenze erscheinen hier nicht und lassen sich nicht bearbeiten.",
+  "tagAdmin.usageFailed": "Zählung nicht verfügbar",
   "tagAdmin.done": "Fertig",
   "tags.archived": "archiviert",
   "tags.columnHeader": "Tags",

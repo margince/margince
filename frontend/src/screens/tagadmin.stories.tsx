@@ -16,7 +16,7 @@ import { TagVocabularyCard } from "./tagadmin";
 // anybody may extend is a list of everything anybody ever typed.
 
 const meta: Meta = {
-  title: "Settings/Tag vocabulary",
+  title: "Settings/Admin settings/Data model/Tag vocabulary",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -100,4 +100,50 @@ export const ReadOnly: Story = {
  * reporting that a list is empty. */
 export const Empty: Story = {
   render: () => <Card words={[]} />,
+};
+
+/**
+ * The catalog is capped and carries no cursor. An admin shown a cut list would
+ * coin a duplicate of a word past the cap, and merge could not name it.
+ */
+export const CatalogCut: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({
+        tag: ["read", "create", "update", "delete"],
+      } as never),
+      "GET /tags": () =>
+        jsonResponse({
+          data: WORDS,
+          page: { has_more: true, next_cursor: null },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <TagVocabularyCard />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * A seat the settings entry opened for on another grant entirely — the tab
+ * unions five data-model reads. The card says the vocabulary is withheld
+ * rather than drawing an empty list, which would read as "no tags here".
+ */
+export const VocabularyWithheld: Story = {
+  render: () => <Card grants={{ custom_field: ["read"] }} />,
+};
+
+/**
+ * At a phone width. The row wraps rather than pushing its verbs out of the
+ * settings column, which a narrow window cannot scroll back to.
+ */
+export const Narrow: Story = {
+  parameters: { viewport: { defaultViewport: "mobile1" } },
+  render: () => (
+    <div style={{ maxWidth: "22rem" }}>
+      <Card />
+    </div>
+  ),
 };

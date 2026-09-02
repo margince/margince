@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch } from "../api/version";
+import { ifMatch, requireVersion } from "../api/version";
 import { throwProblem } from "./common";
 
 export type Tag = components["schemas"]["Tag"];
@@ -32,9 +32,13 @@ export type TagDetail = components["schemas"]["TagDetail"];
  * them would leave the verb with nothing to act on — and an admin looking for
  * a word they archived last month would conclude it was deleted.
  */
-export function useTagCatalog() {
+export function useTagCatalog(enabled = true) {
   return useQuery({
     queryKey: ["tags", "catalog"],
+    // Not asked at all without the grant: the settings entry opens on any of
+    // five data-model reads, so this card is mounted for seats that hold none
+    // of the tag ones, and the request could only answer 403.
+    enabled,
     queryFn: async () => {
       const { data, error } = await api.GET("/tags", {
         params: { query: { include_archived: true } },
@@ -85,8 +89,19 @@ function useVocabularyInvalidation() {
     void queryClient.invalidateQueries({ queryKey: ["tags"] });
     void queryClient.invalidateQueries({ queryKey: ["tag"] });
     void queryClient.invalidateQueries({ queryKey: ["record-tags"] });
+    // The three record LISTS carry their rows' tags inline, keyed under their
+    // own prefixes rather than under any tag key. Without these a rename or a
+    // merge leaves the old spelling on every row a reader has already loaded,
+    // for as long as that page stays fresh — and this client disables refetch
+    // on focus, so coming back to the tab does not repair it.
+    for (const list of TAGGED_LISTS) {
+      void queryClient.invalidateQueries({ queryKey: [list] });
+    }
   };
 }
+
+/** The list reads whose rows carry tags inline. */
+const TAGGED_LISTS = ["people", "organizations", "deals"] as const;
 
 export function useCreateTag() {
   const invalidate = useVocabularyInvalidation();
@@ -114,14 +129,22 @@ export function useUpdateTag() {
   return useMutation({
     mutationFn: async (input: {
       id: string;
-      version: number;
+      /** The row's own, straight off the read. Undefined is a REFUSAL rather
+       *  than a default — see the mutationFn. */
+      version: number | undefined;
       name?: string;
       color?: TagColorEdit;
       description?: string;
     }) => {
       const { id, version, ...body } = input;
+      // Inside the mutation, not at the call site: a throw here becomes this
+      // mutation's `error` and lands on the dialog's own error line, while the
+      // same throw in a click handler escapes into React and takes the page
+      // down. The refusal itself is not optional — an unpinned PATCH is
+      // last-write-wins, landing on top of an edit it never saw and reporting
+      // success to both editors.
       const { data, error } = await api.PATCH("/tags/{id}", {
-        params: { path: { id }, ...ifMatch(version) },
+        params: { path: { id }, ...ifMatch(requireVersion(version)) },
         body,
       });
       if (error) {

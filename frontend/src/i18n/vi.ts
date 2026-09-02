@@ -1761,6 +1761,13 @@ export const vi = {
   "tagAdmin.mergedTitle": "Đã gộp",
   "tagAdmin.mergedBody":
     "{moved} bản ghi đã chuyển. {collapsed} vốn mang cả hai nên tag trùng bị bỏ.",
+  "tagAdmin.countUsage": "Đếm bản ghi",
+  "tagAdmin.noVersion":
+    "Tag này được đọc mà không có phiên bản nên không lưu được. Hãy mở lại trang và thử lại.",
+  "tagAdmin.withheld": "Bạn không có quyền xem từ vựng tag của tổ chức này.",
+  "tagAdmin.truncated":
+    "Danh sách bị rút gọn. Những từ vượt giới hạn không hiện ở đây và không sửa hay gộp được.",
+  "tagAdmin.usageFailed": "Không đếm được",
   "tagAdmin.done": "Xong",
   "tags.archived": "đã lưu trữ",
   "tags.columnHeader": "Tag",
