@@ -9,12 +9,12 @@ import { StoryProviders } from "./story-utils";
 // What is moving on the account, and for each piece the one reason it wants a
 // person today.
 //
-// Two rules run through every story here and neither is visible in a single
-// screenshot. A deal and a project are two stories, never interleaved. And a
-// section a reader may not see is never drawn as a section with nothing in it
-// — the withheld stories below are the ones that prove it, because "no open
-// deals" on an account with a full pipeline is the worst thing this card can
-// say.
+// Deals only — the account's projects have their one home in the ProjectLinks
+// section. Two rules run through every story here and neither is visible in a
+// single screenshot: every line is one record's own story, and a section a
+// reader may not see is never drawn as a section with nothing in it — "no
+// open deals" on an account with a full pipeline is the worst thing this card
+// can say.
 
 type View = components["schemas"]["Organization360"];
 
@@ -56,15 +56,6 @@ const deal = {
   stalled: false,
 };
 
-const project = {
-  project_id: "p-1",
-  key: "SM-1",
-  name: "Shopsystem-Migration",
-  phase: "delivering",
-  target_end_date: "2026-11-30",
-  quiet: false,
-};
-
 function Card({ view, loading }: Readonly<{ view?: View; loading?: boolean }>) {
   return (
     <StoryProviders>
@@ -82,8 +73,8 @@ const meta: Meta<typeof Card> = {
 export default meta;
 type Story = StoryObj<typeof Card>;
 
-// Both groups with rows, and nothing wrong with either: the baseline a reader
-// learns the card's shape from.
+// Rows and nothing wrong with any of them: the baseline a reader learns the
+// card's shape from.
 export const Populated: Story = {
   render: () => (
     <Card
@@ -91,7 +82,6 @@ export const Populated: Story = {
         {
           ...base,
           deals: { ...base.deals, data: [deal] },
-          projects: [project],
         } as unknown as View
       }
     />
@@ -99,7 +89,7 @@ export const Populated: Story = {
 };
 
 // One attention fact per row, which is the card's whole point: a task nobody
-// did, and something the account said they would do and has not.
+// did.
 export const WithAttention: Story = {
   render: () => (
     <Card
@@ -120,70 +110,15 @@ export const WithAttention: Story = {
               },
             ],
           },
-          projects: [
-            {
-              ...project,
-              attention: {
-                kind: "commitment_theirs",
-                title: "Wir schicken die Schnittstellendoku bis Ende der Woche",
-                who: "Dietmar Rietsch",
-                due_at: "2026-08-21T09:00:00Z",
-                source_activity_id: "a-9",
-              },
-            },
-          ],
         } as unknown as View
       }
     />
   ),
 };
 
-// A project nobody has filed anything against. Derived server-side from the
-// module's own quiet window, never counted in the client — the payload
-// carries no created_at to count from, and a second copy of the threshold is
-// how two surfaces come to disagree about what "quiet" means.
-export const QuietProject: Story = {
-  render: () => (
-    <Card
-      view={
-        {
-          ...base,
-          deals: { ...base.deals, data: [deal] },
-          projects: [
-            {
-              ...project,
-              quiet: true,
-              last_activity_at: "2026-07-22T09:00:00Z",
-            },
-          ],
-        } as unknown as View
-      }
-    />
-  ),
-};
-
-// Both halves readable and genuinely empty. A FACT about the account — and
-// the state the overview reads to decide the growth-fit card takes this slot.
+// Readable and genuinely empty. A FACT about the account — and the state the
+// overview reads to decide the growth-fit card takes this slot.
 export const NothingInFlight: Story = { render: () => <Card view={base} /> };
-
-// The reader holds the deal grant and not the project one. The deals still
-// render, the projects say they are hidden, and the header shows NO count —
-// a number that folded an unreadable half into it would be false rather than
-// partial.
-export const ProjectsWithheld: Story = {
-  render: () => (
-    <Card
-      view={
-        {
-          ...base,
-          deals: { ...base.deals, data: [deal] },
-          projects: undefined,
-          sections_omitted: ["projects"],
-        } as unknown as View
-      }
-    />
-  ),
-};
 
 // The rows are readable but the activity grant is not, so no attention fact
 // could be derived for any of them. The rows render and the card SAYS the
@@ -196,7 +131,6 @@ export const StatusesWithheld: Story = {
         {
           ...base,
           deals: { ...base.deals, data: [deal] },
-          projects: [project],
           // The refusal is recorded BOTH ways: the assembler names the section
           // it could not read before it sets the flag, so a story carrying the
           // flag alone is a payload the endpoint cannot emit.
@@ -224,7 +158,6 @@ export const MoreThanFits: Story = {
             // continue from.
             page: { has_more: true, next_cursor: null },
           },
-          projects: [project],
         } as unknown as View
       }
     />

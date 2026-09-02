@@ -276,7 +276,10 @@ export const en = {
   "deal.archived": "archived",
   "record.notShown": "Not shown",
   "record.timelineLoading": "Loading this record’s history…",
-  "record.timeline": "Timeline",
+  // The same word the tab strip uses (`tab.timeline`): the heading over the
+  // slot and the tab that opens it name one thing, and two words for it read
+  // as two things.
+  "record.timeline": "History",
   "record.edit": "Edit",
   "record.save": "Save",
   "record.saveDone": "“{name}” saved",
@@ -878,7 +881,12 @@ export const en = {
   "co.strip.fin.loading": "Loading…",
   "co.strip.unpriced": "No convertible amount on these deals",
   "co.strip.pricedPartly": "{priced} of {total} deals priced",
-  "co.strip.health": "Relationship",
+  // "Conversation", not "Relationship": the health receipt beside this tile
+  // rates a DIMENSION called Relationship (how many people are in contact),
+  // and one word carrying two readings let the tile say "One-sided" while the
+  // receipt said "Strong" about what read as the same thing. This tile is
+  // about the correspondence.
+  "co.strip.health": "Conversation",
   "co.strip.healthOneSided": "One-sided",
   "co.strip.healthBalanced": "Balanced",
   "co.strip.replyShare": "{percent}% of the exchange is theirs",
@@ -1107,6 +1115,8 @@ export const en = {
   "finance.title": "Finance",
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",
+  "finance.syncing":
+    "Syncing with your accounting source. Figures appear once the first sweep lands.",
   "finance.noConnection":
     "No financial source connected — connect one to see what this customer has been invoiced and whether they pay on time",
   "finance.unmapped":
@@ -1215,7 +1225,9 @@ export const en = {
   "commercial.offer.expired": "Expired",
   "commercial.offer.superseded": "Superseded",
   "co.section.restricted": "Hidden \u2014 your role cannot read this",
-  "co.next.title": "Next steps",
+  // The same word the tab strip uses (`tab.tasks`): a tab called Tasks
+  // opening a card called Next steps reads as a wrong turn.
+  "co.next.title": "Tasks",
   "co.next.empty": "No open task on this account.",
   "co.next.overdue": "Overdue",
   "co.next.due": "Due {when}",
@@ -1235,19 +1247,12 @@ export const en = {
   "co.work.count": "{count} in flight",
   "co.work.countAtLeast": "{count}+ in flight",
   "co.work.deals": "Deals",
-  "co.work.projects": "Projects",
   "co.work.noDealsDetail":
     "A deal is where the money and the close date live. Open one when there is something to win.",
-  "co.work.noProjectsDetail":
-    "A project holds the delivery: the people on it, the deals under it, and what it is due to finish.",
   "co.work.noDeals": "No open deals.",
-  "co.work.noProjects": "No projects in flight.",
   "co.work.closes": "closes {date}",
-  "co.work.targetEnd": "due to end {date}",
   "co.work.stalled":
     "Nothing has been filed against this deal in the last 60 days.",
-  "co.work.quiet": "Nothing has been filed against this project since {when}.",
-  "co.work.neverTouched": "Nothing has ever been filed against this project.",
   "co.work.overdueTask":
     "{who} was supposed to \u2018{title}\u2019 by {date} and has not.",
   "co.work.overdueTaskUnnamed":
@@ -1447,6 +1452,7 @@ export const en = {
   "co.rail.people.title": "Their key people",
   "co.rail.people.empty": "No contacts yet. Nobody to write to.",
   "co.rail.people.add": "Add a contact",
+  "co.rail.people.inTouch": "Already in touch with them",
   "co.rail.details.all": "All fields",
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
@@ -1504,6 +1510,10 @@ export const en = {
   "chronology.changes": "Changes",
   "filter.label": "Narrow this list",
   "chronology.all": "All",
+  "chronology.conversations": "Conversations",
+  "chronology.conversationsEmpty": "No conversations with them yet.",
+  "convo.yourMove": "Your move",
+  "convo.waitingOnThem": "Waiting on them",
   "chronology.changesEmpty":
     "No field on this record has been changed since it was created.",
   "chronology.allEmpty": "Nothing has happened on this record yet.",
@@ -1788,6 +1798,7 @@ export const en = {
   "co.recent.dir.both": "both sides",
   "co.recent.minutes": "{count} min",
   "co.recent.re": "on a deal",
+  "co.recent.reNamed": "on {name}",
   "co.tags.title": "Tags",
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":

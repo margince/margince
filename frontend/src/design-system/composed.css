@@ -731,11 +731,35 @@
   white-space: nowrap;
 }
 
+/* A timeline list whose rows carry no date gutter or rail of their own —
+   the change history and the consent log, whose date rides inline in each
+   row's meta line. Without this the chronicle's four-column grid auto-places
+   their single body cell into the 4.5rem date gutter and every sentence
+   wraps one word per line. */
+.timeline.timeline-plain li {
+  display: block;
+  padding: var(--space-3) 0;
+}
+
+.timeline.timeline-plain li + li {
+  border-top: 1px solid var(--borderSubtle);
+}
+
 /* The message under a timeline row. Two lines by default: enough to recognise
    a thread, without turning the account's history into a mailbox. */
 .tl-text {
   display: block;
   margin-top: var(--space-1);
+}
+
+/* A note's body on its own plate: the rep's aside about the record, told
+   apart from the correspondence around it before a word of either is read.
+   The recessed ground, not a tint — colour on this page means direction or
+   provenance, and a note has neither. */
+.tl-note .tl-text {
+  background: var(--bgCard);
+  border-radius: var(--r-sm);
+  padding: var(--space-2) var(--space-3);
 }
 
 .tl-text-clamp {

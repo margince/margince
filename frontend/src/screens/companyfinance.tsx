@@ -41,7 +41,13 @@ type FinanceInvoice = components["schemas"]["FinanceInvoice"];
 const CARD_STATE: Record<FinanceState, SectionState> = {
   no_connection: "empty",
   unmapped: "empty",
-  syncing: "loading",
+  // `syncing` is a known state with a name, not a mute wait: the read
+  // ANSWERED, and the first sweep has simply not landed yet. Drawn as
+  // `loading` it was a skeleton for as long as the sweep ran — minutes on a
+  // cold connection — which reads as a section that broke. The empty arm
+  // prints the state's own sentence instead, exactly as `no_connection` and
+  // `unmapped` do.
+  syncing: "empty",
   connected: "ready",
   // The last refresh failed, and the figures beside it are the last ones that
   // succeeded. `stale` rather than `failed`, because `failed` suppresses the
@@ -203,6 +209,7 @@ function chromeOf(
 const EMPTY_LABEL: Partial<Record<FinanceState, MessageKey>> = {
   no_connection: "finance.noConnection",
   unmapped: "finance.unmapped",
+  syncing: "finance.syncing",
 };
 
 // The panel leads with the one figure that asks for a decision, and states
