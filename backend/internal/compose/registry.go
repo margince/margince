@@ -45,7 +45,8 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 	// The gate resolves seats through identity, and identity binds the same
 	// handle: a registry built for a named workspace must not admit through a
 	// service that resolves a different one.
-	return registryWithGate(db, auth.NewGate(identity.NewServiceFor(db)), nil, nil, send, companyEnricher{}, nil, nil, nil, nil, slog.Default())
+	return registryWithGate(db, auth.NewGate(identity.NewServiceFor(db)), nil, nil, send, companyEnricher{}, nil, nil, nil,
+		meetingBriefReader(newMeetingBriefService(db)), slog.Default())
 }
 
 // NewRegistryWithIncumbent is NewRegistry plus the per-workspace live-incumbent
@@ -53,14 +54,18 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 // through — the wiring a role with a vault (the api server) installs so the MCP
 // tool surface can actually write back, not just answer errNoWriteIncumbent.
 func NewRegistryWithIncumbent(pool *pgxpool.Pool, resolveIncumbent func(context.Context) (overlay.Incumbent, error), send SendPath) *agents.Registry {
-	return registryWithGate(InstallationDB(pool), auth.NewGate(identity.NewService(pool)), nil, resolveIncumbent, send, companyEnricher{}, nil, nil, nil, nil, slog.Default())
+	db := InstallationDB(pool)
+	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, resolveIncumbent, send, companyEnricher{}, nil, nil, nil,
+		meetingBriefReader(newMeetingBriefService(db)), slog.Default())
 }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, resolveIncumbent func(context.Context) (overlay.Incumbent, error), send SendPath) *agents.Registry {
+	db := InstallationDB(pool)
+	brief := meetingBriefReader(newMeetingBriefService(db))
 	if brain == nil {
-		return registryWithGate(InstallationDB(pool), auth.NewGate(identity.NewService(pool)), nil, resolveIncumbent, send, companyEnricher{}, nil, nil, nil, nil, slog.Default())
+		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, resolveIncumbent, send, companyEnricher{}, nil, nil, nil, brief, slog.Default())
 	}
-	return registryWithGate(InstallationDB(pool), auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), resolveIncumbent, send, companyEnricher{}, nil, nil, nil, nil, slog.Default())
+	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), resolveIncumbent, send, companyEnricher{}, nil, nil, nil, brief, slog.Default())
 }
 
 // registryWithGate composes the tool surface. The quota charger arrives as
