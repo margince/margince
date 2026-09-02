@@ -4,6 +4,7 @@
 package org360
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -259,6 +260,26 @@ func TestTheIntroPromptAsksForTheNamesTheCheckerRequires(t *testing.T) {
 	} {
 		if !strings.Contains(introSystem, required) {
 			t.Fatalf("the prompt never asks the model to %q, but parseIntroDraft refuses a draft that omits it", required)
+		}
+	}
+}
+
+// The sibling of the note's floor test: the template must survive the parse
+// that judges the model. Free, derived rather than hand-authored, and the
+// cheapest place this site's contract can be stated.
+func TestTheIntroTemplateSurvivesItsOwnParse(t *testing.T) {
+	t.Parallel()
+	for name, fixture := range map[string]IntroFixture{
+		"a warm route":     warmIntro(),
+		"nothing recorded": {Colleague: "Sofia Meier", Contact: "Philipp Königs"},
+	} {
+		subject, body := IntroFloorFor(fixture)
+		raw, err := json.Marshal(map[string]string{"subject": subject, "body": body})
+		if err != nil {
+			t.Fatalf("%s: marshalling the floor: %v", name, err)
+		}
+		if _, _, err := CheckIntroDraft(string(raw), fixture); err != nil {
+			t.Errorf("%s: the template is refused by its own parse: %v", name, err)
 		}
 	}
 }

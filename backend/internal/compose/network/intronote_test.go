@@ -292,3 +292,68 @@ func TestTheReasonsNameTheRouteAndOnlyWhatIsRecorded(t *testing.T) {
 		t.Errorf("the reason claims a band with none on file: %q", label)
 	}
 }
+
+// A reply that obeys noteSystem to the letter must survive parseIntroNote.
+//
+// It did not. The prompt's only mention of a subject was the prohibition "No
+// subject line inside the body", so an obedient model left the field empty and
+// the note was refused; and "Write TO the recipient" never asked for the
+// recipient's NAME, which the parse requires. Every such reply fell to the
+// template, on a note a customer reads, with nothing red anywhere.
+//
+// The replies below are written from the PROMPT, never from the parse. Written
+// from the parse they would pass by construction and prove nothing.
+func TestANoteObeyingThePromptIsAccepted(t *testing.T) {
+	t.Parallel()
+	facts := warmNote()
+	for name, reply := range map[string]string{
+		"the shortest obeying reply": `{"subject":"Introducing Lena Fischer","body":"Hi Philipp, I wanted to put you in touch with Lena Fischer, a colleague of mine. Her team cut depot energy costs by a fifth at two comparable sites, which I thought might be worth a conversation."}`,
+		"no relationship claimed":    `{"subject":"Introducing Lena Fischer","body":"Hi Philipp, I thought I would introduce you to Lena Fischer. She works on depot energy costs, which may be worth a short conversation."}`,
+	} {
+		if _, err := parseIntroNote(reply, facts); err != nil {
+			t.Errorf("refused a reply that obeys the prompt (%s): %v", name, err)
+		}
+	}
+}
+
+// The mirror of the parse: every name and field the parse requires has to be
+// asked for in the prompt that must satisfy it. This is the half that was
+// missing, and its absence is why the site was refused on every request.
+func TestTheNotePromptAsksForWhatTheParseRequires(t *testing.T) {
+	t.Parallel()
+	for _, required := range []string{
+		"address them by name: open with their first name",
+		"naming them in full",
+		`Write a short subject line in the "subject" field`,
+	} {
+		if !strings.Contains(noteSystem, required) {
+			t.Fatalf("the prompt never asks for %q, but the parse refuses a reply that omits it", required)
+		}
+	}
+}
+
+// The template must survive the parse that judges the model.
+//
+// It did not: the floor greets "Hi Philipp," while the parse demanded
+// "Philipp Königs", so the site's own known-good output was refused by its own
+// checker. That is the cheapest possible statement of the contract, and it
+// needs no model, no key and no network — the floor is DERIVED from the facts
+// rather than hand-authored, so it cannot be quietly written to satisfy the
+// checker it is meant to hold.
+func TestTheNoteTemplateSurvivesItsOwnParse(t *testing.T) {
+	t.Parallel()
+	for name, facts := range map[string]noteFacts{
+		"a warm route":        warmNote(),
+		"nothing recorded":    {contact: "Philipp Königs", colleague: "Sofia Meier", requester: "Lena Fischer", lang: textlang.English},
+		"through a middleman": {contact: "Philipp Königs", colleague: "Sofia Meier", requester: "Lena Fischer", through: "Marek Janetzke", lang: textlang.English},
+	} {
+		floor := noteFloor(facts)
+		raw, err := json.Marshal(map[string]string{"subject": floor.subject, "body": floor.body})
+		if err != nil {
+			t.Fatalf("%s: marshalling the floor: %v", name, err)
+		}
+		if _, err := parseIntroNote(string(raw), facts); err != nil {
+			t.Errorf("%s: the template is refused by its own parse: %v", name, err)
+		}
+	}
+}

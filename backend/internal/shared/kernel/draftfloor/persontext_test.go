@@ -127,3 +127,67 @@ func TestNamesPersonMatchesAWordAndNotASubstring(t *testing.T) {
 		t.Error("an empty name refused a draft it cannot judge")
 	}
 }
+
+// A name buried inside a word is not a name the draft states, and the boundary
+// on either side of a match may be a multi-byte rune.
+//
+// It read one BYTE and widened it: inside a character like "ü" that byte is a
+// continuation byte, and most of them widen to runes unicode.IsLetter rejects.
+// So "MüLena" reported that it names "Lena" — the check that exists to catch an
+// embedded name accepted one, and only where the neighbouring text is non-ASCII.
+func TestANameInsideAWordIsNotNamedAcrossAMultiByteBoundary(t *testing.T) {
+	t.Parallel()
+	for name, text := range map[string]string{
+		"non-ASCII immediately before": "MüLena schrieb gestern",
+		"non-ASCII immediately after":  "Lenaüber alles",
+		"both sides":                   "MüLenaüber",
+	} {
+		if NamesPerson(text, "Lena") {
+			t.Errorf("%s: %q was read as naming %q", name, text, "Lena")
+		}
+	}
+	for name, text := range map[string]string{
+		"after a multi-byte word":  "Grüße Lena, kurz zum Angebot",
+		"before a multi-byte word": "Lena über das Angebot",
+		"between them":             "Grüße Lena über das Angebot",
+	} {
+		if !NamesPerson(text, "Lena") {
+			t.Errorf("%s: %q does name %q and was refused", name, text, "Lena")
+		}
+	}
+}
+
+// Text that is not valid UTF-8 has no rune at the edge to judge, and the
+// boundary check says so rather than guessing. A model reply is bytes off a
+// wire; a draft carrying a broken sequence must not decide a name by accident.
+func TestABrokenSequenceAtTheEdgeIsNotAWordCharacter(t *testing.T) {
+	t.Parallel()
+	// 0xFF is not a legal UTF-8 start byte, so the rune on either side of the
+	// match decodes as RuneError from a single byte.
+	for name, text := range map[string]string{
+		"broken byte before": "\xffLena wrote",
+		"broken byte after":  "Lena\xff wrote",
+	} {
+		if !NamesPerson(text, "Lena") {
+			t.Errorf("%s: %q names Lena and was refused", name, text)
+		}
+	}
+}
+
+// A combining mark extends the written word, so a name followed by one is a
+// different name. "Lena" plus U+0308 renders "Lenä", and reading the mark as a
+// boundary reported that a draft named Lena when it named somebody else.
+func TestACombiningMarkExtendsTheWord(t *testing.T) {
+	t.Parallel()
+	for name, text := range map[string]string{
+		"mark after the name":  "Lenä schrieb gestern",
+		"mark before the name": "̈Lena schrieb gestern",
+	} {
+		if NamesPerson(text, "Lena") {
+			t.Errorf("%s: %q was read as naming %q", name, text, "Lena")
+		}
+	}
+	if !NamesPerson("Grüße Lena, kurz zum Angebot", "Lena") {
+		t.Error("a name beside ordinary punctuation was refused")
+	}
+}
