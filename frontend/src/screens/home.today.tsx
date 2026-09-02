@@ -53,17 +53,28 @@ export function TodaySection({
               })
             : undefined
         }
+        // The button is drawn ONLY when there is no run to show.
+        //
+        // POST /brief answers "today's run already existed; this is it,
+        // unchanged" — it assembles a brief where none exists and re-ranks
+        // nothing. So a control labelled "Refresh brief" beside an existing
+        // run promised a re-rank the click could not perform, and a rep who
+        // pressed it and saw the same order concluded the ranking was stuck.
+        //
+        // What a reader actually wants at that moment is the queue as it
+        // stands, which the page already refetches on focus.
         titleAction={
-          <Button
-            small
-            pending={refresh.isPending}
-            busyLabel={t("home.refreshing")}
-            onClick={() => refresh.mutate()}
-            data-testid="brief-refresh"
-          >
-            <RefreshCw aria-hidden />{" "}
-            {t(brief ? "home.refresh" : "home.generate")}
-          </Button>
+          brief ? undefined : (
+            <Button
+              small
+              pending={refresh.isPending}
+              busyLabel={t("home.refreshing")}
+              onClick={() => refresh.mutate()}
+              data-testid="brief-refresh"
+            >
+              <RefreshCw aria-hidden /> {t("home.generate")}
+            </Button>
+          )
         }
         footer={
           brief && brief.items.length > 0 ? (

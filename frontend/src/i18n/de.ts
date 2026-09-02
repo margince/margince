@@ -2272,7 +2272,6 @@ export const de = {
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.asOf": "Stand {at}",
-  "home.refresh": "Briefing aktualisieren",
   "home.refreshing": "Sortiere neu…",
   "home.generate": "Briefing jetzt holen",
   "home.noneBody":
@@ -2969,6 +2968,9 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
+  "brief.coverage.summary": "Einige Quellen haben mehr, als diese Seite zeigt",
+  "brief.coverage.bounded":
+    "{shown} von mindestens {considered} gelesenen angezeigt",
   "delivery.morningLabel": "Ihr Tagesbriefing",
   "delivery.morningHelp":
     "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf Ihrer Briefing-Seite steht es ohnehin.",

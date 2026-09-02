@@ -2256,7 +2256,6 @@ export const vi = {
     "{count} deal không nằm trong các số này — quyền của bạn không bao gồm chúng.",
   "home.pipelineUnavailable": "Không tải được số liệu này.",
   "home.asOf": "tính đến {at}",
-  "home.refresh": "Làm mới tóm tắt",
   "home.refreshing": "Đang xếp hạng…",
   "home.generate": "Lấy tóm tắt hôm nay",
   "home.noneBody":
@@ -2943,6 +2942,9 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
   "settings.signatureCancel": "Hủy",
+  "brief.coverage.summary":
+    "Một số nguồn có nhiều hơn những gì trang này hiển thị",
+  "brief.coverage.bounded": "Hiển thị {shown} trên ít nhất {considered} đã đọc",
   "delivery.morningLabel": "Bản tóm tắt buổi sáng",
   "delivery.morningHelp":
     "Bản tóm tắt trong ngày có được gửi qua email hay không. Dù sao nó cũng có trên trang Tóm tắt.",

@@ -11,6 +11,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
+import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
 import { DecisionsSection } from "./home.decisions";
 import {
@@ -33,6 +34,7 @@ import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { TodaySection } from "./home.today";
 import { WeeklySection } from "./home.weekly";
+import { useWorklist } from "./worklist.queries";
 import "./home.css";
 
 // Home — the morning handover.
@@ -290,6 +292,12 @@ export function HomeScreen() {
   const briefQuery = useMorningBrief();
   const digestQuery = useMorningDigest();
   const dealsQuery = useHomeDeals();
+  // The ONE ranked order, read here for its coverage. Home has always been
+  // deal-only; what it could not say is which sources it never saw, and that
+  // answer lives on the worklist read rather than on any of the five deal
+  // reads beside it. Same query key as the Worklist screen, so the two cannot
+  // disagree about what was read.
+  const worklistQuery = useWorklist("mine", "all");
   const pipelineQuery = usePipelineValue();
 
   const approvals = approvalsQuery.data?.data ?? [];
@@ -354,6 +362,9 @@ export function HomeScreen() {
         onGoToDuplicates={() => navigate({ screen: "worklist" })}
         onGoToWatch={() => goToSection("home-watch")}
       />
+      {/* Before the readings, because a strip of numbers a reader cannot
+          trust is worse than one they can qualify. */}
+      {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
       <HomeReadingsStrip
         decisions={decisionReadings}
         open={openReading}
