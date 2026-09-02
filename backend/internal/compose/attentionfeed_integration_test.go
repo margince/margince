@@ -326,3 +326,53 @@ func stageFor(t *testing.T, e *integration.Env, svc *approvals.Service,
 	}
 	return id
 }
+
+// THE DAY ENDS AT THE INSTALLATION'S MIDNIGHT, through the shipped wiring.
+//
+// The boundary used to be UTC's wherever the installation was: a seat seven
+// hours east saw work due through 07:00 tomorrow local, which is work they are
+// not owed yet, and a seat west lost the evening's. The unit tests pin the
+// arithmetic; this pins that the composition actually asks.
+func TestTheWorklistsDayEndsAtTheInstallationsMidnight(t *testing.T) {
+	e := integration.Setup(t)
+	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
+
+	// 15:00 UTC is 22:00 in Ho Chi Minh City, so the local day ends at 17:00
+	// UTC — two hours ahead — while UTC's own midnight is nine hours out.
+	now := time.Date(2026, 6, 15, 15, 0, 0, 0, time.UTC)
+	logTask(t, e, "Due late tonight, local", time.Date(2026, 6, 15, 16, 30, 0, 0, time.UTC), false)
+	logTask(t, e, "Due tomorrow morning, local", time.Date(2026, 6, 15, 18, 0, 0, 0, time.UTC), false)
+
+	day := assembleFeed(e.Admin(), t, e, now)
+	got := titlesOn(day.Planned)
+	if len(got) != 1 || got[0] != "Due late tonight, local" {
+		t.Fatalf("the planned lane = %v, want only tonight's work: 18:00 UTC is 01:00 tomorrow "+
+			"where this installation is, and UTC's midnight is not its day", got)
+	}
+}
+
+// THE PLANNED BADGE COUNTS PAST THE LANE'S CAP, through the shipped wiring.
+//
+// The lane shows a dozen; a rep with thirteen used to see twelve cards and a
+// badge of twelve, on a lane with no second page to reach the thirteenth by.
+func TestThePlannedBadgeCountsEveryTaskDueNotJustThePage(t *testing.T) {
+	e := integration.Setup(t)
+	// A FIXED midday, not the clock: due-two-hours-from-now falls past the end
+	// of the day for the last two hours of it, and every task would drop off the
+	// lane — a test that passes for twenty-two hours a day and fails the merge
+	// queue at random.
+	now := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+	due := now.Add(2 * time.Hour)
+	// One past the cap, which is the case the badge used to misreport.
+	for i := range 13 {
+		logTask(t, e, fmt.Sprintf("Owed %d", i), due, false)
+	}
+
+	day := assembleFeed(e.Admin(), t, e, now)
+	if len(day.Planned) != 12 {
+		t.Fatalf("the lane carries %d cards, want the cap of twelve", len(day.Planned))
+	}
+	if day.Counts.Planned != 13 {
+		t.Errorf("counts.planned = %d, want 13 — the badge is how many they have", day.Counts.Planned)
+	}
+}

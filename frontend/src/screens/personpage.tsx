@@ -10,7 +10,7 @@ import {
   Search,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
@@ -28,10 +28,10 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { linkedinUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, useSorMode } from "./common";
+import { throwProblem, useMe, useSorMode } from "./common";
 import { ComposeModal } from "./compose";
 import { ConsentSection } from "./consent";
-import { OwnerName } from "./entityref";
+import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { PersonMeetingBrief } from "./meetingbrief";
 import {
@@ -47,6 +47,7 @@ import { PersonComposer, PersonResearchDrawer } from "./persondrawers";
 import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";
+import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
 import { PersonRail } from "./personrail";
 import { PersonReadings } from "./personreadings";
 import { PersonResearchTab } from "./personresearch";
@@ -188,6 +189,68 @@ function PersonTabPanel({
   }
 }
 
+// What a moment card's action does, off the surface the server named. A
+// standalone function rather than a closure inside PersonPageV2: the switch's
+// branches are this function's cognitive weight, not the page's.
+//
+// A destination this client cannot route opens NOTHING rather than guessing:
+// the typed descriptor exists so a button whose path does not exist is never
+// rendered, and silently doing something else would be worse than the 404 it
+// was meant to prevent.
+function runPersonMomentAction(
+  action: PersonMomentAction,
+  t: ReturnType<typeof useT>,
+  handlers: Readonly<{
+    openComposer: (intent: string) => void;
+    setDrawer: (drawer: Drawer) => void;
+    openBrief: (activityId: string | null) => void;
+    // The prep moment is raised off the next meeting, so that is the one it
+    // briefs by default. An action naming its own activity is honoured over
+    // it, because a moment about a different meeting must not open a brief
+    // about this one.
+    nextMeetingId: string | null;
+  }>,
+): void {
+  const destination = action.destination;
+  if (!destination) {
+    // An action with no destination is its own destination — the composer is
+    // the sensible home for the drafting kinds.
+    if (action.kind === "draft_reply") {
+      handlers.openComposer("");
+    }
+    return;
+  }
+  switch (destination.surface) {
+    case "composer":
+      handlers.openComposer(composerIntentOf(destination.prefill, t));
+      return;
+    case "research":
+      handlers.setDrawer("research");
+      return;
+    case "meeting_brief":
+      handlers.openBrief(destination.entity_id ?? handlers.nextMeetingId);
+      return;
+    case "record":
+      if (destination.entity_id) {
+        navigate({ screen: "deals", id: destination.entity_id });
+      }
+      return;
+    case "activity_log":
+      handlers.setDrawer("activity_log");
+      return;
+    case "task":
+      handlers.setDrawer("activity_task");
+      return;
+    default:
+      // Every surface PersonMomentDestination documents today is handled
+      // above, so the compiler holds this exhaustive: a surface the contract
+      // adds and this switch does not is a type error here, not a live
+      // button that silently does nothing until someone notices.
+      destination.surface satisfies never;
+      return;
+  }
+}
+
 export function PersonPageV2({
   id,
   tab,
@@ -242,6 +305,13 @@ export function PersonPageV2({
   // on the floor and opened the same empty composer as the generic button, so
   // "Draft a follow-up" and "Write an email" did exactly the same thing.
   const [composerIntent, setComposerIntent] = useState("");
+  // BOTH doors to the composer, answered in one place: the address opens it on
+  // arrival, pressing "Write an email" opens it after. The page is at its
+  // complexity ceiling — the lint says so — so the question is settled in the
+  // hook rather than in two conditionals in the markup.
+  const composer = useComposer(t, drawer === "composer", composerIntent, () =>
+    setDrawer(null),
+  );
 
   // Every path to the composer goes through here, and the intent it opens with
   // is decided ONCE, on the way in. Two rules the two callers each get wrong on
@@ -279,53 +349,16 @@ export function PersonPageV2({
     (entry) => entry.channel === "email" && entry.verdict === "allowed",
   );
 
-  // The action loop. Every surface the contract can name routes here.
-  //
-  // A destination this client cannot route opens NOTHING rather than guessing:
-  // the typed descriptor exists so a button whose path does not exist is never
-  // rendered, and silently doing something else would be worse than the 404 it
-  // was meant to prevent.
-  const runAction = (action: PersonMomentAction) => {
-    const destination = action.destination;
-    if (!destination) {
-      // An action with no destination is its own destination — the composer is
-      // the sensible home for the drafting kinds.
-      if (action.kind === "draft_reply") {
-        openComposer("");
-      }
-      return;
-    }
-    switch (destination.surface) {
-      case "composer":
-        openComposer(composerIntentOf(destination.prefill, t));
-        return;
-      case "research":
-        setDrawer("research");
-        return;
-      case "meeting_brief":
-        // The prep moment is raised off the next meeting, so that is the one
-        // it briefs. An action naming its own activity is honoured over the
-        // page's, because a moment about a different meeting must not open a
-        // brief about this one.
-        openBrief(
-          destination.entity_id ?? view.data.next_meeting?.activity_id ?? null,
-        );
-        return;
-      case "record":
-        if (destination.entity_id) {
-          navigate({ screen: "deals", id: destination.entity_id });
-        }
-        return;
-      case "activity_log":
-        setDrawer("activity_log");
-        return;
-      default:
-        // `task` has no surface on this page yet. Doing nothing is the honest
-        // outcome; inventing a navigation would take the reader somewhere they
-        // did not ask to go.
-        return;
-    }
-  };
+  // The action loop. Every surface the contract can name routes to
+  // `runPersonMomentAction`, a standalone function rather than a closure here
+  // so its switch's own branches are not this component's cognitive weight.
+  const runAction = (action: PersonMomentAction) =>
+    runPersonMomentAction(action, t, {
+      openComposer,
+      setDrawer,
+      openBrief,
+      nextMeetingId: view.data.next_meeting?.activity_id ?? null,
+    });
 
   return (
     <div className="wrap">
@@ -341,10 +374,12 @@ export function PersonPageV2({
               consentAllows={emailAllowed}
               consentKnown={guard.data !== undefined}
               personId={id}
+              overlay={overlay}
               onWrite={() => openComposer("")}
               onWriteMail={() => setDrawer("mail")}
               onResearch={() => setDrawer("research")}
               onLogActivity={() => setDrawer("activity_log")}
+              onAddTask={() => setDrawer("activity_task")}
             />
             <PageAsideToggle />
           </>
@@ -465,9 +500,9 @@ export function PersonPageV2({
           personId={id}
           view={view.data}
           guard={guard.data}
-          open={drawer === "composer"}
-          intent={composerIntent}
-          onClose={() => setDrawer(null)}
+          open={composer.open}
+          intent={composer.intent}
+          onClose={composer.close}
         />
         <PersonMailDrawer
           personId={id}
@@ -487,16 +522,11 @@ export function PersonPageV2({
           onClose={() => openBrief(null)}
           projects={liveProjects(view.data.projects)}
         />
-        {/* Mounted only while open, so the form starts fresh each time and the
-            day it offers is today's, not the day the drawer was first built. */}
-        {drawer === "activity_log" && (
-          <LogActivityAction
-            entityType="person"
-            entityId={id}
-            openOnMount
-            onClose={() => setDrawer(null)}
-          />
-        )}
+        <PersonActivityDrawer
+          personId={id}
+          drawer={drawer}
+          onClose={() => setDrawer(null)}
+        />
       </RecordView>
     </div>
   );
@@ -510,12 +540,13 @@ export function PersonPageV2({
 // reachable only for the soonest meeting and only while the prep moment was
 // live — every other meeting on the record had a brief the backend would
 // happily assemble and no way to ask for it.
-type Drawer = "composer" | "mail" | "research" | "activity_log" | null;
-
-// The query key naming which meeting is being briefed. One spelling, because
-// another screen composes this address and this one reads it; two would be a
-// link that opens nothing.
-export const BRIEF_PARAM = "prep";
+type Drawer =
+  | "composer"
+  | "mail"
+  | "research"
+  | "activity_log"
+  | "activity_task"
+  | null;
 
 /**
  * Which meeting the address says to brief, and how to change it.
@@ -534,6 +565,49 @@ export const BRIEF_PARAM = "prep";
  * complexity ceiling — the lint says so — and this is one idea a reader should
  * be able to take in on its own.
  */
+/**
+ * Whether the composer is open, what it is about, and how to close it.
+ *
+ * TWO DOORS, one answer. A reader presses "Write an email" on this page, or
+ * arrives on `?compose=reply` from another screen — the worklist's
+ * `draft_reply` move. Both end here, so neither caller has to know about the
+ * other.
+ *
+ * The address half is DERIVED, not seeded, the same reason the brief drawer is:
+ * a drawer held in state stays open when the reader navigates back out of it,
+ * and deriving makes Back close it, which is what pressing Back means.
+ *
+ * An intent this client does not know opens NOTHING rather than an empty
+ * composer: an address is something a person can type, and a stray
+ * `?compose=x` silently starting an email is worse than a link that does not
+ * work.
+ */
+function useComposer(
+  t: ReturnType<typeof useT>,
+  pressedOpen: boolean,
+  pressedIntent: string,
+  onPressedClose: () => void,
+): Readonly<{ open: boolean; intent: string; close: () => void }> {
+  const [params, setParams] = useUrlParams();
+  const asked = params.get(COMPOSE_PARAM);
+  const key = asked ? COMPOSER_INTENT_KEYS[asked] : undefined;
+  const close = () => {
+    onPressedClose();
+    // The address goes with it, or Back would re-open what the reader just
+    // closed and the link could never be dismissed.
+    if (asked) {
+      const out = new Map(params);
+      out.delete(COMPOSE_PARAM);
+      setParams(out);
+    }
+  };
+  return {
+    open: pressedOpen || key !== undefined,
+    intent: key ? t(key) : pressedIntent,
+    close,
+  };
+}
+
 function useBriefedMeeting(): [
   string | null,
   (activityId: string | null) => void,
@@ -589,6 +663,9 @@ function PersonIdentityLine({
   view,
 }: Readonly<{ view: Person360 }>): ReactNode {
   const t = useT();
+  // The owner off the roster's first page, as the deal's facts read theirs.
+  const roster = useRoster("user", Boolean(view.person.owner_id));
+  const rosterPartial = useRosterPartial("user", Boolean(view.person.owner_id));
   const person = view.person;
   const email = person.emails?.[0]?.email;
   const phone = person.phones?.[0]?.phone;
@@ -655,10 +732,13 @@ function PersonIdentityLine({
         )}
         <span className="pe-meta-fact pe-meta-quiet">
           {t("person.page.owner")}:{" "}
-          <OwnerName
-            ownerId={view.person.owner_id}
-            unowned={t("person.page.ownerUnassigned")}
-          />
+          {rosterOwnerName(
+            view.person.owner_id,
+            roster,
+            rosterPartial,
+            t,
+            t("person.page.ownerUnassigned"),
+          )}
         </span>
       </div>
     </div>
@@ -744,6 +824,32 @@ function PersonMailDrawer({
   );
 }
 
+// The Log activity / Add task drawer: one form, one drawer state, started on
+// a different kind depending on which verb opened it — the same shape
+// companyheader.tsx's two LogActivityAction triggers already show side by
+// side. Split out the way PersonMailDrawer is above, so this drawer's own
+// branching stays out of PersonPageV2's cognitive weight.
+function PersonActivityDrawer({
+  personId,
+  drawer,
+  onClose,
+}: Readonly<{ personId: string; drawer: Drawer; onClose: () => void }>) {
+  if (drawer !== "activity_log" && drawer !== "activity_task") {
+    return null;
+  }
+  const asTask = drawer === "activity_task";
+  return (
+    <LogActivityAction
+      entityType="person"
+      entityId={personId}
+      initialKind={asTask ? "task" : undefined}
+      triggerLabel={asTask ? "log.addTask" : undefined}
+      openOnMount
+      onClose={onClose}
+    />
+  );
+}
+
 // The header's verbs, in the order every record page carries them: writing
 // first, then the record's other doors. None of them is filled — the move
 // worth doing is the one the call names, and that one carries the colour.
@@ -752,26 +858,45 @@ function PersonActions({
   consentAllows,
   consentKnown,
   personId,
+  overlay,
   onWrite,
   onWriteMail,
   onResearch,
   onLogActivity,
+  onAddTask,
 }: Readonly<{
   view: Person360;
   consentAllows: boolean;
   consentKnown: boolean;
   personId: string;
+  // LogActivityAction itself renders nothing in overlay — a mirrored
+  // workspace has no activity write of its own, the same fact
+  // PersonEmailPanel already states for the record's email box — so a
+  // trigger drawn here would set drawer state a mount elsewhere refuses.
+  overlay: boolean;
   onWrite: () => void;
   onWriteMail: () => void;
   onResearch: () => void;
   onLogActivity: () => void;
+  onAddTask: () => void;
 }>): ReactNode {
   const t = useT();
-  // useCanWrite, not useCan: the form issues a POST, and a read seat is
-  // refused before RBAC is consulted. The button stays on the page and says
-  // why it will not press, so a reader can tell "not mine to do" from "this
-  // build has no such button".
+  // useCanWrite, not useCan: both this verb and Add task below issue the same
+  // POST, and a read seat is refused before RBAC is consulted. The buttons
+  // stay on the page and say why they will not press, so a reader can tell
+  // "not mine to do" from "this build has no such button".
+  const me = useMe();
   const canLog = useCanWrite("activity", "create");
+  // Named once and pointed at by both buttons — Button's own contract for a
+  // surface where several controls are refused by ONE fact: printing the
+  // sentence beside each button says it as many times as there are buttons.
+  const logRefusedId = useId();
+  // A guard that has not answered yet refuses nothing: claiming a refusal
+  // `/me` has not decided is worse than a control that is briefly quiet —
+  // the same rule writeRefusal states for the identical shape, above.
+  const logGrantKnown = me.data?.authorization !== undefined;
+  const logRefused = logGrantKnown && !canLog ? logRefusedId : undefined;
+  const logPending = !logGrantKnown;
   // The transports the composer would offer, read here so the button NAMES
   // what pressing it does. The same reachability the drawer resolves: a label
   // computed from anything else is a promise the composer then breaks.
@@ -813,22 +938,43 @@ function PersonActions({
           navigate({ screen: "contacts", id: personId, id2: "meetings" })
         }
       />
-      {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
-          This is the standing way in; the moment card offers the same form
-          when its rung decides logging is the thing to do next. */}
-      <Button
-        disabled={!canLog}
-        reason={canLog ? undefined : t("person.action.logRefused")}
-        onClick={onLogActivity}
-      >
-        <FileText size={15} aria-hidden="true" /> {t("log.title")}
-      </Button>
-      {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
-          squaring this one would name the opposite of what it does. */}
-      <Button onClick={() => navigate({ screen: "worklist" })}>
-        <CheckSquare size={15} aria-hidden="true" />{" "}
-        {t("person.action.addTask")}
-      </Button>
+      {/* Neither verb is drawn in overlay: LogActivityAction, the form both
+          open, renders nothing there — a mirrored workspace has no activity
+          write of its own — so a trigger here would set drawer state a mount
+          elsewhere refuses to act on. */}
+      {!overlay && (
+        <>
+          {logRefused && (
+            <p className="t-caption" id={logRefusedId}>
+              {t("record.logActivityRefused")}
+            </p>
+          )}
+          {/* A CRM a rep cannot write a meeting into is a CRM that only
+              reads. This is the standing way in; the moment card offers the
+              same form when its rung decides logging is the thing to do
+              next. */}
+          <Button
+            disabled={logPending}
+            reasonId={logRefused}
+            onClick={onLogActivity}
+          >
+            <FileText size={15} aria-hidden="true" /> {t("log.title")}
+          </Button>
+          {/* Keeps its words. A tick box is the glyph for COMPLETING a task,
+              so squaring this one would name the opposite of what it does.
+              Files the task against THIS record — the same form Log activity
+              opens, started on its task kind, rather than a navigation to the
+              Worklist, which has no way to add one. */}
+          <Button
+            disabled={logPending}
+            reasonId={logRefused}
+            onClick={onAddTask}
+          >
+            <CheckSquare size={15} aria-hidden="true" />{" "}
+            {t("person.action.addTask")}
+          </Button>
+        </>
+      )}
       {/* A real menu. This was a button labelled "More actions" that navigated
           to the timeline tab — the same place the Call button went — so the one
           control on the header promising there was more behind it delivered a

@@ -291,6 +291,17 @@ const (
 // classifySeed runs the one classification call over the landing page.
 func (w *siteDeepReadWorker) classifySeed(ctx context.Context, seed crawlPage) (siteTriageVerdict, error) {
 	if strings.TrimSpace(seed.Text) == "" {
+		if seed.UnresolvedForward {
+			// This page named the site's real address and the crawl could not
+			// reach it. The emptiness is a gap in the read, not the site
+			// saying that nobody is here, so it must not settle the domain:
+			// answering `parked` here would re-create the very defect the
+			// forwarding follow exists to fix.
+			return siteTriageVerdict{
+				Kind:   siteKindUnclear,
+				Reason: "the landing page forwards to an address that could not be read",
+			}, nil
+		}
 		// A page with no readable text identifies nobody. That IS the parked
 		// answer, and it costs no model call to say so.
 		return siteTriageVerdict{

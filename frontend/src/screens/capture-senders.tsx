@@ -6,7 +6,9 @@ import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
-import { useT } from "../i18n";
+import { formatDate } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
@@ -236,6 +238,8 @@ export function CaptureSendersCard() {
 // correction rather than only the answer that now stands.
 function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
   const kind = row.kind ?? "";
   const words = kindLabel[kind] ? t(kindLabel[kind]) : kind;
   if (row.overruled) {
@@ -251,8 +255,22 @@ function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
     );
   }
   return (
-    <Badge tone={admitted.has(kind) ? "success" : undefined} quiet>
-      {words || t("senders.kind.undecided")}
-    </Badge>
+    <>
+      <Badge tone={admitted.has(kind) ? "success" : undefined} quiet>
+        {words || t("senders.kind.undecided")}
+      </Badge>
+      {/* The deadline, not just the verdict. A personal verdict does not hide
+          this sender's mail, so during the window nothing on the page looks
+          different and there is nothing for an owner to object to — the date is
+          what turns a silent classification into something they can act on, and
+          "mark as business" beside it is the act that cancels it. */}
+      {row.deletes_at && (
+        <div className="cell-note">
+          {t("senders.deletesOn", {
+            date: formatDate(row.deletes_at, locale, zone),
+          })}
+        </div>
+      )}
+    </>
   );
 }

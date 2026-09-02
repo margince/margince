@@ -26,8 +26,12 @@ ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
   test-selfdir pkg-freeze test-desktop-launcher changelog-sections \
   test-changelog-sections test-dev-postgres-container test-e2e-llm-check
 
-# How wide the gate fan-out runs. 4 is what the CI runner has and what
-# backend/Makefile's own fan-out already uses; a bigger machine can raise it.
+# How wide the gate fan-out runs: the machine's online core count, so a 4-core
+# CI runner and an 18-core laptop each get the width they have without anybody
+# setting a flag. `getconf _NPROCESSORS_ONLN` answers on both macOS and Linux;
+# the fallback covers a platform where it does not, at the width the CI runner
+# has. Override per run (`GATE_JOBS=2 make check-backend`) to leave cores free
+# for other sessions checking at the same time.
 #
 # Four gates writing at once interleaves their output, which make 4.0's
 # --output-sync would fix and the 3.81 macOS ships would not. The flag is left
@@ -37,7 +41,7 @@ ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
 # already names itself in its own OK:/FAIL: line, with make naming the target
 # again on the way out. Set it by hand (`make check-backend MAKEFLAGS=…`) on a
 # run whose interleaving you need untangled.
-GATE_JOBS ?= 4
+GATE_JOBS ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
 
 # Where the demo dataset lives. It is a SEPARATE, private repo (it carries real
 # company names and crawled pages), cloned beside this one by convention. The
@@ -95,7 +99,7 @@ SEED_STACK = set -e; . scripts/lib-devstate.sh; \
     seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
   fi;
 
-.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
+.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -116,7 +120,21 @@ help:
 ## Idempotent; extend here as new setup steps are needed. A fresh worktree can
 ## run `make check` / `make dev` immediately after.
 install: fe-install tools hooks
-	@echo "install: worktree ready (frontend deps + gate tools + hooks)"
+	@# Fill the machine-wide Go module cache now, while nothing else needs it.
+	@# Every `go` command that still has something to download takes the single
+	@# flock at $$GOMODCACHE/cache/lock, so the first gate run in a fresh
+	@# worktree can sit silently behind a parallel session's download with
+	@# nothing on screen saying why. Downloading per module at setup time makes
+	@# the gate runs lock-free. fixtures/ is excluded for the reason
+	@# scripts/check-lint-modules.sh states: those units resolve only inside a
+	@# test-composed workspace, so `go mod download` cannot run there.
+	@set -e; for mod in $$(git ls-files '*go.mod' \
+	  | sed -e 's#/go\.mod$$##' -e 's#^go\.mod$$#.#' \
+	  | grep -v '^fixtures/'); do \
+	  echo "install: go mod download ($$mod)"; \
+	  (cd "$$mod" && go mod download); \
+	done
+	@echo "install: worktree ready (frontend deps + gate tools + hooks + module cache)"
 
 ## check-backend — the backend half of the gate: the root deterministic script
 ## gates plus the backend gate (build, vet, lint, arch-lint, unit + fitness
@@ -690,6 +708,24 @@ e2e-company:
 		E2E_ORG_SPARSE="$(E2E_ORG_SPARSE)" \
 		pnpm exec playwright test company-record.spec.ts
 	@echo "screenshots: $(E2E_SHOT_DIR)"
+
+## e2e-brief — the Brief (Home) page's LAYOUT: which regions exist, in what
+## order, and that nothing pans at desktop, phone or 200% zoom, in both
+## palettes. The vitest suites already prove the data flow; none of them can
+## see a rail that reflowed under the work column or a panel that spilled
+## sideways under a long German label.
+## Runs on the LIVE stack (make dev, then make seed-dev) and skips loudly
+## without one. Its screenshot lands OUTSIDE the repo, for a human to compare.
+E2E_BRIEF_SHOT_DIR ?= /tmp/e2e-brief
+e2e-brief: SHELL := /bin/bash
+e2e-brief:
+	@mkdir -p "$(E2E_BRIEF_SHOT_DIR)"
+	@set -e; . scripts/lib-devstate.sh; \
+	app="$${BASE_URL:-}"; [ -n "$$app" ] || app="$$(dev_app_base_url)"; \
+	cd frontend && BASE_URL="$$app" \
+		E2E_BRIEF_SHOT_DIR="$(E2E_BRIEF_SHOT_DIR)" \
+		pnpm exec playwright test brief.spec.ts
+	@echo "screenshots: $(E2E_BRIEF_SHOT_DIR)"
 
 ## storybook — the component workbench on :6006 (the design-system catalog +
 ## the story surface fe-uat renders). Stories live beside their component as

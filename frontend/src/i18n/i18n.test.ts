@@ -138,13 +138,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "tab.deals",
   "deals.pipeline",
   "deal.fcPipeline",
-  "record.timeline",
   "cf.obj.deal",
   "cf.obj.person",
   "cf.obj.lead",
   "co.brief.cite.deal",
   "co.brief.cite.person",
-  "quotas.contributing.deal",
   "deals.unit",
   "history.actorAgent",
 
@@ -192,7 +190,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.conv.clarify.optionDetail",
   "create.linkedin",
   "person.enriched.field.linkedin",
-  "quotas.periodRange",
 
   // Units, version rows and other format-only strings: symbols/abbreviations
   // that do not translate (ms, a version-row template).

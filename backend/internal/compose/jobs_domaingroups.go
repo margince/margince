@@ -33,7 +33,7 @@ import (
 // rather than an omission: this role holds no brief_ranking model lane, so the
 // overnight run is the deterministic composite order. The model re-order stays
 // what the api role adds on a rep's explicit refresh.
-func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
+func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, mail BriefMailConfig) {
 	addDeclaredWorker[BriefGenerateArgs](reg, &briefGenerateWorker{pool: pool})
 	addDeclaredWorker[BriefGenerateWorkspaceArgs](reg, &briefGenerateWorkspaceWorker{
 		engine: briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool))),
@@ -41,6 +41,7 @@ func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger
 		users:  identity.NewService(pool),
 		now:    time.Now,
 		log:    log,
+		mail:   mail,
 	})
 }
 

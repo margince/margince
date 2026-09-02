@@ -69,7 +69,7 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 			}
 			ctx, err := gate.Admit(ctx, spec, resolve)
 			r = r.WithContext(ctx)
-			// The quotas the gate just READ on this door are paid on it too, or
+			// The counters the gate just READ on this door are paid on it too, or
 			// they are counters nothing increments: a credential that only ever
 			// uses /v1 would sit at zero forever and no threshold could be
 			// crossed. ADR-0055's claim is that both doors are governed alike,

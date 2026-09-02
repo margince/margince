@@ -209,7 +209,11 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		store: capture.NewSenderOverrideStore(InstallationDB(pool)),
 	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
-	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{store: capture.NewCounterpartyHoldStore(InstallationDB(pool))}
+	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{
+		store:     capture.NewCounterpartyHoldStore(InstallationDB(pool)),
+		recompute: activities.RecomputeAudienceTx,
+		clearHold: activities.ClearCounterpartyHoldTx,
+	}
 	s.claimHandlers = claimHandlers{people: s.peopleStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.

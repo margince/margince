@@ -10,16 +10,19 @@
 
 import { Badge, Button } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
+import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
+import { useNoticeRead } from "./taskactions";
 import {
   comparisonText,
   consequenceText,
   dealFactsText,
   itemTitle,
   moveHref,
+  moveOpensComposer,
   reasonText,
   rowHref,
 } from "./worklist.copy";
@@ -52,9 +55,18 @@ export function WorklistRow({
   // server already decided as of a fixed instant.
   asOf: string;
   // Whether the pane beside the queue is about this row.
-  selected: boolean;
-  onSelect: () => void;
-  onReview: () => void;
+  //
+  // BOTH CALLBACKS ARE OPTIONAL, because one surface has no pane. The Brief
+  // shows the head of this same queue on the page a rep opens first, and it has
+  // no second column to open a row INTO — so passing a no-op would draw a rank
+  // button that answers nothing, which is exactly the dead control the comment
+  // on that button warns about. Absent means the affordance is not drawn and
+  // the rank reads as the number it is.
+  selected?: boolean;
+  onSelect?: () => void;
+  // Where a grouped row is reviewed. Also a filter change the Brief cannot
+  // make: it shows a fixed cut and has no filter to move.
+  onReview?: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -80,30 +92,12 @@ export function WorklistRow({
         selected ? "worklist-row worklist-row-selected" : "worklist-row"
       }
     >
-      {/* The way INTO the pane. A button on the rank rather than the whole row
-          being pressable: the row already holds links and verbs, and a control
-          wrapping controls is a press whose target the reader has to guess. */}
-      <button
-        type="button"
-        className="worklist-rank-select"
-        aria-pressed={selected}
-        // Names the ROW, not the verb. Every rank button carrying the same
-        // label made them indistinguishable to anybody navigating by name, and
-        // overrode the visible digit — which is the one thing that told them
-        // apart on screen.
-        aria-label={t("worklist.pane.openRow", {
-          position: formatNumber(position, locale),
-          title,
-        })}
-        onClick={onSelect}
-      >
-        {/* The rank is the page's central claim, so it is readable rather than
-          decorative: the list element carries the order for a screen reader and
-          the number states it for everybody else. */}
-        <span className="t-caption worklist-rank">
-          {formatNumber(position, locale)}
-        </span>
-      </button>
+      <Rank
+        position={position}
+        title={title}
+        selected={selected}
+        onSelect={onSelect}
+      />
       <div className="worklist-row-text">
         <p className="t-body worklist-row-title">
           {href ? (
@@ -144,7 +138,7 @@ export function WorklistRow({
             has nothing below it to beat. */}
         {above && <p className="t-caption worklist-row-above">{above}</p>}
       </div>
-      {item.batch ? (
+      {item.batch && onReview ? (
         <BatchVerb onReview={onReview} />
       ) : (
         <RowVerbs item={item} href={href} move={moveHref(item)} />
@@ -160,7 +154,67 @@ export function WorklistRow({
         <ReassignControl item={item} owner={owner} />
       )}
       {decidable(item) && <RowDecision item={item} />}
+      {/* Settled inline rather than drawn by RowVerbs — see NoticeAcknowledge. */}
+      {item.source === "notice" && item.actions.includes("acknowledge") && (
+        <NoticeAcknowledge id={item.id} />
+      )}
     </PanelRow>
+  );
+}
+
+/**
+ * The rank, and the way INTO the pane where there is one.
+ *
+ * A button on the rank rather than the whole row being pressable: the row
+ * already holds links and verbs, and a control wrapping controls is a press
+ * whose target the reader has to guess.
+ *
+ * Without `onSelect` it is a plain number. The Brief draws these rows on a page
+ * with no second column, so a button there would open nothing — and a control
+ * that answers nothing is worse than no control, because a reader presses it
+ * once and learns the page lies about what is pressable.
+ */
+function Rank({
+  position,
+  title,
+  selected,
+  onSelect,
+}: Readonly<{
+  position: number;
+  title: string;
+  selected?: boolean;
+  onSelect?: () => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  // The rank is the page's central claim, so it is readable rather than
+  // decorative: the list element carries the order for a screen reader and the
+  // number states it for everybody else.
+  const digit = (
+    <span className="t-caption worklist-rank">
+      {formatNumber(position, locale)}
+    </span>
+  );
+  if (!onSelect) {
+    return digit;
+  }
+  return (
+    <button
+      type="button"
+      className="worklist-rank-select"
+      aria-pressed={selected ?? false}
+      // Names the ROW, not the verb. Every rank button carrying the same label
+      // made them indistinguishable to anybody navigating by name, and overrode
+      // the visible digit — which is the one thing that told them apart on
+      // screen.
+      aria-label={t("worklist.pane.openRow", {
+        position: formatNumber(position, locale),
+        title,
+      })}
+      onClick={onSelect}
+    >
+      {digit}
+    </button>
   );
 }
 
@@ -188,6 +242,38 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <div className="worklist-row-decision">
       <ApprovalRow approval={usable} extraInvalidateKeys={[worklistKey]} />
+    </div>
+  );
+}
+
+// A notice's one verb: the reader has seen it, and it leaves the lane.
+// Settled here rather than routed as a link — the mutation this calls is
+// the notice's own read endpoint, and there is no separate surface to send
+// the reader to for "I've seen this".
+function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const acknowledge = useNoticeRead([worklistKey]);
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        pending={acknowledge.isPending}
+        onClick={() =>
+          acknowledge.mutate(id, {
+            // A rejected read leaves the button idle with nothing else on
+            // screen to say so — the same rendering a click that did nothing
+            // would leave. Without this the notice stays in the lane and the
+            // reader has no reason to try again.
+            onError: () =>
+              toast.show(t("worklist.verb.acknowledgeFailed"), {
+                mark: false,
+              }),
+          })
+        }
+      >
+        {t("worklist.verb.acknowledge")}
+      </Button>
     </div>
   );
 }
@@ -272,7 +358,16 @@ function RowVerbs({
           standing rather than on a screen they have to go and find. */}
       {move && (
         <a className="link-button" href={move}>
-          {t("worklist.verb.draft_reply")}
+          {/* THE LABEL MOVES WITH THE ROUTE. Where the address opens the
+              composer the verb is the act; where it only reaches the record it
+              says so, because a label promising a draft over a link that merely
+              navigates is the overstatement this row refused to make until the
+              route existed. */}
+          {t(
+            moveOpensComposer(item)
+              ? "worklist.verb.draft_reply_now"
+              : "worklist.verb.draft_reply",
+          )}
         </a>
       )}
       {verbs.map(({ action, destination }) => (
@@ -298,11 +393,13 @@ const VERB_DESTINATION: Partial<
   // They come back when the decision card is drawn inline, which is its own
   // piece of work.
   //
+  // `acknowledge` is absent too — see NoticeAcknowledge, which draws it
+  // inline instead of through this table.
+  //
   // Everything routable is the record the row is about.
   open: (href) => href,
   complete: (href) => href,
   snooze: (href) => href,
-  acknowledge: (href) => href,
 };
 
 // The one verb whose routing depends on the SOURCE rather than only the verb.

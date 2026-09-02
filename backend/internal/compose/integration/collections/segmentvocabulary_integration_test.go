@@ -571,27 +571,13 @@ func TestEveryEnumOverTheRecordVocabularyMatchesTheCheckConstraint(t *testing.T)
 	}
 
 	// The SIBLING vocabularies, each against ITS OWN table. Comparing them all
-	// to taggable's CHECK would pass only because the four happen to admit the
+	// to taggable's CHECK would pass only because they happen to admit the
 	// same five today, and that coincidence is where this class of bug lives:
 	// 0131 widened four CHECKs and the contract tracked one.
 	for _, c := range []struct {
 		table string
 		enums map[string]func(string) bool
 	}{
-		{
-			table: "list",
-			enums: map[string]func(string) bool{
-				"List.entity_type":              func(v string) bool { return crmcontracts.ListEntityType(v).Valid() },
-				"CreateListRequest.entity_type": func(v string) bool { return crmcontracts.CreateListRequestEntityType(v).Valid() },
-			},
-		},
-		{
-			table: "list_member",
-			enums: map[string]func(string) bool{
-				"ListMember.entity_type":           func(v string) bool { return crmcontracts.ListMemberEntityType(v).Valid() },
-				"AddListMemberRequest.entity_type": func(v string) bool { return crmcontracts.AddListMemberRequestEntityType(v).Valid() },
-			},
-		},
 		{
 			table: "activity_link",
 			enums: map[string]func(string) bool{

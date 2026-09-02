@@ -112,7 +112,6 @@ backend/internal/modules/automation/automations_catalog.go core 0035
 backend/internal/modules/automation/automations_catalog.go core 0078
 backend/internal/modules/automation/automations_runs.go migration 0061
 backend/internal/modules/automation/automations_runs_test.go migration 0061
-backend/internal/modules/automation/catalog_actions.go core 0008
 backend/internal/modules/automation/engine_blocked.go migration 0061
 backend/internal/modules/automation/gate.go migration 0061
 backend/internal/modules/automation/rundetail.go migration 0079
@@ -155,8 +154,6 @@ backend/internal/modules/privacy/retentionpolicystore.go core 0217
 backend/internal/modules/privacy/retentionrestricted.go migration 0291
 backend/internal/modules/privacy/subjectcolumns.go core 0229
 backend/internal/modules/privacy/transcriptreadings.go core 0245
-backend/internal/modules/quotas/attainment.go core 0217
-backend/internal/modules/quotas/quotas.go core 0228
 backend/internal/modules/search/binding.go migration 0114
 backend/internal/modules/search/graph.go core 0038
 backend/internal/modules/search/graphactivitysubjects.go core 0038
@@ -260,5 +257,7 @@ scripts/deploy/db-bootstrap.sql migration 0015
 scripts/lib-testdb.sh migration 0015
 scripts/test-migration-versions.sh core 0002
 scripts/test-migration-versions.sh core 0003
+scripts/test-migration-versions.sh core 1799999997
+scripts/test-migration-versions.sh core 1799999998
 scripts/test-migration-versions.sh core 1799999999
 scripts/test-migration-versions.sh migration 1799999999

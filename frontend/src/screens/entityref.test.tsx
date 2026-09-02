@@ -9,9 +9,45 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
+import { DealBulkBar } from "./dealbulk";
 import { EntityRef } from "./entityref";
-import { SetTargetAction } from "./quotas.forms";
+
+type Deal = components["schemas"]["Deal"];
+type Stage = components["schemas"]["Stage"];
+
+// The bulk bar is this file's HOST for the roster picker: it draws the same
+// owner combobox off useRoster("user") and the same partial-list note, with
+// the roster enabled on mount, so these tests reach the picker directly.
+const HOST_DEAL: Deal = {
+  id: "d-1",
+  name: "Brandt renewal",
+  pipeline_id: "p-1",
+  stage_id: "s-1",
+  status: "open",
+  source: "manual",
+  captured_by: "human:u-1",
+  version: 1,
+  created_at: "2026-07-01T08:00:00Z",
+  updated_at: "2026-07-01T08:00:00Z",
+};
+
+const HOST_STAGE: Stage = {
+  id: "s-1",
+  pipeline_id: "p-1",
+  name: "Qualified",
+  position: 1,
+  semantic: "open",
+  win_probability: 40,
+};
+
+function renderRosterHost() {
+  return render(
+    <DealBulkBar deals={[HOST_DEAL]} stages={[HOST_STAGE]} onDone={() => {}} />,
+  );
+}
 
 // EntityRef (P-4 UUID-legibility): a cross-record reference resolves the
 // target's id to its display name and backlinks to its 360.
@@ -466,13 +502,14 @@ describe("the roster walk", () => {
       [{ id: "u-2", display_name: "Mor Adler" }],
     ]);
     const user = userEvent.setup();
-    render(<SetTargetAction label="Set target" />);
+    renderRosterHost();
 
-    await user.click(screen.getByTestId("quota-create"));
-    await user.click(await screen.findByRole("combobox"));
+    await user.click(
+      await screen.findByRole("combobox", { name: en["deals.bulkOwner"] }),
+    );
 
-    // A quota is written against ONE subject, so a subject the picker never
-    // offers is a quota nobody can create.
+    // An assignment is written against ONE subject, so a subject the picker
+    // never offers is an assignment nobody can make.
     expect(
       await screen.findByRole("option", { name: "Mor Adler" }),
     ).toBeTruthy();
@@ -504,10 +541,7 @@ describe("the roster walk", () => {
 
   it("stops at its page budget and tells a picker the list is only part of one", async () => {
     const cursors = stubEndlessRoster();
-    const user = userEvent.setup();
-    render(<SetTargetAction label="Set target" />);
-
-    await user.click(screen.getByTestId("quota-create"));
+    renderRosterHost();
 
     // The bound is what makes an unstoppable cursor a short list instead of a
     // page that never paints — and the picker states the shortfall rather than

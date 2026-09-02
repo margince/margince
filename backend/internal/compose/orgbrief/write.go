@@ -269,7 +269,7 @@ func ParseBriefSections(reply, orgID string, in Input) ([]Section, error) {
 	}
 	known := knownRecords(orgID, in)
 	byKind := map[string][]Sentence{}
-	// The quota is on the BRIEF, not on one section: a model that returns two
+	// The volume budget is on the BRIEF, not on one section: a model that returns two
 	// next_step sections would otherwise be handed the allowance twice, and the
 	// merged output would carry twice the advice the reader was promised.
 	recommendations := 0
@@ -293,7 +293,7 @@ func ParseBriefSections(reply, orgID string, in Input) ([]Section, error) {
 			}
 			sentence.Nature = nature
 			// Grounding decides FIRST. Counting an ungrounded recommendation
-			// would let one malformed claim spend the quota and suppress the
+			// would let one malformed claim spend the volume budget and suppress the
 			// valid advice behind it — the reader loses the advice and is told
 			// nothing about why.
 			if !claims.Grounded(sentence, known) {
@@ -431,9 +431,9 @@ const (
 
 // The natures a sentence can carry, same derivation, same reason.
 const (
-	natureFact           = string(crmcontracts.Fact)
-	natureAssessment     = string(crmcontracts.Assessment)
-	natureRecommendation = string(crmcontracts.Recommendation)
+	natureFact           = string(crmcontracts.OrganizationBriefSentenceNatureFact)
+	natureAssessment     = string(crmcontracts.OrganizationBriefSentenceNatureAssessment)
+	natureRecommendation = string(crmcontracts.OrganizationBriefSentenceNatureRecommendation)
 )
 
 // knownNature is every nature ANY section may carry, derived from natureAllowed

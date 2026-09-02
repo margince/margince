@@ -7,17 +7,21 @@ package agents
 // date first, each with the person who owes it and the record it was made
 // about.
 //
-// EARLIEST DUE, not oldest promise. The order is the due date ascending with
-// undated last — a promise made a year ago and never dated sorts behind one
-// made this morning for tomorrow, because what a reviewer is chasing is the
-// date that has passed rather than the day the words were said.
+// MOST OVERDUE FIRST, and the order is kernel/owedwork's — the same ranking the
+// contact and company pages apply, so an agent and a reader looking at one
+// account agree about what is most overdue. Among late promises the one whose
+// deadline passed LAST leads, because that is the one still recoverable; then
+// the rest by nearest deadline, with undated ones behind them.
 //
-// A promise here is a TASK ACTIVITY that nobody has ticked off. That is the
-// whole definition, and it is the tool's honesty problem: a commitment made
-// out loud in a meeting and never written down is not in this answer, and a
-// model told nothing would report the list as "what we owe" rather than as
-// "what we recorded that we owe". The description says so, and the tool
-// refuses to imply more than the rows support.
+// The order matters more than a display choice would, because the bound cuts
+// against it: read earliest-first and truncated, a bounded answer holds the
+// oldest promises and drops the one that slipped yesterday.
+//
+// A promise here is EITHER a task nobody ticked off or a commitment an
+// extractor read out of a captured conversation. The two are unlinked rows, so
+// one promise both said and typed appears twice; what is absent is a promise
+// made where nothing was captured at all. The description says both, and the
+// tool refuses to imply more than the rows support.
 //
 // THE TOOL IS CLOCK-FREE. The seam stamps the instant it swept at, and
 // everything below is a pure function of (due date, that instant) — which is
@@ -49,15 +53,47 @@ type CommitmentAbout struct {
 	Name string `json:"name,omitempty"`
 }
 
-// OpenCommitment is one outstanding promise as the seam read it.
+// OpenCommitment is one outstanding promise as the seam read it, from either
+// of the two places a promise gets written down.
+//
+// EXACTLY ONE OF TaskID AND ClaimID. A promise somebody typed is a task row; a
+// promise an extractor read out of a conversation is a claim row, and the two
+// are unlinked — nothing writes conversation_claim.task_activity_id — so one
+// promise recorded both ways arrives here as two. That is the honest answer
+// until the link is written; guessing which pairs mean one promise would be
+// this surface inventing a fact.
 type OpenCommitment struct {
-	TaskID       ids.UUID
-	Subject      string
-	DueAt        *time.Time
+	// Source is `task` or `conversation`, and says which of the two ids below
+	// is set.
+	Source string
+	// TaskID is the task activity, for a task-sourced promise.
+	TaskID *ids.UUID
+	// ClaimID is the extracted commitment, and SourceActivityID is the message
+	// it was read from — which is what a reader opens to check it.
+	ClaimID          *ids.UUID
+	SourceActivityID *ids.UUID
+	// Quote is the sentence the promise was made in. Claims only: a task
+	// carries what somebody retyped and has nothing to quote.
+	Quote   string
+	Subject string
+	DueAt   *time.Time
+	// FiledAt is when the promise was made: a task's creation, a claim's
+	// message. It breaks ties between two promises sharing a deadline, so the
+	// answer does not depend on which source a seam happened to read first.
+	FiledAt      time.Time
 	AssigneeID   *ids.UUID
 	AssigneeName string
 	About        []CommitmentAbout
 }
+
+// The two places a promise is recorded, as this surface names them.
+const (
+	// CommitmentFromTask is a promise somebody typed as a task.
+	CommitmentFromTask = "task"
+	// CommitmentFromConversation is a promise an extractor read out of a
+	// captured conversation and nobody typed.
+	CommitmentFromConversation = "conversation"
+)
 
 // CommitmentSweep is ONE reading of the open-promise set: the rows, the
 // instant they are judged against, and whether the sweep stopped at its
@@ -115,12 +151,26 @@ const (
 // a model told nothing reports it as one. It matters more here than most,
 // because the question this tool answers is "is anything being dropped".
 const commitmentsTruncatedMessage = "More open commitments exist than are listed here. " +
-	"Report these as the soonest-due promises found, not as everything outstanding."
+	"Report these as the most overdue promises found, not as everything outstanding."
 
 // maxCommitments bounds one call. It is the schema's maximum and the
 // server-side ceiling both, so a caller that omits the argument gets a
 // bounded read rather than the whole table.
 const maxCommitments = 50
+
+// CommitmentSweepLimit is how many promises one call serves, for a seam that
+// merges more than one source.
+//
+// The bound belongs to the TOOL, not to either read behind it. Each source has
+// a default of its own — they differ — so a seam that passed the caller's zero
+// straight through would return whatever the two happened to add up to, and
+// report nothing as cut because neither read had hit its own bound.
+func CommitmentSweepLimit(asked int) int {
+	if asked <= 0 || asked > maxCommitments {
+		return maxCommitments
+	}
+	return asked
+}
 
 type reviewCommitments struct{ list CommitmentLister }
 
@@ -165,8 +215,9 @@ func (t reviewCommitments) Handle(ctx context.Context, in json.RawMessage) (json
 	noteDerivedContent(ctx)
 	items := make([]CommitmentItem, 0, len(sweep.Commitments))
 	for _, c := range sweep.Commitments {
-		noteEvidence(ctx, datasource.EntityActivity, c.TaskID)
-		items = append(items, c.wire(sweep.AsOf))
+		item := c.wire(sweep.AsOf)
+		noteCommitmentEvidence(ctx, item)
+		items = append(items, item)
 	}
 	if sweep.Truncated {
 		noteWarning(ctx, warningSweepTruncated, commitmentsTruncatedMessage)
@@ -191,7 +242,9 @@ func requireCommitmentLimit(limit int) error {
 // state it is in as of the sweep's own instant.
 func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 	item := CommitmentItem{
-		TaskID: c.TaskID, Subject: c.Subject, DueAt: c.DueAt,
+		TaskID: c.TaskID, ClaimID: c.ClaimID, Source: c.Source,
+		SourceActivityID: c.SourceActivityID,
+		Quote:            c.Quote, Subject: c.Subject, DueAt: c.DueAt,
 		State: commitmentState(c.DueAt, asOf),
 		// Never null: a model handed null reads it as "unknown" where an empty
 		// array says "this promise names no record".
@@ -229,4 +282,19 @@ func commitmentState(dueAt *time.Time, asOf time.Time) string {
 // whether it is past it at all.
 func daysOverdue(dueAt *time.Time, asOf time.Time) (int, bool) {
 	return deadline.DaysPast(dueAt, asOf)
+}
+
+// noteCommitmentEvidence records the row a promise was read from, whichever
+// kind it is.
+//
+// Both point at an activity: a task IS an activity row, and a claim quotes the
+// message it was extracted from. So the caller's evidence trail lands on
+// something they can open either way, which is what the trail is for.
+func noteCommitmentEvidence(ctx context.Context, item CommitmentItem) {
+	switch {
+	case item.TaskID != nil:
+		noteEvidence(ctx, datasource.EntityActivity, *item.TaskID)
+	case item.SourceActivityID != nil:
+		noteEvidence(ctx, datasource.EntityActivity, *item.SourceActivityID)
+	}
 }

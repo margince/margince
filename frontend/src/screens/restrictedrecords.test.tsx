@@ -35,6 +35,26 @@ const HELD_ANGEBOT = {
   redacted_fields: ["raw", "counterparty_email"],
 };
 
+// A record a project qualifies on its own (handelsbriefArm needs no deal for
+// a project) — the ordinary shape for correspondence from a negotiation that
+// was lost, or from delivery work years after the deal that started it.
+const HELD_BY_PROJECT_ONLY = {
+  activity_id: "00000000-0000-4000-8000-0000000000b2",
+  kind: "email",
+  occurred_at: "2025-03-04T09:00:00Z",
+  restricted_at: "2026-08-18T07:00:00Z",
+  restricted_until: "2032-01-01T00:00:00Z",
+  reason: "commercial_correspondence · §257 HGB / §147 AO",
+  deals: [],
+  projects: [
+    {
+      id: "00000000-0000-4000-8000-0000000000p1",
+      name: "Halloran Seilerei rope refit",
+    },
+  ],
+  redacted_fields: [],
+};
+
 type Sent = { key: string; body: unknown };
 
 function backend(allow: GrantSpec, records: unknown[]): Sent[] {
@@ -100,6 +120,19 @@ describe("RestrictedRecordsCard", () => {
     // The wire carries no subject or body, and the card asks for none — but
     // the assertion is about the screen: nothing that reads like the message.
     expect(screen.queryByText(/Angebot/)).not.toBeInTheDocument();
+  });
+
+  // A project link qualifies correspondence on its own — the screen used to
+  // check only `deals` and print "No deal on record" over a project name the
+  // server had already sent it.
+  it("names the qualifying project when no deal holds the record", async () => {
+    backend({ retention_policy: ["read"] }, [HELD_BY_PROJECT_ONLY]);
+    render(<RestrictedRecordsCard />);
+
+    expect(
+      await screen.findByText("Halloran Seilerei rope refit"),
+    ).toBeVisible();
+    expect(screen.queryByText("No deal on record")).not.toBeInTheDocument();
   });
 
   it("says when nothing is held", async () => {

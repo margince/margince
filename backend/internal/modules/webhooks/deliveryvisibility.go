@@ -79,6 +79,10 @@ var selfOnlyEvents = map[string]struct{}{
 	// gate to apply.
 	"weekly_plan.updated":        {},
 	"weekly_plan.help_requested": {},
+	// What a member chose about their own inbox. Its entity is `user`, which is
+	// workspace-level, so without this the fan-out would tell every
+	// subscription owner which colleagues had switched their mail off.
+	"user_delivery.changed": {},
 }
 
 var workspaceLevelEntities = map[string]struct{}{

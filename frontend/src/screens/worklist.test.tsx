@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { WorklistScreen } from "./worklist";
 
 // The ranked queue, and the ways it can mislead the person reading it.
@@ -42,14 +43,14 @@ function stub(day: Worklist, approval?: unknown) {
   );
 }
 
-function renderWorklist(locale: Locale = "en") {
+function renderWorklist(locale: Locale = "en", opensOn?: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
-        <WorklistScreen />
+        <WorklistScreen opensOn={opensOn} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -65,6 +66,13 @@ function day(over: Partial<Worklist> = {}): Worklist {
     sources_unavailable: [],
     reach: [],
     counts: [],
+    readings: {
+      revenue_at_risk_minor: null,
+      buyer_replies: 0,
+      prospecting: 0,
+      review: 0,
+      more_available: false,
+    },
     ...over,
   };
 }
@@ -969,5 +977,106 @@ describe("what the selected row is about", () => {
     await waitFor(() => {
       expect(container.querySelectorAll("aside")).toHaveLength(0);
     });
+  });
+});
+
+// What `#/worklist/<segment>` opens on.
+//
+// The address is the other half of the team board's row: a board that writes a
+// hash nothing reads is a row that goes nowhere. These assert the REQUEST, not
+// the rendering, because whose day the page is showing is a question about
+// which day it asked the server for.
+describe("the address opens a queue", () => {
+  function requestedUrls(): string[] {
+    const mock = globalThis.fetch as unknown as {
+      mock: { calls: readonly (readonly unknown[])[] };
+    };
+    return mock.mock.calls
+      .map(([input]) =>
+        String(input instanceof Request ? input.url : (input as string)),
+      )
+      .filter((url) => url.includes("/worklist"));
+  }
+
+  it("asks for a named colleague's day when the segment is a user id", async () => {
+    stub(day({ scope_options: ["mine", "team"] }));
+    renderWorklist("en", "11111111-1111-4111-8111-111111111111");
+
+    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
+    expect(
+      requestedUrls().some((url) =>
+        url.includes("owner=11111111-1111-4111-8111-111111111111"),
+      ),
+    ).toBe(true);
+  });
+
+  // The scope word is not an owner. Passing it as one would ask the server for
+  // a person whose id is the string "unassigned", which is a 403 or a 404 where
+  // the reader asked a perfectly ordinary question.
+  it("asks for the unowned pile when the segment is the scope word", async () => {
+    stub(day({ scope: "unassigned", scope_options: ["mine", "team"] }));
+    renderWorklist("en", "unassigned");
+
+    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
+    expect(
+      requestedUrls().some((url) => url.includes("scope=unassigned")),
+    ).toBe(true);
+    expect(requestedUrls().some((url) => url.includes("owner="))).toBe(false);
+  });
+
+  // No segment is the reader's own day, which is what every seat sees.
+  it("asks for the reader's own day when the address names nothing", async () => {
+    stub(day());
+    renderWorklist();
+
+    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
+    expect(requestedUrls().some((url) => url.includes("owner="))).toBe(false);
+    expect(requestedUrls().some((url) => url.includes("scope=mine"))).toBe(
+      true,
+    );
+  });
+});
+
+// The label moves with the route.
+//
+// The row's own comment refused to say "Draft the reply" while the click only
+// navigated: "a link labelled 'Draft the reply' would promise something the
+// click does not do… the label moves back when it lands". This is the assertion
+// that the two halves stay together — mutate either and one of these fails.
+describe("the draft_reply verb says what the click does", () => {
+  function replyRow(subjectType: string, id: string): WorklistItem {
+    return row({
+      id: `m-${id}`,
+      source: "waiting_customer",
+      category: "customer_waiting",
+      title: "Aster Handel",
+      subject: { type: subjectType, id },
+      move: { action: "draft_reply", activity_id: "a-1" },
+    } as unknown as Partial<WorklistItem>);
+  }
+
+  it("names the ACT where the address opens the composer", async () => {
+    stub(day({ queue: [replyRow("person", "p-1")] }));
+    renderWorklist();
+
+    const link = await screen.findByRole("link", {
+      name: en["worklist.verb.draft_reply_now"],
+    });
+    expect(link.getAttribute("href")).toContain("compose=reply");
+  });
+
+  it("names where it GOES where there is no composer to open", async () => {
+    stub(day({ queue: [replyRow("deal", "d-1")] }));
+    renderWorklist();
+
+    const link = await screen.findByRole("link", {
+      name: en["worklist.verb.draft_reply"],
+    });
+    expect(link.getAttribute("href")).not.toContain("compose=");
+    expect(
+      screen.queryByRole("link", {
+        name: en["worklist.verb.draft_reply_now"],
+      }),
+    ).toBeNull();
   });
 });

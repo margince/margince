@@ -556,6 +556,9 @@ function problemDetail(
   if (t && code === "gateway_unavailable") {
     return t("common.gatewayUnavailable");
   }
+  if (t && code === "assistant_unavailable") {
+    return t("common.assistantUnavailable");
+  }
   if (t && code === "permission_denied") {
     return t("common.permissionDenied");
   }

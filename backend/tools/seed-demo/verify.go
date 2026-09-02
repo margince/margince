@@ -277,7 +277,7 @@ func checkLifecycleIsSet(c *client, _ demoConfig) ([]verifyFinding, error) {
 
 // checkTheSurfacesAreNotEmpty catches a phase that silently created nothing.
 //
-// Tags, lists, quotas, offers and products are each a SCREEN, and an empty one
+// Tags, lists, offers and products are each a SCREEN, and an empty one
 // looks identical to a broken one: a Tags page with no rows teaches a viewer
 // that the product has no tags. The seeder reports "0 new" for a phase that
 // converged AND for a phase that failed to write anything, so the count in the
@@ -295,8 +295,6 @@ func checkTheSurfacesAreNotEmpty(c *client, _ demoConfig) ([]verifyFinding, erro
 		why   string
 	}{
 		{"tags", "/v1/tags", nil, "the Tags screen reads as a product without tags"},
-		{"lists", "/v1/lists", nil, "no saved segment to open"},
-		{"quotas", "/v1/quotas", nil, "attainment has nothing to be a percentage of"},
 		{"products", "/v1/products", nil, "an offer has no rate card behind it"},
 	} {
 		count := 0

@@ -376,6 +376,22 @@ func (s *scenario) readString(t *testing.T, table, column string, id ids.UUID) s
 	return out
 }
 
+// seedTag puts one word in the workspace's vocabulary, the way an admin would
+// before anyone applies it. Written straight to the table rather than through
+// the MCP surface on purpose: the agent scopes these scenarios run under
+// deliberately cannot coin a tag, which is the rule under test elsewhere.
+func (s *scenario) seedTag(t *testing.T, name string) {
+	t.Helper()
+	err := apptest.InWorkspace(s.AppEnv, t, func(tx pgx.Tx) error {
+		_, execErr := tx.Exec(context.Background(),
+			`INSERT INTO tag (name) VALUES ($1)`, name)
+		return execErr
+	})
+	if err != nil {
+		t.Fatalf("seeding the tag %q: %v", name, err)
+	}
+}
+
 // countRows answers one counting query.
 func (s *scenario) countRows(t *testing.T, sql string, args ...any) int {
 	t.Helper()

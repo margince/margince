@@ -137,10 +137,10 @@ type TimeScanner struct {
 	engine   *WorkflowEngine
 	scan     ActivityScan
 	dateScan DateFieldScan
-	// now is the scanner's clock (the quotas.NewStoreWithClock spelling —
-	// there is no Clock interface in this repo): captured ONCE per Scan
-	// call so every workspace and every instance in one pass agrees on
-	// what "before the cutoff" means.
+	// now is the scanner's clock — a function rather than an interface,
+	// which is this repo's spelling: captured ONCE per Scan call so every
+	// workspace and every instance in one pass agrees on what "before the
+	// cutoff" means.
 	now func() time.Time
 	log *slog.Logger
 }

@@ -60,7 +60,7 @@ func TestAMeetingWithNothingWrittenDownSaysSo(t *testing.T) {
 		{ID: ids.NewV7(), Subject: "prepared", StartsAt: soon, NeedsPrep: false, PrepKnown: true},
 	})
 
-	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25)
+	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestAMeetingThisReaderCannotReadClaimsNothingAboutPreparation(t *testing.T)
 		NeedsPrep: true, PrepKnown: false,
 	}})
 
-	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25)
+	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)
 	}

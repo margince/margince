@@ -272,6 +272,12 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"list_tags": "same missing tag.read as apply_tag above — and unlike remove_tag it shares its " +
 		"answer shape with nothing else here, so this waiver leaves that shape unproven rather " +
 		"than proven elsewhere",
+	"get_tag": "same missing tag.read as apply_tag above. It answers ONE row of the shape list_tags " +
+		"answers many of, so the two are unproven together rather than one covering the other — " +
+		"whichever seat eventually carries tag.read reaches both",
+	"get_record_tags": "same missing tag.read as apply_tag above. Its answer shape IS held, " +
+		"against a real database, by the record-tags integration suite — including the withheld " +
+		"case, which is the one a schema alone could not prove",
 	"book_meeting":         "needs a live calendar provider",
 	"send_email":           "needs an outbound mail provider",
 	"send_account_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",

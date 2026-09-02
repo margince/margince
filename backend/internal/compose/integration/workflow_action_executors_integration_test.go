@@ -25,11 +25,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
-	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -101,113 +99,6 @@ func TestNotifyFiringWithNoTransportLandsAVisibleSkippedRun(t *testing.T) {
 	const wantReason = "no notification transport configured"
 	if reason == nil || *reason != wantReason {
 		t.Fatalf("run detail reason = %v, want %q", reason, wantReason)
-	}
-}
-
-// testListsAdapter mirrors compose's own (unexported) listsAdapter: this
-// suite lives outside package compose, so it needs its own copy of the
-// same one-line mapping onto collections.Store.AddMember.
-type testListsAdapter struct{ store *collections.Store }
-
-func (a testListsAdapter) AddMember(ctx context.Context, listID ids.ListID, entityType string, entityID ids.UUID) error {
-	_, err := a.store.AddMember(ctx, listID, entityType, entityID)
-	return err
-}
-
-// addToListProbe is a synthetic handler that exists only for this suite:
-// no shipped starter carries an add_to_list action, so nothing else
-// exercises ApplyActions' add_to_list case against a real database.
-type addToListProbe struct {
-	listID ids.ListID
-	lists  automation.Lists
-}
-
-func (addToListProbe) Spec() workflow.Spec {
-	return workflow.Spec{
-		Name:    "task11a_add_to_list_probe",
-		Trigger: workflow.Trigger{EventType: "deal.stage_changed"},
-		Tier:    mcp.TierAutoExecute,
-	}
-}
-
-func (addToListProbe) Match(context.Context, workflow.Event) (bool, error) { return true, nil }
-
-func (p addToListProbe) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
-	args, err := json.Marshal(map[string]any{"list_id": p.listID})
-	if err != nil {
-		return workflow.Effect{}, err
-	}
-	return workflow.Effect{Actions: []workflow.Action{{
-		Kind: workflow.ActionAddToList, Target: ev.Entity, Args: args,
-	}}}, nil
-}
-
-func (p addToListProbe) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
-	applied, err := automation.ApplyActions(ctx, automation.Executors{Lists: p.lists}, eff)
-	return workflow.RunResult{Applied: applied}, err
-}
-
-func (addToListProbe) IdempotencyKey(ev workflow.Event) string {
-	return "task11a_add_to_list_probe:" + ev.ID.String()
-}
-
-func TestAddToListFiringAddsARealListMember(t *testing.T) {
-	e := Setup(t)
-	pipeline, open, _ := DealFixture(t, e)
-	dealID := e.SeedDeal(t, "Add To List Probe Deal", pipeline, open, nil)
-
-	listsStore := collections.NewStore(e.DB())
-	// The harness AdminPerms grants the core record objects but not `list`,
-	// so seed the probe list as a seeded user carrying an explicit list
-	// grant — the automation firing below is what the test exercises, not
-	// this setup write.
-	listAuthor := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
-		RoleKeys: []string{"admin"},
-		Objects:  map[string]principal.ObjectGrant{"list": {Create: true, Read: true, Update: true}},
-		RowScope: principal.RowScopeAll,
-	})
-	list, err := listsStore.CreateList(listAuthor, collections.CreateListInput{Name: "Task 11a Probe List", EntityType: "deal"})
-	if err != nil {
-		t.Fatalf("seeding the probe list: %v", err)
-	}
-
-	engine := compose.NewWorkflowEngine(e.DB())
-	engine.RegisterSystemWorkflow(addToListProbe{listID: list.ID, lists: testListsAdapter{store: listsStore}})
-
-	ctx := context.Background()
-	if err := engine.HandleEvent(ctx, kevents.Envelope{
-		EventID: ids.NewV7(), Type: "deal.stage_changed",
-		OccurredAt: time.Now().UTC(),
-		Entity:     kevents.EntityRef{Type: "deal", ID: dealID},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	var memberCount int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(
-			context.Background(),
-			`SELECT count(*) FROM list_member WHERE list_id = $1 AND entity_type = 'deal' AND entity_id = $2`,
-			list.ID, dealID,
-		).Scan(&memberCount)
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if memberCount != 1 {
-		t.Fatalf("list_member rows for (list, deal) = %d, want exactly 1 — the add_to_list firing never reached collections' real write path", memberCount)
-	}
-
-	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(
-			context.Background(),
-			`SELECT status FROM workflow_run WHERE handler = 'task11a_add_to_list_probe'`,
-		).Scan(&status)
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if status != "applied" {
-		t.Fatalf("run status = %q, want applied", status)
 	}
 }
 

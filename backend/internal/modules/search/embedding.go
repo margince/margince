@@ -226,6 +226,11 @@ func (s *Store) SimilarEntities(ctx context.Context, queryVec []float32, identit
 func similarBranchSQL(ctx context.Context, types []string, vecPos, identityPos int, arg func(any) int) ([]string, error) {
 	var branches []string
 	for _, branch := range searchBranches {
+		// A word has no prose to embed, so a similarity search over one would
+		// compare a name against a vector nothing produced.
+		if branch.textOnly {
+			continue
+		}
 		if len(types) > 0 && !slices.Contains(types, branch.entity) {
 			continue
 		}

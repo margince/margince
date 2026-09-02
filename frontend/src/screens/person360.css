@@ -378,6 +378,15 @@
   justify-self: start;
 }
 
+/* On a phone the meta line is too long for one row: the date and the kind
+   keep the first line, and the status and the time take one under the
+   subject, so nothing has to overflow the panel to stay on its line. */
+@media (max-width: 600px) {
+  .pe-memory-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
 .pe-memory-action:empty {
   display: none;
 }

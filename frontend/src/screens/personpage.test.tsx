@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { en } from "../i18n/en";
 import { PersonPageV2 } from "./personpage";
 import { PERSON_TABS } from "./persontab";
 import {
@@ -120,7 +121,6 @@ function mount(
   },
 ) {
   installFetchStub({
-    ...extraRoutes,
     "GET /me": meRoute(allow, { seat: "full" }),
     "GET /people/p-1/360": () => jsonResponse(page),
     "GET /people/p-1/brief": () =>
@@ -140,6 +140,9 @@ function mount(
           },
         ],
       }),
+    // Last, so a spec that needs to override a read above (e.g. a /me that
+    // never resolves, for a pending-grant spec) can.
+    ...extraRoutes,
   });
   render(
     <StoryProviders>
@@ -725,6 +728,82 @@ describe("logging an activity", () => {
     ).toBeTruthy();
   });
 
+  // "Add task" issues the same POST /activities as "Log activity", so it is
+  // refused by the same grant — sharing the one sentence rather than
+  // printing it twice.
+  it("also refuses Add task without the create grant, over the same sentence", async () => {
+    mount("overview", view, [], {}, { person: ["read", "update"] });
+
+    const header = await recordHeader();
+    const addTask = within(header).getByRole("button", { name: "Add task" });
+    const logActivity = within(header).getByRole("button", {
+      name: /Log activity/,
+    });
+    expect(addTask).toHaveProperty("disabled", true);
+    expect(
+      within(header).getAllByText(
+        "You do not have permission to log activities on this record.",
+      ),
+    ).toHaveLength(1);
+    expect(addTask.getAttribute("aria-describedby")).toBe(
+      logActivity.getAttribute("aria-describedby"),
+    );
+  });
+
+  // A guard that has not answered yet refuses nothing: while /me is still in
+  // flight, useCanWrite reads false the same way it would for a caller
+  // without the grant — so without this, both buttons would flash the
+  // "You do not have permission" sentence on every page load, before the
+  // verdict is even in.
+  it("stays quiet — disabled, no claimed refusal — while the grant is still in flight", async () => {
+    mount("overview", view, [], {
+      "GET /me": () => new Promise<Response>(() => {}),
+    });
+
+    const header = await recordHeader();
+    const addTask = within(header).getByRole("button", { name: "Add task" });
+    const logActivity = within(header).getByRole("button", {
+      name: /Log activity/,
+    });
+    expect(addTask).toHaveProperty("disabled", true);
+    expect(logActivity).toHaveProperty("disabled", true);
+    expect(
+      within(header).queryByText(
+        "You do not have permission to log activities on this record.",
+      ),
+    ).toBeNull();
+  });
+
+  // The button names a verb, opens the same form Log activity does — started
+  // on the task kind — and files the task against THIS person, rather than
+  // navigating to the Worklist, which has no way to add one.
+  it("adds a task on this person from the header, instead of leaving for the Worklist", async () => {
+    const user = userEvent.setup();
+    const posted: unknown[] = [];
+    mount("overview", view, [], {
+      "POST /activities": (body) => {
+        posted.push(body);
+        return jsonResponse({}, 201);
+      },
+    });
+
+    const header = await recordHeader();
+    await user.click(within(header).getByRole("button", { name: "Add task" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add task" });
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Subject" }),
+      "Send the renewal quote",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      kind: "task",
+      subject: "Send the renewal quote",
+      links: [{ entity_type: "person", entity_id: "p-1" }],
+    });
+  });
+
   it("logs a meeting on this person from the moment card's action", async () => {
     const user = userEvent.setup();
     const posted: unknown[] = [];
@@ -754,5 +833,104 @@ describe("logging an activity", () => {
       meeting_status: "held",
       links: [{ entity_type: "person", entity_id: "p-1" }],
     });
+  });
+
+  // The `task` surface PersonMomentDestination documents ("the task sheet")
+  // used to fall through runAction's default and do nothing — the same
+  // capability-the-API-serves-and-no-screen-offers shape as the header's own
+  // Add task bug, in the same file's action loop.
+  const taskMoment: Person360["moment"] = {
+    claim_key: "moment:overdue_promise",
+    evidence_fingerprint: "fp-task",
+    rule: "overdue_promise",
+    headline: "Something is due",
+    why_now: "The next step needs a task to track it.",
+    confidence: "observed_fact",
+    evidence: [],
+    recommended_action: {
+      kind: "complete_task",
+      label: "File a task",
+      state: "available",
+      destination: { surface: "task" },
+    },
+  };
+
+  it("adds a task from the moment card's own 'task' surface", async () => {
+    const user = userEvent.setup();
+    const posted: unknown[] = [];
+    mount("overview", { ...view, moment: taskMoment }, [], {
+      "POST /activities": (body) => {
+        posted.push(body);
+        return jsonResponse({}, 201);
+      },
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "File a task" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Add task" });
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Subject" }),
+      "Chase the signed order",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      kind: "task",
+      subject: "Chase the signed order",
+      links: [{ entity_type: "person", entity_id: "p-1" }],
+    });
+  });
+});
+
+// The composer another screen sends a reader to.
+//
+// The worklist's `draft_reply` move refused to promise a draft while the click
+// only navigated. `?compose=reply` is the route that makes the promise true, so
+// these are about it opening, saying what it was asked for, and closing on Back
+// the way the brief drawer does.
+describe("PersonPageV2 — the addressed composer", () => {
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("opens the composer the address asks for, with nothing pressed", async () => {
+    window.location.hash = "#/contacts/p-1?compose=reply";
+    mount("overview");
+
+    // The INTENT is what makes this different from the generic "Write an
+    // email": the draft opens knowing what it is for. It is the field's VALUE
+    // rather than text on the page — the composer hands it to a model.
+    const intent = await screen.findByLabelText(en["person.composer.intent"]);
+    expect((intent as HTMLTextAreaElement).value).toBe(
+      en["person.composer.intentReply"],
+    );
+  });
+
+  // An address is something a person can type. A stray `?compose=x` silently
+  // opening an empty draft is worse than a link that does nothing.
+  it("opens nothing for an intent it does not know", async () => {
+    window.location.hash = "#/contacts/p-1?compose=sell-them-something";
+    mount("overview");
+
+    await screen.findByRole("heading", { name: view.person.full_name });
+    expect(screen.queryByLabelText(en["person.composer.intent"])).toBeNull();
+  });
+
+  // Derived from the address rather than seeded from it — the same reason the
+  // brief drawer is. Back is how a reader closes a thing they arrived at by
+  // link, and it has to work.
+  it("closes when the address stops asking for it", async () => {
+    window.location.hash = "#/contacts/p-1?compose=reply";
+    mount("overview");
+    await screen.findByLabelText(en["person.composer.intent"]);
+
+    window.location.hash = "#/contacts/p-1";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText(en["person.composer.intent"])).toBeNull(),
+    );
   });
 });

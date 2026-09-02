@@ -46,6 +46,13 @@ func (w waitingOwnedBy) Unanswered(context.Context, time.Time) ([]WaitingCustome
 	return []WaitingCustomer(w), false, nil
 }
 
+// Nothing hidden: these tests are about WHOSE rows the queue carries, and a
+// fake that also invented a backlog would let a projection defect show up as a
+// guardrail figure instead of as a missing row.
+func (w waitingOwnedBy) Hidden(context.Context, time.Time) (HiddenWork, error) {
+	return HiddenWork{Shown: len(w)}, nil
+}
+
 // Opening a named person's queue keeps THEIR waiting customers and drops the
 // reader's own.
 //
@@ -71,7 +78,7 @@ func TestANamedOwnersQueueCarriesTheirWaitingCustomersAndNotTheReadersOwn(t *tes
 	}
 	svc.teammates = teammatesSaying(true)
 
-	day, err := svc.Worklist(managerReading(), "", "", theRep, 25)
+	day, err := svc.Worklist(managerReading(), "", "", theRep, 25, "")
 	if err != nil {
 		t.Fatalf("opening the named owner's queue: %v", err)
 	}

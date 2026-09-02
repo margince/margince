@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { cleanup, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
 import { fleetDeal, jsonResponse, render, run, stubApi } from "./home.testkit";
@@ -19,6 +19,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
   window.location.hash = "";
+});
+
+// The weekly is a VIEW of the Brief now, not a panel at the foot of the
+// morning. These cases are about what the retrospective says, so each one opens
+// on the address that shows it — the dial itself is tested in
+// home.dials.test.tsx.
+beforeEach(() => {
+  window.location.hash = "#/home?view=weekly";
 });
 
 // ── The week just gone ──
@@ -100,9 +108,19 @@ describe("HomeScreen — the weekly retrospective", () => {
     render(<HomeScreen />);
 
     // The panel formats local_week_start immediately, so a half-shaped answer
-    // used to take Home's whole render down with it — the queue, the deck and
-    // everything else — rather than drawing one honest empty section.
-    await screen.findByText("Fleet retrofit");
+    // used to take the whole render down with it rather than drawing one honest
+    // empty section.
+    //
+    // What "the rest of the page survives" MEANS moved with the dials: the
+    // morning's queue and this panel are no longer on screen together, so the
+    // surviving surface to look for is the weekly's own — the dials and the
+    // section around the panel that could not draw.
+    expect(
+      await screen.findByRole("group", { name: en["brief.view.label"] }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: en["home.panel.weekly"] }),
+    ).toBeTruthy();
   });
 });
 

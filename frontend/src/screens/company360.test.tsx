@@ -83,7 +83,6 @@ function view(overrides: Partial<Organization360> = {}): Organization360 {
     next_steps: { data: [], page: emptyPage },
     pending_approvals: { data: [], page: emptyPage },
     tags: [],
-    list_memberships: [],
     since_last_visit: {
       baseline_at: "2026-05-30T09:00:00Z",
       new_activities: 0,
@@ -486,7 +485,7 @@ describe("company view — withheld sections", () => {
       name: "Where this account stands",
     });
     const relationship = within(strip)
-      .getByText("Relationship")
+      .getByText("Conversation")
       .closest(".stat-card");
     if (!(relationship instanceof HTMLElement)) {
       throw new Error("the relationship card has no wrapper");
@@ -565,25 +564,6 @@ describe("company view — the verbs that change a section", () => {
   });
 });
 
-it("offers the tag verb but not the list verb when only lists are withheld", async () => {
-  // The two halves of the card are governed separately, so one withheld
-  // grant must not take the other's verb with it — and must not offer a
-  // write whose refusal would be the first the reader hears of the limit.
-  stub(
-    view({
-      list_memberships: undefined,
-      sections_omitted: ["list_memberships"],
-    }),
-  );
-  renderCompany();
-
-  // The verbs sit in the overview stack now — the rail (companyrail.tsx)
-  // shows the tags and lists themselves, and carries no write affordance of
-  // its own, so the action strip that changes them is unscoped here.
-  expect(await screen.findByRole("button", { name: "Add tag" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Add to list" })).toBeNull();
-});
-
 describe("company view — the context column belongs to the account, not to a tab", () => {
   it("keeps the relationship rail mounted when the reader switches tab", async () => {
     stub(view(), 200, partnerOrg);
@@ -621,10 +601,10 @@ describe("company view — the context column belongs to the account, not to a t
     // The chronology moved off the overview when the page gained its own
     // History tab, so it is not under the partner form either.
     await userEvent.click(screen.getByRole("button", { name: "History" }));
-    expect(screen.getByRole("region", { name: "Timeline" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "History" })).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Partner" }));
-    expect(screen.queryByRole("region", { name: "Timeline" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "History" })).toBeNull();
   });
 });
 
@@ -842,54 +822,6 @@ describe("company view — a failed read is not an empty account", () => {
     expect(
       within(deals).queryByText("Hidden — your role cannot read this"),
     ).toBeNull();
-  });
-});
-
-describe("company view — one section never answers for another", () => {
-  it("does not let readable tags claim there are no lists", async () => {
-    // Tags came back empty; lists were withheld. "Not on any list, and no
-    // tags applied" would be a claim about a half nobody answered for.
-    stub(
-      view({
-        tags: [],
-        list_memberships: undefined,
-        sections_omitted: ["list_memberships"],
-      }),
-    );
-    renderCompany();
-
-    const rail = await screen.findByRole("complementary", { name: "Context" });
-    // The refusal has to name WHICH half it is about: under a heading
-    // covering both, an unattached "hidden from you" leaves the reader
-    // unable to tell whether the lists or the tags were withheld.
-    const listsPart = within(rail).getByRole("region", { name: "Lists" });
-    expect(
-      within(listsPart).getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
-
-    const tagsPart = within(rail).getByRole("region", { name: "Tags" });
-    expect(within(tagsPart).getByText("No tags applied.")).toBeTruthy();
-    expect(
-      within(tagsPart).queryByText("Hidden — your role cannot read this"),
-    ).toBeNull();
-    expect(within(rail).queryByText("Not on any list.")).toBeNull();
-  });
-
-  it("still shows the tags a caller can read when lists are withheld", async () => {
-    stub(
-      view({
-        tags: [{ id: "t-1", name: "Key account" }],
-        list_memberships: undefined,
-        sections_omitted: ["list_memberships"],
-      }),
-    );
-    renderCompany();
-
-    const rail = await screen.findByRole("complementary", { name: "Context" });
-    // Losing one grant narrows the card; it does not blank it.
-    await waitFor(() =>
-      expect(within(rail).getByText("Key account")).toBeTruthy(),
-    );
   });
 });
 
@@ -1674,9 +1606,9 @@ describe("company view — the KPI row never invents a figure", () => {
       name: "Where this account stands",
     });
     expect(within(strip).getByText("Not a customer yet")).toBeTruthy();
-    // Relationship and health are on BOTH rows — a prospect is not asked to
+    // Conversation and health are on BOTH rows — a prospect is not asked to
     // give up knowing how the relationship stands.
-    expect(within(strip).getByText("Relationship")).toBeTruthy();
+    expect(within(strip).getByText("Conversation")).toBeTruthy();
 
     cleanup();
     stub(
@@ -1699,7 +1631,7 @@ describe("company view — the KPI row never invents a figure", () => {
     strip = await screen.findByRole("region", {
       name: "Where this account stands",
     });
-    expect(within(strip).getByText("Relationship")).toBeTruthy();
+    expect(within(strip).getByText("Conversation")).toBeTruthy();
     expect(within(strip).getByText("Gone quiet")).toBeTruthy();
     expect(within(strip).queryByText("Not a customer yet")).toBeNull();
   });
@@ -1863,7 +1795,7 @@ describe("company view — where the record came from", () => {
 });
 
 describe("company view — the account's own tabs", () => {
-  it("gives People the whole middle column", async () => {
+  it("keeps the rail summary beside the People tab", async () => {
     stub(
       view({
         people: {
@@ -1897,10 +1829,13 @@ describe("company view — the account's own tabs", () => {
     await screen.findByRole("complementary", { name: "Context" });
 
     await userEvent.click(screen.getByRole("button", { name: /^People/ }));
-    // ONCE. The tab is the roster in full, and the rail's summary of it stands
-    // down while the tab is open — the same names twice, side by side, is a
-    // list a reader has to reconcile with itself.
-    expect(screen.getAllByText("Christian Hagemeyer")).toHaveLength(1);
+    // TWICE, deliberately: the tab is the roster in full and the rail's
+    // capped summary stands beside it as the reader's anchor across tabs —
+    // both checked independently, so the test still fails if either goes
+    // missing.
+    const rail = await screen.findByRole("complementary", { name: "Context" });
+    expect(within(rail).getByText("Christian Hagemeyer")).toBeTruthy();
+    expect(screen.getAllByText("Christian Hagemeyer")).toHaveLength(2);
   });
 
   it("offers the four tabs the record page has, in order", async () => {
@@ -2273,7 +2208,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
   // whole suite exists for was the standing readings disappearing behind the
   // money, not the money itself.
   // A relationship dimension and a live reply balance are enough to draw
-  // both HealthStat ("Relationship") and HealthSummaryStat ("Health") with real
+  // both HealthStat ("Conversation") and HealthSummaryStat ("Health") with real
   // verdicts rather than their unassessed readings, which is what makes the
   // standing half of the row worth asserting here.
   const withStanding = () =>
@@ -2311,10 +2246,11 @@ describe("the money slot says its reason once and borrows no figure", () => {
     );
 
     expect(within(region).getByText("Open pipeline")).toBeTruthy();
-    // The card's own label rather than any match: the health verdict's basis
-    // disclosure names "Relationship" a second time as one of its dimensions.
+    // The card's own label: the tile reads the correspondence and is named
+    // Conversation, while the health receipt still names a Relationship
+    // dimension of its own.
     expect(
-      within(region).getByText("Relationship", {
+      within(region).getByText("Conversation", {
         selector: ".stat-card-label",
       }),
     ).toBeTruthy();
@@ -2336,10 +2272,11 @@ describe("the money slot says its reason once and borrows no figure", () => {
     await waitFor(() => expect(region.textContent).not.toMatch(/Loading…/));
 
     expect(within(region).getByText("Open pipeline")).toBeTruthy();
-    // The card's own label rather than any match: the health verdict's basis
-    // disclosure names "Relationship" a second time as one of its dimensions.
+    // The card's own label: the tile reads the correspondence and is named
+    // Conversation, while the health receipt still names a Relationship
+    // dimension of its own.
     expect(
-      within(region).getByText("Relationship", {
+      within(region).getByText("Conversation", {
         selector: ".stat-card-label",
       }),
     ).toBeTruthy();

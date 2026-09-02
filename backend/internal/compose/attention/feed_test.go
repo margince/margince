@@ -52,6 +52,9 @@ type stubDuplicates struct {
 	unreadable ids.UUID
 	// describeErr is a read that BROKE rather than one that was refused.
 	describeErr error
+	// asked records every batch the lane requested, so a test can count the
+	// reads rather than assume them.
+	asked *[]string
 }
 
 func (s stubDuplicates) OpenCandidates(context.Context, int) ([]DuplicatePair, error) {
@@ -60,21 +63,35 @@ func (s stubDuplicates) OpenCandidates(context.Context, int) ([]DuplicatePair, e
 
 func (s stubDuplicates) CountOpen(context.Context) (int, error) { return s.open, s.err }
 
-func (s stubDuplicates) Describe(
-	_ context.Context, _ string, id ids.UUID,
-) (RecordFace, error) {
+func (s stubDuplicates) DescribeMany(
+	_ context.Context, entityType string, rowIDs []ids.UUID,
+) (map[ids.UUID]RecordFace, error) {
+	if s.asked != nil {
+		*s.asked = append(*s.asked, entityType)
+	}
 	if s.describeErr != nil {
-		return RecordFace{}, s.describeErr
+		return nil, s.describeErr
 	}
-	if id == s.unreadable {
-		return RecordFace{}, apperrors.ErrNotFound
+	faces := make(map[ids.UUID]RecordFace, len(rowIDs))
+	for _, id := range rowIDs {
+		if id == s.unreadable {
+			// ABSENT rather than an error: a row the reader may not see is one
+			// the batched read leaves out, which is what its not-found meant.
+			continue
+		}
+		faces[id] = RecordFace{Label: "Record " + id.String()[:8]}
 	}
-	return RecordFace{Label: "Record " + id.String()[:8]}, nil
+	return faces, nil
 }
 
 type stubTasks struct {
 	rows []Task
 	err  error
+	// total is what the SOURCE holds, which is not len(rows) once the lane's
+	// cap has bitten. Zero means "as many as the page", which is the ordinary
+	// case; a test proving the badge sets it higher.
+	total    int
+	countErr error
 	// until records the window the lane asked for, so a test can prove the
 	// boundary rather than assume it. A pointer receiver only where it is
 	// read back; the value form stays valid for every test that ignores it.
@@ -84,6 +101,18 @@ type stubTasks struct {
 	// afterwards. owner records WHICH person, where the scope names one.
 	scope TaskScope
 	owner ids.UUID
+}
+
+func (s *stubTasks) CountOpenForViewer(
+	_ context.Context, _ time.Time, _ TaskScope, _ ids.UUID,
+) (int, error) {
+	if s.countErr != nil {
+		return 0, s.countErr
+	}
+	if s.total > 0 {
+		return s.total, nil
+	}
+	return len(s.rows), nil
 }
 
 func (s *stubTasks) OpenForViewer(

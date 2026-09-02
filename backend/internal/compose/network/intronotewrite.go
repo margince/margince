@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/draftreply"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -57,10 +58,16 @@ func writeIntroNote(
 }
 
 // noteFromModel writes the note and checks what came back.
+//
+// draftreply.Ask re-asks through the SAME parse the answer path runs, so a
+// reply this site would refuse goes back to the model with the reason.
 func noteFromModel(
 	ctx context.Context, lane Completer, facts noteFacts,
 ) (introNote, error) {
-	res, err := lane.Complete(ctx, noteRequest(facts))
+	res, err := draftreply.Ask(ctx, lane, noteRequest(facts), func(text string) error {
+		_, parseErr := parseIntroNote(text, facts)
+		return parseErr
+	})
 	if err != nil {
 		return introNote{}, fmt.Errorf("network: drafting the introduction note: %w", err)
 	}
@@ -72,8 +79,9 @@ const noteSystem = `You write one short note that a person will FORWARD to someb
 The reader is the recipient — a customer or a prospect, not a teammate. You are writing in the voice of the person who will send it: they know the recipient, and they are passing along an introduction.
 
 Rules you must not break:
-- Write TO the recipient. Never mention that anybody was asked to make this introduction, and never refer to an internal request.
-- Say who is being introduced and why the recipient might care, in one sentence each.
+- Write TO the recipient, and address them by name: open with their first name. Never mention that anybody was asked to make this introduction, and never refer to an internal request.
+- Say who is being introduced, naming them in full, and why the recipient might care, in one sentence each.
+- Write a short subject line in the "subject" field, naming the colleague you are introducing.
 - Do not invent anything about the relationship or about the recipient's company. You are told how warm the relationship is and when they last spoke; say no more than that.
 - Ask for nothing more than a conversation. No pitch, no pricing, no meeting times.
 - No subject line inside the body.`
@@ -125,32 +133,21 @@ func noteSchema() json.RawMessage {
 
 // parseIntroNote reads the reply and refuses what a reader must not be handed.
 //
-// A SHAPE check, not a grounding filter: it says the note was written to the
-// right person about the right person, and claims nothing about what it says of
-// them. Whether it overstates the relationship is scored by the certification
-// rubric, because no substring test can decide it.
+// The refusals are draftreply's, shared with the colleague-facing request: the
+// same reply shape, judged the same way, spelled once.
+//
+// Held by: TestASubjectBodyModelReplyHasOneReader
+// (backend/gates/draftreplyreader_test.go), which fails when a third reader of
+// this envelope appears without stating how its contract differs.
 func parseIntroNote(raw string, facts noteFacts) (introNote, error) {
-	var answer struct {
-		Subject string `json:"subject"`
-		Body    string `json:"body"`
-	}
-	if err := json.Unmarshal([]byte(ai.Unfence(raw)), &answer); err != nil {
-		return introNote{}, fmt.Errorf(
-			"network: the reply is not the shape this site takes: %w", err)
-	}
-	subject := strings.TrimSpace(ai.PlainText(answer.Subject))
-	body := strings.TrimSpace(ai.PlainText(answer.Body))
-	if subject == "" || body == "" {
-		return introNote{}, fmt.Errorf("network: the reply carries no note to forward")
-	}
-	// A note that never names the person being introduced is asking for
-	// nothing in particular, and one that never names the recipient is not
-	// addressed to them. Either reads as a message the colleague must rewrite,
-	// which is worse than the template they would otherwise have had.
-	for _, needed := range []string{facts.requester, facts.contact} {
-		if needed != "" && !draftfloor.NamesPerson(body, needed) {
-			return introNote{}, fmt.Errorf("network: the note never names %q", needed)
-		}
+	// The recipient is ADDRESSED, so their first name is what a greeting
+	// carries; the colleague is TALKED ABOUT, so they are named in full. The
+	// asymmetry is org360's, and it is not cosmetic: requiring the recipient's
+	// surname refused this site's own template, whose greeting is "Hi Philipp,".
+	subject, body, err := draftreply.Parse(raw,
+		draftfloor.FirstName(facts.contact), facts.requester)
+	if err != nil {
+		return introNote{}, fmt.Errorf("network: %w", err)
 	}
 	return introNote{subject: subject, body: body}, nil
 }

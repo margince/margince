@@ -12,6 +12,15 @@ export type WorklistValue = components["schemas"]["WorklistValue"];
 // hand-written union goes stale the moment the server adds a value, and it goes
 // stale silently — nothing compares the two.
 export type WorklistScope = Worklist["scope"];
+/**
+ * The one scope word an ADDRESS carries: `#/worklist/unassigned`.
+ *
+ * Here rather than on the screen, so Home can name the same pile without
+ * importing the queue, and typed as WorklistScope so a scope renamed in
+ * crm.yaml fails to compile instead of leaving an address that silently stops
+ * opening what it names.
+ */
+export const UNASSIGNED: WorklistScope = "unassigned";
 export type WorklistFilter = NonNullable<Worklist["filter"]>;
 export type WorklistCategory = WorklistItem["category"];
 // The ways a row can be put down, derived from the item rather than spelled
@@ -23,6 +32,7 @@ export type WorklistDisposition = NonNullable<
 >[number];
 export type TeamBoard = components["schemas"]["TeamBoard"];
 export type TeamBoardMember = components["schemas"]["TeamBoardMember"];
+export type HiddenBacklog = components["schemas"]["HiddenBacklog"];
 
 export const worklistKey = ["worklist"] as const;
 
@@ -76,6 +86,31 @@ export function useTeamBoard(enabled: boolean) {
     queryKey: [...worklistKey, "team"],
     queryFn: async (): Promise<TeamBoard> => {
       const { data, error } = await api.GET("/worklist/team", {});
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
+// What the queue is NOT showing, and which rule holds it back.
+//
+// Read on its own key rather than folded into the day: it is five SQL reads
+// where the queue is one, and a rep opening the Worklist should not wait on a
+// diagnostic to see their work. A slow or failing guardrail must cost the queue
+// nothing, which is what a separate query buys.
+//
+// `enabled` carries the same tier the team board's does. The figures are counted
+// under the caller's own visibility either way, so this is not what makes them
+// safe — it is what keeps a surface the reader has no route to from firing a
+// request behind their back.
+export function useHiddenBacklog(enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: [...worklistKey, "hidden"],
+    queryFn: async (): Promise<HiddenBacklog> => {
+      const { data, error } = await api.GET("/worklist/hidden", {});
       if (error) {
         throwProblem(error);
       }

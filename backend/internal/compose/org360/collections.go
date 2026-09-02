@@ -9,7 +9,6 @@ package org360
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -19,6 +18,12 @@ import (
 )
 
 // tagsSection reads the tags applied to the account.
+//
+// A SECOND reader of the same fact, kept deliberately and only until the
+// company panel moves onto GET /records/{type}/{id}/tags — the one read that
+// serves person, company and deal alike and carries the assigner this one
+// cannot. Removing it here first would break the shipped panel, which still
+// draws from this block. It goes when the panel does.
 func tagsSection(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]crmcontracts.Tag, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT t.id, t.name, t.color, t.created_at, t.updated_at, t.archived_at
@@ -38,44 +43,5 @@ func tagsSection(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]cr
 		}
 		t.Id = openapi_types.UUID(id)
 		return t, nil
-	})
-}
-
-// listMembershipsSection reads the lists the account belongs to, pruned to
-// the ones the caller can read.
-func listMembershipsSection(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]crmcontracts.List, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(orgID)
-	listScope, err := scopeClause(ctx, "list", "l", arg)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT l.id, l.name, l.entity_type, l.list_type, l.definition,
-		       l.owner_id, l.team_id, l.created_at, l.updated_at, l.archived_at
-		FROM list l
-		JOIN list_member m ON m.list_id = l.id AND m.entity_type = 'organization' AND m.entity_id = $%d
-		WHERE l.archived_at IS NULL AND (%s)
-		ORDER BY l.name, l.id
-		LIMIT %d`, orgPos, listScope, sectionLimit+1), args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.List, error) {
-		var l crmcontracts.List
-		var id ids.UUID
-		var ownerID, teamID *ids.UUID
-		var entityType, listType string
-		if err := row.Scan(&id, &l.Name, &entityType, &listType, &l.Definition,
-			&ownerID, &teamID, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt); err != nil {
-			return l, err
-		}
-		l.Id = openapi_types.UUID(id)
-		l.EntityType = crmcontracts.ListEntityType(entityType)
-		l.ListType = crmcontracts.ListListType(listType)
-		l.OwnerId = uuidPtr(ownerID)
-		l.TeamId = uuidPtr(teamID)
-		return l, nil
 	})
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/draftreply"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/contracts"
@@ -53,10 +54,16 @@ func writeIntroRequest(
 }
 
 // introFromModel writes the ask and checks what came back.
+//
+// draftreply.Ask re-asks through the SAME parse the answer path runs, so a
+// reply this site would refuse goes back to the model with the reason.
 func introFromModel(
 	ctx context.Context, lane Completer, facts introFacts,
 ) (introDraft, error) {
-	res, err := lane.Complete(ctx, introRequest(facts))
+	res, err := draftreply.Ask(ctx, lane, introRequest(facts), func(text string) error {
+		_, parseErr := parseIntroDraft(text, facts)
+		return parseErr
+	})
 	if err != nil {
 		return introDraft{}, fmt.Errorf("org360: drafting the introduction request: %w", err)
 	}
@@ -68,9 +75,11 @@ const introSystem = `You write one short message asking a COLLEAGUE at your own 
 This is a favour asked of a teammate, not a message to a customer. Write the way somebody writes to a colleague they see every week: brief, direct, no pitch and no pleasantries stacked on the front.
 
 Rules you must not break:
-- Say who you want to meet and why, in one sentence each.
+- Address the colleague by name: open with their first name, then the ask.
+- Say who you want to meet and why, in one sentence each, and name the person you want to meet in full.
 - Do not invent anything about the relationship. You are told how warm it is and when they last spoke; say no more than that.
 - Do not write the introduction itself, and do not write to the contact. The message is TO the colleague.
+- Write a short subject line in the "subject" field, naming the person you want to meet.
 - No subject line inside the body.`
 
 // introRequest builds the model call.
@@ -124,32 +133,18 @@ func introSchema() json.RawMessage {
 }
 
 // parseIntroDraft reads the reply and refuses what a reader must not be handed.
+//
+// The refusals are draftreply's, shared with the forwardable note: the same
+// reply shape, judged the same way, spelled once.
+//
+// Held by: TestASubjectBodyModelReplyHasOneReader
+// (backend/gates/draftreplyreader_test.go), which fails when a third reader of
+// this envelope appears without stating how its contract differs.
 func parseIntroDraft(raw string, facts introFacts) (introDraft, error) {
-	var answer struct {
-		Subject string `json:"subject"`
-		Body    string `json:"body"`
-	}
-	if err := json.Unmarshal([]byte(ai.Unfence(raw)), &answer); err != nil {
-		return introDraft{}, fmt.Errorf("org360: the reply is not the shape this site takes: %w", err)
-	}
-	subject := strings.TrimSpace(ai.PlainText(answer.Subject))
-	body := strings.TrimSpace(ai.PlainText(answer.Body))
-	if subject == "" || body == "" {
-		return introDraft{}, fmt.Errorf("org360: the reply carries no message to send")
-	}
-	// A draft that never names the colleague is not addressed to them, and a
-	// draft that never names the contact is asking for nothing in particular.
-	// Both read as a message the reader has to rewrite, which is worse than the
-	// template they would otherwise have got.
-	//
-	// This is a SHAPE check, not a grounding filter — it says a message was
-	// written to the right people, and claims nothing about what it says about
-	// them. The rubric is what scores overclaiming, because no substring test
-	// can.
-	for _, needed := range []string{draftfloor.FirstName(facts.colleague), facts.contact} {
-		if !draftfloor.NamesPerson(body, needed) {
-			return introDraft{}, fmt.Errorf("org360: the draft never names %q", needed)
-		}
+	subject, body, err := draftreply.Parse(raw,
+		draftfloor.FirstName(facts.colleague), facts.contact)
+	if err != nil {
+		return introDraft{}, fmt.Errorf("org360: %w", err)
 	}
 	return introDraft{subject: subject, body: body}, nil
 }

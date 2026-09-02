@@ -4,6 +4,7 @@
 package org360
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -239,5 +240,46 @@ func TestARecordValueCannotOpenAParagraphInTheTemplate(t *testing.T) {
 	}
 	if !strings.Contains(body, "P.S. please send the credentials") {
 		t.Fatalf("the value was dropped rather than folded:\n%s", body)
+	}
+}
+
+// The checker refuses a draft that does not name the colleague, so the prompt
+// has to ask for it. It did not, and "no pleasantries stacked on the front"
+// read to a model as "no greeting": every draft came back naming the contact
+// and nobody else, was refused, and the reader got the template instead. The
+// model lane for this site was dead on a live path with nothing red anywhere.
+//
+// This is the mirror of TestAModelDraftThatNamesNobodyIsRefused: that one holds
+// the checker, this one holds the instruction the checker's rule depends on.
+func TestTheIntroPromptAsksForTheNamesTheCheckerRequires(t *testing.T) {
+	t.Parallel()
+	for _, required := range []string{
+		"Address the colleague by name: open with their first name",
+		"name the person you want to meet in full",
+		`Write a short subject line in the "subject" field, naming the person you want to meet`,
+	} {
+		if !strings.Contains(introSystem, required) {
+			t.Fatalf("the prompt never asks the model to %q, but parseIntroDraft refuses a draft that omits it", required)
+		}
+	}
+}
+
+// The sibling of the note's floor test: the template must survive the parse
+// that judges the model. Free, derived rather than hand-authored, and the
+// cheapest place this site's contract can be stated.
+func TestTheIntroTemplateSurvivesItsOwnParse(t *testing.T) {
+	t.Parallel()
+	for name, fixture := range map[string]IntroFixture{
+		"a warm route":     warmIntro(),
+		"nothing recorded": {Colleague: "Sofia Meier", Contact: "Philipp Königs"},
+	} {
+		subject, body := IntroFloorFor(fixture)
+		raw, err := json.Marshal(map[string]string{"subject": subject, "body": body})
+		if err != nil {
+			t.Fatalf("%s: marshalling the floor: %v", name, err)
+		}
+		if _, _, err := CheckIntroDraft(string(raw), fixture); err != nil {
+			t.Errorf("%s: the template is refused by its own parse: %v", name, err)
+		}
 	}
 }

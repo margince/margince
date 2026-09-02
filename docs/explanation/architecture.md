@@ -27,7 +27,7 @@ shared  →  platform  →  modules  →  compose  →  cmd
 - **`internal/modules/`** — the twenty bounded capabilities (identity,
   people, deals, activities, approvals, agents, automation, ai, search,
   capture, comms, consent, privacy, collections, signals, customfields,
-  quotas, webhooks, overlay, migration; the `de` jurisdiction pack is an
+  webhooks, overlay, migration; the `de` jurisdiction pack is an
   extension under `extensions/`, not a module). A
   module package starts flat (store + mapping + transport + provider in
   one package) and earns a subpackage only under the

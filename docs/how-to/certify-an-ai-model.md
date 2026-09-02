@@ -8,20 +8,18 @@ validator, never a copy of either — scores each answer with a pinned rubric
 judge, folds the runs into a `certified` / `supported_degraded` /
 `not_supported` verdict, and commits the result as a JSON record.
 
-This is the **paid, opt-in** lane: it makes real provider calls billed to your own
-**BYOK** (bring-your-own-key) budget, since Margince runs no inference of its
-own. It is a developer/CI tool, never part of a request path.
+This is the **paid, opt-in** lane: real provider calls billed to your own **BYOK**
+(bring-your-own-key) budget, since Margince runs no inference of its own. A
+developer/CI tool, never part of a request path.
 
 > **Start free.** `make e2e-ai-report` ([§3](#3-read-the-readiness-report)) needs
 > no key, no network and no database: it prints what every shipped site's record
-> already says, including the ones nothing has ever certified. Read that before
-> you spend anything — it tells you whether the run you are about to pay for is
-> the one that is actually missing.
+> already says, including the ones nothing has ever certified. Read it before you
+> spend — it tells you whether the run you are about to pay for is the missing one.
 
-See also [explanation/ai-runtime.md](../explanation/ai-runtime.md) (how the
-runtime works), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md)
-(binding a provider) and [add-an-ai-task.md](add-an-ai-task.md) (adding a task or
-site rather than certifying one).
+See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md),
+[add-an-ai-task.md](add-an-ai-task.md) (adding one rather than certifying it), and
+[reference/ai-certification.md](../reference/ai-certification.md) — the committed page these records render to.
 
 ## Prerequisites
 
@@ -109,8 +107,8 @@ make e2e-ai ROUTING=config/margince.dev.yaml JUDGE=anthropic:claude-sonnet-4-6
 It resolves a model per task from that config's `seeds.ai_routing` and logs the
 resolution before it spends — task, leading rung, model bound there — so a run
 against a config you have not read is still not a run against a binding you
-cannot see. Records land under the resolved models' own names, which is why one
-such run can write several.
+cannot see. Records land under the resolved models' own names, so one run writes
+several.
 
 The **task** names come from the contract (`backend/api/ai-tasks.yaml`), and only
 a task it marks `status: shipped` can be certified — including `cert_judge`,
@@ -123,13 +121,12 @@ A `planned` task — one the contract declares but nothing implements
 (`nl_search`, `transcript`) — owns no scenarios, and naming it fails the run with
 `task "…" has no scenarios under corpus`. That is the point: a scenario for a
 prompt nobody ships would score a hand-written copy and report the task covered,
-so the corpus refuses to carry one and a fitness test (`aicert/corpus_test.go`)
-holds it to that in both directions.
+so a fitness test (`aicert/corpus_test.go`) holds the corpus to that both ways.
 
 A task is not one prompt. `cold_start` ships four invocation **sites** and
 `voice_build` three, each with its own scenarios; `TASK=` selects the task, so
-certifying one runs every site it ships, and the report in §3 is what breaks a
-task's result back down per site.
+certifying one runs every site it ships, and §3's report breaks the result back
+down per site.
 
 ## 2. Benchmark a candidate swap
 
@@ -145,16 +142,8 @@ make e2e-ai TASK=cold_start \
 Certify both the incumbent and the candidate, then compare their records before
 you change the binding.
 
-The binding carries its own endpoint, so an `openai_compatible` candidate is a
-one-liner — `BASE_URL` is required there and empty for a native vendor, which
-uses its own default:
-
-```bash
-make e2e-ai TASK=cold_start \
-  MODEL=openai_compatible:z-ai/glm-5.2 BASE_URL=https://openrouter.ai/api \
-  JUDGE=gemini:gemini-3.1-pro
-```
-
+The binding carries its own endpoint, so an `openai_compatible` candidate is the
+same one-liner with `BASE_URL=` added (the Prerequisites example above).
 A broker slug may carry its own variant suffix (`:free`, `:batch`, `:thinking`);
 the provider/model split cuts at the FIRST colon, so
 `openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
@@ -172,8 +161,7 @@ make e2e-ai-report
 
 Free, no network: it reads the census, the corpus and the JSON under `records/`,
 and prints one row per shipped invocation site — including the sites nothing has
-ever certified, which is the whole reason it enumerates the census rather than
-the records:
+ever certified, which is why it enumerates the census rather than the records:
 
 ```text
 AI certification readiness: 1 of 36 shipped sites carry a current record.
@@ -190,9 +178,9 @@ task can ship several sites — `cold_start` ships four — so the record carrie
 scenario's own counts and the row folds the ones that ran on its site. A site the
 record never ran a scenario on reads `absent`, not as its sibling's numbers.
 `RUNS`/`PASSED` is how often the site did what its scenarios asked; the four
-columns after `RELIABILITY` are what the site's own validator **reported** and are
-not a pass/fail column, since a run can be `ACCEPTED` and still fail, when the
-scenario asked for an abstention.
+columns after `RELIABILITY` are what the site's own validator **reported**, never
+a pass/fail column — a run can be `ACCEPTED` and still fail, when the scenario
+asked for an abstention.
 
 Four states, and they never collapse into each other:
 
@@ -213,58 +201,45 @@ Four states, and they never collapse into each other:
 
 Only `current` counts toward the headline count: a `partial` has a measurement you
 can read plus an unpaid remainder. `SCENARIOS` is `measured/total` — how many of
-this site's *current* scenarios the record scored and still describes, out of how
-many the corpus ships for it today — which is what makes a `partial` actionable,
-since `9/10` and `1/10` are the same word and very different bills. A scenario the
-record measured and the corpus has since **dropped** counts in neither half:
-nobody can re-run it, so it cannot stand in as coverage.
+this site's *current* scenarios the record still describes, out of how many the
+corpus ships today — which is what makes a `partial` actionable, since `9/10` and
+`1/10` are the same word and very different bills. A scenario the corpus has
+since **dropped** counts in neither half: nobody can re-run it.
 
 **Per-scenario stamps are what make re-certification affordable.** A record
 carries each scenario's own stamp (`ScenarioRecord.Stamp`) beside the task-level
-`PromptVersion`, which is simply the fold of them (`aicert.ScenarioStamps` /
-`FoldScenarioStamps`). Before that, adding ONE scenario to a ten-scenario task
-moved the task stamp and invalidated nine measurements that were still perfectly
-true, so clearing it cost a re-run of all ten; now the same edit reads
-`partial 9/10` and costs one. The guarantee is finer rather than weaker: a
-scenario's stamp still covers the scenario whole plus both requests this build
-constructs from it, so a record still cannot describe a scenario, or a prompt, it
-did not measure. A record written before those stamps existed carries none, is
-judged by its task stamp exactly as before — `current` or `stale`, never
-`partial` — and reads `-` under `SCENARIOS`.
+`PromptVersion`, which is the fold of them (`aicert.ScenarioStamps` /
+`FoldScenarioStamps`), so adding one scenario to a ten-scenario task reads
+`partial 9/10` and costs one re-run rather than invalidating nine measurements
+that are still true. The guarantee is finer rather than weaker: a scenario's
+stamp still covers the scenario whole plus both requests this build constructs
+from it. A record written before those stamps existed carries none, is judged by
+its task stamp — `current` or `stale`, never `partial` — and reads `-` under
+`SCENARIOS`.
 
 `SCOPE` is how much of the site a run covers, from the most to the least:
 
 - **`full_invocation`** — the run drives the whole production invocation, so
   certifying it certifies the site.
-- **`single_turn`** — the scenario seeds the window and grades the one reply
-  that follows; the surrounding conversation or tool loop is supplied, not
-  exercised. The turns it leaves out are their own answers.
+- **`single_turn`** — the scenario seeds the window and grades the one reply that
+  follows; the surrounding conversation or tool loop is supplied, not exercised.
 - **`single_call`** — the run makes ONE of the calls the site makes for one
   invocation. Where the site re-asks a below-floor item, asks again after an
   unreadable answer, or fans out over pages, the answer the product serves is
-  assembled from calls the run never made — and the fold that assembles them is
-  unmeasured too.
+  assembled from calls the run never made, by a fold equally unmeasured.
 
 **Every row is one (provider, model, env) binding.** A `certified` band
-green-lights that deployment and says nothing about another one, which is why the
-binding sits in the row rather than in the file name only. The report is a view
-for a human release decision, not a gate: it always exits 0, because the lane it
-reports on is paid, manual and BYOK-gated.
+green-lights that deployment and says nothing about another, which is why the
+binding sits in the row. The report is a view for a human release decision, not a
+gate: it always exits 0, because the lane it reports on is paid and manual.
 
 ## 4. See the prompts — trace request/response for tuning
 
 When a task lands `not_supported` or `supported_degraded`, the verdict alone
-doesn't tell you *why*. Turn on the payload trace to read exactly what each
-model saw and said:
-
-```bash
-make e2e-ai TASK=enrich \
-  MODEL=gemini:gemini-3.1-flash-lite \
-  JUDGE=anthropic:claude-sonnet-4-6   # trace is ON by default
-```
-
-Every candidate **and** judge call is dumped to a JSONL file under the
-repo-root `.tmp/aicert/` (gitignored), and the path is printed to stdout:
+doesn't tell you *why*. The payload trace reads back exactly what each model saw
+and said, and is ON by default: every candidate **and** judge call is dumped to a
+JSONL file under the repo-root `.tmp/aicert/` (gitignored), path printed to
+stdout:
 
 > **Except a `no_payload` task**, whose content the contract forbids retaining
 > whatever the capture posture says (`ai.NoPayload` — today the counterparty
@@ -304,6 +279,34 @@ The trace is **on by default** because the corpus is a fixed, hand-authored
 scenario set and the content is post-stripper and local-only — there is nothing
 to leak. `TRACE=<dir>` picks a directory; `TRACE=` (empty) turns it off.
 
+## 5. When the network drops mid-run
+
+A record covers a whole task, so a fault anywhere in one used to discard every
+run already paid for — twenty-one real model calls lost to the twenty-second.
+Two things now stand in the way.
+
+**The run is re-driven** when the router comes back having failed on every bound
+tier — three attempts, waiting 2s then 8s. Only an exhausted ladder is retried: a
+validator failure or a caps miss is a *measurement*, and an exhausted account is
+a human's to fix. It is re-driven whole, because a site may turn a multi-turn
+conversation or a tool loop and there is no resuming one mid-way.
+
+**Every scored run is journaled** to `.tmp/aicert/resume/` as it is scored, so a
+restart replays what it can (`… run(s) replayable`) instead of paying again. A
+journaled run stands in for a fresh one only when nothing it measured can have
+moved: the **same candidate binding, judge, profile, corpus version, scenario
+stamp, binary and repeat index**, and **within six hours**. Edit a prompt and
+that scenario's stamp moves; rebuild after tightening a site's validator and the
+binary moves, which the stamp does *not* cover — either way those runs are
+measured again. A replayed run passes the same served-identity and degrade gates
+a live one does, so a resumed record is the same measurement.
+
+On by default and gitignored, like the trace. `RESUME=<dir>` relocates it;
+`RESUME=` measures everything fresh. A journal cut off mid-write still replays
+every whole run before the cut. One run owns a directory at a time — parallel
+`TASK=` runs each need their own `RESUME=<dir>`, and a killed run leaves a
+`.lock` to delete.
+
 ## How the verdict is decided
 
 Each run either **HardPasses** — the site's own production validator accepted
@@ -333,12 +336,9 @@ are the run's totals.
 - **Reasoning models think before they answer.** Gemini 2.5 / o-series spend
   output tokens on internal thinking that counts against `maxOutputTokens`; the
   lane gives both candidate and judge headroom so a thinking burst doesn't starve
-  the answer into a `MAX_TOKENS` stop. If you author a tight `caps.max_tokens`,
-  leave room for it.
-- **Markdown-fenced JSON** is tolerated: the lane unfences ` ```json ` blocks the
-  same way production parsers do.
-- Records are committed artifacts — the proof travels with the code. Re-running
-  refreshes latency/token numbers (network noise); the verdict is durable.
+  the answer into `MAX_TOKENS`. Leave room for it in a tight `caps.max_tokens`.
+- **Markdown-fenced JSON** is tolerated: the lane unfences as production does.
+- Records are committed artifacts — the proof travels with the code.
 
 ## When certification passes but the field does not
 

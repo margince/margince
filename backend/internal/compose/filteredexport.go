@@ -328,7 +328,6 @@ type filteredExportRequest struct {
 	Object string              `json:"object"`
 	Filter *storekit.Predicate `json:"filter"`
 	ViewID string              `json:"view_id"`
-	ListID string              `json:"list_id"`
 	Format string              `json:"format"`
 }
 
@@ -379,10 +378,10 @@ func (h filteredExportHandlers) CreateFilteredExport(w http.ResponseWriter, r *h
 }
 
 // resolveSource turns the request's chosen source into the (resource,
-// predicate) pair the engine runs. Exactly one of object / view_id /
-// list_id must be set; an inline object additionally requires a filter
-// (this is filtered export — an unfiltered whole-object dump is the export
-// bundle's job, not this path).
+// predicate) pair the engine runs. Exactly one of object / view_id must be
+// set; an inline object additionally requires a filter (this is filtered
+// export — an unfiltered whole-object dump is the export bundle's job, not
+// this path).
 func (h filteredExportHandlers) resolveSource(ctx context.Context, req filteredExportRequest) (string, storekit.Predicate, error) {
 	sources := 0
 	if req.Object != "" {
@@ -391,13 +390,10 @@ func (h filteredExportHandlers) resolveSource(ctx context.Context, req filteredE
 	if req.ViewID != "" {
 		sources++
 	}
-	if req.ListID != "" {
-		sources++
-	}
 	if sources != 1 {
 		return "", storekit.Predicate{}, &exportBadRequest{
 			field:  objectSourceField,
-			reason: "supply exactly one of object, view_id, or list_id",
+			reason: "supply exactly one of object or view_id",
 		}
 	}
 
@@ -410,22 +406,12 @@ func (h filteredExportHandlers) resolveSource(ctx context.Context, req filteredE
 			}
 		}
 		return req.Object, *req.Filter, nil
-	case req.ViewID != "":
+	default:
 		id, err := ids.ParseAs[ids.SavedViewKind](req.ViewID)
 		if err != nil {
 			return "", storekit.Predicate{}, &exportBadRequest{field: "view_id", reason: "must be a UUID"}
 		}
 		src, err := h.collections.SavedViewFilterSource(ctx, id)
-		if err != nil {
-			return "", storekit.Predicate{}, err
-		}
-		return src.Resource, src.Predicate, nil
-	default:
-		id, err := ids.ParseAs[ids.ListKind](req.ListID)
-		if err != nil {
-			return "", storekit.Predicate{}, &exportBadRequest{field: "list_id", reason: "must be a UUID"}
-		}
-		src, err := h.collections.ListFilterSource(ctx, id)
 		if err != nil {
 			return "", storekit.Predicate{}, err
 		}

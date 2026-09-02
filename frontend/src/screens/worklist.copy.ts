@@ -1,4 +1,5 @@
 import { ENTITY, isEntityKind } from "../app/entity";
+
 import { routeHash } from "../app/router";
 import {
   calendarDaysBetween,
@@ -8,6 +9,7 @@ import {
   formatNumber,
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
+import { COMPOSE_PARAM } from "./personpage.address";
 import { settingsAddress } from "./settings";
 import type {
   Worklist,
@@ -343,25 +345,35 @@ export function dealFactsText(
 // entry with no page of its own — `app/entity.ts` says so in as many words —
 // so `#/activities/<id>` would be a control that goes nowhere.
 //
-// WHAT THIS IS NOT. It does not open a composer. The composer lives on the
-// record page behind its own button, and no route opens it, so a link labelled
-// "Draft the reply" would promise something the click does not do. The verb
-// therefore says where it goes — the reader lands on the record with the
-// message on its timeline, one press from the draft — and naming the step
-// honestly is worth more than a label that overstates it.
+// A `draft_reply` row whose subject is a PERSON opens the composer, through
+// `?compose=reply` on their record (personpage.tsx COMPOSE_PARAM). Everything
+// else lands on the record itself, and its verb says so.
 //
-// Opening the composer from here needs a deep link the app does not have. The
-// meeting brief has one now (`?prep=<activityId>` on the contact record), but
-// the composer does not: it picks its transport from the person's own
-// reachability rather than from a thread a caller names, so an address could
-// open it without opening it ON the message this row is about. The worklist
-// sends no `prepare_meeting` move either — `WorklistMove.action` has one value.
-// Both are their own change, and the label moves back when they land.
+// WHY ONLY A PERSON. The composer lives on the person page and drafts to the
+// person, choosing its transport from their own reachability. A deal or an
+// organization has no composer to open, so a link claiming to draft there would
+// promise what the click cannot do — the defect this function's own comment
+// warned about before the route existed.
+//
+// AND IT NAMES NO MESSAGE. `?compose=reply` asks for a reply to the PERSON, not
+// to the thread this row is about, because the composer cannot be aimed at one.
+// The row keeps its link to the record beside this, where the message sits on
+// the timeline. A parameter naming an activity would promise a precision the
+// composer does not have.
 export function moveHref(item: WorklistItem): string | undefined {
   if (item.move?.action !== "draft_reply") {
     return undefined;
   }
-  return subjectHref(item);
+  const record = subjectHref(item);
+  if (!record || item.subject?.type !== "person") {
+    return record;
+  }
+  return `${record}?${COMPOSE_PARAM}=reply`;
+}
+
+/** Whether this row's move opens the composer, rather than only a record. */
+export function moveOpensComposer(item: WorklistItem): boolean {
+  return item.move?.action === "draft_reply" && item.subject?.type === "person";
 }
 
 // One item's headline.
@@ -415,12 +427,21 @@ export function sourceUnavailableText(
   missing: NonNullable<Worklist["sources_unavailable"]>[number],
   t: T,
 ): string {
-  const name = knownSource(missing.source as WorklistItem["source"])
-    ? t(`worklist.untitled.${missing.source as keyof typeof KNOWN_SOURCES}`)
-    : t("worklist.untitled.generic");
+  const name = sourceName(missing.source, t);
   return missing.reason === "withheld"
     ? t("worklist.source.withheld", { source: name })
     : t("worklist.source.failed", { source: name });
+}
+
+// One source, in the reader's words.
+//
+// Through the same known-source check the titles use, so a source this build
+// has never heard of is described generically rather than printed as its own
+// identifier — a reader must never be shown `ai_work_health` as a noun.
+export function sourceName(source: string, t: T): string {
+  return knownSource(source as WorklistItem["source"])
+    ? t(`worklist.untitled.${source as keyof typeof KNOWN_SOURCES}`)
+    : t("worklist.untitled.generic");
 }
 
 // The sources this build can name without its own sentence.

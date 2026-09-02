@@ -21,10 +21,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // heldMailSubject and heldMailBody are the fixture's confidential message. They
@@ -388,4 +390,242 @@ func TestTheRescopeConsumerFollowsTheRowNotTheStaleEvent(t *testing.T) {
 		t.Error("a stale narrowing event deleted the vector of a message that is workspace again — " +
 			"nothing rebuilds it, because the widening's own event found the row already indexed")
 	}
+}
+
+func TestNarrowingRetractsWhatAMessagesSignatureWroteOnAContact(t *testing.T) {
+	// A title lifted from a signature block is the message's content, restated
+	// on a record everybody can see. Narrowing the message and leaving the field
+	// behind limits the mail and publishes what it said.
+	e := SetupSearch(t)
+	activity := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by, audience)
+		VALUES ($1, 'email', $2, $3, now(), 'inbound', 'gmail', 'connector:gmail:x', 'workspace')`,
+		heldMailSubject, heldMailBody)
+	person := seedPersonForSignature(t, e)
+	seedSignatureField(t, e, person, activity, "title", "Leiterin Recht")
+
+	narrowAndRescope(t, e, activity)
+
+	if n := signatureFields(t, e, activity); n != 0 {
+		t.Errorf("%d profile field(s) survive a narrowed message, want 0: the field says what the "+
+			"message said, to readers the message itself is now withheld from", n)
+	}
+}
+
+func TestNarrowingLeavesAFieldAPersonConfirmed(t *testing.T) {
+	// The human-edit conflict, settled on the write side rather than here: a
+	// person accepting a value writes their own source_ref over the enrichment's,
+	// so a field somebody confirmed no longer names the message at all.
+	e := SetupSearch(t)
+	ctx := context.Background()
+	activity := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by, audience)
+		VALUES ($1, 'email', $2, $3, now(), 'inbound', 'gmail', 'connector:gmail:x', 'workspace')`,
+		heldMailSubject, heldMailBody)
+	person := seedPersonForSignature(t, e)
+	seedSignatureField(t, e, person, activity, "title", "Leiterin Recht")
+	// The person corrects it, which replaces source_ref with their own.
+	if _, err := e.Owner.Exec(ctx, `
+		UPDATE person_profile_field
+		   SET value = 'Justiziarin', source_ref = 'human:correction', captured_by = 'human:someone'
+		 WHERE person_id = $1 AND field = 'title'`, person); err != nil {
+		t.Fatal(err)
+	}
+
+	narrowAndRescope(t, e, activity)
+
+	var value string
+	if err := e.Owner.QueryRow(ctx, `
+		SELECT value FROM person_profile_field WHERE person_id = $1 AND field = 'title'`,
+		person).Scan(&value); err != nil {
+		t.Fatalf("the field a person confirmed was retracted with the message: %v", err)
+	}
+	if value != "Justiziarin" {
+		t.Errorf("value = %q, want the correction the person made", value)
+	}
+}
+
+func TestNarrowingLeavesAnotherMessagesSignatureFields(t *testing.T) {
+	// Scoped to the message that was narrowed. A second message from the same
+	// correspondent is still open, and what its signature said is still readable.
+	e := SetupSearch(t)
+	narrowed := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by, audience)
+		VALUES ($1, 'email', $2, $3, now(), 'inbound', 'gmail', 'connector:gmail:x', 'workspace')`,
+		heldMailSubject, heldMailBody)
+	other := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by, audience)
+		VALUES ($1, 'email', 'noch offen', 'der Text', now(), 'inbound', 'gmail', 'connector:gmail:y', 'workspace')`)
+	person := seedPersonForSignature(t, e)
+	seedSignatureField(t, e, person, narrowed, "title", "Leiterin Recht")
+	seedSignatureField(t, e, person, other, "phone", "+49 30 1234")
+
+	narrowAndRescope(t, e, narrowed)
+
+	if n := signatureFields(t, e, narrowed); n != 0 {
+		t.Errorf("%d field(s) survive the narrowed message, want 0", n)
+	}
+	if n := signatureFields(t, e, other); n != 1 {
+		t.Errorf("%d field(s) survive the message that is still open, want 1: narrowing one message "+
+			"does not retract what another one said", n)
+	}
+}
+
+func TestNarrowingLeavesAFieldAPersonRestored(t *testing.T) {
+	// The case that made the first version of this destroy somebody's work.
+	//
+	// RestoreProfileField INHERITS source_ref from the row it undoes, so a value
+	// a person restored still names the message the signature came from. Keyed
+	// on the ref alone, the retraction deleted it — and there is nothing to
+	// recover it from, because the restore's own precedence clears the undo
+	// buffer on the way past.
+	//
+	// Seeded through RestoreProfileField rather than by writing the row this
+	// test wants to see, which is the only reason it can see the defect: the
+	// sibling test below hand-wrote a source_ref production never produces.
+	e := SetupSearch(t)
+	ctx := context.Background()
+	activity := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by, audience)
+		VALUES ($1, 'email', $2, $3, now(), 'inbound', 'gmail', 'connector:gmail:x', 'workspace')`,
+		heldMailSubject, heldMailBody)
+	person := seedPersonForSignature(t, e)
+	// A value the signature replaced, with the earlier one in the undo buffer —
+	// the state ApplySignatureFields leaves behind when it overwrites.
+	seedSignatureField(t, e, person, activity, "title", "VP Finance")
+	if _, err := e.Owner.Exec(ctx, `
+		UPDATE person_profile_field
+		   SET superseded_value = 'CFO', superseded_captured_by = 'human:earlier',
+		       superseded_observed_at = now() - interval '1 day'
+		 WHERE person_id = $1 AND field = 'title'`, person); err != nil {
+		t.Fatal(err)
+	}
+	// title is a MIRRORED field: the restore CASes on the person column agreeing
+	// with the sidecar, because a title somebody retyped leaves the sidecar
+	// untouched and restoring on the sidecar alone would overwrite their answer.
+	if _, err := e.Owner.Exec(ctx,
+		`UPDATE person SET title = 'VP Finance' WHERE id = $1`, person); err != nil {
+		t.Fatal(err)
+	}
+	// The person presses undo, through the store that serves that press.
+	if err := people.NewStore(e.DB()).RestoreProfileField(
+		personWriter(e), ids.From[ids.PersonKind](person), "title"); err != nil {
+		t.Fatalf("restoring the field: %v", err)
+	}
+
+	narrowAndRescope(t, e, activity)
+
+	var value string
+	if err := e.Owner.QueryRow(ctx, `
+		SELECT value FROM person_profile_field WHERE person_id = $1 AND field = 'title'`,
+		person).Scan(&value); err != nil {
+		t.Fatalf("the value a person restored was deleted by narrowing the message it replaced: %v", err)
+	}
+	if value != "CFO" {
+		t.Errorf("value = %q, want the value the person restored", value)
+	}
+}
+
+func TestNarrowingLeavesAFieldAPersonCorrected(t *testing.T) {
+	// The case the source predicate does NOT cover, and the reason there are
+	// three. A human correcting a field records it in ai_feedback and touches
+	// neither the column nor the profile-field row — so a corrected field is
+	// still source=capture_enrich and still names the message. The row is what
+	// person360 overlays the correction onto, so deleting it takes their verdict
+	// off the screen with it.
+	e := SetupSearch(t)
+	ctx := context.Background()
+	activity := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by, audience)
+		VALUES ($1, 'email', $2, $3, now(), 'inbound', 'gmail', 'connector:gmail:x', 'workspace')`,
+		heldMailSubject, heldMailBody)
+	person := seedPersonForSignature(t, e)
+	seedSignatureField(t, e, person, activity, "title", "VP Finance")
+	// The verdict a correction leaves behind, keyed the way refuseIfCorrected
+	// reads it.
+	if _, err := e.Owner.Exec(ctx, `
+		INSERT INTO ai_feedback (subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, captured_by, source)
+		VALUES ('person', $1, 'profile_field',
+		        encode(sha256(('profile_field:title')::bytea), 'hex'), 'corrected', 'Justiziarin', 'human:someone', 'ui')`,
+		person); err != nil {
+		t.Fatal(err)
+	}
+
+	narrowAndRescope(t, e, activity)
+
+	if n := signatureFields(t, e, activity); n != 1 {
+		t.Errorf("%d field(s) survive, want 1: a field a person corrected is the row their verdict "+
+			"is shown against, and deleting it takes the correction off the screen", n)
+	}
+}
+
+// personWriter is a seat that may write a person, which SearchEnv.Admin is not:
+// its grants are the read set the search suites need. A restore is a write to
+// the subject's own record and takes person.update.
+func personWriter(e *SearchEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
+		SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"person": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// narrowAndRescope narrows a message and runs the consumer that collects what
+// was derived from it, which is the pair production performs.
+func narrowAndRescope(t *testing.T, e *SearchEnv, activity ids.UUID) {
+	t.Helper()
+	ctx := context.Background()
+	if _, err := e.Owner.Exec(ctx,
+		`UPDATE activity SET audience = 'participants' WHERE id = $1`, activity); err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(map[string]any{"changed_fields": map[string]any{"audience": "participants"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := compose.NewAudienceRescopeGen(e.Pool).HandleEvent(ctx, kevents.Envelope{
+		Type:    "activity.updated",
+		Entity:  kevents.EntityRef{Type: "activity", ID: activity},
+		Payload: payload,
+	}); err != nil {
+		t.Fatalf("the rescope consumer refused the narrowing: %v", err)
+	}
+}
+
+// seedPersonForSignature lands the contact a signature enrichment writes onto.
+func seedPersonForSignature(t *testing.T, e *SearchEnv) ids.UUID {
+	t.Helper()
+	return e.SeedID(t, `
+		INSERT INTO person (id, full_name, source, captured_by)
+		VALUES ($1, 'Die Absenderin', 'manual', 'human:test')`)
+}
+
+// seedSignatureField writes the row a signature enrichment writes: source_ref
+// naming the message it was lifted from, which is the key the retraction reads.
+func seedSignatureField(t *testing.T, e *SearchEnv, person, activity ids.UUID, field, value string) {
+	t.Helper()
+	if _, err := e.Owner.Exec(context.Background(), `
+		INSERT INTO person_profile_field
+		       (person_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, $2, $3, 'aus der Signatur', 'activity:'||$4, 'capture_enrich', 'system:enrich')`,
+		person, field, value, activity.String()); err != nil {
+		t.Fatalf("seeding a signature-derived field: %v", err)
+	}
+}
+
+// signatureFields counts what one message's signature still has on record.
+func signatureFields(t *testing.T, e *SearchEnv, activity ids.UUID) int {
+	t.Helper()
+	var n int
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM person_profile_field WHERE source_ref = 'activity:'||$1`,
+		activity.String()).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
 }

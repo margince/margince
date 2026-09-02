@@ -42,7 +42,7 @@ func wholeHandoff() HandoffFacts {
 		}},
 		Stakeholders: []HandoffStakeholder{{PersonID: ids.NewV7(), Role: "Sponsor"}},
 		OpenCommitments: []OpenCommitment{{
-			TaskID: ids.NewV7(), Subject: "Book the kickoff", DueAt: at(48 * time.Hour),
+			TaskID: newTaskID(), Subject: "Book the kickoff", DueAt: at(48 * time.Hour),
 		}},
 	}
 }
@@ -176,10 +176,10 @@ func TestAnOpenDealBesideAWonOneIsNotAMissingSale(t *testing.T) {
 func TestTheOverdueGapCountsOnlyThePromisesThatArePastDue(t *testing.T) {
 	facts := wholeHandoff()
 	facts.OpenCommitments = []OpenCommitment{
-		{TaskID: ids.NewV7(), DueAt: at(-72 * time.Hour)},
-		{TaskID: ids.NewV7(), DueAt: at(-24 * time.Hour)},
-		{TaskID: ids.NewV7(), DueAt: at(48 * time.Hour)},
-		{TaskID: ids.NewV7()},
+		{TaskID: newTaskID(), DueAt: at(-72 * time.Hour)},
+		{TaskID: newTaskID(), DueAt: at(-24 * time.Hour)},
+		{TaskID: newTaskID(), DueAt: at(48 * time.Hour)},
+		{TaskID: newTaskID()},
 	}
 	out := prepared(t, facts)
 

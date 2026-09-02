@@ -25,6 +25,10 @@ const GROUP_ORDER = [
   "deal",
   "activity",
   "lead",
+  // Last: a tag is a WORD, and somebody searching a name is usually after the
+  // records rather than the label. It sits below them and is how they get to
+  // the rest of the slice.
+  "tag",
 ] as const;
 const GROUP_KEY: Record<string, MessageKey> = {
   person: "search.group.person",
@@ -32,6 +36,7 @@ const GROUP_KEY: Record<string, MessageKey> = {
   deal: "search.group.deal",
   activity: "search.group.activity",
   lead: "search.group.lead",
+  tag: "search.group.tag",
 };
 // Only these hit types have a 360 to route to (the app-wide ENTITY registry).
 // `activity` is a valid SearchResult type but has no record route, so it

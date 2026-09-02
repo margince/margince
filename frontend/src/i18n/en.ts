@@ -158,7 +158,7 @@ export const en = {
   "autonomy.auto": "auto-execute",
   "autonomy.confirm": "confirm-first",
 
-  "nav.home": "Home",
+  "nav.home": "Brief",
   "nav.contacts": "Contacts",
   "nav.companies": "Companies",
   "nav.leads": "Leads",
@@ -239,6 +239,7 @@ export const en = {
   "search.group.deal": "Deals",
   "search.group.activity": "Activities",
   "search.group.lead": "Leads",
+  "search.group.tag": "Tags",
   "search.tier.mirrored": "from a connected system",
   "search.tier.unverified": "unverified",
 
@@ -275,7 +276,10 @@ export const en = {
   "deal.archived": "archived",
   "record.notShown": "Not shown",
   "record.timelineLoading": "Loading this record’s history…",
-  "record.timeline": "Timeline",
+  // The same word the tab strip uses (`tab.timeline`): the heading over the
+  // slot and the tab that opens it name one thing, and two words for it read
+  // as two things.
+  "record.timeline": "History",
   "record.edit": "Edit",
   "record.save": "Save",
   "record.saveDone": "“{name}” saved",
@@ -289,6 +293,8 @@ export const en = {
     "This company is archived. Restore it to change anything on it.",
   "record.notYoursToChange":
     "This company belongs to someone else. Ask its owner to share it with you if you need to make changes.",
+  "record.logActivityRefused":
+    "You do not have permission to log activities on this record.",
   "record.share": "Share",
   "record.moreActions": "More actions",
   "record.fullHistory": "Full history",
@@ -494,6 +500,8 @@ export const en = {
   // fetch and a bug in our own code both report in wording nobody authored for
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
+  "common.assistantUnavailable":
+    "The assistant did not answer, so it cannot draft this for you. An administrator can check the model binding under Settings → AI. Nothing here needs it — the details can be entered by hand.",
   "common.gatewayUnavailable":
     "The server did not finish this request in time. It may still be working — wait a moment before trying again, or the same work can run twice.",
   // Every 403 the server codes `permission_denied`, which is two refusals with
@@ -873,7 +881,12 @@ export const en = {
   "co.strip.fin.loading": "Loading…",
   "co.strip.unpriced": "No convertible amount on these deals",
   "co.strip.pricedPartly": "{priced} of {total} deals priced",
-  "co.strip.health": "Relationship",
+  // "Conversation", not "Relationship": the health receipt beside this tile
+  // rates a DIMENSION called Relationship (how many people are in contact),
+  // and one word carrying two readings let the tile say "One-sided" while the
+  // receipt said "Strong" about what read as the same thing. This tile is
+  // about the correspondence.
+  "co.strip.health": "Conversation",
   "co.strip.healthOneSided": "One-sided",
   "co.strip.healthBalanced": "Balanced",
   "co.strip.replyShare": "{percent}% of the exchange is theirs",
@@ -1102,6 +1115,8 @@ export const en = {
   "finance.title": "Finance",
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",
+  "finance.syncing":
+    "Syncing with your accounting source. Figures appear once the first sweep lands.",
   "finance.noConnection":
     "No financial source connected — connect one to see what this customer has been invoiced and whether they pay on time",
   "finance.unmapped":
@@ -1210,7 +1225,9 @@ export const en = {
   "commercial.offer.expired": "Expired",
   "commercial.offer.superseded": "Superseded",
   "co.section.restricted": "Hidden \u2014 your role cannot read this",
-  "co.next.title": "Next steps",
+  // The same word the tab strip uses (`tab.tasks`): a tab called Tasks
+  // opening a card called Next steps reads as a wrong turn.
+  "co.next.title": "Tasks",
   "co.next.empty": "No open task on this account.",
   "co.next.overdue": "Overdue",
   "co.next.due": "Due {when}",
@@ -1230,19 +1247,12 @@ export const en = {
   "co.work.count": "{count} in flight",
   "co.work.countAtLeast": "{count}+ in flight",
   "co.work.deals": "Deals",
-  "co.work.projects": "Projects",
   "co.work.noDealsDetail":
     "A deal is where the money and the close date live. Open one when there is something to win.",
-  "co.work.noProjectsDetail":
-    "A project holds the delivery: the people on it, the deals under it, and what it is due to finish.",
   "co.work.noDeals": "No open deals.",
-  "co.work.noProjects": "No projects in flight.",
   "co.work.closes": "closes {date}",
-  "co.work.targetEnd": "due to end {date}",
   "co.work.stalled":
     "Nothing has been filed against this deal in the last 60 days.",
-  "co.work.quiet": "Nothing has been filed against this project since {when}.",
-  "co.work.neverTouched": "Nothing has ever been filed against this project.",
   "co.work.overdueTask":
     "{who} was supposed to \u2018{title}\u2019 by {date} and has not.",
   "co.work.overdueTaskUnnamed":
@@ -1330,7 +1340,7 @@ export const en = {
   "approval.kind.send_email": "Send an email",
   "approval.kind.held_draft": "Review a drafted email",
   "approval.kind.book_meeting": "Book a meeting",
-  "approval.kind.quota_release": "Let an agent continue",
+  "approval.kind.volume_release": "Let an agent continue",
   "approval.kind.coldstart": "Fill in a new account",
   "approval.kind.enrich": "Enrich from the web",
   "approval.kind.deepread": "Read the company site",
@@ -1441,6 +1451,7 @@ export const en = {
   "co.rail.people.title": "Their key people",
   "co.rail.people.empty": "No contacts yet. Nobody to write to.",
   "co.rail.people.add": "Add a contact",
+  "co.rail.people.inTouch": "Already in touch with them",
   "co.rail.details.all": "All fields",
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
@@ -1498,6 +1509,10 @@ export const en = {
   "chronology.changes": "Changes",
   "filter.label": "Narrow this list",
   "chronology.all": "All",
+  "chronology.conversations": "Conversations",
+  "chronology.conversationsEmpty": "No conversations with them yet.",
+  "convo.yourMove": "Your move",
+  "convo.waitingOnThem": "Waiting on them",
   "chronology.changesEmpty":
     "No field on this record has been changed since it was created.",
   "chronology.allEmpty": "Nothing has happened on this record yet.",
@@ -1753,9 +1768,7 @@ export const en = {
     "{field} is recorded as \u201c{value}\u201d. Removing it says this is not a fact about the company. A later read of their website may state it again.",
   "co.facts.showAll": "Show all {count}",
   "co.facts.showLess": "Show fewer",
-  "co.tags.lists": "Lists",
   "co.tags.tags": "Tags",
-  "co.tags.noLists": "Not on any list.",
   "co.tags.noTags": "No tags applied.",
   "co.project.new": "New project",
   "co.deal.new": "New deal",
@@ -1766,11 +1779,6 @@ export const en = {
   "co.tags.pick": "Tag name",
   "co.tags.overCap":
     "There are more tags than this list can show, so a tag missing from it may still exist. Ask an admin to prune the tags before adding a new one.",
-  "co.lists.added": "Added to “{name}”",
-  "co.lists.add": "Add to list",
-  "co.lists.pick": "List name",
-  "co.lists.overCap":
-    "There are more lists than can be shown, so a list missing from them may still exist. Ask an admin to prune the lists before adding a new one.",
   "co.recent.title": "What happened lately",
   "co.recent.emptyDetail":
     "Once you send an email, log a call or hold a meeting, the exchange appears here, with who did what on each side.",
@@ -1789,7 +1797,8 @@ export const en = {
   "co.recent.dir.both": "both sides",
   "co.recent.minutes": "{count} min",
   "co.recent.re": "on a deal",
-  "co.tags.title": "Lists & tags",
+  "co.recent.reNamed": "on {name}",
+  "co.tags.title": "Tags",
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
@@ -2311,7 +2320,6 @@ export const en = {
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
   "home.asOf": "as of {at}",
-  "home.refresh": "Refresh brief",
   "home.refreshing": "Ranking…",
   "home.generate": "Get today's brief now",
   "home.noneBody":
@@ -2329,6 +2337,111 @@ export const en = {
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
   "home.weekly.weekOf": "Week of {day}",
+  // The week ahead. The frozen review says what happened; this is the only part
+  // of that page anybody can still change.
+  "plan.title": "Plan next week",
+  // The head of the ranked queue, on the page a rep opens first. The same rows
+  // the Worklist draws, in the order the server decided.
+  "brief.donext.title": "Do next",
+  // The Brief's opening sentence, composed from the rows the page is showing —
+  // never model-written, so it cannot say what the rows contradict.
+  "brief.eyebrow": "Your morning",
+  "brief.eyebrow.weekly": "Your week",
+  // The Brief's two dials. Which brief, and whose.
+  "brief.view.label": "Which brief",
+  "brief.view.morning": "Morning",
+  "brief.view.weekly": "Weekly",
+  "brief.scope.label": "Whose brief",
+  "brief.scope.mine": "Mine",
+  "brief.scope.team": "Team",
+  "brief.sentence.clear": "Nothing is waiting on you this morning.",
+  "brief.sentence.one": "First: {lead}",
+  "brief.sentence.oneWithCost": "First: {lead} — {consequence}",
+  "brief.sentence.many": "First: {lead} Then {rest} more.",
+  "brief.sentence.manyWithCost":
+    "First: {lead} — {consequence} Then {rest} more.",
+
+  "brief.donext.sub": "One order, from your worklist.",
+  "brief.donext.loading": "Reading what waits on you",
+  "brief.donext.clear": "Nothing is waiting on you right now.",
+  "brief.donext.rest": "{count} more on the worklist",
+
+  // A team's week, frozen when it closed. Two weeks compare because neither
+  // moves under the comparison.
+  "teamweekly.title": "The team's week",
+  "teamweekly.weekOf": "{team} · week of {day}",
+  "teamweekly.frozen": "Frozen",
+  "teamweekly.loading": "Reading the team's week",
+  "teamweekly.empty": "Nothing to show for this week.",
+  "teamweekly.forbidden":
+    "A team's week is a team question, and your access reaches your own rows only.",
+  "teamweekly.noSnapshot":
+    "No week has closed for this team yet. The first snapshot is written on the Monday after their first full week.",
+  "teamweekly.pickTeam": "Choose a team",
+  "teamweekly.repsUnread":
+    "{count} member(s) could not be read. Every figure here covers {counted}.",
+  "teamweekly.ofTotal": "{part} of {whole}",
+  "teamweekly.headline.plain":
+    "The week ran without a reading that stands out either way.",
+  "teamweekly.headline.healthy":
+    "{reading} is healthy at {pct}%, against a bar of {bar}%.",
+  "teamweekly.headline.weak":
+    "{reading} is not, at {pct}% against a bar of {bar}%.",
+  "teamweekly.reading.firstResponse": "First response",
+  "teamweekly.reading.nextStep": "Meetings with a next step",
+  "teamweekly.reading.commitments": "Promises kept",
+  "teamweekly.card.firstResponse": "Answered in time",
+  "teamweekly.card.firstResponseBasis": "{breached} breached",
+  "teamweekly.card.meetings": "Meetings with a next step",
+  "teamweekly.card.meetingsBasis": "of the meetings held",
+  "teamweekly.card.commitments": "Promises kept",
+  "teamweekly.card.commitmentsBasis": "of what was owed",
+  "teamweekly.card.won": "Won",
+  "teamweekly.card.wonBasis": "{lost} lost",
+  "teamweekly.card.reps": "Members counted",
+  "teamweekly.card.repsBasis": "whose week was read in full",
+  "teamweekly.movement.title": "What the week did",
+  "teamweekly.movement.won": "Won",
+  "teamweekly.movement.lost": "Lost",
+  "teamweekly.movement.meetings": "Meetings held",
+  "teamweekly.movement.leads": "Leads routed",
+  "teamweekly.coach.title": "Coach this week",
+  "teamweekly.coach.sub":
+    "One focus per member, including the member whose week went well.",
+  "teamweekly.coach.empty": "Nobody was on this team that week.",
+  "teamweekly.focus.help_requested": "Asked for help",
+  "teamweekly.focus.leads_breached": "Leads went unanswered",
+  "teamweekly.focus.commitments_missed": "Promises missed",
+  "teamweekly.focus.meetings_without_next_step":
+    "Meetings left without a next step",
+  "teamweekly.focus.strong_week": "Worth copying",
+  "teamweekly.focus.quiet_week": "A quiet week",
+
+  "plan.sub": "What you said you would do, and what you need to do it.",
+  "plan.loading": "Reading your plan",
+  "plan.empty": "Nothing on the plan yet.",
+  "plan.none": "You have not planned this week yet.",
+  "plan.start": "Plan my week",
+  "plan.add": "Add commitment",
+  "plan.save_one": "Save {count} change",
+  "plan.save_other": "Save {count} changes",
+  "plan.due": "due {day}",
+  "plan.state.open": "Open",
+  "plan.state.done": "Done",
+  "plan.state.missed": "Missed",
+  "plan.state.dropped": "Dropped",
+  "plan.help.label": "What do you need from your lead?",
+  "plan.help.ask": "Ask for help",
+  "plan.help.edit": "Edit request",
+  "plan.help.send": "Send",
+  "plan.help.cancel": "Cancel",
+  "plan.help.asked": "You asked: {text}",
+  "plan.help.waiting": "Waiting on your lead.",
+  "plan.new.label": "What will you do?",
+  "plan.new.due": "By when",
+  "plan.new.save": "Add",
+  "plan.new.cancel": "Cancel",
+
   "home.weekly.pickWeek": "Open another week",
   "home.weekly.none":
     "No weekly review yet — the first one is written on the Monday after your first full week.",
@@ -3017,6 +3130,15 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
+  "brief.coverage.summary": "Some sources have more than this page shows",
+  "brief.coverage.bounded": "{shown} shown of at least {considered} read",
+  "delivery.morningLabel": "Your morning brief",
+  "delivery.morningHelp":
+    "Whether the day's brief also arrives by email. It is on your Brief page either way.",
+  "delivery.weeklyLabel": "Your weekly review",
+  "delivery.weeklyHelp": "Whether Monday's review also arrives by email.",
+  "delivery.byEmail": "By email",
+  "delivery.none": "Not by email",
   "settings.languageHelp": "Lasts for this session.",
   "role.admin": "Admin",
   "role.management": "Management",
@@ -3907,6 +4029,8 @@ export const en = {
     "There is no message left to share — this thread\u2019s first message was erased, and the hold stays so a later reply does not arrive open.",
   "heldThreads.pending": "Waiting on a verdict",
   "heldThreads.attempts": "asked {count} time(s)",
+  "heldThreads.backlogStalled":
+    "{count} thread(s) have been asked about repeatedly with no answer. Mail stays withheld while this lasts — nothing is lost, and it clears on its own once the classifier answers again.",
   "heldThreads.heldByOthers":
     "Still held: {count} other mailbox imported this message and has not shared it. A thread opens only when everyone who received it agrees.",
   "heldThreads.kind.legal": "Legal",
@@ -3928,6 +4052,7 @@ export const en = {
   "senders.recordYes": "Yes",
   "senders.recordNo": "No",
   "senders.byYou": "— you decided",
+  "senders.deletesOn": "Oldest message deleted on {date}",
   "senders.markBusiness": "Business",
   "senders.keepOut": "Keep out",
   "senders.withdraw": "Undo",
@@ -4063,13 +4188,17 @@ export const en = {
   "connectors.oauthDenied": "You declined access — nothing was connected.",
   "connectors.oauthError":
     "The connection couldn't be completed — please try again.",
-  // Two failures that "try again" would be wrong about: the provider refused
-  // the grant (retrying the same way repeats it), and the provider's API isn't
-  // enabled for this deployment (no user action can clear it).
+  // Three failures that "try again" would be wrong about, each fixed somewhere
+  // else: the provider refused the grant (retrying the same way repeats it),
+  // its API is not enabled for this deployment (the vendor's console), and it
+  // refused this deployment's own client credentials (the app card in
+  // Settings). The last two are an administrator's; no user action clears them.
   "connectors.oauthRejected":
     "The provider declined the connection. Make sure you accept every permission it asks for, then try connecting again.",
   "connectors.oauthMisconfigured":
     "This deployment can't complete that connection yet — the provider's API isn't enabled for it. An administrator needs to enable it; the server log names which API.",
+  "connectors.oauthBadClient":
+    "The provider refused this installation's app credentials. An administrator should check the client ID and secret under Settings → General; re-connecting will not clear it on its own.",
   "connectors.dismissOutcome": "Dismiss",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
@@ -5859,7 +5988,7 @@ export const en = {
   "users.teamNobodyToAdd": "No users to add yet.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
-    "Named groups you can share records with. Being in a team grants no access on its own — customers, contacts, leads and deals are readable by everyone here.",
+    "Named groups you can share records with. Membership alone still grants no access for most roles — the exception is Team Lead: adding one to a team gives them that team's records to read and work, without a share being arranged.",
   "users.teamsAdminOnly": "Managing teams is available to admins only.",
   "users.deactivated": "{name} deactivated",
   "users.reactivated": "{name} reactivated",
@@ -6136,81 +6265,6 @@ export const en = {
   "countdown.minutesSeconds": "{minutes}m {seconds}s",
   "countdown.expired": "Expired",
 
-  // Quotas & attainment (RD-T06): human-set revenue targets with
-  // server-computed attainment, surfaced under the Reports "Quotas" segment.
-  "quotas.tab": "Quotas",
-  // The selector panel's own title. The Reports segment picker directly above
-  // it already reads "Quotas", so this names what the LIST holds — one row per
-  // owner or team carrying a target — rather than repeating the page.
-  "quotas.selector.title": "Who has a quota",
-  "quotas.sub": "revenue targets — human-set, attainment computed",
-  "quotas.role.owner": "Individual quota",
-  "quotas.role.team": "Team quota",
-  "quotas.periodRange": "{start} – {end}",
-  "quotas.empty.title": "No quota set",
-  "quotas.empty.body":
-    "A quota is a target a human sets — owner or team, period, amount. We don't guess one for you. Set a target to start tracking attainment from closed-won deals.",
-  "quotas.empty.cta": "Set a target",
-  "quotas.attained": "attained",
-  "quotas.closedWon": "Closed-won this period",
-  "quotas.target": "Target",
-  "quotas.gap": "Gap to target",
-  "quotas.baseCurrencyNote":
-    "Figures in the organization's base currency ({currency}).",
-  "quotas.pace.ahead":
-    "Ahead of pace — {pct}% attained vs {pace}% of period elapsed.",
-  "quotas.pace.behind":
-    "Behind pace — {pct}% attained vs {pace}% of period elapsed.",
-  "quotas.pace.met": "Target met — {pct}% attained.",
-  "quotas.computed": "computed server-side",
-  "quotas.contributing.title": "What counts toward attainment",
-  "quotas.contributing.subtitle": "closed-won deals · base value in the period",
-  "quotas.contributing.deal": "Deal",
-  "quotas.contributing.amount": "Counted amount",
-  "quotas.contributing.total": "Counted total",
-  "quotas.contributing.caption":
-    "Base currency · open / lost / omitted deals excluded",
-  "quotas.explain.formula":
-    "attainment = Σ(closed-won base value) ÷ target, to the cent",
-  "quotas.explain.closedWon":
-    "closed-won = {sum} ({count} deals in the period)",
-  "quotas.explain.target": "target = {target} (human-set)",
-  "quotas.explain.result": "attainment = {sum} ÷ {target} = {pct}%",
-  "quotas.explain.exclusions":
-    "open / lost / omitted deals are excluded; clean-core only",
-  "quotas.scopeNote.title": "What this quota deliberately is",
-  "quotas.scopeNote.flag": "flagged, not hidden",
-  "quotas.scopeNote.body":
-    "The target is human-set — the AI never invents a quota number. Attainment is computed from closed-won base value and is fully auditable. There is no AI-set goal, no forecast-to-quota auto-fill, and no comp/commission engine yet.",
-  "quotas.target.title": "Period target",
-  "quotas.target.new": "Set a target",
-  "quotas.target.edit": "Edit target",
-  "quotas.target.save": "Save target",
-  "quotas.target.note":
-    "Editing writes a human-typed value and logs the change. Attainment recomputes against it.",
-  "quotas.target.sideFixed":
-    "A quota's owner/team side is fixed — switch it by archiving and recreating.",
-  "quotas.side.label": "Assigned to",
-  "quotas.side.owner": "Owner",
-  "quotas.side.team": "Team",
-  "quotas.owner": "Owner",
-  "quotas.team": "Team",
-  "quotas.pickOwner": "Select an owner…",
-  "quotas.pickTeam": "Select a team…",
-  "quotas.amountHint": "Whole units of the currency below. No decimals.",
-  "quotas.periodStart": "Period start",
-  "quotas.periodEnd": "Period end",
-  "quotas.amount": "Target amount",
-  "quotas.currency": "Currency",
-  "quotas.err.targetZero": "This quota has no target yet",
-  "quotas.err.computeFailed": "Attainment couldn't be computed",
-  "quotas.err.ownerXorTeam": "Choose exactly one of owner or team.",
-  "quotas.saveDone": "Quota saved",
-  "quotas.archiveDone": "Quota archived",
-  "quotas.archive.title": "Archive quota",
-  "quotas.archive.confirm":
-    "Archiving drops this quota from the list and stops tracking its attainment. Archived quotas can't be edited.",
-
   "installationSettings.orgTitle": "Installation",
   "installationSettings.orgSub":
     "What this installation is called, and the zone every reporting period is computed in.",
@@ -6454,6 +6508,26 @@ export const en = {
     "Takes effect from the next message. Messages already captured stay.",
   "captureExclusions.current": "Rules in effect",
   "captureExclusions.empty": "No exclusions.",
+  "ownerIdentities.title": "Your other addresses",
+  "ownerIdentities.sub":
+    "Addresses that are also you: a send-as alias, a private domain you read, an address you forward from. Mail between your own addresses is not correspondence with anybody, so it is not captured and never becomes a contact.",
+  "ownerIdentities.add": "Add address",
+  "ownerIdentities.addLabel": "Declare another address as your own",
+  "ownerIdentities.addDescription":
+    "Yours alone. A colleague never sees what you list here.",
+  "ownerIdentities.current": "Declared",
+  "ownerIdentities.notRetroactive":
+    "Applies from the next message on. Mail already captured stays, and a contact already made from an alias stays until you merge or remove it.",
+  "ownerIdentities.empty": "You have declared no other addresses.",
+  "ownerIdentities.remove": "Withdraw this address",
+  "ownerIdentities.added": "Address added.",
+  "ownerIdentities.confirm": "Add",
+  "ownerIdentities.kindLabel": "What are you declaring?",
+  "ownerIdentities.kind.address": "One address",
+  "ownerIdentities.kind.domain": "A whole domain",
+  "ownerIdentities.valueLabel": "Address or domain",
+  "ownerIdentities.addressPlaceholder": "you@example.com",
+  "ownerIdentities.domainPlaceholder": "example.com",
   "captureExclusions.scope.user": "Only me",
   "captureExclusions.scope.workspace": "Whole organization",
   "captureExclusions.kind.address": "Address",
@@ -6895,8 +6969,6 @@ export const en = {
   "person.action.meetings": "See meetings",
   "person.action.addTask": "Add task",
   "person.action.research": "Research",
-  "person.action.logRefused":
-    "You do not have permission to log activities on this record.",
 
   "person.strip.lastInbound": "Last inbound",
   "person.strip.lastOutbound": "Last outbound",
@@ -7360,10 +7432,6 @@ export const en = {
   "filters.pickRecord": "Choose one",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Choose a value",
-  "filters.saveList": "Save as list",
-  "filters.saveListTitle": "Save this filter as a dynamic list",
-  "filters.listName": "List name",
-  "filters.saveListConfirm": "Create list",
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 
@@ -7588,10 +7656,13 @@ export const en = {
   "worklist.pane.lastOutbound": "We last wrote",
   "worklist.pane.never": "Never",
   "worklist.focus.title": "Do this next",
+  "worklist.nextup.title": "And then",
   "worklist.focus.verb.decide": "Decide",
   "worklist.focus.verb.merge": "Review the pair",
   "worklist.focus.verb.complete": "Complete it",
   "worklist.focus.verb.act": "Act on it",
+  // Required by the template's key type, never produced: worthActingOn
+  // excludes primary_action "acknowledge" before this key is ever built.
   "worklist.focus.verb.acknowledge": "Acknowledge",
   "worklist.focus.verb.open": "Open it",
   "worklist.focus.verb.snooze": "Open it",
@@ -7646,6 +7717,38 @@ export const en = {
   "worklist.board.nobody": "Nobody yet",
   "worklist.board.truncated":
     "There is more work than this could count. These are floors, not totals.",
+  "worklist.readings.label": "What today is worth",
+  "worklist.readings.revenue": "Revenue at risk",
+  "worklist.readings.revenue.detail": "Across the deals drifting today",
+  "worklist.readings.revenue.unpriced": "No deal at risk could be priced",
+  "worklist.readings.replies": "Buyer replies",
+  "worklist.readings.replies.detail": "Customers waiting on an answer",
+  "worklist.readings.prospecting": "Prospecting",
+  "worklist.readings.prospecting.detail": "New business owed a first reply",
+  "worklist.readings.review": "Review",
+  "worklist.readings.review.detail": "Routine work queued behind a decision",
+  "worklist.readings.truncated":
+    "There is more work than this could count. These are floors, not totals.",
+  "worklist.hidden.title": "What the queue is not showing",
+  "worklist.hidden.loading": "Checking what is held back…",
+  "worklist.hidden.clear":
+    "Nothing is being held back. Every waiting customer reaches somebody’s queue.",
+  "worklist.hidden.truncated":
+    "There is more work than this could count. These are floors, not totals.",
+  "worklist.hidden.count": "{count} waiting",
+  "worklist.hidden.pastHorizon": "Too old for the queue",
+  "worklist.hidden.pastHorizon.detail":
+    "Nobody decided this. They wrote months ago and were never answered.",
+  "worklist.hidden.unlinked": "Attached to no record",
+  "worklist.hidden.unlinked.detail":
+    "Usually not sales. Sometimes a customer nobody managed to file.",
+  "worklist.hidden.notSales": "Judged not sales work",
+  "worklist.hidden.notSales.detail":
+    "Hidden from the whole organization, and it does not lift.",
+  "worklist.hidden.setAside": "Set aside by you",
+  "worklist.hidden.setAside.detail":
+    "Snoozed or marked not yours. A snooze comes back on its own.",
+  "worklist.hidden.shown": "The queue itself carries {count}.",
   "worklist.filter.label": "Kind of work",
   "worklist.filter.all": "All",
   "worklist.filter.customer_waiting": "Customer waiting",
@@ -7750,7 +7853,8 @@ export const en = {
   "worklist.verb.open": "Open",
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
-  "worklist.verb.acknowledge": "Open",
+  "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.source.failed": "{source} could not be read",
   "worklist.source.withheld": "{source} is hidden from your account",
   "worklist.untitled.generic": "Something needs you",
@@ -7762,6 +7866,9 @@ export const en = {
   "worklist.untitled.batch": "A group of routine decisions",
   "worklist.verb.review_batch": "Review",
   "worklist.verb.draft_reply": "Open to reply",
+  // Where the composer actually opens, the verb is the ACT rather than the way
+  // to it. The two labels are separate keys because the two clicks differ.
+  "worklist.verb.draft_reply_now": "Draft the reply",
   "worklist.deal.closes": "closes {date}",
   "worklist.batch.system_incident": "{cause} failed {count} times",
   "worklist.batch.unnamedCause": "Something",

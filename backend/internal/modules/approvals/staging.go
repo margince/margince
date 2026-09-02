@@ -412,12 +412,13 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	if err := tx.QueryRow(ctx,
 		`INSERT INTO approval (id, kind, proposed_by, on_behalf_of, passport_id,
 			                       target_entity_type, target_entity_id, target_version,
-			                       summary, proposed_change, diff_hash, expires_at, bundle_id,
-			                       evidence)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now() + $12::interval, $13, $14)
+			                       target_label, summary, proposed_change, diff_hash, expires_at,
+			                       bundle_id, evidence)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now() + $13::interval, $14, $15)
 			 RETURNING expires_at`,
 		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID),
 		nullStr(in.TargetType), nullUUID(in.TargetID), in.TargetVersion,
+		targetLabel(ctx, tx, in.TargetType, in.TargetID),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
 		nullUUID(in.BundleID), evidence).Scan(&expiresAt); err != nil {
 		return ids.ApprovalID{}, err

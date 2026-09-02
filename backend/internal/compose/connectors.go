@@ -203,9 +203,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if h.registry == nil || !ok {
-		// This installation has not configured an OAuth app for the provider —
-		// its surface keeps the declared 501.
-		httperr.NotImplemented(w, r, "ConnectConnector")
+		writeConnectorUnavailable(w, r, string(provider), h.registry != nil)
 		return
 	}
 	actor, ok := principal.Actor(r.Context())

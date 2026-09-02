@@ -45,7 +45,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// The SAME meter the tool registry charges: this door refuses on the bound
 	// the other door pays into, so a Passport cannot spend its window on one
 	// and keep reading on the other.
-	gate := auth.NewGate(identitySvc, auth.WithQuota(srv.quotaMeter))
+	gate := auth.NewGate(identitySvc, auth.WithVolumeMeter(srv.volumeMeter))
 	// This registry admits REST calls; it never INVOKES a tool — a REST enrich
 	// runs scrapeHandlers, not the tool — so the enricher here supplies only the
 	// spec's cap and tier, and the ZERO value supplies those. Deliberately not
@@ -55,7 +55,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// transport invokes tools through srv.toolRegistry, which holds the live
 	// server.
 	//
-	// It DOES carry the quota charger, even though it invokes nothing: the two
+	// It DOES carry the volume budget charger, even though it invokes nothing: the two
 	// charge points agentGate calls (ChargeAdmittedCall, ChargeEffect) hang off
 	// this registry, so a registry built without one would refuse REST calls on
 	// a counter it then never paid — the exact half-a-control this change exists
@@ -63,7 +63,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.resolveOverlayIncumbent(pool), srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
 		meetingBriefReader(srv.meetingBriefSvc), srv.log,
-		agents.WithQuotaCharger(srv.quotaMeter))
+		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
 	// provider seam: agentGate's StageResolver dispatches per workspace
 	// exactly like the MCP registry's tools do — and the overlay-mode

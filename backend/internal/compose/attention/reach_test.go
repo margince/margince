@@ -28,7 +28,7 @@ func TestABoundedSourceSaysMoreRatherThanATotal(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{})
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source != "notice" {
@@ -51,7 +51,7 @@ func TestASourceUnderItsBoundClaimsNoMore(t *testing.T) {
 	notices := []crmcontracts.AttentionItem{item("only", "notice")}
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{})
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source == "notice" && reach.MoreAvailable {
@@ -73,7 +73,7 @@ func TestAFoldedGroupIsCountedAgainstTheSourcesItStandsFor(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AutomationHealth: &failures}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{})
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source != "automation_run" {
@@ -97,8 +97,8 @@ func TestReachIsOrderedTheSameWayTwice(t *testing.T) {
 	bounces := []crmcontracts.AttentionItem{item("b", "bounce")}
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices, Bounces: &bounces}
 
-	first := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{})
-	second := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{})
+	first := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	second := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	if len(first.Reach) != len(second.Reach) {
 		t.Fatalf("two reads gave %d and %d sources", len(first.Reach), len(second.Reach))
@@ -127,7 +127,7 @@ func TestReachUnderMineCountsNothingOfAColleaguesWork(t *testing.T) {
 	atRisk := []crmcontracts.AttentionItem{theirs}
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &atRisk}
 
-	got := (&Service{}).worklistFrom(ctx, day, "mine", "", 50, waitingRead{}, leadRead{})
+	got := (&Service{}).worklistFrom(ctx, day, "mine", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source == "deal_at_risk" && reach.Considered > 0 {
@@ -155,7 +155,7 @@ func TestEveryBoundedLaneReportsItsTruncation(t *testing.T) {
 		AsOf: rankInstant, Planned: planned, AtRisk: &atRisk, RelationshipDecay: &decay,
 	}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 500, waitingRead{}, leadRead{})
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 500, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	marked := map[crmcontracts.WorklistReachSource]bool{}
 	for _, reach := range got.Reach {
@@ -175,7 +175,7 @@ func TestASourceReadAndFoundEmptyStillAppears(t *testing.T) {
 	none := []crmcontracts.AttentionItem{}
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &none}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{})
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source == "notice" {
@@ -197,7 +197,7 @@ func TestNarrowingKeepsTheOtherSourcesInReach(t *testing.T) {
 	notices := []crmcontracts.AttentionItem{item("n1", "notice")}
 	day := crmcontracts.Attention{AsOf: rankInstant, Planned: planned, Notices: &notices}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "system", 50, waitingRead{}, leadRead{})
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "system", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source != "task" {

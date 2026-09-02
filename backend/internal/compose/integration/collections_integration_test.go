@@ -30,79 +30,15 @@ func setupCollections(t *testing.T) (*apptest.AppEnv, string) {
 	return e, person.ID
 }
 
-func TestListsLifecycleAndMembership(t *testing.T) {
-	e, personID := setupCollections(t)
-
-	var list struct {
-		ID string `json:"id"`
-	}
-	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
-		"name": "Q3 Targets", "entity_type": "person",
-	}, nil, &list); status != http.StatusCreated {
-		t.Fatalf("create list → %d", status)
-	}
-	// A static list refuses a definition; a dynamic one demands it.
-	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
-		"name": "Broken", "entity_type": "person", "list_type": "dynamic",
-	}, nil, nil); status != 422 {
-		t.Fatalf("definition-less dynamic list → %d, want 422", status)
-	}
-
-	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
-		"entity_type": "person", "entity_id": personID,
-	}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("add member → %d", status)
-	}
-	var problem struct {
-		Code string `json:"code"`
-	}
-	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
-		"entity_type": "person", "entity_id": personID,
-	}, nil, &problem); status != http.StatusConflict {
-		t.Fatalf("duplicate member → %d, want 409", status)
-	}
-	// A wrong-typed member is refused before any probe.
-	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
-		"entity_type": "deal", "entity_id": personID,
-	}, nil, nil); status != 422 {
-		t.Fatalf("type-mismatched member → %d, want 422", status)
-	}
-	// A member reference outside visibility is absent (H1).
-	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
-		"entity_type": "person", "entity_id": "00000000-0000-7000-8000-00000000dead",
-	}, nil, nil); status != http.StatusNotFound {
-		t.Fatalf("invisible member target → %d, want 404", status)
-	}
-
-	var members struct {
-		Data []struct {
-			EntityID string `json:"entity_id"`
-		} `json:"data"`
-	}
-	if status := e.Call(t, "GET", "/v1/lists/"+list.ID+"/members", nil, nil, &members); status != http.StatusOK || len(members.Data) != 1 {
-		t.Fatalf("list members → %d %+v", status, members)
-	}
-
-	if status := e.Call(t, "DELETE", "/v1/lists/"+list.ID, nil, nil, nil); status != http.StatusOK {
-		t.Fatalf("archive list → %d", status)
-	}
-	var lists struct {
-		Data []struct {
-			ID string `json:"id"`
-		} `json:"data"`
-	}
-	if status := e.Call(t, "GET", "/v1/lists", nil, nil, &lists); status != http.StatusOK || len(lists.Data) != 0 {
-		t.Fatalf("archived list still listed: %+v", lists)
-	}
-}
-
 func TestTagsLifecycleAndApplication(t *testing.T) {
 	e, personID := setupCollections(t)
 
 	var tag struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/tags", AnyMap{"name": "Champion", "color": "#ff6b00"}, nil, &tag); status != http.StatusCreated {
+	// A palette tone, not a hex: colour became a closed set of four when the tag
+	// vocabulary was made governed, and free text is refused.
+	if status := e.Call(t, "POST", "/v1/tags", AnyMap{"name": "Champion", "color": "amber"}, nil, &tag); status != http.StatusCreated {
 		t.Fatalf("create tag → %d", status)
 	}
 	// The name is unique case-insensitively.

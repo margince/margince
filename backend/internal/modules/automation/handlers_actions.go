@@ -4,7 +4,7 @@
 package automation
 
 // The three composing action executors ApplyActions (engine.go)
-// delegates to: notify, add_to_list, and draft_email. Split out of
+// delegates to: notify and draft_email. Split out of
 // engine.go so that file's own switch stays readable as the executor
 // count grows (the same reasoning gen-workflow's docs give for splitting
 // a package once a named trigger fires).
@@ -61,22 +61,6 @@ func applyNotify(ctx context.Context, notifier Notifier, action workflow.Action)
 		return err
 	}
 	return notifier.Notify(ctx, in.Recipient, in.Subject, in.Body)
-}
-
-// addToListArgs names the static list an add_to_list action writes
-// into; the member being added is the action's own Target.
-type addToListArgs struct {
-	ListID ids.ListID `json:"list_id"`
-}
-
-// applyAddToList is add_to_list's executor: Target names the entity
-// being added, Args names the list.
-func applyAddToList(ctx context.Context, lists Lists, action workflow.Action) error {
-	in, err := decodeActionArgs[addToListArgs](action.Args)
-	if err != nil {
-		return err
-	}
-	return lists.AddMember(ctx, in.ListID, string(action.Target.Type), action.Target.ID)
 }
 
 // draftEmailArgs names what draft_email hands to Comms: Target is the

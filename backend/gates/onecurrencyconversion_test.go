@@ -69,11 +69,6 @@ var fxConversionExempt = gatekit.Waive(map[string]string{
 		"at today",
 	"internal/modules/deals/deal_advance.go": "the same freeze at the moment it happens — advancing to won " +
 		"reads the rate once and stores it on the deal, which is why a closed figure never moves again",
-	"internal/modules/quotas/attainment.go": "a THIRD conversion, and one the module DAG forces: quotas is a " +
-		"module and a module never imports a sibling (ADR-0054 §3), so it cannot reach deals.FXRates and must " +
-		"ask fx_rate itself. Its own comment already names the two implementations it mirrors. Holding it " +
-		"identical to them is an obligation this gate cannot discharge — what it can do is stop a FOURTH " +
-		"appearing anywhere the engine IS reachable",
 	"internal/compose/rateproposals_integration_test.go": "a test seeding and asserting on rate rows. It reads " +
 		"the table to arrange and to check, never to convert an amount for a reader",
 	"gates/onecurrencyconversion_test.go": "this gate itself: the probes below are planted defects, and " +

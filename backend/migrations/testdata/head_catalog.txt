@@ -598,15 +598,19 @@ public.ai_usage_pkey CREATE UNIQUE INDEX ai_usage_pkey ON public.ai_usage USING 
 public.app_user acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.app_user.app_user_agent_is_full CHECK (((NOT is_agent) OR (seat_type = 'full'::text)))
 public.app_user.app_user_agent_never_forced CHECK ((NOT (is_agent AND must_change_password)))
+public.app_user.app_user_delivery_hour_check CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))
 public.app_user.app_user_failed_login_count_check CHECK ((failed_login_count >= 0))
 public.app_user.app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL))))
 public.app_user.app_user_forget_weekly_plan_responses CREATE TRIGGER app_user_forget_weekly_plan_responses BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()
 public.app_user.app_user_locale_shipped CHECK ((locale = ANY (ARRAY['en'::text, 'de'::text, 'vi'::text])))
+public.app_user.app_user_morning_brief_delivery_check CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
 public.app_user.app_user_pkey PRIMARY KEY (id)
 public.app_user.app_user_seat_type_check CHECK ((seat_type = ANY (ARRAY['read'::text, 'full'::text])))
 public.app_user.app_user_status_check CHECK ((status = ANY (ARRAY['invited'::text, 'active'::text, 'suspended'::text, 'deactivated'::text])))
+public.app_user.app_user_weekly_delivery_check CHECK (((weekly_delivery IS NULL) OR (weekly_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
 public.app_user.archived_at timestamp with time zone gen=- def=-
 public.app_user.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.app_user.delivery_hour_local integer gen=- def=-
 public.app_user.display_name text NOT NULL gen=- def=-
 public.app_user.email text NOT NULL gen=- def=-
 public.app_user.failed_login_count integer NOT NULL gen=- def=0
@@ -614,13 +618,16 @@ public.app_user.id uuid NOT NULL gen=- def=uuidv7()
 public.app_user.is_agent boolean NOT NULL gen=- def=false
 public.app_user.locale text gen=- def=-
 public.app_user.locked_until timestamp with time zone gen=- def=-
+public.app_user.morning_brief_delivery text gen=- def=-
 public.app_user.must_change_password boolean NOT NULL gen=- def=false
 public.app_user.password_hash text gen=- def=-
+public.app_user.quiet_day_notice boolean gen=- def=-
 public.app_user.seat_type text NOT NULL gen=- def='full'::text
 public.app_user.status text NOT NULL gen=- def='active'::text
 public.app_user.timezone text NOT NULL gen=- def='UTC'::text
 public.app_user.trg_app_user_updated CREATE TRIGGER trg_app_user_updated BEFORE UPDATE ON public.app_user FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.app_user.weekly_delivery text gen=- def=-
 public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING btree (id)
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.approval.approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL))))
@@ -652,6 +659,7 @@ public.approval.status text NOT NULL gen=- def='pending'::text
 public.approval.summary text gen=- def=-
 public.approval.target_entity_id uuid gen=- def=-
 public.approval.target_entity_type text gen=- def=-
+public.approval.target_label text gen=- def=-
 public.approval.target_version bigint gen=- def=-
 public.approval.trg_approval_updated CREATE TRIGGER trg_approval_updated BEFORE UPDATE ON public.approval FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.approval.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -870,6 +878,8 @@ public.brief_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/mar
 public.brief_run.annotated_at timestamp with time zone gen=- def=-
 public.brief_run.as_of timestamp with time zone NOT NULL gen=- def=-
 public.brief_run.brief_run_candidate_count_check CHECK ((candidate_count >= 0))
+public.brief_run.brief_run_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))
+public.brief_run.brief_run_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL)))
 public.brief_run.brief_run_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))
 public.brief_run.brief_run_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (annotated_at IS NOT NULL)))
 public.brief_run.brief_run_pkey PRIMARY KEY (id)
@@ -880,6 +890,8 @@ public.brief_run.candidate_count integer NOT NULL gen=- def=-
 public.brief_run.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.brief_run.id uuid NOT NULL gen=- def=uuidv7()
 public.brief_run.local_day date NOT NULL gen=- def=-
+public.brief_run.mail_attempted_at timestamp with time zone gen=- def=-
+public.brief_run.mail_error text gen=- def=-
 public.brief_run.narrative text gen=- def=-
 public.brief_run.revenue_norm_currency text NOT NULL gen=- def=''::text
 public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
@@ -1034,6 +1046,7 @@ public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=no
 public.capture_import.posture_at_import text gen=- def=-
 public.capture_import.user_id uuid NOT NULL gen=- def=-
 public.capture_import.verdict_reason text gen=- def=-
+public.capture_import.verdict_reasons text[] gen=- def=-
 public.capture_import.verdict_status text gen=- def=-
 public.capture_import_activity_user_key CREATE UNIQUE INDEX capture_import_activity_user_key ON public.capture_import USING btree (activity_id, user_id)
 public.capture_import_pkey CREATE UNIQUE INDEX capture_import_pkey ON public.capture_import USING btree (id)
@@ -1076,6 +1089,7 @@ public.capture_pending_counterparty.next_attempt_at timestamp with time zone gen
 public.capture_pending_counterparty.owner_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.proposal_id uuid gen=- def=-
 public.capture_pending_counterparty.resolved_at timestamp with time zone gen=- def=-
+public.capture_pending_counterparty.resolved_by_owner boolean NOT NULL gen=- def=false
 public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::text
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
@@ -2305,8 +2319,6 @@ public.idx_project_org CREATE INDEX idx_project_org ON public.project USING btre
 public.idx_project_org_open CREATE INDEX idx_project_org_open ON public.project USING btree (organization_id) WHERE ((phase <> 'closed'::text) AND (archived_at IS NULL))
 public.idx_project_owner CREATE INDEX idx_project_owner ON public.project USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_project_search CREATE INDEX idx_project_search ON public.project USING gin (search_tsv)
-public.idx_quota_owner CREATE INDEX idx_quota_owner ON public.quota USING btree (owner_id) WHERE (owner_id IS NOT NULL)
-public.idx_quota_team CREATE INDEX idx_quota_team ON public.quota USING btree (team_id) WHERE (team_id IS NOT NULL)
 public.idx_record_grant_record CREATE INDEX idx_record_grant_record ON public.record_grant USING btree (record_type, record_id)
 public.idx_record_grant_subject CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id)
 public.idx_rel_company_projects CREATE INDEX idx_rel_company_projects ON public.relationship USING btree (organization_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
@@ -2349,6 +2361,7 @@ public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_mirror_conflict_class CREATE INDEX idx_system_log_mirror_conflict_class ON public.system_log USING btree (((detail ->> 'object_class'::text)), occurred_at DESC) WHERE (action = 'mirror.conflict'::text)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
+public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
 public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable USING btree (entity_type, entity_id)
 public.idx_taggable_tag CREATE INDEX idx_taggable_tag ON public.taggable USING btree (tag_id)
 public.idx_team_membership_team CREATE INDEX idx_team_membership_team ON public.team_membership USING btree (team_id)
@@ -3978,27 +3991,6 @@ public.provider_run_reservation.reserved_at timestamp with time zone NOT NULL ge
 public.provider_run_reservation.reserved_credits integer NOT NULL gen=- def=-
 public.provider_run_reservation.run_id uuid NOT NULL gen=- def=-
 public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservation_pkey ON public.provider_run_reservation USING btree (run_id, pool)
-public.quota acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.quota.archived_at timestamp with time zone gen=- def=-
-public.quota.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.quota.currency character(3) NOT NULL gen=- def=-
-public.quota.id uuid NOT NULL gen=- def=uuidv7()
-public.quota.owner_id uuid gen=- def=-
-public.quota.period_end date NOT NULL gen=- def=-
-public.quota.period_start date NOT NULL gen=- def=-
-public.quota.quota_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
-public.quota.quota_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.quota.quota_owner_xor_team CHECK (((owner_id IS NOT NULL) <> (team_id IS NOT NULL)))
-public.quota.quota_period_valid CHECK ((period_end >= period_start))
-public.quota.quota_pkey PRIMARY KEY (id)
-public.quota.quota_target_nonneg CHECK ((target_minor >= 0))
-public.quota.quota_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE SET NULL (team_id)
-public.quota.target_minor bigint NOT NULL gen=- def=-
-public.quota.team_id uuid gen=- def=-
-public.quota.trg_quota_updated CREATE TRIGGER trg_quota_updated BEFORE UPDATE ON public.quota FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.quota.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.quota.version bigint NOT NULL gen=- def=1
-public.quota_pkey CREATE UNIQUE INDEX quota_pkey ON public.quota USING btree (id)
 public.raw_capture acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.raw_capture.id uuid NOT NULL gen=- def=uuidv7()
 public.raw_capture.payload jsonb NOT NULL gen=- def=-
@@ -4435,19 +4427,26 @@ public.tag acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_
 public.tag.archived_at timestamp with time zone gen=- def=-
 public.tag.color text gen=- def=-
 public.tag.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.tag.description text gen=- def=-
 public.tag.id uuid NOT NULL gen=- def=uuidv7()
 public.tag.name text NOT NULL gen=- def=-
+public.tag.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
+public.tag.tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text]))))
 public.tag.tag_pkey PRIMARY KEY (id)
 public.tag.trg_tag_updated CREATE TRIGGER trg_tag_updated BEFORE UPDATE ON public.tag FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.tag.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.tag.version bigint NOT NULL gen=- def=1
 public.tag_pkey CREATE UNIQUE INDEX tag_pkey ON public.tag USING btree (id)
 public.taggable acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.taggable.assigned_at timestamp with time zone NOT NULL gen=- def=now()
+public.taggable.assigned_by uuid gen=- def=-
+public.taggable.assigned_by_kind text gen=- def=-
 public.taggable.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.taggable.entity_id uuid NOT NULL gen=- def=-
 public.taggable.entity_type text NOT NULL gen=- def=-
 public.taggable.id uuid NOT NULL gen=- def=uuidv7()
 public.taggable.tag_id uuid NOT NULL gen=- def=-
+public.taggable.taggable_assigned_by_kind_check CHECK (((assigned_by_kind IS NULL) OR (assigned_by_kind = ANY (ARRAY['human'::text, 'agent'::text, 'import'::text]))))
 public.taggable.taggable_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.taggable.taggable_pkey PRIMARY KEY (id)
 public.taggable.taggable_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
@@ -4691,7 +4690,7 @@ public.uq_site_read_org_inflight CREATE UNIQUE INDEX uq_site_read_org_inflight O
 public.uq_site_read_triage_inflight CREATE UNIQUE INDEX uq_site_read_triage_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'domain_triage'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_site_read_ws_id CREATE UNIQUE INDEX uq_site_read_ws_id ON public.site_read USING btree (id)
 public.uq_stage_position CREATE UNIQUE INDEX uq_stage_position ON public.stage USING btree (pipeline_id, "position") WHERE (archived_at IS NULL)
-public.uq_tag_name CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name))
+public.uq_tag_name CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name)) WHERE (archived_at IS NULL)
 public.uq_team_weekly_review_rep CREATE UNIQUE INDEX uq_team_weekly_review_rep ON public.team_weekly_review_rep USING btree (team_weekly_review_id, user_id)
 public.uq_team_weekly_review_team_week CREATE UNIQUE INDEX uq_team_weekly_review_team_week ON public.team_weekly_review USING btree (team_id, local_week_start)
 public.uq_transcript_read_inflight CREATE UNIQUE INDEX uq_transcript_read_inflight ON public.transcript_read USING btree (activity_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))

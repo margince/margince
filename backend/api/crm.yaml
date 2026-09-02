@@ -120,8 +120,6 @@ tags:
     description: Polymorphic activity timeline (email/call/meeting/note/task).
   - name: Leads
     description: Thin, segregated machine/bulk-sourced prospects + promotion.
-  - name: Lists
-    description: Static and dynamic-segment lists.
   - name: Tags
     description: Tags applicable to people/orgs/deals/leads.
   - name: Views
@@ -140,8 +138,6 @@ tags:
     description: The 🟡 confirm-first approval inbox (approve/reject staged agent actions).
   - name: Identity
     description: Current user / principal, plus Agent Seat Passport issuance (the local/A1 path).
-  - name: Quotas
-    description: Owner or team revenue quota targets for a period, with server-computed attainment (RD-WIRE-2/RD-WIRE-3).
   - name: Agents
     description: The governed agent tool surface — registry metadata for the operator UI.
   - name: Provenance
@@ -771,10 +767,27 @@ paths:
           in: query
           schema: { type: string }
           description: Full-text query over name/title (tsvector).
-        - name: tag
+        - name: tag_id
           in: query
-          schema: { type: string }
-          description: Filter by tag name.
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a person types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
         - name: organization_id
           in: query
           schema: { type: string, format: uuid }
@@ -2210,6 +2223,27 @@ paths:
         - name: q
           in: query
           schema: { type: string }
+        - name: tag_id
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a person types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
       responses:
         '200':
           description: A page of organizations.
@@ -3839,6 +3873,27 @@ paths:
           in: query
           schema: { type: string, enum: [sourced, influenced] }
           description: Deals a partner brought (`sourced`) or merely helped (`influenced`).
+        - name: tag_id
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a person types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
       responses:
         '200':
           description: A page of deals.
@@ -7240,108 +7295,10 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
 
   # ------------------------------ /lists ------------------------------------
-  /lists:
-    get:
-      tags: [Lists]
-      operationId: listLists
-      summary: List lists (static + dynamic segments).
-      parameters:
-        - name: entity_type
-          in: query
-          schema: { type: string, enum: [person, organization, deal, lead, project] }
-        - $ref: '#/components/parameters/IncludeArchived'
-      responses:
-        '200':
-          description: Lists.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ListListResponse' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-    post:
-      tags: [Lists]
-      operationId: createList
-      x-mcp-tool: { verb: create_record, record_type: list, tier: auto_execute, scope: write }
-      summary: Create a list (static set or dynamic segment).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateListRequest' }
-      responses:
-        '201':
-          description: Created list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/List' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-
-  /lists/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Lists]
-      operationId: getList
-      summary: Get a list by id.
-      responses:
-        '200':
-          description: The list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/List' }
-        '404': { $ref: '#/components/responses/NotFound' }
-    delete:
-      tags: [Lists]
-      operationId: archiveList
-      x-mcp-tool: { verb: archive_record, record_type: list, tier: auto_execute, scope: write }
-      summary: Archive a list.
-      responses:
-        '200':
-          description: Archived list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/List' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /lists/{id}/members:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Lists]
-      operationId: listListMembers
-      summary: List a list's members — explicit rows for a static list, or the live filter evaluation for a dynamic segment.
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: Members of the list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ListMemberListResponse' }
-        '404': { $ref: '#/components/responses/NotFound' }
-    post:
-      tags: [Lists]
-      operationId: addListMember
-      x-mcp-tool: { verb: update_record, record_type: list, tier: auto_execute, scope: write }
-      summary: Add a member to a static list.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/AddListMemberRequest' }
-      responses:
-        '201':
-          description: Added member.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ListMember' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-
   # ------------------------- /filters/vocabulary -----------------------------
   /filters/vocabulary:
     get:
-      tags: [Lists]
+      tags: [Views]
       operationId: getFilterVocabulary
       summary: Read what a new filter clause may name on one record type (LVS-EXT-8).
       description: |
@@ -7380,7 +7337,7 @@ paths:
 
   /filters/preview:
     post:
-      tags: [Lists]
+      tags: [Views]
       operationId: previewFilter
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport, matching createFilteredExport
       # Human-only, and the reason is the same property that makes this operation
@@ -7523,7 +7480,7 @@ paths:
         First-class filtered export (features/10 §3): emits exactly the rows that match the active
         filter AND that the caller may see (row-scoped through the same one filter engine that drives
         lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
-        with a `filter` (the canonical §13.5 predicate), a `view_id`, or a `list_id`. Bulk record read
+        with a `filter` (the canonical §13.5 predicate) or a `view_id`. Bulk record read
         that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
         export writes one `audit_log` entry (who exported what slice, when — P7/P12).
       requestBody:
@@ -7885,8 +7842,9 @@ paths:
       summary: List tags.
       description: |
         The workspace's tag vocabulary. Read it before applying one: apply_tag takes a tag_name and
-        creates the word when there is none, so a caller who cannot see the existing words invents a
-        near-duplicate — "K5 Conference" beside "K5 Conference 2026" — and the vocabulary stops being one.
+        REFUSES a word the workspace does not hold, so a caller who cannot see the existing words
+        asks for a near-duplicate — "K5 Conference" beside "K5 Conference 2026" — and an admin
+        coins it, and the vocabulary stops being one.
       x-mcp-tool: { verb: list_tags, record_type: tag, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/IncludeArchived'
@@ -7900,12 +7858,11 @@ paths:
     post:
       tags: [Tags]
       operationId: createTag
-      # No tool verb of its own. apply_tag takes a tag_name and creates the word
-      # when the workspace has none — "add tag: K5 Conference 2026" is one act
-      # to the person asking, and a create verb whose only caller is the next
-      # line of the same flow is a second call that exists for the surface's
-      # convenience rather than theirs. The tool surface still creates tags;
-      # it just does not have a verb that ONLY creates one.
+      # Human-only, and now the ONLY door that coins a word. apply_tag used to
+      # create one when the workspace had none; it refuses instead, because a
+      # vocabulary an agent can extend on a misspelling is not governed. Adding
+      # to it is an admin or ops act, taken deliberately at a surface where the
+      # existing words are on screen.
       x-agent-access: human-only
       summary: Create a tag.
       requestBody:
@@ -7925,11 +7882,62 @@ paths:
   /tags/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Tags]
+      operationId: getTag
+      x-mcp-tool: { verb: get_tag, record_type: tag, tier: auto_execute, scope: read }
+      summary: Read one tag, with how much of the workspace carries it.
+      description: |
+        The word and its weight. `usage` counts the records this caller may see — an admin
+        deciding whether to retire a tag needs to know what retiring it costs, and a count
+        that included rows they cannot read would be a number they cannot act on.
+
+        Counts cover the three advertised record types. Lead and project taggings exist in
+        storage and are not advertised, so they are not counted here either.
+      responses:
+        '200':
+          description: The tag.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Tags]
+      operationId: updateTag
+      # Human-only for the same reason createTag is: renaming a word every seat
+      # can already apply changes what a filter selects for everyone at once.
+      x-agent-access: human-only
+      summary: Rename, recolour or describe a tag.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTagRequest' }
+      responses:
+        '200':
+          description: The updated tag.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tag' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        # 409 covers both refusals this can give: a name another live tag already
+        # holds, and the version skew If-Match reports (code: version_skew).
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Tags]
       operationId: archiveTag
       x-mcp-tool: { verb: archive_record, record_type: tag, tier: auto_execute, scope: write }
       summary: Archive a tag.
+      description: |
+        Retiring a word leaves every record that carries it alone: the taggings stay, so a
+        history that says "this was a Key Account in March" is still true. What changes is
+        that nobody can apply it again.
       responses:
         '200':
           description: Archived tag.
@@ -7937,6 +7945,108 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Tag' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /tags/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Tags]
+      operationId: restoreTag
+      x-agent-access: human-only
+      summary: Bring an archived tag back into the vocabulary.
+      description: |
+        The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
+        name in the meantime: two words a reader cannot tell apart is the exact state the
+        vocabulary exists to prevent, and the caller has to rename one of them first.
+      responses:
+        '200':
+          description: The restored tag.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tag' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /tags/{id}/merge:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Tags]
+      operationId: mergeTags
+      x-agent-access: human-only
+      summary: Fold this tag into another, moving every record that carries it.
+      description: |
+        The fix for a vocabulary that grew two words for one idea. Every record carrying the
+        source ends up carrying the target, the source is archived, and its NAME IS RELEASED
+        — a later create may reuse it, and links to the old tag stop working.
+
+        The answer separates `moved` from `collapsed` because they are different facts: a
+        record that carried only the source is moved, and one that already carried both
+        collapses into a single tagging. An admin reading "12 moved, 3 collapsed" knows the
+        target grew by 12, which a single total would not tell them.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MergeTagsRequest' }
+      responses:
+        '200':
+          description: What the merge moved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MergeTagsResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{entity_type}/{entity_id}/tags:
+    parameters:
+      - name: entity_type
+        in: path
+        required: true
+        schema: { type: string, enum: [person, organization, deal] }
+      - name: entity_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Tags]
+      operationId: getRecordTags
+      x-mcp-tool: { verb: get_record_tags, record_type: tag, tier: auto_execute, scope: read }
+      summary: The tags on one record, and who put them there.
+      description: |
+        ONE read for all three record types, because the panel that draws them is one
+        component: a per-type block on each record response would be three copies of one
+        shape, and they would drift.
+
+        Each assignment carries who applied it and when, which the record page shows beside
+        the tag. `assigned_by` is absent for assignments made before the product recorded
+        it — absent means unknown, never "the system".
+
+        The three advertised types only. `taggable` admits lead and project, and this route
+        refuses them: a read that answered for a type no screen offers would be a surface
+        nobody meant to ship.
+
+        Withheld is not empty. A caller who may read the record but not the tag vocabulary
+        gets `withheld: true` and no assignments — distinguishable from a record that simply
+        carries none, because "no tags" is a claim about the record and this caller cannot
+        make it.
+      responses:
+        '200':
+          description: The record's tags.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordTagsResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        # A caller lacking read on the RECORD type is refused outright. Lacking
+        # the tag vocabulary is not a refusal — that answers 200 with withheld.
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /tags/{id}/apply:
     parameters:
@@ -8108,7 +8218,7 @@ paths:
           in: query
           schema:
             type: array
-            items: { type: string, enum: [person, organization, deal, activity, lead, project] }
+            items: { type: string, enum: [person, organization, deal, activity, lead, project, tag] }
           style: form
           explode: false
           description: Restrict to these object types (default all).
@@ -8967,31 +9077,51 @@ paths:
     post:
       tags: [Capture]
       operationId: purgeCaptureExclusion
-      summary: Destroy the mail one of your own rules matched.
+      summary: Destroy the mail one exclusion rule matched.
       description: |
         An exclusion stops FUTURE mail. This destroys what already arrived: the message text, the
         provider original, the attachments and their blobs, the embeddings, the delivery copies and
         everything derived from them. It is not reversible and there is no undo — the preview exists
         so the counts are seen before that is true.
 
-        Only mail your own connection brought in. A message a colleague also imported keeps their
-        copy: your import of it is released, theirs stands, and the message stays on their timeline.
-        A message the law still requires keeping survives both and is reported as skipped — a
-        statutory hold, or commercial correspondence inside its retention window. An owner told
-        their mail is gone must not find it still there.
+        How far it reaches follows the rule's own scope. For YOUR OWN rule: only mail your own
+        connection brought in. A message a colleague also imported keeps their copy — your import
+        of it is released, theirs stands, and the message stays on their timeline.
+
+        For a WORKSPACE rule: every captured message the rule matches, across every seat. The
+        message is destroyed for everybody, so every seat's claim on it goes with it — nobody is
+        left holding a stub on their timeline for mail they were told is gone.
+
+        A workspace purge needs the ADMIN role. Being able to WRITE a workspace rule is not
+        enough: that grant is held by ops seats too, and destroying every colleague's matching
+        mail is the workspace's own act.
+
+        It also matches the way ingress matches — a message the rule caught through a To or Cc
+        line is destroyed, not only one whose sender matched. A COLLEAGUE on that line does not
+        count: they are not the counterparty a rule is about, and admitting them would let a rule
+        naming your own mail domain match nearly everything.
+
+        Either arm needs a seat that may change things. A read seat is licensed to look, not to
+        destroy.
+
+        Either way, a message the law still requires keeping survives and is reported as skipped —
+        a statutory hold, or commercial correspondence inside its retention window. Somebody told
+        their mail is gone must not find it still there. And either way, only mail a connection
+        actually captured: an activity somebody logged by hand was never governed by a capture
+        rule and is left alone.
 
         An erasure request that has been EXECUTED leaves such a hold and is therefore covered. One
         still open is not: nothing marks the messages it will be about until somebody acts on it,
         so a purge can destroy correspondence a pending request was going to assemble.
 
-        Contacts go too, but only the ones your mail is the sole reason this CRM knows them: a
-        person with an address outside the rule, a deal against their name, or mail another
-        colleague also imported is somebody the workspace knows independently, and destroying that
-        record would take away work somebody did. Those that do go are anonymised rather than
-        deleted, so a colleague's records that reference them do not break.
-
-        Your own rules only. A workspace rule belongs to the workspace, and destroying every
-        colleague's matching mail is not one person's act.
+        Contacts go too on your own rule, but only the ones your mail is the sole reason this CRM
+        knows them. A person with an address outside the rule, a deal against their name, or mail
+        another colleague also imported is somebody the workspace knows independently, and
+        destroying that record would take away work somebody did. Those that do go are anonymised
+        rather than deleted, so a colleague's records that reference them do not break. A workspace purge
+        anonymises nobody: a contact every seat can see is by definition known for more reasons
+        than the mail one rule matched, and erasing people workspace-wide is what a data-subject
+        request is for.
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
       parameters:
@@ -9219,6 +9349,42 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /capture/counterparty-holds/share-history:
+    post:
+      tags: [Capture]
+      operationId: shareCaptureCounterpartyHoldHistory
+      summary: Re-open the mail the caller's counterparty holds already caught.
+      description: |
+        The undo for a hold placed by mistake — the wrong domain, a supplier typed as a lawyer.
+        Without it every message a hold ever caught stays held forever, because lifting the hold
+        deliberately widens nothing and the audience derivation only ever tightens.
+
+        Not per hold, and the wording matters: the capture record says that A hold caught a
+        message, never WHICH one, so this re-opens everything the caller's holds caught rather
+        than one domain's mail. There is no id here for that reason.
+
+        Three things it will NOT re-open, each because re-opening it would publish something
+        nobody asked to publish:
+
+        - a message a colleague also holds — their hold stands, and the message stays limited;
+        - a message that ALSO matched another rule, such as a `[Vertraulich]` subject marker or
+          the workspace mail-sharing floor;
+        - a message captured before the product recorded every matching rule, which cannot be
+          proven to have been held for this reason alone.
+
+        Answers how many of the caller's IMPORTS it released. A message another seat still holds
+        stays limited, so a released import is not always a message the workspace can now read.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: What was released.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShareCaptureHoldHistoryResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /capture/counterparty-holds/{id}:
     parameters:
@@ -9697,6 +9863,66 @@ paths:
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
           description: 'How many ranked items to return.'
+        - name: cursor
+          in: query
+          schema: { type: string }
+          description: |
+            Where to continue a walk, from a prior response's `next_cursor`. Omitted starts at
+            the top, which is what every reader opening their day wants.
+
+            NOT the shared keyset cursor the CRUD lists use, and the difference is why this
+            endpoint declares its own. Those walk rows a database already ordered, so their
+            token carries a sort key and the next page is a WHERE clause. This queue has no
+            such column: it assembles from a dozen lanes and ranks them by a comparator
+            reading facts no table holds — whether a wait is crowded, what a deal is worth in
+            base currency, which band a row landed in. So the token carries a POSITION in that
+            ranking, and the next page re-assembles the day, ranks it the same way, and starts
+            there.
+
+            It encodes the `scope`, `filter` and `owner` it was minted under, NORMALISED, so
+            that two spellings of one question share a cursor: an omitted `filter` and
+            `filter=all` weigh the same candidates, and naming yourself as `owner` is the
+            question the default already answers. Sending a cursor alongside a genuinely
+            different scope, filter or owner returns `422 code: cursor_param_mismatch` rather
+            than continuing into another question — page two of your own tasks silently
+            becoming the team's deals is what that prevents, and nothing in the response would
+            have said so. `limit` is deliberately NOT fingerprinted: it decides how many rows
+            a page carries, not which rows exist, so changing it mid-walk is legitimate.
+
+            A token that does not decode returns `422 code: malformed_cursor`. The token is
+            opaque, NOT authenticated: it is base64 of a small JSON object and a caller who
+            studies it can construct one. That grants nothing. A cursor only chooses where to
+            resume inside a page that is re-assembled from scratch under the caller's own
+            principal, so every row it can reach is one the caller could already read, and no
+            forged token widens scope or row visibility.
+
+            WHAT A WALK GUARANTEES, and what it does not. This is live work, so the day moves
+            between pages: a rep answers a message, a deal closes, a colleague takes a task.
+
+            Guaranteed: the walk TERMINATES, and over a day that does not move it reaches
+            every row exactly once. The offset advances on every page and the candidate set is
+            bounded, so no arrangement of arrivals, answers and reprioritisations makes a
+            client paging to exhaustion loop.
+
+            Not guaranteed: a stable snapshot, which a set re-assembled and re-ranked on every
+            read cannot offer. One consequence, and it is the whole cost of this design: A ROW
+            THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO READS IS SERVED TWICE OR NOT AT ALL ON
+            THIS WALK. A deal that turns urgent moves up past where you have got to; one that
+            is answered lets everything below it move up by one.
+
+            Such a row is not lost from the product — the next read of the queue ranks it
+            afresh and shows it — so treat a walk as a way to reach a backlog you already know
+            is there, not as a transaction over it. There is no way to ask for the whole day
+            at one instant: `limit` stops at 100 and a single category can hold more than that,
+            because the sources are read to their own bounds well past a page (the decision
+            lane alone weighs 200). `counts` is what says how much is behind the page.
+
+            The alternative was a token naming the last row it handed you, which is the
+            obvious design and is worse here. When that row is answered between pages, or
+            sinks to the end of the ranking, "everything after it" is empty and the walk
+            reports itself finished while work is still owed. A queue whose purpose is that
+            work is not forgotten cannot fail that way, so it accepts the boundary case above
+            instead.
         - name: owner
           in: query
           schema: { type: string, format: uuid }
@@ -9769,6 +9995,40 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TeamBoard' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /worklist/hidden:
+    get:
+      tags: [Brief]
+      operationId: getHiddenBacklog
+      summary: What the queue is not showing, and which rule is holding it back.
+      description: |
+        The Worklist is designed to look finite: a rep works it to the bottom and the day
+        is done. Five rules make a waiting customer disappear from it, and nothing on the
+        page can say whether any of them is hiding real work — a rep who marks every hard
+        reply `not_sales` produces a page identical to a rep with a clean queue. The
+        failure is invisible by construction, which is the one shape of defect a finite
+        queue cannot report on itself.
+
+        This is the counter-reading. Each figure is the SAME eligibility query the queue
+        runs, with ONE hiding rule relaxed, so a difference is attributable rather than a
+        single number nobody can act on: a reader is told which rule to look at.
+
+        THE TARGET IS ZERO, and every figure is a defect rather than a statistic. Two of
+        the rules are somebody's choice and two are nobody's — see each field.
+
+        Counted under the CALLER's own visibility, like `/worklist/team`'s counts are: a
+        figure summing rows the reader may not open would publish work they have no
+        access to. So this answers "how much is hidden from YOU", which is the only
+        honest reading available without giving one person a licence to read another's
+        records.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: What is being held back.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HiddenBacklog' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /digest:
@@ -11298,6 +11558,59 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+  /data-subject-requests/{id}/package:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Compliance]
+      operationId: downloadDataSubjectPackage
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Download the Art. 15 package an access request asks for.
+      description: |
+        Assembles everything this installation holds about the subject and hands it back as a file
+        to forward to them: their record and its identifiers, the conversations they were party to
+        and what was said in them, the attachments, consent and its history, what they themselves
+        submitted through a confirm link, what was read about them from public sources, and the
+        provider originals behind the captured mail.
+
+        A privileged read that deliberately crosses the caller's own row scope, because Art. 15
+        owes the subject everything held rather than the slice one colleague may see. So it takes
+        the same trust erasure does: an ADMIN, human, holding `person.delete`, with unbounded row
+        scope. An agent is refused whatever its passport carries — an admin's read-scoped passport
+        would otherwise assemble a subject's entire record.
+
+        Only an `access` request has a package. An erasure or a rectification is answered by its
+        own path, and handing back a subject's whole record to close a request that asked for
+        something else would be the export nobody asked for.
+
+        The request's `subject_ref` must name a person id. It is free text until somebody resolves
+        it, and a request naming nobody has nothing to assemble — the same refusal fulfilling an
+        erasure gives, for the same reason. A `subject_ref` that is not a person id at all answers
+        422; one that is a well-formed id naming no person answers 404. The two look identical on a
+        stale request row and are worth telling apart.
+
+        **The download is recorded.** Assembling a package writes an audit entry against the person
+        — action `export`, naming the officer who asked and how much it carried. That record is what
+        makes a read this privileged acceptable, and it is written whether or not the package
+        reaches anybody.
+
+        This does NOT change the request's status. Producing the export and deciding the request is
+        answered are two acts by the same person: mark it fulfilled through the PATCH once you have
+        sent it, so a download that never reached anybody does not close the row.
+      responses:
+        '200':
+          description: The package, as a JSON file named after the request.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: |
+                  The assembled package. Its sections follow what the installation actually holds,
+                  and the set grows whenever a new table starts holding subject data — the shape is
+                  deliberately not pinned here, because a schema mirrored in the contract would
+                  drift one release behind the export a gate checks for completeness.
+                additionalProperties: true
   /audit-log:
     get:
       tags: [Compliance]
@@ -14447,7 +14760,7 @@ paths:
   # archived) — setting is_default=true while another default already holds
   # that locale is rejected (409 offer_template_default_conflict); different
   # locales may each carry their own default. Deliberately carries no
-  # source/captured_by — like Quota/CustomField, this is workspace-authored
+  # source/captured_by — like CustomField, this is workspace-authored
   # config, not a captured record; provenance lives in the audit row.
   /offer-templates:
     get:
@@ -15749,243 +16062,6 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
-  # ------------------------------ /quotas -------------------------------------
-  /quotas:
-    get:
-      tags: [Quotas]
-      operationId: listQuotas
-      summary: List quotas (cursor-paginated).
-      x-mcp-tool: { verb: search_records, record_type: quota, tier: auto_execute, scope: read }
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Sort'
-        - $ref: '#/components/parameters/IncludeArchived'
-        - name: owner_id
-          in: query
-          schema: { type: string, format: uuid }
-        - name: team_id
-          in: query
-          schema: { type: string, format: uuid }
-      responses:
-        '200':
-          description: A page of quotas.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/QuotaListResponse' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-    post:
-      tags: [Quotas]
-      operationId: createQuota
-      summary: Create a quota (owner XOR team revenue target for one period).
-      description: |
-        RD-WIRE-2. Exactly one of owner_id/team_id must be non-null (RD-DDL-2 CHECK) —
-        supplying both or neither is refused with a 422 validation_error carrying a distinct
-        details.errors[].code (owner_xor_team_required), not the generic per-field
-        validation code, so a caller can branch on this specific violation. target_minor is
-        always human-set (RD-PARAM-3) — no default, no AI-guessed or server-computed
-        fallback. Quota targets follow the pipeline/stage-config posture (createPipeline,
-        updateStage): human session only (x-agent-access: human-only), never an MCP tool
-        tier — an agent never sets or changes a sales target.
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateQuotaRequest' }
-            examples:
-              ownerQuota:
-                value:
-                  owner_id: 018f3a1b-0000-7000-8000-000000000001
-                  period_start: '2026-01-01'
-                  period_end: '2026-03-31'
-                  target_minor: 28000000
-                  currency: EUR
-              teamQuota:
-                value:
-                  team_id: 018f3a1b-0000-7000-8000-000000000030
-                  period_start: '2026-01-01'
-                  period_end: '2026-03-31'
-                  target_minor: 100000000
-                  currency: EUR
-      responses:
-        '201':
-          description: Created quota.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Quota' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '422':
-          description: Validation failed, including the owner-XOR-team contract.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-              examples:
-                bothSet:
-                  summary: Both owner_id and team_id supplied
-                  value:
-                    type: 'https://errors.gradion.com/validation_error'
-                    title: Validation failed
-                    status: 422
-                    code: validation_error
-                    detail: Exactly one of owner_id/team_id must be set, not both.
-                    details:
-                      errors:
-                        - { field: owner_id, code: owner_xor_team_required, message: 'Supply exactly one of owner_id or team_id, not both.' }
-                neitherSet:
-                  summary: Neither owner_id nor team_id supplied
-                  value:
-                    type: 'https://errors.gradion.com/validation_error'
-                    title: Validation failed
-                    status: 422
-                    code: validation_error
-                    detail: Exactly one of owner_id/team_id must be set.
-                    details:
-                      errors:
-                        - { field: owner_id, code: owner_xor_team_required, message: 'Supply exactly one of owner_id or team_id.' }
-
-  /quotas/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Quotas]
-      operationId: getQuota
-      summary: Get a quota by id.
-      x-mcp-tool: { verb: read_record, record_type: quota, tier: auto_execute, scope: read }
-      responses:
-        '200':
-          description: The quota.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Quota' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-    patch:
-      tags: [Quotas]
-      operationId: updateQuota
-      summary: Update a quota (partial).
-      description: |
-        Merge-PATCH (API-CONV-1); If-Match required for concurrency-safe writes (API-CC-2).
-        Re-validates the owner-XOR-team contract after the merge — patching into a both-set
-        or neither-set state returns the same 422 owner_xor_team_required shape as
-        createQuota. Human session only, like createQuota/archiveQuota (see createQuota's
-        description) — an agent never sets or changes a sales target.
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/IfMatch'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/UpdateQuotaRequest' }
-      responses:
-        '200':
-          description: Updated quota.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Quota' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422':
-          description: Validation failed, including the owner-XOR-team contract.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-              examples:
-                bothSet:
-                  value:
-                    type: 'https://errors.gradion.com/validation_error'
-                    title: Validation failed
-                    status: 422
-                    code: validation_error
-                    detail: Exactly one of owner_id/team_id must be set, not both.
-                    details:
-                      errors:
-                        - { field: owner_id, code: owner_xor_team_required, message: 'Supply exactly one of owner_id or team_id, not both.' }
-    delete:
-      tags: [Quotas]
-      operationId: archiveQuota
-      summary: Archive (soft-delete) a quota.
-      description: |
-        Archive semantics (API-CONV-2): sets archived_at, drops from default lists, stays
-        fetchable by id, and returns 200 + the full archived entity — never 204. This
-        deliberately does not follow /automations/{id}'s deleteAutomation 204-on-archive
-        shape, which predates/diverges from the standard convention every other archive
-        operation in this contract (archivePerson, archiveOrganization, archiveDeal)
-        correctly follows. Human session only, like createQuota/updateQuota.
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      responses:
-        '200':
-          description: Archived quota (now carries a non-null archived_at).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Quota' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /quotas/{id}/attainment:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Quotas]
-      operationId: getQuotaAttainment
-      summary: Server-computed attainment for this quota (RD-WIRE-3), decomposed per closed-won deal.
-      x-mcp-tool: { verb: read_record, record_type: quota, tier: auto_execute, scope: read }
-      description: |
-        RD-FORM-2: attainment = Σ(closed-won base_value_minor in the quota's period) ÷
-        target_minor, base-currency converted. Never client-summed — contributing_deals
-        always sums to closed_won_minor. A zero or otherwise unusable target refuses the
-        computation honestly (422 attainment_target_zero, RD-AC-4/AC-quota-6) rather than
-        dividing by zero; a failed clean-core query (e.g. a missing FX rate, mirroring
-        getOrganizationHierarchyRollup's fx_rate_unavailable) is an honest error, never a
-        stale or invented figure. Requires read on quotas AND deals (the aggregate is
-        built from deal sums); per-deal row visibility is deliberately not consulted —
-        attainment is a workspace-level figure, the hierarchy-rollup posture.
-      responses:
-        '200':
-          description: This quota's server-computed attainment.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/QuotaAttainment' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422':
-          description: Attainment cannot be honestly computed — target is zero, or the clean-core query failed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
-              examples:
-                targetZero:
-                  summary: The quota's target_minor is zero
-                  value:
-                    type: 'https://errors.gradion.com/attainment_target_zero'
-                    title: Attainment target is zero
-                    status: 422
-                    code: attainment_target_zero
-                    detail: This quota's target_minor is zero; attainment is refused rather than computed against a zero denominator.
-                computationFailed:
-                  summary: The clean-core closed-won query failed
-                  value:
-                    type: 'https://errors.gradion.com/attainment_computation_failed'
-                    title: Attainment computation failed
-                    status: 422
-                    code: attainment_computation_failed
-                    detail: The clean-core closed-won query failed; showing a stale or guessed figure is never acceptable — retry.
-
   # =========================================================================
   # =========================================================================
   # NET-NEW V1 RESOURCES (data-model.md §12.5) — first-class, but specified by
@@ -15999,7 +16075,6 @@ paths:
   #   /drafting-assets    (E07/E08; approval flips `approved` — admin/🟡)
   #   /agent-connections  (E10; revoke via POST /agent-connections/{id}/revoke; events read-only)
   #   /saved-views        (E15; V1 enforces shared_scope=private)
-  #   /quotas             (E09; now SPECIFIED above, RD-T06 — owner XOR team, attainment via /quotas/{id}/attainment)
   #   /webhook-subscriptions (E10/S-E10.6, A51; HTTPS-only target_url, event_types ⊆ the published
   #                       events.md §2 catalog, signing_secret_ref; state active|paused. create/update
   #                       is 🟡 — registers outbound egress; x-mcp-tool create_record tier confirmation_required.
@@ -16611,6 +16686,60 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /me/brief-delivery:
+    get:
+      tags: [Identity]
+      operationId: getMyBriefDelivery
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: What the product may send you about your day and your week.
+      description: |
+        Always the CALLER's own. An admin does not read a colleague's inbox preferences
+        through this API any more than they read their display language.
+
+        A field is ABSENT where the member has never chosen, which is not the same as
+        choosing `none`: the first follows the installation's default and moves if that
+        default moves, the second is a decision that stays.
+      responses:
+        '200':
+          description: The caller's delivery settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BriefDelivery' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Identity]
+      operationId: saveMyBriefDelivery
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Choose what the product may send you.
+      description: |
+        Always the caller's own — there is no id by which one member sets another's, and
+        an agent carrying its grantor's authority does not change what lands in its
+        grantor's inbox.
+
+        A PATCH in shape: an omitted field is left as it was, never cleared. A client that
+        renders three controls and sends two must not silently reset the third, and the
+        settings page is exactly where that mistake costs somebody their mail without
+        anybody choosing it.
+
+        A save that moves nothing writes nothing and publishes nothing, so a page that
+        saves on every render does not fill the ledger with changes nobody made.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BriefDelivery' }
+      responses:
+        '200':
+          description: The settings as they now stand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BriefDelivery' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /me/locale:
     put:
       tags: [Identity]
@@ -20009,6 +20138,14 @@ components:
         record_exists:
           type: boolean
           description: Whether a contact actually exists for this address.
+        deletes_at:
+          type: string
+          format: date-time
+          description: |
+            When this sender's oldest message is destroyed. Present only for a `personal` verdict
+            you have not overruled — every other kind is withheld rather than destroyed, and
+            deciding this sender is business cancels the deletion. Later mail from the same sender
+            runs its own window, so this date names the next message to go rather than all of them.
 
     ThreadAudienceOutcome:
       type: object
@@ -20128,6 +20265,19 @@ components:
         data:
           type: array
           items: { $ref: '#/components/schemas/CaptureCounterpartyHold' }
+    ShareCaptureHoldHistoryResponse:
+      type: object
+      required: [released]
+      properties:
+        released:
+          type: integer
+          minimum: 0
+          description: |
+            How many of the caller's own imports stopped being held for this reason. Not the same
+            as how many messages the workspace can now read: a message a colleague also holds
+            stays limited, because the audience is the strictest answer across every seat that
+            imported it. Zero means every message the caller's holds caught is held for some
+            other reason too, or was captured before the product recorded more than one reason.
     CreateCaptureCounterpartyHoldRequest:
       type: object
       additionalProperties: false
@@ -21954,6 +22104,10 @@ components:
       description: A contact. Mirrors the `person` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        # The live tags this row carries, capped: a chip strip shows a few and
+        # says "+N", so a row does not need every word to draw one. Archived
+        # tags are omitted — a retired word is not drawn on a list.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         id: { type: string, format: uuid }
         first_name: { type: [string, 'null'] }
         last_name: { type: [string, 'null'] }
@@ -22234,6 +22388,10 @@ components:
       description: A company. Mirrors the `organization` table.
       required: [id, display_name, source, captured_by, created_at, updated_at]
       properties:
+        # The live tags this row carries, capped: a chip strip shows a few and
+        # says "+N", so a row does not need every word to draw one. Archived
+        # tags are omitted — a retired word is not drawn on a list.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
@@ -23701,7 +23859,7 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [people, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments]
+            enum: [people, deals, projects, strength, activities, tags, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments]
         people:
           type: object
           required: [data, page]
@@ -23732,7 +23890,6 @@ components:
         strength: { $ref: '#/components/schemas/OrganizationStrength' }
         activities: { $ref: '#/components/schemas/ActivityListResponse' }
         tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
-        list_memberships: { type: array, items: { $ref: '#/components/schemas/List' } }
         pending_approvals:
           type: object
           required: [data, page]
@@ -26420,6 +26577,10 @@ components:
       description: A deal. Mirrors the `deal` table.
       required: [id, name, pipeline_id, stage_id, status, source, captured_by, created_at, updated_at]
       properties:
+        # The live tags this row carries, capped: a chip strip shows a few and
+        # says "+N", so a row does not need every word to draw one. Archived
+        # tags are omitted — a retired word is not drawn on a list.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         id: { type: string, format: uuid }
         name: { type: string }
         amount_minor: { type: [integer, 'null'], format: int64 }
@@ -29101,17 +29262,6 @@ components:
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
 
-    CreateListRequest:
-      type: object
-      required: [name, entity_type]
-      properties:
-        name: { type: string }
-        entity_type: { type: string, enum: [person, organization, deal, lead, project] }
-        list_type: { type: string, enum: [static, dynamic], default: static }
-        definition: { type: [object, 'null'], additionalProperties: true }
-        owner_id: { type: [string, 'null'], format: uuid }
-        team_id: { type: [string, 'null'], format: uuid }
-
     ListMember:
       type: object
       required: [id, list_id, entity_type, entity_id]
@@ -29122,27 +29272,6 @@ components:
         entity_id: { type: string, format: uuid }
         added_by: { type: string }
         created_at: { type: string, format: date-time }
-
-    AddListMemberRequest:
-      type: object
-      required: [entity_type, entity_id]
-      properties:
-        entity_type: { type: string, enum: [person, organization, deal, lead, project] }
-        entity_id: { type: string, format: uuid }
-
-    ListListResponse:
-      type: object
-      required: [data, page]
-      properties:
-        data: { type: array, items: { $ref: '#/components/schemas/List' } }
-        page: { $ref: '#/components/schemas/PageInfo' }
-
-    ListMemberListResponse:
-      type: object
-      required: [data, page]
-      properties:
-        data: { type: array, items: { $ref: '#/components/schemas/ListMember' } }
-        page: { $ref: '#/components/schemas/PageInfo' }
 
     FilterPreviewRequest:
       type: object
@@ -29303,8 +29432,16 @@ components:
       required: [id, name]
       properties:
         id: { type: string, format: uuid }
-        name: { type: string }
-        color: { type: [string, 'null'] }
+        name: { type: string, maxLength: 64 }
+        # The palette the design system draws, closed on purpose: a tag is a
+        # shared word, and a colour a reader cannot tell from another one is
+        # not a distinction. Mirrors the tag_color_check constraint.
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
+        # The If-Match precondition a caller sends back when they rename this
+        # tag. Without it on the read, a client has nothing to quote and every
+        # rename is last-write-wins.
+        version: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -29313,8 +29450,130 @@ components:
       type: object
       required: [name]
       properties:
+        # Bounded because the server bounds it: leading and inner whitespace is
+        # collapsed before the length is measured, so a name that fits once
+        # normalized is accepted even when it was typed longer.
+        name: { type: string, maxLength: 64 }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
+
+    RowTag:
+      type: object
+      description: |
+        A tag as a list ROW carries it: the word and its colour, nothing else. The full
+        assignment — who applied it, when — comes from the record's own tags read, because a
+        page of fifty rows does not need fifty assignments to draw a chip.
+      required: [tag_id, name]
+      properties:
+        tag_id: { type: string, format: uuid }
         name: { type: string }
-        color: { type: [string, 'null'] }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+
+    RecordTagsResponse:
+      type: object
+      description: |
+        What one record carries. `withheld` says the caller could not read the vocabulary,
+        which is why `data` is empty — a reader has to be able to tell that from a record
+        with no tags on it.
+      required: [data, withheld]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/RecordTag' } }
+        withheld: { type: boolean }
+
+    RecordTag:
+      type: object
+      description: One tag on one record, with the assignment that put it there.
+      required: [tag_id, name, archived, assigned_at]
+      properties:
+        tag_id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
+        # Archived tags stay ON the records that carry them: retiring a word
+        # stops it being applied, it does not un-tag a history that was true.
+        # The panel draws them muted rather than hiding them.
+        archived: { type: boolean }
+        assigned_at: { type: string, format: date-time }
+        # Absent when the assignment predates the product recording it. A reader
+        # sees "added on 3 March" with no name rather than a name nobody chose.
+        assigned_by: { $ref: '#/components/schemas/RecordTagAssigner' }
+
+    RecordTagAssigner:
+      type: object
+      description: Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's.
+      required: [kind]
+      properties:
+        user_id: { type: [string, 'null'], format: uuid }
+        display_name: { type: [string, 'null'] }
+        kind: { type: string, enum: [human, agent, import] }
+
+    TagDetail:
+      type: object
+      description: One tag with how much of the workspace carries it.
+      required: [id, name, usage]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 64 }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
+        version: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        archived_at: { type: [string, 'null'], format: date-time }
+        usage: { $ref: '#/components/schemas/TagUsage' }
+
+    TagUsage:
+      type: object
+      description: |
+        How many records of each advertised type carry this tag, counted within what the
+        reader may see. Lead and project taggings are storage the product does not advertise
+        and are not counted.
+      required: [people, companies, deals]
+      properties:
+        people: { type: integer }
+        companies: { type: integer }
+        deals: { type: integer }
+
+    UpdateTagRequest:
+      type: object
+      description: |
+        A partial update: an omitted field is left alone.
+
+        Clearing is spelled as a VALUE, not as null. `color: "none"` removes the colour and
+        `description: ""` removes the text, because a decoded absent field and a decoded null
+        are the same thing in the generated request type — a contract that promised the two
+        meant different things would be promising something no server can honour.
+
+        The name cannot be cleared. A tag without one cannot be applied or read.
+      properties:
+        name: { type: string, maxLength: 64 }
+        color: { type: string, enum: [teal, amber, rose, slate, none] }
+        description: { type: string }
+
+    MergeTagsRequest:
+      type: object
+      required: [into_tag_id]
+      properties:
+        into_tag_id:
+          type: string
+          format: uuid
+          description: The tag that survives. Must be live, and must not be this tag.
+
+    MergeTagsResult:
+      type: object
+      description: What the merge did, in the two numbers that differ.
+      required: [into_tag_id, moved, collapsed]
+      properties:
+        into_tag_id: { type: string, format: uuid }
+        moved:
+          type: integer
+          description: Records that carried only the source and now carry the target.
+        collapsed:
+          type: integer
+          description: |
+            Records that already carried both. Their duplicate tagging is dropped rather than
+            moved, so the target gains nothing from them — which is why this is not folded
+            into `moved`.
 
     Taggable:
       type: object
@@ -29404,15 +29663,15 @@ components:
       type: object
       description: >-
         A filtered export request. Supply exactly ONE source: an inline `object`
-        (with a required `filter`), a `view_id` (a saved view whose filter state is
-        exported), or a `list_id` (a dynamic list whose definition is exported). The
-        slice is always row-scoped to the caller through the one filter engine.
+        (with a required `filter`) or a `view_id` (a saved view whose filter state
+        is exported). The slice is always row-scoped to the caller through the one
+        filter engine.
       required: [format]
       properties:
         object:
           type: string
           enum: [person, organization, deal, lead, project]
-          description: The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
+          description: The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
         filter:
           type: object
           additionalProperties: true
@@ -29420,11 +29679,7 @@ components:
         view_id:
           type: string
           format: uuid
-          description: Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
-        list_id:
-          type: string
-          format: uuid
-          description: Export the definition of a dynamic list. Mutually exclusive with object/view_id.
+          description: Export the filter state of one of the caller's saved views. Mutually exclusive with object.
         format:
           type: string
           enum: [csv, json]
@@ -29792,6 +30047,38 @@ components:
 
     # ---- Authorization (the /me capability snapshot) ----
 
+    BriefDelivery:
+      type: object
+      additionalProperties: false
+      description: |
+        What one member wants delivered. Every field is optional in BOTH directions: absent
+        on a read means they have never chosen, absent on a write means leave it alone.
+      properties:
+        morning_brief_delivery:
+          type: string
+          enum: [none, email]
+          description: |
+            Whether the morning brief arrives by mail. `none` is a CHOICE to receive
+            nothing; absent is not.
+        weekly_delivery:
+          type: string
+          enum: [none, email]
+          description: The same, for the weekly review.
+        quiet_day_notice:
+          type: boolean
+          description: |
+            Whether a day with nothing to act on still gets a message. Its own setting
+            rather than an implication of the two above: "tell me when there is something"
+            and "tell me every morning either way" are different asks.
+        delivery_hour_local:
+          type: integer
+          minimum: 0
+          maximum: 23
+          description: |
+            The local hour a delivery should not arrive before, in the installation's
+            reporting timezone. Absent means the job's own hour, which is what every seat
+            gets today.
+
     WeeklyPlan:
       type: object
       additionalProperties: false
@@ -29884,7 +30171,7 @@ components:
       enum:
         [person, organization, deal, lead, activity, pipeline, list, tag, relationship, partner,
          automation, voice_profile, product, offer, signal, saved_view, custom_field,
-         computed_field, quota, offer_template, overlay_connection, embedding_reindex,
+         computed_field, offer_template, overlay_connection, embedding_reindex,
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
@@ -30638,7 +30925,10 @@ components:
       type: object
       required: [type, id]
       properties:
-        type: { type: string, enum: [person, organization, deal, activity, lead, project] }
+        # `tag` is a WORD, not a record: finding it is the step before finding
+        # the records that carry it, and without it a reader has to know the
+        # vocabulary already.
+        type: { type: string, enum: [person, organization, deal, activity, lead, project, tag] }
         id: { type: string, format: uuid }
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }
@@ -30977,7 +31267,6 @@ components:
             - person
             - product
             - project
-            - quota
             - record_grant
             - relationship
             - saved_view
@@ -32116,6 +32405,15 @@ components:
             than only the part of it that was new.
         target_entity_type: { type: [string, 'null'], description: Entity the effect mutates (for precondition re-validation). }
         target_entity_id: { type: [string, 'null'], format: uuid }
+        target_label:
+          type: [string, 'null']
+          description: >-
+            What the target record was CALLED when this proposal was staged, where its type
+            has a name at all. Resolved at staging time and frozen: the record may be
+            renamed, archived or merged before anyone opens the inbox, and a caption
+            re-resolved then would name something the approver was never shown. Absent means
+            the type carries no name, or the row had already gone — a card then says nothing
+            rather than "unknown".
         target_version: { type: [integer, 'null'], description: 'The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036).' }
         diff_hash: { type: [string, 'null'], description: 'Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect.' }
         summary: { type: [string, 'null'], description: One-line description of the proposed change. }
@@ -33817,7 +34115,7 @@ components:
       description: >-
         A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6).
         Mirrors the `offer_template` table. Deliberately carries no source/captured_by —
-        like Quota/CustomField, this is workspace-authored config, not a captured record;
+        like CustomField, this is workspace-authored config, not a captured record;
         provenance lives in the audit row, not this schema.
       required: [id, name, locale, is_default, layout, version, created_at, updated_at]
       properties:
@@ -34853,11 +35151,23 @@ components:
         How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
         queue's own count under its both-sides-visible rule, kept separate because the
         lane shows a bounded slice of it.
+
+        A lane whose count is its bounded page says so in its own description. `needs_you`,
+        `planned` and `commitments` report the TOTAL beside a bounded page, because a badge
+        that stops at the cap tells a reader with thirteen that they have twelve — and these
+        lanes offer no second page to find the thirteenth by.
       required: [needs_you, planned, this_morning]
       properties:
         this_morning: { type: integer, minimum: 0, description: "Briefing items still unanswered in the rep's run for today." }
         needs_you: { type: integer, minimum: 0 }
-        planned: { type: integer, minimum: 0 }
+        planned:
+          type: integer
+          minimum: 0
+          description: >-
+            How many pieces of agreed work are due by the end of the installation's day —
+            EVERY one this caller may see, not the bounded page below it. The lane shows the
+            soonest-due dozen; the number says how many there are, which is the reading
+            `needs_you` has always had.
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
         meetings:
           type: integer
@@ -34875,9 +35185,9 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many promises this lane is CARRYING, which is the bounded page rather than every
-            promise due — the same bound `planned` reports under. A rep past the bound sees the
-            soonest-due ones, which is the order the lane is in.
+            How many promises are due by the end of the installation's day — EVERY one this
+            caller may see, not the bounded page below it, the same reading `planned` carries.
+            A rep past the bound sees the soonest-due ones, which is the order the lane is in.
         relationship_decay:
           type: integer
           minimum: 0
@@ -35107,7 +35417,7 @@ components:
         does, widened: a source the caller may not read is named as `withheld`, and one
         that failed to answer is named as `failed`. Both keep the summary from claiming a
         clear day it did not actually see.
-      required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts]
+      required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts, readings]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
         scope:
@@ -35131,6 +35441,26 @@ components:
           type: array
           items: { $ref: '#/components/schemas/WorklistSourceUnavailable' }
           description: 'Sources that could not be included, and why. Empty is the honest common case.'
+        next_cursor:
+          type: string
+          description: |
+            Send this back as `cursor` to continue past the last row of this page. See that
+            parameter for what a walk does and does not guarantee.
+
+            ABSENT MEANS THE WALK IS OVER — nothing was left behind this page. It is
+            deliberately not minted on a final page: a cursor there invites one more request
+            that can only answer empty, and a client walking until the cursor disappears
+            would never stop.
+
+            Absent is therefore a claim, not a silence, and it is the one this field must
+            never make wrongly. It is a claim about THIS READ of the day: work that arrives
+            afterwards, or that overtakes rows already handed out, appears on the next read
+            rather than extending a finished walk.
+
+            `reach` and `counts` answer a different question — how deep each SOURCE was read,
+            which is a bound on work rather than the end of a page — so a walk that has ended
+            can still sit above sources that were cut short, and both statements are true at
+            once.
         reach:
           type: array
           items: { $ref: '#/components/schemas/WorklistReach' }
@@ -35146,6 +35476,7 @@ components:
             pill counts, and what lets the page say how much it is not showing. Counted
             before any narrowing, so a filtered page still reports the categories it is
             not drawing.
+        readings: { $ref: '#/components/schemas/WorklistReadings' }
         bands:
           type: array
           items: { $ref: '#/components/schemas/WorklistBand' }
@@ -35338,6 +35669,160 @@ components:
             the client can say WHY a deal ranked where it did. Null when the pipeline has
             no open deals to take a median of.
         base_currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$', description: 'The currency every expected-revenue figure here is converted to.' }
+
+    WorklistReadings:
+      type: object
+      description: |
+        The day's four OUTCOME figures, for the strip above the queue: what money is
+        drifting, who is waiting on an answer, how much new business is in hand, and how
+        much routine work is queued behind a decision.
+
+        These are not the filter pills. `counts` says how many items of a kind the queue
+        holds; these say what those items MEAN for the day, which is why one of them is a
+        sum of money rather than a tally. Both are on the page because a rep asks two
+        different questions — "what is there" and "what is at stake".
+
+        Every figure describes the same set `counts.considered` describes: what this read
+        weighed AFTER the scope narrowing and BEFORE the category filter, the fold and the
+        page cut. That is the only set for which the numbers are stable — computed over
+        the page, the strip would shrink as a reader walked the queue and read as work
+        disappearing; computed after the filter, opening a pill would empty the other
+        three.
+
+        `more_available` carries the same honesty `WorklistCount` carries, for the same
+        reason: a source read to its work bound makes every figure here a FLOOR rather
+        than a total, and a strip stating "3 buyers waiting" over a scan that stopped
+        early tells a rep the opposite of the truth.
+      required: [revenue_at_risk_minor, buyer_replies, prospecting, review, more_available]
+      properties:
+        revenue_at_risk_minor:
+          type: [integer, 'null']
+          format: int64
+          description: |
+            What the drifting deals are worth, summed over the deals this read PRICED, in
+            the currency `revenue_currency` names.
+
+            Null when no deal at risk could be priced — no amount recorded, or no stored
+            rate for its currency. Null is not zero: zero says the pipeline is safe, and
+            absence says nobody can tell. A deal the estate cannot price is left OUT of
+            the sum rather than counted as nothing, so a partly priced day reports what it
+            could price and says so through `revenue_currency`.
+
+            It is a FLOOR on what is drifting, never a total, and two things put work
+            outside it. A deal nobody could price is one. The other is that only the
+            at-risk lane goes through the currency conversion, so a deal reaching the page
+            from the overnight brief draws an amount on its own card and adds nothing
+            here. Both are why `more_available` matters: read this figure as "at least
+            this much", and read the `deals_at_risk` entry in `counts` for how many deals
+            stand behind it.
+        revenue_currency:
+          type: [string, 'null']
+          pattern: '^[A-Z]{3}$'
+          description: |
+            The currency `revenue_at_risk_minor` is stated in — the installation's base
+            currency, once the amounts went through the conversion seam.
+
+            Null when they did not, which makes the sum a total of raw minor units in no
+            one currency. A client must not format a figure whose units it cannot name:
+            with this absent the amount is not money yet, and drawing it as money is the
+            error the conversion seam exists to prevent.
+        buyer_replies:
+          type: integer
+          minimum: 0
+          description: 'How many customers have written and are waiting on an answer.'
+        prospecting:
+          type: integer
+          minimum: 0
+          description: 'How much new business is in hand and owed a first response.'
+        review:
+          type: integer
+          minimum: 0
+          description: |
+            How much routine work is queued behind a decision. Counted before the fold, so
+            a hundred alike approvals read as a hundred here even where the queue draws
+            them as one row — the strip says how much work there is, and the queue says
+            how much reading it costs.
+        more_available:
+          type: boolean
+          description: |
+            True when any source behind any figure here was read to its work bound, so
+            every number above is a floor. Set once for the strip rather than per reading:
+            the four are read as one row, and a reader who cannot trust one of them cannot
+            trust the row.
+
+    HiddenBacklog:
+      type: object
+      description: |
+        How much waiting work each hiding rule is keeping off one reader's queue, at one
+        instant. Every count is of THREADS, matching what the queue counts: a customer who
+        wrote three times is waiting once.
+      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, truncated, clear]
+      properties:
+        as_of: { type: string, format: date-time, description: 'The instant every figure below was read at.' }
+        shown:
+          type: integer
+          minimum: 0
+          description: |
+            What the queue itself would carry. Here so the others read as a proportion
+            rather than as bare volumes — three hidden against four shown is a broken
+            queue, and three against three hundred is a rep tidying up.
+        set_aside:
+          type: integer
+          minimum: 0
+          description: |
+            Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
+            least alarming of the four: a snooze lifts on its own moment, so this includes
+            work that will come back without anybody remembering it. `not_mine` does not
+            lift at all.
+        not_sales:
+          type: integer
+          minimum: 0
+          description: |
+            Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
+            the judgement worth watching: it hides the thread from the WHOLE workspace and
+            never lifts, so one rep's mistake removes a customer from everybody's day
+            permanently.
+        past_horizon:
+          type: integer
+          minimum: 0
+          description: |
+            Work older than the queue's horizon with no open deal behind it. NOBODY CHOSE
+            THIS. A customer who wrote four months ago and was never answered is exactly
+            the failure a sales queue exists to prevent, and the horizon removes them on a
+            date with no rep having judged anything.
+
+            Bounded at a year: past that a message is history by any reading, and an
+            unbounded scan would answer a different question at the cost of a full table
+            read.
+        unlinked:
+          type: integer
+          minimum: 0
+          description: |
+            Inbound mail that qualifies in every other way and is attached to no record the
+            workspace sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+            is right — a rep's dentist is not a customer — and it is also where a real
+            customer lands when capture failed to link their thread. Its own figure for
+            that reason rather than folded into a total.
+        truncated:
+          type: boolean
+          description: |
+            True when a read stopped at its own scan bound, which makes every figure above
+            it a FLOOR rather than a count.
+
+            The bound is on the shared statement, so the strict read and every relaxed read
+            clip at the same number. On a queue already at the cap all five return it, every
+            difference is zero, and a guardrail without this flag would report a clear
+            backlog over the installation most likely to be hiding work.
+
+            `clear` is false whenever this is true. That is not a claim that work IS hidden;
+            it is a refusal to claim the opposite over a question the scan stopped before
+            settling.
+        clear:
+          type: boolean
+          description: |
+            True when nothing is being held back AND the reads were complete. The
+            guardrail's target, sent as its own field because a number only ever read beside
+            other numbers becomes decoration — this is what a check asserts on.
 
     WorklistItem:
       type: object
@@ -35604,165 +36089,6 @@ components:
       properties:
         source: { type: string }
         reason: { type: string, enum: [withheld, failed] }
-    # ---- Quota + attainment (RD-T06, RD-WIRE-2/3, RD-DDL-2, RD-FORM-2) ----
-    Quota:
-      type: object
-      description: |
-        A per-owner or per-team revenue target for one period (RD-DDL-2). Exactly one of
-        owner_id/team_id is non-null (CHECK constraint) — never both, never neither;
-        createQuota/updateQuota document and enforce this (422 owner_xor_team_required).
-        target_minor is always human-set: no AI-guessed quota, no default, no
-        server-computed fallback (RD-PARAM-3). Deliberately carries no
-        source/captured_by/created_by provenance columns — unlike custom_field's
-        created_by (CF-T01), RD-DDL-2's column list has none. Attainment is a separate
-        read (getQuotaAttainment, RD-WIRE-3) — this schema never carries attainment
-        fields itself.
-      required: [id, period_start, period_end, target_minor, currency, created_at, updated_at]
-      properties:
-        id: { type: string, format: uuid }
-        owner_id:
-          type: [string, 'null']
-          format: uuid
-          description: Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-        team_id:
-          type: [string, 'null']
-          format: uuid
-          description: Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-        period_start: { type: string, format: date }
-        period_end: { type: string, format: date }
-        target_minor:
-          type: integer
-          format: int64
-          description: >-
-            Human-set revenue target, integer minor units (RD-PARAM-3) — never an AI-guessed
-            or server-computed field.
-        currency: { type: string, pattern: '^[A-Z]{3}$' }
-        version: { $ref: '#/components/schemas/RowVersion' }
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
-        archived_at: { type: [string, 'null'], format: date-time }
-
-    QuotaListResponse:
-      type: object
-      required: [data, page]
-      properties:
-        data: { type: array, items: { $ref: '#/components/schemas/Quota' } }
-        page: { $ref: '#/components/schemas/PageInfo' }
-
-    CreateQuotaRequest:
-      type: object
-      description: |
-        Exactly one of owner_id/team_id must be non-null — supplying both or neither is a 422
-        validation_error carrying a distinct, machine-branchable details.errors[].code
-        (owner_xor_team_required), not the generic per-field validation code (see
-        createQuota's 422 examples). Not expressed as an OpenAPI 3.1 oneOf here — a prose
-        note plus a 422 on mismatch, matching how CreateCustomFieldRequest documents its
-        conditional currency/options requirement (CF-T01).
-      required: [period_start, period_end, target_minor, currency]
-      properties:
-        owner_id: { type: [string, 'null'], format: uuid }
-        team_id: { type: [string, 'null'], format: uuid }
-        period_start: { type: string, format: date }
-        period_end: { type: string, format: date }
-        target_minor: { type: integer, format: int64, minimum: 0 }
-        currency: { type: string, pattern: '^[A-Z]{3}$' }
-
-    UpdateQuotaRequest:
-      type: object
-      description: >-
-        Merge-PATCH (API-CONV-1). Re-validates owner-XOR-team after the merge is applied —
-        patching the row into a both-set or neither-set state is refused with the same 422
-        owner_xor_team_required shape as createQuota, not silently accepted. Switching a
-        quota between owner- and team-scoped is archive-and-recreate: merge-PATCH cannot
-        express the null clear (omitted and null are the same wire shape), so a PATCH can
-        only reassign within the side the row already carries.
-      properties:
-        owner_id: { type: [string, 'null'], format: uuid }
-        team_id: { type: [string, 'null'], format: uuid }
-        period_start: { type: string, format: date }
-        period_end: { type: string, format: date }
-        target_minor: { type: integer, format: int64, minimum: 0 }
-        currency: { type: string, pattern: '^[A-Z]{3}$' }
-
-    QuotaAttainment:
-      type: object
-      description: |
-        RD-WIRE-3 / RD-FORM-2 — server-computed attainment for one quota, decomposed for
-        "explain this number": attainment = Σ(closed-won base_value_minor in the quota's
-        period) ÷ target_minor, base-currency converted, in integer minor units. Never
-        client-summed — contributing_deals always sums to closed_won_minor. Rides as a
-        sub-resource of the quota (mirrors /organizations/{id}/hierarchy-rollup's
-        "computed read with decomposition" shape) rather than an inline field on Quota or
-        a GET ?include= expansion — chosen once, applied consistently; the plain Quota
-        response (list or single-get) never carries attainment fields. A failed or absent
-        computation is an honest error (getQuotaAttainment's 422 responses), never a
-        cached or invented figure (RD-AC-4).
-      required: [quota_id, closed_won_minor, target_minor, currency, attainment_pct, gap_minor, pace_pct, band, as_of_date, contributing_deals]
-      properties:
-        quota_id: { type: string, format: uuid }
-        closed_won_minor:
-          type: integer
-          format: int64
-          description: Σ base_value_minor over closed-won deals in the quota's period (RD-FORM-2).
-        target_minor:
-          type: integer
-          format: int64
-          description: >-
-            The BASE-CONVERTED target this attainment is measured against — Quota.target_minor
-            converted into the workspace base currency at the as_of_date FX rate. It equals
-            Quota.target_minor only when the quota is set in the base currency; a cross-currency
-            quota's echo differs, so gap arithmetic never mixes currencies.
-        currency:
-          type: string
-          pattern: '^[A-Z]{3}$'
-          description: >-
-            The workspace base currency — every money figure here (closed_won_minor,
-            target_minor, gap_minor) is denominated in it, NOT in Quota.currency.
-        attainment_pct:
-          type: number
-          description: >-
-            closed_won_minor ÷ target_minor × 100 (RD-FORM-2). Uncapped raw value — e.g. 113
-            for the worked example — display capping (the ring visual stops at a full circle)
-            is a RD-PARAM-4 UI concern, not this field's.
-        gap_minor:
-          type: integer
-          format: int64
-          description: >-
-            Signed gap to target — closed_won_minor minus target_minor (RD-FORM-2's worked
-            example: +33.872,00 EUR once closed-won exceeds target); positive once attainment
-            exceeds 100%, negative while short of target.
-        pace_pct:
-          type: number
-          description: >-
-            Percent of the quota period elapsed at as_of_date (RD-PARAM-4 pace indicator):
-            0 before period_start, 100 at/after period_end, linear between. Carries period
-            progress ONLY — comparing it against attainment_pct (ahead/behind pace) is the
-            consumer's step, not encoded in this field.
-        band:
-          type: string
-          enum: [met, accent, behind]
-          description: >-
-            Server-computed display band (RD-PARAM-4): met >= 100%, accent 60-99%, behind
-            < 60%. The client never recomputes this from raw attainment_pct.
-        as_of_date: { type: string, format: date, description: The date this attainment was computed. }
-        contributing_deals:
-          type: array
-          description: Per-deal decomposition for "Explain This Number"; sums to closed_won_minor.
-          items: { $ref: '#/components/schemas/QuotaAttainmentDeal' }
-
-    QuotaAttainmentDeal:
-      type: object
-      description: One row of RD-FORM-2's per-deal breakdown — a closed-won deal counted toward this quota's attainment.
-      required: [deal_id, base_value_minor]
-      properties:
-        deal_id: { type: string, format: uuid }
-        base_value_minor:
-          type: integer
-          format: int64
-          description: This deal's counted amount toward closed_won_minor (base currency, minor units).
-
-    # ---- Knowledge: document corpora and the grounded ask over them ----------
-
     KnowledgeCorpus:
       type: object
       required: [id, name, topic_statement, min_similarity, default_ask, coverage, created_at]

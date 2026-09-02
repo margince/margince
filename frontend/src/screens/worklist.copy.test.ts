@@ -11,8 +11,8 @@ import { describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
 import type { Translator } from "../i18n";
 import { translate } from "../i18n";
-import { comparisonText } from "./worklist.copy";
-import type { WorklistComparison } from "./worklist.queries";
+import { comparisonText, moveHref, moveOpensComposer } from "./worklist.copy";
+import type { WorklistComparison, WorklistItem } from "./worklist.queries";
 
 const t: Translator = (key, params) => translate("en", key, params);
 // The elapsed-days math under test (calendarDaysBetween) does not take a
@@ -91,5 +91,65 @@ describe("comparisonText — waiting_days tie-break", () => {
 
   it("draws nothing for order (every comparator tied, ids broke it)", () => {
     expect(comparisonText({ comparator: "order" }, t, "en", zone)).toBeNull();
+  });
+});
+
+// The move that became performable.
+//
+// The row refused to promise a draft until a route existed to open one — its
+// own comment said so. These are about the two halves of that promise moving
+// together: where the composer opens, and what the label is allowed to claim.
+
+function replyRow(subject: { type: string; id: string } | undefined) {
+  return {
+    id: "r1",
+    source: "waiting_customer",
+    category: "customer_waiting",
+    title: "Aster Handel",
+    because: [],
+    actions: ["open"],
+    dispositions: [],
+    overdue: false,
+    subject,
+    move: { action: "draft_reply", activity_id: "a-1" },
+  } as unknown as WorklistItem;
+}
+
+describe("moveHref — the draft_reply move", () => {
+  // The composer lives on the person page and drafts to the person. A link
+  // asking for it there is a link that does what its label says.
+  it("opens the composer on a person's record", () => {
+    const href = moveHref(replyRow({ type: "person", id: "p-1" }));
+    expect(href).toContain("#/contacts/p-1");
+    expect(href).toContain("compose=reply");
+    expect(moveOpensComposer(replyRow({ type: "person", id: "p-1" }))).toBe(
+      true,
+    );
+  });
+
+  // A deal has no composer to open, so a link claiming to draft there would
+  // promise what the click cannot do. It reaches the record and says so.
+  it("reaches the record, and claims no draft, where there is no composer", () => {
+    for (const type of ["deal", "organization"]) {
+      const item = replyRow({ type, id: "x-1" });
+      expect(moveHref(item)).not.toContain("compose=");
+      expect(moveHref(item)).toBeTruthy();
+      expect(moveOpensComposer(item)).toBe(false);
+    }
+  });
+
+  it("offers no move at all where the row names no record", () => {
+    expect(moveHref(replyRow(undefined))).toBeUndefined();
+  });
+
+  // A row with no move suggests no step, and a control drawn for one would be
+  // pressable with nothing behind it.
+  it("offers no move where the row suggests no step", () => {
+    const noMove = {
+      ...replyRow({ type: "person", id: "p-1" }),
+      move: undefined,
+    };
+    expect(moveHref(noMove as unknown as WorklistItem)).toBeUndefined();
+    expect(moveOpensComposer(noMove as unknown as WorklistItem)).toBe(false);
   });
 });

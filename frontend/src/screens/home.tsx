@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
+import { useUrlParams } from "../app/urlstate";
 import type { DecisionDeckItem } from "../design-system/decisiondeck";
 import { PageZones } from "../design-system/pagezones";
 import type { SectionState } from "../design-system/surfacestate";
@@ -11,6 +12,12 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
+import { BriefDials } from "./brief.dials";
+import { DoNext } from "./brief.donext";
+import { PlanSection } from "./brief.plan";
+import { TeamWeeklyPanel } from "./brief.teamweekly";
+import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
+import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
 import { DecisionsSection } from "./home.decisions";
 import {
@@ -31,8 +38,10 @@ import {
 } from "./home.queries";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
+import { HomeTeamBoard } from "./home.teamboard";
 import { TodaySection } from "./home.today";
 import { WeeklySection } from "./home.weekly";
+import { useWorklist, type Worklist } from "./worklist.queries";
 import "./home.css";
 
 // Home — the morning handover.
@@ -185,6 +194,10 @@ function HomeWork({
   brief,
   deals,
   briefState,
+  teamOffered,
+  day,
+  dayState,
+  address,
   onAlreadyDecided,
 }: Readonly<{
   items: readonly DecisionDeckItem[];
@@ -193,6 +206,16 @@ function HomeWork({
   brief: MorningBrief | null;
   deals: readonly Deal[];
   briefState: SectionState;
+  // Whether the reader's scope reaches a team, off the worklist read the page
+  // already makes. The same gate the team BOARD uses, so one tier decides both.
+  teamOffered: boolean;
+  // The ONE ranked order, already read by the page for its coverage line. Do
+  // next shows its head, from the same query key — so the Brief and the
+  // Worklist cannot disagree about what is waiting.
+  day: Worklist | undefined;
+  dayState: SectionState;
+  /** Which Brief the reader asked for, from the address. */
+  address: BriefAddress;
   onAlreadyDecided: () => void;
 }>) {
   const decisions = (
@@ -223,9 +246,42 @@ function HomeWork({
   // Monday, after the work that is waiting on them today. Ordering it above
   // either of those would put last week ahead of this morning.
   const lastWeek = <WeeklySection key="weekly" />;
+  // The team's frozen week, on the same tier the team BOARD is offered on:
+  // read off scope_options so the control and the refusal cannot disagree.
+  const teamWeek = <TeamWeeklyPanel key="team-weekly" offered={teamOffered} />;
+  // The plan goes UNDER the retrospective, never above it. A rep decides what
+  // next week holds by reading what this one did, so the frozen past leads and
+  // the live future follows.
+  const nextWeek = <PlanSection key="plan" />;
+  // WHAT IS ALREADY WAITING, above what is worth pursuing. The deal queue below
+  // answers a different question, and a morning that led with it led with the
+  // wrong half — decision 3 of the Brief plan, and the reason this section
+  // exists at all.
+  const doNext = <DoNext key="donext" day={day} state={dayState} />;
+  const board = <HomeTeamBoard key="board" offered={teamOffered} />;
+
+  // ONE VIEW AT A TIME, and every combination the dials offer has a surface
+  // behind it — decision 5 of the plan, which is the sequencing defect it
+  // exists to prevent: a dial that resolves to a legacy screen, an empty state
+  // standing in for an unbuilt one, or nothing at all.
+  //
+  // Morning · mine — the decisions waiting, what to do next, the opportunity
+  //   queue. Weekly · mine — the week that closed, then the week being planned.
+  // Morning · team — who on the team is carrying what, right now.
+  // Weekly · team — the team's frozen week.
+  //
+  // The team views are reachable only when the reader's scope admits them
+  // (`teamOffered`), which is also what draws the scope dial: the control and
+  // the surface read one answer, so neither can offer what the other refuses.
+  if (address.scope === "team") {
+    return address.view === "weekly" ? [teamWeek] : [board];
+  }
+  if (address.view === "weekly") {
+    return [lastWeek, nextWeek];
+  }
   return items.length > 0
-    ? [decisions, today, lastWeek]
-    : [today, decisions, lastWeek];
+    ? [decisions, doNext, today]
+    : [doNext, today, decisions];
 }
 
 /**
@@ -290,6 +346,22 @@ export function HomeScreen() {
   const briefQuery = useMorningBrief();
   const digestQuery = useMorningDigest();
   const dealsQuery = useHomeDeals();
+  // The ONE ranked order, read here for its coverage. Home has always been
+  // deal-only; what it could not say is which sources it never saw, and that
+  // answer lives on the worklist read rather than on any of the five deal
+  // reads beside it. Same query key as the Worklist screen, so the two cannot
+  // disagree about what was read.
+  const worklistQuery = useWorklist("mine", "all");
+  // Whether this reader's scope reaches a team, off the read the page already
+  // makes. It decides BOTH which dials are drawn and which the address may
+  // resolve to, so a control and a surface cannot disagree about it.
+  const teamOffered =
+    worklistQuery.data?.scope_options?.includes("team") ?? false;
+  // The dials live in the ADDRESS, not in state — decision 2. The Brief is a
+  // destination people return to and send each other, which is the case the
+  // Worklist's "dials stay state" choice deliberately excluded.
+  const [params, setParams] = useUrlParams();
+  const address = addressFrom(params, teamOffered);
   const pipelineQuery = usePipelineValue();
 
   const approvals = approvalsQuery.data?.data ?? [];
@@ -342,7 +414,14 @@ export function HomeScreen() {
 
   return (
     <div className="wrap">
+      <BriefDials
+        address={address}
+        offered={teamOffered}
+        onChange={(next) => setParams(paramsFor(next))}
+      />
       <HomeGlance
+        view={address.view}
+        day={worklistQuery.data}
         firstName={firstNameOf(me.data?.user?.display_name)}
         now={new Date(nowMs)}
         decisions={decisionReadings}
@@ -354,6 +433,9 @@ export function HomeScreen() {
         onGoToDuplicates={() => navigate({ screen: "worklist" })}
         onGoToWatch={() => goToSection("home-watch")}
       />
+      {/* Before the readings, because a strip of numbers a reader cannot
+          trust is worse than one they can qualify. */}
+      {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
       <HomeReadingsStrip
         decisions={decisionReadings}
         open={openReading}
@@ -373,6 +455,14 @@ export function HomeScreen() {
             brief={brief}
             deals={deals}
             briefState={readState(briefQuery)}
+            // The optional chain reaches the FIELD, not just the payload: a
+            // worklist answer that carried no scope_options crashed the whole
+            // page, and a page that throws is a worse answer than one that
+            // simply does not offer the team view.
+            teamOffered={teamOffered}
+            day={worklistQuery.data}
+            dayState={readState(worklistQuery)}
+            address={address}
             onAlreadyDecided={onAlreadyDecided}
           />
         }

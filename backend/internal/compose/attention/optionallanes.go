@@ -29,6 +29,13 @@ type optionalLane struct {
 	name  string
 	bound bool
 	read  func() ([]crmcontracts.AttentionItem, error)
+	// total answers how many there ARE, where the lane can say. Nil means the
+	// page length is the whole truth — a lane that is not capped, or one whose
+	// source cannot count without reading. Where it is set, the badge beside the
+	// title is the total and the cards below it are the page, which is the
+	// reading needs_you has always had: a reader with forty must be told forty,
+	// then shown the few worth one sitting.
+	total func() (int, error)
 	into  **[]crmcontracts.AttentionItem
 	count **int
 }
@@ -58,12 +65,28 @@ func (l optionalLane) collect(
 		return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
 	case err != nil:
 		return omitted, err
-	default:
-		*l.into = &items
-		count := len(items)
-		*l.count = &count
-		return omitted, nil
 	}
+	count := len(items)
+	if l.total != nil {
+		// The SAME refusal reading the page gets, and asked BEFORE either field
+		// is filed. A count is a read of the rows it counts, so a reader refused
+		// by it is refused by the page too — answering the lane's error one way
+		// and its badge's another would fail the whole feed over a lane the page
+		// would simply have withheld, and filing the items first would leave a
+		// lane both present and named as omitted.
+		count, err = l.total()
+		switch {
+		case errors.Is(err, apperrors.ErrModeNotOverlay):
+			return omitted, nil
+		case errors.Is(err, apperrors.ErrPermissionDenied):
+			return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
+		case err != nil:
+			return omitted, err
+		}
+	}
+	*l.into = &items
+	*l.count = &count
+	return omitted, nil
 }
 
 // optionalLanes describes the optional lanes, in the order they are read.
@@ -72,13 +95,13 @@ func (l optionalLane) collect(
 // began an hour ago cannot be prepared for, and one that ended would be plainly
 // wrong on a lane headed "still ahead".
 func (s *Service) optionalLanes(
-	ctx context.Context, asOf time.Time, out *crmcontracts.Attention,
+	ctx context.Context, asOf, until time.Time, out *crmcontracts.Attention,
 ) []optionalLane {
 	lanes := []optionalLane{
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetings.Today(ctx, asOf, endOfDay(asOf), plannedCap)
+				booked, err := s.meetings.Today(ctx, asOf, until, plannedCap)
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,
@@ -99,12 +122,13 @@ func (s *Service) optionalLanes(
 		{
 			name: "commitments", bound: s.commitments != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				due, err := s.commitments.DueBy(ctx, endOfDay(asOf), plannedCap)
+				due, err := s.commitments.DueBy(ctx, until, plannedCap)
 				return renderEach(due, func(promise Commitment) crmcontracts.AttentionItem {
 					return commitmentItem(promise, asOf)
 				}), err
 			},
-			into: &out.Commitments, count: &out.Counts.Commitments,
+			total: func() (int, error) { return s.commitments.CountDueBy(ctx, until) },
+			into:  &out.Commitments, count: &out.Counts.Commitments,
 		},
 		{
 			name: "did_not_run", bound: s.failed != nil,

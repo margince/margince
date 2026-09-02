@@ -115,7 +115,6 @@ const (
 	objectPipeline      = "pipeline"
 	objectCustomField   = "custom_field"
 	objectSignal        = "signal"
-	objectQuota         = "quota"
 	objectOfferTemplate = "offer_template"
 	objectProduct       = "product"
 	objectIntegrations  = "integrations"
@@ -270,8 +269,6 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/products":             {object: objectProduct, rowNote: noOwnerCatalog},
 	"POST /v1/offer-templates":      {object: objectOfferTemplate, rowNote: noOwnerTemplate},
 	"PUT /v1/offer-templates/{id}":  {object: objectOfferTemplate, rowNote: noOwnerTemplate},
-	"POST /v1/quotas":               {object: objectQuota, rowNote: "workspace-shared revenue target config (RD-T06), no owner column"},
-	"PATCH /v1/quotas/{id}":         {object: objectQuota, rowNote: "workspace-shared revenue target config (RD-T06), no owner column"},
 	"POST /v1/signals":              {object: objectSignal, table: tableSignal, idPath: "id"},
 	"PATCH /v1/signals/{id}":        {object: objectSignal, table: tableSignal, idPath: "id"},
 	"POST /v1/signals/{id}/resolve": {object: objectSignal, table: tableSignal, idPath: "id"},

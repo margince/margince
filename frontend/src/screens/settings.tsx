@@ -88,7 +88,9 @@ import { AiSettingsTab } from "./ai-settings";
 import { ActorTag } from "./audit";
 import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
+import { BriefDeliveryRows } from "./briefdelivery";
 import { CaptureActivityTab } from "./capture-activity";
+import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { CaptureSendersCard } from "./capture-senders";
 import { CaptureSettingsCard } from "./capture-settings";
 import {
@@ -314,9 +316,10 @@ export function tabContent(id: SettingsTabId): ReactNode {
         <>
           <UsersAdminCard />
           {/* Teams are share targets and a way to address a group of users.
-              Membership grants no access on its own — no seeded role is
-              team-scoped — so this card sits below the roster rather than
-              claiming to answer who may edit whose records. */}
+              Membership alone still grants nothing to most roles, but Team
+              Lead is team-scoped (RowScopeTeam) — so this card is also where
+              an admin decides whose records a Team Lead's membership hands
+              over, not merely a way to address a group. */}
           <TeamsCard />
         </>
       );
@@ -409,6 +412,14 @@ function ConnectionsTab() {
           connection below. */}
       <MailSharingCard />
       <ConnectorsCard />
+      {/* Directly under the mailboxes and before what they brought in, because
+          it changes what COUNTS as correspondence: an address declared here is
+          the same person, so mail among them is not a conversation with anybody
+          and never becomes one. Per-seat rather than per-connection, which is
+          why it is a card of its own and not a row inside connectors.tsx —
+          those rows render once per mailbox and a seat's own addresses are one
+          list however many mailboxes they connect. */}
+      <OwnerIdentitiesCard />
       {/* Under the mailboxes, because it is what those mailboxes DID: every
           address they brought in, and what the classifier concluded about each.
           The posture rows above say what may be read; this says what was
@@ -1029,6 +1040,7 @@ function AccountCard() {
           <PasswordSettingRow />
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
+          <BriefDeliveryRows />
         </SettingList>
       </PanelBody>
     </Panel>

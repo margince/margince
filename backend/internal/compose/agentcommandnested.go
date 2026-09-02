@@ -23,15 +23,6 @@ import (
 )
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func addListMemberCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
-	id, err := routedID(r)
-	if err != nil {
-		return nil, err
-	}
-	return agents.NewAddListMemberCall(deps.records, agents.AddListMemberCommand{ID: id}), nil
-}
-
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
 func applyTagCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
 	id, err := routedID(r)
 	if err != nil {

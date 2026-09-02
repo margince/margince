@@ -99,10 +99,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // lanes inside it. It leads the group because it is what a reader opens
       // when the question is "what needs me?".
       { screen: "worklist", labelKey: "nav.today", icon: Sun },
-      // The board, not a bullseye: this route opens a column per stage with the
-      // deals standing in them, and `Target` drew a goal — which is what a quota
-      // surface would be. A reader scanning five glyphs on a phone bar with no
-      // labels under them has only the shape to go on.
+      // The board, not a bullseye: this route opens a column per stage with
+      // the deals standing in them, and `Target` drew a goal rather than a
+      // board. A reader scanning five glyphs on a phone bar with no labels
+      // under them has only the shape to go on.
       { screen: "deals", labelKey: "nav.deals", icon: Kanban },
       // The body of work a deal is about. It starts during the deal and
       // outlives close-won, so it sits beside the pipeline rather than under

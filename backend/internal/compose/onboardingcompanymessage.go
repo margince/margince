@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -117,6 +118,32 @@ func (a *onboardingCompanyAssistant) message(w http.ResponseWriter, r *http.Requ
 
 	answer, clarify, actAction, err := a.converse(r.Context(), req, act, message, history, conversation, research, read, comparisons, runID)
 	if err != nil {
+		// A model this installation cannot reach is a DEPENDENCY that is down,
+		// not a fault in the request — and httperr.Write has no sentinel for it,
+		// so it would fall through to an opaque 500 whose body names nothing.
+		//
+		// It names the way through instead. Every required field can be typed by
+		// hand, so a model outage does not actually block onboarding: it blocks
+		// the assistant. Someone who is told only "internal error" has no way to
+		// know that, and the wizard is the first thing they ever see.
+		if modelUnreachable(err) {
+			// A CODE, because this sentence has a reader. The wizard is the
+			// first screen anybody sees and it is rendered in their language;
+			// a detail written here would arrive in English whatever that
+			// language is. The detail stays for a caller with no catalog.
+			//
+			// It says the assistant did not ANSWER, and does not say why. The
+			// sentinel covers the whole walk reaching its end — a provider that
+			// is down, a credential it refused, a model nobody bound, a request
+			// every rung rejected — and naming one of those would be a guess
+			// four times out of five. Settings → AI is offered as the place to
+			// look rather than as the diagnosis, and the way through is true
+			// whichever it was.
+			httperr.Unavailable(w, r, codeAssistantUnavailable,
+				"the assistant did not answer — an administrator can check the model binding under "+
+					"Settings → AI. The company details can be entered by hand; nothing here needs the assistant")
+			return
+		}
 		httperr.Write(w, r, err)
 		return
 	}
@@ -394,3 +421,22 @@ func (h onboardingStateHandlers) MessageOnboardingCompany(w http.ResponseWriter,
 	}
 	h.assistant.message(w, r)
 }
+
+// modelUnreachable reports whether err is the model lane failing rather than
+// this request being wrong.
+//
+// Matched on ai.ErrAllTiersFailed, the aggregate the router raises once the
+// walk has reached the end of the bound rungs: the one place that distinction
+// is already made, and a sentinel rather than the message text, which would be
+// a second copy of it.
+func modelUnreachable(err error) bool {
+	return errors.Is(err, ai.ErrAllTiersFailed)
+}
+
+// codeAssistantUnavailable is the problem code the onboarding client reads to
+// pick its own copy, rather than rendering this handler's English detail at a
+// reader who set another language.
+//
+// Held by: TestEveryReaderFacingProblemCodeHasClientCopy
+// (backend/gates/frontendoauthoutcomes_test.go)
+const codeAssistantUnavailable = "assistant_unavailable"

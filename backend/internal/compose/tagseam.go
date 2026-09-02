@@ -8,8 +8,8 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -28,42 +28,89 @@ func tagSeam(pool *pgxpool.Pool) agents.Tags {
 	return tagAdapter{store: collections.NewStore(InstallationDB(pool))}
 }
 
-// EnsureTag reuses the workspace's own word before minting a new one.
+// ResolveTag answers the id of an EXISTING workspace tag with this name, and
+// refuses when there is none.
+//
+// It does not create. The vocabulary is governed — only Admin and Ops coin a
+// word — so a tool that minted one on a name it did not recognise would hand
+// every agent, and through it every rep, the authority the governance exists
+// to withhold. A misspelling would become a permanent second tag nobody
+// chose, which is exactly the drift a shared vocabulary is for preventing.
 //
 // Case-insensitive, because "K5 Conference" and "k5 conference" are the same
-// tag to everyone except a database, and a vocabulary that holds both has
-// stopped being a vocabulary. An ARCHIVED tag of that name is not reused: it
-// was retired on purpose, and quietly resurrecting it would undo that decision
-// on the strength of a coincidence of spelling.
-func (a tagAdapter) EnsureTag(ctx context.Context, name string) (ids.UUID, error) {
+// tag to everyone except a database. An ARCHIVED tag of that name is refused
+// with a distinct message: the word exists, it was retired on purpose, and
+// the caller needs to know that rather than being told it is unknown.
+func (a tagAdapter) ResolveTag(ctx context.Context, name string) (ids.UUID, error) {
 	if found, ok, err := a.store.FindTag(ctx, name); err != nil || ok {
 		return found, err
 	}
-	created, err := a.store.NewTag(ctx, name, "")
-	if err == nil {
-		return created.TagID, nil
-	}
-	// Two callers can both miss the lookup and both try to create; uq_tag_name
-	// lets exactly one win. The loser reuses the winner's tag rather than
-	// failing a call that asked for a state now true — the reuse this method
-	// exists for, arriving a moment later than expected.
-	//
-	// A name whose only holder is ARCHIVED lands here too and stays a
-	// conflict: the index does not exempt archived rows, and quietly
-	// resurrecting a word somebody retired is not this call's decision to make.
-	if !errors.Is(err, apperrors.ErrConflict) {
+	// A miss is either a word nobody has coined or one somebody retired. The
+	// two need different answers: the second is not "no such tag".
+	_, state, err := a.store.LookupTagName(ctx, name)
+	if err != nil {
 		return ids.UUID{}, err
 	}
-	found, ok, findErr := a.store.FindTag(ctx, name)
-	if findErr != nil {
-		return ids.UUID{}, findErr
+	if state.Archived() {
+		return ids.UUID{}, fmt.Errorf("the tag %q was archived and cannot be applied; an admin can restore it: %w",
+			name, apperrors.ErrConflict)
 	}
-	if !ok {
-		return ids.UUID{}, fmt.Errorf("a tag named %q exists but is archived and is not reused; use a different name: %w",
-			name, err)
-	}
-	return found, nil
+	return ids.UUID{}, fmt.Errorf("no tag named %q exists, and this tool does not create one; an admin or ops seat can add it to the vocabulary: %w",
+		name, apperrors.ErrNotFound)
 }
+
+// GetTag hands one word and its weight across. The counts come from the store
+// so the tool surface and the web surface report the same number — a tool that
+// counted for itself would be a second answer to the question the admin screen
+// already asks.
+func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetail, error) {
+	row, usage, err := a.store.GetTag(ctx, ids.From[ids.TagKind](tagID))
+	if err != nil {
+		return agents.TagDetail{}, err
+	}
+	out := agents.TagDetail{
+		Tag: agents.Tag{
+			TagID:    row.ID.UUID,
+			Name:     row.Name,
+			Archived: row.ArchivedAt != nil,
+		},
+		People:    usage.People,
+		Companies: usage.Companies,
+		Deals:     usage.Deals,
+	}
+	if row.Color != nil {
+		out.Color = *row.Color
+	}
+	return out, nil
+}
+
+// RecordTags hands the record-tag read across. The tool and the record page
+// read the SAME store method, so a model and a person looking at one company
+// cannot be told different things about who tagged it.
+func (a tagAdapter) RecordTags(ctx context.Context, entityType string, entityID ids.UUID) (agents.RecordTagsResult, error) {
+	read, err := a.store.RecordTagsFor(ctx, entityType, entityID)
+	if err != nil {
+		return agents.RecordTagsResult{}, err
+	}
+	out := agents.RecordTagsResult{
+		Tags:     make([]agents.RecordTagOnRecord, 0, len(read.Data)),
+		Withheld: read.Withheld,
+	}
+	for _, t := range read.Data {
+		out.Tags = append(out.Tags, agents.RecordTagOnRecord{
+			TagID:          t.TagID,
+			Name:           t.Name,
+			Archived:       t.Archived,
+			AssignedBy:     t.AssignedByName,
+			AssignedByKind: t.AssignedByKind,
+			AssignedAt:     t.AssignedAt.Format(time.RFC3339),
+		})
+	}
+	return out, nil
+}
+
+// RecordTagTypes answers the store's own list of served types.
+func (a tagAdapter) RecordTagTypes() []string { return collections.RecordTagTypesServed() }
 
 // ListTags hands the collections module's own cross-module shape straight
 // through: TagVocabulary was written for a caller outside that module and

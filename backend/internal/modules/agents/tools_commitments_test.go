@@ -95,11 +95,11 @@ func TestDaysOverdueCountsWholeElapsedDays(t *testing.T) {
 // An overdue item carries the count; an upcoming one carries no count at all
 // rather than a zero a reader would print as "0 days overdue".
 func TestOnlyAnOverduePromiseCarriesADayCount(t *testing.T) {
-	overdue := OpenCommitment{TaskID: ids.NewV7(), DueAt: at(-25 * time.Hour)}.wire(sweptAt())
+	overdue := OpenCommitment{TaskID: newTaskID(), DueAt: at(-25 * time.Hour)}.wire(sweptAt())
 	if overdue.DaysOverdue == nil || *overdue.DaysOverdue != 1 {
 		t.Errorf("an overdue promise carries days_overdue = %v, want 1", overdue.DaysOverdue)
 	}
-	upcoming := OpenCommitment{TaskID: ids.NewV7(), DueAt: at(time.Hour)}.wire(sweptAt())
+	upcoming := OpenCommitment{TaskID: newTaskID(), DueAt: at(time.Hour)}.wire(sweptAt())
 	if upcoming.DaysOverdue != nil {
 		t.Errorf("an upcoming promise carries days_overdue = %v, want absent", *upcoming.DaysOverdue)
 	}
@@ -109,7 +109,7 @@ func TestOnlyAnOverduePromiseCarriesADayCount(t *testing.T) {
 // assignee members are absent TOGETHER — a name beside no id would be a
 // promise attributed to nobody in particular.
 func TestAnUnownedPromiseCarriesNeitherIdNorName(t *testing.T) {
-	item := OpenCommitment{TaskID: ids.NewV7(), AssigneeName: "leaked"}.wire(sweptAt())
+	item := OpenCommitment{TaskID: newTaskID(), AssigneeName: "leaked"}.wire(sweptAt())
 	if item.AssigneeID != nil || item.AssigneeName != "" {
 		t.Errorf("an unassigned promise reports assignee (%v, %q), want both absent",
 			item.AssigneeID, item.AssigneeName)
@@ -119,7 +119,7 @@ func TestAnUnownedPromiseCarriesNeitherIdNorName(t *testing.T) {
 // A promise that names no record answers an empty list, never null: a model
 // handed null reads it as "unknown" where an empty array says "none".
 func TestAPromiseAboutNothingAnswersAnEmptyListNotNull(t *testing.T) {
-	raw, err := json.Marshal(OpenCommitment{TaskID: ids.NewV7()}.wire(sweptAt()))
+	raw, err := json.Marshal(OpenCommitment{TaskID: newTaskID()}.wire(sweptAt()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestAPromiseAboutNothingAnswersAnEmptyListNotNull(t *testing.T) {
 func TestTheAnswerCarriesTheInstantItsStatesWereJudgedAgainst(t *testing.T) {
 	tool := reviewCommitments{list: commitmentSweepOf(CommitmentSweep{
 		AsOf:        sweptAt(),
-		Commitments: []OpenCommitment{{TaskID: ids.NewV7(), Subject: "Send the SOW", DueAt: at(-48 * time.Hour)}},
+		Commitments: []OpenCommitment{{TaskID: newTaskID(), Subject: "Send the SOW", DueAt: at(-48 * time.Hour)}},
 	})}
 
 	raw, err := tool.Handle(context.Background(), json.RawMessage(`{}`))
@@ -171,7 +171,7 @@ func TestABoundedCommitmentSweepSaysSo(t *testing.T) {
 	} {
 		tool := reviewCommitments{list: commitmentSweepOf(CommitmentSweep{
 			AsOf:        sweptAt(),
-			Commitments: []OpenCommitment{{TaskID: ids.NewV7()}},
+			Commitments: []OpenCommitment{{TaskID: newTaskID()}},
 			Truncated:   tc.truncated,
 		})}
 		registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
@@ -203,4 +203,12 @@ func TestALimitOutsideTheServedRangeIsRefusedByName(t *testing.T) {
 	if _, err := tool.Handle(context.Background(), json.RawMessage(`{"limit":50}`)); err != nil {
 		t.Errorf("the ceiling itself is refused: %v", err)
 	}
+}
+
+// newTaskID is one task-sourced promise's id. A promise now carries EITHER a
+// task id or a claim id, so the pointer says which of the two this row is —
+// and every fixture here is a filed task.
+func newTaskID() *ids.UUID {
+	id := ids.NewV7()
+	return &id
 }

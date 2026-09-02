@@ -31,7 +31,6 @@
 # is whatever this file holds, and a second copy of it drifts.
 #
 # Sorted, one key per line: <path>#<declaration>.
-
 ../cli/craft/gate/anthropic.go#func NewAnthropicClient
 ../cli/craft/main.go#func pinnedModel
 ../desktop/launcher/console.go#func say
@@ -71,7 +70,7 @@ internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes
 internal/compose/agentgatecanon.go#const keyBindsTheRetry
 internal/compose/agentgatestaging.go#func resolveStagedTarget
-internal/compose/agentsplit.go#const block at const opAddListMember
+internal/compose/agentsplit.go#const block at const opApplyTag
 internal/compose/agenttasks.go#const taskColumns
 internal/compose/aicert/record.go#type Record.Scenarios
 internal/compose/aicert/reportcmd/report.go#var reportColumns
@@ -318,7 +317,6 @@ internal/modules/agents/outputshapes.go#const block at const schemaObject
 internal/modules/agents/outputshapes.go#const envelopeDataMember
 internal/modules/agents/outputshapes_test.go#func TestDeclaredOutputSchemasMatchTheCommittedRendering
 internal/modules/agents/outputshapes_test.go#func renderDeclaredSchemas
-internal/modules/agents/quotarelease.go#type QuotaReleaseRequest.Proposal
 internal/modules/agents/recordtyped.go#const block at const typeLead
 internal/modules/agents/registration.go#func envelopedSpec
 internal/modules/agents/registration.go#func unitOwned
@@ -335,6 +333,7 @@ internal/modules/agents/tools_project360_result.go#type Project360PhaseHistory
 internal/modules/agents/tools_resolve.go#var resolveKinds
 internal/modules/agents/tools_tags.go#func decodeTagging
 internal/modules/agents/tools_tags.go#func taggingSchema
+internal/modules/agents/volumerelease.go#type VolumeReleaseRequest.Proposal
 internal/modules/ai/feedback.go#const fieldSubjectType
 internal/modules/ai/feedback.go#type RecordInput.ClaimPath
 internal/modules/ai/railemit_test.go#func TestADegradedCallSaysWhyEvenWithNoSentinel
@@ -406,7 +405,6 @@ internal/modules/comms/seams.go#func rfc8058Post
 internal/modules/comms/seams.go#type deliveryStore
 internal/modules/comms/store_channel_integration_test.go#func TestStagingAChannelDeliveryWithNoBodyIsRefused
 internal/modules/consent/doi.go#const purposeIDField
-internal/modules/consent/dsr.go#const block at const fieldStatus
 internal/modules/consent/dsr.go#const dsrSelectByID
 internal/modules/consent/dsr.go#func validateDSRUpdate
 internal/modules/consent/gate.go#func grantedForRecipient
@@ -563,8 +561,8 @@ internal/modules/signals/signal.go#func OfOrganizationWhere
 internal/modules/signals/warmroom.go#func RankRouteIn
 internal/modules/signals/warmroom.go#func RouteInEdges
 internal/modules/webhooks/store.go#const fieldEventTypes
-internal/platform/agentquota/counter.go#func CounterFor
-internal/platform/agentquota/meter_test.go#var governedCounters
+internal/platform/agentvolume/counter.go#func CounterFor
+internal/platform/agentvolume/meter_test.go#var governedCounters
 internal/platform/auth/capturePrivacyCoverage_test.go#func TestEveryTableThatCanHoldAnOwnerRowIsOwnerPrivate
 internal/platform/auth/edgeread.go#const relationshipObject
 internal/platform/auth/fieldmask.go#func StampWritable

@@ -11,6 +11,21 @@
   margin: 0;
 }
 
+/* The four outcome readings and the caveat under them. The strip owns its own
+   plate, so this only stacks the caveat beneath it. */
+.worklist-readings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Every figure above is a floor. Same quiet as the completeness line and for
+   the same reason: the surface reporting on its own limits, not a row of work. */
+.worklist-readings-floor {
+  color: var(--textSecondary);
+  margin: 0;
+}
+
 /* What the page is not showing. Quiet on purpose: this is the surface reporting
    on itself rather than a row of work, and it must not compete with the queue
    for the reader's eye. */
@@ -91,6 +106,18 @@
   margin-top: var(--space-2);
 }
 
+/* What follows the focus card. A plain list of titles: the evidence is on the
+   card above and the rows below, and a third copy would be a third surface to
+   keep in agreement about one deal. */
+.worklist-nextup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 /* The band heading, above the first row of its run.
    Inside the list item rather than between them, because an <ol> may hold only
    <li> children — a heading placed as a sibling would be invalid structure that
@@ -159,4 +186,58 @@
   display: flex;
   flex: 0 0 auto;
   gap: var(--space-2);
+}
+
+/* The guardrail over the queue's own hiding rules. A diagnostic behind a
+   disclosure, so it is quiet by default and legible when opened. */
+.worklist-hidden {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Every figure is a floor when the read was cut. Stated before the numbers, and
+   in the tone the surface uses for warnings about itself. */
+.worklist-hidden-truncated {
+  color: var(--textSecondary);
+  margin: 0;
+}
+
+.worklist-hidden-clear {
+  color: var(--textSecondary);
+  margin: 0;
+}
+
+.worklist-hidden-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.worklist-hidden-row {
+  display: grid;
+  gap: 0 var(--space-2);
+  grid-template-columns: auto 1fr;
+}
+
+/* The count leads, because the question a reader opens this for is "how much".
+   Tabular so four rows of figures line up rather than drifting by digit width. */
+.worklist-hidden-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* The detail sits under the label rather than beside it: it is a sentence about
+   whose choice the rule was, and a third column would squeeze it to one word. */
+.worklist-hidden-detail {
+  color: var(--textSecondary);
+  grid-column: 2;
+}
+
+.worklist-hidden-shown {
+  color: var(--textSecondary);
+  margin: 0;
 }

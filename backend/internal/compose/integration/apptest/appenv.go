@@ -22,7 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -143,7 +143,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 		// every agent read in a lane that is testing something else. Declaring
 		// the app under test unbounded is the honest spelling: a suite that
 		// wants the bound composes its own metered Server.
-		compose.WithAgentQuota(agentquota.Unmetered()),
+		compose.WithAgentVolume(agentvolume.Unmetered()),
 	}, opts(origin)...)
 	ts.Config.Handler = compose.New(pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), allOpts...)
 	ts.StartTLS()

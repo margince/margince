@@ -148,6 +148,18 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/recordconversations.test.tsx",
+    why: "The component takes the zone as a required prop and these cases assert which GROUPS render and which badges they carry — no date rendering is asserted. The zone is the shape being satisfied, not a rendering under test.",
+  },
+  {
+    file: "screens/historyreversalrow.stories.tsx",
+    why: "The story hand-renders a member row and passes the formatter's required zone directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
+  },
+  {
+    file: "screens/recordconversations.stories.tsx",
+    why: "The story passes the component's required zone prop directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
+  },
+  {
     file: "screens/historyfielddiff.test.tsx",
     why: "The component under test takes a reading context whose zone is required, and these cases assert the CURRENCY scaling — no value here renders a date. The zone is the shape being satisfied, not a rendering being asserted.",
   },
@@ -310,18 +322,6 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "screens/privacy.assignee.test.tsx",
     why: "Its `User` fixtures carry the member's own stored `timezone`, which is a field on the wire rather than a zone this code renders in.",
-  },
-  {
-    file: "screens/quotas.forms.stories.tsx",
-    why: "The `me` fixture behind the quota forms carries the reader's stored `timezone` as wire data.",
-  },
-  {
-    file: "screens/quotas.stories.tsx",
-    why: "Same `me` fixture behind the quotas story: a stored user setting the story has to supply.",
-  },
-  {
-    file: "screens/quotas.test.tsx",
-    why: "Same `me` fixture behind the quotas suite: a stored user setting, not a formatting decision.",
   },
   {
     file: "screens/scheduledsends.stories.tsx",

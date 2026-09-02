@@ -28,7 +28,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,8 +47,8 @@ type countingRedeemer struct {
 	hashes   []string
 }
 
-// StageQuotaRelease satisfies the seam; a step-up never reaches these tests.
-func (*countingRedeemer) StageQuotaRelease(context.Context, agents.QuotaReleaseRequest) (ids.ApprovalID, bool, error) {
+// StageVolumeRelease satisfies the seam; a step-up never reaches these tests.
+func (*countingRedeemer) StageVolumeRelease(context.Context, agents.VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil
 }
 
@@ -279,11 +279,11 @@ func TestAReleasedRetryOnAStaticTierIsPinnedAndNotResplit(t *testing.T) {
 	}
 }
 
-// countingCharges is the quota meter as the REST door uses it: it only ever
+// countingCharges is the volume meter as the REST door uses it: it only ever
 // receives charges, and keeps them per counter.
-type countingCharges struct{ spent map[agentquota.Counter]int }
+type countingCharges struct{ spent map[agentvolume.Counter]int }
 
-func (c *countingCharges) Consume(_ context.Context, counter agentquota.Counter, n int) error {
+func (c *countingCharges) Consume(_ context.Context, counter agentvolume.Counter, n int) error {
 	c.spent[counter] += n
 	return nil
 }
@@ -319,9 +319,9 @@ func gateCallCharges(t *testing.T, sourceSemantic, token string, redeemErr error
 	deal, current, target := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	stages := reopenStages{semantics: map[ids.UUID]string{current: sourceSemantic, target: "open"}}
 	var records datasource.SystemOfRecordProvider = stagedDeal{stageID: current, version: 12}
-	charger := &countingCharges{spent: map[agentquota.Counter]int{}}
+	charger := &countingCharges{spent: map[agentvolume.Counter]int{}}
 
-	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}), agents.WithQuotaCharger(charger))
+	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}), agents.WithVolumeCharger(charger))
 	agents.RegisterCoreTools(reg, records, stages, nil, nil, nil, nil)
 
 	r := httptest.NewRequest(http.MethodPost, "/v1/deals/"+deal.String()+"/advance",
@@ -341,7 +341,7 @@ func gateCallCharges(t *testing.T, sourceSemantic, token string, redeemErr error
 		w.WriteHeader(http.StatusOK)
 	})).ServeHTTP(recorder, r)
 
-	return charger.spent[agentquota.Calls], recorder.Code
+	return charger.spent[agentvolume.Calls], recorder.Code
 }
 
 // The call ceiling counts CALLS THAT RAN: one apiece whichever arm carried them,

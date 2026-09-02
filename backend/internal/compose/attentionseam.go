@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -94,36 +93,32 @@ func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]a
 	return pairs, nil
 }
 
-// Describe names one side of a pair, under the reader's own scope.
+// DescribeMany names records of one entity type, under the reader's own scope.
 //
-// Each branch is that record's ordinary get, so a reader who may not see the
-// record gets the same refusal here as anywhere else. The pair's own row is not
-// permission to read what it points at.
-func (d attentionDuplicates) Describe(
-	ctx context.Context, entityType string, id ids.UUID,
-) (attention.RecordFace, error) {
-	switch entityType {
-	case flipObjectPerson:
-		row, err := d.store.GetPerson(ctx, ids.From[ids.PersonKind](id), storekit.LiveOnly)
-		if err != nil {
-			return attention.RecordFace{}, err
-		}
-		return personFace(row), nil
-	case flipObjectOrganization:
-		row, err := d.store.GetOrganization(ctx, ids.From[ids.OrganizationKind](id), storekit.LiveOnly)
-		if err != nil {
-			return attention.RecordFace{}, err
-		}
-		return organizationFace(row), nil
-	case flipObjectLead:
-		row, err := d.store.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
-		if err != nil {
-			return attention.RecordFace{}, err
-		}
-		return leadFace(row), nil
-	default:
-		return attention.RecordFace{}, apperrors.ErrNotFound
+// The store read carries the same object grant and the same row scope the
+// ordinary get applies — the pair's own row is not permission to read what it
+// points at — and asks the scope of the whole set at once, which is what turns
+// a page of ten pairs from twenty transactions into three.
+func (d attentionDuplicates) DescribeMany(
+	ctx context.Context, entityType string, rowIDs []ids.UUID,
+) (map[ids.UUID]attention.RecordFace, error) {
+	if entityType != flipObjectPerson && entityType != flipObjectOrganization && entityType != flipObjectLead {
+		return nil, apperrors.ErrNotFound
 	}
+	described, err := d.store.DescribeForMerge(ctx, entityType, rowIDs)
+	if err != nil {
+		return nil, err
+	}
+	faces := make(map[ids.UUID]attention.RecordFace, len(described))
+	for id, row := range described {
+		faces[id] = attention.RecordFace{
+			Label:        row.Label,
+			Detail:       row.Detail,
+			CreatedAt:    &row.CreatedAt,
+			RelatedCount: row.RelatedCount,
+		}
+	}
+	return faces, nil
 }
 
 func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
@@ -364,19 +359,17 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		attentionTasks{store: activities.NewStore(db)},
 		attentionReceipts{svc: svc},
 		attentionBriefing{engine: briefs.NewBriefEngine(pool, people.NewStore(db)), now: now},
-		// Commitments is deliberately UNBOUND: the lane's production writer —
-		// the extraction task that reads promises out of captured
-		// conversations — does not exist yet (issue #849), so no real
-		// installation can put a row behind it, and a lane fed only by demo
-		// seeds would show every real customer an empty promise list dressed
-		// as a feature. A nil binding renders the lane ABSENT (the contract's
-		// honest "this feed does not do commitments"), and rebinding is the
-		// one-line attentionCommitments{store: people.NewStore(db)} when #849
-		// lands. The seam type stays compiled against the interface (the
-		// assertion beside it in attentionlanesseam.go), and the store read
-		// behind it keeps its own integration test — what is NOT tested is
-		// the seam wiring itself, because nothing wires it.
-		nil,
+		// Commitments is bound now that claims have a writer. It was nil while
+		// nothing could put a row behind the lane: a lane fed only by demo
+		// seeds would have shown every real customer an empty promise list
+		// dressed as a feature, and absent is the honest rendering of "this
+		// feed does not do commitments".
+		//
+		// That is no longer true. POST /people/{id}/claims writes through
+		// people.RecordConversationClaim, and the transcript reader files what
+		// a reader accepts from a meeting. A promise a rep made is then real
+		// data the queue was still refusing to show.
+		attentionCommitments{store: people.NewStore(db)},
 		attentionAtRisk{lister: quietDealScan(pool, deals.QuietThresholdDays)},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
@@ -419,6 +412,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 			projects:   projects.NewStore(db),
 		},
 		now,
+		// The installation's own midnight is where "today" ends for the
+		// due-dated lanes. Unbound it would be UTC's, which is nobody's day
+		// outside one timezone.
+		attention.WithZone(attentionZone(pool)),
 	).WithWaiting(attentionWaiting{store: activities.NewStore(db), now: now}).
 		// The asks waiting on this colleague to answer. Until this lane existed
 		// a colleague learned they had been asked only by opening that
@@ -455,4 +452,18 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// at a dozen and a board built from it would call every loaded rep
 		// equally loaded.
 		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
+}
+
+// attentionZone binds the feed's day boundary to the installation's timezone,
+// through the SAME read the slipping-deal sweep and the morning brief already
+// make — one spelling of "which day is it here", so two surfaces cannot come to
+// disagree about when today ended.
+//
+// A transaction per call and no cache: the setting is one indexed row, the feed
+// asks once per request, and a cached zone would go on deciding "today" for
+// however long the process lives after an operator moved the installation.
+func attentionZone(pool *pgxpool.Pool) attention.Zone {
+	return func(ctx context.Context) (*time.Location, error) {
+		return installationZone(ctx, pool)
+	}
 }

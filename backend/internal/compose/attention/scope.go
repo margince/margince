@@ -110,9 +110,17 @@ func (s *Service) resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, e
 		return ids.UUID{}, apperrors.ErrPermissionDenied
 	}
 	// Their own id needs no wider tier: "mine, spelled out" is the same
-	// question the default answers.
+	// question the default answers, so it resolves to the SAME answer — the
+	// zero owner the default carries — rather than to their id.
+	//
+	// The two spellings already read identically: TasksMine files the query
+	// under `actor.UserID` and TasksOwnedBy under `owner`, which for this case
+	// are one value. Returning the id instead made them differ everywhere the
+	// resolved owner is read as an identity rather than used as a filter — a
+	// continuation token minted under one spelling was refused under the other,
+	// and the caller was told their question had changed when it had not.
 	if owner == actor.UserID {
-		return owner, nil
+		return ids.UUID{}, nil
 	}
 	// An unbounded reader reaches every row, so for them the tier IS the whole
 	// test and naming anyone is answerable.
@@ -276,9 +284,19 @@ func narrowedByItsOwnLane(row ranked) bool {
 // The counterpart to keepReadersOwn, over the same evidence: a row with an owner
 // belongs to that person and not to this queue. A row with nobody to name stays,
 // which is what the scope is for.
+//
+// A promise is the exception, and it is not decorative. A conversation claim
+// has no assignee column, so it reaches here with no owner to read while
+// already belonging to the rep whose query produced it. Reading only answersTo
+// would file the rep's own debt under work nobody answers for.
+//
+// An ownerless task or lead genuinely answers to nobody — those stay.
 func keepUnowned(rows []ranked) []ranked {
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
+		if row.item.Source == sourceClaim {
+			continue
+		}
 		if _, ok := answersTo(row); !ok {
 			kept = append(kept, row)
 		}

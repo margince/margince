@@ -5,6 +5,7 @@ package consent
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -83,7 +84,7 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 			writeConsentErr(w, r, err)
 			return
 		}
-		if current.Kind == "erasure" {
+		if current.Kind == dsrKindErasure {
 			if h.eraser == nil {
 				// Fail closed: fulfilling an erasure on a surface with no
 				// erase path wired would certify a deletion that never
@@ -106,4 +107,83 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, wireDSR(updated))
+}
+
+// DownloadDataSubjectPackage answers an Art. 15 access request with the package
+// it asks for.
+//
+// The queue could record an access request and mark it fulfilled with no product
+// path that produced anything, so "fulfilled" meant an officer had said so. This
+// is the path: it assembles what the installation holds about the subject and
+// hands it back, as the file an officer forwards.
+//
+// It does NOT change the request's status. Producing the export and deciding the
+// request is answered are two acts by the same person, and collapsing them would
+// close a request on a download that might have failed to reach anybody — the
+// officer marks it fulfilled through the existing PATCH once they have sent it.
+func (h Handlers) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.assembler == nil {
+		// Fail closed rather than answer an empty package: a role composed
+		// without the assembler cannot produce an Art. 15 export, and an empty
+		// one would read as "we hold nothing about this person".
+		httperr.ServiceUnavailable(w, r,
+			"this installation cannot assemble a subject-access package here")
+		return
+	}
+	// GetDSR takes the queue's own gate — admin, human, person.read — so
+	// reaching the request is already what reaching any request takes.
+	//
+	// That gate is the narrow one and it has to stay in front. AssembleSAR
+	// admits any unbounded human holding person.delete, which the seeded
+	// defaults give to ops and management as well as admin, so calling it
+	// without reading the request first would make the export reachable by
+	// roles the queue that owns this workflow refuses.
+	request, err := h.store.GetDSR(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	// An access request, not an erasure or a rectification. The other two kinds
+	// have their own paths and answering them with a package would export a
+	// subject's whole record to close a request that asked for something else.
+	if request.Kind != dsrKindAccess {
+		writeConsentErr(w, r, &ValidationError{
+			Field:  fieldKind,
+			Reason: "only an access request has a package to download",
+		})
+		return
+	}
+	// The same refusal the erasure path gives, for the same reason: subject_ref
+	// is free text until somebody resolves it to a person, and a request naming
+	// nobody has nothing to assemble.
+	personID, parseErr := ids.Parse(request.SubjectRef)
+	if parseErr != nil {
+		writeConsentErr(w, r, &ValidationError{
+			Field:  fieldSubjectRef,
+			Reason: "an access request must name a person id before its package can be assembled",
+		})
+		return
+	}
+	body, err := h.assembler.AssemblePackage(r.Context(), personID)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	// Served as a download rather than an inline body: this is a file an officer
+	// forwards to the subject, and naming it after the request is what ties the
+	// copy they sent to the row that recorded it. Through httperr.Download, which
+	// is the one spelling of a download's headers.
+	httperr.Download{
+		ContentType: "application/json",
+		Filename:    "subject-access-" + request.ID.String() + ".json",
+		Size:        int64(len(body)),
+	}.WriteHeaders(w)
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(body); err != nil {
+		// The status and headers are already on the wire, so this cannot become
+		// an error response. Logged rather than swallowed: a truncated export an
+		// officer forwards as complete is the failure worth knowing about.
+		slog.ErrorContext(r.Context(), "subject-access package was not fully written",
+			"request", request.ID.String(), "error", err)
+	}
 }

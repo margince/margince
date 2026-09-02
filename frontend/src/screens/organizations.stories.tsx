@@ -191,7 +191,6 @@ const org360 = {
   },
   pending_approvals: { data: [], page: emptyPage },
   tags: [{ id: "t-1", workspace_id: "w-1", name: "Key account" }],
-  list_memberships: [],
   since_last_visit: {
     baseline_at: "2026-07-10T09:00:00Z",
     new_activities: 2,

@@ -110,6 +110,8 @@ Columns:
 | `draft_email` | 🟢 | `draft` | — | Activities seam; not mode-routed |
 | `draft_follow_ups_for` | 🟢 | `draft` | — | `unsupported_by_sor` (native-only guard) |
 | `enrich` | 🟡 | `enrich` | yes | Reads the company's own website, not a record store; the write-back is seam-routed |
+| `get_record_tags` | 🟢 | `read` | — | Reads one record's tags with who applied each; native, not mode-routed |
+| `get_tag` | 🟢 | `read` | — | Reads one tag and how much of the workspace carries it; native vocabulary, not mode-routed |
 | `intro_path_to` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `list_pipelines` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `list_records` | 🟢 | `read` | — | Mirror-backed unfiltered; a FILTERED call is `unsupported_by_sor` (see below) |

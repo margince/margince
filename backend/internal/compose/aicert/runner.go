@@ -106,6 +106,12 @@ type RunnerConfig struct {
 	// post-stripper request+response is dumped to a JSONL file under this
 	// directory and its path printed to stdout. Empty = no trace.
 	TraceDir string
+	// ResumeDir, when non-empty, turns on the resume journal
+	// (MARGINCE_AICERT_RESUME): every scored run is appended to a JSONL file
+	// under this directory as it is scored, and a later run in the same
+	// six-hour window replays the ones it can instead of paying for them
+	// again. Empty = every run is paid for. See resume.go.
+	ResumeDir string
 }
 
 // validateBindings refuses a run that could not produce a trustworthy verdict,
@@ -201,6 +207,22 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		}
 	}()
 
+	// ResumeDir empty ⇒ resuming off: journal stays nil and every method
+	// no-ops. Opened here, before the first paid call, so a journal that
+	// cannot be loaded or compacted costs nothing to find out about.
+	var journal *runJournal
+	if cfg.ResumeDir != "" {
+		journal, err = openRunJournal(ctx, cfg.ResumeDir, cfg.JudgeBinding, cfg.recordProfile(), nowFunc(), log)
+		if err != nil {
+			return nil, fmt.Errorf("aicert: runner: %w", err)
+		}
+	}
+	defer func() {
+		if cerr := journal.close(); cerr != nil {
+			log.WarnContext(ctx, "aicert: closing resume journal", "err", cerr)
+		}
+	}()
+
 	var records []Record
 	var runErrs []error
 	for _, task := range sortedTasks(byTask) {
@@ -217,7 +239,8 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 			binding = resolved
 			log.InfoContext(ctx, "aicert: routed", "task", string(task), "tier", string(rung), "model", resolved.Model)
 		}
-		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, cfg.JudgeBinding, cfg.recordProfile(), repeats, log, &certifyHooks{trace: trace})
+		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, cfg.JudgeBinding, cfg.recordProfile(), repeats, log,
+			&certifyHooks{trace: trace, journal: journal.forTask(task, binding)})
 		if err != nil {
 			log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
 			runErrs = append(runErrs, fmt.Errorf("task %s: %w", task, err))
@@ -245,6 +268,9 @@ type certifyHooks struct {
 	candidateOpts []ai.LocalOption
 	judgeOpts     []ai.LocalOption
 	trace         *payloadTrace
+	// journal is this task's view of the resume journal. Its zero value is the
+	// disabled one, so a caller that resumes nothing leaves it alone.
+	journal taskJournal
 }
 
 // certifyTask runs every scenario for one task over a fresh
@@ -269,8 +295,9 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	promptVersion := FoldScenarioStamps(scenarioStamps)
 	var candidateExtra, judgeExtra []ai.LocalOption
 	var trace *payloadTrace
+	var journal taskJournal
 	if hooks != nil {
-		candidateExtra, judgeExtra, trace = hooks.candidateOpts, hooks.judgeOpts, hooks.trace
+		candidateExtra, judgeExtra, trace, journal = hooks.candidateOpts, hooks.judgeOpts, hooks.trace, hooks.journal
 	}
 	// Capture the post-stripper bodies only when a trace will consume them —
 	// otherwise the router pays the marshal+strip cost for content nothing reads.
@@ -304,7 +331,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	taskVerdict := VerdictCertified // folded down to the worst scenario verdict below
 
 	for _, sc := range scenarios {
-		scenarioVerdict, err := runScenario(ctx, task, sc, scenarioStamps[sc.Name], census, repeats, candidateRouter, candidateRec, judgeRouter, judgeRec, log, acc, trace)
+		scenarioVerdict, err := runScenario(ctx, task, sc, scenarioStamps[sc.Name], census, repeats, candidateRouter, candidateRec, judgeRouter, judgeRec, log, acc, trace, journal)
 		if err != nil {
 			return Record{}, err
 		}

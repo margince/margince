@@ -121,7 +121,10 @@ function useSearchTargets() {
       if (error) throwProblem(error);
       const out: RecordPickerCandidate[] = [];
       for (const result of data.data) {
-        if (result.type === "activity") continue;
+        // Neither is a record this can be filed against: an activity is the
+        // message itself, and a tag is a word rather than something a message
+        // can be about.
+        if (result.type === "activity" || result.type === "tag") continue;
         kindById.current.set(result.id, result.type);
         out.push({ id: result.id, name: result.title ?? result.id });
       }

@@ -326,7 +326,7 @@ func TestThePageIsSummarisedAndExplainedAgainstItself(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3, waitingRead{}, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	if out.Summary.Total != len(out.Queue) {
 		t.Fatalf("summary totals %d over a page of %d", out.Summary.Total, len(out.Queue))
@@ -411,7 +411,7 @@ func TestAWaitingCustomerLeadsTheDay(t *testing.T) {
 		Since:      rankInstant.Add(-2 * 24 * time.Hour),
 	}}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
 
 	if out.Queue[0].Source != "customer_waiting" {
 		t.Fatalf("the day led with %q, not the customer who is waiting", out.Queue[0].Source)
@@ -435,7 +435,7 @@ func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
 		DealID:     deal,
 	}}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
 
 	if len(out.Queue) != 1 {
 		t.Fatalf("one unanswered message produced %d rows", len(out.Queue))
@@ -457,7 +457,7 @@ func TestTheLongestWaitLeadsAmongWaitingCustomers(t *testing.T) {
 		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000b"), Since: rankInstant.Add(-9 * 24 * time.Hour)},
 	}
 
-	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
 
 	if out.Queue[0].Id != "01a05500-0000-7000-8000-00000000000b" {
 		t.Fatal("the two-day wait outranked the eighty-three-day one")
@@ -479,7 +479,7 @@ func TestEveryWaitingRowMayStateItsSubject(t *testing.T) {
 		Since:      rankInstant.Add(-24 * time.Hour),
 	}}
 
-	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
 
 	if out.Queue[0].Title == nil || *out.Queue[0].Title != "Re: pricing" {
 		t.Fatal("a waiting row the content gate admitted lost its subject line")
@@ -504,7 +504,7 @@ func TestAColleaguesWaitingCustomerLeavesTheReadersOwnQueue(t *testing.T) {
 		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000a2"), Since: rankInstant.Add(-time.Hour)},
 	}
 
-	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 25, waitingRead{rows: waiting, read: true}, leadRead{})
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
 
 	for _, row := range out.Queue {
 		if row.Id == "01a05500-0000-7000-8000-0000000000a1" {
@@ -683,7 +683,7 @@ func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
 		Planned: []crmcontracts.AttentionItem{item("task", "task", withDue(rankInstant.Add(-time.Hour)))},
 	}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 100, waitingRead{rows: waiting, read: true}, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 100, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
 
 	// Every wait is still on the page, and every one still SAYS it is a wait.
 	// Rewriting the level of the ninth would tell the reader it was agreed work
@@ -721,7 +721,8 @@ func TestAWaitingRowNamesTheMessageAReplyWouldAnswer(t *testing.T) {
 	}}
 
 	out := (&Service{}).worklistFrom(context.Background(),
-		crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{})
+		crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true},
+		leadRead{}, worklistCursor{}, nil)
 
 	move := out.Queue[0].Move
 	if move == nil {
@@ -755,7 +756,7 @@ func TestAnAbsorbedDealKeepsItsMoneyOnTheWaitingRow(t *testing.T) {
 		DealID:     deal,
 	}}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
 
 	if len(out.Queue) != 1 {
 		t.Fatalf("one message about one deal produced %d rows", len(out.Queue))

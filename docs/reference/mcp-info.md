@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 59 |
+| Tools | 61 |
 | Resources | 9 |
-| Tool catalog | 169.0 KB |
+| Tool catalog | 173.7 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 44142 |
+| Approx. wire tokens | 45334 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 80.9 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 39.1 KB | 23% | Yes, every step |
-| Input schemas | 36.5 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 12.5 KB | 7% | Partly |
-| **Description + input schema** | **75.6 KB** | **44%** | **the recurring cost** |
+| Output schemas | 83.5 KB | 48% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 40.2 KB | 23% | Yes, every step |
+| Input schemas | 37.0 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 12.9 KB | 7% | Partly |
+| **Description + input schema** | **77.2 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,7 +57,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (59)
+### Tools (61)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -65,7 +65,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.2 KB |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
-| [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.0 KB |
+| [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.2 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.7 KB |
@@ -82,17 +82,19 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
 | [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
+| [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
+| [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 1.9 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
-| [`list_records`](#list_records) | List records | yes |  | 3.1 KB |
+| [`list_records`](#list_records) | List records | yes |  | 3.2 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.8 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
-| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
+| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.2 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.0 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.4 KB |
@@ -102,14 +104,14 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.0 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
-| [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.2 KB |
+| [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.0 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
-| [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 2.9 KB |
+| [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 6.0 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
@@ -1054,7 +1056,7 @@ Write what you found onto the morning brief you just read: one sentence about th
 
 **Apply a tag to a record**
 
-Tag a person, company, deal, lead or project by tag_id, or by tag_name, which reuses the workspace's word or coins it. Prefer a tag_id from list_tags: a name matches case-insensitively, and a near-miss makes a NEW word. The same tag twice is a conflict. (Governance: runs immediately; requires passport scope "write".)
+Tag a person, company, deal, lead or project by tag_id, or by tag_name, which must name a tag the workspace already has. This tool never creates a tag: an unknown name is refused, and only an admin or ops seat can add a word to the vocabulary. A name matches case-insensitively; an archived word is refused as archived rather than as unknown. Prefer a tag_id from list_tags. The same tag twice is a conflict. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -1086,8 +1088,8 @@ Tag a person, company, deal, lead or project by tag_id, or by tag_name, which re
       "type": "string"
     },
     "tag_name": {
-      "description": "Instead of tag_id: the tag is created if the workspace has no such word",
-      "maxLength": 120,
+      "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+      "maxLength": 64,
       "type": "string"
     }
   },
@@ -3988,6 +3990,319 @@ Learn about an organization by reading its public website, and propose what was 
 
 </details>
 
+### get_record_tags
+
+**Get a record's tags**
+
+Read the tags on one person, company or deal, with who applied each and when. Those three record types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty for that reason — NOT because the record carries no tags, and it must not be reported as none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "record_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "record_type": {
+      "enum": [
+        "person",
+        "organization",
+        "deal"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "record_type",
+    "record_id"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "tags": {
+          "items": {
+            "properties": {
+              "archived": {
+                "type": "boolean"
+              },
+              "assigned_at": {
+                "type": "string"
+              },
+              "assigned_by": {
+                "type": "string"
+              },
+              "assigned_by_kind": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "tag_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "assigned_at",
+              "name",
+              "tag_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "withheld": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "tags",
+        "withheld"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### get_tag
+
+**Get a tag**
+
+Read one tag and how many people, companies and deals carry it. The counts cover those three record types only. They say how much retiring or merging the word would touch; the records themselves come from list_records. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "tag_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tag_id"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "archived": {
+          "type": "boolean"
+        },
+        "color": {
+          "type": "string"
+        },
+        "companies": {
+          "type": "integer"
+        },
+        "deals": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "people": {
+          "type": "integer"
+        },
+        "tag_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "companies",
+        "deals",
+        "name",
+        "people",
+        "tag_id"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### intro_path_to
 
 **Find a warm introduction path**
@@ -4862,7 +5177,7 @@ Enumerate the people, organizations, deals, leads or projects that meet exact co
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other) deal — organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
       "type": "object"
     },
     "limit": {
@@ -6524,10 +6839,24 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
               "assignee_name": {
                 "type": "string"
               },
+              "claim_id": {
+                "format": "uuid",
+                "type": "string"
+              },
               "days_overdue": {
                 "type": "integer"
               },
               "due_at": {
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "source_activity_id": {
+                "format": "uuid",
                 "type": "string"
               },
               "state": {
@@ -6543,9 +6872,9 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
             },
             "required": [
               "about",
+              "source",
               "state",
-              "subject",
-              "task_id"
+              "subject"
             ],
             "type": "object"
           },
@@ -8629,10 +8958,24 @@ Read one project's whole page: company, phase history with time per phase, deals
                   "assignee_name": {
                     "type": "string"
                   },
+                  "claim_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
                   "days_overdue": {
                     "type": "integer"
                   },
                   "due_at": {
+                    "type": "string"
+                  },
+                  "quote": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "source_activity_id": {
+                    "format": "uuid",
                     "type": "string"
                   },
                   "state": {
@@ -8648,9 +8991,9 @@ Read one project's whole page: company, phase history with time per phase, deals
                 },
                 "required": [
                   "about",
+                  "source",
                   "state",
-                  "subject",
-                  "task_id"
+                  "subject"
                 ],
                 "type": "object"
               },
@@ -9776,8 +10119,8 @@ Take one tag off one record — by tag_id or tag_name — leaving the word itsel
       "type": "string"
     },
     "tag_name": {
-      "description": "Instead of tag_id: the tag is created if the workspace has no such word",
-      "maxLength": 120,
+      "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+      "maxLength": 64,
       "type": "string"
     }
   },
@@ -10145,7 +10488,7 @@ Find out whether the people and companies named in something you are holding alr
 
 **Review open commitments**
 
-Answer "what have we promised and not delivered?": the open tasks across the workspace, earliest due date first and undated ones last, each with the person who owes it, when it came due and the record it was made about. A promise appears here only because someone recorded it as a task — what was agreed in a meeting and never written down is absent — so this is what the workspace has on record, not everything owed. It is scoped to the records the caller may see. Use whats_slipping_this_week when the question is which DEALS are at risk rather than which promises are outstanding, and catch_me_up_on for everything that has happened on one record. Each item carries task_id and, where there is one, assignee_id. Every state is judged against as_of, so carry that too if you report the answer later. (Governance: runs immediately; requires passport scope "read".)
+Answer "what have we promised and not delivered?": the open promises across the workspace, most overdue first, from BOTH places a promise is recorded — a task somebody filed, and a commitment read out of a captured conversation, which carries the sentence it was read from. Each names when it came due and the record it was made about. It reads what the workspace captured: a promise made in an uncaptured call, or in a thread nobody filed, is absent. The two sources are not linked, so a promise both said and typed can appear twice. Narrowing by assignee or project returns recorded TASKS alone — a conversation commitment carries neither — so a narrowed answer is a smaller question than the unnarrowed one. It is scoped to the records the caller may see. Use whats_slipping_this_week when the question is which DEALS are at risk rather than which promises are outstanding, and catch_me_up_on for everything that has happened on one record. Each item carries source (task | conversation) and the id for that source — task_id or claim_id — plus assignee_id where a task has one. Every state is judged against as_of, so carry that too if you report the answer later. (Governance: runs immediately; requires passport scope "read".)
 
 Renders its result in [`ui://margince/commitments.html`](#commitments_view), visible to `model`, `app`.
 
@@ -10220,10 +10563,24 @@ Renders its result in [`ui://margince/commitments.html`](#commitments_view), vis
               "assignee_name": {
                 "type": "string"
               },
+              "claim_id": {
+                "format": "uuid",
+                "type": "string"
+              },
               "days_overdue": {
                 "type": "integer"
               },
               "due_at": {
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "source_activity_id": {
+                "format": "uuid",
                 "type": "string"
               },
               "state": {
@@ -10239,9 +10596,9 @@ Renders its result in [`ui://margince/commitments.html`](#commitments_view), vis
             },
             "required": [
               "about",
+              "source",
               "state",
-              "subject",
-              "task_id"
+              "subject"
             ],
             "type": "object"
           },

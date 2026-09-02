@@ -78,10 +78,11 @@ no code, no API, just the app.
 - [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, egress, and overlay-mode behaviour.
 - [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.
 - [agent-tool-budget.md](reference/agent-tool-budget.md) — what each agent's tool menu costs in prompt tokens, agent by agent, against the published ceiling. Generated with its `.json` sibling, never hand-edited.
+- [ai-certification.md](reference/ai-certification.md) — what the AI certification lane covers: every shipped invocation site, the scenarios it is scored against with a link to each case, and a table per (provider, model, env) binding. Generated from the corpus, the records and the invocation-site census, never hand-edited; a stale record says which scenario moved under it.
 - [supply-chain.md](reference/supply-chain.md) — the source-tree SBOMs, the license gate, keyless signing, and the pinned toolchain.
 
 Several reference pages are **generated** and say so in their own first lines —
-`mcp-info`, `agent-tool-budget`, `rbac-matrix`, `performance-budgets` and the
+`mcp-info`, `agent-tool-budget`, `ai-certification`, `rbac-matrix`, `performance-budgets` and the
 `perfbench/` records. Do not hand-edit them, and do not try to shorten them: their
 length is a function of the surface they tabulate, which is why
 `backend/gates/docspagelength_test.go` reads that marker and exempts them from the page

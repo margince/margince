@@ -11,7 +11,12 @@ package compose
 // copies out of the page — checked verbatim, then checked for reaching over
 // somebody else — rather than from where the two strings happen to sit.
 
-import "strings"
+import (
+	"net/mail"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/webread"
+)
 
 // attributionQuote checks the model's claim that the page gives THIS person
 // THIS role, and returns the page's own words that say so.
@@ -231,6 +236,24 @@ func gatePagePeople(parsed pageFactsReply, page crawlPage, idx snippetIndex, dro
 			drop(lanePeople, name, role, dropNoPublishedEmail)
 			continue
 		}
+		// And it has to be an address on THIS site's own domain, because the
+		// proposal files the person at the company whose site was read.
+		//
+		// A printed address proves contactability, not affiliation. A "what our
+		// clients say" wall that prints the quoted person's own address yields a
+		// lead filed as a contact at the quoting company — which their own
+		// quoted job title disproves on the same line, and which then propagates
+		// into whatever the account page says about that company.
+		//
+		// The cost is named rather than hidden: a member of staff who publishes
+		// a personal address becomes unproposable, and the drop census says so
+		// by its own reason. That is the trade taken deliberately — a missing
+		// lead is recoverable by hand, a wrong affiliation is not obviously
+		// wrong to whoever reads it next.
+		if !addressOnSiteDomain(publishedEmail, page.URL) {
+			drop(lanePeople, name, role, dropEmailOffSiteDomain)
+			continue
+		}
 		person := sitePerson{
 			Name:            name,
 			Role:            role,
@@ -261,4 +284,50 @@ func gatePagePeople(parsed pageFactsReply, page crawlPage, idx snippetIndex, dro
 		out = append(out, person)
 	}
 	return out
+}
+
+// addressOnSiteDomain reports whether a printed address belongs to the site the
+// page came from, compared as REGISTRABLE domains.
+//
+// The address is PARSED, not split. A bare "@acme.example", or "not an
+// email@acme.example", carries the site's domain after the last @ and would
+// otherwise vouch for an affiliation while naming nobody reachable — the
+// proposal would then ask a human to confirm a lead whose only contact detail
+// cannot be sent to.
+//
+// The comparison is webread.SameRegistrableDomain, which is the crawler's own
+// off-domain gate: www.acme.de and mail.acme.de are one site, acme.de and
+// acme.com are not, and neither are two customers of one co.uk-style suffix.
+// It is strict where freemail.Registrable is lenient — that one passes a host
+// through unchanged when it can derive no eTLD+1, so a bare public suffix on
+// both sides would compare equal and admit the very thing this refuses.
+//
+// Anything it cannot read answers false. An address or a URL this cannot parse
+// is not one it can vouch for, and the proposal it would admit is the one this
+// check exists to refuse.
+func addressOnSiteDomain(email, pageURL string) bool {
+	parsed, err := mail.ParseAddress(email)
+	if err != nil {
+		return false
+	}
+	// The LAST @, because a quoted local part may contain one: mail.ParseAddress
+	// reads `"x@acme.example/"@other.example` as the single address
+	// `x@acme.example/@other.example`, and cutting at the first @ would hand
+	// "acme.example/@other.example" to a URL parse that reads its host as
+	// acme.example — an address on other.example vouching for an acme page.
+	at := strings.LastIndex(parsed.Address, "@")
+	if at <= 0 || at == len(parsed.Address)-1 {
+		return false
+	}
+	domain := parsed.Address[at+1:]
+	// Nothing further is asserted about the domain's shape here, because two
+	// checks already own it: mail.ParseAddress refuses a path, a space or a
+	// second @ in an unquoted domain, and SameRegistrableDomain answers false
+	// for anything url.Parse or the public-suffix list cannot read. A guard
+	// between them would be one no input reaches, which is a guard nobody can
+	// tell from a broken one.
+	//
+	// A host in URL form because SameRegistrableDomain compares two URLs, and
+	// reusing it is what keeps this test and the crawler's the same test.
+	return webread.SameRegistrableDomain(pageURL, "https://"+domain)
 }

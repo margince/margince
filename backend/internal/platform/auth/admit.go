@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package auth is the ONE admission point for governed agent actions
-// (interfaces.md §2, ADR-0055): scope ∧ seat ∧ tier ∧ quota, resolved against
+// (interfaces.md §2, ADR-0055): scope ∧ seat ∧ tier ∧ volume, resolved against
 // the calling Principal, BEFORE any handler runs — whether the action arrives
 // as an MCP tool call or a mutating REST operation. It is its own package
 // so nothing else can mint an admitted capability — Surface A (inbound
@@ -15,7 +15,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
@@ -29,7 +29,7 @@ import (
 // instead of surviving on whatever the transport stamped earlier.
 type Gate struct {
 	authority authz.Resolver
-	quota     Quota
+	volume    VolumeMeter
 }
 
 // GateOption configures a Gate at construction. Variadic rather than
@@ -38,14 +38,14 @@ type Gate struct {
 // nil by copy-paste.
 type GateOption func(*Gate)
 
-// WithQuota installs the per-Passport volume meter (MCP-SESS-*). A gate built
+// WithVolumeMeter installs the per-Passport volume meter (MCP-SESS-*). A gate built
 // WITHOUT one does not enforce any of those bounds, which is a real composition
 // rather than an oversight: the Surface-B runner and the workflow paths build a
 // gate and run as the human or system that started them, whom these bounds do
 // not govern. The api server — the one role an agent principal ever reaches —
 // passes it, from the same pointer it gives the registry that charges it.
-func WithQuota(quota Quota) GateOption {
-	return func(g *Gate) { g.quota = quota }
+func WithVolumeMeter(quota VolumeMeter) GateOption {
+	return func(g *Gate) { g.volume = quota }
 }
 
 // NewGate builds the admission point over its authority seam. Options add
@@ -65,7 +65,7 @@ func NewGate(authority authz.Resolver, opts ...GateOption) *Gate {
 //
 // The decision order is deliberate: scope first (a caller without the
 // verb never learns the tier, and pays no authority read), then the live
-// seat ceiling, then the read quota, then tier. A 🟡 outcome (declared or
+// seat ceiling, then the read bound, then tier. A 🟡 outcome (declared or
 // dynamically resolved) returns ErrRequiresApproval. On admission the returned
 // context carries the principal refreshed with the re-derived authority,
 // so downstream store RBAC runs on current grants.
@@ -79,7 +79,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// their authority is their RBAC, enforced at the store. The gate
 	// exists to bound AGENTS (03b Layer 1); a human reaching a tool
 	// through the UI already answered for the action.
-	// A buyer holds no scope, no seat and no quota, so "not an agent, pass"
+	// A buyer holds no scope, no seat and no volume bound, so "not an agent, pass"
 	// would wave one through every check this gate exists to apply. Refused
 	// by kind rather than by the absence of a passport, because the absence
 	// is what makes the pass-through look safe.
@@ -95,7 +95,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// passport holds — mcp.ToolSpec.SelfDescribing carries the reason, and the
 	// listing filter reads the same flag, so what is offered is what is
 	// admitted. Every check below still applies: the seat, the re-derived
-	// RBAC and the quota are not waived by knowing whose seat it is.
+	// RBAC and the volume bounds are not waived by knowing whose seat it is.
 	if !spec.SelfDescribing && !p.Scopes.Has(spec.RequiredScope) {
 		return ctx, fmt.Errorf("gate: %s needs scope %q: %w", spec.Name, spec.RequiredScope, apperrors.ErrScopeExceeded)
 	}
@@ -152,15 +152,15 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 			spec.Name, p.ID, apperrors.ErrSeatTierInsufficient)
 	}
 
-	// Quota, the third term of "scope ∧ tier ∧ quota" (interfaces.md §2). It
+	// Volume, the third term of "scope ∧ tier ∧ volume" (interfaces.md §2). It
 	// runs AFTER scope and seat so a caller who may not run the verb at all
-	// never learns that a quota exists, let alone how much of it is spent.
+	// never learns that a bound exists, let alone how much of it is spent.
 	//
-	// Which counters bind THIS call, and what crossing one costs, is quota.go's
+	// Which counters bind THIS call, and what crossing one costs, is volume.go's
 	// business. It runs before tier because a suspended Passport is refused
 	// whatever the tier resolves to, and resolving a dynamic tier costs a
 	// database read the refused caller should not be able to make us pay.
-	if err := g.refuseOnQuota(ctx, spec); err != nil {
+	if err := g.refuseOnVolume(ctx, spec); err != nil {
 		return ctx, err
 	}
 
@@ -264,7 +264,7 @@ func deniedIfGone(what, tool string, err error) error {
 	return fmt.Errorf("gate: %s: resolving %s: %w", tool, what, err)
 }
 
-// AdmitRead applies the READ quota alone, for a call that has no tool spec to
+// AdmitRead applies the READ bound alone, for a call that has no tool spec to
 // admit against — the ADR-0055 REST surface's non-mutating half.
 //
 // It exists because that path has no tier to resolve and no scope to check
@@ -289,15 +289,15 @@ func deniedIfGone(what, tool string, err error) error {
 //
 // Non-agents are admitted untouched, exactly as Admit leaves them.
 func (g *Gate) AdmitRead(ctx context.Context) error {
-	if g == nil || g.quota == nil {
+	if g == nil || g.volume == nil {
 		return nil
 	}
 	p, ok := principal.Actor(ctx)
 	if !ok || p.Type != principal.PrincipalAgent {
 		return nil
 	}
-	if reading := g.quota.Read(ctx, agentquota.Reads); reading.Exceeded {
-		return &QuotaExceededError{Reading: reading}
+	if reading := g.volume.Read(ctx, agentvolume.Reads); reading.Exceeded {
+		return &VolumeExceededError{Reading: reading}
 	}
 	return nil
 }
