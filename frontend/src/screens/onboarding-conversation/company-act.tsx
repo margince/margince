@@ -17,7 +17,7 @@ import {
   outstandingStep,
   useInstallationSetup,
 } from "../installation-setup";
-import type { CompanyDraft } from "../onboarding";
+import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import {
   changeDraftField,
   EMPTY_DRAFT,
@@ -892,11 +892,21 @@ export function CompanyAct({
   // press away: it is where a field is edited freely and a fact is unticked,
   // and the server wants both of those from somewhere.
   const cards = deckCards(blocking, advisory);
+  // The same mapping over EVERY row, so the deck can still draw the card it is
+  // standing on after that field stops being outstanding. Built from `allRows`
+  // rather than kept as a copy: what the reader types has to reach the control
+  // it was typed into.
+  const cardOf = (field: CompanyFieldName) =>
+    deckCards(
+      allRows.filter((row) => row.field === field),
+      [],
+    )[0];
   const reviewScene =
     state.phase === "co.review" && reviewProposal ? (
       artifactMode === "dossier" ? (
         <ReviewDeck
           cards={cards}
+          cardOf={cardOf}
           settled={selectedFactKeys.length}
           onField={(field, value) =>
             setDraft((current) => changeDraftField(current, field, value))

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -75,6 +75,7 @@ export function deckCards(
 
 export function ReviewDeck({
   cards,
+  cardOf,
   settled,
   onField,
   onDone,
@@ -84,6 +85,15 @@ export function ReviewDeck({
   digest,
 }: Readonly<{
   cards: readonly DeckCard[];
+  /**
+   * One field's card as it stands RIGHT NOW, answered or not.
+   *
+   * `cards` carries only what is still outstanding, so a field leaves it on
+   * its first keystroke. The card being typed into has to keep rendering from
+   * somewhere, and this is that somewhere: the whole record, not the part of
+   * it that still wants attention.
+   */
+  cardOf: (field: CompanyFieldName) => DeckCard | undefined;
   /** How many facts went onto the record without needing anybody. */
   settled: number;
   onField: (field: CompanyFieldName, value: string) => void;
@@ -105,9 +115,25 @@ export function ReviewDeck({
   const t = useT();
   const { locale } = useLocale();
   const [at, setAt] = useState(0);
+  // The order the deck asks in, fixed the first time each field appears and
+  // never shortened.
+  //
+  // `cards` is derived from what is still outstanding, so a field drops out of
+  // it the moment its first character lands. A cursor that indexed THAT array
+  // moved the deck on mid-word: the reader typed one letter, the row stopped
+  // being outstanding, the array closed up, and the next question slid in
+  // under the caret. The place in the queue is a field, and the field's
+  // content is read live so what is typed still shows.
+  const order = useRef<CompanyFieldName[]>([]);
+  for (const entry of cards) {
+    if (!order.current.includes(entry.field)) {
+      order.current.push(entry.field);
+    }
+  }
+  const asking = order.current[at];
   // Past the end is the honest state once every card is met, not a clamp back
   // onto the last one: the deck is finished and says so.
-  const card = cards[at];
+  const card = asking === undefined ? undefined : cardOf(asking);
 
   if (card === undefined) {
     return (
@@ -120,7 +146,7 @@ export function ReviewDeck({
         </div>
         <DeckFoot
           left={0}
-          total={cards.length}
+          total={order.current.length}
           settled={settled}
           locale={locale}
           onDone={onDone}
@@ -139,16 +165,16 @@ export function ReviewDeck({
           {/* The cards still to come, as edges behind the live one. They carry no
             content and are not read out: a reader is told how many are left in
             words by the tray, and the stack is what makes that number felt. */}
-          {cards.length - at > 1 && (
+          {order.current.length - at > 1 && (
             <span className="rdeck-peek" aria-hidden="true" />
           )}
-          {cards.length - at > 2 && (
+          {order.current.length - at > 2 && (
             <span className="rdeck-peek rdeck-peek-far" aria-hidden="true" />
           )}
           <DeckCardFace
             card={card}
             index={at}
-            total={cards.length}
+            total={order.current.length}
             locale={locale}
             onField={onField}
             onNext={() => setAt((n) => n + 1)}
@@ -157,7 +183,7 @@ export function ReviewDeck({
         {digest(card.field)}
       </div>
       <DeckFoot
-        left={cards.length - at}
+        left={cards.length}
         total={cards.length}
         settled={settled}
         locale={locale}
