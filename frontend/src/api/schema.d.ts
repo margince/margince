@@ -26454,6 +26454,26 @@ export interface components {
             /** @description Sources that could not be included, and why. Empty is the honest common case. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
             /**
+             * @description Send this back as `cursor` to continue past the last row of this page. See that
+             *     parameter for what a walk does and does not guarantee.
+             *
+             *     ABSENT MEANS THE WALK IS OVER — nothing was left behind this page. It is
+             *     deliberately not minted on a final page: a cursor there invites one more request
+             *     that can only answer empty, and a client walking until the cursor disappears
+             *     would never stop.
+             *
+             *     Absent is therefore a claim, not a silence, and it is the one this field must
+             *     never make wrongly. It is a claim about THIS READ of the day: work that arrives
+             *     afterwards, or that overtakes rows already handed out, appears on the next read
+             *     rather than extending a finished walk.
+             *
+             *     `reach` and `counts` answer a different question — how deep each SOURCE was read,
+             *     which is a bound on work rather than the end of a page — so a walk that has ended
+             *     can still sit above sources that were cut short, and both statements are true at
+             *     once.
+             */
+            next_cursor?: string;
+            /**
              * @description How much of each source the queue actually looked at. A source is read up to a
              *     work bound, so a page can be a page rather than everything there is, and this
              *     is where the queue says which. Empty only when no source was read at all.
@@ -38127,6 +38147,65 @@ export interface operations {
                 filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
                 /** @description How many ranked items to return. */
                 limit?: number;
+                /**
+                 * @description Where to continue a walk, from a prior response's `next_cursor`. Omitted starts at
+                 *     the top, which is what every reader opening their day wants.
+                 *
+                 *     NOT the shared keyset cursor the CRUD lists use, and the difference is why this
+                 *     endpoint declares its own. Those walk rows a database already ordered, so their
+                 *     token carries a sort key and the next page is a WHERE clause. This queue has no
+                 *     such column: it assembles from a dozen lanes and ranks them by a comparator
+                 *     reading facts no table holds — whether a wait is crowded, what a deal is worth in
+                 *     base currency, which band a row landed in. So the token carries a POSITION in that
+                 *     ranking, and the next page re-assembles the day, ranks it the same way, and starts
+                 *     there.
+                 *
+                 *     It encodes the `scope`, `filter` and `owner` it was minted under, NORMALISED, so
+                 *     that two spellings of one question share a cursor: an omitted `filter` and
+                 *     `filter=all` weigh the same candidates, and naming yourself as `owner` is the
+                 *     question the default already answers. Sending a cursor alongside a genuinely
+                 *     different scope, filter or owner returns `422 code: cursor_param_mismatch` rather
+                 *     than continuing into another question — page two of your own tasks silently
+                 *     becoming the team's deals is what that prevents, and nothing in the response would
+                 *     have said so. `limit` is deliberately NOT fingerprinted: it decides how many rows
+                 *     a page carries, not which rows exist, so changing it mid-walk is legitimate.
+                 *
+                 *     A token that does not decode returns `422 code: malformed_cursor`. The token is
+                 *     opaque, NOT authenticated: it is base64 of a small JSON object and a caller who
+                 *     studies it can construct one. That grants nothing. A cursor only chooses where to
+                 *     resume inside a page that is re-assembled from scratch under the caller's own
+                 *     principal, so every row it can reach is one the caller could already read, and no
+                 *     forged token widens scope or row visibility.
+                 *
+                 *     WHAT A WALK GUARANTEES, and what it does not. This is live work, so the day moves
+                 *     between pages: a rep answers a message, a deal closes, a colleague takes a task.
+                 *
+                 *     Guaranteed: the walk TERMINATES, and over a day that does not move it reaches
+                 *     every row exactly once. The offset advances on every page and the candidate set is
+                 *     bounded, so no arrangement of arrivals, answers and reprioritisations makes a
+                 *     client paging to exhaustion loop.
+                 *
+                 *     Not guaranteed: a stable snapshot, which a set re-assembled and re-ranked on every
+                 *     read cannot offer. One consequence, and it is the whole cost of this design: A ROW
+                 *     THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO READS IS SERVED TWICE OR NOT AT ALL ON
+                 *     THIS WALK. A deal that turns urgent moves up past where you have got to; one that
+                 *     is answered lets everything below it move up by one.
+                 *
+                 *     Such a row is not lost from the product — the next read of the queue ranks it
+                 *     afresh and shows it — so treat a walk as a way to reach a backlog you already know
+                 *     is there, not as a transaction over it. There is no way to ask for the whole day
+                 *     at one instant: `limit` stops at 100 and a single category can hold more than that,
+                 *     because the sources are read to their own bounds well past a page (the decision
+                 *     lane alone weighs 200). `counts` is what says how much is behind the page.
+                 *
+                 *     The alternative was a token naming the last row it handed you, which is the
+                 *     obvious design and is worse here. When that row is answered between pages, or
+                 *     sinks to the end of the ranking, "everything after it" is empty and the walk
+                 *     reports itself finished while work is still owed. A queue whose purpose is that
+                 *     work is not forgotten cannot fail that way, so it accepts the boundary case above
+                 *     instead.
+                 */
+                cursor?: string;
                 /**
                  * @description Whose queue to answer, when it is somebody else's. A manager reading a team
                  *     exception is told which rep it belongs to, and the next question is always

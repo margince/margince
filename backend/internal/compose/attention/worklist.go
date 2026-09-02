@@ -17,13 +17,9 @@ package attention
 
 import (
 	"context"
-	"errors"
-	"log/slog"
 	"sort"
-	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -57,7 +53,7 @@ const worklistMaxPage = 100
 // classified and then dropped, so the summary's figures describe the same day
 // whichever filter is applied.
 func (s *Service) Worklist(
-	ctx context.Context, scope, filter string, owner ids.UUID, limit int,
+	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
 ) (crmcontracts.Worklist, error) {
 	// Resolved BEFORE the day is read: a reader asking for a scope they do not
 	// hold gets a refusal rather than a page assembled and then narrowed, and
@@ -68,6 +64,18 @@ func (s *Service) Worklist(
 	}
 	// Same rule, same moment: whose queue this is, refused rather than narrowed.
 	namedOwner, err := s.resolveOwner(ctx, owner)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	// Checked against the RESOLVED scope and owner, not the words the request
+	// used. `scope` omitted and `scope=mine` are the same question, and a
+	// fingerprint over the raw request would refuse a caller who spelled the
+	// default out on page two of a walk they started without it.
+	//
+	// Refused BEFORE the day is read: a token minted for another question is the
+	// caller's mistake, and assembling a page to then discard it spends a dozen
+	// lane reads on an answer nobody receives.
+	cursor, err := decodeCursor(token, resolved, filter, namedOwner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -120,7 +128,7 @@ func (s *Service) Worklist(
 	// left the second half seeing no named owner: it fell through to "mine" and
 	// returned the READER's own day under the named person's heading, which is
 	// the one way this page can be wrong that its reader cannot detect.
-	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads)
+	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads, cursor)
 	if waitingErr != nil {
 		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
 	}
@@ -134,55 +142,9 @@ func (s *Service) Worklist(
 
 // worklistFrom projects an already-assembled day, so a test can drive the
 // ranking, the paging and the summary without standing up every lane's reader.
-// waitingCustomers reads who is waiting, or names why it could not.
-//
-// A refusal is reported as a withheld source; any other failure as a failed
-// one. Neither takes the rest of the day down with it — a page that answered
-// nothing because one source stumbled is less useful than a page that says
-// which part it could not read.
-func (s *Service) waitingCustomers(
-	ctx context.Context, asOf time.Time,
-) (waitingRead, *crmcontracts.WorklistSourceUnavailable) {
-	if s.waiting == nil {
-		return waitingRead{}, nil
-	}
-	rows, cut, err := s.waiting.Unanswered(ctx, asOf)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
-		}
-	case err != nil:
-		// Named on the page AND recorded here. A source reported as failed with
-		// nothing in the log leaves an operator with a warning they cannot act
-		// on — which is how this one went a whole verification round without
-		// anybody being able to say what broke.
-		slog.ErrorContext(ctx, "the who-is-waiting read failed", "error", err)
-		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
-		}
-	default:
-		return waitingRead{rows: rows, read: true, cut: cut}, nil
-	}
-}
-
-// waitingRead is what the who-is-waiting source answered, and whether it ran.
-//
-// `read` tells an empty answer from an absent lane, the way the lead read's own
-// wrapper does: reach publishes a row for every source it is told about, so
-// recording a source that never ran would report it as successfully read and
-// empty. `cut` is the lane's own scan depth, which the row count cannot
-// recover — the seam drops machine senders and folds duplicate threads AFTER
-// the SQL cap, so a short answer is what a truncated scan looks like.
-type waitingRead struct {
-	rows []WaitingCustomer
-	read bool
-	cut  bool
-}
-
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
-	waiting waitingRead, leads leadRead,
+	waiting waitingRead, leads leadRead, cursor worklistCursor,
 ) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
@@ -300,7 +262,12 @@ func (s *Service) worklistFrom(
 	// then slicing left the last returned row comparing itself against a row the
 	// caller never received, and the summary describing a queue longer than the
 	// one on screen.
-	shown := page(rows, limit)
+	//
+	// The resume happens inside the same cut, between the sort and the slice: the
+	// candidate order does not depend on `limit` — crowding is marked above, over
+	// the whole narrowed set — so page two weighs exactly what page one weighed
+	// and continues it rather than re-deciding it.
+	shown, more, reached := pageFrom(rows, limit, cursor)
 	ordered := rankAll(shown)
 	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{
@@ -326,6 +293,23 @@ func (s *Service) worklistFrom(
 	if filter != "" {
 		narrowed := crmcontracts.WorklistFilter(filter)
 		out.Filter = &narrowed
+	}
+	// The token for the row this page stopped on, minted ONLY when there is more
+	// behind it. A cursor on a final page invites one more request that can only
+	// answer empty, and a client walking until the cursor disappears would never
+	// stop.
+	//
+	// Fingerprinted with `s.taskOwner`, the same resolved owner the two
+	// narrowing passes above read. Taking it from the request instead would let
+	// the token and the rows it continues disagree about whose queue this is.
+	//
+	// The position is how far into THIS read's ranking the page got — where the
+	// cut landed, not a running total of rows handed out. The two differ the
+	// moment the day moves between pages, and a running total would push the
+	// offset past the work still owed.
+	if more && len(shown) > 0 {
+		token := encodeCursor(reached, scope, filter, s.taskOwner)
+		out.NextCursor = &token
 	}
 	return out
 }
@@ -392,30 +376,6 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
 	bounded["dedupe_candidate"] = bounded["approval"]
 	return bounded
-}
-
-// page cuts the candidates to what one read carries.
-//
-// It runs BEFORE the ranking is drawn, so the comparison each row publishes is
-// against a row the caller actually received. The cut itself is by score, so
-// this sorts first and then slices — taking the best `limit`, never the first
-// `limit` the producers happened to return.
-func page(rows []ranked, limit int) []ranked {
-	sort.SliceStable(rows, func(i, j int) bool { return less(rows[i], rows[j]) })
-	if len(rows) > limit {
-		return rows[:limit]
-	}
-	return rows
-}
-
-func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranked {
-	kept := make([]ranked, 0, len(rows))
-	for _, row := range rows {
-		if row.item.Category == want {
-			kept = append(kept, row)
-		}
-	}
-	return kept
 }
 
 // summarize counts the day in the three figures the header states.
