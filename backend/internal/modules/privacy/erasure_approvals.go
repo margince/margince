@@ -72,14 +72,21 @@ const subjectApprovalMatch = `
 	OR summary               ~* ANY($3::text[])`
 
 // blankStagedProposal is what emptying a staged proposal IS: the payload, the
-// summary a human reads, and the material it was read out of.
+// summary a human reads, the name of the record it was about, and the material
+// it was read out of.
 //
 // One spelling because three statements in this package perform it, and a
 // content column added to one of them is a content column the other two leave
 // behind — which is exactly how the quotation came to outlive an erasure that
 // emptied everything beside it.
+//
+// target_label is a person's own name where the proposal was about a person, so
+// it goes with the rest. NULL rather than ”: the column's absence is what the
+// card reads as "say nothing", and an empty string would leave a blank caption
+// where a name used to be.
 const blankStagedProposal = `proposed_change = '{}'::jsonb,
 	       summary         = '',
+	       target_label    = NULL,
 	       evidence        = NULL`
 
 // The reasons this package writes onto a proposal it withdraws. Three, because

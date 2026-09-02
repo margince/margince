@@ -15274,6 +15274,9 @@ type Approval struct {
 	// TargetEntityType Entity the effect mutates (for precondition re-validation).
 	TargetEntityType *string `json:"target_entity_type,omitempty"`
 
+	// TargetLabel What the target record was CALLED when this proposal was staged, where its type has a name at all. Resolved at staging time and frozen: the record may be renamed, archived or merged before anyone opens the inbox, and a caption re-resolved then would name something the approver was never shown. Absent means the type carries no name, or the row had already gone — a card then says nothing rather than "unknown".
+	TargetLabel *string `json:"target_label,omitempty"`
+
 	// TargetVersion The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036).
 	TargetVersion *int `json:"target_version,omitempty"`
 }
