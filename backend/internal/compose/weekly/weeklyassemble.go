@@ -98,7 +98,33 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 		if review.Counts, err = countWeek(ctx, tx, userID, start, end); err != nil {
 			return err
 		}
+		// Leads and meetings read separately from the tallies above: different
+		// tables, different scope clauses, and each dated by a rule that takes
+		// a paragraph to justify. They fold onto the same Counts because a
+		// reader of a week wants one set of figures.
+		c := &review.Counts
+		if c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err =
+			countWeekLeads(ctx, tx, userID, start, end); err != nil {
+			return err
+		}
+		if c.MeetingsHeld, c.MeetingsWithNextStep, err =
+			countWeekMeetings(ctx, tx, userID, start, end); err != nil {
+			return err
+		}
+		if review.Money, err = countWeekMoney(ctx, tx, userID, start, end); err != nil {
+			return err
+		}
 		if review.Deals, err = readWeekDeals(ctx, tx, userID, start, end); err != nil {
+			return err
+		}
+		// The week this one is measured against: the rep's most recent EARLIER
+		// review, whenever it was.
+		//
+		// Their previous review rather than "last week" by arithmetic. A rep
+		// with a gap — a leave, a worker outage — has a prior week that is not
+		// seven days back, and looking for one would find nothing and report
+		// every count as new.
+		if review.PriorReviewID, err = priorReview(ctx, tx, userID, weekStart); err != nil {
 			return err
 		}
 
@@ -152,7 +178,6 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-
 	// Activities carry no owner, so their visibility comes from the records
 	// they link to and the audience the writer set — never hand-rolled.
 	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
@@ -231,6 +256,110 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 		return Counts{}, fmt.Errorf("weekly: counting the week: %w", err)
 	}
 	return c, nil
+}
+
+// countWeekLeads counts how the week's inbound leads were answered.
+//
+// Dated by COALESCE(routed_at, created_at), which is the rule the SLA writer
+// itself applies (leadsla.go): a lead nobody routed still has a first-response
+// target running from when it arrived. Keying on routed_at alone would drop
+// every unrouted lead from the week — the ones most likely to have been missed.
+//
+// Answered and breached are read from the two stamps the SLA writer maintains,
+// never recomputed from a policy that may have changed since: a week is judged
+// by the target that applied to it.
+func countWeekLeads(
+	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
+) (routed, answered, breached int, err error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
+	// A rep's OWN leads, but the scope clause still applies: a rep whose grants
+	// were narrowed after the week must not read back rows they can no longer
+	// see, and the review is assembled under their own principal
+	// (weeklyjobs.go binds it) precisely so this holds.
+	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	if scope == "" {
+		scope = "true"
+	}
+	// One window expression, three counts over it.
+	const arrived = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
+		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d`
+	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT
+		  (SELECT count(*) FROM lead l
+		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
+		      AND `+arrived+` AND (%[4]s)),
+		  (SELECT count(*) FROM lead l
+		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
+		      AND `+arrived+`
+		      AND l.first_response_at IS NOT NULL AND l.sla_breached_at IS NULL
+		      AND (%[4]s)),
+		  (SELECT count(*) FROM lead l
+		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
+		      AND `+arrived+`
+		      AND l.sla_breached_at IS NOT NULL AND (%[4]s))`,
+		startPos, endPos, userPos, scope), args...).
+		Scan(&routed, &answered, &breached)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("weekly: counting the week's leads: %w", err)
+	}
+	return routed, answered, breached, nil
+}
+
+// countWeekMeetings counts the meetings the rep held and how many left a next
+// step behind.
+//
+// A booking cancelled or no-showed is not a conversation the week can be
+// credited with, so only `held` counts.
+//
+// Attributed by captured_by, because a meeting has no owner: the
+// activity_task_fields CHECK reserves assignee_id for tasks, so filtering
+// meetings by it would match nothing and report every rep as having held none.
+//
+// "Left a next step" is a task raised AFTER the meeting against a record the
+// meeting was also filed under — through the shared record rather than a direct
+// pointer, because there is no meeting_id on a task.
+func countWeekMeetings(
+	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
+) (held, withNextStep int, err error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	startPos, endPos := arg(start), arg(end)
+	capturedPos := arg("human:" + userID.String())
+	scope, err := auth.ActivityContentClause(ctx, "m", arg)
+	if err != nil {
+		return 0, 0, err
+	}
+	const heldByRep = `m.kind = 'meeting' AND m.archived_at IS NULL
+		      AND m.meeting_status = 'held' AND m.captured_by = $%[3]d
+		      AND m.occurred_at >= $%[1]d AND m.occurred_at < $%[2]d
+		      AND (%[4]s)`
+	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT
+		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`),
+		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`
+		      AND EXISTS (
+		        SELECT 1 FROM activity_link ml
+		          JOIN activity_link tl ON tl.entity_type = ml.entity_type
+		            AND tl.person_id IS NOT DISTINCT FROM ml.person_id
+		            AND tl.organization_id IS NOT DISTINCT FROM ml.organization_id
+		            AND tl.deal_id IS NOT DISTINCT FROM ml.deal_id
+		            AND tl.lead_id IS NOT DISTINCT FROM ml.lead_id
+		            AND tl.project_id IS NOT DISTINCT FROM ml.project_id
+		          JOIN activity task ON task.id = tl.activity_id
+		         WHERE ml.activity_id = m.id AND task.kind = 'task'
+		           AND task.archived_at IS NULL
+		           AND task.created_at >= m.occurred_at))`,
+		startPos, endPos, capturedPos, scope), args...).
+		Scan(&held, &withNextStep)
+	if err != nil {
+		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)
+	}
+	return held, withNextStep, nil
 }
 
 // readWeekDeals reads the deals this rep's week is about, LABELS AND ALL.

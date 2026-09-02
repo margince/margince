@@ -22,6 +22,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -51,6 +53,36 @@ type Review struct {
 	// the week unremarkable" — the two read identically as silence otherwise.
 	Narrative  string
 	NarratedAt *time.Time
+
+	// What the week did to the pipeline, in the installation's base currency.
+	//
+	// Beside Counts rather than inside it because a tally and a conversion fail
+	// differently: every count is always answerable, and this one has a third
+	// outcome — not computable — that a tally has no room for.
+	Money Money
+
+	// The review this week is measured against: the same rep's most recent
+	// earlier one, or nil for their first.
+	//
+	// The deltas themselves are NOT stored: a stored difference is a third copy
+	// of what the two rows already say, and the three drift the first time one
+	// row is rewritten.
+	//
+	// Held by: TestNoDeltaIsStoredBesideTheTwoFrozenRows
+	// (backend/internal/compose/weekly/weeklycompare_integration_test.go)
+	PriorReviewID *ids.UUID
+	// Prior is that row's own frozen figures, loaded for a reader that wants
+	// the comparison. Nil when there is no prior week, and nil on the prior
+	// row itself: a review carries ONE step of history, not a chain that
+	// lengthens every week a rep works here.
+	Prior *PriorWeek
+}
+
+// PriorWeek is the earlier review a week is compared against.
+type PriorWeek struct {
+	LocalWeekStart time.Time
+	Counts         Counts
+	Money          Money
 }
 
 // Counts are the week's tallies. Every one is as-of the review's AsOf, which
@@ -67,6 +99,34 @@ type Counts struct {
 	ProposalsRejected   int
 	BriefItemsActed     int
 	BriefItemsDismissed int
+
+	// How the week's inbound leads were answered. A lead still inside its
+	// target when the row was written is in neither of the last two: it has
+	// not yet been either answered in time or missed.
+	LeadsRouted           int
+	LeadsAnsweredInTarget int
+	LeadsBreached         int
+
+	// Meetings held, and how many left a next step behind. The second is the
+	// one a rep can act on.
+	MeetingsHeld         int
+	MeetingsWithNextStep int
+}
+
+// Money is a base-currency figure, or the honest absence of one.
+//
+// The three totals travel together with their currency because they are one
+// answer: either the week's pipeline movement converted, or it did not. A
+// caller cannot be handed two of the three and left to guess about the rest.
+type Money struct {
+	CreatedMinor int64
+	WonMinor     int64
+	LostMinor    int64
+	Currency     string
+	// Known is false when a deal in the week could not be converted, or when
+	// the installation names no base currency. The zero value is therefore the
+	// honest "not computable", not a week in which nothing happened.
+	Known bool
 }
 
 // DealLine is one deal the week is about, frozen at the moment it was written.
@@ -132,7 +192,10 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 			 ORDER BY local_week_start DESC
 			 LIMIT 1`, userID, weekStart)
 		var err error
-		review, err = scanReview(ctx, tx, row)
+		if review, err = scanReview(ctx, tx, row); err != nil {
+			return err
+		}
+		review.Prior, err = readPriorWeek(ctx, tx, review.PriorReviewID, userID)
 		return err
 	})
 	if err != nil {
@@ -152,6 +215,10 @@ const reviewSelect = `
 	       deals_moved, deals_won, deals_lost,
 	       proposals_accepted, proposals_rejected,
 	       brief_items_acted, brief_items_dismissed,
+	       leads_routed, leads_answered_in_target, leads_breached,
+	       meetings_held, meetings_with_next_step,
+	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
+	       base_currency, prior_review_id,
 	       coalesce(narrative, ''), narrated_at
 	  FROM weekly_review`
 
@@ -159,17 +226,32 @@ const reviewSelect = `
 func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 	var review Review
 	c := &review.Counts
+	var created, won, lost *int64
+	var currency *string
 	switch err := row.Scan(&review.ID, &review.UserID, &review.LocalWeekStart,
 		&review.GeneratedAt, &review.AsOf,
 		&c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
 		&c.DealsMoved, &c.DealsWon, &c.DealsLost,
 		&c.ProposalsAccepted, &c.ProposalsRejected,
 		&c.BriefItemsActed, &c.BriefItemsDismissed,
+		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
+		&c.MeetingsHeld, &c.MeetingsWithNextStep,
+		&created, &won, &lost, &currency, &review.PriorReviewID,
 		&review.Narrative, &review.NarratedAt); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return Review{}, apperrors.ErrNotFound
 	case err != nil:
 		return Review{}, err
+	}
+	// Known reads off the CURRENCY, which the table's own CHECK ties to the
+	// three figures: either all four are present or none is. Reading it off a
+	// sum would call a genuine zero — a week that created no pipeline — an
+	// unconvertible one.
+	if currency != nil {
+		review.Money = Money{
+			CreatedMinor: deref(created), WonMinor: deref(won), LostMinor: deref(lost),
+			Currency: *currency, Known: true,
+		}
 	}
 	lines, err := readDealLines(ctx, tx, review.ID)
 	if err != nil {
@@ -257,21 +339,49 @@ func readDealLines(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) ([]DealLin
 // no error.
 func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool, error) {
 	c := review.Counts
+	// Column and value paired at the point of writing, and the placeholders
+	// derived from the argument slice. Twenty-odd hand-numbered $N in one
+	// statement is a column-and-argument miscount waiting to happen, and
+	// nothing checks that the three lists agree.
+	cols, args := insertColumns{}, []any(nil)
+	add := func(name string, value any) {
+		cols = append(cols, name)
+		args = append(args, value)
+	}
+	add("user_id", review.UserID)
+	add("local_week_start", review.LocalWeekStart)
+	add("as_of", review.AsOf)
+	add("tasks_due", c.TasksDue)
+	add("tasks_done", c.TasksDone)
+	add("tasks_carried_over", c.TasksCarriedOver)
+	add("deals_moved", c.DealsMoved)
+	add("deals_won", c.DealsWon)
+	add("deals_lost", c.DealsLost)
+	add("proposals_accepted", c.ProposalsAccepted)
+	add("proposals_rejected", c.ProposalsRejected)
+	add("brief_items_acted", c.BriefItemsActed)
+	add("brief_items_dismissed", c.BriefItemsDismissed)
+	add("leads_routed", c.LeadsRouted)
+	add("leads_answered_in_target", c.LeadsAnsweredInTarget)
+	add("leads_breached", c.LeadsBreached)
+	add("meetings_held", c.MeetingsHeld)
+	add("meetings_with_next_step", c.MeetingsWithNextStep)
+	add("prior_review_id", review.PriorReviewID)
+	// The four money columns are written together or not at all — the table's
+	// own CHECK says a figure names its currency and a currency names figures.
+	// An unconvertible week writes four nulls, which is the honest absence.
+	if review.Money.Known {
+		add("pipeline_created_minor", review.Money.CreatedMinor)
+		add("pipeline_won_minor", review.Money.WonMinor)
+		add("pipeline_lost_minor", review.Money.LostMinor)
+		add("base_currency", review.Money.Currency)
+	}
+
 	var id ids.UUID
-	err := tx.QueryRow(ctx, `
-		INSERT INTO weekly_review (user_id, local_week_start, as_of,
-		    tasks_due, tasks_done, tasks_carried_over,
-		    deals_moved, deals_won, deals_lost,
-		    proposals_accepted, proposals_rejected,
-		    brief_items_acted, brief_items_dismissed)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	err := tx.QueryRow(ctx, fmt.Sprintf(`
+		INSERT INTO weekly_review (%s) VALUES (%s)
 		ON CONFLICT ON CONSTRAINT uq_weekly_review_user_week DO NOTHING
-		RETURNING id`,
-		review.UserID, review.LocalWeekStart, review.AsOf,
-		c.TasksDue, c.TasksDone, c.TasksCarriedOver,
-		c.DealsMoved, c.DealsWon, c.DealsLost,
-		c.ProposalsAccepted, c.ProposalsRejected,
-		c.BriefItemsActed, c.BriefItemsDismissed).Scan(&id)
+		RETURNING id`, cols.names(), cols.placeholders()), args...).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The week already had a review. The loser of that race is not an
 		// error: the constraint did its job.
@@ -349,4 +459,22 @@ func (e *Engine) Narrate(ctx context.Context, reviewID ids.UUID, sentence string
 			map[string]any{"narrative": stored, "narrated_at": stamp})
 		return err
 	})
+}
+
+// insertColumns is a statement's column list, which knows its own placeholders.
+//
+// The pairing is the point: a caller adds a column and its argument in one
+// call, and the $N run is derived from how many there are rather than typed.
+// The defect this prevents is a column added to the list and not to the values,
+// which Postgres reports as a type error several columns away from the cause.
+type insertColumns []string
+
+func (c insertColumns) names() string { return strings.Join(c, ", ") }
+
+func (c insertColumns) placeholders() string {
+	holders := make([]string, len(c))
+	for i := range c {
+		holders[i] = "$" + strconv.Itoa(i+1)
+	}
+	return strings.Join(holders, ", ")
 }
