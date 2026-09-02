@@ -300,6 +300,13 @@
 .record-actions .btn-with-reason {
   max-inline-size: 22ch;
 }
+/* The caption hangs BELOW its button, so a row centred on its tallest item
+   lifts every explained verb above its neighbours and the row reads as two
+   rungs. Once any verb carries a caption the row aligns to its top edge: the
+   buttons share one line and the sentences hang under them. */
+.record-actions:has(.btn-with-reason) {
+  align-items: flex-start;
+}
 
 /* On a phone the record's verbs stick to the bottom of the viewport (plan
  * §10.3). A rep scrolling an account's story is several screens from the
