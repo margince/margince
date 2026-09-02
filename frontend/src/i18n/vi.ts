@@ -2271,6 +2271,57 @@ export const vi = {
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
   "plan.title": "Lập kế hoạch tuần tới",
+  // Tuần của một nhóm, đóng băng khi tuần khép lại. Hai tuần so sánh được vì
+  // không tuần nào dịch chuyển dưới phép so sánh.
+  "teamweekly.title": "Tuần của nhóm",
+  "teamweekly.weekOf": "{team} · tuần từ {day}",
+  "teamweekly.frozen": "Đã đóng băng",
+  "teamweekly.loading": "Đang đọc tuần của nhóm",
+  "teamweekly.empty": "Không có gì để hiển thị cho tuần này.",
+  "teamweekly.forbidden":
+    "Tuần của nhóm là câu hỏi cấp nhóm, còn quyền của bạn chỉ tới các bản ghi của chính bạn.",
+  "teamweekly.noSnapshot":
+    "Chưa có tuần nào khép lại cho nhóm này. Ảnh chụp đầu tiên được ghi vào thứ Hai sau tuần đầy đủ đầu tiên.",
+  "teamweekly.pickTeam": "Chọn một nhóm",
+  "teamweekly.repsUnread":
+    "Không đọc được {count} thành viên. Mọi con số ở đây bao phủ {counted}.",
+  "teamweekly.ofTotal": "{part} trên {whole}",
+  "teamweekly.headline.plain":
+    "Tuần trôi qua mà không có chỉ số nào nổi bật theo hướng nào.",
+  "teamweekly.headline.healthy":
+    "{reading} ở mức tốt là {pct}%, so với ngưỡng {bar}%.",
+  "teamweekly.headline.weak":
+    "{reading} thì không, ở {pct}% so với ngưỡng {bar}%.",
+  "teamweekly.reading.firstResponse": "Phản hồi đầu tiên",
+  "teamweekly.reading.nextStep": "Cuộc họp có bước tiếp theo",
+  "teamweekly.reading.commitments": "Cam kết đã giữ",
+  "teamweekly.card.firstResponse": "Trả lời đúng hạn",
+  "teamweekly.card.firstResponseBasis": "{breached} quá hạn",
+  "teamweekly.card.meetings": "Cuộc họp có bước tiếp theo",
+  "teamweekly.card.meetingsBasis": "trên số cuộc họp đã diễn ra",
+  "teamweekly.card.commitments": "Cam kết đã giữ",
+  "teamweekly.card.commitmentsBasis": "trên số đã cam kết",
+  "teamweekly.card.won": "Thắng",
+  "teamweekly.card.wonBasis": "{lost} thua",
+  "teamweekly.card.reps": "Thành viên được tính",
+  "teamweekly.card.repsBasis": "có tuần được đọc đầy đủ",
+  "teamweekly.movement.title": "Tuần đã làm được gì",
+  "teamweekly.movement.won": "Thắng",
+  "teamweekly.movement.lost": "Thua",
+  "teamweekly.movement.meetings": "Cuộc họp đã diễn ra",
+  "teamweekly.movement.leads": "Lead được phân",
+  "teamweekly.coach.title": "Đồng hành tuần này",
+  "teamweekly.coach.sub":
+    "Một trọng tâm cho mỗi thành viên, kể cả người có tuần tốt.",
+  "teamweekly.coach.empty": "Tuần đó không có ai trong nhóm này.",
+  "teamweekly.focus.help_requested": "Đã nhờ giúp đỡ",
+  "teamweekly.focus.leads_breached": "Lead không được trả lời",
+  "teamweekly.focus.commitments_missed": "Cam kết bị bỏ lỡ",
+  "teamweekly.focus.meetings_without_next_step":
+    "Cuộc họp không có bước tiếp theo",
+  "teamweekly.focus.strong_week": "Đáng để học theo",
+  "teamweekly.focus.quiet_week": "Một tuần yên ắng",
+
   "plan.sub": "Điều bạn đã cam kết, và điều bạn cần để làm được.",
   "plan.loading": "Đang đọc kế hoạch của bạn",
   "plan.empty": "Chưa có gì trong kế hoạch.",
