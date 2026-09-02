@@ -2204,13 +2204,14 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     render(<LeadScreen id="l-1" />);
 
     // Said wherever the score is: the score card and the reading beside it
-    // both carry the figure, so both say what stands behind it.
+    // both carry the figure, so both say what stands behind it — exactly
+    // two, so neither surface can drop the sentence unnoticed.
     await waitFor(() =>
       expect(
         screen.getAllByText(
           "The breakdown for this score isn\u2019t stored yet — the next update will show it.",
-        ).length,
-      ).toBeGreaterThan(0),
+        ),
+      ).toHaveLength(2),
     );
     expect(screen.queryByText("What this score has to work with:")).toBeNull();
     expect(
