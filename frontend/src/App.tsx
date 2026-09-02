@@ -231,6 +231,10 @@ const ScheduledSendsScreen = lazy(
     })),
   ),
 );
+const TagResultScreen = lazy(() =>
+  import("./screens/tagresult").then((m) => ({ default: m.TagResultScreen })),
+);
+
 const SearchScreen = lazy(
   routed(() =>
     import("./screens/search").then((m) => ({ default: m.SearchScreen })),
@@ -485,6 +489,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
         <ScreenNotice messageKey="screen.pending" />
       ),
     search: ({ id }) => <SearchScreen q={id ? safeDecode(id) : ""} />,
+    tags: ({ id }) => <TagResultScreen tagID={id} />,
     share: ({ id, id2 }) => <ShareRoute id={id} id2={id2} />,
     onboarding: () => <OnboardingScreen />,
     client: () => <ClientSurfaceScreen />,

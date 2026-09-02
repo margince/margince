@@ -51,6 +51,7 @@ import { interactionIcon } from "./interactionchrome";
 import { daysSinceInbound, isQuiet } from "./personquiet";
 import { consentWord } from "./personreadings";
 import { personTabRoute } from "./persontab";
+import { TagsPanel } from "./tagspanel";
 
 // The right rail (concept §5.11): SEPARATE panels, each answering one question
 // about the person — their fields, their companies, how the relationship
@@ -154,6 +155,7 @@ export function PersonRail({
           side: consent says what this contact allows us to send, the hold
           says what the seat is willing for colleagues to read. */}
       <PersonHoldSection view={view} />
+      <PersonTagsSection view={view} />
       <RecentActivity view={view} />
     </div>
   );
@@ -176,6 +178,32 @@ function PersonHoldSection({ view }: Readonly<{ view: Person360 }>) {
         <CounterpartyHoldRow email={email} />
       </PanelBody>
     </Panel>
+  );
+}
+
+// --- How this contact is filed -----------------------------------------
+
+/**
+ * The contact's tags, drawn by the SHARED panel in the rail's section chrome.
+ *
+ * The three questions the server asks before it writes are asked here too: the
+ * object grant, this record's own editability, and — inside the panel — whether
+ * the vocabulary is visible at all.
+ */
+function PersonTagsSection({ view }: Readonly<{ view: Person360 }>) {
+  const person = view.person;
+  const readOnlyReason = usePersonReadOnlyReason(person);
+  const canUpdate = useCan("person", "update");
+  if (!person.id) {
+    return null;
+  }
+  return (
+    <TagsPanel
+      entityType="person"
+      entityID={person.id}
+      canEdit={canUpdate && !readOnlyReason}
+      chrome="section"
+    />
   );
 }
 

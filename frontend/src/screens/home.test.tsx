@@ -458,14 +458,11 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     });
     render(<HomeScreen />);
 
-    // The other four reads land, so the strip is drawn and its silence about
-    // decisions is a choice rather than a page that has not started.
-    const strip = await screen.findByTestId("home-readings");
-    await waitFor(() =>
-      expect(within(strip).getByText("Gone quiet")).toBeTruthy(),
-    );
-    expect(within(strip).queryByText("Waiting on you")).toBeNull();
-    expect(within(strip).queryByText("none expire today")).toBeNull();
+    // The other reads land, so the page is drawn and its silence about decisions
+    // is a choice rather than a page that has not started. The strip is the
+    // witness that the page rendered: it is drawn from the worklist answer, not
+    // from the queue this case leaves in flight.
+    await screen.findByTestId("home-readings");
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
     expect(screen.queryByTestId("glance-decisions")).toBeNull();
     // The wait belongs to the deck alone. Five independent reads exist so that
@@ -482,11 +479,8 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     });
     render(<HomeScreen />);
 
-    const strip = await screen.findByTestId("home-readings");
-    await waitFor(() =>
-      expect(within(strip).getByText("Gone quiet")).toBeTruthy(),
-    );
-    expect(within(strip).queryByText("Waiting on you")).toBeNull();
+    await screen.findByTestId("home-readings");
+    expect(screen.queryByTestId("glance-decisions")).toBeNull();
     // Not "nothing is waiting": a queue that could not be read is not an empty
     // one, and the deck says which of the two this is.
     expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
@@ -501,6 +495,10 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
   // Home reads ONE page of deals. Past it every reading taken from those rows is
   // a floor, and the failure this guards is the quiet one: the same words, a
   // smaller number, and nothing failing.
+  //
+  // The readings strip no longer counts deals — it is drawn from the worklist
+  // answer, which carries its own bound. What still reads a deals PAGE is the
+  // panel that lists the quiet ones, and that is where the floor has to be said.
   it("reports a deal reading off a full page as a floor rather than a total", async () => {
     stubApi({
       "GET /deals": () =>
@@ -511,17 +509,9 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     });
     render(<HomeScreen />);
 
-    const strip = await screen.findByTestId("home-readings");
-    await waitFor(() =>
-      expect(within(strip).getByText("Open deals")).toBeTruthy(),
-    );
-    // Two open deals on the page and another page behind them: both the open
-    // count and the quiet count say so where the figure is read.
-    expect(within(strip).getByText("2+")).toBeTruthy();
-    expect(within(strip).getByText("1+")).toBeTruthy();
-    // And the panel that LISTS them says the list is part of one, rather than
-    // making the "nothing has gone quiet" claim it has no grounds for.
-    expect(screen.getByText("Showing part of the list")).toBeTruthy();
+    // The panel that LISTS them says the list is part of one, rather than making
+    // the "nothing has gone quiet" claim it has no grounds for.
+    expect(await screen.findByText("Showing part of the list")).toBeTruthy();
   });
 
   // What "today" means is the reader's own calendar day, so this is the one case
@@ -545,12 +535,11 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     });
     render(<HomeScreen />);
 
-    const strip = await screen.findByTestId("home-readings");
+    // The glance is where the decision counts are said now: the readings strip
+    // is drawn from the worklist answer and knows nothing about approvals.
     await waitFor(() =>
-      expect(within(strip).getByText("Waiting on you")).toBeTruthy(),
+      expect(screen.getByTestId("glance-decisions").textContent).toContain("2"),
     );
-    expect(within(strip).getByText("2")).toBeTruthy();
-    expect(within(strip).getByText("1 expires today")).toBeTruthy();
     expect(screen.getByTestId("glance-expiring").textContent).toContain("1");
   });
 });

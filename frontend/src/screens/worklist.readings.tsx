@@ -39,7 +39,12 @@ export function WorklistReadings({ day }: Readonly<{ day: Worklist }>) {
       className="worklist-readings"
       aria-label={t("worklist.readings.label")}
     >
-      <StatStrip testId="worklist-readings">
+      <StatStrip
+        testId="worklist-readings"
+        floor={
+          readings.more_available ? t("worklist.readings.truncated") : undefined
+        }
+      >
         <RevenueStat readings={readings} locale={locale} t={t} />
         <CountStat
           label={t("worklist.readings.replies")}
@@ -60,11 +65,6 @@ export function WorklistReadings({ day }: Readonly<{ day: Worklist }>) {
           locale={locale}
         />
       </StatStrip>
-      {readings.more_available && (
-        <p className="t-meta worklist-readings-floor">
-          {t("worklist.readings.truncated")}
-        </p>
-      )}
     </section>
   );
 }

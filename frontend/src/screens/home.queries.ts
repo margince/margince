@@ -193,11 +193,6 @@ export function quietDeals(deals: readonly Deal[]): Deal[] {
   return deals.filter((deal) => deal.stalled && deal.status === "open");
 }
 
-/** Every open deal, quiet or not — what the readings strip counts. */
-export function openDeals(deals: readonly Deal[]): Deal[] {
-  return deals.filter((deal) => deal.status === "open");
-}
-
 /**
  * Ask for today's brief now. The overnight pass owns generation and a rep has
  * one run per local day, so this is a catch-up rather than a re-rank: it

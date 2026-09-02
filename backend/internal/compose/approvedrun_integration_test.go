@@ -45,7 +45,11 @@ func parkedRun(t *testing.T, e *integration.Env, svc *approvals.Service, kind st
 	targetID ids.UUID, patch string,
 ) (ids.ApprovalID, string) {
 	t.Helper()
-	id, err := svc.Stage(e.Admin(), approvals.StageInput{
+	// Staged the way a firing stages: the system actor acting on behalf of the
+	// automation's owner, and the owner is the human decider() releases as. A
+	// kind narrowed to its own rep needs that — a held draft sends from the
+	// approver's own mailbox, so only the person it goes out as may release it.
+	id, err := svc.Stage(e.AutomationCtx(e.Rep1), approvals.StageInput{
 		Kind:           kind,
 		ProposedChange: json.RawMessage(patch),
 		DiffHash:       "approvedrun-" + ids.NewV7().String(),

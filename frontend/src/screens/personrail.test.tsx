@@ -215,6 +215,23 @@ function mount(view: Person360) {
           page,
         });
       }
+      // The record's tags. The catch-all below would answer with no `withheld`
+      // key at all, which the panel reads as visible-and-empty — a state this
+      // suite would then be asserting by accident rather than by choice.
+      if (url.pathname.endsWith("/tags")) {
+        return json({
+          data: [
+            {
+              tag_id: "t-1",
+              name: "Champion",
+              color: "teal",
+              archived: false,
+              assigned_at: "2026-03-03T10:00:00Z",
+            },
+          ],
+          withheld: false,
+        });
+      }
       return json({ data: [], page });
     }),
   );
@@ -786,5 +803,15 @@ describe("which employer is the current one", () => {
     // The LOCAL date, formatted by hand. Reaching for toISOString() here would
     // send yesterday's date to anybody west of UTC for most of their working day.
     expect((body as Record<string, unknown>).ended_at).toBe("2026-08-18");
+  });
+});
+
+describe("how the contact is filed", () => {
+  // The tags panel is shared with the company and deal pages, and it draws in
+  // the rail's SECTION chrome here: the person rail is one card of headed
+  // sections, so a second card inside it would be a box in a box.
+  it("draws the contact's tags in the rail", async () => {
+    mount(granted);
+    expect(await screen.findByText("Champion")).toBeTruthy();
   });
 });

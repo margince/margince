@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { HomeScreen } from "./home";
+import { readingsDay } from "./home.fixtures";
 import type { Deal } from "./home.queries";
 
 // Home's context rail (screens/home.rail.tsx): what the night shift did, what
@@ -71,6 +72,10 @@ const DEFAULTS: Routes = {
     jsonResponse({ title: "Not Found", code: "no_digest_yet" }, 404),
   "POST /reports/deals-by-stage": () =>
     jsonResponse({ report: "deals-by-stage", plan: {}, columns: [], rows: [] }),
+  // Same reason as the report above: the fallback empty PAGE carries no
+  // `readings` and no `counts`, and the Brief's strip reads both as required
+  // fields. An unrouted worklist read has to answer with a worklist.
+  "GET /worklist": () => jsonResponse(readingsDay({}, [])),
 };
 
 /**
@@ -158,9 +163,9 @@ describe("HomeScreen — the context rail", () => {
     expect(
       await within(panel ?? card).findByText("Nordwind Logistik"),
     ).toBeTruthy();
-    // And the count reaches the strip, where 1 is a fact rather than a default.
-    const strip = screen.getByTestId("home-readings");
-    expect(within(strip).getByText("Gone quiet")).toBeTruthy();
+    // And the count reaches the glance, where 1 is a fact rather than a default.
+    // The readings strip is drawn from the worklist answer and knows nothing
+    // about the deals page, so the glance is what carries this figure.
     expect(screen.getByTestId("glance-quiet").textContent).toContain("1");
   });
 

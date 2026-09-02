@@ -29,12 +29,10 @@ import {
   type Deal,
   type MorningBrief,
   type MorningDigest,
-  openDeals,
   quietDeals,
   useHomeDeals,
   useMorningBrief,
   useMorningDigest,
-  usePipelineValue,
 } from "./home.queries";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
@@ -141,12 +139,6 @@ function topDeal(
     return null;
   }
   return deals.find((deal) => deal.id === first.deal_id) ?? null;
-}
-
-/** The top composite as whole percent, or null when there is no run. */
-function topPct(brief: MorningBrief | null): number | null {
-  const first = brief?.items[0];
-  return first ? Math.round(first.composite * 100) : null;
 }
 
 /**
@@ -362,14 +354,13 @@ export function HomeScreen() {
   // Worklist's "dials stay state" choice deliberately excluded.
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params, teamOffered);
-  const pipelineQuery = usePipelineValue();
 
   const approvals = approvalsQuery.data?.data ?? [];
   const items = useMemo(() => deckItems(approvals), [approvals]);
   const deals = dealsQuery.data?.rows ?? [];
   // Every count taken from this page is a floor: the read stops at one page,
-  // and `more` is what keeps the strip from reporting a bounded number as a
-  // total.
+  // and `more` is what keeps the glance and the watch panel from reporting a
+  // bounded number as a total.
   const beyondPage = dealsQuery.data?.more ?? false;
   const quiet = quietDeals(deals);
   const quietReading = dealsQuery.isSuccess
@@ -398,19 +389,6 @@ export function HomeScreen() {
         expiringToday: expiringToday(approvals, nowMs),
       }
     : null;
-  // Both halves have to have answered: the count of open deals comes from the
-  // deals page and the count of currencies from the report, and half a reading
-  // is a tile that states one fact and implies another.
-  const openReading =
-    dealsQuery.isSuccess && pipelineQuery.isSuccess
-      ? {
-          deals: { seen: openDeals(deals).length, more: beyondPage },
-          currencies: pipelineQuery.data.rows.length,
-        }
-      : null;
-  const rankedReading = briefQuery.isSuccess
-    ? { count: brief?.items.length ?? 0, topPct: topPct(brief) }
-    : null;
 
   return (
     <div className="wrap">
@@ -436,12 +414,9 @@ export function HomeScreen() {
       {/* Before the readings, because a strip of numbers a reader cannot
           trust is worse than one they can qualify. */}
       {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
-      <HomeReadingsStrip
-        decisions={decisionReadings}
-        open={openReading}
-        ranked={rankedReading}
-        quiet={quietReading}
-      />
+      {/* The strip reads the SAME worklist answer the queue below it reads, so
+          the five figures cannot disagree with the rows they summarise. */}
+      {worklistQuery.data && <HomeReadingsStrip day={worklistQuery.data} />}
       {/* Screen-level so it survives the deck re-rendering under it. */}
       {decidedNote}
       <PageZones
