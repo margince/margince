@@ -59,6 +59,17 @@ describe("leadStanding", () => {
     expect(standing.because).toBe("lead.standing.noResponse");
   });
 
+  it("reads a deadline the server has not judged as no clock at all", () => {
+    const standing = leadStanding(
+      lead({ sla_deadline_at: "2026-08-19T08:14:00Z" }),
+      t,
+      "en",
+      zone,
+    );
+    expect(standing.tone).toBe("accent");
+    expect(standing.because).toBe("lead.standing.noResponse");
+  });
+
   it("is their move once we answered, and in motion once they engaged", () => {
     const answered = leadStanding(
       lead({ status: "contacted", first_response_at: "2026-08-21T09:12:00Z" }),

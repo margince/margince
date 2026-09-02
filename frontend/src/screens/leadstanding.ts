@@ -24,6 +24,19 @@ export type LeadStanding = {
   restsOn: Grounding[];
 };
 
+// The first-response clock as ONE fact, read by the call and by the readings
+// card alike: the server runs a target only when it has both a deadline and a
+// verdict on it, and a deadline without a verdict is not a clock either surface
+// may be late against. Exported so the two cannot read the same row apart.
+export function firstResponseClock(
+  lead: Lead,
+): { deadline: string; state: NonNullable<Lead["sla_state"]> } | undefined {
+  if (!lead.sla_deadline_at || !lead.sla_state) {
+    return undefined;
+  }
+  return { deadline: lead.sla_deadline_at, state: lead.sla_state };
+}
+
 export function leadStanding(
   lead: Lead,
   t: Translator,
@@ -138,10 +151,11 @@ function unansweredBecause(
   t: Translator,
   instant: (at: string) => string,
 ): string {
-  if (!lead.sla_deadline_at) {
+  const clock = firstResponseClock(lead);
+  if (!clock) {
     return t("lead.standing.noResponse");
   }
-  return lead.sla_state === "breached"
-    ? t("lead.standing.overdueSince", { at: instant(lead.sla_deadline_at) })
-    : t("lead.standing.dueBy", { at: instant(lead.sla_deadline_at) });
+  return clock.state === "breached"
+    ? t("lead.standing.overdueSince", { at: instant(clock.deadline) })
+    : t("lead.standing.dueBy", { at: instant(clock.deadline) });
 }

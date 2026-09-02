@@ -472,10 +472,10 @@ function AccountMoment({
         from: t(MOMENT_EVIDENCE_LABEL[item.type]),
       }))}
       footer={
-        target ? (
+        target && onOpenRecord ? (
           <Button
             variant="ghost"
-            onClick={() => onOpenRecord?.(target.type, target.id)}
+            onClick={() => onOpenRecord(target.type, target.id)}
           >
             {moment.recommended_action.label}
           </Button>

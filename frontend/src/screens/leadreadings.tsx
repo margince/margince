@@ -14,6 +14,7 @@ import {
   scoreFactorLabel,
   terminalBadge,
 } from "./leadpresentation";
+import { firstResponseClock } from "./leadstanding";
 
 // The lead's four readings, in the cards every record page draws them in: how
 // it scores and what made the score; whether anybody has answered, and how
@@ -131,7 +132,8 @@ function FirstResponseCard({
       />
     );
   }
-  if (!lead.sla_deadline_at || !lead.sla_state) {
+  const clock = firstResponseClock(lead);
+  if (!clock) {
     // Nobody has answered and the installation runs no clock: owed, without
     // a deadline to be late against.
     return (
@@ -142,8 +144,8 @@ function FirstResponseCard({
       />
     );
   }
-  const breached = lead.sla_state === "breached";
-  const atRisk = lead.sla_state === "at_risk";
+  const breached = clock.state === "breached";
+  const atRisk = clock.state === "at_risk";
   return (
     <StatCard
       label={label}
@@ -155,7 +157,7 @@ function FirstResponseCard({
             : t("lead.sla.withinTarget")
       }
       detail={t(breached ? "lead.sla.overdueSince" : "lead.sla.dueBy", {
-        at: formatDateTime(lead.sla_deadline_at, locale, zone),
+        at: formatDateTime(clock.deadline, locale, zone),
       })}
       tone={breached ? "danger" : atRisk ? "warn" : undefined}
       dot={breached || atRisk}
