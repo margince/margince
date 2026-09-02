@@ -494,6 +494,8 @@ export const en = {
   // fetch and a bug in our own code both report in wording nobody authored for
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
+  "common.assistantUnavailable":
+    "The assistant did not answer, so it cannot draft this for you. An administrator can check the model binding under Settings → AI. Nothing here needs it — the details can be entered by hand.",
   "common.gatewayUnavailable":
     "The server did not finish this request in time. It may still be working — wait a moment before trying again, or the same work can run twice.",
   // Every 403 the server codes `permission_denied`, which is two refusals with

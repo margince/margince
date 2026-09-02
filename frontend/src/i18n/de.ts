@@ -475,6 +475,8 @@ export const de = {
   "common.error": "Konnten diese Ansicht nicht laden.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
+  "common.assistantUnavailable":
+    "Der Assistent hat nicht geantwortet und kann das hier nicht entwerfen. Eine Administratorin oder ein Administrator kann die Modellbindung unter Einstellungen → KI prüfen. Nötig ist er nicht — die Angaben lassen sich von Hand eintragen.",
   "common.gatewayUnavailable":
     "Der Server hat diese Anfrage nicht rechtzeitig abgeschlossen. Sie läuft möglicherweise noch — warte einen Moment, bevor du es erneut versuchst, sonst läuft dieselbe Arbeit zweimal.",
   "common.permissionDenied":

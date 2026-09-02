@@ -391,7 +391,9 @@ func TestCallbackDenialWithUntrustedStateKeepsTheDefaultSurface(t *testing.T) {
 // installation passes through on its way in — and the generic sentence sends an
 // operator looking for a newer build instead of to the screen that fixes it.
 func TestConnectingWithNoStoredAppSaysWhichAppIsMissing(t *testing.T) {
-	h := connectorHandlers{}
+	// A WIRED deployment with no app for THIS vendor: the registry exists
+	// (gmail is composed), and graph has nothing stored.
+	h := wiredHandlers()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/connectors/graph/connect", nil).WithContext(humanCtx())
 
@@ -408,5 +410,23 @@ func TestConnectingWithNoStoredAppSaysWhichAppIsMissing(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("the body does not mention %q, so it does not say what to go do: %s", want, body)
 		}
+	}
+}
+
+// A deployment that wired NO capture keeps the generic sentence. Sending its
+// operator to the app card would be sending them somewhere that cannot make the
+// route work — there is no registry for an app to be resolved against.
+func TestConnectingWithNoCaptureAtAllStaysGeneric(t *testing.T) {
+	h := connectorHandlers{}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/connectors/graph/connect", nil).WithContext(humanCtx())
+
+	h.ConnectConnector(rec, req, "graph")
+
+	if rec.Code != http.StatusNotImplemented {
+		t.Fatalf("status = %d, want 501", rec.Code)
+	}
+	if body := rec.Body.String(); strings.Contains(body, "Settings") {
+		t.Errorf("a deployment with no capture registry was told to visit Settings: %s", body)
 	}
 }

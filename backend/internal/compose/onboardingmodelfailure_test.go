@@ -36,3 +36,33 @@ func TestAModelLaneThatFailedEveryTierIsRecognisable(t *testing.T) {
 		t.Error("an ordinary error was reported as the model lane being unreachable")
 	}
 }
+
+// AN ORDINARY PROVIDER ERROR still reaches the degraded answer, and that is
+// deliberate rather than an oversight.
+//
+// The sentinel marks the walk reaching its end, whatever killed the last rung:
+// a provider that is down, a credential it refused, a request every rung
+// rejected. From the wizard's seat those are one fact — no draft — and the
+// answer it gives is true of all of them, which is why the message says the
+// assistant did not ANSWER and names Settings → AI as a place to look rather
+// than as the cause.
+//
+// The alternative is a 500 for the cases the sentinel does not cover, which is
+// the opaque answer this whole change exists to remove.
+func TestAnOrdinaryProviderFailureStillDegradesRatherThanFallingThrough(t *testing.T) {
+	t.Parallel()
+
+	for name, cause := range map[string]error{
+		"a provider that is down":     errors.New("openai-compat: 502 bad gateway"),
+		"a credential it refused":     errors.New("openai-compat: 401 invalid_api_key"),
+		"a model nobody bound":        errors.New("no bound tier can serve cold_start in profile eu_hosted"),
+		"a request every rung reject": errors.New("openai-compat: 400 context_length_exceeded"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if !modelUnreachable(fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, cause)) {
+				t.Error("the walk ended with no answer and the wizard would still report an opaque 500")
+			}
+		})
+	}
+}

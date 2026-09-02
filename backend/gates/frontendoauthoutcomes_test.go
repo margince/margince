@@ -126,3 +126,69 @@ func TestTheOnboardingPanelsNameOnlyRealOutcomes(t *testing.T) {
 		}
 	}
 }
+
+// A problem CODE the api answers with is the other half of the same bargain:
+// the SPA picks copy from it, and one it does not recognise falls through to
+// the detail — which is written in one language and reaches a reader in
+// whatever language they set.
+//
+// Scoped to httperr.Unavailable, the helper that EXISTS to carry a code for a
+// reader. Every problem code in the tree is a wider question with real debt
+// behind it (codes today that no catalog answers), and a gate that failed on
+// all of it would be turned off rather than fixed. What this holds is the
+// narrow promise the helper makes: if you reach for the one that takes a code,
+// the client half is not optional.
+const problemCodeMapping = "../frontend/src/screens/common.tsx"
+
+var (
+	unavailableCall = regexp.MustCompile(`httperr\.Unavailable\(\s*w,\s*r,\s*([A-Za-z][A-Za-z0-9_]*|"[a-z_]+")`)
+	codeConstDecl   = regexp.MustCompile(`(?m)^\s*(?:const\s+)?([A-Za-z][A-Za-z0-9_]*)\s*=\s*"([a-z_]+)"`)
+)
+
+func TestEveryReaderFacingProblemCodeHasClientCopy(t *testing.T) {
+	t.Parallel()
+
+	consts := map[string]string{}
+	var wanted []string
+	entries, err := os.ReadDir("internal/compose")
+	if err != nil {
+		t.Fatalf("reading compose: %v", err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
+			continue
+		}
+		source, readErr := os.ReadFile("internal/compose/" + e.Name())
+		if readErr != nil {
+			t.Fatalf("reading %s: %v", e.Name(), readErr)
+		}
+		text := string(source)
+		for _, m := range codeConstDecl.FindAllStringSubmatch(text, -1) {
+			consts[m[1]] = m[2]
+		}
+		for _, m := range unavailableCall.FindAllStringSubmatch(text, -1) {
+			wanted = append(wanted, m[1])
+		}
+	}
+	// NOT a skip. compose reaches for this helper today, so an empty read means
+	// the detection stopped seeing it — and a census that can fail short
+	// reports PASS with nothing to notice.
+	if len(wanted) == 0 {
+		t.Fatal("no httperr.Unavailable call was found in internal/compose — the detection has gone blind")
+	}
+
+	mapping, err := os.ReadFile(problemCodeMapping)
+	if err != nil {
+		t.Fatalf("reading the problem mapping: %v", err)
+	}
+	for _, w := range slices.Compact(wanted) {
+		code := strings.Trim(w, `"`)
+		if resolved, ok := consts[w]; ok {
+			code = resolved
+		}
+		if !strings.Contains(string(mapping), `"`+code+`"`) {
+			t.Errorf("the api answers problem code %q and %s maps no copy to it — the reader gets the "+
+				"English detail whatever language they set", code, problemCodeMapping)
+		}
+	}
+}

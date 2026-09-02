@@ -203,7 +203,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if h.registry == nil || !ok {
-		httperr.NotImplementedBecause(w, r, noConnectorAppDetail(string(provider)))
+		writeConnectorUnavailable(w, r, string(provider), h.registry != nil)
 		return
 	}
 	actor, ok := principal.Actor(r.Context())

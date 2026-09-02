@@ -13,10 +13,12 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -68,17 +70,24 @@ const (
 	outcomeError     = "error"
 )
 
-// noConnectorAppDetail is what a 501 says when the route WORKS and this
-// installation has not given it an app.
+// writeConnectorUnavailable answers a connect request this deployment cannot
+// serve, saying WHICH of the two reasons it is.
 //
-// 501 covers both "nobody built this" and "not configured here", and the
-// generic stub text only describes the first — so an operator reading it goes
-// looking for a newer build instead of for the screen that fixes it in a
-// minute. A Settings-supplied installation passes through this state on its way
-// in, which makes it a normal step rather than a gap in the product.
-func noConnectorAppDetail(provider string) string {
-	return "no " + provider + " OAuth app is configured for this installation — " +
-		"add one under Settings → General, or supply it in the environment"
+// Both are 501 and they are not the same fact. Without a capture registry this
+// deployment wired no mail capture at all, and no screen an operator can open
+// changes that — the generic sentence is the honest one there. With a registry
+// and no stored app the route WORKS and is waiting, which a Settings-supplied
+// installation passes through on its way in; the generic stub text describes an
+// unbuilt feature and sends that operator looking for a newer build instead of
+// for the screen that fixes it in a minute.
+func writeConnectorUnavailable(w http.ResponseWriter, r *http.Request, provider string, hasRegistry bool) {
+	if !hasRegistry {
+		httperr.NotImplemented(w, r, "ConnectConnector")
+		return
+	}
+	httperr.NotImplementedBecause(w, r,
+		"no "+provider+" OAuth app is configured for this installation — "+
+			"add one under Settings → General, or supply it in the environment")
 }
 
 // disabledProviderAPI reports whether the failure is a provider API that was
