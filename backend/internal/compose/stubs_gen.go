@@ -395,6 +395,10 @@ func (stubs) CreateCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.
 	httperr.NotImplemented(w, r, "CreateCaptureCounterpartyHold")
 }
 
+func (stubs) ShareCaptureCounterpartyHoldHistory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ShareCaptureCounterpartyHoldHistory")
+}
+
 func (stubs) DeleteCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteCaptureCounterpartyHold")
 }

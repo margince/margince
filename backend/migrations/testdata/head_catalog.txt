@@ -1041,6 +1041,7 @@ public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=no
 public.capture_import.posture_at_import text gen=- def=-
 public.capture_import.user_id uuid NOT NULL gen=- def=-
 public.capture_import.verdict_reason text gen=- def=-
+public.capture_import.verdict_reasons text[] gen=- def=-
 public.capture_import.verdict_status text gen=- def=-
 public.capture_import_activity_user_key CREATE UNIQUE INDEX capture_import_activity_user_key ON public.capture_import USING btree (activity_id, user_id)
 public.capture_import_pkey CREATE UNIQUE INDEX capture_import_pkey ON public.capture_import USING btree (id)

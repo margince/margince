@@ -6076,6 +6076,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/counterparty-holds/share-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-open the mail the caller's counterparty holds already caught.
+         * @description The undo for a hold placed by mistake — the wrong domain, a supplier typed as a lawyer.
+         *     Without it every message a hold ever caught stays held forever, because lifting the hold
+         *     deliberately widens nothing and the audience derivation only ever tightens.
+         *
+         *     Not per hold, and the wording matters: the capture record says that A hold caught a
+         *     message, never WHICH one, so this re-opens everything the caller's holds caught rather
+         *     than one domain's mail. There is no id here for that reason.
+         *
+         *     Three things it will NOT re-open, each because re-opening it would publish something
+         *     nobody asked to publish:
+         *
+         *     - a message a colleague also holds — their hold stands, and the message stays limited;
+         *     - a message that ALSO matched another rule, such as a `[Vertraulich]` subject marker or
+         *       the workspace mail-sharing floor;
+         *     - a message captured before the product recorded every matching rule, which cannot be
+         *       proven to have been held for this reason alone.
+         *
+         *     Answers how many of the caller's IMPORTS it released. A message another seat still holds
+         *     stays limited, so a released import is not always a message the workspace can now read.
+         */
+        post: operations["shareCaptureCounterpartyHoldHistory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/counterparty-holds/{id}": {
         parameters: {
             query?: never;
@@ -13509,6 +13547,16 @@ export interface components {
         };
         CaptureCounterpartyHoldListResponse: {
             data: components["schemas"]["CaptureCounterpartyHold"][];
+        };
+        ShareCaptureHoldHistoryResponse: {
+            /**
+             * @description How many of the caller's own imports stopped being held for this reason. Not the same
+             *     as how many messages the workspace can now read: a message a colleague also holds
+             *     stays limited, because the audience is the strictest answer across every seat that
+             *     imported it. Zero means every message the caller's holds caught is held for some
+             *     other reason too, or was captured before the product recorded more than one reason.
+             */
+            released: number;
         };
         CreateCaptureCounterpartyHoldRequest: {
             /** @enum {string} */
@@ -37631,6 +37679,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    shareCaptureCounterpartyHoldHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What was released. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareCaptureHoldHistoryResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     deleteCaptureCounterpartyHold: {

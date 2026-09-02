@@ -49,10 +49,10 @@ func recordImportTx(
 	// has two. A seat's decisions are per seat anyway, so the column would have
 	// no reader; it lands with the code that can fill it honestly.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason)
-		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''))
+		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6)
 		ON CONFLICT (activity_id, user_id) DO NOTHING`,
-		activityID, ownerUserID, birth.posture, birth.verdictStatus, birth.reason); err != nil {
+		activityID, ownerUserID, birth.posture, birth.verdictStatus, birth.reason, birth.reasons); err != nil {
 		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
 	}
 	return nil
