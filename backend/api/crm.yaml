@@ -22104,6 +22104,10 @@ components:
       description: A contact. Mirrors the `person` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        # The live tags this row carries, capped: a chip strip shows a few and
+        # says "+N", so a row does not need every word to draw one. Archived
+        # tags are omitted — a retired word is not drawn on a list.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         id: { type: string, format: uuid }
         first_name: { type: [string, 'null'] }
         last_name: { type: [string, 'null'] }
@@ -22384,6 +22388,10 @@ components:
       description: A company. Mirrors the `organization` table.
       required: [id, display_name, source, captured_by, created_at, updated_at]
       properties:
+        # The live tags this row carries, capped: a chip strip shows a few and
+        # says "+N", so a row does not need every word to draw one. Archived
+        # tags are omitted — a retired word is not drawn on a list.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
@@ -26569,6 +26577,10 @@ components:
       description: A deal. Mirrors the `deal` table.
       required: [id, name, pipeline_id, stage_id, status, source, captured_by, created_at, updated_at]
       properties:
+        # The live tags this row carries, capped: a chip strip shows a few and
+        # says "+N", so a row does not need every word to draw one. Archived
+        # tags are omitted — a retired word is not drawn on a list.
+        tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
         id: { type: string, format: uuid }
         name: { type: string }
         amount_minor: { type: [integer, 'null'], format: int64 }
@@ -29444,6 +29456,18 @@ components:
         name: { type: string, maxLength: 64 }
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
         description: { type: [string, 'null'] }
+
+    RowTag:
+      type: object
+      description: |
+        A tag as a list ROW carries it: the word and its colour, nothing else. The full
+        assignment — who applied it, when — comes from the record's own tags read, because a
+        page of fifty rows does not need fifty assignments to draw a chip.
+      required: [tag_id, name]
+      properties:
+        tag_id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
 
     RecordTagsResponse:
       type: object

@@ -15225,6 +15225,7 @@ export interface components {
         };
         /** @description A contact. Mirrors the `person` table. */
         Person: {
+            tags?: components["schemas"]["RowTag"][];
             /** Format: uuid */
             id: string;
             first_name?: string | null;
@@ -15460,6 +15461,7 @@ export interface components {
         };
         /** @description A company. Mirrors the `organization` table. */
         Organization: {
+            tags?: components["schemas"]["RowTag"][];
             /** @description Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows. */
             linkedin_url?: string | null;
             /** @description The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact organization_domain already owns is the duplication ADR-0085 closes. Not accepted on write. */
@@ -18639,6 +18641,7 @@ export interface components {
         };
         /** @description A deal. Mirrors the `deal` table. */
         Deal: {
+            tags?: components["schemas"]["RowTag"][];
             /** Format: uuid */
             id: string;
             name: string;
@@ -21431,6 +21434,18 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | null;
             description?: string | null;
+        };
+        /**
+         * @description A tag as a list ROW carries it: the word and its colour, nothing else. The full
+         *     assignment — who applied it, when — comes from the record's own tags read, because a
+         *     page of fifty rows does not need fifty assignments to draw a chip.
+         */
+        RowTag: {
+            /** Format: uuid */
+            tag_id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
         };
         /**
          * @description What one record carries. `withheld` says the caller could not read the vocabulary,

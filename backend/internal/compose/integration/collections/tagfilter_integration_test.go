@@ -141,3 +141,84 @@ func TestATagModeWithoutTagsFiltersNothing(t *testing.T) {
 		t.Errorf("a mode with no tags selected %v, want every person", got)
 	}
 }
+
+// A list ROW carries its tags, so a table can draw a chip without a second
+// read per row. Filtering by tag and showing them are different features, and
+// shipping the filter alone hides tags on exactly the screens where they
+// explain why a row is in the list.
+func TestAListRowCarriesItsOwnTags(t *testing.T) {
+	e := tagEnv(t)
+	tagA, _ := taggedTrio(t, e)
+
+	var page struct {
+		Data []struct {
+			FullName string `json:"full_name"`
+			Tags     []struct {
+				TagID string `json:"tag_id"`
+				Name  string `json:"name"`
+			} `json:"tags"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/people?tag_id="+tagA, nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("listing: status=%d", status)
+	}
+	if len(page.Data) != 2 {
+		t.Fatalf("selected %d people, want the two carrying tag A", len(page.Data))
+	}
+	for _, row := range page.Data {
+		if len(row.Tags) == 0 {
+			t.Errorf("%s carries no tags on the row; the table has nothing to draw", row.FullName)
+			continue
+		}
+		var carriesA bool
+		for _, tag := range row.Tags {
+			if tag.TagID == tagA {
+				carriesA = true
+			}
+		}
+		if !carriesA {
+			t.Errorf("%s's row tags %+v omit the tag it was selected by", row.FullName, row.Tags)
+		}
+	}
+
+	// The row carrying BOTH reports both: a cap that dropped one would make a
+	// chip strip say less than the record holds.
+	for _, row := range page.Data {
+		if row.FullName == "Carries Both" && len(row.Tags) != 2 {
+			t.Errorf("the person carrying two tags reports %d on the row", len(row.Tags))
+		}
+	}
+}
+
+// An archived tag is not drawn on a list. A retired word is not in the picker,
+// so a chip for it sends a reader somewhere they cannot go.
+func TestAListRowOmitsArchivedTags(t *testing.T) {
+	e := tagEnv(t)
+	live := createTag(t, e, "Still Live")
+	retired := createTag(t, e, "Since Retired")
+	createPersonWithTag(t, e, "Carries Both Kinds", live, retired)
+
+	var archived integration.AnyMap
+	if status := e.Call(t, "DELETE", "/v1/tags/"+retired, nil, nil, &archived); status != http.StatusOK {
+		t.Fatalf("archiving: status=%d body=%v", status, archived)
+	}
+
+	var page struct {
+		Data []struct {
+			Tags []struct {
+				Name string `json:"name"`
+			} `json:"tags"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/people?tag_id="+live, nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("listing: status=%d", status)
+	}
+	if len(page.Data) != 1 {
+		t.Fatalf("selected %d people, want the one", len(page.Data))
+	}
+	for _, tag := range page.Data[0].Tags {
+		if tag.Name == "Since Retired" {
+			t.Error("the row draws a retired word; the picker no longer offers it")
+		}
+	}
+}

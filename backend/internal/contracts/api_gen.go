@@ -9526,6 +9526,30 @@ func (e RetentionScope) Valid() bool {
 	}
 }
 
+// Defines values for RowTagColor.
+const (
+	RowTagColorAmber RowTagColor = "amber"
+	RowTagColorRose  RowTagColor = "rose"
+	RowTagColorSlate RowTagColor = "slate"
+	RowTagColorTeal  RowTagColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the RowTagColor enum.
+func (e RowTagColor) Valid() bool {
+	switch e {
+	case RowTagColorAmber:
+		return true
+	case RowTagColorRose:
+		return true
+	case RowTagColorSlate:
+		return true
+	case RowTagColorTeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RunReportRequestAggregatesFn.
 const (
 	RunReportRequestAggregatesFnAvg           RunReportRequestAggregatesFn = "avg"
@@ -10476,22 +10500,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	TagDetailColorAmber TagDetailColor = "amber"
-	TagDetailColorRose  TagDetailColor = "rose"
-	TagDetailColorSlate TagDetailColor = "slate"
-	TagDetailColorTeal  TagDetailColor = "teal"
+	Amber TagDetailColor = "amber"
+	Rose  TagDetailColor = "rose"
+	Slate TagDetailColor = "slate"
+	Teal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case TagDetailColorAmber:
+	case Amber:
 		return true
-	case TagDetailColorRose:
+	case Rose:
 		return true
-	case TagDetailColorSlate:
+	case Slate:
 		return true
-	case TagDetailColorTeal:
+	case Teal:
 		return true
 	default:
 		return false
@@ -19208,6 +19232,7 @@ type Deal struct {
 	// Stalled Derived — no activity past the threshold (absolute duration).
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
+	Tags      *[]RowTag  `json:"tags,omitempty"`
 	UpdatedAt time.Time  `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
@@ -23091,6 +23116,7 @@ type Organization struct {
 
 	// Strength Deterministic org-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.
 	Strength  *RelationshipStrength `json:"strength,omitempty"`
+	Tags      *[]RowTag             `json:"tags,omitempty"`
 	UpdatedAt time.Time             `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
@@ -25045,6 +25071,7 @@ type Person struct {
 
 	// Strength Deterministic relationship-strength (features/07 §4). Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.
 	Strength *RelationshipStrength `json:"strength,omitempty"`
+	Tags     *[]RowTag             `json:"tags,omitempty"`
 
 	// Title Denormalized current title; authoritative title is on the employment relationship.
 	Title     *string   `json:"title,omitempty"`
@@ -27446,6 +27473,18 @@ type Role struct {
 type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 }
+
+// RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
+// assignment — who applied it, when — comes from the record's own tags read, because a
+// page of fifty rows does not need fifty assignments to draw a chip.
+type RowTag struct {
+	Color *RowTagColor       `json:"color,omitempty"`
+	Name  string             `json:"name"`
+	TagId openapi_types.UUID `json:"tag_id"`
+}
+
+// RowTagColor defines model for RowTag.Color.
+type RowTagColor string
 
 // RowVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 // Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -37866,6 +37905,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "status")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["updated_at"]; found {
 		err = json.Unmarshal(raw, &a.UpdatedAt)
 		if err != nil {
@@ -38104,6 +38151,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 	object["status"], err = json.Marshal(a.Status)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'status': %w", err)
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
+		}
 	}
 
 	object["updated_at"], err = json.Marshal(a.UpdatedAt)
@@ -40448,6 +40502,14 @@ func (a *Organization) UnmarshalJSON(b []byte) error {
 		delete(object, "strength")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["updated_at"]; found {
 		err = json.Unmarshal(raw, &a.UpdatedAt)
 		if err != nil {
@@ -40685,6 +40747,13 @@ func (a Organization) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
+		}
+	}
+
 	object["updated_at"], err = json.Marshal(a.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
@@ -40905,6 +40974,14 @@ func (a *Person) UnmarshalJSON(b []byte) error {
 		delete(object, "strength")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["title"]; found {
 		err = json.Unmarshal(raw, &a.Title)
 		if err != nil {
@@ -41083,6 +41160,13 @@ func (a Person) MarshalJSON() ([]byte, error) {
 		object["strength"], err = json.Marshal(a.Strength)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'strength': %w", err)
+		}
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
 		}
 	}
 

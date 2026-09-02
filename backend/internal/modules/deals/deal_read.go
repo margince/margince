@@ -116,6 +116,23 @@ var dealListFields = map[string]string{
 	"expected_close_date": fieldcatalog.TypeDate,
 }
 
+// wireRowTags renders one deal row's tag chips. A twin of the people module's:
+// a module never imports a sibling, and the shape is the contract's.
+func wireRowTags(tags []storekit.RowTag) *[]crmcontracts.RowTag {
+	out := make([]crmcontracts.RowTag, 0, len(tags))
+	for _, t := range tags {
+		var color *crmcontracts.RowTagColor
+		if t.Color != nil {
+			c := crmcontracts.RowTagColor(*t.Color)
+			color = &c
+		}
+		out = append(out, crmcontracts.RowTag{
+			TagId: openapi_types.UUID(t.TagID), Name: t.Name, Color: color,
+		})
+	}
+	return &out
+}
+
 func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontracts.Deal, storekit.Page, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
@@ -130,7 +147,14 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 	}
 	return storekit.RunListPage(ctx, s, pre, dealTable, dealColumns, active, where, scanDealPage,
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
-		func(tx pgx.Tx, page []crmcontracts.Deal) error { return maskDeals(ctx, tx, page) })
+		func(tx pgx.Tx, page []crmcontracts.Deal) error {
+			if err := maskDeals(ctx, tx, page); err != nil {
+				return err
+			}
+			return storekit.AttachRowTags(ctx, tx, dealTaggableType, page,
+				func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
+				func(d *crmcontracts.Deal, tags []storekit.RowTag) { d.Tags = wireRowTags(tags) })
+		})
 }
 
 // ListDealsTx is ListDeals inside a caller-opened transaction — the composite

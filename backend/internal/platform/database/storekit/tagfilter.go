@@ -4,9 +4,11 @@
 package storekit
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -95,4 +97,78 @@ func tagExists(taggableType, idColumn string, tagIDs []ids.UUID, arg func(any) i
 		WHERE tg.entity_type = $%d AND tg.entity_id = %s
 		  AND tg.tag_id = ANY($%d) AND t.archived_at IS NULL)`,
 		arg(taggableType), idColumn, arg(tagIDs))
+}
+
+// RowTag is one tag as a list row carries it — the word and its colour, and
+// nothing about who applied it. A page of fifty rows draws fifty chips and
+// needs no assignments to do it.
+type RowTag struct {
+	TagID ids.UUID
+	Name  string
+	Color *string
+}
+
+// rowTagCap bounds how many tags one row carries back.
+//
+// A chip strip shows a few and says "+N", so the row does not need every word
+// to draw one — and a record somebody tagged forty times would otherwise make
+// one page of fifty rows into two thousand joined rows. The count a strip
+// needs beyond the cap comes from the record's own tags read, which is the
+// screen that has room for it.
+const rowTagCap = 5
+
+// AttachRowTags loads the live tags for one page of records, in ONE query, and
+// hands each row its own.
+//
+// Batched deliberately: the obvious per-row read is N queries for a page of N,
+// which is the shape that makes a list feel slow and shows up nowhere in a
+// unit test. `taggableType` is the value taggable.entity_type stores.
+//
+// Archived tags are omitted. A retired word is not drawn on a list, and a row
+// showing one would send a reader to a picker that no longer offers it.
+func AttachRowTags[T any](
+	ctx context.Context, tx pgx.Tx, taggableType string,
+	rows []T, id func(T) ids.UUID, set func(*T, []RowTag),
+) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	recordIDs := make([]ids.UUID, len(rows))
+	for i := range rows {
+		recordIDs[i] = id(rows[i])
+	}
+	// The window is what keeps the cap per RECORD rather than per page: a
+	// plain LIMIT would hand every tag to the first row and none to the rest.
+	found, err := tx.Query(ctx, `
+		SELECT entity_id, tag_id, name, color FROM (
+			SELECT g.entity_id, t.id AS tag_id, t.name, t.color,
+			       row_number() OVER (PARTITION BY g.entity_id ORDER BY t.name, t.id) AS rank
+			  FROM taggable g
+			  JOIN tag t ON t.id = g.tag_id
+			 WHERE g.entity_type = $1 AND g.entity_id = ANY($2) AND t.archived_at IS NULL
+		) ranked
+		 WHERE rank <= $3`, taggableType, recordIDs, rowTagCap)
+	if err != nil {
+		return fmt.Errorf("storekit: reading row tags for %s: %w", taggableType, err)
+	}
+	defer found.Close()
+
+	byRecord := make(map[ids.UUID][]RowTag, len(rows))
+	for found.Next() {
+		var recordID ids.UUID
+		var tag RowTag
+		if err := found.Scan(&recordID, &tag.TagID, &tag.Name, &tag.Color); err != nil {
+			return fmt.Errorf("storekit: scanning a row tag: %w", err)
+		}
+		byRecord[recordID] = append(byRecord[recordID], tag)
+	}
+	if err := found.Err(); err != nil {
+		return err
+	}
+	for i := range rows {
+		if tags := byRecord[id(rows[i])]; len(tags) > 0 {
+			set(&rows[i], tags)
+		}
+	}
+	return nil
 }
