@@ -7983,6 +7983,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RecordTagsResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        # A caller lacking read on the RECORD type is refused outright. Lacking
+        # the tag vocabulary is not a refusal — that answers 200 with withheld.
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 

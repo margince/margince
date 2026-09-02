@@ -67,9 +67,29 @@ func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
 		t.Fatalf("tagging the company: status=%d body=%v", status, applied)
 	}
 
+	// A deal too: the test name claims three types, and two of them passing
+	// says nothing about the third — deal is the one whose row scope differs
+	// most from a person's.
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	var deal integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/deals", integration.AnyMap{
+		"name": "Tagged Deal", "pipeline_id": stages.PipelineID,
+		"stage_id": stages.Open, "source": "manual",
+	}, nil, &deal); status != http.StatusCreated {
+		t.Fatalf("creating the deal: status=%d body=%v", status, deal)
+	}
+	dealID, _ := deal["id"].(string)
+	var dealTagged integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/tags/"+tag+"/apply", integration.AnyMap{
+		"entity_type": "deal", "entity_id": dealID,
+	}, nil, &dealTagged); status != http.StatusCreated {
+		t.Fatalf("tagging the deal: status=%d body=%v", status, dealTagged)
+	}
+
 	for _, c := range []struct{ entityType, id string }{
 		{"person", person},
 		{"organization", orgID},
+		{"deal", dealID},
 	} {
 		body, status := readRecordTags(t, e, c.entityType, c.id)
 		if status != http.StatusOK {

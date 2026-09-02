@@ -131,7 +131,7 @@ func (s *Store) recordTagRows(ctx context.Context, tx pgx.Tx, entityType string,
 		var kind *string
 		if err := rows.Scan(&r.TagID, &r.Name, &r.Color, &r.Description, &r.Archived,
 			&r.AssignedAt, &assignedBy, &kind, &r.AssignedByName); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("collections: scanning a record tag: %w", err)
 		}
 		if assignedBy != nil {
 			r.AssignedBy = *assignedBy
