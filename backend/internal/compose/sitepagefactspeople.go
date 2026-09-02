@@ -12,10 +12,10 @@ package compose
 // somebody else — rather than from where the two strings happen to sit.
 
 import (
-	"net/url"
+	"net/mail"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 // attributionQuote checks the model's claim that the page gives THIS person
@@ -289,24 +289,32 @@ func gatePagePeople(parsed pageFactsReply, page crawlPage, idx snippetIndex, dro
 // addressOnSiteDomain reports whether a printed address belongs to the site the
 // page came from, compared as REGISTRABLE domains.
 //
-// eTLD+1 on both sides, so a page at www.acme.de accepts jane@acme.de and a
-// page at acme.de accepts an address on mail.acme.de — the same "same site"
-// test the crawler's own off-domain gate applies. Two customers of one
-// co.uk-style suffix are not the same site, which publicsuffix settles rather
-// than a suffix count would.
+// The address is PARSED, not split. A bare "@acme.example", or "not an
+// email@acme.example", carries the site's domain after the last @ and would
+// otherwise vouch for an affiliation while naming nobody reachable — the
+// proposal would then ask a human to confirm a lead whose only contact detail
+// cannot be sent to.
 //
-// Anything unparseable answers false. An address or a URL this cannot read is
-// not one it can vouch for, and the proposal it would admit is the one this
+// The comparison is webread.SameRegistrableDomain, which is the crawler's own
+// off-domain gate: www.acme.de and mail.acme.de are one site, acme.de and
+// acme.com are not, and neither are two customers of one co.uk-style suffix.
+// It is strict where freemail.Registrable is lenient — that one passes a host
+// through unchanged when it can derive no eTLD+1, so a bare public suffix on
+// both sides would compare equal and admit the very thing this refuses.
+//
+// Anything it cannot read answers false. An address or a URL this cannot parse
+// is not one it can vouch for, and the proposal it would admit is the one this
 // check exists to refuse.
 func addressOnSiteDomain(email, pageURL string) bool {
-	_, domain, found := strings.Cut(email, "@")
-	if !found || domain == "" {
+	parsed, err := mail.ParseAddress(email)
+	if err != nil {
 		return false
 	}
-	parsed, err := url.Parse(pageURL)
-	if err != nil || parsed.Hostname() == "" {
+	local, domain, found := strings.Cut(parsed.Address, "@")
+	if !found || local == "" || domain == "" {
 		return false
 	}
-	site := freemail.Registrable(parsed.Hostname())
-	return site != "" && freemail.Registrable(domain) == site
+	// A host in URL form because SameRegistrableDomain compares two URLs, and
+	// reusing it is what keeps this test and the crawler's the same test.
+	return webread.SameRegistrableDomain(pageURL, "https://"+domain)
 }

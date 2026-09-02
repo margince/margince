@@ -721,3 +721,33 @@ func TestAStaffMemberWithAPersonalAddressIsUnproposableAndSaysSo(t *testing.T) {
 		t.Fatalf("the drop must name the rule that took him: %+v", dropped)
 	}
 }
+
+// AN ADDRESS THAT NAMES NOBODY IS NOT AN ADDRESS.
+//
+// A bare "@acme.example", or a run of words ending in one, carries the site's
+// domain after the last @ and would vouch for the affiliation while naming
+// nobody reachable — the proposal would ask a human to confirm a lead whose
+// only contact detail cannot be sent to. So the address is parsed, not split.
+func TestAnAddressWithNobodyInFrontOfItIsRefused(t *testing.T) {
+	for name, address := range map[string]string{
+		"no local part":    "@acme.example",
+		"words then an at": "not an email@acme.example",
+		"nothing at all":   "acme.example",
+		"a trailing at":    "anna@",
+		"two at signs":     "anna@muster@acme.example",
+	} {
+		t.Run(name, func(t *testing.T) {
+			if addressOnSiteDomain(address, seedURL) {
+				t.Errorf("%q vouched for the site's own domain while naming nobody reachable", address)
+			}
+		})
+	}
+}
+
+// AND A REAL ONE ON THE SITE STILL PASSES, so the check above is not refusing
+// everything.
+func TestAnOrdinaryAddressOnTheSitePasses(t *testing.T) {
+	if !addressOnSiteDomain("anna@acme.example", seedURL) {
+		t.Error("the site's own address was refused, so the parse is rejecting more than malformed input")
+	}
+}
