@@ -186,6 +186,36 @@ func claimSourceWithinProject(projectPos int) string {
 // whose source the caller may not read is not returned, because the claim
 // would otherwise quote a message the reader has no grant for.
 func (s *Store) ClaimsForPerson(ctx context.Context, tx pgx.Tx, personID ids.PersonID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error) {
+	return s.readClaims(ctx, tx, personID, within, sqlAlwaysVisible, "c.created_at DESC", limit)
+}
+
+// OpenCommitmentsForPerson reads the open promises WE made to this person,
+// soonest deadline first with the undated behind them.
+//
+// A DIFFERENT QUESTION FROM ClaimsForPerson, which is why it is a second entry
+// point and not a filter the caller applies afterwards. That read answers
+// "what has been said on this record lately" — every kind of claim, newest
+// first, capped for display. This one answers "what do we owe them, most
+// urgent first", and the two disagree exactly where it matters: a commitment
+// made in June and due tomorrow sits far below the newest twenty-five rows, so
+// a caller filtering that page finds no promise on a record that owes one this
+// week.
+//
+// Same statement, same gates, same scan — only the filter and the order move.
+// Two spellings of one read is how the two end up disagreeing about which
+// claims exist.
+func (s *Store) OpenCommitmentsForPerson(ctx context.Context, tx pgx.Tx, personID ids.PersonID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error) {
+	const open = `c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review`
+	return s.readClaims(ctx, tx, personID, within, open, "c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id", limit)
+}
+
+// readClaims is the read both entry points share. `extra` narrows the
+// rows and `order` ranks them; both are compile-time literals from this file,
+// never anything off a request.
+func (s *Store) readClaims(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID, within *ids.ProjectID,
+	extra, order string, limit int,
+) ([]crmcontracts.ConversationClaim, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	personPos := arg(personID)
@@ -206,9 +236,9 @@ func (s *Store) ClaimsForPerson(ctx context.Context, tx pgx.Tx, personID ids.Per
 		       c.corrected_at, c.task_activity_id
 		FROM conversation_claim c
 		JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
-		WHERE c.person_id = $%d AND c.archived_at IS NULL AND (%s) AND %s
-		ORDER BY c.created_at DESC
-		LIMIT %d`, personPos, scope, filed, limit), args...)
+		WHERE c.person_id = $%d AND c.archived_at IS NULL AND (%s) AND %s AND (%s)
+		ORDER BY %s
+		LIMIT %d`, personPos, scope, filed, extra, order, limit), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the conversation claims: %w", err)
 	}

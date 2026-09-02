@@ -10,6 +10,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// scored names a confidence the way the store now carries it: a pointer, so a
+// row that records none is tellable from one scored at zero.
+func scored(value float32) *float32 { return &value }
+
 func TestAssembleCompanyContextIsCanonicalAndScoped(t *testing.T) {
 	generatedAt := time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)
 	company := Company{
@@ -18,14 +22,14 @@ func TestAssembleCompanyContextIsCanonicalAndScoped(t *testing.T) {
 		OrganizationSource:     "manual",
 		OrganizationCapturedBy: "human:owner",
 		ProfileFields: []CompanyProfileField{
-			{Field: fieldICP, Value: "Mid-market manufacturers", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: 1},
-			{Field: fieldOfferSummary, Value: "Revenue software", Source: companySourceSiteRead, CapturedBy: "agent:site-read", SourceURL: "https://gradion.com", Confidence: 0.9},
-			{Field: fieldDisplayName, Value: "Gradion", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: 1},
+			{Field: fieldICP, Value: "Mid-market manufacturers", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
+			{Field: fieldOfferSummary, Value: "Revenue software", Source: companySourceSiteRead, CapturedBy: "agent:site-read", SourceURL: "https://gradion.com", Confidence: scored(0.9)},
+			{Field: fieldDisplayName, Value: "Gradion", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
 		},
 		Facts: []CompanyFact{
-			{Category: "signal", Field: "named_customer", Value: "Acme", ValueKey: "acme", Source: companySourceSiteRead, CapturedBy: "agent:site-read", Confidence: 0.8},
-			{Category: "signal", Field: "technology", Value: "Go", ValueKey: "go", Source: companySourceSiteRead, CapturedBy: "agent:site-read", Confidence: 0.8},
-			{Category: "offering", Field: "service", Value: "Advisory", ValueKey: "advisory", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: 1},
+			{Category: "signal", Field: "named_customer", Value: "Acme", ValueKey: "acme", Source: companySourceSiteRead, CapturedBy: "agent:site-read", Confidence: scored(0.8)},
+			{Category: "signal", Field: "technology", Value: "Go", ValueKey: "go", Source: companySourceSiteRead, CapturedBy: "agent:site-read", Confidence: scored(0.8)},
+			{Category: "offering", Field: "service", Value: "Advisory", ValueKey: "advisory", Source: companySourceHuman, CapturedBy: "human:owner", Confidence: scored(1)},
 		},
 	}
 

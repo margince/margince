@@ -167,43 +167,20 @@ func (s *Service) resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, e
 // model the product does not have.
 func mineOnly(scope string) bool { return scope == scopeMine }
 
-// ownedByReader reports whether an item is the reader's own work.
+// ownedByReader reports whether a row is the reader's own work.
 //
-// Only the DEAL-bearing sources can be judged here, because only they carry an
-// owner on the wire. Everything else on this queue is already per-reader by
-// construction — a task the lane read for this viewer, an approval they may
-// decide, their own mailbox, their own promises — so a row with no owner to
-// check is the reader's by the lane that produced it, and dropping it would
-// hide their own work from them.
-func ownedByReader(item crmcontracts.WorklistItem, reader principal.Principal) bool {
-	if item.Deal == nil || item.Deal.OwnerId == nil {
+// Only the rows that NAME somebody can be judged here — a deal's owner on the
+// wire, or the owner a waiting message's lane resolved. Everything else on this
+// queue is already per-reader by construction: a task the lane read for this
+// viewer, an approval they may decide, their own mailbox, their own promises. So
+// a row with nobody to check is the reader's by the lane that produced it, and
+// dropping it would hide their own work from them.
+func ownedByReader(row ranked, reader principal.Principal) bool {
+	named, ok := answersTo(row)
+	if !ok {
 		return true
 	}
-	return ids.UUID(*item.Deal.OwnerId) == reader.UserID
-}
-
-// waitingIsMine reports whether an unanswered message belongs to the reader's
-// own work.
-//
-// A message has no owner column, so the question is answered by the RECORD it
-// is filed under: a thread about a colleague's deal is that colleague's to
-// answer.
-//
-// A message filed under nothing names nobody, and stays — an unowned customer
-// writing in is everybody's, and dropping it would leave nobody looking at it.
-//
-// That reading is the one this queue is otherwise moving away from, and it
-// survives here for a reason worth stating: ownedDeals is built from the
-// at-risk lane alone, so a deal the reader owns which is perfectly healthy is
-// absent from it and reads as unowned. Judging a wait exactly against that set
-// would drop the reader's own waiting customer whenever their deal was doing
-// well. Making it exact needs the owner on the row itself, which is the read
-// the waiting query does not yet carry.
-func waitingIsMine(waiting WaitingCustomer, ownedDeals map[ids.UUID]bool) bool {
-	if waiting.DealID.IsZero() {
-		return true
-	}
-	return ownedDeals[waiting.DealID]
+	return named == reader.UserID
 }
 
 // keepReadersOwn drops the rows belonging to somebody else.
@@ -229,7 +206,7 @@ func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if ownedByReader(row.item, actor) {
+		if narrowedByItsOwnLane(row) || ownedByReader(row, actor) {
 			kept = append(kept, row)
 		}
 	}
@@ -250,50 +227,181 @@ func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 // "Lena's day" that is mostly the reader's own day is a worse failure than an
 // empty one, because nothing on it says so.
 //
-// So a row survives when it names this owner's deal, or when it came from the
+// So a row survives when it answers to this owner, or when it came from the
 // task lane, which narrowed to them in its own query. Everything else is the
 // reader's, and this is not their page.
 //
 // That is also the honest limit of the scope, and the contract states it where
 // the parameter is declared: a manager opening a rep's queue sees the rep's
-// deals and tasks, never their mailbox.
+// deals, tasks and waiting customers, never their mailbox or their notices.
 func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if row.item.Source == sourceTask {
+		if narrowedByItsOwnLane(row) {
 			kept = append(kept, row)
 			continue
 		}
-		// The lead lane narrowed to this owner in its own query, exactly as the
-		// task lane did, so its rows are already theirs. Judging them by the
-		// deal arm below would drop every one — a lead row carries a lead
-		// subject and no deal — and a manager opening a rep's day would find
-		// the lane silently missing rather than empty.
-		if row.item.Source == sourceLeadResponse {
-			kept = append(kept, row)
-			continue
-		}
-		if row.item.Deal != nil && row.item.Deal.OwnerId != nil &&
-			ids.UUID(*row.item.Deal.OwnerId) == owner {
+		if named, ok := answersTo(row); ok && named == owner {
 			kept = append(kept, row)
 		}
 	}
 	return kept
 }
 
+// narrowedByItsOwnLane reports whether a source already answered the ownership
+// question in its own query.
+//
+// Two lanes take the scope and the owner as ARGUMENTS — tasks and owed leads —
+// so what they return is already the right person's, whichever scope this read
+// runs at. Re-judging their rows here is not a second safety net: it asks a
+// different question of an answer that was already correct, and it gets it
+// wrong. A lead the lane returned under `mine` is the reader's by the store's
+// own predicate, and comparing its owner id against the reader drops it whenever
+// the two disagree for a reason the store already accounted for.
+//
+// One helper rather than a case per source in each of three filters, because
+// the case that gets forgotten fails silently: the lane goes missing from the
+// page rather than empty, and nothing says which.
+//
+// Held by: TestOnlyNarrowToScopeChoosesBetweenTheScopeFilters
+// (scopeonespelling_test.go) — the filters are reachable only through
+// narrowToScope, so a fourth caller with its own source list cannot appear
+// without that test naming it.
+func narrowedByItsOwnLane(row ranked) bool {
+	return row.item.Source == sourceTask || row.item.Source == sourceLeadResponse
+}
+
 // keepUnowned keeps the rows that answer to nobody.
 //
-// The counterpart to keepReadersOwn, over the same evidence: a deal-bearing row
-// with an owner belongs to that person and not to this queue. A row with no
-// owner to check stays, which is what the scope is for.
+// The counterpart to keepReadersOwn, over the same evidence: a row with an owner
+// belongs to that person and not to this queue. A row with nobody to name stays,
+// which is what the scope is for.
 func keepUnowned(rows []ranked) []ranked {
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if row.item.Deal == nil || row.item.Deal.OwnerId == nil {
+		if _, ok := answersTo(row); !ok {
 			kept = append(kept, row)
 		}
 	}
 	return kept
+}
+
+// narrowToScope keeps the rows this read is FOR.
+//
+// The one place the three filters are chosen between, because they are three
+// answers to one question and a caller that picked between them itself would be
+// a second copy of the rule. The waiting rows go through it before their
+// crowding is decided and the whole page goes through it after everything is
+// assembled; both reach the same filter, so neither can drift from the other.
+//
+// Held by: TestOnlyNarrowToScopeChoosesBetweenTheScopeFilters
+// (scopeonespelling_test.go), which fails when anything else calls a keep*
+// filter directly.
+//
+// A named owner outranks the scope word: "their queue" is the narrower question,
+// and answering the wider one would hand back a page that looks like the rep's
+// day and is not.
+func (s *Service) narrowToScope(
+	ctx context.Context, rows []ranked, scope string, owner ids.UUID,
+) []ranked {
+	switch {
+	case !owner.IsZero():
+		return keepOwnedBy(rows, owner)
+	case mineOnly(scope):
+		return keepReadersOwn(ctx, rows)
+	case scope == scopeUnassigned:
+		return keepUnowned(rows)
+	case scope == scopeTeam:
+		return s.keepTeams(ctx, rows)
+	default:
+		// `all`, which narrows nothing: the reader reaches every row by tier,
+		// and every row here was already read under that tier.
+		return rows
+	}
+}
+
+// keepTeams keeps the rows belonging to the reader's own team.
+//
+// `team` used to narrow NOTHING, and the gap was not academic. The row-scope
+// gate narrows the deal-bearing rows correctly, but the task lane's gate is a
+// link walk and auth.ActivityDiscoverClause coalesces the empty link set to
+// TRUE — so a task carrying no record link is discoverable by anyone in the
+// installation. A team-scoped reader asking for `team` was handed exactly those
+// rows, belonging to colleagues on no team of theirs, under a heading that says
+// "my team". resolveOwner refuses to open that same person's queue by name,
+// so the page contradicted the door beside it.
+//
+// Membership is asked ONCE for the page rather than per row: the roster is a
+// fact about the reader, and asking per row would be a query per task.
+//
+// It fails CLOSED. Without the membership reader there is no team to answer
+// for, and a queue that handed back every row it had read would be widening a
+// scope named `team` — the failure resolveOwner's own nil case exists to
+// prevent.
+func (s *Service) keepTeams(ctx context.Context, rows []ranked) []ranked {
+	if s.teammates == nil {
+		return nil
+	}
+	roster, _, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	if err != nil {
+		return nil
+	}
+	team := make(map[ids.UUID]bool, len(roster))
+	for _, member := range roster {
+		team[member.UserID] = true
+	}
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		named, ok := answersTo(row)
+		// A row naming nobody stays. Unowned work is the team's as much as
+		// anybody's, and dropping it here would hide it from the only wider
+		// scope most readers hold.
+		if !ok || team[named] {
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// answersTo is WHO a row belongs to, and whether anybody does.
+//
+// One reading for all three scope filters, because they are three questions
+// about one fact and an answer that differed between them would put a row on two
+// queues or on none. It used to be spelled once per filter over the deal alone,
+// which is why a waiting message — owned through the record it is filed under
+// rather than through a deal on the wire — was invisible to every one of them.
+//
+// Held by: TestOnlyNarrowToScopeChoosesBetweenTheScopeFilters
+// (scopeonespelling_test.go) — the filters all reach this because narrowToScope
+// is their only caller, and that test fails when anything else calls one.
+//
+// Two carriers, because the two kinds of row need different things. A
+// deal-bearing row carries its owner ON THE WIRE, where the client draws it;
+// everything else that has an owner carries it beside the item, where only these
+// filters read it.
+//
+// THE LANE'S OWN ANSWER WINS, and the order is the correctness of it rather than
+// a preference. This runs twice over a waiting row — once before its crowding is
+// decided, once with the whole page — and between the two passes
+// dropDealsAlreadyWaiting ATTACHES a deal to it, so the row's evidence changes
+// under the filter. Asking the deal first meant the two passes could answer
+// differently: a wait kept as its owner's on the first pass was judged against
+// the absorbed deal's owner on the second, and when the two disagreed — a deal
+// reassigned between the at-risk read and the waiting read — the customer landed
+// on neither person's queue and nothing said so.
+//
+// The lane's answer is also the better one. It resolved ownership from the
+// record the thread is actually filed under; the attached deal arrived because
+// the row absorbed a drifting deal's facts for DISPLAY, which is a different
+// question from who owes the reply.
+func answersTo(row ranked) (ids.UUID, bool) {
+	if !row.owner.IsZero() {
+		return row.owner, true
+	}
+	if row.item.Deal != nil && row.item.Deal.OwnerId != nil {
+		return ids.UUID(*row.item.Deal.OwnerId), true
+	}
+	return ids.UUID{}, false
 }
 
 // scopeOptions puts the resolver's answer on the wire.

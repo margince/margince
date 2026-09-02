@@ -4715,6 +4715,19 @@ paths:
           description: >-
             Only activities that occurred strictly before this instant (exclusive), so a day range
             is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
+        - name: waiting_reply
+          in: query
+          schema: { type: boolean }
+          description: >-
+            Restrict the list to an inbound message still awaiting an answer: the newest message
+            of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it
+            answers what on this record is waiting for a reply.
+
+            Native system-of-record only: an incumbent mirror carries no thread walk to answer
+            it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422
+            every unsupported overlay parameter gets, rather than returning the whole mirrored
+            set as though every row qualified. `false` asks for nothing and is accepted in
+            either mode.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -4723,6 +4736,13 @@ paths:
               schema: { $ref: '#/components/schemas/ActivityListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422':
+          description: >-
+            A filter the workspace's mode cannot answer — `waiting_reply=true`, or any other
+            narrowing the incumbent mirror carries no data for, in overlay mode.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '404':
           description: >-
             The `entity_type`/`entity_id` this read was narrowed TO is outside the caller's
@@ -8530,6 +8550,85 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /company/logo:
+    post:
+      tags: [Organizations]
+      operationId: uploadCompanyLogo
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      # A person choosing their own company's face. The agent path to this field is the
+      # website read, which resolves a mark from the site rather than being handed one.
+      x-agent-access: human-only
+      summary: Replace the installation's own company mark with an uploaded image.
+      description: |
+        Multipart upload. The image is re-encoded to the same square PNG a resolved mark is
+        normalized to, so what is served from `logo_url` is always this origin's own bytes
+        and never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
+        anything that will not decode is refused as 415.
+
+        The upload is a HUMAN write and takes precedence: while it stands, a website read
+        resolving a different mark leaves it alone. `DELETE` gives the field back — the
+        record returns to its monogram and the next read may resolve a mark again.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: The company, carrying the `logo_url` the upload now answers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyProfile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No company saved yet — there is no record to give a mark to.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415':
+          description: The upload is not an image this server can decode and re-encode.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Organizations]
+      operationId: deleteCompanyLogo
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Take the installation's own company mark off the record.
+      description: |
+        The record goes back to its deterministic monogram and the stored object is
+        collected. It also gives the field back: a person's mark is what holds a website
+        read off, so a company with no mark can be given one by the next read.
+
+        Removing a mark the installation never had is not an error — the outcome the
+        caller asked for is the outcome they get.
+      responses:
+        '200':
+          description: The company, with no `logo_url`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyProfile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No company saved yet.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /company/context/capabilities:
     get:
       tags: [Organizations, AI]
@@ -9572,8 +9671,15 @@ paths:
             it at any tier: nothing in it belongs to a colleague, which is what unassigned
             means. It exists because `mine` is exact — a task with no assignee is no
             longer folded into every reader's own queue, so it needs a queue of its own or
-            the product would have stopped mentioning it. Tasks only: a message has no
-            assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
+            the product would have stopped mentioning it.
+
+            It carries unanswered mail too, and that is the case it matters most for. A
+            message has no assignee, so its owner is the owner of the record it is filed
+            under — deal, then lead, then person, then organization, first owner found. A
+            thread no owned record attributes to anybody is the customer nobody is looking
+            at, which is exactly what this queue is opened to find. Such a message stays
+            reachable from `mine` as well, on the ground that an unowned customer writing
+            in is everybody's until somebody takes them.
 
             WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
             going quiet, meetings and duplicate pairs are read under the caller's row
@@ -9627,6 +9733,44 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /worklist/team:
+    get:
+      tags: [Brief]
+      operationId: getTeamBoard
+      summary: One row per teammate — who is carrying what, so a lead can see where to help.
+      description: |
+        The manager's read of the same work `/worklist` ranks for one person. It answers
+        "who on my team is drowning", which the ranked queue structurally cannot: that
+        queue assembles ONE person's day, so widening its scope cannot produce rows for
+        sources that were never read for anybody else.
+
+        So this is COUNTS, not rows. Three per teammate — customers waiting on a reply,
+        deals at risk, tasks already past due — chosen because each is work somebody is
+        answerable for rather than a volume of activity. A lead reads the board to pick
+        who to talk to, then opens that person's own day with `GET /worklist?owner=`,
+        which is the drill-down this board exists to route to.
+
+        Every count is read under the CALLER's visibility, never the teammate's. A number
+        summing rows the reader may not open would publish a colleague's volume to
+        somebody with no access to any of it, so what this reports is "how much of their
+        load you can see" — the only honest answer available without giving one person a
+        licence to read another's records.
+
+        Requires a row scope of `team` or `all`; an own-scoped reader is refused with 403
+        rather than shown a board of one. The teammates listed are the live human seats
+        sharing a live team with the caller, the caller included — a lead who also sells
+        needs their own row beside their team's. A caller on no team gets themselves
+        alone, which says plainly that nobody has been put on a team with them; an empty
+        board would read as an outage.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The team's load.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamBoard' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /digest:
     get:
       tags: [Capture]
@@ -10507,6 +10651,68 @@ paths:
                       - { provider: anthropic, configured: true, env_var: ANTHROPIC_API_KEY }
                       - { provider: openai, configured: false, env_var: OPENAI_API_KEY }
                       - { provider: gemini, configured: true, env_var: GEMINI_API_KEY }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
+  /ai/available-models/{provider}:
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        schema: { type: string }
+        description: The routing name of the vendor — the same string a binding uses.
+      - name: tier
+        in: query
+        required: false
+        schema: { type: string }
+        description: >-
+          The lane being edited, named as the routing document names it (`premium`, `embeddings`, …).
+          It selects WHICH stored binding supplies the host, for the installation that binds one
+          vendor at two — a broker on one lane and a self-hosted gateway on another, which the
+          routing validator permits. Omitted, or naming a lane bound to some other vendor, the host
+          falls back to any binding on this vendor and then to the adapter's own default.
+    get:
+      tags: [AI]
+      operationId: listAvailableModels
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: What one vendor says it serves today (admin/ops).
+      description: |
+        Asks the VENDOR what it currently serves, so the routing form offers models that exist
+        rather than only the ones somebody last hand-entered on the price sheet.
+
+        AVAILABILITY only — never price. `/ai-model-rates` is the effective-dated record a call
+        is costed against, and a model listed here that it cannot price is bindable and reports
+        UNPRICED.
+
+        The vendor is named, and only the vendor: the host it is reached at comes from this
+        installation's own stored binding, or from the adapter's default. There is no request
+        parameter that selects an endpoint.
+
+        A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`
+        naming the state. The model field on the routing form takes any id the vendor serves,
+        whether or not it appears here.
+
+        `lane` is stated only where the vendor states it. A caller that needs the distinction
+        must treat an absent `lane` as unknown rather than as chat: an embedder bound to a chat
+        tier cannot serve a call.
+      responses:
+        '200':
+          description: What the vendor serves, or why it could not be asked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailableModelList' }
+              examples:
+                answered:
+                  summary: The vendor answered
+                  value:
+                    provider: anthropic
+                    models:
+                      - { id: claude-opus-4-8, display_name: Claude Opus 4.8, lane: chat }
+                      - { id: claude-sonnet-4-6, display_name: Claude Sonnet 4.6, lane: chat }
+                noKey:
+                  summary: The vendor takes a key and holds none
+                  value: { provider: anthropic, models: [], unavailable: no_key }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
@@ -15165,6 +15371,196 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /weekly-plans/current:
+    get:
+      tags: [Brief]
+      operationId: getCurrentWeeklyPlan
+      summary: The caller's plan for this week — what they said they would do.
+      description: |
+        The forward half of the Brief's weekly. `/weekly-reviews/latest` is the week that
+        closed, frozen and edited by nobody; this is the week running, authored by the rep.
+
+        Whose plan is not a parameter. A plan is a personal record and the caller's own is
+        the only one this path answers for; a lead reads a rep's through
+        `/weekly-plans/{owner_id}/current`, which states whose week it wants.
+
+        404 when the rep has not started one. The read never writes: creating a plan here
+        would put an empty week in every rep's history the first time they opened the page,
+        and "did this person plan their week" would stop being answerable.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The week as planned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Brief]
+      operationId: startWeeklyPlan
+      summary: Open a plan for this week.
+      description: |
+        Idempotent: a second call answers the plan the first opened rather than reporting a
+        race. Two tabs pressing "plan my week" produce one plan.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The plan, whether this call opened it or found it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /weekly-plans/{owner_id}/current:
+    get:
+      tags: [Brief]
+      operationId: getTeammateWeeklyPlan
+      summary: A teammate's plan for this week, for their lead.
+      description: |
+        The second reader, and the only path that names a person. Gated on the same
+        shared-live-team question that decides whether a lead may open a rep's queue or put
+        a notice in it — one seam, never a fourth spelling of "is this my colleague".
+
+        404 rather than 403 for a reader who is not their lead: whether a person has a plan
+        is itself something a stranger may not learn.
+      x-agent-access: human-only
+      parameters:
+        - name: owner_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+          description: Whose week to read.
+      responses:
+        '200':
+          description: The teammate's week as planned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /weekly-plans/commitments:
+    post:
+      tags: [Brief]
+      operationId: addWeeklyPlanCommitment
+      summary: Write one thing onto this week's plan.
+      description: |
+        Onto the CALLER's own plan, opening one for the week if they have none. There is no
+        plan id in the body: a plan id would be a way to write onto somebody else's week,
+        and there is no reason for one to exist.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewWeeklyPlanCommitment' }
+      responses:
+        '201':
+          description: The commitment as written.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyPlanCommitment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /weekly-plans/commitments/{id}/state:
+    put:
+      tags: [Brief]
+      operationId: setWeeklyPlanCommitmentState
+      summary: Mark one commitment done, reopen it, or drop it.
+      description: |
+        `missed` is not settable. It is what the week's CLOSE writes over a commitment left
+        open, not something a rep declares about themselves — a rep who decides they will
+        not do a thing drops it, which says something different and truer.
+      x-agent-access: human-only
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [state]
+              properties:
+                state: { type: string, enum: [open, done, dropped] }
+      responses:
+        '204': { description: Settled. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /weekly-plans/commitments/{id}/help:
+    put:
+      tags: [Brief]
+      operationId: askForWeeklyPlanHelp
+      summary: Say what you need from your lead on one commitment.
+      description: |
+        An empty ask withdraws a standing request. The withdrawal emits the ordinary plan
+        update rather than the help-requested event, so retracting a request does not page
+        a lead a second time.
+      x-agent-access: human-only
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [help_requested]
+              properties:
+                help_requested: { type: string, maxLength: 2000 }
+      responses:
+        '204': { description: Recorded. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /weekly-plans/commitments/{id}/response:
+    put:
+      tags: [Brief]
+      operationId: answerWeeklyPlanCommitment
+      summary: Answer a teammate's request for help.
+      description: |
+        The lead's one write, and it touches three columns together — the answer, who wrote
+        it and when — because an answer with nobody behind it cannot be shown to the person
+        who asked.
+
+        It touches nothing else. A lead may answer a request; they may not settle a
+        commitment, reword it or drop it, and there is no argument here by which they could.
+      x-agent-access: human-only
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [manager_response]
+              properties:
+                manager_response: { type: string, maxLength: 2000 }
+      responses:
+        '204': { description: Answered. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /notices:
     post:
       tags: [Notices]
@@ -18471,7 +18867,7 @@ components:
         subscription_id: { type: string, format: uuid }
         event_id: { type: string, format: uuid }
         event_type: { type: string }
-        status: { type: string, enum: [pending, delivered, retrying, dead_lettered] }
+        status: { type: string, enum: [pending, delivered, retrying, dead_lettered, visibility_revoked] }
         attempts: { type: integer }
         last_status_code: { type: [integer, 'null'] }
         last_error: { type: [string, 'null'] }
@@ -19105,6 +19501,55 @@ components:
         providers:
           type: array
           items: { $ref: '#/components/schemas/AiProviderKeyStatus' }
+    AvailableModelList:
+      type: object
+      additionalProperties: false
+      required: [provider, models]
+      description: >-
+        One vendor's own answer about what it serves.
+
+        An empty `models` with NO `unavailable` is a vendor that answered and serves nothing —
+        a local runner with no model pulled onto it is the ordinary case. It is a different
+        state from a vendor that could not be asked, which always sets `unavailable`, and a
+        client that folded the two would tell a reader to paste a key they already have.
+      properties:
+        provider:
+          type: string
+          description: The routing name of the vendor that was asked.
+        models:
+          type: array
+          items: { $ref: '#/components/schemas/AvailableModel' }
+        unavailable:
+          type: string
+          enum: [no_key, profile_forbids, not_published, unreachable, no_endpoint]
+          description: >-
+            Why the list is empty, when it is. Absent means the vendor answered.
+            `no_key` — the vendor takes a credential and holds none.
+            `profile_forbids` — the deployment profile does not permit reaching this vendor,
+            so asking would be the egress the profile exists to prevent.
+            `not_published` — this adapter has no list endpoint.
+            `unreachable` — the vendor was asked and did not answer.
+            `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+    AvailableModel:
+      type: object
+      additionalProperties: false
+      required: [id]
+      description: >-
+        One model a vendor says it serves. Three fields and no fourth: the vendors disagree about
+        everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+      properties:
+        id:
+          type: string
+          description: The string a binding names, exactly as the vendor spells it.
+        display_name:
+          type: string
+          description: The vendor's own human label, absent where it publishes none.
+        lane:
+          type: string
+          enum: [chat, embeddings]
+          description: >-
+            What the vendor says the model is FOR, absent where it does not say. Absent means
+            UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
     AiProviderKeyStatus:
       type: object
       additionalProperties: false
@@ -23918,6 +24363,12 @@ components:
             believing the buyer had done nothing. Empty when the reader could see
             everything the brief looks at.
           items: { $ref: '#/components/schemas/MeetingBriefOmission' }
+        plan:
+          $ref: '#/components/schemas/MeetingPlan'
+          description: >-
+            What to DO in the room, built over the same records as `sections`. Optional on the
+            wire so a client written before it keeps rendering the cited summary; the server
+            writes one on every read.
 
     MeetingBriefOmission:
       type: object
@@ -23930,6 +24381,287 @@ components:
         reason:
           type: string
           description: One sentence a reader can act on, naming what is missing and why.
+
+    MeetingPlan:
+      type: object
+      description: |
+        The preparation plan: what to DO in the room, as against `sections`, which is what is
+        KNOWN about it.
+
+        Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+        reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+        UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+        generated from the ABSENCE of a record, never from a writer leaving a field out, which
+        is the difference between "nobody captured the decision route" and "the model forgot to
+        mention it".
+
+        Assessments and recommendations cite records the caller can open, or they are dropped
+        whole — the same grounding rule every sentence in `sections` runs.
+      required:
+        [generated_by, readiness, meeting_type, likely_asks, questions, scenarios,
+         account_arc, advance, unknowns]
+      properties:
+        generated_by:
+          $ref: '#/components/schemas/WrittenBy'
+          description: >-
+            Which writer produced the plan. Independent of the brief's own: the plan can fall to
+            its deterministic floor while the sections were written by a model, and the reverse.
+        readiness:
+          $ref: '#/components/schemas/MeetingPlanReadiness'
+        meeting_type: { $ref: '#/components/schemas/MeetingPlanType' }
+        objective: { $ref: '#/components/schemas/MeetingPlanObjective' }
+        opening:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: The suggested opener. Always a `recommendation`.
+        top_risk: { $ref: '#/components/schemas/MeetingPlanRisk' }
+        likely_asks:
+          type: array
+          maxItems: 5
+          description: What the other side is likely to ask, each an assessment with the record behind it.
+          items: { $ref: '#/components/schemas/MeetingPlanAsk' }
+        questions:
+          type: array
+          maxItems: 5
+          description: What to ask them, ranked. Three is a plan a rep can hold; the cap is five.
+          items: { $ref: '#/components/schemas/MeetingPlanQuestion' }
+        scenarios:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/MeetingPlanScenario' }
+        account_arc:
+          type: array
+          maxItems: 5
+          description: >-
+            The moments that change TODAY's conversation, oldest first, built from the whole
+            history this caller may read rather than from the newest page of it.
+          items: { $ref: '#/components/schemas/MeetingPlanArcMoment' }
+        advance: { $ref: '#/components/schemas/MeetingPlanAdvance' }
+        unknowns:
+          type: array
+          description: >-
+            What the record does not say, each with the question that would close it. Derived
+            from absence, so an empty list means the record answered everything this plan asks
+            of it — not that nobody looked.
+          items: { $ref: '#/components/schemas/MeetingPlanUnknown' }
+        manager_coaching:
+          $ref: '#/components/schemas/MeetingPlanCoaching'
+          description: >-
+            Present only for a lead reading a teammate's meeting. Absent for everybody else,
+            including the rep whose meeting it is — a rep reading their own brief is preparing,
+            not being coached.
+
+    MeetingPlanCoaching:
+      type: object
+      description: |
+        The coaching layer, for a lead reading a teammate's meeting.
+
+        It adds a READING of how this meeting could go wrong for this rep. It adds no account
+        fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+        and this is attached over it — so a lead and their rep are looking at the same meeting,
+        and the lead is looking at one more thing.
+
+        Who gets it is decided by the server, never asked for by a client. The rule is the
+        same one that governs raising a coaching notice: a seat that may coach at all, and a
+        live team shared with somebody in the room.
+      required: [focus, failure_mode, listen_for, watch_for, intervene_if, paths]
+      properties:
+        focus:
+          type: string
+          description: The ONE thing to coach on. A list of five is a list nobody coaches from.
+        failure_mode:
+          type: string
+          description: How this meeting most plausibly goes wrong for this rep, given this account.
+        listen_for:
+          type: string
+          description: What a good version of this conversation sounds like.
+        watch_for:
+          type: string
+          description: The move that says it is going wrong.
+        intervene_if:
+          type: string
+          description: >-
+            The narrow condition under which a lead should step in. Narrow on purpose: a lead
+            who takes over a rep's meeting has coached nobody.
+        paths:
+          type: array
+          maxItems: 3
+          description: The ways this meeting can go, for a lead to rehearse against.
+          items: { $ref: '#/components/schemas/MeetingPlanCoachingPath' }
+
+    MeetingPlanCoachingPath:
+      type: object
+      required: [label, play]
+      properties:
+        label: { type: string }
+        play: { type: string }
+
+    MeetingPlanReadiness:
+      type: string
+      enum: [outline, prepared]
+      x-enum-varnames: [MeetingPlanReadinessOutline, MeetingPlanReadinessPrepared]
+      description: |
+        How much of a preparation this plan actually is, so a surface can decide whether to lead
+        with it.
+
+        `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+        for. Useful, but not yet the thing a rep walks in holding.
+        `prepared` — it also carries the risk with its response, at least two likely asks and at
+        least three questions. A client leads with the plan at `prepared` and keeps the cited
+        summary in front at `outline`, so a half-built plan never displaces what already worked.
+
+    MeetingPlanTypeValue:
+      type: string
+      enum:
+        [relationship, first_discovery, followup_discovery, demo, commercial, decision,
+         delivery, renewal_risk, unknown]
+      x-enum-varnames:
+        [MeetingPlanTypeRelationship, MeetingPlanTypeFirstDiscovery,
+         MeetingPlanTypeFollowupDiscovery, MeetingPlanTypeDemo, MeetingPlanTypeCommercial,
+         MeetingPlanTypeDecision, MeetingPlanTypeDelivery, MeetingPlanTypeRenewalRisk,
+         MeetingPlanTypeUnknown]
+      description: >-
+        What kind of meeting this is, which decides what a good plan for it looks like. `unknown`
+        is a first-class answer rather than a failure: it means the records do not say what this
+        meeting is for, and the plan then opens by asking rather than by guessing.
+
+    MeetingPlanTier:
+      type: string
+      enum: [high, medium, low]
+      x-enum-varnames: [MeetingPlanTierHigh, MeetingPlanTierMedium, MeetingPlanTierLow]
+      description: >-
+        A three-step ordinal, for ranking. Never a probability: nothing here is measured finely
+        enough to print one, and a number would claim a precision the evidence does not have.
+
+    MeetingPlanType:
+      type: object
+      required: [value, confidence]
+      properties:
+        value: { $ref: '#/components/schemas/MeetingPlanTypeValue' }
+        confidence: { $ref: '#/components/schemas/MeetingPlanTier' }
+
+    MeetingPlanObjective:
+      type: object
+      description: The outcome to earn, and the reminder not to force it.
+      required: [sentence, caveat]
+      properties:
+        sentence:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: One cited `recommendation`.
+        caveat:
+          type: string
+          description: >-
+            The one-line "do not force this" reminder. Fixed product copy keyed to the meeting
+            type, not read from the records, which is why it carries no evidence of its own.
+
+    MeetingPlanRisk:
+      type: object
+      description: The one thing that can change this conversation, and what to do when it does.
+      required: [text, response_plan]
+      properties:
+        text:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: The risk, as an `assessment` citing the record it was read from.
+        response_plan: { $ref: '#/components/schemas/MeetingPlanResponse' }
+
+    MeetingPlanResponse:
+      type: object
+      description: >-
+        What to say, what to show, and what not to promise. Three sentences rather than a
+        paragraph, because a rep reads this while walking.
+      required: [say, show, avoid]
+      properties:
+        say: { type: string }
+        show: { type: string }
+        avoid: { type: string }
+
+    MeetingPlanAsk:
+      type: object
+      required: [question, basis, relevance, prepare]
+      properties:
+        question:
+          type: string
+          description: What they are likely to ask, in their own words where the record has them.
+        basis:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: Why we expect it — a `fact` or `assessment` citing the record.
+        relevance: { $ref: '#/components/schemas/MeetingPlanTier' }
+        prepare: { type: string, description: How to answer it. }
+
+    MeetingPlanQuestion:
+      type: object
+      description: >-
+        One question to ask, with why it matters here and what the answer sounds like. Evidence
+        is required: a question no record motivated is a question that would read the same on
+        any account, which is the failure this whole shape exists to prevent.
+      required: [ask, why, listen_for, evidence]
+      properties:
+        ask: { type: string }
+        why: { type: string }
+        listen_for: { type: string }
+        evidence:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/OrganizationBriefEvidence' }
+
+    MeetingPlanScenario:
+      type: object
+      description: What the meeting may turn into, and what to do if it does.
+      required: [label, play, evidence]
+      properties:
+        label: { type: string }
+        play: { type: string }
+        evidence:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/OrganizationBriefEvidence' }
+
+    MeetingPlanArcMoment:
+      type: object
+      description: >-
+        One stretch of the relationship that still bears on today. A moment, not a message: it
+        spans the conversations it was built from, and cites them.
+      required: [from, to, title, summary]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        title: { type: string }
+        summary:
+          $ref: '#/components/schemas/OrganizationBriefSentence'
+          description: A `fact` citing the conversations the moment is made of.
+
+    MeetingPlanAdvance:
+      type: object
+      description: >-
+        How to close: the least that still counts, the most worth aiming at, and what to fall
+        back to. A meeting that ends with none of the three ended with nothing.
+      required: [minimum, best, fallback]
+      properties:
+        minimum: { $ref: '#/components/schemas/OrganizationBriefSentence' }
+        best: { $ref: '#/components/schemas/OrganizationBriefSentence' }
+        fallback: { $ref: '#/components/schemas/OrganizationBriefSentence' }
+
+    MeetingPlanUnknownKind:
+      type: string
+      enum:
+        [intent_not_captured, no_open_deal, decision_route_not_captured, no_prior_meeting,
+         no_commitments_captured, no_history, attendees_not_visible]
+      x-enum-varnames:
+        [MeetingPlanUnknownIntentNotCaptured, MeetingPlanUnknownNoOpenDeal,
+         MeetingPlanUnknownDecisionRouteNotCaptured, MeetingPlanUnknownNoPriorMeeting,
+         MeetingPlanUnknownNoCommitmentsCaptured, MeetingPlanUnknownNoHistory,
+         MeetingPlanUnknownAttendeesNotVisible]
+      description: >-
+        Which gap this is. A closed vocabulary so a surface can order and label them, and so a
+        writer cannot invent an eighth.
+
+    MeetingPlanUnknown:
+      type: object
+      required: [kind, question]
+      properties:
+        kind: { $ref: '#/components/schemas/MeetingPlanUnknownKind' }
+        question:
+          type: string
+          description: The question to ask in the room that would close this gap.
 
     MeetingBriefSection:
       type: object
@@ -28992,6 +29724,80 @@ components:
 
     # ---- Authorization (the /me capability snapshot) ----
 
+    WeeklyPlan:
+      type: object
+      additionalProperties: false
+      description: |
+        One rep's week as they meant it to go — the forward counterpart to the frozen
+        WeeklyReview beside it.
+      required: [id, local_week_start, status, commitments]
+      properties:
+        id: { type: string, format: uuid }
+        local_week_start:
+          type: string
+          format: date
+          description: The Monday of the week planned, in the installation reporting timezone.
+        status:
+          type: string
+          enum: [open, closed]
+          description: |
+            `closed` once the weekly job has settled the week and frozen its outcome into the
+            review. A closed plan stops accepting edits, which is what keeps the review's
+            counts true.
+        commitments:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyPlanCommitment' }
+    WeeklyPlanCommitment:
+      type: object
+      additionalProperties: false
+      description: One thing a rep said they would do this week.
+      required: [id, label, state, position]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string, maxLength: 500 }
+        linked_record:
+          description: |
+            The record this is about, when it names one. Carried as a type and an id and
+            NEVER resolved here — the client asks the record's own endpoint, so a record the
+            reader may not see simply does not resolve, and a deleted one stops resolving
+            without erasing the commitment that named it.
+          allOf: [{ $ref: '#/components/schemas/WeeklyPlanLink' }]
+        due_on: { type: [string, 'null'], format: date }
+        state:
+          type: string
+          enum: [open, done, missed, dropped]
+          description: |
+            `missed` is written by the week's close over a commitment left open; a rep
+            settles their own as done or dropped. Dropped counts as neither owed nor kept:
+            deciding a thing is not worth doing is not failing to do it.
+        help_requested:
+          type: [string, 'null']
+          description: What the rep needs from their lead, absent when they have asked nothing.
+        manager_response:
+          type: [string, 'null']
+          description: What the lead answered, absent until they have.
+        manager_user_id: { type: [string, 'null'], format: uuid }
+        responded_at: { type: [string, 'null'], format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+        position: { type: integer, description: 'The order the rep put them in.' }
+    WeeklyPlanLink:
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type: { type: string, enum: [deal, lead, person, organization, project] }
+        id: { type: string, format: uuid }
+    NewWeeklyPlanCommitment:
+      type: object
+      additionalProperties: false
+      required: [label]
+      properties:
+        label: { type: string, minLength: 1, maxLength: 500 }
+        linked_record:
+          description: Both halves or neither — a type with no id names nothing.
+          allOf: [{ $ref: '#/components/schemas/WeeklyPlanLink' }]
+        due_on: { type: [string, 'null'], format: date }
+
     RbacObject:
       type: string
       description: >
@@ -29014,7 +29820,7 @@ components:
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
-         knowledge_corpus, knowledge_document, introduction]
+         knowledge_corpus, knowledge_document, introduction, weekly_plan]
 
     RbacAction:
       type: string
@@ -30268,6 +31074,16 @@ components:
         organization_id: { type: string, format: uuid, description: The anchor organization this profile belongs to. }
         display_name: { type: string, minLength: 1, description: What the company is called day to day. }
         website: { type: [string, 'null'], description: 'The company''s own domain (acme.com) — stored as its primary domain, the same handle a read-back resolves organizations by. A full URL is accepted on write and reduced to its domain.' }
+        logo_url:
+          type: [string, 'null']
+          readOnly: true
+          description: |
+            Where to fetch the installation's own company logo — the same `getOrganizationLogo`
+            path `Organization.logo_url` carries for that record, cookie-authenticated and
+            same-origin. The mark is whichever one the company is wearing: the one a website
+            read resolved from its own site, or the one a person uploaded through
+            `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
+            is never an error: a client draws the deterministic monogram then.
         legal_name: { type: [string, 'null'], description: 'The registered legal entity, when it differs from display_name.' }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
@@ -33381,12 +34197,77 @@ components:
             The deals the week is about, won and lost first. Capped for reading — the counts stay
             complete, so a busy week reads "12 moved" beside the most recent of them rather than
             a truncated number.
+        pipeline:
+          description: |
+            What the week did to the pipeline, in the installation's base currency at the rate that
+            applied when the review was written.
+
+            ABSENT when the week held a deal that could not be converted — an open deal freezes no
+            rate, so a currency with no usable rate makes the whole figure unanswerable. A total
+            covering three of four deals would be a confident number that is quietly short, and
+            nothing is ever converted at an invented rate of 1. Absent is also the answer when the
+            installation names no base currency.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPipeline' }]
+        prior:
+          description: |
+            The same rep's previous review, so a reader can see what CHANGED rather than only what
+            happened. Absent for their first week.
+
+            The counts of a frozen earlier row, not a stored delta: two frozen rows and one
+            subtraction cannot disagree, and a stored delta could. It is their most recent earlier
+            review rather than "last week" — a rep with a gap has a previous week that is not seven
+            days back.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPrior' }]
+
+    WeeklyReviewPipeline:
+      type: object
+      additionalProperties: false
+      description: Money the week added to and took out of the pipeline, in one currency.
+      required: [created_minor, won_minor, lost_minor, currency]
+      properties:
+        created_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            Value of the deals opened in the week, converted at the latest rate on or before the
+            week's end and frozen here.
+        won_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            Value of the deals won in the week, at each deal's own close-time rate — the honest
+            figure for money that has already moved.
+        lost_minor: { type: integer, format: int64, minimum: 0, description: 'The same, for deals lost.' }
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: |
+            The currency the three figures are in, stored beside them: the installation's base
+            currency is an operator-mutable setting, and re-reading it later would re-label old
+            reviews with a currency their numbers were never in.
+
+    WeeklyReviewPrior:
+      type: object
+      additionalProperties: false
+      description: The week before this one, for comparison.
+      required: [local_week_start, counts]
+      properties:
+        local_week_start: { type: string, format: date }
+        counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
+        pipeline:
+          description: Absent under the same rule as the current week's.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPipeline' }]
 
     WeeklyReviewCounts:
       type: object
       additionalProperties: false
       required: [tasks_due, tasks_done, tasks_carried_over, deals_moved, deals_won, deals_lost,
-                 proposals_accepted, proposals_rejected, brief_items_acted, brief_items_dismissed]
+                 proposals_accepted, proposals_rejected, brief_items_acted, brief_items_dismissed,
+                 leads_routed, leads_answered_in_target, leads_breached,
+                 meetings_held, meetings_with_next_step,
+                 commitments_due, commitments_kept]
       properties:
         tasks_due: { type: integer, minimum: 0, description: 'Tasks assigned to this rep that fell due in the week.' }
         tasks_done: { type: integer, minimum: 0, description: 'And were finished inside it.' }
@@ -33404,6 +34285,37 @@ components:
         proposals_rejected: { type: integer, minimum: 0, description: 'The same, rejected.' }
         brief_items_acted: { type: integer, minimum: 0, description: 'Morning-brief items this rep acted on in the week.' }
         brief_items_dismissed: { type: integer, minimum: 0, description: 'And dismissed.' }
+        commitments_due:
+          type: integer
+          minimum: 0
+          description: |
+            Commitments the rep stood by in the week's plan. A dropped commitment is in
+            neither this nor `commitments_kept`: deciding on Wednesday that a thing is not
+            worth doing is not failing to do it, and counting it against a rep teaches them
+            to leave dead commitments open rather than say so.
+        commitments_kept: { type: integer, minimum: 0, description: 'And how many were done.' }
+        leads_routed: { type: integer, minimum: 0, description: 'Inbound leads routed to this rep during the week.' }
+        leads_answered_in_target:
+          type: integer
+          minimum: 0
+          description: |
+            Of those, the ones answered before the first-response target ran out. Read from the
+            stamps the SLA writer maintained at the time, never recomputed from today's policy —
+            a week is judged by the target that applied to it.
+        leads_breached: { type: integer, minimum: 0, description: 'And the ones whose target ran out.' }
+        meetings_held:
+          type: integer
+          minimum: 0
+          description: |
+            Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+            week can be judged by, and counting it would credit a conversation that never occurred.
+        meetings_with_next_step:
+          type: integer
+          minimum: 0
+          description: |
+            Of those, the ones that left a task behind against a record the meeting was also filed
+            under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
+            is the pattern this figure exists to make visible.
 
     WeeklyReviewDeal:
       type: object
@@ -34111,7 +35023,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice, introduction_request, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -34129,6 +35041,73 @@ components:
             page that stopped one short of more, and it says the cautious thing rather than
             claiming a source is complete when it is not. The client renders `considered` as
             "200+" rather than "200".
+
+    TeamBoard:
+      type: object
+      description: |
+        Who on the team is carrying what. One row per live teammate, plus the work that
+        reached nobody.
+      required: [as_of, members, unassigned, truncated]
+      properties:
+        as_of: { type: string, format: date-time, description: 'The instant every count below was read at.' }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/TeamBoardMember' }
+          description: |
+            The live human seats sharing a live team with the caller, the caller included,
+            ordered by display name. Never empty: a caller on no team is their own single
+            row, because "only you" and "nobody" are different answers and the second reads
+            as an outage.
+        unassigned:
+          $ref: '#/components/schemas/TeamBoardCounts'
+          description: |
+            The same three counts over work that names nobody — an unowned customer writing
+            in, a deal with no owner, a task nobody was assigned.
+
+            Its own figure rather than a member row, because there is no person to open. A
+            board that dropped it would report a clean team while the work nobody is looking
+            at is exactly the work that goes missing.
+        truncated:
+          type: boolean
+          description: |
+            True when a count was read to its work bound, so the real figure may be higher
+            than what is shown. The waiting-customer read scans a bounded number of threads
+            across the whole installation, so a busy installation reports a floor — and says
+            so here rather than presenting a floor as a total.
+
+    TeamBoardMember:
+      type: object
+      description: One teammate and the work they are answerable for.
+      required: [user_id, display_name, counts]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: |
+            Whose row this is. It is what `GET /worklist?owner=` takes, which is the
+            drill-down the board routes to.
+        display_name: { type: string, description: 'The teammate, as the roster names them.' }
+        counts: { $ref: '#/components/schemas/TeamBoardCounts' }
+
+    TeamBoardCounts:
+      type: object
+      description: |
+        Three counts of work somebody owes, all read under the CALLER's visibility rather
+        than the teammate's — so this is how much of their load the reader can see.
+      required: [waiting, at_risk, overdue]
+      properties:
+        waiting:
+          type: integer
+          description: |
+            Customers who wrote and have had no reply, attributed by the record the thread is
+            filed under: deal, then lead, then person, then organization, first owner found.
+            The same eligibility the ranked queue applies, so the board and the day agree.
+        at_risk:
+          type: integer
+          description: 'Open deals gone quiet or already past their expected close date.'
+        overdue:
+          type: integer
+          description: 'Open tasks whose due moment has already passed.'
 
     WorklistBand:
       type: object

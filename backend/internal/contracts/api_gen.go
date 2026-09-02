@@ -1837,6 +1837,51 @@ func (e AutomationRunTier) Valid() bool {
 	}
 }
 
+// Defines values for AvailableModelLane.
+const (
+	AvailableModelLaneChat       AvailableModelLane = "chat"
+	AvailableModelLaneEmbeddings AvailableModelLane = "embeddings"
+)
+
+// Valid indicates whether the value is a known member of the AvailableModelLane enum.
+func (e AvailableModelLane) Valid() bool {
+	switch e {
+	case AvailableModelLaneChat:
+		return true
+	case AvailableModelLaneEmbeddings:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AvailableModelListUnavailable.
+const (
+	NoEndpoint     AvailableModelListUnavailable = "no_endpoint"
+	NoKey          AvailableModelListUnavailable = "no_key"
+	NotPublished   AvailableModelListUnavailable = "not_published"
+	ProfileForbids AvailableModelListUnavailable = "profile_forbids"
+	Unreachable    AvailableModelListUnavailable = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the AvailableModelListUnavailable enum.
+func (e AvailableModelListUnavailable) Valid() bool {
+	switch e {
+	case NoEndpoint:
+		return true
+	case NoKey:
+		return true
+	case NotPublished:
+		return true
+	case ProfileForbids:
+		return true
+	case Unreachable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BackfillPreviewEstimateQuality.
 const (
 	BackfillPreviewEstimateQualityHeuristic BackfillPreviewEstimateQuality = "heuristic"
@@ -6172,6 +6217,117 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingPlanReadiness.
+const (
+	MeetingPlanReadinessOutline  MeetingPlanReadiness = "outline"
+	MeetingPlanReadinessPrepared MeetingPlanReadiness = "prepared"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanReadiness enum.
+func (e MeetingPlanReadiness) Valid() bool {
+	switch e {
+	case MeetingPlanReadinessOutline:
+		return true
+	case MeetingPlanReadinessPrepared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanTier.
+const (
+	MeetingPlanTierHigh   MeetingPlanTier = "high"
+	MeetingPlanTierLow    MeetingPlanTier = "low"
+	MeetingPlanTierMedium MeetingPlanTier = "medium"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanTier enum.
+func (e MeetingPlanTier) Valid() bool {
+	switch e {
+	case MeetingPlanTierHigh:
+		return true
+	case MeetingPlanTierLow:
+		return true
+	case MeetingPlanTierMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanTypeValue.
+const (
+	MeetingPlanTypeCommercial        MeetingPlanTypeValue = "commercial"
+	MeetingPlanTypeDecision          MeetingPlanTypeValue = "decision"
+	MeetingPlanTypeDelivery          MeetingPlanTypeValue = "delivery"
+	MeetingPlanTypeDemo              MeetingPlanTypeValue = "demo"
+	MeetingPlanTypeFirstDiscovery    MeetingPlanTypeValue = "first_discovery"
+	MeetingPlanTypeFollowupDiscovery MeetingPlanTypeValue = "followup_discovery"
+	MeetingPlanTypeRelationship      MeetingPlanTypeValue = "relationship"
+	MeetingPlanTypeRenewalRisk       MeetingPlanTypeValue = "renewal_risk"
+	MeetingPlanTypeUnknown           MeetingPlanTypeValue = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanTypeValue enum.
+func (e MeetingPlanTypeValue) Valid() bool {
+	switch e {
+	case MeetingPlanTypeCommercial:
+		return true
+	case MeetingPlanTypeDecision:
+		return true
+	case MeetingPlanTypeDelivery:
+		return true
+	case MeetingPlanTypeDemo:
+		return true
+	case MeetingPlanTypeFirstDiscovery:
+		return true
+	case MeetingPlanTypeFollowupDiscovery:
+		return true
+	case MeetingPlanTypeRelationship:
+		return true
+	case MeetingPlanTypeRenewalRisk:
+		return true
+	case MeetingPlanTypeUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanUnknownKind.
+const (
+	MeetingPlanUnknownAttendeesNotVisible      MeetingPlanUnknownKind = "attendees_not_visible"
+	MeetingPlanUnknownDecisionRouteNotCaptured MeetingPlanUnknownKind = "decision_route_not_captured"
+	MeetingPlanUnknownIntentNotCaptured        MeetingPlanUnknownKind = "intent_not_captured"
+	MeetingPlanUnknownNoCommitmentsCaptured    MeetingPlanUnknownKind = "no_commitments_captured"
+	MeetingPlanUnknownNoHistory                MeetingPlanUnknownKind = "no_history"
+	MeetingPlanUnknownNoOpenDeal               MeetingPlanUnknownKind = "no_open_deal"
+	MeetingPlanUnknownNoPriorMeeting           MeetingPlanUnknownKind = "no_prior_meeting"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanUnknownKind enum.
+func (e MeetingPlanUnknownKind) Valid() bool {
+	switch e {
+	case MeetingPlanUnknownAttendeesNotVisible:
+		return true
+	case MeetingPlanUnknownDecisionRouteNotCaptured:
+		return true
+	case MeetingPlanUnknownIntentNotCaptured:
+		return true
+	case MeetingPlanUnknownNoCommitmentsCaptured:
+		return true
+	case MeetingPlanUnknownNoHistory:
+		return true
+	case MeetingPlanUnknownNoOpenDeal:
+		return true
+	case MeetingPlanUnknownNoPriorMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefItemState.
 const (
 	MorningBriefItemStateActed     MorningBriefItemState = "acted"
@@ -9732,16 +9888,16 @@ func (e SetActivityDispositionRequestDisposition) Valid() bool {
 
 // Defines values for SetAiModelRateRequestLane.
 const (
-	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
-	SetAiModelRateRequestLaneEmbeddings SetAiModelRateRequestLane = "embeddings"
+	Chat       SetAiModelRateRequestLane = "chat"
+	Embeddings SetAiModelRateRequestLane = "embeddings"
 )
 
 // Valid indicates whether the value is a known member of the SetAiModelRateRequestLane enum.
 func (e SetAiModelRateRequestLane) Valid() bool {
 	switch e {
-	case SetAiModelRateRequestLaneChat:
+	case Chat:
 		return true
-	case SetAiModelRateRequestLaneEmbeddings:
+	case Embeddings:
 		return true
 	default:
 		return false
@@ -11616,10 +11772,11 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
-	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
-	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
-	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusDeadLettered      WebhookDeliveryStatus = "dead_lettered"
+	WebhookDeliveryStatusDelivered         WebhookDeliveryStatus = "delivered"
+	WebhookDeliveryStatusPending           WebhookDeliveryStatus = "pending"
+	WebhookDeliveryStatusRetrying          WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusVisibilityRevoked WebhookDeliveryStatus = "visibility_revoked"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
@@ -11632,6 +11789,8 @@ func (e WebhookDeliveryStatus) Valid() bool {
 	case WebhookDeliveryStatusPending:
 		return true
 	case WebhookDeliveryStatusRetrying:
+		return true
+	case WebhookDeliveryStatusVisibilityRevoked:
 		return true
 	default:
 		return false
@@ -11650,6 +11809,75 @@ func (e WebhookSubscriptionState) Valid() bool {
 	case WebhookSubscriptionStateActive:
 		return true
 	case WebhookSubscriptionStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanStatus.
+const (
+	WeeklyPlanStatusClosed WeeklyPlanStatus = "closed"
+	WeeklyPlanStatusOpen   WeeklyPlanStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanStatus enum.
+func (e WeeklyPlanStatus) Valid() bool {
+	switch e {
+	case WeeklyPlanStatusClosed:
+		return true
+	case WeeklyPlanStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanCommitmentState.
+const (
+	WeeklyPlanCommitmentStateDone    WeeklyPlanCommitmentState = "done"
+	WeeklyPlanCommitmentStateDropped WeeklyPlanCommitmentState = "dropped"
+	WeeklyPlanCommitmentStateMissed  WeeklyPlanCommitmentState = "missed"
+	WeeklyPlanCommitmentStateOpen    WeeklyPlanCommitmentState = "open"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanCommitmentState enum.
+func (e WeeklyPlanCommitmentState) Valid() bool {
+	switch e {
+	case WeeklyPlanCommitmentStateDone:
+		return true
+	case WeeklyPlanCommitmentStateDropped:
+		return true
+	case WeeklyPlanCommitmentStateMissed:
+		return true
+	case WeeklyPlanCommitmentStateOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanLinkType.
+const (
+	WeeklyPlanLinkTypeDeal         WeeklyPlanLinkType = "deal"
+	WeeklyPlanLinkTypeLead         WeeklyPlanLinkType = "lead"
+	WeeklyPlanLinkTypeOrganization WeeklyPlanLinkType = "organization"
+	WeeklyPlanLinkTypePerson       WeeklyPlanLinkType = "person"
+	WeeklyPlanLinkTypeProject      WeeklyPlanLinkType = "project"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanLinkType enum.
+func (e WeeklyPlanLinkType) Valid() bool {
+	switch e {
+	case WeeklyPlanLinkTypeDeal:
+		return true
+	case WeeklyPlanLinkTypeLead:
+		return true
+	case WeeklyPlanLinkTypeOrganization:
+		return true
+	case WeeklyPlanLinkTypePerson:
+		return true
+	case WeeklyPlanLinkTypeProject:
 		return true
 	default:
 		return false
@@ -12203,6 +12431,7 @@ const (
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
 	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
+	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the WorklistReachSource enum.
@@ -12247,6 +12476,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceSyncHealth:
 		return true
 	case WorklistReachSourceTask:
+		return true
+	case WorklistReachSourceUndelivered:
 		return true
 	default:
 		return false
@@ -13917,22 +14148,43 @@ func (e ListSignalsParamsKind) Valid() bool {
 
 // Defines values for ListSignalsParamsResolutionState.
 const (
-	Dropped       ListSignalsParamsResolutionState = "dropped"
-	LowConfidence ListSignalsParamsResolutionState = "low_confidence"
-	Resolved      ListSignalsParamsResolutionState = "resolved"
-	Unresolved    ListSignalsParamsResolutionState = "unresolved"
+	ListSignalsParamsResolutionStateDropped       ListSignalsParamsResolutionState = "dropped"
+	ListSignalsParamsResolutionStateLowConfidence ListSignalsParamsResolutionState = "low_confidence"
+	ListSignalsParamsResolutionStateResolved      ListSignalsParamsResolutionState = "resolved"
+	ListSignalsParamsResolutionStateUnresolved    ListSignalsParamsResolutionState = "unresolved"
 )
 
 // Valid indicates whether the value is a known member of the ListSignalsParamsResolutionState enum.
 func (e ListSignalsParamsResolutionState) Valid() bool {
 	switch e {
-	case Dropped:
+	case ListSignalsParamsResolutionStateDropped:
 		return true
-	case LowConfidence:
+	case ListSignalsParamsResolutionStateLowConfidence:
 		return true
-	case Resolved:
+	case ListSignalsParamsResolutionStateResolved:
 		return true
-	case Unresolved:
+	case ListSignalsParamsResolutionStateUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
+const (
+	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+)
+
+// Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
+func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
+	switch e {
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
+		return true
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
+		return true
+	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
 		return true
 	default:
 		return false
@@ -16046,6 +16298,36 @@ type AutonomySettings struct {
 	Data []KindAutonomy `json:"data"`
 }
 
+// AvailableModel One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+type AvailableModel struct {
+	// DisplayName The vendor's own human label, absent where it publishes none.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// Id The string a binding names, exactly as the vendor spells it.
+	Id string `json:"id"`
+
+	// Lane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+	Lane *AvailableModelLane `json:"lane,omitempty"`
+}
+
+// AvailableModelLane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+type AvailableModelLane string
+
+// AvailableModelList One vendor's own answer about what it serves.
+// An empty `models` with NO `unavailable` is a vendor that answered and serves nothing — a local runner with no model pulled onto it is the ordinary case. It is a different state from a vendor that could not be asked, which always sets `unavailable`, and a client that folded the two would tell a reader to paste a key they already have.
+type AvailableModelList struct {
+	Models []AvailableModel `json:"models"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
+}
+
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+type AvailableModelListUnavailable string
+
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
 type BackfillPreview struct {
 	ComputedAt time.Time `json:"computed_at"`
@@ -17055,6 +17337,14 @@ type CompanyProfile struct {
 
 	// LegalName The registered legal entity, when it differs from display_name.
 	LegalName *string `json:"legal_name,omitempty"`
+
+	// LogoUrl Where to fetch the installation's own company logo — the same `getOrganizationLogo`
+	// path `Organization.logo_url` carries for that record, cookie-authenticated and
+	// same-origin. The mark is whichever one the company is wearing: the one a website
+	// read resolved from its own site, or the one a person uploaded through
+	// `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
+	// is never an error: a client draws the deterministic monogram then.
+	LogoUrl *string `json:"logo_url,omitempty"`
 
 	// MinimumComplete True when display_name, offer_summary and icp are confirmed.
 	MinimumComplete *bool `json:"minimum_complete,omitempty"`
@@ -21631,6 +21921,20 @@ type MeetingBrief struct {
 	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
 	Omitted *[]MeetingBriefOmission `json:"omitted,omitempty"`
 
+	// Plan The preparation plan: what to DO in the room, as against `sections`, which is what is
+	// KNOWN about it.
+	//
+	// Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+	// reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+	// UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+	// generated from the ABSENCE of a record, never from a writer leaving a field out, which
+	// is the difference between "nobody captured the decision route" and "the model forgot to
+	// mention it".
+	//
+	// Assessments and recommendations cite records the caller can open, or they are dropped
+	// whole — the same grounding rule every sentence in `sections` runs.
+	Plan *MeetingPlan `json:"plan,omitempty"`
+
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
 	// guessing. Present only when the request named a `project_id`.
@@ -21697,6 +22001,210 @@ type MeetingBriefSection struct {
 // `talking_points` — each tied to a specific captured statement.
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
+
+// MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
+// KNOWN about it.
+//
+// Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+// reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+// UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+// generated from the ABSENCE of a record, never from a writer leaving a field out, which
+// is the difference between "nobody captured the decision route" and "the model forgot to
+// mention it".
+//
+// Assessments and recommendations cite records the caller can open, or they are dropped
+// whole — the same grounding rule every sentence in `sections` runs.
+type MeetingPlan struct {
+	// AccountArc The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it.
+	AccountArc []MeetingPlanArcMoment `json:"account_arc"`
+
+	// Advance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
+	Advance MeetingPlanAdvance `json:"advance"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// LikelyAsks What the other side is likely to ask, each an assessment with the record behind it.
+	LikelyAsks []MeetingPlanAsk `json:"likely_asks"`
+
+	// ManagerCoaching The coaching layer, for a lead reading a teammate's meeting.
+	//
+	// It adds a READING of how this meeting could go wrong for this rep. It adds no account
+	// fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+	// and this is attached over it — so a lead and their rep are looking at the same meeting,
+	// and the lead is looking at one more thing.
+	//
+	// Who gets it is decided by the server, never asked for by a client. The rule is the
+	// same one that governs raising a coaching notice: a seat that may coach at all, and a
+	// live team shared with somebody in the room.
+	ManagerCoaching *MeetingPlanCoaching `json:"manager_coaching,omitempty"`
+	MeetingType     MeetingPlanType      `json:"meeting_type"`
+
+	// Objective The outcome to earn, and the reminder not to force it.
+	Objective *MeetingPlanObjective      `json:"objective,omitempty"`
+	Opening   *OrganizationBriefSentence `json:"opening,omitempty"`
+
+	// Questions What to ask them, ranked. Three is a plan a rep can hold; the cap is five.
+	Questions []MeetingPlanQuestion `json:"questions"`
+
+	// Readiness How much of a preparation this plan actually is, so a surface can decide whether to lead
+	// with it.
+	//
+	// `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+	// for. Useful, but not yet the thing a rep walks in holding.
+	// `prepared` — it also carries the risk with its response, at least two likely asks and at
+	// least three questions. A client leads with the plan at `prepared` and keeps the cited
+	// summary in front at `outline`, so a half-built plan never displaces what already worked.
+	Readiness MeetingPlanReadiness  `json:"readiness"`
+	Scenarios []MeetingPlanScenario `json:"scenarios"`
+
+	// TopRisk The one thing that can change this conversation, and what to do when it does.
+	TopRisk *MeetingPlanRisk `json:"top_risk,omitempty"`
+
+	// Unknowns What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked.
+	Unknowns []MeetingPlanUnknown `json:"unknowns"`
+}
+
+// MeetingPlanAdvance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
+type MeetingPlanAdvance struct {
+	Best     OrganizationBriefSentence `json:"best"`
+	Fallback OrganizationBriefSentence `json:"fallback"`
+	Minimum  OrganizationBriefSentence `json:"minimum"`
+}
+
+// MeetingPlanArcMoment One stretch of the relationship that still bears on today. A moment, not a message: it spans the conversations it was built from, and cites them.
+type MeetingPlanArcMoment struct {
+	From    time.Time                 `json:"from"`
+	Summary OrganizationBriefSentence `json:"summary"`
+	Title   string                    `json:"title"`
+	To      time.Time                 `json:"to"`
+}
+
+// MeetingPlanAsk defines model for MeetingPlanAsk.
+type MeetingPlanAsk struct {
+	Basis OrganizationBriefSentence `json:"basis"`
+
+	// Prepare How to answer it.
+	Prepare string `json:"prepare"`
+
+	// Question What they are likely to ask, in their own words where the record has them.
+	Question string `json:"question"`
+
+	// Relevance A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+	Relevance MeetingPlanTier `json:"relevance"`
+}
+
+// MeetingPlanCoaching The coaching layer, for a lead reading a teammate's meeting.
+//
+// It adds a READING of how this meeting could go wrong for this rep. It adds no account
+// fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+// and this is attached over it — so a lead and their rep are looking at the same meeting,
+// and the lead is looking at one more thing.
+//
+// Who gets it is decided by the server, never asked for by a client. The rule is the
+// same one that governs raising a coaching notice: a seat that may coach at all, and a
+// live team shared with somebody in the room.
+type MeetingPlanCoaching struct {
+	// FailureMode How this meeting most plausibly goes wrong for this rep, given this account.
+	FailureMode string `json:"failure_mode"`
+
+	// Focus The ONE thing to coach on. A list of five is a list nobody coaches from.
+	Focus string `json:"focus"`
+
+	// InterveneIf The narrow condition under which a lead should step in. Narrow on purpose: a lead who takes over a rep's meeting has coached nobody.
+	InterveneIf string `json:"intervene_if"`
+
+	// ListenFor What a good version of this conversation sounds like.
+	ListenFor string `json:"listen_for"`
+
+	// Paths The ways this meeting can go, for a lead to rehearse against.
+	Paths []MeetingPlanCoachingPath `json:"paths"`
+
+	// WatchFor The move that says it is going wrong.
+	WatchFor string `json:"watch_for"`
+}
+
+// MeetingPlanCoachingPath defines model for MeetingPlanCoachingPath.
+type MeetingPlanCoachingPath struct {
+	Label string `json:"label"`
+	Play  string `json:"play"`
+}
+
+// MeetingPlanObjective The outcome to earn, and the reminder not to force it.
+type MeetingPlanObjective struct {
+	// Caveat The one-line "do not force this" reminder. Fixed product copy keyed to the meeting type, not read from the records, which is why it carries no evidence of its own.
+	Caveat   string                    `json:"caveat"`
+	Sentence OrganizationBriefSentence `json:"sentence"`
+}
+
+// MeetingPlanQuestion One question to ask, with why it matters here and what the answer sounds like. Evidence is required: a question no record motivated is a question that would read the same on any account, which is the failure this whole shape exists to prevent.
+type MeetingPlanQuestion struct {
+	Ask       string                      `json:"ask"`
+	Evidence  []OrganizationBriefEvidence `json:"evidence"`
+	ListenFor string                      `json:"listen_for"`
+	Why       string                      `json:"why"`
+}
+
+// MeetingPlanReadiness How much of a preparation this plan actually is, so a surface can decide whether to lead
+// with it.
+//
+// `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+// for. Useful, but not yet the thing a rep walks in holding.
+// `prepared` — it also carries the risk with its response, at least two likely asks and at
+// least three questions. A client leads with the plan at `prepared` and keeps the cited
+// summary in front at `outline`, so a half-built plan never displaces what already worked.
+type MeetingPlanReadiness string
+
+// MeetingPlanResponse What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+type MeetingPlanResponse struct {
+	Avoid string `json:"avoid"`
+	Say   string `json:"say"`
+	Show  string `json:"show"`
+}
+
+// MeetingPlanRisk The one thing that can change this conversation, and what to do when it does.
+type MeetingPlanRisk struct {
+	// ResponsePlan What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+	ResponsePlan MeetingPlanResponse       `json:"response_plan"`
+	Text         OrganizationBriefSentence `json:"text"`
+}
+
+// MeetingPlanScenario What the meeting may turn into, and what to do if it does.
+type MeetingPlanScenario struct {
+	Evidence []OrganizationBriefEvidence `json:"evidence"`
+	Label    string                      `json:"label"`
+	Play     string                      `json:"play"`
+}
+
+// MeetingPlanTier A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+type MeetingPlanTier string
+
+// MeetingPlanType defines model for MeetingPlanType.
+type MeetingPlanType struct {
+	// Confidence A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+	Confidence MeetingPlanTier `json:"confidence"`
+
+	// Value What kind of meeting this is, which decides what a good plan for it looks like. `unknown` is a first-class answer rather than a failure: it means the records do not say what this meeting is for, and the plan then opens by asking rather than by guessing.
+	Value MeetingPlanTypeValue `json:"value"`
+}
+
+// MeetingPlanTypeValue What kind of meeting this is, which decides what a good plan for it looks like. `unknown` is a first-class answer rather than a failure: it means the records do not say what this meeting is for, and the plan then opens by asking rather than by guessing.
+type MeetingPlanTypeValue string
+
+// MeetingPlanUnknown defines model for MeetingPlanUnknown.
+type MeetingPlanUnknown struct {
+	// Kind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
+	Kind MeetingPlanUnknownKind `json:"kind"`
+
+	// Question The question to ask in the room that would close this gap.
+	Question string `json:"question"`
+}
+
+// MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
+type MeetingPlanUnknownKind string
 
 // Money Money as integer minor-units + ISO-4217 currency. Never a float.
 type Money struct {
@@ -21954,6 +22462,15 @@ type MyAgentGrantState string
 type MyAgentGrants struct {
 	// Data One entry per scheduled agent, including the ones never answered.
 	Data []MyAgentGrant `json:"data"`
+}
+
+// NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
+type NewWeeklyPlanCommitment struct {
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+	Label string              `json:"label"`
+
+	// LinkedRecord Both halves or neither — a type with no id names nothing.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
 }
 
 // Notice One durable line addressed to one person, as the raising call returns it.
@@ -27830,6 +28347,58 @@ type Team struct {
 	UpdatedAt    *time.Time          `json:"updated_at,omitempty"`
 }
 
+// TeamBoard Who on the team is carrying what. One row per live teammate, plus the work that
+// reached nobody.
+type TeamBoard struct {
+	// AsOf The instant every count below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Members The live human seats sharing a live team with the caller, the caller included,
+	// ordered by display name. Never empty: a caller on no team is their own single
+	// row, because "only you" and "nobody" are different answers and the second reads
+	// as an outage.
+	Members []TeamBoardMember `json:"members"`
+
+	// Truncated True when a count was read to its work bound, so the real figure may be higher
+	// than what is shown. The waiting-customer read scans a bounded number of threads
+	// across the whole installation, so a busy installation reports a floor — and says
+	// so here rather than presenting a floor as a total.
+	Truncated bool `json:"truncated"`
+
+	// Unassigned Three counts of work somebody owes, all read under the CALLER's visibility rather
+	// than the teammate's — so this is how much of their load the reader can see.
+	Unassigned TeamBoardCounts `json:"unassigned"`
+}
+
+// TeamBoardCounts Three counts of work somebody owes, all read under the CALLER's visibility rather
+// than the teammate's — so this is how much of their load the reader can see.
+type TeamBoardCounts struct {
+	// AtRisk Open deals gone quiet or already past their expected close date.
+	AtRisk int `json:"at_risk"`
+
+	// Overdue Open tasks whose due moment has already passed.
+	Overdue int `json:"overdue"`
+
+	// Waiting Customers who wrote and have had no reply, attributed by the record the thread is
+	// filed under: deal, then lead, then person, then organization, first owner found.
+	// The same eligibility the ranked queue applies, so the board and the day agree.
+	Waiting int `json:"waiting"`
+}
+
+// TeamBoardMember One teammate and the work they are answerable for.
+type TeamBoardMember struct {
+	// Counts Three counts of work somebody owes, all read under the CALLER's visibility rather
+	// than the teammate's — so this is how much of their load the reader can see.
+	Counts TeamBoardCounts `json:"counts"`
+
+	// DisplayName The teammate, as the roster names them.
+	DisplayName string `json:"display_name"`
+
+	// UserId Whose row this is. It is what `GET /worklist?owner=` takes, which is the
+	// drill-down the board routes to.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // TeamListResponse defines model for TeamListResponse.
 type TeamListResponse struct {
 	Data []Team   `json:"data"`
@@ -28938,6 +29507,70 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
+// WeeklyReview beside it.
+type WeeklyPlan struct {
+	Commitments []WeeklyPlanCommitment `json:"commitments"`
+	Id          openapi_types.UUID     `json:"id"`
+
+	// LocalWeekStart The Monday of the week planned, in the installation reporting timezone.
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Status `closed` once the weekly job has settled the week and frozen its outcome into the
+	// review. A closed plan stops accepting edits, which is what keeps the review's
+	// counts true.
+	Status WeeklyPlanStatus `json:"status"`
+}
+
+// WeeklyPlanStatus `closed` once the weekly job has settled the week and frozen its outcome into the
+// review. A closed plan stops accepting edits, which is what keeps the review's
+// counts true.
+type WeeklyPlanStatus string
+
+// WeeklyPlanCommitment One thing a rep said they would do this week.
+type WeeklyPlanCommitment struct {
+	CompletedAt *time.Time          `json:"completed_at,omitempty"`
+	DueOn       *openapi_types.Date `json:"due_on,omitempty"`
+
+	// HelpRequested What the rep needs from their lead, absent when they have asked nothing.
+	HelpRequested *string            `json:"help_requested,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	Label         string             `json:"label"`
+
+	// LinkedRecord The record this is about, when it names one. Carried as a type and an id and
+	// NEVER resolved here — the client asks the record's own endpoint, so a record the
+	// reader may not see simply does not resolve, and a deleted one stops resolving
+	// without erasing the commitment that named it.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
+
+	// ManagerResponse What the lead answered, absent until they have.
+	ManagerResponse *string             `json:"manager_response,omitempty"`
+	ManagerUserId   *openapi_types.UUID `json:"manager_user_id,omitempty"`
+
+	// Position The order the rep put them in.
+	Position    int        `json:"position"`
+	RespondedAt *time.Time `json:"responded_at,omitempty"`
+
+	// State `missed` is written by the week's close over a commitment left open; a rep
+	// settles their own as done or dropped. Dropped counts as neither owed nor kept:
+	// deciding a thing is not worth doing is not failing to do it.
+	State WeeklyPlanCommitmentState `json:"state"`
+}
+
+// WeeklyPlanCommitmentState `missed` is written by the week's close over a commitment left open; a rep
+// settles their own as done or dropped. Dropped counts as neither owed nor kept:
+// deciding a thing is not worth doing is not failing to do it.
+type WeeklyPlanCommitmentState string
+
+// WeeklyPlanLink defines model for WeeklyPlanLink.
+type WeeklyPlanLink struct {
+	Id   openapi_types.UUID `json:"id"`
+	Type WeeklyPlanLinkType `json:"type"`
+}
+
+// WeeklyPlanLinkType defines model for WeeklyPlanLink.Type.
+type WeeklyPlanLinkType string
+
 // WeeklyReview One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
 // which is why they are stored rather than recomputed.
 type WeeklyReview struct {
@@ -28969,6 +29602,25 @@ type WeeklyReview struct {
 	// It adds nothing: every fact it may state is already in the counts and the lines
 	// beside it, which is what makes the whole lane safe to lose.
 	Narrative *string `json:"narrative,omitempty"`
+
+	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
+	// applied when the review was written.
+	//
+	// ABSENT when the week held a deal that could not be converted — an open deal freezes no
+	// rate, so a currency with no usable rate makes the whole figure unanswerable. A total
+	// covering three of four deals would be a confident number that is quietly short, and
+	// nothing is ever converted at an invented rate of 1. Absent is also the answer when the
+	// installation names no base currency.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// Prior The same rep's previous review, so a reader can see what CHANGED rather than only what
+	// happened. Absent for their first week.
+	//
+	// The counts of a frozen earlier row, not a stored delta: two frozen rows and one
+	// subtraction cannot disagree, and a stored delta could. It is their most recent earlier
+	// review rather than "last week" — a rep with a gap has a previous week that is not seven
+	// days back.
+	Prior *WeeklyReviewPrior `json:"prior,omitempty"`
 }
 
 // WeeklyReviewCounts defines model for WeeklyReviewCounts.
@@ -28978,11 +29630,40 @@ type WeeklyReviewCounts struct {
 
 	// BriefItemsDismissed And dismissed.
 	BriefItemsDismissed int `json:"brief_items_dismissed"`
-	DealsLost           int `json:"deals_lost"`
+
+	// CommitmentsDue Commitments the rep stood by in the week's plan. A dropped commitment is in
+	// neither this nor `commitments_kept`: deciding on Wednesday that a thing is not
+	// worth doing is not failing to do it, and counting it against a rep teaches them
+	// to leave dead commitments open rather than say so.
+	CommitmentsDue int `json:"commitments_due"`
+
+	// CommitmentsKept And how many were done.
+	CommitmentsKept int `json:"commitments_kept"`
+	DealsLost       int `json:"deals_lost"`
 
 	// DealsMoved Deals that changed stage, excluding those that closed.
 	DealsMoved int `json:"deals_moved"`
 	DealsWon   int `json:"deals_won"`
+
+	// LeadsAnsweredInTarget Of those, the ones answered before the first-response target ran out. Read from the
+	// stamps the SLA writer maintained at the time, never recomputed from today's policy —
+	// a week is judged by the target that applied to it.
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+
+	// LeadsBreached And the ones whose target ran out.
+	LeadsBreached int `json:"leads_breached"`
+
+	// LeadsRouted Inbound leads routed to this rep during the week.
+	LeadsRouted int `json:"leads_routed"`
+
+	// MeetingsHeld Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+	// week can be judged by, and counting it would credit a conversation that never occurred.
+	MeetingsHeld int `json:"meetings_held"`
+
+	// MeetingsWithNextStep Of those, the ones that left a task behind against a record the meeting was also filed
+	// under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
+	// is the pattern this figure exists to make visible.
+	MeetingsWithNextStep int `json:"meetings_with_next_step"`
 
 	// ProposalsAccepted Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
 	// `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
@@ -29029,6 +29710,34 @@ type WeeklyReviewDealOutcome string
 type WeeklyReviewIndex struct {
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
+}
+
+// WeeklyReviewPipeline Money the week added to and took out of the pipeline, in one currency.
+type WeeklyReviewPipeline struct {
+	// CreatedMinor Value of the deals opened in the week, converted at the latest rate on or before the
+	// week's end and frozen here.
+	CreatedMinor int64 `json:"created_minor"`
+
+	// Currency The currency the three figures are in, stored beside them: the installation's base
+	// currency is an operator-mutable setting, and re-reading it later would re-label old
+	// reviews with a currency their numbers were never in.
+	Currency string `json:"currency"`
+
+	// LostMinor The same, for deals lost.
+	LostMinor int64 `json:"lost_minor"`
+
+	// WonMinor Value of the deals won in the week, at each deal's own close-time rate — the honest
+	// figure for money that has already moved.
+	WonMinor int64 `json:"won_minor"`
+}
+
+// WeeklyReviewPrior The week before this one, for comparison.
+type WeeklyReviewPrior struct {
+	Counts         WeeklyReviewCounts `json:"counts"`
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Pipeline Absent under the same rule as the current week's.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
 }
 
 // Worklist The rep's day, ranked. One list rather than fourteen lanes, because a reader
@@ -29745,6 +30454,10 @@ type ListActivitiesParams struct {
 
 	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
+
+	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+	// Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified. `false` asks for nothing and is accepted in either mode.
+	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
 }
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
@@ -29989,6 +30702,12 @@ type ResetDataJSONBody struct {
 type ListAiModelRatesParams struct {
 	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
 	ModelId  *string `form:"model_id,omitempty" json:"model_id,omitempty"`
+}
+
+// ListAvailableModelsParams defines parameters for ListAvailableModels.
+type ListAvailableModelsParams struct {
+	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default.
+	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
 }
 
 // ListAiCallsParams defines parameters for ListAiCalls.
@@ -30374,6 +31093,11 @@ type DecideCommissionEntryParams struct {
 type GetCompanyContextParams struct {
 	// Scopes Comma-separated context scopes. Omit for the bounded default set.
 	Scopes *string `form:"scopes,omitempty" json:"scopes,omitempty"`
+}
+
+// UploadCompanyLogoMultipartBody defines parameters for UploadCompanyLogo.
+type UploadCompanyLogoMultipartBody struct {
+	File openapi_types.File `json:"file"`
 }
 
 // StartCompanySiteReadParams defines parameters for StartCompanySiteRead.
@@ -34064,6 +34788,24 @@ type ListWebhookDeliveriesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// AskForWeeklyPlanHelpJSONBody defines parameters for AskForWeeklyPlanHelp.
+type AskForWeeklyPlanHelpJSONBody struct {
+	HelpRequested string `json:"help_requested"`
+}
+
+// AnswerWeeklyPlanCommitmentJSONBody defines parameters for AnswerWeeklyPlanCommitment.
+type AnswerWeeklyPlanCommitmentJSONBody struct {
+	ManagerResponse string `json:"manager_response"`
+}
+
+// SetWeeklyPlanCommitmentStateJSONBody defines parameters for SetWeeklyPlanCommitmentState.
+type SetWeeklyPlanCommitmentStateJSONBody struct {
+	State SetWeeklyPlanCommitmentStateJSONBodyState `json:"state"`
+}
+
+// SetWeeklyPlanCommitmentStateJSONBodyState defines parameters for SetWeeklyPlanCommitmentState.
+type SetWeeklyPlanCommitmentStateJSONBodyState string
+
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
@@ -34085,8 +34827,15 @@ type GetWorklistParams struct {
 	// it at any tier: nothing in it belongs to a colleague, which is what unassigned
 	// means. It exists because `mine` is exact — a task with no assignee is no
 	// longer folded into every reader's own queue, so it needs a queue of its own or
-	// the product would have stopped mentioning it. Tasks only: a message has no
-	// assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
+	// the product would have stopped mentioning it.
+	//
+	// It carries unanswered mail too, and that is the case it matters most for. A
+	// message has no assignee, so its owner is the owner of the record it is filed
+	// under — deal, then lead, then person, then organization, first owner found. A
+	// thread no owned record attributes to anybody is the customer nobody is looking
+	// at, which is exactly what this queue is opened to find. Such a message stays
+	// reachable from `mine` as well, on the ground that an unowned customer writing
+	// in is everybody's until somebody takes them.
 	//
 	// WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
 	// going quiet, meetings and duplicate pairs are read under the caller's row
@@ -34279,6 +35028,9 @@ type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
 
 // PutCompanyJSONRequestBody defines body for PutCompany for application/json ContentType.
 type PutCompanyJSONRequestBody = CompanyProfileInput
+
+// UploadCompanyLogoMultipartRequestBody defines body for UploadCompanyLogo for multipart/form-data ContentType.
+type UploadCompanyLogoMultipartRequestBody UploadCompanyLogoMultipartBody
 
 // StartCompanySiteReadJSONRequestBody defines body for StartCompanySiteRead for application/json ContentType.
 type StartCompanySiteReadJSONRequestBody = StartCompanySiteReadRequest
@@ -34783,6 +35535,18 @@ type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
 
 // UpdateWebhookSubscriptionJSONRequestBody defines body for UpdateWebhookSubscription for application/json ContentType.
 type UpdateWebhookSubscriptionJSONRequestBody = UpdateWebhookSubscriptionRequest
+
+// AddWeeklyPlanCommitmentJSONRequestBody defines body for AddWeeklyPlanCommitment for application/json ContentType.
+type AddWeeklyPlanCommitmentJSONRequestBody = NewWeeklyPlanCommitment
+
+// AskForWeeklyPlanHelpJSONRequestBody defines body for AskForWeeklyPlanHelp for application/json ContentType.
+type AskForWeeklyPlanHelpJSONRequestBody AskForWeeklyPlanHelpJSONBody
+
+// AnswerWeeklyPlanCommitmentJSONRequestBody defines body for AnswerWeeklyPlanCommitment for application/json ContentType.
+type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBody
+
+// SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
+type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
 
 // Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
 // element and whether it was found
@@ -42535,6 +43299,9 @@ type ServerInterface interface {
 	// Enqueue an async model-cost refresh (stages 🟡 proposals).
 	// (POST /ai-model-rates/propose-refresh)
 	ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request)
+	// What one vendor says it serves today (admin/ops).
+	// (GET /ai/available-models/{provider})
+	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -42829,6 +43596,12 @@ type ServerInterface interface {
 	// Get the effective server-side company-context rollout capability.
 	// (GET /company/context/capabilities)
 	GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request)
+	// Take the installation's own company mark off the record.
+	// (DELETE /company/logo)
+	DeleteCompanyLogo(w http.ResponseWriter, r *http.Request)
+	// Replace the installation's own company mark with an uploaded image.
+	// (POST /company/logo)
+	UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
 	// Start an optional progressive website read before the anchor company exists.
 	// (POST /company/site-reads)
 	StartCompanySiteRead(w http.ResponseWriter, r *http.Request, params StartCompanySiteReadParams)
@@ -44080,6 +44853,27 @@ type ServerInterface interface {
 	// Rotate a subscription's signing secret (returns the new secret once).
 	// (POST /webhook-subscriptions/{id}/rotate-secret)
 	RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id Id)
+	// Write one thing onto this week's plan.
+	// (POST /weekly-plans/commitments)
+	AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request)
+	// Say what you need from your lead on one commitment.
+	// (PUT /weekly-plans/commitments/{id}/help)
+	AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Answer a teammate's request for help.
+	// (PUT /weekly-plans/commitments/{id}/response)
+	AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Mark one commitment done, reopen it, or drop it.
+	// (PUT /weekly-plans/commitments/{id}/state)
+	SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The caller's plan for this week — what they said they would do.
+	// (GET /weekly-plans/current)
+	GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// Open a plan for this week.
+	// (POST /weekly-plans/current)
+	StartWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// A teammate's plan for this week, for their lead.
+	// (GET /weekly-plans/{owner_id}/current)
+	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID)
 	// The weeks the acting rep has a review for, newest first.
 	// (GET /weekly-reviews)
 	ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
@@ -44089,6 +44883,9 @@ type ServerInterface interface {
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
+	// One row per teammate — who is carrying what, so a lead can see where to help.
+	// (GET /worklist/team)
+	GetTeamBoard(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -44254,6 +45051,12 @@ func (_ Unimplemented) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 // Enqueue an async model-cost refresh (stages 🟡 proposals).
 // (POST /ai-model-rates/propose-refresh)
 func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What one vendor says it serves today (admin/ops).
+// (GET /ai/available-models/{provider})
+func (_ Unimplemented) ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -44842,6 +45645,18 @@ func (_ Unimplemented) GetCompanyContext(w http.ResponseWriter, r *http.Request,
 // Get the effective server-side company-context rollout capability.
 // (GET /company/context/capabilities)
 func (_ Unimplemented) GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take the installation's own company mark off the record.
+// (DELETE /company/logo)
+func (_ Unimplemented) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the installation's own company mark with an uploaded image.
+// (POST /company/logo)
+func (_ Unimplemented) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47347,6 +48162,48 @@ func (_ Unimplemented) RotateWebhookSecret(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Write one thing onto this week's plan.
+// (POST /weekly-plans/commitments)
+func (_ Unimplemented) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what you need from your lead on one commitment.
+// (PUT /weekly-plans/commitments/{id}/help)
+func (_ Unimplemented) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a teammate's request for help.
+// (PUT /weekly-plans/commitments/{id}/response)
+func (_ Unimplemented) AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark one commitment done, reopen it, or drop it.
+// (PUT /weekly-plans/commitments/{id}/state)
+func (_ Unimplemented) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's plan for this week — what they said they would do.
+// (GET /weekly-plans/current)
+func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open a plan for this week.
+// (POST /weekly-plans/current)
+func (_ Unimplemented) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A teammate's plan for this week, for their lead.
+// (GET /weekly-plans/{owner_id}/current)
+func (_ Unimplemented) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The weeks the acting rep has a review for, newest first.
 // (GET /weekly-reviews)
 func (_ Unimplemented) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
@@ -47362,6 +48219,12 @@ func (_ Unimplemented) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Requ
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One row per teammate — who is carrying what, so a lead can see where to help.
+// (GET /worklist/team)
+func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47569,6 +48432,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "occurred_before"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "occurred_before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "waiting_reply" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "waiting_reply", r.URL.Query(), &params.WaitingReply, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "waiting_reply"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "waiting_reply", Err: err})
 		}
 		return
 	}
@@ -48703,6 +49579,54 @@ func (siw *ServerInterfaceWrapper) ProposeAiModelRateRefresh(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ProposeAiModelRateRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAvailableModels operation middleware
+func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAvailableModelsParams
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAvailableModels(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -51948,6 +52872,46 @@ func (siw *ServerInterfaceWrapper) GetCompanyContextCapabilities(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCompanyContextCapabilities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCompanyLogo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadCompanyLogo(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71071,6 +72035,208 @@ func (siw *ServerInterfaceWrapper) RotateWebhookSecret(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// AddWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddWeeklyPlanCommitment(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AskForWeeklyPlanHelp operation middleware
+func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AskForWeeklyPlanHelp(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerWeeklyPlanCommitment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetWeeklyPlanCommitmentState operation middleware
+func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetWeeklyPlanCommitmentState(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCurrentWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCurrentWeeklyPlan(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartWeeklyPlan(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTeammateWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeammateWeeklyPlan(w, r, ownerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListWeeklyReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 
@@ -71205,6 +72371,28 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWorklist(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTeamBoard operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamBoard(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71407,6 +72595,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai-model-rates/propose-refresh", wrapper.ProposeAiModelRateRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)
@@ -71701,6 +72892,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/company/context/capabilities", wrapper.GetCompanyContextCapabilities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/company/logo", wrapper.DeleteCompanyLogo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/company/logo", wrapper.UploadCompanyLogo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads", wrapper.StartCompanySiteRead)
@@ -72954,6 +74151,27 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/webhook-subscriptions/{id}/rotate-secret", wrapper.RotateWebhookSecret)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/weekly-plans/commitments", wrapper.AddWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/help", wrapper.AskForWeeklyPlanHelp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/response", wrapper.AnswerWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/state", wrapper.SetWeeklyPlanCommitmentState)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-plans/current", wrapper.GetCurrentWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/weekly-plans/current", wrapper.StartWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-plans/{owner_id}/current", wrapper.GetTeammateWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-reviews", wrapper.ListWeeklyReviews)
 	})
 	r.Group(func(r chi.Router) {
@@ -72961,6 +74179,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)
 	})
 
 	return r

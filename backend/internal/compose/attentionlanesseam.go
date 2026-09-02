@@ -86,12 +86,17 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 // disagree about which deals are in trouble. Only the patience differs, and it
 // is named here rather than buried: a queue exists to warn, and the stalled
 // threshold is a status rather than a warning.
-type attentionAtRisk struct{ lister agents.SlippingLister }
+// The depth-reporting scanner, not the plain SlippingLister: the team board
+// needs to know whether the sweep was cut, and that cannot be recovered from the
+// rows it returns.
+type attentionAtRisk struct {
+	lister func(context.Context) ([]agents.SlippingDeal, bool, error)
+}
 
-func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, error) {
-	candidates, err := a.lister(ctx)
+func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool, error) {
+	candidates, cut, err := a.lister(ctx)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	now := clockNow()
 	risky := make([]attention.RiskyDeal, 0, len(candidates))
@@ -108,7 +113,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, erro
 			ExpectedCloseDate: deal.ExpectedCloseDate,
 		})
 	}
-	return risky, nil
+	return risky, cut, nil
 }
 
 // idleDaysOf is how long the deal has been quiet, counted from the base the
@@ -249,11 +254,20 @@ type attentionWaiting struct {
 // The instant comes from the caller so the whole read is one snapshot. Asking
 // the clock again here would let the anti-joins judge against a moment the rest
 // of the day was not read at.
-func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]attention.WaitingCustomer, error) {
+func (w attentionWaiting) Unanswered(
+	ctx context.Context, asOf time.Time,
+) ([]attention.WaitingCustomer, bool, error) {
 	rows, err := w.store.WaitingReplies(ctx, asOf)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
+	// Asked of what the STORE returned, before keepWaitingCustomers runs.
+	//
+	// That filter drops machine senders and folds duplicate threads, so what it
+	// returns is smaller than what was read — and a caller comparing the
+	// SURVIVORS against the scan bound would read a full scan whose survivors
+	// are few as a complete one. This is the only place both numbers exist.
+	cut := len(rows) >= activities.WaitingScanCap
 	out := make([]attention.WaitingCustomer, 0, len(rows))
 	for _, row := range keepWaitingCustomers(rows) {
 		out = append(out, attention.WaitingCustomer{
@@ -264,9 +278,10 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 			OrganizationID: row.OrganizationID,
 			DealID:         row.DealID,
 			HasOpenDeal:    row.HasOpenDeal,
+			OwnerID:        row.OwnerID,
 		})
 	}
-	return out, nil
+	return out, cut, nil
 }
 
 // keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
@@ -402,4 +417,26 @@ func (t attentionTasks) OpenForViewer(
 		})
 	}
 	return open, nil
+}
+
+// attentionOverdue counts overdue tasks per assignee for the team board.
+//
+// A second reader over the same table attentionTasks lists from, and the reason
+// is the bound rather than the rows: that lane stops at a dozen, so a board that
+// counted its answer would report every loaded rep as holding exactly twelve.
+// The store's aggregate is unbounded and answers the count itself.
+type attentionOverdue struct{ store *activities.Store }
+
+func (o attentionOverdue) OverduePerAssignee(
+	ctx context.Context, asOf time.Time,
+) (map[ids.UUID]int, error) {
+	rows, err := o.store.OverdueLoadByAssignee(ctx, asOf)
+	if err != nil {
+		return nil, err
+	}
+	per := make(map[ids.UUID]int, len(rows))
+	for _, row := range rows {
+		per[row.OwnerID] = row.Overdue
+	}
+	return per, nil
 }

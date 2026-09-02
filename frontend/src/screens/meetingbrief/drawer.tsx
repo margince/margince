@@ -17,7 +17,7 @@ import {
   ProjectPicker,
   ScopeLine,
 } from "../../design-system/projectpicker";
-import { formatDateTime } from "../../format/format";
+import { formatDate, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, throwProblem } from "../common";
 import type { MeetingFacts, PreparedFor } from "./header";
@@ -124,6 +124,7 @@ export function PersonMeetingBrief({
         titleId="person-meeting-title"
         onClose={onClose}
         formatWhen={(utcIso) => formatDateTime(utcIso, locale, zone)}
+        formatDay={(utcIso) => formatDate(utcIso, locale, zone)}
         scopeSlot={
           <>
             {filedByMeeting && brief.data?.scope && (

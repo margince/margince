@@ -844,13 +844,30 @@ function usePanelFrame(
 /**
  * The state the section shows when nobody has overridden it.
  *
- * ONE SUBJECT: the agent. Nothing the browser does reaches this function. The
- * rail used to derive `ingest` from a query being in flight and `working` from a
- * mutation, which meant the Core spoke the agent's vocabulary while reporting
- * the reader's own clicks: the orb went to `ingest` because a list was loading,
- * and `ingest` was therefore the one state the agent could never cause. What the
- * tool is doing is still reported, in its own quieter line under this one, and
- * it no longer borrows the agent's voice to do it.
+ * ONE SUBJECT: the agent. The rail used to derive `ingest` from a query being in
+ * flight and `working` from any mutation, which meant the Core spoke the agent's
+ * vocabulary while reporting the reader's own clicks: the orb went to `ingest`
+ * because a list was loading, and `ingest` was therefore the one state the agent
+ * could never cause. What the TOOL is doing is still reported, in its own
+ * quieter line under this one, and it no longer borrows the agent's voice.
+ *
+ * The subject stayed the agent when a second observer of it was added. Two
+ * things watch the same work from different ends: the server's projection, which
+ * knows what a run IS and is the only thing that may name it, and this tab's own
+ * count of requests it is holding open to a route whose handler calls a model
+ * and waits (`asking`, from api/model-inflight.ts). The projection arrives on a
+ * poll, so between a person pressing "Draft with AI" and the next read there was
+ * a live model call nothing on screen reported: the orb sat at rest through the
+ * whole of the work it exists to show. `asking` closes that window and claims
+ * nothing else: it ranks BELOW every occurrence the feed carries, so it can
+ * never outrank a run, and the moment the feed can name the work it does.
+ *
+ * The correction that ranking allows is real and is the design working, not a
+ * defect to hide: `asking` answers `working` because a request in flight cannot
+ * say which half of the lifecycle it is in, so a route whose task turns out to
+ * be `ingest` (the enrich and cold-start lanes) shows `working` for the
+ * moment before the feed arrives and settles into its own lane after. A guess
+ * the owner of the fact overrules is the right shape for a bridge.
  *
  * The order is severity, and it starts with the faults that stop the agent
  * running AT ALL, because an agent with no model bound is not a broken run, it
@@ -920,6 +937,18 @@ function derive(
   const live = server.running.find((item) => item.state !== "stalled");
   if (live) {
     return { state: laneFor(live), cause: live };
+  }
+  // This tab's own ask, which the feed has not caught up with yet. `working`
+  // rather than a lane read from the kind, because the kind is exactly what is
+  // not known here: a request in flight says the agent is busy and says nothing
+  // about which half of its lifecycle it is in. `working` is the same answer
+  // laneFor gives an unnamed kind, and for the same reason: the honest half of
+  // what is known. No cause travels with it, so the line under the orb falls
+  // back to the generic word instead of borrowing a sentence about some other
+  // run, and the moment the feed carries the occurrence the branch above wins
+  // and names it.
+  if (server.asking) {
+    return { state: "working", cause: null };
   }
   // A request that failed a moment ago does NOT colour the orb. One dropped
   // request on a flaky connection would otherwise flash the corner of every

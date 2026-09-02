@@ -64,10 +64,9 @@ type WebhookDeliveryListResponse =
 type UpdateWebhookSubscriptionRequest =
   components["schemas"]["UpdateWebhookSubscriptionRequest"];
 
-// The shared delivery-status → Badge tone mapping (events.md §5's four
-// delivery states): kept here, next to the subscription list it health-
-// summarizes, so the deliveries panel reuses the ONE spelling rather than
-// re-deriving its own tone rules per status.
+// The shared delivery-status → Badge tone mapping: kept here, next to the
+// subscription list it health-summarizes, so the deliveries panel reuses the
+// same spelling rather than re-deriving its own tone rules per status.
 export function webhookStatusBadge(
   status: WebhookDeliveryStatus,
 ): "success" | "warn" | "danger" | "accent" {
@@ -77,6 +76,12 @@ export function webhookStatusBadge(
     case "dead_lettered":
       return "danger";
     case "retrying":
+      return "warn";
+    // Not "danger": nothing failed. The subscriber's own endpoint is fine and
+    // the record simply left their sight, so this is a stop rather than a
+    // fault, and an operator reading the list should not go looking for a
+    // broken endpoint.
+    case "visibility_revoked":
       return "warn";
     case "pending":
       return "accent";

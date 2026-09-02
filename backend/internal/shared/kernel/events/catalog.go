@@ -302,6 +302,14 @@ var catalog = map[string]struct {
 	"notice.created": {identityStreamEntity, 1},
 	"notice.read":    {identityStreamEntity, 1},
 
+	// A weekly plan belongs to one rep, so its changes ride the same identity
+	// stream a notice does. help_requested is its own type rather than another
+	// updated: it is the one change somebody else is meant to act on, and an
+	// automation notifying a lead subscribes to that and not to every tick of
+	// a checkbox.
+	"weekly_plan.updated":        {identityStreamEntity, 1},
+	"weekly_plan.help_requested": {identityStreamEntity, 1},
+
 	// An introduction request is about a CONTACT — who can open a door to
 	// them, and what came of asking — so it rides the person stream a
 	// consumer ranking that contact's open work already reads.

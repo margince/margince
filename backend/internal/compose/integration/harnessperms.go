@@ -36,6 +36,7 @@ import (
 const (
 	roleAdmin    = "admin"
 	roleRep      = "rep"
+	roleManager  = "manager"
 	roleReadOnly = "read_only"
 	roleOps      = "ops"
 )
@@ -171,6 +172,11 @@ var (
 			// fx_rate + ai_model_rate are admin/ops-only config surfaces
 			// (identity/internal/policy.go's real seed), mirrored here so
 			// the harness admin fixture can exercise the rate editors.
+			// weekly_plan is CRUD for admin in the real seed. The harness's
+			// admin stands in for every seat in most suites, so a plan test
+			// that could not write one would be testing the fixture rather
+			// than the store.
+			"weekly_plan":   {Create: true, Read: true, Update: true, Delete: true},
 			"fx_rate":       {Create: true, Read: true, Update: true, Delete: true},
 			"ai_model_rate": {Create: true, Read: true, Update: true, Delete: true},
 			// ai_routing mirrors the real seed: read + update for admin/ops and

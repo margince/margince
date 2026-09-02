@@ -150,8 +150,11 @@ func TestAnOrdinaryOrganizationPatchStillRunsUnattended(t *testing.T) {
 // registryWithGate rather than NewRegistry so the tier floor arrives the way
 // production supplies it.
 func composedRegistry(e *integration.Env) *agents.Registry {
+	// The nils are the readers this test's tools never reach: a drafter, an
+	// incumbent resolver, an embedder, a transcript enqueue, an imports reader, a
+	// meeting-brief reader and a logger. What it exercises is the tier floor.
 	return registryWithGate(e.DB(), auth.NewGate(adminSeat{}), nil, nil,
-		SendPath{}, companyEnricher{}, nil, nil, nil, nil)
+		SendPath{}, companyEnricher{}, nil, nil, nil, nil, nil)
 }
 
 // composedRegistryFlooring is that same composition with ONE pair floored to

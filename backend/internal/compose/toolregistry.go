@@ -33,6 +33,10 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 	s.toolRegistry = registryWithGate(InstallationDB(pool),
 		auth.NewGate(identity.NewService(pool), auth.WithQuota(s.quotaMeter)),
 		s.replyDrafter, s.resolveOverlayIncumbent(pool), s.send, companyEnricher{srv: s},
-		s.retrievalEmbedder, s.transcriptOnLanding, importsFor(s), s.log,
+		s.retrievalEmbedder, s.transcriptOnLanding, importsFor(s),
+		// The SERVER's brief service, not a second one built from the pool: the
+		// model lane is bound to that instance, so a fresh service here would
+		// serve agents the deterministic floor while the person page got prose.
+		meetingBriefReader(s.meetingBriefSvc), s.log,
 		agents.WithQuotaCharger(s.quotaMeter), agents.WithCostShare(s.quotaMeter))
 }

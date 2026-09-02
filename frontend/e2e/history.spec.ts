@@ -40,7 +40,11 @@ test("a filtered list is what Back returns to", async ({ page }) => {
   );
   await expect(page).toHaveURL(/[?&]q=brandt/);
 
+  // Scoped to the page body: the rail now heads with the installation's own
+  // company, and this fixture's company is also called Brandt, so an unscoped
+  // /Brandt/ link would be the rail's home link rather than the row.
   await page
+    .getByRole("main")
     .getByRole("link", { name: /Brandt/ })
     .first()
     .click();
@@ -102,6 +106,7 @@ test("Forward returns to the list Back left", async ({ page }) => {
   );
 
   await page
+    .getByRole("main")
     .getByRole("link", { name: /Brandt/ })
     .first()
     .click();
@@ -195,6 +200,7 @@ test("paging is in the address, and Back returns to the page you left", async ({
 
   await page.goto("/#/companies?page=2");
   await page
+    .getByRole("main")
     .getByRole("link", { name: /Brandt/ })
     .first()
     .click();

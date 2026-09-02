@@ -600,6 +600,7 @@ public.app_user.app_user_agent_is_full CHECK (((NOT is_agent) OR (seat_type = 'f
 public.app_user.app_user_agent_never_forced CHECK ((NOT (is_agent AND must_change_password)))
 public.app_user.app_user_failed_login_count_check CHECK ((failed_login_count >= 0))
 public.app_user.app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL))))
+public.app_user.app_user_forget_weekly_plan_responses CREATE TRIGGER app_user_forget_weekly_plan_responses BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()
 public.app_user.app_user_locale_shipped CHECK ((locale = ANY (ARRAY['en'::text, 'de'::text, 'vi'::text])))
 public.app_user.app_user_pkey PRIMARY KEY (id)
 public.app_user.app_user_seat_type_check CHECK ((seat_type = ANY (ARRAY['read'::text, 'full'::text])))
@@ -2352,6 +2353,9 @@ public.idx_voice_corpus_profile CREATE INDEX idx_voice_corpus_profile ON public.
 public.idx_webhook_delivery_by_subscription CREATE INDEX idx_webhook_delivery_by_subscription ON public.webhook_delivery USING btree (subscription_id, created_at DESC)
 public.idx_webhook_delivery_due CREATE INDEX idx_webhook_delivery_due ON public.webhook_delivery USING btree (next_retry_at) WHERE (status = 'retrying'::text)
 public.idx_webhook_subscription_live CREATE INDEX idx_webhook_subscription_live ON public.webhook_subscription USING btree (state) WHERE (archived_at IS NULL)
+public.idx_weekly_plan_commitment_help CREATE INDEX idx_weekly_plan_commitment_help ON public.weekly_plan_commitment USING btree (plan_id) WHERE (btrim(help_requested) <> ''::text)
+public.idx_weekly_plan_commitment_plan CREATE INDEX idx_weekly_plan_commitment_plan ON public.weekly_plan_commitment USING btree (plan_id, "position", created_at)
+public.idx_weekly_plan_owner CREATE INDEX idx_weekly_plan_owner ON public.weekly_plan USING btree (owner_id, local_week_start DESC)
 public.idx_weekly_review_deal_review CREATE INDEX idx_weekly_review_deal_review ON public.weekly_review_deal USING btree (weekly_review_id, occurred_at DESC)
 public.idx_weekly_review_user CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC)
 public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -4628,6 +4632,7 @@ public.uq_voice_profile_delta_version CREATE UNIQUE INDEX uq_voice_profile_delta
 public.uq_voice_profile_user_live CREATE UNIQUE INDEX uq_voice_profile_user_live ON public.voice_profile USING btree (owner_id) WHERE ((scope = 'user'::text) AND (archived_at IS NULL))
 public.uq_voice_profile_version_number CREATE UNIQUE INDEX uq_voice_profile_version_number ON public.voice_profile_version USING btree (voice_profile_id, profile_version)
 public.uq_voice_profile_version_profile_number CREATE UNIQUE INDEX uq_voice_profile_version_profile_number ON public.voice_profile_version USING btree (voice_profile_id, profile_version)
+public.uq_weekly_plan_owner_week CREATE UNIQUE INDEX uq_weekly_plan_owner_week ON public.weekly_plan USING btree (owner_id, local_week_start)
 public.uq_weekly_review_user_week CREATE UNIQUE INDEX uq_weekly_review_user_week ON public.weekly_review USING btree (user_id, local_week_start)
 public.user_record_view acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.user_record_view.entity_id uuid NOT NULL gen=- def=-
@@ -4860,6 +4865,8 @@ public.webhook_delivery.attempts integer NOT NULL gen=- def=0
 public.webhook_delivery.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.webhook_delivery.dead_lettered_at timestamp with time zone gen=- def=-
 public.webhook_delivery.delivered_at timestamp with time zone gen=- def=-
+public.webhook_delivery.entity_id uuid gen=- def=-
+public.webhook_delivery.entity_type text gen=- def=-
 public.webhook_delivery.event_id uuid NOT NULL gen=- def=-
 public.webhook_delivery.event_type text NOT NULL gen=- def=-
 public.webhook_delivery.id uuid NOT NULL gen=- def=uuidv7()
@@ -4873,7 +4880,7 @@ public.webhook_delivery.trg_webhook_delivery_updated CREATE TRIGGER trg_webhook_
 public.webhook_delivery.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.webhook_delivery.webhook_delivery_dedupe_key UNIQUE (subscription_id, event_id)
 public.webhook_delivery.webhook_delivery_pkey PRIMARY KEY (id)
-public.webhook_delivery.webhook_delivery_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'delivered'::text, 'retrying'::text, 'dead_lettered'::text])))
+public.webhook_delivery.webhook_delivery_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'delivered'::text, 'retrying'::text, 'dead_lettered'::text, 'visibility_revoked'::text])))
 public.webhook_delivery.webhook_delivery_subscription_fkey FOREIGN KEY (subscription_id) REFERENCES webhook_subscription(id) ON DELETE CASCADE
 public.webhook_delivery_dedupe_key CREATE UNIQUE INDEX webhook_delivery_dedupe_key ON public.webhook_delivery USING btree (subscription_id, event_id)
 public.webhook_delivery_pkey CREATE UNIQUE INDEX webhook_delivery_pkey ON public.webhook_delivery USING btree (id)
@@ -4895,20 +4902,89 @@ public.webhook_subscription.webhook_subscription_pkey PRIMARY KEY (id)
 public.webhook_subscription.webhook_subscription_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text])))
 public.webhook_subscription.webhook_subscription_target_url_check CHECK ((target_url ~ '^https://'::text))
 public.webhook_subscription_pkey CREATE UNIQUE INDEX webhook_subscription_pkey ON public.webhook_subscription USING btree (id)
+public.weekly_plan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_plan.captured_by text NOT NULL gen=- def=-
+public.weekly_plan.commitments_due integer gen=- def=-
+public.weekly_plan.commitments_kept integer gen=- def=-
+public.weekly_plan.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.weekly_plan.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_plan.local_week_start date NOT NULL gen=- def=-
+public.weekly_plan.owner_id uuid NOT NULL gen=- def=-
+public.weekly_plan.status text NOT NULL gen=- def='open'::text
+public.weekly_plan.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.weekly_plan.uq_weekly_plan_owner_week UNIQUE (owner_id, local_week_start)
+public.weekly_plan.version bigint NOT NULL gen=- def=1
+public.weekly_plan.weekly_plan_outcome_is_a_tally CHECK (((commitments_due IS NULL) OR ((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due))))
+public.weekly_plan.weekly_plan_outcome_matches_status CHECK ((((status = 'closed'::text) = (commitments_due IS NOT NULL)) AND ((commitments_due IS NULL) = (commitments_kept IS NULL))))
+public.weekly_plan.weekly_plan_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.weekly_plan.weekly_plan_pkey PRIMARY KEY (id)
+public.weekly_plan.weekly_plan_status_check CHECK ((status = ANY (ARRAY['open'::text, 'closed'::text])))
+public.weekly_plan_commitment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_plan_commitment.captured_by text NOT NULL gen=- def=-
+public.weekly_plan_commitment.completed_at timestamp with time zone gen=- def=-
+public.weekly_plan_commitment.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.weekly_plan_commitment.due_on date gen=- def=-
+public.weekly_plan_commitment.help_requested text NOT NULL gen=- def=''::text
+public.weekly_plan_commitment.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_plan_commitment.label text NOT NULL gen=- def=-
+public.weekly_plan_commitment.linked_record_id uuid gen=- def=-
+public.weekly_plan_commitment.linked_record_type text gen=- def=-
+public.weekly_plan_commitment.manager_response text NOT NULL gen=- def=''::text
+public.weekly_plan_commitment.manager_user_id uuid gen=- def=-
+public.weekly_plan_commitment.plan_id uuid NOT NULL gen=- def=-
+public.weekly_plan_commitment.position integer NOT NULL gen=- def=0
+public.weekly_plan_commitment.responded_at timestamp with time zone gen=- def=-
+public.weekly_plan_commitment.state text NOT NULL gen=- def='open'::text
+public.weekly_plan_commitment.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.weekly_plan_commitment.version bigint NOT NULL gen=- def=1
+public.weekly_plan_commitment.weekly_plan_commitment_done_at CHECK (((state = 'done'::text) = (completed_at IS NOT NULL)))
+public.weekly_plan_commitment.weekly_plan_commitment_help_bound CHECK ((length(help_requested) <= 2000))
+public.weekly_plan_commitment.weekly_plan_commitment_label_bound CHECK ((length(label) <= 500))
+public.weekly_plan_commitment.weekly_plan_commitment_label_present CHECK ((btrim(label) <> ''::text))
+public.weekly_plan_commitment.weekly_plan_commitment_link_type_check CHECK (((linked_record_type IS NULL) OR (linked_record_type = ANY (ARRAY['deal'::text, 'lead'::text, 'person'::text, 'organization'::text, 'project'::text]))))
+public.weekly_plan_commitment.weekly_plan_commitment_link_whole CHECK (((linked_record_type IS NULL) = (linked_record_id IS NULL)))
+public.weekly_plan_commitment.weekly_plan_commitment_manager_fkey FOREIGN KEY (manager_user_id) REFERENCES app_user(id)
+public.weekly_plan_commitment.weekly_plan_commitment_pkey PRIMARY KEY (id)
+public.weekly_plan_commitment.weekly_plan_commitment_plan_fkey FOREIGN KEY (plan_id) REFERENCES weekly_plan(id) ON DELETE CASCADE
+public.weekly_plan_commitment.weekly_plan_commitment_response_bound CHECK ((length(manager_response) <= 2000))
+public.weekly_plan_commitment.weekly_plan_commitment_response_whole CHECK ((((btrim(manager_response) = ''::text) = (manager_user_id IS NULL)) AND ((manager_user_id IS NULL) = (responded_at IS NULL))))
+public.weekly_plan_commitment.weekly_plan_commitment_state_check CHECK ((state = ANY (ARRAY['open'::text, 'done'::text, 'missed'::text, 'dropped'::text])))
+public.weekly_plan_commitment_forget_manager() secdef=false cfg=- acl=- 
+BEGIN
+    UPDATE weekly_plan_commitment
+       SET manager_response = '', manager_user_id = NULL, responded_at = NULL
+     WHERE manager_user_id = OLD.id;
+    RETURN OLD;
+END;
+
+public.weekly_plan_commitment_pkey CREATE UNIQUE INDEX weekly_plan_commitment_pkey ON public.weekly_plan_commitment USING btree (id)
+public.weekly_plan_pkey CREATE UNIQUE INDEX weekly_plan_pkey ON public.weekly_plan USING btree (id)
 public.weekly_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review.as_of timestamp with time zone NOT NULL gen=- def=-
+public.weekly_review.base_currency text gen=- def=-
 public.weekly_review.brief_items_acted integer NOT NULL gen=- def=0
 public.weekly_review.brief_items_dismissed integer NOT NULL gen=- def=0
+public.weekly_review.commitments_due integer NOT NULL gen=- def=0
+public.weekly_review.commitments_kept integer NOT NULL gen=- def=0
 public.weekly_review.deals_lost integer NOT NULL gen=- def=0
 public.weekly_review.deals_moved integer NOT NULL gen=- def=0
 public.weekly_review.deals_won integer NOT NULL gen=- def=0
 public.weekly_review.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.weekly_review.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_review.leads_answered_in_target integer NOT NULL gen=- def=0
+public.weekly_review.leads_breached integer NOT NULL gen=- def=0
+public.weekly_review.leads_routed integer NOT NULL gen=- def=0
 public.weekly_review.local_week_start date NOT NULL gen=- def=-
 public.weekly_review.mail_attempted_at timestamp with time zone gen=- def=-
 public.weekly_review.mail_error text gen=- def=-
+public.weekly_review.meetings_held integer NOT NULL gen=- def=0
+public.weekly_review.meetings_with_next_step integer NOT NULL gen=- def=0
 public.weekly_review.narrated_at timestamp with time zone gen=- def=-
 public.weekly_review.narrative text gen=- def=-
+public.weekly_review.pipeline_created_minor bigint gen=- def=-
+public.weekly_review.pipeline_lost_minor bigint gen=- def=-
+public.weekly_review.pipeline_won_minor bigint gen=- def=-
+public.weekly_review.prior_review_id uuid gen=- def=-
 public.weekly_review.proposals_accepted integer NOT NULL gen=- def=0
 public.weekly_review.proposals_rejected integer NOT NULL gen=- def=0
 public.weekly_review.tasks_carried_over integer NOT NULL gen=- def=0
@@ -4916,12 +4992,18 @@ public.weekly_review.tasks_done integer NOT NULL gen=- def=0
 public.weekly_review.tasks_due integer NOT NULL gen=- def=0
 public.weekly_review.uq_weekly_review_user_week UNIQUE (user_id, local_week_start)
 public.weekly_review.user_id uuid NOT NULL gen=- def=-
+public.weekly_review.weekly_review_commitments_are_tallies CHECK (((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due)))
 public.weekly_review.weekly_review_counts_are_tallies CHECK (((tasks_due >= 0) AND (tasks_done >= 0) AND (tasks_carried_over >= 0) AND (deals_moved >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (proposals_accepted >= 0) AND (proposals_rejected >= 0) AND (brief_items_acted >= 0) AND (brief_items_dismissed >= 0)))
+public.weekly_review.weekly_review_currency_check CHECK (((base_currency IS NULL) OR (base_currency ~ '^[A-Z]{3}$'::text)))
 public.weekly_review.weekly_review_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))
 public.weekly_review.weekly_review_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL)))
+public.weekly_review.weekly_review_money_names_its_currency CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL))))
 public.weekly_review.weekly_review_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))
 public.weekly_review.weekly_review_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (narrated_at IS NOT NULL)))
+public.weekly_review.weekly_review_new_counts_are_tallies CHECK (((leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0))))
+public.weekly_review.weekly_review_next_steps_were_meetings CHECK ((meetings_with_next_step <= meetings_held))
 public.weekly_review.weekly_review_pkey PRIMARY KEY (id)
+public.weekly_review.weekly_review_prior_fkey FOREIGN KEY (prior_review_id) REFERENCES weekly_review(id) ON DELETE SET NULL
 public.weekly_review.weekly_review_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.weekly_review_deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review_deal.amount_minor_at_close bigint gen=- def=-

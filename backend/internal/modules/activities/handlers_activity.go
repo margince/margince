@@ -37,6 +37,12 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		in.EntityType = &et
 		in.EntityID = &id
 	}
+	if params.WaitingReply != nil && *params.WaitingReply {
+		// The instant comes from the store's own clock, not the request, so
+		// the wait and the rest of the page it renders on judge one snapshot.
+		asOf := h.store.now()
+		in.WaitingReplyAsOf = &asOf
+	}
 
 	activities, page, err := h.store.ListActivities(r.Context(), in)
 	if err != nil {

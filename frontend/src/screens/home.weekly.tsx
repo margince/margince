@@ -9,7 +9,7 @@ import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
-import { formatDate, formatNumber } from "../format/format";
+import { formatDate, formatNumber, formatSignedNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -172,6 +172,23 @@ function WeeklyBody({
   }
 
   const c = review.counts;
+  const prior = review.prior?.counts;
+  // The delta line, or nothing. A reading with no earlier week to measure
+  // against gets no line at all rather than "+0": a rep's first week did not
+  // stay level, it had nothing to stay level against.
+  const since = (now: number, before: number | undefined) => {
+    if (before === undefined) {
+      return undefined;
+    }
+    const delta = now - before;
+    return (
+      <span className="home-weekly-delta t-caption">
+        {t("home.weekly.sincePrior", {
+          delta: formatSignedNumber(delta, locale),
+        })}
+      </span>
+    );
+  };
   return (
     <>
       <WeeklyNarrative review={review} />
@@ -182,18 +199,49 @@ function WeeklyBody({
             done: formatNumber(c.tasks_done, locale),
             due: formatNumber(c.tasks_due, locale),
           })}
+          detail={since(c.tasks_done, prior?.tasks_done)}
         />
         <StatCard
           label={t("home.weekly.dealsWon")}
           value={formatNumber(c.deals_won, locale)}
+          detail={since(c.deals_won, prior?.deals_won)}
         />
         <StatCard
           label={t("home.weekly.dealsLost")}
           value={formatNumber(c.deals_lost, locale)}
+          detail={since(c.deals_lost, prior?.deals_lost)}
         />
         <StatCard
           label={t("home.weekly.dealsMoved")}
           value={formatNumber(c.deals_moved, locale)}
+          detail={since(c.deals_moved, prior?.deals_moved)}
+        />
+        <StatCard
+          label={t("home.weekly.leadsAnswered")}
+          value={t("home.weekly.ofRouted", {
+            answered: formatNumber(c.leads_answered_in_target, locale),
+            routed: formatNumber(c.leads_routed, locale),
+          })}
+          detail={since(
+            c.leads_answered_in_target,
+            prior?.leads_answered_in_target,
+          )}
+        />
+        <StatCard
+          label={t("home.weekly.promisesKept")}
+          value={t("home.weekly.ofDue", {
+            done: formatNumber(c.commitments_kept, locale),
+            due: formatNumber(c.commitments_due, locale),
+          })}
+          detail={since(c.commitments_kept, prior?.commitments_kept)}
+        />
+        <StatCard
+          label={t("home.weekly.meetingsHeld")}
+          value={t("home.weekly.ofMeetings", {
+            withStep: formatNumber(c.meetings_with_next_step, locale),
+            held: formatNumber(c.meetings_held, locale),
+          })}
+          detail={since(c.meetings_held, prior?.meetings_held)}
         />
         <StatCard
           label={t("home.weekly.decided")}

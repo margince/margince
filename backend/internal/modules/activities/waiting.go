@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // WaitingReply is one inbound message nobody has answered.
@@ -55,11 +56,34 @@ type WaitingReply struct {
 	// exists". The looser reading would let somebody learn a deal is there by
 	// watching a row they can see decline to go stale.
 	HasOpenDeal bool
+	// OwnerID is who owes this reply, resolved from the record the thread is
+	// filed under. Zero when no record on it names an owner.
+	//
+	// PRECEDENCE, first owner found: deal, lead, person, organization. It is the
+	// order of how specific the claim is — a thread on a deal is that deal
+	// owner's to answer whatever else it touches, and a person outranks their
+	// company because the company owner is answerable for the account rather
+	// than for every conversation inside it.
+	//
+	// A separate question from the record ids above, which the caller picks a
+	// DISPLAY record from by link priority. The two are allowed to differ: those
+	// answer "what is this about", this one answers "who owes the reply".
+	//
+	// Resolved through the SAME visibility-gated links, so an owner appears only
+	// where the reader may see the record naming them. Read off an ungated join
+	// it would publish who owns a record the reader cannot open.
+	OwnerID ids.UUID
 }
 
-// waitingScanCap bounds the work one read does. Beyond this the answer is
+// WaitingScanCap bounds the work one read does. Beyond this the answer is
 // "there are more", never a silent truncation reported as a total.
-const waitingScanCap = 200
+//
+// Exported because the caller has to compare against it. The seam filters what
+// this read returns — machine senders out, duplicate threads folded — so only a
+// comparison against the ROWS THIS RETURNED can tell a truncated scan from a
+// complete one, and the number doing the comparing has to be this one rather
+// than a copy that can drift from it.
+const WaitingScanCap = 200
 
 // waitingHorizonDays is how far back a wait can reach and still be work.
 //
@@ -166,7 +190,45 @@ const waitingRepliesSQL = `
 	       -- off an ungated one it would answer "a deal exists" rather than "you
 	       -- can see a deal", and a reader would learn the first by watching a
 	       -- row they can see decline to go stale.
-	       bool_or(openDeal.id IS NOT NULL)
+	       bool_or(openDeal.id IS NOT NULL),
+	       -- WHO owes the reply, first owner found down the precedence: deal,
+	       -- lead, person, organization.
+	       --
+	       -- COALESCE over four aggregates rather than four correlated
+	       -- subqueries: the links are already joined and grouped here, so this
+	       -- costs the group it is already paying for.
+	       --
+	       -- ORDERED BY THE RECORD's id, not by the owner's, and that is the
+	       -- whole correctness of it. A message may be filed under two deals —
+	       -- uq_activity_link is keyed on (activity, type, id), so a second deal
+	       -- link is a legal row — and ordering by owner_id picks the smallest
+	       -- OWNER across both. That owner need not own the deal this same query
+	       -- reports: the row would name deal D1 and bill its wait to the person
+	       -- who owns D2. Ordering by the record id makes each arm walk its links
+	       -- in the SAME order the record ids above are picked in.
+	       --
+	       -- The unowned links are skipped rather than ending the walk, so a
+	       -- message on an unowned deal and an owned one is answered by the owner
+	       -- who exists. That is deliberately not the same pick as DealID, which
+	       -- names the first deal owned or not: the two answer different
+	       -- questions — what is this about, and who owes the reply — and the
+	       -- struct's own comment says they may differ. What they may NOT do is
+	       -- name an owner of some third record, which is what ordering by owner
+	       -- id allowed.
+	       --
+	       -- Every arm reads through wl, the VISIBILITY-GATED link join. An
+	       -- owner off an ungated join would name who owns a record this reader
+	       -- may not open.
+	       COALESCE(
+	         (array_agg(ownerDeal.owner_id ORDER BY ownerDeal.id::text)
+	          FILTER (WHERE ownerDeal.owner_id IS NOT NULL))[1],
+	         (array_agg(ownerLead.owner_id ORDER BY ownerLead.id::text)
+	          FILTER (WHERE ownerLead.owner_id IS NOT NULL))[1],
+	         (array_agg(ownerPerson.owner_id ORDER BY ownerPerson.id::text)
+	          FILTER (WHERE ownerPerson.owner_id IS NOT NULL))[1],
+	         (array_agg(ownerOrg.owner_id ORDER BY ownerOrg.id::text)
+	          FILTER (WHERE ownerOrg.owner_id IS NOT NULL))[1],
+	         '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
@@ -176,11 +238,22 @@ const waitingRepliesSQL = `
 	         ON sender.activity_id = a.id AND sender.role = 'from'
 	  LEFT JOIN deal openDeal ON openDeal.id = wl.deal_id
 	                         AND %[8]s
+	  -- The ownership walk, all four off the gated link join above.
+	  LEFT JOIN deal ownerDeal ON ownerDeal.id = wl.deal_id
+	  LEFT JOIN lead ownerLead ON ownerLead.id = wl.lead_id
+	  LEFT JOIN person ownerPerson ON ownerPerson.id = wl.person_id
+	  LEFT JOIN organization ownerOrg ON ownerOrg.id = wl.organization_id
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
 	   AND a.occurred_at <= $%[1]d
 	   AND %[2]s
+	   -- Entity narrowing goes HERE, before waitingScanCap's LIMIT below: a
+	   -- record's own wait can sit outside the oldest waitingScanCap threads
+	   -- workspace-wide, and narrowing after the cap would report nothing
+	   -- waiting on the very record this asks about. "TRUE" for the
+	   -- workspace-wide Worklist read.
+	   AND (%[11]s)
 	   AND a.thread_key IS NOT NULL
 	   -- Old enough and it is history, not work — UNLESS an open deal is on it.
 	   --
@@ -310,6 +383,19 @@ const waitingRepliesSQL = `
 	 ORDER BY a.occurred_at DESC
 	 LIMIT %[4]d`
 
+// waitingRepliesSQL is Sprintf'd directly at BOTH call sites — WaitingReplies
+// below (entityClause scopeUnbounded, the workspace-wide Worklist read) and
+// the entity-scoped list filter (waitingReplyExistsClause) — rather than
+// through a wrapper. Eleven positional holes is already the shape the
+// constant settled on for its own eligibility rules; a wrapper over that
+// many arguments would just be the same Sprintf call once removed, with a
+// second place to keep its parameter order in sync with the %[N] indices
+// below. What must not fork between the two call sites is the SQL TEXT — the
+// anti-joins, the tie break, the future-dated guard, the horizon, the
+// live-record predicates — and sharing the one constant holds that; a test
+// feeding both callers the same timeline and requiring the same answer holds
+// the rest.
+
 // WaitingReplies answers who is waiting on this reader for a reply.
 //
 // One row per thread — the newest inbound in it — because a customer who wrote
@@ -365,13 +451,14 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		// job has set nothing aside.
 		reader := arg(readerOrNobody(ctx))
 		rows, err := tx.Query(ctx,
-			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap,
+			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				waitingHorizonDays,
 				liveRecord(openDealPredicate, "d"),
 				liveRecord(workingLeadPredicate, "ld"),
 				liveRecord(openDealPredicate, "openDeal"),
 				liveRecord(openDealPredicate, "fd"),
-				reader), args...)
+				reader,
+				scopeUnbounded), args...)
 		if err != nil {
 			return err
 		}
@@ -381,7 +468,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.PersonID, &row.OrganizationID, &row.DealID,
-				&row.HasOpenDeal); err != nil {
+				&row.HasOpenDeal, &row.OwnerID); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)
@@ -392,4 +479,85 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		return nil, fmt.Errorf("activities: reading who is waiting for a reply: %w", err)
 	}
 	return waiting, nil
+}
+
+// waitingReplyEntityClause narrows the thread walk to one record, in the SAME
+// vocabulary linktarget.go and listActivitiesFilter's own entity_type/id
+// filter use — a record type added to linkColumn or the organization arm
+// reaches this walk too, rather than a second copy silently missing it.
+func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any) int) (string, error) {
+	if entityType == string(datasource.RecordOrganization) {
+		// An account's timeline is wider than its direct links (mail is filed
+		// against the person it was with), so this reuses the SAME three-arm
+		// walk the timeline list and the company view both read through —
+		// see OrgLinkedActivityExists.
+		return OrgLinkedActivityExists(arg(entityID)), nil
+	}
+	column := linkColumn(entityType)
+	if column == "" {
+		return "", &InvalidLinkTypeError{EntityType: entityType}
+	}
+	typePos := arg(entityType)
+	idPos := arg(entityID)
+	return sprintf("EXISTS (SELECT 1 FROM activity_link el WHERE el.activity_id = a.id AND el.entity_type = $%d AND el.%s = $%d)",
+		typePos, column, idPos), nil
+}
+
+// waitingReplyExistsClause builds the timeline list's `waiting_reply=true`
+// filter: the SAME thread walk WaitingReplies runs for the Worklist,
+// embedded as a subquery so the outer list's own entity/kind/cursor terms
+// compose with it rather than duplicating what "unanswered" means.
+//
+// The subquery is uncorrelated — it computes its own candidate set rather
+// than reading the outer FROM — so its own `a` alias shadowing the outer
+// query's is harmless.
+func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.Time, entityType *string, entityID *ids.UUID) (string, error) {
+	instant := arg(asOf)
+	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
+	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
+	if err != nil {
+		return "", err
+	}
+	if linkVisible == "" {
+		linkVisible = scopeUnbounded
+	}
+	entityClause := scopeUnbounded
+	if entityType != nil && entityID != nil {
+		entityClause, err = waitingReplyEntityClause(*entityType, *entityID, arg)
+		if err != nil {
+			return "", err
+		}
+	}
+	// The SAME reader, horizon and live-record rules WaitingReplies applies
+	// for the Worklist: a thread the Worklist would not name as waiting must
+	// not be named by a record page either, and a per-record set-aside must
+	// still be this reader's own.
+	reader := arg(readerOrNobody(ctx))
+	return "a.id IN (SELECT id FROM (" +
+		fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap,
+			waitingHorizonDays,
+			liveRecord(openDealPredicate, "d"),
+			liveRecord(workingLeadPredicate, "ld"),
+			liveRecord(openDealPredicate, "openDeal"),
+			liveRecord(openDealPredicate, "fd"),
+			reader,
+			entityClause) +
+		") waiting_thread)", nil
+}
+
+// appendWaitingReplyClause is listActivitiesFilter's `waiting_reply=true`
+// term, split out so that already-long function does not have to grow to
+// hold it. A no-op when the caller did not ask for the filter.
+func appendWaitingReplyClause(ctx context.Context, in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
+	if in.WaitingReplyAsOf == nil {
+		return where, nil
+	}
+	clause, err := waitingReplyExistsClause(ctx, arg, *in.WaitingReplyAsOf, in.EntityType, in.EntityID)
+	if err != nil {
+		return nil, err
+	}
+	return append(where, clause), nil
 }

@@ -252,6 +252,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "weekly_plan": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
       }
     },
     "row_scope": "all"
@@ -509,6 +515,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "weekly_plan": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
       }
     },
     "row_scope": "all"
@@ -766,6 +778,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "weekly_plan": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
       }
     },
     "row_scope": "team"
@@ -1019,6 +1037,12 @@
         "update": true
       },
       "webhook_subscription": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "weekly_plan": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1280,6 +1304,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "weekly_plan": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       }
     },
     "row_scope": "all"
@@ -1537,6 +1567,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "weekly_plan": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
       }
     },
     "row_scope": "own"

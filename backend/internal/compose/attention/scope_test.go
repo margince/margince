@@ -141,7 +141,7 @@ func TestAPageOfTheReadersOwnIsNotShortenedByColleaguesRows(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
 
-	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3, nil, leadRead{})
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3, waitingRead{}, leadRead{})
 
 	if len(out.Queue) != 3 {
 		t.Fatalf("a reader with three of their own rows got a page of %d", len(out.Queue))
@@ -357,7 +357,7 @@ func TestOpeningAnothersQueueCarriesTheirWorkAndNotTheReadersOwn(t *testing.T) {
 	}
 	reader := &Service{taskOwner: lena, taskScope: TasksOwnedBy}
 
-	out := reader.worklistFrom(context.Background(), day, scopeMine, "", 25, nil, leadRead{})
+	out := reader.worklistFrom(context.Background(), day, scopeMine, "", 25, waitingRead{}, leadRead{})
 
 	var ids []string
 	for _, row := range out.Queue {
@@ -382,9 +382,19 @@ func (t teammatesSaying) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bo
 	return bool(t), nil
 }
 
+// The roster half answers the reader alone, which is what a caller on no team
+// gets from the real reader. These tests are about the yes/no half.
+func (t teammatesSaying) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return []TeamMember{{UserID: ids.UUID{1}, DisplayName: "the reader"}}, false, nil
+}
+
 // teammatesFailing is the membership read that could not answer.
 type teammatesFailing struct{}
 
 func (teammatesFailing) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bool, error) {
 	return false, errors.New("reading team membership")
+}
+
+func (teammatesFailing) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return nil, false, errors.New("reading team membership")
 }

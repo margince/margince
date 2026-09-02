@@ -4,6 +4,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
+import { useModelCallsInFlight } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { throwProblem } from "../screens/common";
 import { displayedKinds } from "./ai-activity-lines";
@@ -13,6 +14,21 @@ type AiActivityItem = components["schemas"]["AiActivityItem"];
 /** Fast while the AI is mid-occurrence; slow otherwise. */
 const POLL_LIVE_MS = 3_000;
 const POLL_IDLE_MS = 30_000;
+
+/**
+ * How long this tab's own ask stays reported after its request ended.
+ *
+ * A model call that answers in a tenth of a second is still the agent doing
+ * something a person asked for, and a light that appears and disappears inside
+ * one animation frame is a light nobody sees. This is the same floor the
+ * ticker's lines are given (`LINGER_MS` in agentrail-ticker.ts) and for the
+ * same reason: long enough to register, short enough that the report is never
+ * stale. It stretches the PRESENTATION of a real event and invents none: the
+ * offline fake model answers in about a tenth of a second, so without a floor
+ * every dev stack and every demo would show exactly the nothing this change
+ * exists to fix.
+ */
+const ASK_LINGER_MS = 900;
 
 const ACTIVITY_KEY = ["me", "ai-activity"] as const;
 
@@ -26,6 +42,16 @@ export type AiActivity = Readonly<{
   recent: readonly AiActivityItem[];
   /** Whether any AI work is live RIGHT NOW, as reported by a read that answered. */
   working: boolean;
+  /**
+   * Whether THIS TAB is holding a request open to a route that calls a model.
+   *
+   * Its own fact, beside the feed rather than mixed into it, because the two
+   * know different things. The feed knows what the work IS and is the only
+   * thing that may say so; it arrives on a poll, so it cannot answer the
+   * instant somebody presses a button. This answers exactly that instant and
+   * nothing else: no kind, no state, no sentence.
+   */
+  asking: boolean;
 }>;
 
 /**
@@ -43,6 +69,7 @@ export type AiActivity = Readonly<{
 export function useAiActivity(): AiActivity {
   const client = useQueryClient();
   const [visible, setVisible] = useState(() => !document.hidden);
+  const open = useModelCallsInFlight();
 
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -85,11 +112,35 @@ export function useAiActivity(): AiActivity {
     // Coalesced through NOTHING for the same reason the result below is: the
     // cached body is whatever the server sent, and reaching into it for a
     // length is what turns an off-contract 200 into a throw.
+    // An ask in flight counts as live even before the feed agrees. The
+    // projection is written from an event the router publishes, so there is a
+    // short window in which this tab knows the agent is working and the feed
+    // does not yet, and resting at the idle cadence through that window is how
+    // a run that lasted five seconds was read at thirty-second resolution.
+    // The raw count and not the lingering flag: the linger is presentation,
+    // and the cadence follows the fact.
     refetchInterval: (q) =>
-      (q.state.data?.running ?? NOTHING).length > 0
+      open > 0 || (q.state.data?.running ?? NOTHING).length > 0
         ? POLL_LIVE_MS
         : POLL_IDLE_MS,
   });
+
+  // Both EDGES of an ask, read immediately rather than waited for: the request
+  // leaving is when the occurrence appears, and the request answering is when
+  // it settles. Polling alone would show each of those up to a poll late, which
+  // for the short tasks a person triggers and then watches is most of the run.
+  //
+  // On `open` rather than on the lingering flag above, because the linger is a
+  // presentation floor and this is a read: waiting it out would put the settled
+  // line on screen most of a second after the draft it describes.
+  const previousOpen = useRef(open);
+  useEffect(() => {
+    if (open === previousOpen.current) {
+      return;
+    }
+    previousOpen.current = open;
+    void client.refetchQueries({ queryKey: ACTIVITY_KEY });
+  }, [open, client]);
 
   // The app disables focus refetching for every query (FE-PARAM-3), so
   // returning to the tab is otherwise answered out of the cache — and the
@@ -115,14 +166,67 @@ export function useAiActivity(): AiActivity {
   // whole section throws instead of reporting nothing.
   const answered = query.data;
   const running = answered?.running ?? NOTHING;
+  const recent = answered?.recent ?? NOTHING;
+  const asking = useLingeringAsk(open, recent[0]?.id);
   return {
     running,
-    recent: answered?.recent ?? NOTHING,
+    recent,
     // STALLED is not working. The server derives that state for an occurrence
     // whose own source says it should have finished by now, and the chrome that
     // reads `working` pulses to say the AI is busy — so counting a stalled item
     // here would animate "still going" over a line that reads "it may have
     // stopped", softening the one verdict this state exists to deliver.
     working: running.some((item) => item.state !== "stalled"),
+    asking,
   };
+}
+
+/**
+ * An ask, held on screen for long enough to be seen.
+ *
+ * `open` is the truth and this is what a reader can perceive of it. The floor
+ * lives here rather than in the store so the count stays honest for anybody
+ * else who reads it: a store that lied about what was in flight to make a light
+ * look right would hand its next consumer a fact that is not one.
+ *
+ * The floor is for a call the feed never caught up with. `newestSettled` is
+ * the feed's newest settled occurrence; a DIFFERENT one arriving while the ask
+ * lingers is the feed naming the work that just finished, and the linger
+ * yields to it at once — holding a bare "working" over a line that already
+ * says what was done would be the presentation contradicting the record.
+ */
+function useLingeringAsk(
+  open: number,
+  newestSettled: string | undefined,
+): boolean {
+  const [lingering, setLingering] = useState(false);
+  // What the feed's newest settled occurrence was when the ask left. Null
+  // while no ask is being held, so a settlement from some other run does not
+  // count as this one's.
+  const settledAtAsk = useRef<{ id: string | undefined } | null>(null);
+  useEffect(() => {
+    if (open > 0) {
+      settledAtAsk.current ??= { id: newestSettled };
+      setLingering(true);
+      return undefined;
+    }
+    if (!lingering) {
+      // Nothing is being held over, so there is nothing to stop holding. The
+      // guard is what keeps a rail that has never seen an ask from arming a
+      // timer on every mount, which is a page that never goes quiet.
+      settledAtAsk.current = null;
+      return undefined;
+    }
+    if (settledAtAsk.current && settledAtAsk.current.id !== newestSettled) {
+      setLingering(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      setLingering(false);
+    }, ASK_LINGER_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [open, lingering, newestSettled]);
+  return open > 0 || lingering;
 }

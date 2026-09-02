@@ -118,6 +118,10 @@ type Service struct {
 	// ordinary way: nil is a feed that does not read leads at all, which the
 	// queue reports as an absent source rather than as an empty one.
 	leads LeadResponses
+	// overdueLoad is the team board's COUNTING reader for tasks, beside the
+	// bounded listing reader the ranked queue uses. Optional, and its absence
+	// draws no column rather than a column of zeros.
+	overdueLoad OverdueLoad
 	// decisionDepth is how many staged decisions a read takes. The lane feed's
 	// page is a prefetch for a surface that answers one at a time; the ranked
 	// queue takes a census, because a batch row that says "10" over a pile of
@@ -175,74 +179,6 @@ func NewService(
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
 		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
 	}
-}
-
-// WithWaiting binds the who-is-waiting reader.
-//
-// An option rather than another positional argument: NewService already takes
-// nineteen, and the next reader to add one would be adding the twentieth to a
-// call nobody can read. The lane is absent when it is not bound, which is the
-// same promise every optional lane makes.
-func (s *Service) WithWaiting(w Waiting) *Service {
-	s.waiting = w
-	return s
-}
-
-// WithUndelivered binds the given-up-on-sends reader — an option for the reason
-// WithWaiting is one, which this lane would otherwise have been the first to
-// disprove.
-func (s *Service) WithUndelivered(u Undelivered) *Service {
-	s.undelivered = u
-	return s
-}
-
-// WithIntroductions binds the reader for asks waiting on this colleague — an
-// option for the reason WithWaiting is one.
-//
-// Unbound, the lane is ABSENT rather than empty: "this installation does not do
-// introductions" is a different fact from "nobody has asked you for one", and a
-// colleague told the second when the first is true would stop looking.
-func (s *Service) WithIntroductions(i Introductions) *Service {
-	s.introductions = i
-	return s
-}
-
-// WithMachineSender binds the rule that tells a sending system from a person.
-func (s *Service) WithMachineSender(is MachineSender) *Service {
-	s.machine = is
-	return s
-}
-
-// WithDealFacts binds the reader that puts a deal's own figures on a row whose
-// producer carried only its id. An option for the reason WithWaiting is one.
-//
-// Unbound, those rows travel with a name and no figures, which is what they did
-// before this seam existed — a smaller card, never a wrong one.
-func (s *Service) WithDealFacts(f DealFacts) *Service {
-	s.dealFacts = f
-	return s
-}
-
-// WithTeammates binds the membership question a team-scoped reader's named-owner
-// ask is decided by. An option for the reason WithWaiting is one.
-//
-// Unbound, a team-scoped reader naming somebody else is REFUSED — the opposite
-// of how the optional lanes above degrade, and deliberately so: those answer
-// "this installation has no such lane", while this one answers "may I", and an
-// unanswerable may-I is a no.
-func (s *Service) WithTeammates(t Teammates) *Service {
-	s.teammates = t
-	return s
-}
-
-// WithLeadResponses binds the inbound leads still owed a first reply.
-//
-// Read BESIDE the assembled day rather than as a fifteenth lane, the way the
-// waiting-customer source already is: /attention publishes a fourteen-lane
-// promise, and this is not one of them. The queue is where the two orders meet.
-func (s *Service) WithLeadResponses(l LeadResponses) *Service {
-	s.leads = l
-	return s
 }
 
 // countingDecisions returns a copy of this service that reads decisions to

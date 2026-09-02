@@ -53,20 +53,47 @@ func slippingLister(pool *pgxpool.Pool) agents.SlippingLister {
 // Deals whose expected close date has passed join the set at ANY window: an
 // overdue close is late whatever the idle clock says.
 func quietDealLister(pool *pgxpool.Pool, quietForDays int) agents.SlippingLister {
-	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
+	scan := quietDealScan(pool, quietForDays)
 	return func(ctx context.Context) ([]agents.SlippingDeal, error) {
+		candidates, _, err := scan(ctx)
+		return candidates, err
+	}
+}
+
+// quietDealScan is quietDealLister with its SCAN DEPTH reported.
+//
+// The bool says a sweep stopped at its bound, and it travels with the rows
+// because it cannot be recovered from them: this reader filters after it scans,
+// keeping only what is quiet or overdue out of two bounded sweeps, so ten
+// survivors can be all that is left of a full fifty. A caller comparing the
+// returned count against the bound would read a truncated scan with few
+// survivors as a complete one — under-reporting, which is the one direction a
+// figure about somebody's workload must never fail in.
+//
+// One function with two callers rather than two predicates: quietDealLister
+// above is this, with the depth dropped, because agents.SlippingLister is a
+// shared type this cannot widen.
+func quietDealScan(
+	pool *pgxpool.Pool, quietForDays int,
+) func(context.Context) ([]agents.SlippingDeal, bool, error) {
+	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
+	return func(ctx context.Context) ([]agents.SlippingDeal, bool, error) {
 		limit := slippingScanLimit
 		quiet, _, err := store.ListDeals(ctx, deals.ListDealsInput{
 			QuietForDays: &quietForDays, Limit: &limit,
 		})
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		openStatus := "open"
 		open, _, err := store.ListDeals(ctx, deals.ListDealsInput{Status: &openStatus, Limit: &limit})
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
+		// EITHER sweep at its bound means deals may sit past it. Asked of what
+		// was READ, before anything is filtered, which is the whole reason this
+		// question cannot be answered from the returned rows.
+		cut := len(quiet) >= slippingScanLimit || len(open) >= slippingScanLimit
 
 		// The quiet sweep already applied the window, so its rows are admitted
 		// on that ground alone. Testing candidate.Stalled instead would ask the
@@ -84,7 +111,7 @@ func quietDealLister(pool *pgxpool.Pool, quietForDays int) agents.SlippingLister
 		// any installation not running in UTC.
 		zone, err := installationZone(ctx, pool)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		now := time.Now().UTC()
 		out := make([]agents.SlippingDeal, 0, len(quiet))
@@ -100,7 +127,7 @@ func quietDealLister(pool *pgxpool.Pool, quietForDays int) agents.SlippingLister
 			seen[candidate.DealID] = true
 			out = append(out, candidate)
 		}
-		return out, nil
+		return out, cut, nil
 	}
 }
 

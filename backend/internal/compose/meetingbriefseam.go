@@ -19,8 +19,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -31,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,13 +40,21 @@ import (
 // assembles fresh on every call because a cached brief is the one thing a
 // pre-meeting read must not be. The only difference between the two surfaces
 // is who is asking.
-func meetingBriefReader(pool *pgxpool.Pool) agents.MeetingBriefReader {
-	peopleStore := people.NewStore(InstallationDB(pool))
-	view := person360.NewService(pool, peopleStore, deals.NewStore(InstallationDB(pool), DealsInstallation()), ProjectsStore(pool),
-		consent.NewStore(InstallationDB(pool)),
-		comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))),
-		ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
-	service := meetingbrief.NewService(pool, view, peopleStore, time.Now)
+//
+// It takes the SERVER's service rather than building a second one. This used to
+// construct its own person360 and its own meetingbrief.Service from the pool,
+// which was one engine in name only: WithMeetingBriefWriter binds the model
+// lane to the server's instance, so the human surface would have got model
+// prose while the agent surface silently kept the deterministic floor —
+// "one brief, both surfaces" is the rule this seam exists to hold, and two
+// services is how it would have been broken without anything failing.
+//
+// A nil service means this role wired no brief at all; the tool then degrades
+// to the assembled picture, which is what RegisterIntentTools already does.
+func meetingBriefReader(service *meetingbrief.Service) agents.MeetingBriefReader {
+	if service == nil {
+		return nil
+	}
 	return func(ctx context.Context, activityID ids.UUID) (agents.MeetingBriefResult, error) {
 		brief, filed, err := service.GetFiled(ctx, activityID)
 		if err != nil {
@@ -78,6 +85,7 @@ func agentMeetingBrief(brief crmcontracts.MeetingBrief) agents.MeetingBriefResul
 		}
 		out.Sections = append(out.Sections, part)
 	}
+	out.Plan = agentMeetingPlan(brief.Plan)
 	return out
 }
 
@@ -93,4 +101,24 @@ func agentBriefLine(sentence crmcontracts.OrganizationBriefSentence) agents.Meet
 		})
 	}
 	return line
+}
+
+// newMeetingBriefService composes a brief for a role that has NO SERVER to
+// borrow one from: the harnesses and the non-server registries built through
+// NewRegistryFor, where the tool would otherwise degrade to the assembled
+// picture and prep_for_meeting would answer without a brief at all.
+//
+// This is not the second engine the seam above refuses. That refusal is about
+// one PROCESS holding two, where WithMeetingBriefWriter binds the model lane to
+// the server's instance and the agent surface would silently keep the
+// deterministic floor. A composition with no server has no instance to diverge
+// from; this is the only one, and the api role still passes its own.
+func newMeetingBriefService(db *database.DB) *meetingbrief.Service {
+	pool := db.Pool()
+	peopleStore := people.NewStore(db)
+	view := person360.NewService(pool, peopleStore, deals.NewStore(db, DealsInstallation()), ProjectsStore(pool),
+		consent.NewStore(db),
+		comms.NewStore(db, time.Now, activities.NewStore(db)),
+		ai.NewFeedbackStore(db), time.Now)
+	return meetingbrief.NewService(pool, view, peopleStore, time.Now)
 }

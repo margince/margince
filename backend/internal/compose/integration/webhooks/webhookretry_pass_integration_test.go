@@ -30,10 +30,14 @@ import (
 )
 
 // webhookSweepCtx is the scope the retry workspace worker binds before it calls
-// the engine: the tenant, and nothing else. The sweep re-sends deliveries that
-// were already authorized against their owner's scope when they were enqueued,
-// so it resolves no principal and writes no audited row — a suite that bound
-// more would be exercising a pass production never runs.
+// the engine: the tenant, and nothing else. The sweep resolves no principal of
+// its own and writes no audited row — a suite that bound more would be
+// exercising a pass production never runs.
+//
+// It does re-check each delivery's visibility before re-sending, from the
+// subscription owner recorded on the row rather than from anything in this
+// context (webhookrevisibility_integration_test.go). That is why binding only
+// the tenant is still enough.
 func webhookSweepCtx(ws ids.UUID) context.Context {
 	return principal.WithWorkspaceID(context.Background(), ws)
 }

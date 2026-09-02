@@ -132,19 +132,16 @@ export function CallDetailPanel({
   );
 }
 
-export function AiCallsCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  const me = useMe();
-  // Same seam as the spend card beside it: the server gates this read on
-  // automation:update, a write verb guarding a GET, so the seat ceiling stays out
-  // of the question (capability.ts) — a read seat may still read it.
-  const canSee = useCan("automation", "update");
-  const zone = viewerZone();
-  const [task, setTask] = useState("");
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const query = useInfiniteQuery({
-    enabled: canSee,
+// The trace's first page, as one query the card and the page header share.
+//
+// The header wants a single fact from it — when the runtime last called a model
+// — and the unfiltered trace is where that fact lives, so it asks for the same
+// window under the same key rather than opening a second read of the same
+// endpoint. `task: ""` is the card's own no-filter state, which is why the two
+// coincide exactly when the reader has filtered nothing.
+function useCallTrace(task: string, enabled: boolean) {
+  return useInfiniteQuery({
+    enabled,
     queryKey: ["ai-calls", task],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
@@ -158,6 +155,59 @@ export function AiCallsCard() {
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
+}
+
+/**
+ * When the runtime last reached a model, as epoch ms — or null while nobody
+ * knows yet.
+ *
+ * Null covers three different silences on purpose, because the caller draws
+ * nothing for any of them: the read is not this reader's, the page has not
+ * arrived, and the installation has never called. A zero here would be an
+ * instant in 1970, and a "never" would be a claim this hook cannot make for the
+ * first two.
+ *
+ * Its OWN query rather than the card's. The card pages through a filtered trace
+ * on demand; this wants the newest row and wants it to keep up, and the two
+ * cannot share a key without one imposing its refetch on the other — a poll
+ * over every page the reader had loaded.
+ */
+export function useLastCallAt(): number | null {
+  const canSee = useCan("automation", "update");
+  const query = useQuery({
+    enabled: canSee,
+    queryKey: ["ai-call-latest"],
+    // The header says how long ago the last call was, so the figure has to move
+    // while the page is open. A minute is the resolution it reads at.
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await api.GET("/ai/calls", {});
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  // Read through the grant, not only around it. A revoked grant disables the
+  // query but leaves its last answer in the cache, and returning that would go
+  // on showing a seat the runtime activity it may no longer see.
+  if (!canSee) {
+    return null;
+  }
+  const newest = query.data?.data[0];
+  return newest ? Date.parse(newest.occurred_at) : null;
+}
+
+export function AiCallsCard() {
+  const t = useT();
+  const { locale } = useLocale();
+  const me = useMe();
+  // Same seam as the spend card beside it: the server gates this read on
+  // automation:update, a write verb guarding a GET, so the seat ceiling stays out
+  // of the question (capability.ts) — a read seat may still read it.
+  const canSee = useCan("automation", "update");
+  const zone = viewerZone();
+  const [task, setTask] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const query = useCallTrace(task, canSee);
   const calls = query.data?.pages.flatMap((page) => page.data) ?? [];
   const captureEnabled = query.data?.pages[0]?.payload_capture_enabled ?? false;
   // The filter options are the server's complete task set (carried on every

@@ -25,7 +25,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // worklistPage is how many ranked items one read carries by default.
@@ -110,11 +109,12 @@ func (s *Service) Worklist(
 	// under the ownership dial this read already resolved, so `mine` narrows
 	// in the store's own query rather than by dropping rows afterwards.
 	leads, leadsErr := reader.owedLeads(ctx)
-	// On the READER, not on s. The narrowing lives on the copy forOwner made,
-	// and projecting from the original left s.taskOwner zero — so keepOwnedBy
-	// never ran and a page headed with a rep's name was never narrowed to them
-	// at all. The lead lane made this visible: its rows are the first that
-	// keepOwnedBy has to keep deliberately rather than by carrying a deal.
+	// The NARROWED service, not the shared one. The narrowing happens twice on
+	// this path — once when the lanes are read, once when the assembled rows are
+	// kept — and both halves read the same taskOwner. Projecting through `s`
+	// left the second half seeing no named owner: it fell through to "mine" and
+	// returned the READER's own day under the named person's heading, which is
+	// the one way this page can be wrong that its reader cannot detect.
 	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads)
 	if waitingErr != nil {
 		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
@@ -137,14 +137,14 @@ func (s *Service) Worklist(
 // which part it could not read.
 func (s *Service) waitingCustomers(
 	ctx context.Context, asOf time.Time,
-) ([]WaitingCustomer, *crmcontracts.WorklistSourceUnavailable) {
+) (waitingRead, *crmcontracts.WorklistSourceUnavailable) {
 	if s.waiting == nil {
-		return nil, nil
+		return waitingRead{}, nil
 	}
-	rows, err := s.waiting.Unanswered(ctx, asOf)
+	rows, cut, err := s.waiting.Unanswered(ctx, asOf)
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return nil, &crmcontracts.WorklistSourceUnavailable{
+		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
 		}
 	case err != nil:
@@ -153,17 +153,31 @@ func (s *Service) waitingCustomers(
 		// on — which is how this one went a whole verification round without
 		// anybody being able to say what broke.
 		slog.ErrorContext(ctx, "the who-is-waiting read failed", "error", err)
-		return nil, &crmcontracts.WorklistSourceUnavailable{
+		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
 	default:
-		return rows, nil
+		return waitingRead{rows: rows, read: true, cut: cut}, nil
 	}
+}
+
+// waitingRead is what the who-is-waiting source answered, and whether it ran.
+//
+// `read` tells an empty answer from an absent lane, the way the lead read's own
+// wrapper does: reach publishes a row for every source it is told about, so
+// recording a source that never ran would report it as successfully read and
+// empty. `cut` is the lane's own scan depth, which the row count cannot
+// recover — the seam drops machine senders and folds duplicate threads AFTER
+// the SQL cap, so a short answer is what a truncated scan looks like.
+type waitingRead struct {
+	rows []WaitingCustomer
+	read bool
+	cut  bool
 }
 
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
-	waiting []WaitingCustomer, leads leadRead,
+	waiting waitingRead, leads leadRead,
 ) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
@@ -172,31 +186,27 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf)
-	// A waiting message has no owner of its own, so under `mine` its ownership
-	// is the ownership of the record it is filed under: a thread about a
-	// colleague's deal is that colleague's to answer. Judged against the deals
-	// this reader owns in THIS day, which is the set `mine` already narrowed.
-	owned := ownedDealsIn(ctx, day, scope)
 	// Longest wait first, so the few that LEAD are the ones most likely to have
 	// been forgotten rather than whichever the database returned first.
-	mine := make([]WaitingCustomer, 0, len(waiting))
-	for _, customer := range waiting {
-		if mineOnly(scope) && !waitingIsMine(customer, owned) {
-			continue
-		}
-		// The unassigned queue is about work with no ASSIGNEE, and a message has
-		// no assignee column — waitingIsMine reads the record it is filed under,
-		// which cannot tell "nobody owns this" from "the owner's deal is
-		// healthy". Rather than guess, this scope carries no waiting rows and
-		// every one of them stays reachable from mine, team and all.
-		if scope == scopeUnassigned {
-			continue
-		}
-		mine = append(mine, customer)
+	waits := make([]ranked, 0, len(waiting.rows))
+	for _, customer := range waiting.rows {
+		waits = append(waits, classifyWaiting(customer, day.AsOf))
 	}
-	sort.SliceStable(mine, func(i, j int) bool { return mine[i].Since.Before(mine[j].Since) })
-	for i, customer := range mine {
-		row := classifyWaiting(customer, day.AsOf)
+	sort.SliceStable(waits, func(i, j int) bool {
+		return waits[i].occurredAt.Before(waits[j].occurredAt)
+	})
+	// Narrowed BEFORE the crowding mark, through the same filters every other
+	// source is narrowed by. Crowding is a fact about position — the ninth wait
+	// on THIS page — so marking it over rows the scope then removes would demote
+	// a reader's second waiting customer for standing behind seven of a
+	// colleague's.
+	//
+	// One spelling for one rule. This loop used to judge ownership itself, in
+	// terms of the WaitingCustomer rather than the ranked row, which is how the
+	// two ended up disagreeing: a named owner's queue dropped every wait because
+	// the filter below could not see an owner this loop could.
+	waits = s.narrowToScope(ctx, waits, scope, s.taskOwner)
+	for i, row := range waits {
 		// Past the lead, a wait sorts BELOW the other kinds without ceasing to
 		// be one: its level still says a customer is waiting, because that is
 		// what it is and the summary counts on it. What changes is only where
@@ -233,18 +243,16 @@ func (s *Service) worklistFrom(
 	// lead this queue already shows says nothing the lead row does not.
 	rows = dropEscalationTasksAlreadyOwed(rows)
 
-	switch {
 	// Whose queue this is, applied to the rows the same way the lane applied it
-	// to the query. A deal-bearing row belonging to somebody else is not part
-	// of this person's day, and leaving it in would make a manager's answer to
-	// "show me Lena's queue" quietly include rows that are not hers.
-	case !s.taskOwner.IsZero():
-		rows = keepOwnedBy(rows, s.taskOwner)
-	case mineOnly(scope):
-		rows = keepReadersOwn(ctx, rows)
-	case scope == scopeUnassigned:
-		rows = keepUnowned(rows)
-	}
+	// to the query. A row belonging to somebody else is not part of this
+	// person's day, and leaving it in would make a manager's answer to "show me
+	// Lena's queue" quietly include rows that are not hers.
+	//
+	// The waiting rows above already ran through this — they had to, before
+	// their crowding was decided — and running them through it again keeps
+	// nothing new: each filter is a per-row test, so a row it kept once it keeps
+	// again.
+	rows = s.narrowToScope(ctx, rows, scope, s.taskOwner)
 	// The lead read's own bound, which boundedSources cannot see: it reads
 	// beside the assembled day rather than as one of its lanes, so the figure
 	// travels with the rows.
@@ -256,6 +264,13 @@ func (s *Service) worklistFrom(
 	// make.
 	if leads.read {
 		bounded[sourceLeadResponse] = leads.bounded()
+	}
+	// The same rule for the who-is-waiting source, and for the same reason it
+	// needed one: it is read beside the assembled day rather than as one of its
+	// lanes, so boundedSources never saw it and the page reported it complete
+	// however deep the scan had gone.
+	if waiting.read {
+		bounded[sourceWaiting] = waiting.cut
 	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
@@ -310,11 +325,6 @@ func (s *Service) worklistFrom(
 	return out
 }
 
-// ownedDealsIn is the set of deals on this day that the reader owns.
-//
-// Read off the assembled day rather than queried again: the at-risk lane has
-// already returned the deals under the reader's own scope, so this is the
-// answer that surface already has rather than a second opinion about it.
 // boundedSources names the lanes that came back exactly at their own work
 // bound, and therefore may have had more behind them.
 //
@@ -326,11 +336,18 @@ func (s *Service) worklistFrom(
 // complete tells a rep there is no more work of that kind, and there is no
 // failing row to notice — which is why every lane with a bound appears here and
 // `TestEveryBoundedLaneIsNamedInTheBoundsTable` fails when a new one is not.
-// The bounds of the two lanes whose limit lives behind their seam, where this
+// The bounds of the lanes whose limit lives behind their seam, where this
 // package cannot reach it. They are MIRRORS: `compose.slippingScanLimit` and
 // `compose.decayCandidateCap` are the real numbers, and
 // `backend/gates/worklistbounds_test.go` fails in both directions when either
 // side moves, because a mirror nobody checks is a wrong number waiting.
+//
+// The waiting source held a third mirror and no longer does. A mirror exists to
+// be compared against a ROW COUNT, and for that source the row count is the
+// wrong evidence: its seam filters after the scan, so the survivors are fewer
+// than what was read and a short answer is what truncation looks like. The lane
+// reports its own scan depth instead, which is the shape any source that
+// filters after it scans needs.
 const (
 	quietDealBound = 50
 	decayBound     = 40
@@ -370,26 +387,6 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
 	bounded["dedupe_candidate"] = bounded["approval"]
 	return bounded
-}
-
-func ownedDealsIn(ctx context.Context, day crmcontracts.Attention, scope string) map[ids.UUID]bool {
-	owned := map[ids.UUID]bool{}
-	if !mineOnly(scope) || day.AtRisk == nil {
-		return owned
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return owned
-	}
-	for _, item := range *day.AtRisk {
-		if item.Deal == nil || item.Deal.OwnerId == nil || item.Subject == nil {
-			continue
-		}
-		if ids.UUID(*item.Deal.OwnerId) == actor.UserID {
-			owned[ids.UUID(item.Subject.Id)] = true
-		}
-	}
-	return owned
 }
 
 // page cuts the candidates to what one read carries.
