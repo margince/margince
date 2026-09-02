@@ -3,6 +3,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  beginModelCall,
+  endModelCall,
+  modelCallsInFlight,
+} from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { useAiActivity } from "./ai-activity";
 import { displayedKinds, lineFor } from "./ai-activity-lines";
@@ -98,6 +103,12 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  // The in-flight count is module state every case in this file shares. A case
+  // that fails between its begin and its end would otherwise hand the next case
+  // an agent already asking, and the failure would name the wrong test.
+  while (modelCallsInFlight() > 0) {
+    endModelCall();
+  }
   // The listener-registry case spies on document itself, which would otherwise
   // outlive its test.
   vi.restoreAllMocks();
@@ -294,5 +305,127 @@ describe("the kinds filter", () => {
     for (const kind of new URL(urls[0]).searchParams.getAll("kinds")) {
       expect(lineFor({ kind, state: "done" }, (key) => key)).not.toBeNull();
     }
+  });
+});
+
+// This tab's own ask, which is the half of the fact the feed cannot deliver in
+// time. The projection is written from an event the router publishes, so there
+// is a window between the button and the feed in which the agent is working and
+// the poll has not looked; at the idle cadence that window was thirty seconds,
+// which is longer than most of the tasks a person triggers and then waits on.
+describe("the reader's own ask", () => {
+  it("reports the agent as asked the moment a model call opens", async () => {
+    const { result } = mount(() => jsonResponse(activity([])));
+    await advance(0);
+    expect(result.current.asking).toBe(false);
+
+    await act(async () => {
+      beginModelCall();
+    });
+
+    expect(result.current.asking).toBe(true);
+
+    // The count is module state shared by every test in this file, so an ask
+    // left open here would report the NEXT test's agent as busy.
+    await act(async () => {
+      endModelCall();
+    });
+  });
+
+  it("holds the ask long enough to be seen after the call answers", async () => {
+    const { result } = mount(() => jsonResponse(activity([])));
+    await advance(0);
+    await act(async () => {
+      beginModelCall();
+    });
+
+    // The offline fake model answers in about this long, so an ask reported
+    // only for the life of its request would never be drawn at all.
+    await advance(100);
+    await act(async () => {
+      endModelCall();
+    });
+    await advance(500);
+    expect(result.current.asking).toBe(true);
+
+    await advance(400);
+    expect(result.current.asking).toBe(false);
+  });
+
+  it("reads the feed at both ends of a call rather than waiting for a poll", async () => {
+    const { reads } = mount(() => jsonResponse(activity([])));
+    await advance(0);
+    expect(reads).toHaveLength(1);
+
+    // The occurrence appears when the request leaves.
+    await act(async () => {
+      beginModelCall();
+    });
+    await advance(0);
+    expect(reads).toHaveLength(2);
+
+    // It settles when the request answers, and waiting out the linger first
+    // would put the settled line on screen most of a second late.
+    await act(async () => {
+      endModelCall();
+    });
+    await advance(0);
+    expect(reads).toHaveLength(3);
+  });
+
+  // The floor is for a call the feed never caught up with. Once the feed
+  // carries the settled run, the idle line names it, and a bare "working" held
+  // over that line would be the presentation contradicting the record.
+  it("yields the linger the moment the feed carries the settled run", async () => {
+    let settled = false;
+    const { result } = mount(() =>
+      jsonResponse(
+        settled
+          ? {
+              as_of: "2026-08-21T05:00:01Z",
+              running: [],
+              recent: [
+                {
+                  ...A_RUN,
+                  kind: "draft_reply",
+                  state: "done",
+                  finished_at: "2026-08-21T05:00:01Z",
+                },
+              ],
+            }
+          : activity([]),
+      ),
+    );
+    await advance(0);
+    await act(async () => {
+      beginModelCall();
+    });
+    await advance(0);
+
+    settled = true;
+    await act(async () => {
+      endModelCall();
+    });
+    // The end-edge read answers, and that is enough: no 900ms wait.
+    await advance(0);
+    expect(result.current.asking).toBe(false);
+  });
+
+  it("polls fast while an ask is open and the feed still reports nothing", async () => {
+    const { reads } = mount(() => jsonResponse(activity([])));
+    await advance(0);
+    await act(async () => {
+      beginModelCall();
+    });
+    // The edge read above.
+    await advance(0);
+    const beforeCadence = reads.length;
+
+    await advance(3_000);
+    expect(reads.length).toBeGreaterThan(beforeCadence);
+
+    await act(async () => {
+      endModelCall();
+    });
   });
 });
