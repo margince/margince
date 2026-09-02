@@ -13,14 +13,12 @@ package compose
 // is somebody else, create them", reject means the card stays uncreated, and
 // a decline is remembered so re-importing the same file does not re-ask.
 //
-// The proposal deliberately carries NO target. The decline memory is keyed on
-// (kind, target, identity), and the candidate's visibility differs per
-// importer — person rows are scoped, with capture privacy on top — so a
-// candidate-targeted proposal would put the same card in a different bucket
-// per importer, and a decline in one would be invisible to the others. One
-// bucket, one memory: the candidate travels in the payload for display, and
-// deciding is gated on the create grants alone, which is exactly what the
-// approval spends.
+// The proposal deliberately carries NO target — the candidate travels in the
+// payload for display only, and deciding is gated on the create grants
+// alone, which is exactly what the approval spends. The decline memory is
+// keyed on (kind, target, identity) and the identity carries the staging
+// subject, so the memory is per-importer by design: a self-only kind's
+// declines are one member's own answers, never another member's.
 
 import (
 	"context"
@@ -72,6 +70,21 @@ type vcardCreateProposal struct {
 	// importer could see it too. Informational for the decider; the create
 	// itself does not read it.
 	CandidatePersonID *openapi_types.UUID `json:"candidate_person_id,omitempty"`
+	// StagedBy is the importer's own user id. vcard_create is self-only — one
+	// member's own uploaded address book — but neither the identity-keyed
+	// supersession nor the diff-hash join/decline-memory the engine runs for
+	// EVERY kind carries a subject filter of its own; both trust a caller's
+	// discriminator to already be collision-proof. A card is otherwise
+	// addressed by facts a stranger can read off a business card or simply
+	// guess (a name, a company), so without this a second member staging a
+	// same-named — or even a same-named-and-same-company — card could
+	// silently withdraw or answer a colleague's unrelated pending review.
+	// Folding the subject in here, in BOTH the identity and (because it is a
+	// plain field with no omitempty) the hashed payload, makes every one of
+	// this kind's proposals inherently per-importer no matter which fields
+	// the card itself states. Not offered to a decider (no DISPLAY_FIELDS
+	// entry) — a self-only proposal's importer already knows their own id.
+	StagedBy string `json:"staged_by"`
 }
 
 // vcardCreateStager builds the people module's review port: one card's
@@ -83,8 +96,9 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 		// member's own uploaded address book, so the importer is recorded as
 		// the proposal's subject and is the only person who can read or
 		// decide it. Without the stamp a self-only row is decidable by
-		// nobody, so the two halves land together.
-		ctx, err := withGhostOwnerAsSubject(ctx)
+		// nobody, so the two halves land together. subject is the exact id
+		// the approval row itself will carry as on_behalf_of.
+		ctx, subject, err := withGhostOwnerAsSubject(ctx)
 		if err != nil {
 			return err
 		}
@@ -106,6 +120,7 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 			Phones:       strings.Join(phones, ", "),
 			URL:          strings.TrimSpace(entry.URL),
 			Address:      strings.TrimSpace(entry.Address),
+			StagedBy:     subject.String(),
 		}
 		if candidate != nil {
 			id := openapi_types.UUID(candidate.UUID)
@@ -119,14 +134,22 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 		// not the whole payload: a re-export that reorders phone numbers or
 		// tweaks a title is still the same question, and a decline keyed on
 		// the full payload would be forgotten the first time a field moved.
-		// Organization joins the identity as the discriminator for the card
-		// with no address at all — the name-collision lane's common case. Two
-		// emailless cards naming the same person at the same company are ONE
-		// question; at different companies they are two.
+		// staged_by joins it for a different reason than the card fields do:
+		// full_name, emails and organization say WHICH card; staged_by says
+		// WHOSE — and without it, two members' cards naming the same person
+		// (or, for a bare name with no other addressing at all, simply
+		// sharing one) would be one question in the engine's eyes, answerable
+		// and withdrawable by either member's stager.
+		//
+		// Every field named here must carry no `omitempty` on the struct
+		// above: the engine refuses an identity asserting a key the payload's
+		// JSON omits, and a card whose value is legitimately empty (no email,
+		// no company) is not exempt from being asked about.
 		identity, err := json.Marshal(map[string]any{
 			fieldFullName:                  proposal.FullName,
 			"emails":                       proposal.Emails,
 			string(recordTypeOrganization): proposal.Organization,
+			"staged_by":                    proposal.StagedBy,
 		})
 		if err != nil {
 			return fmt.Errorf("compose: encoding the vCard proposal identity: %w", err)

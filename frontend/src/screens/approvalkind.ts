@@ -195,6 +195,12 @@ export const EDITABLE_FIELDS: Readonly<
       label: "approval.field.expected_close_date",
     },
   ],
+  // Every flattened field here is a display copy of the card the server
+  // parsed (vcardCreateProposal's Entry), and the create reads only that
+  // nested struct — never the flattened strings a generic editor would offer
+  // back. An edit to any of them would silently do nothing, so none is
+  // offered rather than each looking like a live field that quietly is not.
+  vcard_create: [],
 };
 
 // What a reader SEES of a proposal, per kind — the read-side counterpart of
