@@ -43579,7 +43579,7 @@ type ServerInterface interface {
 	// Lift an exclusion.
 	// (DELETE /capture/exclusions/{id})
 	DeleteCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id)
-	// Destroy the mail one of your own rules matched.
+	// Destroy the mail one exclusion rule matched.
 	// (POST /capture/exclusions/{id}/purge)
 	PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams)
 	// What your mailbox is holding right now.
@@ -45544,7 +45544,7 @@ func (_ Unimplemented) DeleteCaptureExclusion(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Destroy the mail one of your own rules matched.
+// Destroy the mail one exclusion rule matched.
 // (POST /capture/exclusions/{id}/purge)
 func (_ Unimplemented) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
