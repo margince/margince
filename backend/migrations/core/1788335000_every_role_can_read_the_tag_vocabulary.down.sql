@@ -1,0 +1,14 @@
+-- Nothing to undo, and nothing that COULD be undone honestly.
+--
+-- The up migration ADDS objects.tag where a role has none. The row keeps no
+-- record of which documents it wrote, so a rollback cannot tell a key this
+-- migration added from one that predated it or one an operator has since set by
+-- hand — and removing the key wholesale would revoke a valid grant to undo a
+-- write that never happened for that role.
+--
+-- The forward direction is also the safe one to leave in place. Read on a
+-- vocabulary every role already applies is not a permission a rollback needs to
+-- take away: an installation running the previous code with the key present
+-- behaves exactly as one that always had it, which is what every installation
+-- bootstrapped after 1788320100 already is.
+SELECT 1;
