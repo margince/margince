@@ -132,7 +132,7 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/people/organizationtechnical.go:auditTechnicalEnrichment": "what a company publicly runs lands in organization_fact and no column of the organization moves, so no field has a prior value for an image to name. What was replaced is still recorded, and more precisely than an image would: the evidence carries the rows written AND the rows the reconciliation removed, which is what makes a mail provider moving to Microsoft 365 readable as a move rather than as an arrival",
 
-	"internal/modules/collections/tags.go:ApplyTag": "the tag row is untouched; the write inserts a taggable link, " +
+	"internal/modules/collections/tags.go:applyTagTx": "the tag row is untouched; the write inserts a taggable link, " +
 		"and the after image names the record it now points at.",
 	"internal/modules/collections/tags.go:RemoveTag": "the tag row is untouched; the write deletes a taggable link, " +
 		"and the after image names the record it stopped pointing at.",

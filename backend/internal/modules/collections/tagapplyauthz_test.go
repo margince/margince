@@ -79,3 +79,30 @@ func TestRemovingATagNeedsUpdateOnTheTarget(t *testing.T) {
 		t.Fatalf("a seat holding project.read but not project.update removed a tag: %v", err)
 	}
 }
+
+// The importer's entry point carries the SAME gates as the HTTP one. It reaches
+// the write from inside a transaction the migration module opened, and a path
+// that skipped a gate there would let an import tag records its approver could
+// not — the more dangerous of the two doors, because nothing on screen says the
+// tag was applied.
+//
+// Both refuse before any query, so a nil transaction is never touched: reaching
+// it would itself be the failure these assert against.
+func TestTheImportersApplyCarriesTheSameGatesAsTheHTTPOne(t *testing.T) {
+	store := NewStore(nil)
+
+	readOnly := taggerWith(map[string]principal.ObjectGrant{
+		"tag":     {Read: true},
+		"project": {Read: true},
+	})
+	if _, err := store.ApplyTagTx(readOnly, nil, ids.New[ids.TagKind](), "project", ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a seat holding project.read but not project.update tagged through the importer: %v", err)
+	}
+
+	noVocabulary := taggerWith(map[string]principal.ObjectGrant{
+		"project": {Read: true, Update: true},
+	})
+	if _, err := store.ApplyTagTx(noVocabulary, nil, ids.New[ids.TagKind](), "project", ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a seat that may not read the vocabulary tagged through the importer: %v", err)
+	}
+}

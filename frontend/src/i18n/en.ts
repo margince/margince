@@ -1795,6 +1795,14 @@ export const en = {
   "tagAdmin.listLabel": "Vocabulary",
   "tagAdmin.empty":
     "No tags yet. Add the first word this organization files records under.",
+  "import.contextTag": "File this batch under a tag",
+  "import.contextTagChosen":
+    "Records this import creates will be filed under {name}.",
+  "import.contextTagChosenUnnamed":
+    "Records this import creates will be filed under the tag chosen for this run.",
+  "import.contextTagHint":
+    "Applied to records this import creates, so the batch stays findable. Records it updates keep the tags they have.",
+  "import.contextTagNone": "No tag",
   "tagAdmin.add": "Add tag",
   "tagAdmin.addTitle": "Add a tag",
   "tagAdmin.editTitle": "Edit tag",

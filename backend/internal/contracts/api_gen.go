@@ -18600,6 +18600,21 @@ type CreateImportRunRequest struct {
 	// Connector The source kind. The HubSpot and Salesforce connectors run the same engine and arrive with their own tickets (IEM-AC-8).
 	Connector CreateImportRunRequestConnector `json:"connector"`
 
+	// ContextTagId A tag applied to every record this run CREATES, so a batch stays
+	// findable as a batch — "the K5 conference list", "the January
+	// partner file".
+	//
+	// By id, and the tag must already exist: an import that coined a word
+	// would hand the vocabulary's one governed door to anyone who can
+	// upload a file, and a misspelling in a spreadsheet header would
+	// become a permanent tag nobody chose.
+	//
+	// Creates only. A row that UPDATES a record the estate already held
+	// leaves that record's tags alone — the run did not put it in the
+	// estate, and tagging it would claim the batch contains records it
+	// only touched.
+	ContextTagId *openapi_types.UUID `json:"context_tag_id,omitempty"`
+
 	// Mapping `{source column → target field}`, as the human settled it. Validated against
 	// the object's live field catalog before the run is created.
 	//

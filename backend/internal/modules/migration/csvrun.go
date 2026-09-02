@@ -44,6 +44,12 @@ type RunMapping struct {
 	// must not create them because the decision lived only in the request.
 	// Empty means the contract's default, `create`.
 	OnDuplicate string `json:"on_duplicate,omitempty"`
+	// ContextTag files every record this run CREATES under one word, so a batch
+	// stays findable as a batch. It rides with the mapping for the same reason
+	// OnDuplicate does: the commit happens on a later request than the one that
+	// chose it, and a decision that lived only in the create call would be lost
+	// by the time anything wrote a row.
+	ContextTag string `json:"context_tag,omitempty"`
 }
 
 // CreateStagedRunInput opens a run that must be approved before it writes.
