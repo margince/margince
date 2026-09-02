@@ -186,10 +186,35 @@ func TestDraftEmailFiringLandsTheComposedDraftOnTheRunRecord(t *testing.T) {
 	dealID := e.SeedDeal(t, "Draft Email Probe Deal", pipeline, open, nil)
 
 	engine := compose.NewWorkflowEngine(e.DB())
-	engine.RegisterSystemWorkflow(draftEmailProbe{
+	// RegisterWorkflow, not RegisterSystemWorkflow: a draft_email action now
+	// refuses at compose time with no owner behind the firing
+	// (MissingDraftOwnerError), and a system handler's firing carries no
+	// owner by contract (workflow.Event.OwnerID's own doc) — there is no
+	// instance behind it to read one from. The catalog/instance path below
+	// is what every drafting automation in production actually runs
+	// through, Rep1 owning it is what makes principal.SendingHuman resolve.
+	engine.RegisterWorkflow(draftEmailProbe{
 		comms:     draftingComms{subject: "Re: next step", body: "Following up on our last conversation."},
 		approvals: stagingApprovals{svc: approvals.NewService(e.DB())},
 	})
+	// The match-time gate (gate.go) resolves the owner's authority through
+	// identity.Service reading the REAL role/role_assignment tables, not the
+	// harness's in-memory permission fixtures e.As() uses — so a
+	// human-authored firing needs an actual role row or the gate blocks it
+	// as a lost permission, the same requirement
+	// no_activity_reminder_workqueue_integration_test.go's
+	// seedTaskCreatePermission documents for its own owned automation.
+	seedTaskCreatePermission(t, OwnerConn(t), e.WS, e.Rep1)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO automation (key, name, trigger, action, params, owner_id, enabled)
+			VALUES ('task11a_draft_email_probe', 'Draft Email Probe',
+			        '{"event_type":"deal.stage_changed"}', '{"kind":"draft_email"}', '{}'::jsonb, $1, true)`,
+			e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("enrolling the draft-email probe instance: %v", err)
+	}
 
 	ctx := context.Background()
 	if err := engine.HandleEvent(ctx, kevents.Envelope{
