@@ -15,6 +15,7 @@ import { usePendingApprovals } from "./approvals.queries";
 import { BriefDials } from "./brief.dials";
 import { DoNext } from "./brief.donext";
 import { PlanSection } from "./brief.plan";
+import { ledAlready } from "./brief.sentence";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { BriefCoverage } from "./briefcoverage";
@@ -37,7 +38,7 @@ import {
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { HomeTeamBoard } from "./home.teamboard";
-import { TodaySection } from "./home.today";
+import { FocusSection } from "./home.today";
 import { WeeklySection } from "./home.weekly";
 import { useWorklist, type Worklist } from "./worklist.queries";
 import "./home.css";
@@ -219,13 +220,16 @@ function HomeWork({
       onAlreadyDecided={onAlreadyDecided}
     />
   );
-  const today = (
-    <TodaySection
-      key="today"
+  const focus = (
+    <FocusSection
+      key="focus"
       brief={brief}
       deals={deals}
       nowMs={nowMs}
       state={briefState}
+      // What "Do next" already drew, so one brief run reaching the page through
+      // two endpoints does not put the same suggestion on it twice.
+      drawnAbove={ledAlready(day)}
     />
   );
   // A KEYED array, not two fragments. Positional children of a fragment are
@@ -272,8 +276,8 @@ function HomeWork({
     return [lastWeek, nextWeek];
   }
   return items.length > 0
-    ? [decisions, doNext, today]
-    : [doNext, today, decisions];
+    ? [decisions, doNext, focus]
+    : [doNext, focus, decisions];
 }
 
 /**
@@ -407,7 +411,7 @@ export function HomeScreen() {
         overnight={overnightGlance(digestQuery.isSuccess, digest)}
         stalled={quietReading}
         onGoToDecisions={() => goToSection("home-decisions")}
-        onGoToToday={() => goToSection("home-today")}
+        onGoToToday={() => goToSection("home-focus")}
         onGoToDuplicates={() => navigate({ screen: "worklist" })}
         onGoToWatch={() => goToSection("home-watch")}
       />

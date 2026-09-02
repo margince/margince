@@ -19,7 +19,7 @@ import {
 import { HomeGlance } from "./home.glance";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
-import { TodaySection } from "./home.today";
+import { FocusSection } from "./home.today";
 import {
   installFetchStub,
   jsonResponse,
@@ -27,6 +27,9 @@ import {
   type RouteMap,
   StoryProviders,
 } from "./story-utils";
+
+// A story draws one section on its own, so nothing leads the page above it.
+const NOTHING_ABOVE: ReadonlySet<string> = new Set();
 
 // Home, one part at a time.
 //
@@ -273,27 +276,45 @@ export const DecisionsRefused: Story = {
 // The ranked queue: the composite as the first row of the same axis its five
 // factors are drawn on, and the factors in a softer fill so the row that leads
 // reads first.
-export const Today: Story = {
+export const Focus: Story = {
   render: part(
-    <TodaySection brief={ranked} deals={deals} nowMs={NOW} state="ready" />,
+    <FocusSection
+      brief={ranked}
+      deals={deals}
+      nowMs={NOW}
+      state="ready"
+      drawnAbove={NOTHING_ABOVE}
+    />,
     { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(ranked) },
   ),
 };
 
 // A run that ranked nothing, with the candidate count under it. Honest quiet,
 // and no invented urgency.
-export const TodayQuietRun: Story = {
+export const FocusQuietRun: Story = {
   render: part(
-    <TodaySection brief={quietRun} deals={deals} nowMs={NOW} state="ready" />,
+    <FocusSection
+      brief={quietRun}
+      deals={deals}
+      nowMs={NOW}
+      state="ready"
+      drawnAbove={NOTHING_ABOVE}
+    />,
     { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(quietRun) },
   ),
 };
 
 // No run has ever been made. The panel offers to make one instead of drawing an
 // empty queue that looks like a failure.
-export const TodayNoRun: Story = {
+export const FocusNoRun: Story = {
   render: part(
-    <TodaySection brief={null} deals={deals} nowMs={NOW} state="ready" />,
+    <FocusSection
+      brief={null}
+      deals={deals}
+      nowMs={NOW}
+      state="ready"
+      drawnAbove={NOTHING_ABOVE}
+    />,
     {
       ...RAIL_ROUTES,
       "POST /brief": () => jsonResponse(ranked),
@@ -304,9 +325,15 @@ export const TodayNoRun: Story = {
 // The read behind the queue failed. The panel says so where the cards would be,
 // rather than drawing the empty plate a morning with no run would show — the two
 // are different facts and used to look identical.
-export const TodayRefused: Story = {
+export const FocusRefused: Story = {
   render: part(
-    <TodaySection brief={null} deals={deals} nowMs={NOW} state="failed" />,
+    <FocusSection
+      brief={null}
+      deals={deals}
+      nowMs={NOW}
+      state="failed"
+      drawnAbove={NOTHING_ABOVE}
+    />,
   ),
 };
 
