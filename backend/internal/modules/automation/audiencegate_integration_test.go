@@ -151,6 +151,118 @@ func TestAFiringOnAMessageTheOwnerCanReadProceeds(t *testing.T) {
 	}
 }
 
+func TestAFiringWhoseOwnerCannotReadMessagesAtAllIsBlocked(t *testing.T) {
+	// The object half, which the row half cannot answer.
+	// EnsureActivityContentVisibleLive tests row and audience scope; it never
+	// asks whether this principal may read activities at all. The two come
+	// apart because every catalog action touching an activity requires
+	// activity.CREATE, and a role's CRUD verbs are independently editable — so
+	// an owner granted create but not read cannot open the message through the
+	// API, while a gate checking only the row would fire on it. The activity
+	// here is workspace-visible, so the row half passes and only the grant can
+	// block.
+	fx := setupAutomationDB(t)
+	applyCalls := 0
+	handler := scriptedWorkflow{
+		name: "create_but_not_read",
+		apply: func(workflow.Event) (workflow.RunResult, error) {
+			applyCalls++
+			return workflow.RunResult{}, nil
+		},
+	}
+	fx.seedAutomationWithOwner(t, handler.name, fx.rep1)
+	open := fx.seedActivity(t, "workspace")
+
+	writeOnly := fixtureResolver{rbac: authz.RBAC{Permissions: principal.Permissions{
+		RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{
+			"activity": {Create: true, Update: true, Delete: true},
+		},
+	}}}
+	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), writeOnly)
+	engine.RegisterWorkflow(handler)
+
+	if err := engine.HandleEvent(context.Background(), activityEventFor(open)); err != nil {
+		t.Fatalf("HandleEvent: %v", err)
+	}
+	run, ok := fx.runsByHandler(t)[handler.name]
+	if !ok {
+		t.Fatal("no run row recorded")
+	}
+	if run.status != "blocked" {
+		t.Errorf("run.status = %q, want blocked: the owner may create activities but not read "+
+			"them, so they cannot see the message this fired on", run.status)
+	}
+	if applyCalls != 0 {
+		t.Errorf("Apply called %d times, want 0", applyCalls)
+	}
+}
+
+func TestAFiringOnAnArchivedMessageIsBlocked(t *testing.T) {
+	// What "Live" buys. EnsureActivityContentVisible admits an archived row;
+	// the Live variant does not. A firing acts NOW, on a record a person can no
+	// longer open, so the strict variant is the right one — and swapping it for
+	// the lenient one is a one-word edit nothing else would notice.
+	fx := setupAutomationDB(t)
+	applyCalls := 0
+	handler := scriptedWorkflow{
+		name: "archived_subject",
+		apply: func(workflow.Event) (workflow.RunResult, error) {
+			applyCalls++
+			return workflow.RunResult{}, nil
+		},
+	}
+	fx.seedAutomationWithOwner(t, handler.name, fx.rep1)
+	archived := fx.seedActivity(t, "workspace")
+	fx.exec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, archived)
+
+	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)),
+		fullyPermittedOwner())
+	engine.RegisterWorkflow(handler)
+
+	if err := engine.HandleEvent(context.Background(), activityEventFor(archived)); err != nil {
+		t.Fatalf("HandleEvent: %v", err)
+	}
+	if applyCalls != 0 {
+		t.Error("the firing applied on an archived message: the check admits rows a person " +
+			"can no longer open")
+	}
+}
+
+func TestAFiringOnAMessageTheOwnerCapturedProceeds(t *testing.T) {
+	// The second admit case, and the one that proves the check reads the real
+	// audience arm rather than testing `audience = 'workspace'`. The message is
+	// limited to its participants, but this owner's own mailbox delivered it —
+	// the arm's captured_by clause — so they may read it and the firing runs.
+	fx := setupAutomationDB(t)
+	applyCalls := 0
+	handler := scriptedWorkflow{
+		name: "own_mailbox",
+		apply: func(workflow.Event) (workflow.RunResult, error) {
+			applyCalls++
+			return workflow.RunResult{}, nil
+		},
+	}
+	fx.seedAutomationWithOwner(t, handler.name, fx.rep1)
+	mine := ids.NewV7()
+	fx.exec(t, `
+		INSERT INTO activity (id, kind, audience, source, captured_by, occurred_at)
+		VALUES ($1, 'email', 'participants', 'gmail', 'connector:gmail:'||$2::text, now())`,
+		mine, fx.rep1)
+
+	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)),
+		fullyPermittedOwner())
+	engine.RegisterWorkflow(handler)
+
+	if err := engine.HandleEvent(context.Background(), activityEventFor(mine)); err != nil {
+		t.Fatalf("HandleEvent: %v", err)
+	}
+	if applyCalls != 1 {
+		t.Errorf("Apply called %d times, want 1: the owner's own mailbox delivered this "+
+			"message, so a limited audience still admits them", applyCalls)
+	}
+}
+
 func TestAFiringOnANonActivitySubjectIsUnaffected(t *testing.T) {
 	// The gate is deliberately narrow: audience is an activity's property, and
 	// every other subject's visibility follows row scope, which the object gate

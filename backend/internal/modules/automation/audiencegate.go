@@ -44,11 +44,24 @@ import (
 
 // activityEntity is the one entity type whose visibility this gate can answer.
 //
-// Deliberately narrow. Every other subject a firing names is already covered by
-// the object gate next door, because their visibility follows row scope, which
-// IS the owner's grants. The activity is the exception: its audience is written
-// on the row and moves without anybody's grants moving, which is exactly why
-// the object gate cannot see it.
+// Deliberately narrow, and narrow in a way worth stating because two nearby
+// shapes are NOT covered:
+//
+//   - The gate reads ev.Entity, the trigger's subject, never an action's own
+//     Target. Those can differ by design (gate.go's target-scoped arm says so),
+//     and no shipped handler produces an activity target that differs from its
+//     trigger today — people/leadrouting.go passes ev.Entity straight through.
+//     TestNoHandlerTargetsAnActivityAwayFromItsTrigger fails when one appears.
+//   - A signal carries activity-derived evidence with its own visibility
+//     (platform/auth's SignalScopeClause), and a signal-subject firing skips
+//     this gate. No human-owned signal workflow is registered
+//     (compose/workflows.go), so nothing reaches it, and
+//     TestNoCatalogTriggerCarriesASignalSubject fails when one is added.
+//
+// Every other subject's visibility follows row scope, which IS the owner's
+// grants, so the object gate next door already resolves it. The activity is the
+// exception: its audience is written on the row and moves without anybody's
+// grants moving.
 const activityEntity = datasource.EntityType("activity")
 
 // checkOwnerCanReadSubject refuses a firing whose subject the automation's
@@ -93,6 +106,25 @@ func checkOwnerCanReadSubject(ctx context.Context, db *database.DB, resolver aut
 		TeamIDs:     rbac.TeamIDs,
 		Permissions: rbac.Permissions,
 	})
+	// The OBJECT grant first, then the row. This is the order the real read
+	// path runs (activities/audience.go's GetActivityContent) and both halves
+	// are load-bearing: EnsureActivityContentVisibleLive answers row and
+	// audience scope, never whether this principal may read activities at all.
+	//
+	// The two come apart in practice. Every action in the catalog that touches
+	// an activity requires activity.CREATE (catalog_actions.go), and a role's
+	// CRUD verbs are independently editable — so an owner granted create but
+	// not read cannot open the message through the API while their automation
+	// would have fired on it.
+	if err := auth.Require(ownerCtx, "activity", principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return gateDecision{
+				blocked: true,
+				reason:  "the automation's owner may not read messages at all",
+			}, nil
+		}
+		return gateDecision{}, fmt.Errorf("automation: checking the owner's read grant: %w", err)
+	}
 	err = db.Tx(ctx, func(tx pgx.Tx) error {
 		return auth.EnsureActivityContentVisibleLive(ownerCtx, tx, ev.Entity.ID)
 	})
