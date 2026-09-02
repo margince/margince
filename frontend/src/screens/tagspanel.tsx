@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { MoreHorizontal, Plus } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { Button } from "../design-system/atoms";
@@ -29,12 +30,17 @@ export function TagsPanel({
   entityType,
   entityID,
   canEdit,
+  chrome = "card",
 }: Readonly<{
   entityType: TaggableType;
   entityID: string;
   /** Whether this reader may change the record. Applying a tag writes to the
    * RECORD, so a reader who may only look at it sees the words and no verbs. */
   canEdit: boolean;
+  /** The frame this host draws its rail in. The company rail is a column of
+   * cards, the person rail is ONE card of sections — the same tags inside two
+   * different chromes rather than two components that drift. */
+  chrome?: "card" | "section";
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -52,11 +58,9 @@ export function TagsPanel({
   }
   if (read.isPending) {
     return (
-      <Panel title={t("tags.panelTitle")}>
-        <PanelBody>
-          <p className="tagspanel-note">{t("tags.loading")}</p>
-        </PanelBody>
-      </Panel>
+      <TagsFrame chrome={chrome} title={t("tags.panelTitle")}>
+        <p className="tagspanel-note">{t("tags.loading")}</p>
+      </TagsFrame>
     );
   }
 
@@ -65,11 +69,9 @@ export function TagsPanel({
   // fact about the record that nobody established.
   if (read.data.withheld) {
     return (
-      <Panel title={t("tags.panelTitle")}>
-        <PanelBody>
-          <p className="tagspanel-note">{t("tags.withheld")}</p>
-        </PanelBody>
-      </Panel>
+      <TagsFrame chrome={chrome} title={t("tags.panelTitle")}>
+        <p className="tagspanel-note">{t("tags.withheld")}</p>
+      </TagsFrame>
     );
   }
 
@@ -82,40 +84,74 @@ export function TagsPanel({
   const hidden = tags.length - visible.length;
 
   return (
-    <Panel
+    <TagsFrame
+      chrome={chrome}
       title={t("tags.panelTitle")}
       sub={tags.length > 0 ? t("tags.panelSub") : undefined}
     >
-      <PanelBody>
-        {tags.length === 0 ? (
-          <div className="tagspanel-empty">
-            <p className="tagspanel-empty-title">{t("tags.emptyTitle")}</p>
-            <p className="tagspanel-note">{t("tags.emptyBody")}</p>
-          </div>
-        ) : (
-          <div className="tagspanel-set">
-            {visible.map((tag) => (
-              <TagOnRecord
-                key={tag.tag_id}
-                tag={tag}
-                entityType={entityType}
-                entityID={entityID}
-                canEdit={canEdit}
-              />
-            ))}
-            {hidden > 0 && (
-              <Button small variant="ghost" onClick={() => setExpanded(true)}>
-                {t("tags.more", { count: formatNumber(hidden, locale) })}
-              </Button>
-            )}
-            {expanded && tags.length > VISIBLE_TAGS && (
-              <Button small variant="ghost" onClick={() => setExpanded(false)}>
-                {t("tags.showLess")}
-              </Button>
-            )}
-          </div>
-        )}
-      </PanelBody>
+      {tags.length === 0 ? (
+        <div className="tagspanel-empty">
+          <p className="tagspanel-empty-title">{t("tags.emptyTitle")}</p>
+          <p className="tagspanel-note">{t("tags.emptyBody")}</p>
+        </div>
+      ) : (
+        <div className="tagspanel-set">
+          {visible.map((tag) => (
+            <TagOnRecord
+              key={tag.tag_id}
+              tag={tag}
+              entityType={entityType}
+              entityID={entityID}
+              canEdit={canEdit}
+            />
+          ))}
+          {hidden > 0 && (
+            <Button small variant="ghost" onClick={() => setExpanded(true)}>
+              {t("tags.more", { count: formatNumber(hidden, locale) })}
+            </Button>
+          )}
+          {expanded && tags.length > VISIBLE_TAGS && (
+            <Button small variant="ghost" onClick={() => setExpanded(false)}>
+              {t("tags.showLess")}
+            </Button>
+          )}
+        </div>
+      )}
+    </TagsFrame>
+  );
+}
+
+/**
+ * The frame around the tags, in whichever shape the host rail uses.
+ *
+ * The company rail is a column of sibling cards, so the tags are one more card.
+ * The person rail is ONE card whose contents are headed sections, so a second
+ * card inside it would draw a box in a box. Same contents either way — the
+ * alternative was a second panel component, and the two would have drifted the
+ * first time an empty state changed.
+ */
+function TagsFrame({
+  chrome,
+  title,
+  sub,
+  children,
+}: Readonly<{
+  chrome: "card" | "section";
+  title: string;
+  sub?: string;
+  children: ReactNode;
+}>) {
+  if (chrome === "section") {
+    return (
+      <section className="pe-rail-section">
+        <h3 className="pe-rail-heading">{title}</h3>
+        {children}
+      </section>
+    );
+  }
+  return (
+    <Panel title={title} sub={sub}>
+      <PanelBody>{children}</PanelBody>
     </Panel>
   );
 }
