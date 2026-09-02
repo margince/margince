@@ -269,7 +269,12 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 	}
 	// Terminally unsure: a human decides, and the ledger says so explicitly
 	// rather than by having quietly run out of attempts.
-	if err := e.pending.Retire(ctx, row, "below the confidence floor on a re-ask"); err != nil {
+	// The LAST answer travels with the retirement. A sender lands here because
+	// the model had an opinion it could not hold confidently enough — "it said
+	// person at 0.78 twice" is why a human is now being asked, and dropping it
+	// would hand them the question with none of the evidence.
+	if err := e.pending.Retire(ctx, row, "below the confidence floor on a re-ask",
+		lastMeasurement(retry, retryModel, answers, servedModel)); err != nil {
 		return 0, err
 	}
 	return 1, nil

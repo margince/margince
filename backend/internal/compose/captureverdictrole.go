@@ -51,7 +51,9 @@ func addressIsARoleMailbox(email string) bool {
 func (e *CounterpartyVerdictEngine) askAHumanInstead(
 	ctx context.Context, row capture.PendingCounterparty,
 ) (int, error) {
-	if err := e.pending.Retire(ctx, row, "no model is configured to judge this sender"); err != nil {
+	// No measurement: there was no model to ask.
+	if err := e.pending.Retire(ctx, row, "no model is configured to judge this sender",
+		capture.VerdictMeasurement{}); err != nil {
 		return 0, err
 	}
 	return 1, nil

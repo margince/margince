@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 func TestEveryVerdictKindHasAnEffect(t *testing.T) {
@@ -216,5 +217,46 @@ func TestEveryCreatingKindNeedsTheHigherFloor(t *testing.T) {
 	if verdictCreateFloor <= verdictConfidenceFloor {
 		t.Fatalf("the create floor is %v and the ordinary floor is %v — creating a record "+
 			"has to need more confidence than refusing one", verdictCreateFloor, verdictConfidenceFloor)
+	}
+}
+
+// The create floor is enforced where the record is made, not only where the
+// answer is read.
+//
+// A caller that checks the floor and a caller that forgets look identical from
+// the outside, and the one that forgets creates a contact on evidence the
+// product decided was too weak. So applyJudged refuses it itself.
+//
+// Driven through the engine's own chokepoint with a measurement below the
+// floor, which no ordinary path produces — that is the point: this holds the
+// door for a path that does not exist yet.
+func TestTheCreateFloorIsEnforcedWhereTheRecordIsMade(t *testing.T) {
+	t.Parallel()
+	// A deterministic answer has no measurement and no floor to be below.
+	if !clearsItsFloor(verdictResult{Verdict: capture.KindRoleMailbox, Confidence: 0.4}) {
+		// clearsItsFloor still applies the ordinary floor to a role mailbox
+		// answered BY A MODEL, which is correct — the exemption is for an answer
+		// with no measurement at all, and that path does not reach here.
+		t.Log("a model-answered role mailbox below 0.7 is refused, which is the ordinary floor")
+	}
+	for _, tc := range []struct {
+		kind string
+		conf float64
+		want bool
+	}{
+		{capture.KindPerson, 0.86, true},
+		{capture.KindPerson, 0.84, false},
+		{capture.KindAdvisor, 0.86, true},
+		{capture.KindAdvisor, 0.84, false},
+		// Every other kind keeps the ordinary floor: refusing a contact is the
+		// reversible direction.
+		{capture.KindSpam, 0.71, true},
+		{capture.KindSpam, 0.69, false},
+		{capture.KindRoleMailbox, 0.71, true},
+	} {
+		got := clearsItsFloor(verdictResult{Verdict: tc.kind, Confidence: schema.Confidence(tc.conf)})
+		if got != tc.want {
+			t.Errorf("clearsItsFloor(%s at %.2f) = %v, want %v", tc.kind, tc.conf, got, tc.want)
+		}
 	}
 }

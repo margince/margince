@@ -8,6 +8,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 )
@@ -39,6 +40,19 @@ func (e *CounterpartyVerdictEngine) applyOwnerDecision(ctx context.Context, row 
 func (e *CounterpartyVerdictEngine) applyJudged(
 	ctx context.Context, row capture.PendingCounterparty, verdict string, measured capture.VerdictMeasurement,
 ) (int, error) {
+	// The create floor is enforced HERE and not only at the call sites, because
+	// this is the chokepoint every model-made answer passes through on its way
+	// to a record. A caller that checked the floor and a caller that forgot look
+	// identical from the outside, and the one that forgot creates a contact on
+	// evidence the product decided was too weak.
+	//
+	// A deterministic answer carries no measurement and is not subject to a
+	// floor: a role mailbox is read off the address, and there is no confidence
+	// to be below.
+	if measured.Asked && createsARecord(verdict) && measured.Confidence < verdictCreateFloor {
+		return 0, fmt.Errorf(
+			"verdict: refusing to create a %s record below the create floor", verdict)
+	}
 	done, err := e.apply(ctx, row, verdict, false, measured)
 	if err != nil {
 		return 0, err
@@ -47,4 +61,24 @@ func (e *CounterpartyVerdictEngine) applyJudged(
 		return 1, nil
 	}
 	return 0, nil
+}
+
+// lastMeasurement is what the model actually said, taken from the re-ask when
+// it produced an answer and from the first ask otherwise.
+//
+// A retirement records the LAST opinion rather than the first, because that is
+// the one the floor rejected. Either ask can come back empty — a malformed
+// reply is dropped by the validator before it reaches here — so the fallback is
+// not decoration: without it a retirement after a failed re-ask would record
+// nothing, which reads as "no model was asked" when two were.
+func lastMeasurement(
+	retry []verdictResult, retryModel string, first []verdictResult, firstModel string,
+) capture.VerdictMeasurement {
+	if len(retry) == 1 {
+		return capture.MeasuredVerdict(float64(retry[0].Confidence), retryModel)
+	}
+	if len(first) == 1 {
+		return capture.MeasuredVerdict(float64(first[0].Confidence), firstModel)
+	}
+	return capture.VerdictMeasurement{}
 }

@@ -23,6 +23,18 @@ ALTER TABLE capture_pending_counterparty
 -- A confidence outside [0,1] is not a confidence. The check is here rather
 -- than only in Go because the column is read back by operators and by the
 -- review queue, and a value nothing could have meant would be believed.
+-- NOT VALID, then validated separately. A plain ADD CONSTRAINT scans the whole
+-- table while still holding the ACCESS EXCLUSIVE lock, and lock_timeout bounds
+-- only the wait to ACQUIRE that lock, never how long it is held once acquired.
+-- Every existing row has NULL in this column and would pass, so the scan proves
+-- nothing and the two-step costs nothing.
 ALTER TABLE capture_pending_counterparty
     ADD CONSTRAINT capture_pending_counterparty_confidence_range
-    CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1));
+    CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)) NOT VALID;
+
+-- VALIDATE takes only a SHARE UPDATE EXCLUSIVE lock, which readers and writers
+-- both pass. It matters for the CATALOG rather than for these rows: a
+-- constraint left NOT VALID is not trusted by the planner and reads as
+-- provisional to anybody auditing the schema.
+ALTER TABLE capture_pending_counterparty
+    VALIDATE CONSTRAINT capture_pending_counterparty_confidence_range;
