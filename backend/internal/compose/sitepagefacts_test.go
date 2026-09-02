@@ -735,6 +735,12 @@ func TestAnAddressWithNobodyInFrontOfItIsRefused(t *testing.T) {
 		"nothing at all":   "acme.example",
 		"a trailing at":    "anna@",
 		"two at signs":     "anna@muster@acme.example",
+		// RFC-valid, and the reason the domain is taken from the LAST @:
+		// mail.ParseAddress reads this as the single address
+		// `x@acme.example/@other.example`, so cutting at the FIRST @ hands
+		// "acme.example/@other.example" to a URL parse that reads its host as
+		// acme.example — an address on other.example vouching for an acme page.
+		"a quoted local part carrying an at": `"x@acme.example/"@other.example`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if addressOnSiteDomain(address, seedURL) {

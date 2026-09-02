@@ -310,10 +310,23 @@ func addressOnSiteDomain(email, pageURL string) bool {
 	if err != nil {
 		return false
 	}
-	local, domain, found := strings.Cut(parsed.Address, "@")
-	if !found || local == "" || domain == "" {
+	// The LAST @, because a quoted local part may contain one: mail.ParseAddress
+	// reads `"x@acme.example/"@other.example` as the single address
+	// `x@acme.example/@other.example`, and cutting at the first @ would hand
+	// "acme.example/@other.example" to a URL parse that reads its host as
+	// acme.example — an address on other.example vouching for an acme page.
+	at := strings.LastIndex(parsed.Address, "@")
+	if at <= 0 || at == len(parsed.Address)-1 {
 		return false
 	}
+	domain := parsed.Address[at+1:]
+	// Nothing further is asserted about the domain's shape here, because two
+	// checks already own it: mail.ParseAddress refuses a path, a space or a
+	// second @ in an unquoted domain, and SameRegistrableDomain answers false
+	// for anything url.Parse or the public-suffix list cannot read. A guard
+	// between them would be one no input reaches, which is a guard nobody can
+	// tell from a broken one.
+	//
 	// A host in URL form because SameRegistrableDomain compares two URLs, and
 	// reusing it is what keeps this test and the crawler's the same test.
 	return webread.SameRegistrableDomain(pageURL, "https://"+domain)
