@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
+import { useCanWriteRecord } from "../app/capability";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { TagsPanel } from "./tagspanel";
 
@@ -29,13 +29,14 @@ function CompanyTags({
   organization,
   orgId,
 }: Readonly<{ organization: Organization; orgId: string }>) {
+  // useCanWriteRecord, not useCan: applying a tag is a WRITE to the record, so
+  // it owes the same three axes every other company control derives — the
+  // object grant, the licensing seat, and the server's own `writable` for this
+  // row. `useCompanyReadOnlyReason` adds the reason worth SAYING (archived, or
+  // an overlay installation); it deliberately stays quiet about an ownerless
+  // record, which `writable` is what answers.
+  const canUpdate = useCanWriteRecord("organization", organization);
   const readOnlyReason = useCompanyReadOnlyReason(organization);
-  // The two questions a MOUNT can answer: the object grant, and this row's own
-  // writability. `useCompanyReadOnlyReason` answers only the row — its own
-  // comment says every mount ANDs it with the grant. The third question, whether
-  // the vocabulary is visible at all, belongs to the panel: it draws the
-  // withheld state instead of the words, and its verb never reaches that path.
-  const canUpdate = useCan("organization", "update");
   const canEdit = canUpdate && !readOnlyReason;
 
   return (

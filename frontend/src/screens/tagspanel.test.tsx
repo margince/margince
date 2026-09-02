@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
 import { CompanyTagsSection } from "./companyrailtags";
+import { PersonTagsSection } from "./personrail";
 import {
   installFetchStub,
   jsonResponse,
@@ -179,15 +180,20 @@ describe("the company mount's add-tag verb", () => {
   function mountCompany(
     withheld: boolean,
     grants: Record<string, string[]> = { organization: ["update"] },
+    row: { writable: boolean } = { writable: true },
+    seat: "full" | "read" = "full",
   ) {
     installFetchStub({
-      "GET /me": meRoute(grants as never),
+      "GET /me": meRoute(grants as never, { seat }),
       [`GET /records/organization/${ORG}/tags`]: () =>
         jsonResponse({ data: [], withheld }),
     });
     render(
       <StoryProviders>
-        <CompanyTagsSection organization={ORG_ROW as never} orgId={ORG} />
+        <CompanyTagsSection
+          organization={{ ...ORG_ROW, ...row } as never}
+          orgId={ORG}
+        />
       </StoryProviders>,
     );
   }
@@ -209,6 +215,27 @@ describe("the company mount's add-tag verb", () => {
 
   // Applying writes to the RECORD, so the server asks for `organization.update`
   // as well. A seat without it would be offered a picker whose apply is refused.
+  // The row axis. A rep holding `organization.update` on the OBJECT still may
+  // not write a colleague's company, and the server stamps that as `writable`.
+  it("offers no verb on a company this reader may not write", async () => {
+    mountCompany(false, { organization: ["update"] }, { writable: false });
+    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
+  });
+
+  // The seat axis. A read seat is refused by the licensing middleware before
+  // RBAC is consulted, so a verb offered to one cannot lead to a saved tag.
+  it("offers no verb on a company to a read seat", async () => {
+    mountCompany(
+      false,
+      { organization: ["update"] },
+      { writable: true },
+      "read",
+    );
+    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
+  });
+
   it("offers no verb to a seat holding no update grant", async () => {
     mountCompany(false, {});
     expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
@@ -219,46 +246,61 @@ describe("the company mount's add-tag verb", () => {
 // The verb belongs to the PANEL, not to each host that mounts it. A person page
 // once shipped with tags a reader could see and no way to add one, because the
 // add button lived in the company wrapper and the person mount never placed it.
-// These assert the shared component carries it, whatever record it is drawn on.
-describe("the add verb travels with the panel", () => {
+// These drive the REAL mount, so they fail if it stops computing `canEdit`
+// correctly — a literal prop would only prove the panel obeys whatever it gets.
+describe("the person mount offers the verb the panel draws", () => {
   const PERSON = "01a06151-0000-7000-8000-000000000002";
 
-  function mountFor(entityType: "person" | "deal", canEdit: boolean) {
+  function mountPerson(
+    person: Record<string, unknown>,
+    grants: Record<string, string[]> = { person: ["update"] },
+    seat: "full" | "read" = "full",
+  ) {
     installFetchStub({
-      [`GET /records/${entityType}/${PERSON}/tags`]: () =>
+      "GET /me": meRoute(grants as never, { seat }),
+      [`GET /records/person/${PERSON}/tags`]: () =>
         jsonResponse({ data: [], withheld: false }),
     });
     render(
       <StoryProviders>
-        <TagsPanel
-          entityType={entityType}
-          entityID={PERSON}
-          canEdit={canEdit}
+        <PersonTagsSection
+          view={{ person: { id: PERSON, ...person } } as never}
         />
       </StoryProviders>,
     );
   }
 
-  it.each(["person", "deal"] as const)(
-    "offers the verb on a %s a seat may write",
-    async (entityType) => {
-      mountFor(entityType, true);
-      expect(
-        await screen.findByRole("button", { name: en["tags.add"] }),
-      ).toBeInTheDocument();
-    },
-  );
+  // The control: without it, a verb that never renders would pass every test
+  // below for the wrong reason.
+  it("offers the verb on a contact the seat may write", async () => {
+    mountPerson({ writable: true });
+    expect(
+      await screen.findByRole("button", { name: en["tags.add"] }),
+    ).toBeInTheDocument();
+  });
 
-  // The other half of the same rule: a reader who may not write the record sees
-  // the words and no verb, so the panel is not simply always offering one.
-  it.each(["person", "deal"] as const)(
-    "offers no verb on a %s the seat may only read",
-    async (entityType) => {
-      mountFor(entityType, false);
-      expect(
-        await screen.findByText(en["tags.emptyTitle"]),
-      ).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
-    },
-  );
+  // The row axis. A rep holding `person.update` on the OBJECT still may not
+  // write a colleague's contact, and the server stamps that as `writable`.
+  it("offers no verb on a contact this reader may not write", async () => {
+    mountPerson({ writable: false });
+    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
+  });
+
+  // The seat axis. A read seat is refused by the licensing middleware before
+  // RBAC is consulted, so a verb offered to one is a control whose save cannot
+  // succeed.
+  it("offers no verb to a read seat", async () => {
+    mountPerson({ writable: true }, { person: ["update"] }, "read");
+    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
+  });
+
+  // The object axis, for completeness: all three are necessary and none of the
+  // others would catch a mount that dropped this one.
+  it("offers no verb to a seat holding no update grant", async () => {
+    mountPerson({ writable: true }, {});
+    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
+  });
 });

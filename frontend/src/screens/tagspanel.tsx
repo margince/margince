@@ -121,7 +121,10 @@ export function TagsPanel({
           <AddTagButton onOpen={() => setAdding(true)} />
         </div>
       )}
-      {adding && (
+      {/* `canEdit` again, not `adding` alone: a seat downgrade, an archive or an
+          ownership change while the picker is open takes the button away, and a
+          dialog that outlived it would still submit. */}
+      {canEdit && adding && (
         <AddTagDialog
           entityType={entityType}
           entityID={entityID}
