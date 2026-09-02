@@ -308,7 +308,7 @@ func (c *fxConverter) toBase(ctx context.Context, amountMinor int64, currency st
 	if !found {
 		return 0, &FXRateUnavailableError{Currency: currency, AsOf: c.asOf}
 	}
-	return deals.ConvertToBase(amountMinor, rate.Rate)
+	return deals.ConvertToBase(amountMinor, rate.Rate, currency, c.rates.Base())
 }
 
 // openDealRow is one open deal's contribution inputs: nullable money

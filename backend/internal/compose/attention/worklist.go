@@ -101,6 +101,11 @@ func (s *Service) Worklist(
 	if err := reader.nameTheMoney(ctx, &day); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	// The amounts the ordering compares, put into one currency BEFORE anything
+	// reads them; basemoney.go states the whole rule.
+	if err := reader.priceDayOnto(ctx, day); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
@@ -185,7 +190,7 @@ func (s *Service) worklistFrom(
 	if limit > worklistMaxPage {
 		limit = worklistMaxPage
 	}
-	rows := classifyDay(day, day.AsOf)
+	rows := classifyDay(day, day.AsOf, s.money)
 	// Longest wait first, so the few that LEAD are the ones most likely to have
 	// been forgotten rather than whichever the database returned first.
 	waits := make([]ranked, 0, len(waiting.rows))
@@ -307,7 +312,7 @@ func (s *Service) worklistFrom(
 		// pure function of the same day this call already holds, so the two
 		// cannot disagree, and threading it would change a signature twenty-odd
 		// callers spell.
-		Summary:            summarize(ordered, materialBarOf(day)),
+		Summary:            summarize(ordered, materialBarOf(day, s.money)),
 		SourcesUnavailable: unavailable(day),
 		// `considered` is every candidate this read weighed, `shown` what
 		// survived folding and the cut. Both are already in hand, so no figure
@@ -423,22 +428,7 @@ func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranke
 // (backend/internal/compose/attention/worklist_test.go).
 func summarize(items []crmcontracts.WorklistItem, bar materialBar) crmcontracts.WorklistSummary {
 	summary := crmcontracts.WorklistSummary{Total: len(items)}
-	// Why a deal ranked where it did, in the figure the ranking actually used.
-	// The contract has promised this since the queue shipped and the projection
-	// never sent it, so every "material" and "below material" reason on the page
-	// was a verdict with its threshold withheld: a reader could see that a deal
-	// had been called big, and had no way to ask compared to what.
-	//
-	// base_currency stays absent, and that is not an oversight. The bar is the
-	// median of raw amount_minor values — expectedRevenue converts nothing, and
-	// says so — so on a mixed-currency pipeline the figure is not in any one
-	// currency. Naming one would assert a conversion that did not happen, which
-	// is worse than sending a number the client formats cautiously. It becomes
-	// answerable when the feed reads the FX seam.
-	if bar.known {
-		minor := bar.minor
-		summary.MaterialThresholdMinor = &minor
-	}
+	bar.stateOn(&summary)
 	for _, item := range items {
 		switch {
 		case item.Level <= levelPromise:

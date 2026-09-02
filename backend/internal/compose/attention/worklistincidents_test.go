@@ -29,7 +29,7 @@ func TestAlikeSystemFailuresAreOneIncident(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &failures}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 1 {
 		t.Fatalf("eight failures of one task drew %d rows", len(got))
@@ -53,7 +53,7 @@ func TestTwoBrokenThingsAreTwoIncidents(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &failures}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 2 {
 		t.Fatalf("two broken tasks drew %d rows", len(got))
@@ -79,7 +79,7 @@ func TestAnIncidentIsNotFiledAsRoutineTidying(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &failures}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if got[0].Category != "system" {
 		t.Fatalf("the incident is filed under %q, wanted system", got[0].Category)
@@ -99,7 +99,7 @@ func TestBouncesAreNeverFoldedIntoAnIncident(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Bounces: &bounces}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 4 {
 		t.Fatalf("four bounced customers drew %d rows — some were hidden", len(got))
@@ -119,7 +119,7 @@ func TestAIFailuresGroupByWhatRanNotByEachRunsOwnWords(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &failures}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 1 {
 		t.Fatalf("five failures of one task drew %d incidents", len(got))
@@ -143,7 +143,7 @@ func TestTwoBrokenMailboxesAreTwoIncidents(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &rows}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 2 {
 		t.Fatalf("two broken mailboxes drew %d rows, wanted one incident each", len(got))
@@ -170,7 +170,7 @@ func TestTwoSourcesSharingAConditionWordAreNotOneIncident(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &capture, AiWorkHealth: &ai}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 2 {
 		t.Fatalf("two sources sharing a condition word drew %d rows, wanted one each", len(got))
@@ -186,7 +186,7 @@ func TestASystemRowWithNoNamedConditionNeverGroups(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &rows}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 5 {
 		t.Fatalf("rows naming no condition folded into %d — a failure was hidden", len(got))

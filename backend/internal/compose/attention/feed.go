@@ -104,6 +104,11 @@ type Service struct {
 	// dealFacts is OPTIONAL in the same way: nil means a row whose producer
 	// carried only a deal id travels without the deal's figures.
 	dealFacts DealFacts
+	// fx is OPTIONAL in the same way, and money is one read's answer from it,
+	// written per read onto the request's own copy the way taskScope is.
+	// basemoney.go states what each means and why the copy matters.
+	fx    BaseMoney
+	money dayMoney
 	// machine answers whether an address is a sending system, for the group a
 	// routine contact decision joins. Nil means every address reads as a
 	// person's, which under-groups rather than hiding anything.

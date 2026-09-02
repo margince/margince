@@ -60,7 +60,7 @@ func nonEmptyTables(ctx context.Context, t *testing.T, owner *pgx.Conn) []string
 		  AND c.relkind IN ('r', 'p', 'f')
 		  AND c.relname NOT LIKE 'schema_migrations_%'
 		  AND c.relname <> 'river_migration'
-		  AND c.relname NOT IN ('activity_kind', 'channel_provider', 'lead_source', 'lead_disqualify_reason', 'field_mask', 'overlay_mode')
+		  AND c.relname NOT IN `+PreservedReferenceTables+`
 		ORDER BY n.nspname, c.relname`)
 	if err != nil {
 		t.Fatalf("listing tables: %v", err)
@@ -113,7 +113,7 @@ func TestResetScopeCoversEveryDataRelation(t *testing.T) {
 		  AND c.relkind IN ('r', 'p')
 		  AND c.relname NOT LIKE 'schema_migrations_%'
 		  AND c.relname <> 'river_migration'
-		  AND c.relname NOT IN ('activity_kind', 'channel_provider', 'lead_source', 'lead_disqualify_reason', 'field_mask', 'overlay_mode')
+		  AND c.relname NOT IN `+PreservedReferenceTables+`
 		ORDER BY n.nspname, c.relname`)
 	if err != nil {
 		t.Fatalf("listing every data relation: %v", err)
