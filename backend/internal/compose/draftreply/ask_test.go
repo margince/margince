@@ -39,15 +39,20 @@ func (l *retryingLane) CompleteValidated(
 	_ context.Context, _ model.Request, validate ai.Validator,
 ) (model.Response, error) {
 	l.validated++
-	if err := validate(l.reply); err != nil {
-		l.refused = err
-		return model.Response{Text: l.second}, nil
+	l.refused = validate(l.reply)
+	if l.refused == nil {
+		return model.Response{Text: l.reply}, nil
 	}
-	return model.Response{Text: l.reply}, nil
+	// A refusal is not this lane's failure to report: the real pipeline hands
+	// the message back to the model and asks again, and this double answers
+	// with what a corrected model would send.
+	return model.Response{Text: l.second}, nil
 }
 
-const refusable = `{"subject":"Intro?","body":"Could you introduce me to them?"}`
-const sendable = `{"subject":"Intro?","body":"Hi Sofia, could you introduce me to Philipp Königs?"}`
+const (
+	refusable = `{"subject":"Intro?","body":"Could you introduce me to them?"}`
+	sendable  = `{"subject":"Intro?","body":"Hi Sofia, could you introduce me to Philipp Königs?"}`
+)
 
 func readsIt(text string) error {
 	_, _, err := draftreply.Parse(text, "Sofia", "Philipp Königs")
