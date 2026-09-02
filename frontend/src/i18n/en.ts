@@ -1790,6 +1790,46 @@ export const en = {
   "co.recent.minutes": "{count} min",
   "co.recent.re": "on a deal",
   "co.recent.reNamed": "on {name}",
+  "tagAdmin.title": "Tags",
+  "tagAdmin.sub":
+    "The words this organization files records under. Anyone can apply one; only admin and ops seats add, rename or retire them.",
+  "tagAdmin.listLabel": "Vocabulary",
+  "tagAdmin.empty":
+    "No tags yet. Add the first word this organization files records under.",
+  "tagAdmin.add": "Add tag",
+  "tagAdmin.addTitle": "Add a tag",
+  "tagAdmin.editTitle": "Edit tag",
+  "tagAdmin.nameLabel": "Name",
+  "tagAdmin.colorLabel": "Colour",
+  "tagAdmin.colorNone": "No colour",
+  "tagAdmin.create": "Add",
+  "tagAdmin.save": "Save",
+  "tagAdmin.edit": "Edit",
+  "tagAdmin.merge": "Merge",
+  "tagAdmin.archive": "Retire",
+  "tagAdmin.restore": "Restore",
+  "tagAdmin.usage": "{count} records",
+  "tagAdmin.usagePending": "Counting…",
+  "tagAdmin.nearMatch":
+    "Close to a word this organization already has: {names}. Apply that one instead unless this is a different thing.",
+  "tagAdmin.mergeTitle": "Merge {name} into another tag",
+  "tagAdmin.mergeIntoLabel": "Keep this tag",
+  "tagAdmin.mergeIntoNone": "Choose a tag",
+  "tagAdmin.mergeConfirm": "Merge",
+  "tagAdmin.mergeWarning":
+    "This cannot be undone. Records carrying {name} will carry the other tag instead, and the name is released for anyone to use again.",
+  "tagAdmin.mergedTitle": "Merged",
+  "tagAdmin.mergedBody":
+    "{moved} records moved to the surviving tag. {collapsed} already carried both, so their duplicate was dropped.",
+  "tagAdmin.countUsage": "Count records",
+  "tagAdmin.noVersion":
+    "This tag was read without a version, so it cannot be saved. Reopen the page and try again.",
+  "tagAdmin.withheld":
+    "You do not have access to this organization's tag vocabulary.",
+  "tagAdmin.truncated":
+    "This list is shortened. Words past the limit are not shown here and cannot be edited or merged into.",
+  "tagAdmin.usageFailed": "Count unavailable",
+  "tagAdmin.done": "Done",
   "tags.archived": "archived",
   "tags.columnHeader": "Tags",
   "tags.filterAll": "Any tag",

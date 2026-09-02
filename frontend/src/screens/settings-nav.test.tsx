@@ -310,14 +310,15 @@ const EVERY_TAB_GRANTED: GrantSpec = {
   license: ["read"],
 };
 
-// The four reads Data model unions. Each has to open the page alone: an entry
-// wired to one object with three decorative terms passes any fixture that grants
-// all four.
+// The five reads Data model unions. Each has to open the page alone: an entry
+// wired to one object with four decorative terms passes any fixture that grants
+// all five.
 const DATA_MODEL_READS = [
   "custom_field",
   "pipeline",
   "product",
   "offer_template",
+  "tag",
 ] as const;
 
 // The seeded grant matrix, READ verbs only — the only verb an entry's predicate
