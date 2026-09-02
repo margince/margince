@@ -393,6 +393,22 @@ const DOSSIER_TEST_MS =
   ASYNC_UTIL_TIMEOUT_MS * 3 +
   SLOWEST_MEASURED_TEST_MS;
 
+/**
+ * Walk from the deck to the board that edits.
+ *
+ * Reading the whole record and editing it are separate acts with separate
+ * doors, so a test that acts on a field goes through both rather than assuming
+ * the board is what a review opens on.
+ */
+async function openTheEditingBoard(): Promise<void> {
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Read the whole profile" }),
+  );
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Edit the record" }),
+  );
+}
+
 describe("the conversational company act", () => {
   it("loads the detailed AI profile after the public login profile was cached", async () => {
     const calls = stubApi();
@@ -439,9 +455,12 @@ describe("the conversational company act", () => {
       render(<OnboardingScreen />);
 
       await submitWebsite();
-      // Every field is inline-editable on the review board — there is no
-      // separate edit mode to switch into first, only the collapsed row's own
-      // summary to open, exactly as a human would.
+      // The deck is the review's front door and asks one thing at a time, so
+      // the board every field is inline-editable on is two doors in: the whole
+      // record is read first, and editing it is its own act. Every field is
+      // still editable in place once there, with no mode to switch into beyond
+      // the collapsed row's own summary.
+      await openTheEditingBoard();
       await screen.findByRole("heading", {
         name: /Here is everything I found/,
       });
@@ -488,6 +507,8 @@ describe("the conversational company act", () => {
     render(<OnboardingScreen />);
 
     await submitWebsite();
+    // The fact selection this caps belongs to the editing board, not the deck.
+    await openTheEditingBoard();
     const accept = (await screen.findByRole("button", {
       name: /Continue/,
     })) as HTMLButtonElement;

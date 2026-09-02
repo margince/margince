@@ -256,31 +256,6 @@
   color: var(--danger);
 }
 
-/* The review's outstanding points, grouped by tier rather than one flat
- * list: a heading announces the panel as a to-do (not an error report),
- * then one labelled group per tier that actually differs — what stops
- * confirm, what stops it because a decision is pending, and what merely
- * wants a look. Each group is its own stacked list; unlike a chip set
- * answering the machine, this is navigation into rows that already exist
- * on the surface. */
-.ob-conv-attention {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.ob-conv-attention-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.ob-conv-attention-field {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .ob-conv-confirm {
   display: flex;
   flex-direction: column;
