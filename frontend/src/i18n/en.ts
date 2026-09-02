@@ -1783,7 +1783,7 @@ export const en = {
   "co.recent.dir.both": "both sides",
   "co.recent.minutes": "{count} min",
   "co.recent.re": "on a deal",
-  "co.tags.title": "Lists & tags",
+  "co.tags.title": "Tags",
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",

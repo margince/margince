@@ -30,7 +30,6 @@ func seedSurfaces(c *client, seats *sessions, cfg demoConfig, refs pipelineRefs,
 		run  func() (int, error)
 	}{
 		{"tags", func() (int, error) { return seedTags(c, refs, plan, mode) }},
-		{"lists", func() (int, error) { return seedLists(c, refs, mode) }},
 		// Projects themselves are NOT here — they are created earlier, before
 		// seedActivities, because an activity links to the project it was
 		// about and cannot link to a row that does not exist yet.
@@ -157,49 +156,6 @@ var demoLists = []struct {
 		Name: "Abgesprungen", EntityType: "organization", ListType: "dynamic",
 		Definition: jsonBody{"and": []jsonBody{{"field": "lifecycle", "op": "eq", "value": "former_customer"}}},
 	},
-}
-
-func seedLists(c *client, refs pipelineRefs, mode runMode) (int, error) {
-	created := 0
-	existing := map[string]bool{}
-	if mode != modeDryRun {
-		err := c.getAll("/v1/lists", nil, func(raw json.RawMessage) error {
-			var rows []struct {
-				Name string `json:"name"`
-			}
-			if err := json.Unmarshal(raw, &rows); err != nil {
-				return err
-			}
-			for _, row := range rows {
-				existing[row.Name] = true
-			}
-			return nil
-		})
-		if err != nil {
-			return 0, fmt.Errorf("listing lists: %w", err)
-		}
-	}
-	for _, list := range demoLists {
-		if existing[list.Name] {
-			continue
-		}
-		if mode == modeDryRun {
-			created++
-			continue
-		}
-		body := jsonBody{
-			"name": list.Name, "entity_type": list.EntityType,
-			"list_type": list.ListType, "definition": list.Definition,
-		}
-		if err := c.post("/v1/lists", body, nil); err != nil {
-			if _, conflict := conflictingID(err); conflict {
-				continue
-			}
-			return created, fmt.Errorf("list %q: %w", list.Name, err)
-		}
-		created++
-	}
-	return created, nil
 }
 
 // Custom fields are NOT seeded, and cannot be.

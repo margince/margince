@@ -295,7 +295,6 @@ func checkTheSurfacesAreNotEmpty(c *client, _ demoConfig) ([]verifyFinding, erro
 		why   string
 	}{
 		{"tags", "/v1/tags", nil, "the Tags screen reads as a product without tags"},
-		{"lists", "/v1/lists", nil, "no saved segment to open"},
 		{"quotas", "/v1/quotas", nil, "attainment has nothing to be a percentage of"},
 		{"products", "/v1/products", nil, "an offer has no rate card behind it"},
 	} {

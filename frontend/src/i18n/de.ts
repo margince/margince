@@ -1746,7 +1746,7 @@ export const de = {
   "co.recent.dir.both": "beide Seiten",
   "co.recent.minutes": "{count} Min.",
   "co.recent.re": "zu einem Deal",
-  "co.tags.title": "Listen & Tags",
+  "co.tags.title": "Tags",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
   "co.overlayFallback":
     "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",

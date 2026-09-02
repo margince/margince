@@ -4896,7 +4896,7 @@ export interface paths {
          * @description First-class filtered export (features/10 §3): emits exactly the rows that match the active
          *     filter AND that the caller may see (row-scoped through the same one filter engine that drives
          *     lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
-         *     with a `filter` (the canonical §13.5 predicate), a `view_id`, or a `list_id`. Bulk record read
+         *     with a `filter` (the canonical §13.5 predicate) or a `view_id`. Bulk record read
          *     that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
          *     export writes one `audit_log` entry (who exported what slice, when — P7/P12).
          */
@@ -21371,10 +21371,10 @@ export interface components {
             data: components["schemas"]["SavedView"][];
             page: components["schemas"]["PageInfo"];
         };
-        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported), or a `list_id` (a dynamic list whose definition is exported). The slice is always row-scoped to the caller through the one filter engine. */
+        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`) or a `view_id` (a saved view whose filter state is exported). The slice is always row-scoped to the caller through the one filter engine. */
         FilteredExportRequest: {
             /**
-             * @description The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
+             * @description The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
              * @enum {string}
              */
             object?: "person" | "organization" | "deal" | "lead" | "project";
@@ -21384,14 +21384,9 @@ export interface components {
             };
             /**
              * Format: uuid
-             * @description Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
+             * @description Export the filter state of one of the caller's saved views. Mutually exclusive with object.
              */
             view_id?: string;
-            /**
-             * Format: uuid
-             * @description Export the definition of a dynamic list. Mutually exclusive with object/view_id.
-             */
-            list_id?: string;
             /** @enum {string} */
             format: "csv" | "json";
         };

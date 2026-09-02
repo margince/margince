@@ -76,9 +76,6 @@ func seedRequiredIDFixtures(t *testing.T, e *apptest.AppEnv) requiredIDFixtures 
 		"kind": "note", "body": "relink probe",
 		"links": []AnyMap{{"entity_type": "person", "entity_id": out.person}},
 	})
-	out.list = createAndID(t, e, "/v1/lists", AnyMap{
-		"name": "Required IDs", "entity_type": "person", "list_type": "static",
-	})
 	out.tag = createAndID(t, e, "/v1/tags", AnyMap{"name": "required-ids"})
 	out.project = createAndID(t, e, "/v1/projects", AnyMap{
 		"name": "Stakeholder probe", "organization_id": out.organization, "source": "manual",
@@ -166,12 +163,6 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 		"IssueDoubleOptInJSONBody.purpose_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/consent/double-opt-in",
 			omitted: AnyMap{}, supplied: AnyMap{"purpose_id": absent}, field: "purpose_id",
-		},
-		"AddListMemberRequest.entity_id": {
-			method: "POST", path: "/v1/lists/" + f.list + "/members",
-			omitted:  AnyMap{"entity_type": "person"},
-			supplied: AnyMap{"entity_type": "person", "entity_id": absent},
-			field:    "entity_id",
 		},
 		"ApplyTagRequest.entity_id": {
 			method: "POST", path: "/v1/tags/" + f.tag + "/apply",
