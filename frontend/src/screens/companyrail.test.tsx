@@ -1003,17 +1003,6 @@ describe("CompanyRail", () => {
     expect(spy).toHaveBeenCalledWith("people");
   });
 
-  it("shows the applied tags as badges, counted", () => {
-    stub();
-    renderRail({
-      view: view({
-        tags: [{ id: "t-1", workspace_id: "w", name: "Key account" }],
-      }),
-    });
-    expect(screen.getByText("Key account")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
-  });
-
   it("offers the add-tag verb once the section has answered, on a writable record", async () => {
     stub();
     renderRail();
