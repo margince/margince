@@ -6857,6 +6857,8 @@ export const de = {
 
   "person.strip.lastInbound": "Zuletzt eingehend",
   "person.strip.lastOutbound": "Zuletzt ausgehend",
+  "person.strip.reciprocity": "Gegenseitigkeit",
+  "person.strip.inOut": "{inbound} ein · {outbound} aus",
   "person.strip.nextMeeting": "Nächster Termin",
   "person.strip.never": "Nie",
   "person.strip.today": "Heute",

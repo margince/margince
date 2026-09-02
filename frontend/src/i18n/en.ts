@@ -6902,6 +6902,8 @@ export const en = {
 
   "person.strip.lastInbound": "Last inbound",
   "person.strip.lastOutbound": "Last outbound",
+  "person.strip.reciprocity": "Reciprocity",
+  "person.strip.inOut": "{inbound} in · {outbound} out",
   "person.strip.nextMeeting": "Next meeting",
   "person.strip.never": "Never",
   "person.strip.today": "Today",

@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
@@ -54,6 +55,32 @@ describe("whose move it is", () => {
     const move = card(grid, "Whose move");
     expect(within(move).getByText("Yours")).toBeTruthy();
     expect(within(move).getByText("last from them: 4 days")).toBeTruthy();
+  });
+
+  it("counts the messages each way behind the call, off the page the read carries", async () => {
+    const grid = show(
+      view({
+        last_inbound_at: "2026-08-20T10:00:00Z",
+        last_outbound_at: "2026-08-01T10:00:00Z",
+        activities: {
+          data: [
+            { id: "a1", kind: "email", direction: "inbound" },
+            { id: "a2", kind: "email", direction: "inbound" },
+            { id: "a3", kind: "email", direction: "outbound" },
+            // A note has no direction and is neither side's message.
+            { id: "a4", kind: "note" },
+          ],
+          page: { has_more: false },
+        },
+      } as unknown as Partial<Person360>),
+    );
+    const user = userEvent.setup();
+    const move = card(grid, "Whose move");
+    await user.click(
+      within(move).getByRole("button", { name: "How it stands" }),
+    );
+    expect(screen.getByText("Reciprocity")).toBeTruthy();
+    expect(screen.getByText("2 in · 1 out")).toBeTruthy();
   });
 
   it("is theirs while a reply is still inside the ordinary wait", () => {

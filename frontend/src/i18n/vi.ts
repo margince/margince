@@ -6779,6 +6779,8 @@ export const vi = {
 
   "person.strip.lastInbound": "Nhận gần nhất",
   "person.strip.lastOutbound": "Gửi gần nhất",
+  "person.strip.reciprocity": "Mức qua lại",
+  "person.strip.inOut": "{inbound} vào · {outbound} ra",
   "person.strip.nextMeeting": "Cuộc họp kế tiếp",
   "person.strip.never": "Chưa bao giờ",
   "person.strip.today": "Hôm nay",

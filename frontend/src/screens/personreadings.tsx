@@ -136,6 +136,7 @@ function MoveCard({
           term: t("person.strip.lastOutbound"),
           value: relativeDays(outbound, t, locale, asOf),
         },
+        ...reciprocityFact(view, t, locale),
       ]}
     />
   );
@@ -194,6 +195,34 @@ function MoveCard({
       {...basisProps}
     />
   );
+}
+
+// How the conversation has run each way, as counts and not a score: a
+// standalone number here would be the composite verdict the face
+// deliberately does not carry. Counted off the timeline page the read
+// carries, so the tally is of what the page holds; absent when the activity
+// section was withheld, since a count of nothing would read as silence.
+function reciprocityFact(
+  view: Person360,
+  t: Translate,
+  locale: Locale,
+): { key: string; term: string; value: string }[] {
+  if ((view.sections_omitted ?? []).includes("activities")) {
+    return [];
+  }
+  const rows = view.activities?.data ?? [];
+  const inbound = rows.filter((row) => row.direction === "inbound").length;
+  const outbound = rows.filter((row) => row.direction === "outbound").length;
+  return [
+    {
+      key: "exchanged",
+      term: t("person.strip.reciprocity"),
+      value: t("person.strip.inOut", {
+        inbound: formatNumber(inbound, locale),
+        outbound: formatNumber(outbound, locale),
+      }),
+    },
+  ];
 }
 
 // What WE owe them: the open commitments on our side, and how late the oldest
