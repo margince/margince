@@ -7506,7 +7506,7 @@ export const vi = {
   "worklist.verb.open": "Mở",
   "worklist.verb.complete": "Mở",
   "worklist.verb.snooze": "Mở",
-  "worklist.verb.acknowledge": "Mở",
+  "worklist.verb.acknowledge": "Đã hiểu",
   "worklist.source.failed": "Không đọc được {source}",
   "worklist.source.withheld": "{source} bị ẩn với tài khoản của bạn",
   "worklist.untitled.generic": "Có việc cần bạn",

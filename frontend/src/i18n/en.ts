@@ -7653,7 +7653,7 @@ export const en = {
   "worklist.verb.open": "Open",
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
-  "worklist.verb.acknowledge": "Open",
+  "worklist.verb.acknowledge": "Got it",
   "worklist.source.failed": "{source} could not be read",
   "worklist.source.withheld": "{source} is hidden from your account",
   "worklist.untitled.generic": "Something needs you",

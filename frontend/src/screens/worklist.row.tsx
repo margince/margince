@@ -14,6 +14,7 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
+import { useNoticeRead } from "./taskactions";
 import {
   comparisonText,
   consequenceText,
@@ -160,6 +161,14 @@ export function WorklistRow({
         <ReassignControl item={item} owner={owner} />
       )}
       {decidable(item) && <RowDecision item={item} />}
+      {/* A notice's one verb is settling it, not going anywhere — the record
+          it names, if any, is already reachable through the title link above.
+          Rendered inline rather than through RowVerbs' link table: that table
+          sends the reader to the surface that owns a verb, and no surface
+          owns "I've seen this" but the row itself. */}
+      {item.source === "notice" && item.actions.includes("acknowledge") && (
+        <NoticeAcknowledge id={item.id} />
+      )}
     </PanelRow>
   );
 }
@@ -188,6 +197,26 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <div className="worklist-row-decision">
       <ApprovalRow approval={usable} extraInvalidateKeys={[worklistKey]} />
+    </div>
+  );
+}
+
+// A notice's one verb: the reader has seen it, and it leaves the lane.
+// Settled here rather than routed as a link — the mutation this calls is
+// the notice's own read endpoint, and there is no separate surface to send
+// the reader to for "I've seen this".
+function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const acknowledge = useNoticeRead([worklistKey]);
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        pending={acknowledge.isPending}
+        onClick={() => acknowledge.mutate(id)}
+      >
+        {t("worklist.verb.acknowledge")}
+      </Button>
     </div>
   );
 }
@@ -298,11 +327,16 @@ const VERB_DESTINATION: Partial<
   // They come back when the decision card is drawn inline, which is its own
   // piece of work.
   //
+  // `acknowledge` is absent too, and for a stronger reason than routing: it
+  // names no record to route to. Its only owner is the notice's own read
+  // endpoint, so WorklistRow draws it inline (NoticeAcknowledge) instead of
+  // through this table — a link here would only ever have pointed at the
+  // row's own subject, which is not what pressing "Got it" means.
+  //
   // Everything routable is the record the row is about.
   open: (href) => href,
   complete: (href) => href,
   snooze: (href) => href,
-  acknowledge: (href) => href,
 };
 
 // The one verb whose routing depends on the SOURCE rather than only the verb.
