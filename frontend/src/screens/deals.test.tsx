@@ -729,6 +729,23 @@ describe("mapDealCreate", () => {
 });
 
 describe("DealsScreen", () => {
+  // The board card draws the same chip strip a list row does, so a reader
+  // moving between the two reads one thing one way. The card takes a view
+  // model rather than the wire row, so the tags have to be copied across in
+  // toBoardDeal — a field left out there is silently absent on every card.
+  it("draws a deal's tags on its board card", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([
+        deal({
+          tags: [{ tag_id: "t-1", name: "Renewal", color: "teal" }],
+        }),
+      ]),
+    );
+    render(<DealsScreen />);
+    expect(await screen.findByText("Renewal")).toBeTruthy();
+  });
+
   it("board↔table swaps views over the same fetched set without a reload", async () => {
     const fetchMock = stubBackend([deal({})]);
     vi.stubGlobal("fetch", fetchMock);

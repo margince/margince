@@ -1218,29 +1218,28 @@ function matchesView(
  * builds those.
  */
 /**
- * The tag dials: which word narrows this list, and how several combine.
+ * The tag dial: which word narrows this list.
  *
- * Two chips rather than one control, because they answer two questions and a
- * reader sets them at different moments — a word first, and the mode only when
- * a second word makes the question ambiguous. Both write into
- * `ListQuery.filters` under the wire's own names, so the address, the request
- * and the saved view all say the same thing.
+ * ONE word, not several. This surface holds one value per filter key — a chip
+ * whose row is already applied is dropped from the "add filter" menu, and
+ * `setFilter` assigns rather than appends — so a second tag would replace the
+ * first, not join it. The endpoint takes several ids and a mode that combines
+ * them, and the encoder in `tagfilter.ts` speaks that shape; what is missing is
+ * a surface that can hold two values, which is a change to the filter bar
+ * rather than to tags. Offering an any/all/none dial over a filter that can
+ * only ever hold one word would be a control that cannot do what it says.
  *
  * By ID, never by name. A name is what a person types and an admin can rename,
  * so a saved view holding one would quietly start selecting a different slice
  * the day somebody corrects a spelling.
- *
- * The mode chip is drawn whatever is selected. Hiding it until a second tag is
- * picked would make a dial appear under the reader's cursor as a side effect of
- * choosing a word, and its value is already in the address either way.
  */
 export function useTagChips(): readonly ListChip[] {
   const t = useT();
   const vocabulary = useTagVocabulary();
   const words = vocabulary.data?.tags ?? [];
   if (words.length === 0) {
-    // No vocabulary to filter by — or none this caller may read. Either way a
-    // dial whose every option is "all" is a control that cannot answer.
+    // No vocabulary — or none this caller may read. Either way a dial whose
+    // every option is "all" is a control that cannot answer a question.
     return [];
   }
   return [
@@ -1249,15 +1248,6 @@ export function useTagChips(): readonly ListChip[] {
       label: t("tags.columnHeader"),
       allLabel: t("tags.filterAll"),
       options: words.map((tag) => ({ value: tag.id, label: tag.name })),
-    },
-    {
-      key: "tag_mode",
-      label: t("tags.filterModeLabel"),
-      allLabel: t("tags.filterModeAny"),
-      options: [
-        { value: "all", label: t("tags.filterModeAll") },
-        { value: "none", label: t("tags.filterModeNone") },
-      ],
     },
   ];
 }
