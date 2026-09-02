@@ -2346,6 +2346,7 @@ export const en = {
   "home.weekly.sincePrior": "{delta} vs last week",
   "home.weekly.leadsAnswered": "Leads answered in time",
   "home.weekly.ofRouted": "{answered} of {routed}",
+  "home.weekly.promisesKept": "Promises kept",
   "home.weekly.meetingsHeld": "Meetings with a next step",
   "home.weekly.ofMeetings": "{withStep} of {held}",
   "home.weekly.carriedOver": "Carried over",

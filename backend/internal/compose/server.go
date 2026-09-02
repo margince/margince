@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/quotas"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/agentquota"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -159,8 +160,15 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		reportHandlers:     reportHandlers{engine: newReportEngine(pool)},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers:       briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
-		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool)),
+		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
+		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool).
+			WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)})),
+		// ONE spelling of "which Monday": the plan and the review beside it must
+		// be about the same seven days, and weekly owns that answer. A module
+		// may not import compose, so it takes the function.
+		weeklyPlanHandlers: weeklyplan.NewHandlers(
+			weeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
+		),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the

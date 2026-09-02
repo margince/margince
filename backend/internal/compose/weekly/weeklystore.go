@@ -29,11 +29,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -103,6 +101,12 @@ type Counts struct {
 	// How the week's inbound leads were answered. A lead still inside its
 	// target when the row was written is in neither of the last two: it has
 	// not yet been either answered in time or missed.
+	// What the week's PLAN came to. Read through a seam rather than queried
+	// here: weeklyplan owns those tables, and a review that counted them
+	// itself would be a second reader of somebody else's rows.
+	CommitmentsDue  int
+	CommitmentsKept int
+
 	LeadsRouted           int
 	LeadsAnsweredInTarget int
 	LeadsBreached         int
@@ -152,10 +156,36 @@ const (
 )
 
 // Engine assembles and reads weekly reviews.
-type Engine struct{ pool *pgxpool.Pool }
+type Engine struct {
+	pool *pgxpool.Pool
+	// plan settles the rep's week-ahead and reports what it came to. Nil where
+	// no plan module is bound — the review then counts no commitments rather
+	// than failing, because a retrospective is still worth having without one.
+	plan WeekPlan
+}
+
+// WeekPlan settles the closing week's plan and says what it came to.
+//
+// The one edge between the retrospective and the plan, in ONE direction. This
+// package cannot import the module that owns those tables, and would not want
+// to: what it needs is two integers, and asking for them through an interface
+// is what keeps the plan's rows the plan's business.
+type WeekPlan interface {
+	// CloseWeek settles the caller's plan for the week that closed and returns
+	// how many commitments were owed and how many kept. Idempotent: a second
+	// call over a settled week answers the same figures without moving a row.
+	CloseWeek(ctx context.Context, now time.Time) (due, kept int, err error)
+}
 
 // NewEngine binds the engine to the installation pool.
 func NewEngine(pool *pgxpool.Pool) *Engine { return &Engine{pool: pool} }
+
+// WithPlan binds the week-ahead, so a closed review carries what the plan came
+// to. Absent, the review's commitment counts stay zero.
+func (e *Engine) WithPlan(plan WeekPlan) *Engine {
+	e.plan = plan
+	return e
+}
 
 // reviewUser is the acting rep. A review is a personal record — whose week it
 // was — so there is no argument by which a caller asks for somebody else's.
@@ -215,6 +245,7 @@ const reviewSelect = `
 	       deals_moved, deals_won, deals_lost,
 	       proposals_accepted, proposals_rejected,
 	       brief_items_acted, brief_items_dismissed,
+	       commitments_due, commitments_kept,
 	       leads_routed, leads_answered_in_target, leads_breached,
 	       meetings_held, meetings_with_next_step,
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
@@ -234,6 +265,7 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 		&c.DealsMoved, &c.DealsWon, &c.DealsLost,
 		&c.ProposalsAccepted, &c.ProposalsRejected,
 		&c.BriefItemsActed, &c.BriefItemsDismissed,
+		&c.CommitmentsDue, &c.CommitmentsKept,
 		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 		&c.MeetingsHeld, &c.MeetingsWithNextStep,
 		&created, &won, &lost, &currency, &review.PriorReviewID,
@@ -366,6 +398,8 @@ func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool
 	add("leads_breached", c.LeadsBreached)
 	add("meetings_held", c.MeetingsHeld)
 	add("meetings_with_next_step", c.MeetingsWithNextStep)
+	add("commitments_due", c.CommitmentsDue)
+	add("commitments_kept", c.CommitmentsKept)
 	add("prior_review_id", review.PriorReviewID)
 	// The four money columns are written together or not at all — the table's
 	// own CHECK says a figure names its currency and a currency names figures.
@@ -397,76 +431,6 @@ func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool
 	return id, true, nil
 }
 
-// Narrate writes the week's sentence onto an existing review.
-//
-// A SECOND WRITE onto a row the deterministic pass already committed, never
-// part of assembling it. The counts and the deal lines are the review; this is
-// what a colleague would say about them, and it must be able to fail without
-// costing the rep any of it.
-//
-// Idempotent by replacement: a later pass over the same week is a correction,
-// not an addition. The stamp moves with it.
-//
-// Empty prose stores as NULL with the stamp still written — the CHECK admits
-// that deliberately, so a pass that ran and found the week unremarkable is
-// distinguishable from one that never ran.
-func (e *Engine) Narrate(ctx context.Context, reviewID ids.UUID, sentence string, now time.Time) error {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return err
-	}
-	userID, err := reviewUser(ctx)
-	if err != nil {
-		return err
-	}
-	// Bounded HERE as well as in the parser, because this is the writer: a
-	// caller that reaches Narrate without going through narrative.Parse would
-	// otherwise learn the ceiling from a driver error at 06:00 on a Monday.
-	// Runes, because the column counts characters — a German sentence full of
-	// umlauts is fewer characters than bytes.
-	if n := len([]rune(sentence)); n > narrative.MaxNarrativeRunes {
-		return httperr.Validation("narrative", "too_long",
-			fmt.Sprintf("the sentence is %d characters, over the %d the column holds",
-				n, narrative.MaxNarrativeRunes))
-	}
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		var before *string
-		var beforeStamp *time.Time
-		// The owner check is the row scope: a review belongs to the rep whose
-		// week it was, and the id alone must not reach anybody else's.
-		row := tx.QueryRow(ctx, `
-			SELECT narrative, narrated_at FROM weekly_review
-			 WHERE id = $1 AND user_id = $2
-			 FOR UPDATE`, reviewID, userID)
-		switch err := row.Scan(&before, &beforeStamp); {
-		case errors.Is(err, pgx.ErrNoRows):
-			return apperrors.ErrNotFound
-		case err != nil:
-			return err
-		}
-
-		stamp := now.UTC()
-		var stored *string
-		if sentence != "" {
-			stored = &sentence
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE weekly_review SET narrative = $2, narrated_at = $3 WHERE id = $1`,
-			reviewID, stored, stamp); err != nil {
-			return err
-		}
-		_, err := storekit.Audit(ctx, tx, "update", "weekly_review", reviewID,
-			map[string]any{"narrative": before, "narrated_at": beforeStamp},
-			map[string]any{"narrative": stored, "narrated_at": stamp})
-		return err
-	})
-}
-
-// insertColumns is a statement's column list, which knows its own placeholders.
-//
-// The pairing is the point: a caller adds a column and its argument in one
-// call, and the $N run is derived from how many there are rather than typed.
-// The defect this prevents is a column added to the list and not to the values,
-// which Postgres reports as a type error several columns away from the cause.
 type insertColumns []string
 
 func (c insertColumns) names() string { return strings.Join(c, ", ") }

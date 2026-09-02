@@ -45,6 +45,8 @@ describe("HomeScreen — the weekly retrospective", () => {
       leads_breached: 2,
       meetings_held: 5,
       meetings_with_next_step: 3,
+      commitments_due: 4,
+      commitments_kept: 3,
     },
     deals: [
       {
@@ -204,6 +206,8 @@ describe("HomeScreen — the week against the one before", () => {
     leads_breached: 2,
     meetings_held: 5,
     meetings_with_next_step: 3,
+    commitments_due: 4,
+    commitments_kept: 3,
   };
   const review = {
     id: "01a04000-0000-7000-8000-00000000000a",

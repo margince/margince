@@ -2293,6 +2293,7 @@ export const vi = {
   "home.weekly.sincePrior": "{delta} so với tuần trước",
   "home.weekly.leadsAnswered": "Lead được trả lời đúng hạn",
   "home.weekly.ofRouted": "{answered} trên {routed}",
+  "home.weekly.promisesKept": "Cam kết đã giữ",
   "home.weekly.meetingsHeld": "Cuộc họp có bước tiếp theo",
   "home.weekly.ofMeetings": "{withStep} trên {held}",
   "home.weekly.carriedOver": "Chuyển tiếp",

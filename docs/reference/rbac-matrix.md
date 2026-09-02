@@ -105,6 +105,7 @@ changes none.
 | `tag` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `voice_profile` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `webhook_subscription` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `weekly_plan` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 
 ## What this page does not cover
 

@@ -108,6 +108,7 @@ func countsToWire(c Counts) crmcontracts.WeeklyReviewCounts {
 		DealsMoved:       c.DealsMoved, DealsWon: c.DealsWon, DealsLost: c.DealsLost,
 		ProposalsAccepted: c.ProposalsAccepted, ProposalsRejected: c.ProposalsRejected,
 		BriefItemsActed: c.BriefItemsActed, BriefItemsDismissed: c.BriefItemsDismissed,
+		CommitmentsDue: c.CommitmentsDue, CommitmentsKept: c.CommitmentsKept,
 		LeadsRouted: c.LeadsRouted, LeadsAnsweredInTarget: c.LeadsAnsweredInTarget,
 		LeadsBreached: c.LeadsBreached,
 		MeetingsHeld:  c.MeetingsHeld, MeetingsWithNextStep: c.MeetingsWithNextStep,
