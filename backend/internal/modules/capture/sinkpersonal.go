@@ -50,9 +50,10 @@ func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedR
 		return false, nil
 	}
 	var status, kind string
+	var seen []string
 	if err := tx.QueryRow(ctx, `
-		SELECT status, COALESCE(kind, '') FROM capture_thread_verdict
-		 WHERE thread_key = $1 AND user_id = $2`, rec.ThreadKey, user).Scan(&status, &kind); err != nil {
+		SELECT status, COALESCE(kind, ''), seen_addresses FROM capture_thread_verdict
+		 WHERE thread_key = $1 AND user_id = $2`, rec.ThreadKey, user).Scan(&status, &kind, &seen); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// No verdict yet. The thread may still turn out to be personal, and
 			// the sweep that runs after the classifier answers is what catches
@@ -64,8 +65,93 @@ func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedR
 	if kind != ThreadKindPersonal {
 		return false, nil
 	}
+	// Bound to the addresses the classifier actually SAW, exactly as an opening
+	// verdict is (senderWasSeen, verdictinherit.go). thread_key is the message's
+	// own References root, so a sender picks it verbatim: without this, anybody
+	// who learns or provokes a personal thread key could write from a fresh
+	// address onto that root and be refused a record — quietly keeping
+	// themselves out of the CRM by borrowing somebody else's private
+	// conversation.
+	//
+	// A party the verdict never saw is not in the conversation it judged, and
+	// the ordinary ladder decides about them.
+	if !senderWasSeen(rec, seen) {
+		return false, nil
+	}
 	// held_by_owner is the seat's own hand: they marked the conversation
 	// private, which is a stronger statement than the classifier's and says the
 	// same thing about whether its author is a business contact.
 	return status == VerdictHeld || status == VerdictHeldByOwner, nil
+}
+
+// PrivateThreadContact names one contact a personal verdict has just orphaned:
+// somebody capture created whose correspondence with this seat is now entirely
+// private.
+type PrivateThreadContact struct {
+	PersonID ids.PersonID
+	OwnerID  ids.UUID
+	Email    string
+}
+
+// ContactsOrphanedByPrivacyTx answers which contacts a thread's personal
+// verdict has left with no business reason to exist.
+//
+// The verdict almost always arrives after the contact — capture creates on
+// commit, classification reads the thread later — so the gate at creation time
+// catches only the messages that arrive afterwards. This is what answers for the
+// records already made.
+//
+// It asks about the person's WHOLE correspondence with this seat, not about the
+// thread that triggered it. Somebody who writes about a private matter on
+// Monday and a contract on Tuesday is a business contact who also has a private
+// thread, and retracting them would lose a real counterparty. Only somebody
+// whose every conversation here is personal has no business reason to be in the
+// CRM.
+//
+// It reads addresses rather than person ids from the thread, because that is
+// what the activity carries; the caller resolves each to the record capture
+// made for it.
+func ContactsOrphanedByPrivacyTx(
+	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID,
+) ([]PrivateThreadContact, error) {
+	if threadKey == "" || user == ids.Nil {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT p.id, p.owner_id, pe.email
+		  FROM activity a
+		  JOIN person_email pe ON pe.email = a.counterparty_email AND pe.archived_at IS NULL
+		  JOIN person p ON p.id = pe.person_id AND p.archived_at IS NULL
+		 WHERE a.thread_key = $1
+		   AND a.counterparty_email <> ''
+		   AND p.owner_id = $2
+		   -- Every thread this seat shares with them is personal. One ordinary
+		   -- conversation makes them a business contact who also has a private
+		   -- one, and retracting that loses a real counterparty.
+		   AND NOT EXISTS (
+		         SELECT 1
+		           FROM activity other
+		           LEFT JOIN capture_thread_verdict tv
+		             ON tv.thread_key = other.thread_key AND tv.user_id = $2
+		          WHERE other.counterparty_email = a.counterparty_email
+		            AND other.thread_key <> ''
+		            AND (tv.kind IS DISTINCT FROM $3
+		                 OR tv.status NOT IN ($4, $5)))`,
+		threadKey, user, ThreadKindPersonal, VerdictHeld, VerdictHeldByOwner)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the contacts a private verdict orphaned: %w", err)
+	}
+	defer rows.Close()
+	var out []PrivateThreadContact
+	for rows.Next() {
+		var c PrivateThreadContact
+		if err := rows.Scan(&c.PersonID, &c.OwnerID, &c.Email); err != nil {
+			return nil, fmt.Errorf("capture: reading the contacts a private verdict orphaned: %w", err)
+		}
+		out = append(out, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("capture: reading the contacts a private verdict orphaned: %w", err)
+	}
+	return out, nil
 }

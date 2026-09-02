@@ -154,3 +154,62 @@ func TestAThreadHeldForBusinessReasonsStillMintsItsContact(t *testing.T) {
 			"a legal hold is about who may read the mail, not about whether they are a contact", n)
 	}
 }
+
+// The refusal is bound to the addresses the classifier SAW, not to the thread
+// key alone.
+//
+// thread_key is the message's own References root, so a sender picks it
+// verbatim. Without the binding, anybody who learns or provokes a personal
+// thread key could write from a fresh address onto that root and be refused a
+// record — quietly keeping themselves out of the CRM by borrowing somebody
+// else's private conversation.
+func TestAStrangerCannotBorrowSomebodyElsesPrivateThread(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync, syncSent := env.e, env.sync, env.syncSent
+	const family = "sibling@family.example"
+	const stranger = "vendor@supplier.example"
+
+	// A genuine private conversation, judged personal.
+	syncSent(t, map[string]bool{"borrow1@myco.example": true},
+		email(captureOwner, "", family, "borrow1@myco.example", ""))
+	seedPersonalThread(t, e, e.Rep1, "borrow1@myco.example", []string{family})
+
+	// The vendor is a genuine counterparty on their OWN thread.
+	syncSent(t, map[string]bool{"borrow2@myco.example": true},
+		email(captureOwner, "", stranger, "borrow2@myco.example", ""))
+	sync(t, email(stranger, "Vendor", captureOwner, "borrow2r@supplier.example", "borrow2@myco.example"))
+	if n := countRows(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = 'vendor@supplier.example'`); n != 1 {
+		t.Fatalf("%d persons for a vendor the workspace exchanged mail with, want 1 — "+
+			"the fixture never reaches the case under test", n)
+	}
+
+	// They then write again, forging the family's private root onto it. The
+	// message is captured; what must not happen is that it reads as part of
+	// somebody else's private conversation.
+	sync(t, email(stranger, "Vendor", captureOwner, "borrow3r@supplier.example", "borrow1@myco.example"))
+
+	private, err := readPrivacyOfCapture(t, e, "borrow3r@supplier.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if private {
+		t.Error("a stranger's message inherited a private thread they were never part of")
+	}
+}
+
+// readPrivacyOfCapture answers whether the ladder read one captured message as
+// belonging to a private conversation, by the trace reason it recorded.
+func readPrivacyOfCapture(t *testing.T, e *integration.SearchEnv, sourceID string) (bool, error) {
+	t.Helper()
+	var private bool
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT EXISTS (
+			  SELECT 1 FROM capture_trace
+			   WHERE source_id = $1 AND reason = $2)`,
+			sourceID, capturemod.TraceReasonPrivateThread).Scan(&private)
+	})
+	return private, err
+}
