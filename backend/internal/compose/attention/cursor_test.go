@@ -278,3 +278,105 @@ func mustUUID(t *testing.T, s string) ids.UUID {
 	}
 	return parsed
 }
+
+// A cursor minted while reading one person's queue must not open another's.
+//
+// This is the end-to-end shape of the fingerprint rule, driven through
+// Worklist rather than decodeCursor: the mint reads `s.taskOwner` off the
+// narrowed service and the decode reads `namedOwner` off the resolver, and a
+// test that only exercises decodeCursor would never notice those two coming
+// apart. If they did, a manager's page-two token would silently open a
+// different rep's day under the first rep's heading.
+func TestACursorFromOneQueueCannotOpenAnothers(t *testing.T) {
+	t.Parallel()
+
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
+		stubBriefing{}, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	// Three waits each, so a page of two leaves a third behind and the read
+	// actually mints a cursor.
+	waits := []WaitingCustomer{}
+	for i := range 3 {
+		waits = append(waits,
+			WaitingCustomer{
+				ActivityID: ids.NewV7(), Subject: "the rep's customer",
+				Since: readInstant.Add(-time.Duration(i+2) * 24 * time.Hour), OwnerID: theRep,
+			},
+			WaitingCustomer{
+				ActivityID: ids.NewV7(), Subject: "the manager's own customer",
+				Since: readInstant.Add(-time.Duration(i+2) * 24 * time.Hour), OwnerID: theManager,
+			})
+	}
+	svc.waiting = waitingOwnedBy(waits)
+	svc.teammates = teammatesSaying(true)
+
+	first, err := svc.Worklist(managerReading(), "", "", theRep, 2, "")
+	if err != nil {
+		t.Fatalf("opening the rep's queue: %v", err)
+	}
+	if first.NextCursor == nil {
+		t.Fatal("a page of two over three rows offered no cursor; the walk cannot continue")
+	}
+
+	// The same token, carried onto the manager's own queue.
+	_, err = svc.Worklist(managerReading(), "", "", ids.UUID{}, 2, *first.NextCursor)
+	if err == nil {
+		t.Error("a cursor minted on the rep's queue was accepted on the manager's own; " +
+			"page two would answer about a different person with nothing saying so")
+	}
+
+	// And it still works on the queue it was minted for.
+	if _, err := svc.Worklist(managerReading(), "", "", theRep, 2, *first.NextCursor); err != nil {
+		t.Errorf("the cursor was refused on the very queue it was minted for: %v", err)
+	}
+}
+
+// A folded batch row must be a STABLE anchor across pages.
+//
+// Folding replaces a pile of alike decisions with one row, and that row is what
+// a cursor can land on. Its id is derived from the group's key and cause
+// (batchID), so the same pile folds to the same id on every read. If a later
+// change gave a batch row a per-read identity — a counter, an instant, a random
+// id — a cursor naming one would find nothing on the next page and the walk
+// would end early with work still owed, silently.
+func TestAFoldedRowIsAStableAnchorAcrossReads(t *testing.T) {
+	t.Parallel()
+
+	// A pile deep enough to fold, of the routine contact decisions that fold.
+	needs := make([]crmcontracts.AttentionItem, 0, 12)
+	for i := range 12 {
+		needs = append(needs, item(
+			"d"+string(rune('a'+i)), "approval", withKind("capture_counterparty")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: needs}
+
+	svc := &Service{}
+	first := svc.worklistFrom(t.Context(), day, scopeAll, "", 25,
+		waitingRead{}, leadRead{}, worklistCursor{})
+	second := svc.worklistFrom(t.Context(), day, scopeAll, "", 25,
+		waitingRead{}, leadRead{}, worklistCursor{})
+
+	batched := func(out crmcontracts.Worklist) []string {
+		ids := []string{}
+		for _, row := range out.Queue {
+			if row.Batch != nil {
+				ids = append(ids, string(row.Source)+"|"+row.Id)
+			}
+		}
+		return ids
+	}
+	one, two := batched(first), batched(second)
+	if len(one) == 0 {
+		t.Fatal("the fixture folded nothing; this test would pass vacuously")
+	}
+	if len(one) != len(two) {
+		t.Fatalf("two reads of one day folded differently: %v against %v", one, two)
+	}
+	for i := range one {
+		if one[i] != two[i] {
+			t.Errorf("a folded row changed identity between reads: %q then %q; "+
+				"a cursor naming it would find nothing and end the walk early", one[i], two[i])
+		}
+	}
+}

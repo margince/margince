@@ -55,6 +55,19 @@ type worklistCursor struct {
 // `limit` is deliberately absent: it decides how many rows a page carries, not
 // which candidates were weighed, so changing it mid-walk is a legitimate thing
 // for a caller to do and refusing it would be a lie about what changed.
+//
+// The three values join on NUL, which none of them can contain: `scope` and
+// `filter` are closed contract enums the handler validates before this is
+// reached, and `owner` renders through ids.UUID. So no two distinct requests
+// can join to one string — the ambiguity a delimiter scheme exists to prevent —
+// and this needs no length prefixing.
+//
+// Eight bytes, and it is not a security boundary. A collision would let one
+// token resume a different question, but every row that question then returns
+// has already passed the caller's own scope and row-visibility gates: the page
+// is re-assembled from scratch under the principal, and the token chooses only
+// where to resume within what they may already see. What this defends is a
+// caller's coherence, not their permissions.
 func fingerprint(scope, filter string, owner ids.UUID) string {
 	sum := sha256.Sum256([]byte(scope + "\x00" + filter + "\x00" + owner.String()))
 	return hex.EncodeToString(sum[:8])
