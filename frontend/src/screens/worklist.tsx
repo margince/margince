@@ -196,8 +196,9 @@ function WorklistBody({
   const t = useT();
   const missing = day.sources_unavailable;
   const focus = focusOf(day.queue);
-  // What follows it, bounded. Taken in the server's own order — the ranking
-  // has already kept one lane from owning the top of the page.
+  // What follows it, bounded, in the server's own order. These rows may all be
+  // one kind of work — worklist.nextup.tsx says why that is the ranking's to
+  // fix rather than this page's.
   const next = nextUpOf(day.queue, focus);
   // The row the pane is about. Resolved from the id rather than held as the
   // item itself: a refetch replaces every row object, and a held one would go

@@ -118,10 +118,6 @@
   padding: 0;
 }
 
-.worklist-nextup-row {
-  margin: 0;
-}
-
 /* The band heading, above the first row of its run.
    Inside the list item rather than between them, because an <ol> may hold only
    <li> children — a heading placed as a sibling would be invalid structure that

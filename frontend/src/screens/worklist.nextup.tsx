@@ -10,11 +10,23 @@
 // whole difference between a plan for a morning and a backlog.
 //
 // It SELECTS NOTHING. The rows are the ones the server already ranked, taken in
-// the order it ranked them, and the diversity is already in that ordering:
-// `waitingLead` and `leadLead` demote the ninth of a kind through `crowded`, so
-// one noisy lane cannot own the top of the page before these rows are taken.
-// Choosing representatives here would be a second answer to a question the
-// ranking already answers, and two clients would then disagree about one day.
+// the order it ranked them. Re-ranking here would be a second answer to what
+// matters most today, and two clients would then disagree about one morning.
+//
+// SO THESE FOUR ROWS CAN ALL BE ONE KIND OF WORK, and that is worth saying
+// plainly rather than implying otherwise. The queue's anti-monopoly rule is the
+// `crowded` flag, and it reaches only two lanes — unanswered customers and
+// overdue leads — each at a threshold of eight. Every other producer (tasks,
+// bounces, decisions, the health lanes) has no cap at all, and even the two that
+// do cannot fire before position nine. This list reads positions two to four. So
+// six overdue tasks make a focus card and three rows that are all the same
+// sentence, and nothing in the current ranking prevents it.
+//
+// A quota HERE is still the wrong fix: the client would be answering a question
+// the server owns, and the queue below would disagree with the list above it.
+// Widening `crowded` to the other lanes is the fix, and it belongs to the
+// ranking rather than here — filed as #3673. Until then this list is honest
+// about being the top of one order rather than a survey of the day.
 
 import { Panel } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
