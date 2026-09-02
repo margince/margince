@@ -156,7 +156,7 @@ run that finished while the tab was away.
 ## What a reader is actually shown
 
 `frontend/src/app/ai-activity-lines.ts` holds `ACTIVITY_LINE`: for each of the
-contract's 23 kinds, either a `(state → message key)` table or a written reason
+contract's 27 kinds, either a `(state → message key)` table or a written reason
 there is none. It is typed `Record`, not `Partial<Record>`, so **a new kind fails
 the build** until somebody either writes its copy in every locale or says, in
 code, why it is not shown. The reason lives in the source rather than in a review
