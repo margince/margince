@@ -50,31 +50,6 @@ const doneCap = 8
 // are the ones it set.
 type Clock func() time.Time
 
-// Zone answers the installation's timezone, which is what decides when "today"
-// ends for this feed.
-//
-// A SEAM rather than a read of its own: this package binds no module and opens
-// no transaction, and the installation's timezone is a fact the composition
-// root already resolves for the morning brief through identity.TimezoneOf.
-type Zone func(ctx context.Context) (*time.Location, error)
-
-// Option adjusts a service after its seams are bound.
-//
-// Variadic rather than a nineteenth parameter: the constructor already takes
-// every lane, and a reader counting arguments to find the one that decides the
-// day is a reader who will bind it wrong.
-type Option func(*Service)
-
-// WithZone binds the installation timezone the day boundary is measured in.
-//
-// UNBOUND MEANS UTC, and that is the honest default rather than a hidden one: a
-// composition with no installation to ask — every unit test in this package —
-// has no local day, and UTC is the only answer that does not invent one. The
-// shipped wiring binds it, which is what makes the difference visible.
-func WithZone(z Zone) Option {
-	return func(s *Service) { s.zone = z }
-}
-
 // Service assembles the feed. Every dependency is an interface a compose seam
 // binds to the owning module, so this package imports no module directly.
 type Service struct {
@@ -235,6 +210,13 @@ func (s *Service) countingDecisions() *Service {
 // must not read as a clear day.
 func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) {
 	asOf := s.now().UTC()
+	// The day's end, resolved ONCE for the whole assembly: every due-dated lane
+	// is judged against the same instant, and the installation is asked for its
+	// timezone once rather than per lane.
+	until, err := s.endOfDay(ctx, asOf)
+	if err != nil {
+		return crmcontracts.Attention{}, err
+	}
 	// Every lane starts as an empty slice, never nil. The contract declares
 	// them as arrays, and a withheld lane leaves its field unset — which
 	// serialises as `null` and breaks a generated client that iterates what the
@@ -271,7 +253,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return crmcontracts.Attention{}, err
 	}
 
-	planned, err := s.planned(ctx, asOf, s.taskScope)
+	planned, err := s.planned(ctx, asOf, until, s.taskScope)
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = len(planned)
@@ -282,7 +264,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 
 	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
 	// shape they share; what differs is the reader and the drawing.
-	for _, lane := range s.optionalLanes(ctx, asOf, &out) {
+	for _, lane := range s.optionalLanes(ctx, asOf, until, &out) {
 		omitted, err = lane.collect(omitted)
 		if err != nil {
 			return crmcontracts.Attention{}, err
@@ -421,36 +403,9 @@ func interleave(first, second []crmcontracts.AttentionItem, limit int) []crmcont
 	return out
 }
 
-// endOfDay is the boundary every due-dated lane stops at, so a promise, a task
-// and a meeting falling on the same afternoon are judged against one instant.
-//
-// THE INSTALLATION'S midnight, not UTC's. Truncating the clock to 24 hours
-// answers UTC midnight wherever the installation is, which put a UTC+7 seat's
-// "today" through 07:00 tomorrow and cut a UTC-4 seat's short at 20:00 — the
-// same convention error the morning brief's local_day exists to avoid.
-//
-// AddDate over the local date, not Add(24h) over the instant: a day is 23 or 25
-// hours where clocks change, and adding a fixed span lands an hour off on those
-// two mornings a year — in the direction that drops work the reader is owed.
-func (s *Service) endOfDay(ctx context.Context, asOf time.Time) (time.Time, error) {
-	loc := time.UTC
-	if s.zone != nil {
-		resolved, err := s.zone(ctx)
-		if err != nil {
-			return time.Time{}, err
-		}
-		loc = resolved
-	}
-	local := asOf.In(loc)
-	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1), nil
-}
-
-// planned is today's agreed work, overdue first.
-func (s *Service) planned(ctx context.Context, asOf time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
-	until, err := s.endOfDay(ctx, asOf)
-	if err != nil {
-		return nil, err
-	}
+// planned is today's agreed work, overdue first. The bound is the day's end,
+// resolved once by Assemble so every due-dated lane judges the same afternoon.
+func (s *Service) planned(ctx context.Context, asOf, until time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
 	open, err := s.tasks.OpenForViewer(ctx, until, plannedCap, scope, s.taskOwner)
 	if err != nil {
 		return nil, err

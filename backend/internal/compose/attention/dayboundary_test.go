@@ -102,3 +102,42 @@ func TestAZoneThatWillNotResolveIsAnError(t *testing.T) {
 		t.Error("a zone the installation could not answer for produced a boundary anyway")
 	}
 }
+
+// THE INSTALLATION IS ASKED ONCE PER ASSEMBLY, not once per lane.
+//
+// Three due-dated lanes read the boundary. Resolving per lane means an operator
+// moving the installation mid-read gives one lane yesterday's midnight and the
+// next one today's, inside a single response — and each resolution is a
+// transaction, so it also pays three times for one fact.
+func TestTheZoneIsResolvedOncePerAssembly(t *testing.T) {
+	var asked int
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		t.Fatalf("loading the zone: %v", err)
+	}
+	s := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+		WithZone(func(context.Context) (*time.Location, error) { asked++; return loc, nil }),
+	)
+	if _, err := s.Assemble(context.Background()); err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if asked != 1 {
+		t.Errorf("the installation was asked for its timezone %d times, want once — one response "+
+			"must not judge two lanes against two different days", asked)
+	}
+}
+
+// AND A SEAM THAT ANSWERS NOTHING WITHOUT FAILING is a broken binding, not a
+// zone: reaching time.In with a nil location panics, and a feed that panics
+// tells an operator less than one that reports.
+func TestAZoneSeamAnsweringNoLocationIsAnErrorNotAPanic(t *testing.T) {
+	// The very shape nilnil refuses in production code, written on purpose: what
+	// this pins is that the feed survives a binding somebody got wrong.
+	//nolint:nilnil // the malformed seam IS the subject
+	nothing := func(context.Context) (*time.Location, error) { return nil, nil }
+	if _, err := (&Service{zone: nothing}).endOfDay(context.Background(), time.Now()); err == nil {
+		t.Error("a nil location produced a boundary; the next call would have panicked instead")
+	}
+}
