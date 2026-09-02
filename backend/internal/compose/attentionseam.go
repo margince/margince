@@ -359,19 +359,17 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		attentionTasks{store: activities.NewStore(db)},
 		attentionReceipts{svc: svc},
 		attentionBriefing{engine: briefs.NewBriefEngine(pool, people.NewStore(db)), now: now},
-		// Commitments is deliberately UNBOUND: the lane's production writer —
-		// the extraction task that reads promises out of captured
-		// conversations — does not exist yet (issue #849), so no real
-		// installation can put a row behind it, and a lane fed only by demo
-		// seeds would show every real customer an empty promise list dressed
-		// as a feature. A nil binding renders the lane ABSENT (the contract's
-		// honest "this feed does not do commitments"), and rebinding is the
-		// one-line attentionCommitments{store: people.NewStore(db)} when #849
-		// lands. The seam type stays compiled against the interface (the
-		// assertion beside it in attentionlanesseam.go), and the store read
-		// behind it keeps its own integration test — what is NOT tested is
-		// the seam wiring itself, because nothing wires it.
-		nil,
+		// Commitments is bound now that claims have a writer. It was nil while
+		// nothing could put a row behind the lane: a lane fed only by demo
+		// seeds would have shown every real customer an empty promise list
+		// dressed as a feature, and absent is the honest rendering of "this
+		// feed does not do commitments".
+		//
+		// That is no longer true. POST /people/{id}/claims writes through
+		// people.RecordConversationClaim, and the transcript reader files what
+		// a reader accepts from a meeting. A promise a rep made is then real
+		// data the queue was still refusing to show.
+		attentionCommitments{store: people.NewStore(db)},
 		attentionAtRisk{lister: quietDealScan(pool, deals.QuietThresholdDays)},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},

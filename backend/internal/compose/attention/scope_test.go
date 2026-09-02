@@ -181,6 +181,32 @@ func TestARowWithNoOwnerStaysUnderMine(t *testing.T) {
 	}
 }
 
+// A promise the rep made is THEIRS, not work nobody answers for.
+//
+// A claim carries no assignee column, so the row reaches the filters with no
+// owner to read. The lane's query already narrowed to the acting rep's user id,
+// which is why the source is named in narrowedByItsOwnLane — without that, the
+// ownerless test drops the promise out of "mine" and hands it to "unassigned",
+// putting the rep's own debt in the queue for work with nobody behind it.
+func TestTheReadersOwnPromiseIsNotWorkNobodyAnswersFor(t *testing.T) {
+	reader := ids.MustParse("01a05500-0000-7000-8000-000000000001")
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, UserID: reader,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeOwn},
+	})
+	promise := []ranked{{item: crmcontracts.WorklistItem{
+		Id: "my-promise", Source: sourceClaim, Actions: []crmcontracts.WorklistItemActions{},
+	}}}
+
+	if len(keepReadersOwn(ctx, promise)) != 1 {
+		t.Error("the rep's own promise was dropped from their own queue")
+	}
+	if kept := keepUnowned(promise); len(kept) != 0 {
+		t.Errorf("the rep's own promise appeared under unassigned (%d rows), which is the "+
+			"queue for work nobody answers for", len(kept))
+	}
+}
+
 func ownedDeal(id string, owner ids.UUID) crmcontracts.WorklistItem {
 	uuid := openapi_types.UUID(owner)
 	return crmcontracts.WorklistItem{
