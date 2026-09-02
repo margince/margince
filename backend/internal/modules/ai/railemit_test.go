@@ -4,7 +4,9 @@
 package ai
 
 import (
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -45,6 +47,32 @@ func TestRailDegradeReasonIsTheSentinelOrNothing(t *testing.T) {
 	}
 	if *got != "budget_exceeded" {
 		t.Errorf("degrade reason = %q, want the sentinel", *got)
+	}
+}
+
+// The subject is what lets the rail say WHOM a reply is to or WHICH company is
+// being read up on. Three things are pinned: the unnamed case is nil and not
+// the empty string, because the projection's upsert would otherwise overwrite
+// a name an earlier event carried; the cap is the contract's; and it cuts in
+// runes, so a name in any script the product ships in ends on a character.
+func TestRailSubjectIsTheBoundedNameOrNothing(t *testing.T) {
+	if got := railSubject(Call{}); got != nil {
+		t.Errorf("an unnamed call carries subject %q, want none", *got)
+	}
+	if got := railSubject(Call{SubjectLabel: "   "}); got != nil {
+		t.Errorf("a blank subject carries %q, want none", *got)
+	}
+	named := railSubject(Call{SubjectLabel: "Anna Berg"})
+	if named == nil || *named != "Anna Berg" {
+		t.Fatalf("subject = %v, want the name as bound", named)
+	}
+	long := strings.Repeat("ü", railSubjectBound+5)
+	bounded := railSubject(Call{SubjectLabel: long})
+	if bounded == nil || len([]rune(*bounded)) != railSubjectBound {
+		t.Fatalf("an over-long subject was cut to %d runes, want %d", len([]rune(*bounded)), railSubjectBound)
+	}
+	if !utf8.ValidString(*bounded) {
+		t.Fatal("the cut landed inside a character")
 	}
 }
 

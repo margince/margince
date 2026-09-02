@@ -24,25 +24,24 @@ const notDisplayed = (reason: string): NotDisplayed => ({
   notDisplayed: reason,
 });
 
-const WATCHED_BY_THE_ASKER = notDisplayed(
-  "the work lands on the surface that asked for it and changes it when it arrives, so a line here would narrate what the reader is already looking at. growth_fit renders the band it returns on the panel that asked. cold_start runs behind TWO product surfaces and the reason has to cover both (it declares four invocation SITES in aitaskregistry.go — a different count, and not the one that decides whether a line can be drawn): during onboarding the screen is deliberately RAILLESS — `onboarding` is a member of RAIL_LESS_SCREENS (nav.ts), which shell.tsx reads to drop the whole chrome — so there is no rail on screen for its line to appear on — and the organization page's Enrich card runs it too (cmd/api/modelwiring.go wires WithScrape with the cold_start brain), where a rail DOES exist and the card itself renders the proposal. Naming only the onboarding half would leave the org-page site looking like an oversight. A task-level map cannot separate those arms and does not have to, because neither is drawn where the task runs",
-);
 const SYSTEM_SWEEP = notDisplayed(
   "background workspace work that belongs to nobody in particular, so it has no personal line to draw",
 );
 
-// The site-read lanes, which do NOT belong above however much they look like it.
+// Two of the three site-read lanes, which are STEPS of a read the third lane
+// already narrates.
 //
-// Their attribution is a property of the READ, not of the task: compose binds
-// the requester as OnBehalfOf when a human asked (deepreadprincipal.go), so
-// those occurrences resolve to that person and land in their personal feed —
-// while a read requested by domain triage or the auto-enrich sweep names no
-// human, yields the zero uuid, and is workspace-scoped like any sweep. Calling
-// all three "work that belongs to nobody" is therefore false for the commonest
-// case, and a kind-level map cannot say "sometimes personal" in the SYSTEM_SWEEP
-// sentence — which is why they get their own reason instead of sharing one.
-const SITE_READ_WATCHED_WHERE_IT_RUNS = notDisplayed(
-  "the site-read lanes, whose attribution is a fact about the READ rather than the task: a human-requested read carries that person as on_behalf_of and IS personal to them, while a domain-triage or auto-enrich read names no human and is workspace-scoped. Neither wants a line here. The human's read is already narrated where it was started — the organization page polls the read's own status and draws it live (SiteReadPanel), and the taskbar carries a `site-read` key for the same action — so a rail line would be a third telling of one thing. The system's read belongs to nobody, exactly like the sweeps above. There is also a grain the rail could not render honestly: the occurrence key is correlation+task and one read's correlation is its site_read row id, so a single read files one occurrence PER LANE it runs — the extract lanes for an ordinary read, and site_triage on top for a domain-triage one, which is the only read that reaches all three",
+// One website read files one occurrence per lane it runs, because the
+// occurrence key is correlation+task and a read's correlation is its site_read
+// row id. `site_extract` is the profile lane every human-requested read runs,
+// and it is the one drawn: "I'm reading the zenloop.com website" is the whole
+// of what a reader wants to know. `site_fact_extract` is that same read's
+// page-parallel fact pass, and `site_triage` fires only for a domain-triage read
+// nobody asked for (isDomainTriageRequest) — drawing either would list one read
+// two or three times over, under two or three sentences, for one afternoon's
+// work.
+const SITE_READ_STEP = notDisplayed(
+  "a step inside one website read that `site_extract` already narrates: a read files one occurrence per lane it runs under its own correlation id, so drawing this lane too would list the same read twice. site_fact_extract is the read's page-parallel fact pass; site_triage runs only for a domain-triage read no human requested, which is workspace-scoped and reaches nobody's feed anyway",
 );
 /**
  * The line for one (kind, state), by literal key — or the reason there is none.
@@ -128,9 +127,51 @@ export const ACTIVITY_LINE: Readonly<
     failed: "agent.activity.offerDraft.failed",
   },
 
-  growth_fit: WATCHED_BY_THE_ASKER,
-  cold_start: WATCHED_BY_THE_ASKER,
-  corpus_ask: WATCHED_BY_THE_ASKER,
+  // The AI reading up on a company for the person who asked. Each lands its
+  // result on the surface that asked, and each is ALSO drawn here, because the
+  // orb is the one place a reader looks to learn the AI is at work at all —
+  // a card that fills in forty seconds later tells nobody what was happening
+  // during the forty seconds.
+  growth_fit: {
+    queued: "agent.activity.growthFit.queued",
+    running: "agent.activity.growthFit.running",
+    stalled: "agent.activity.growthFit.stalled",
+    done: "agent.activity.growthFit.done",
+    degraded: "agent.activity.growthFit.degraded",
+    failed: "agent.activity.growthFit.failed",
+  },
+  corpus_ask: {
+    queued: "agent.activity.corpusAsk.queued",
+    running: "agent.activity.corpusAsk.running",
+    stalled: "agent.activity.corpusAsk.stalled",
+    done: "agent.activity.corpusAsk.done",
+    degraded: "agent.activity.corpusAsk.degraded",
+    failed: "agent.activity.corpusAsk.failed",
+  },
+  // The website read behind the organization page's Enrich card, and behind
+  // onboarding — where the screen is railless (`onboarding` is in
+  // RAIL_LESS_SCREENS, nav.ts), so this copy is only ever seen for the card.
+  cold_start: {
+    queued: "agent.activity.coldStart.queued",
+    running: "agent.activity.coldStart.running",
+    stalled: "agent.activity.coldStart.stalled",
+    done: "agent.activity.coldStart.done",
+    degraded: "agent.activity.coldStart.degraded",
+    failed: "agent.activity.coldStart.failed",
+  },
+  // The deep website read a person starts from the organization page. Its
+  // attribution is a fact about the READ: compose binds the requester as
+  // on_behalf_of (deepreadprincipal.go), so a human's read lands in their own
+  // feed, while a domain-triage or auto-enrich read names nobody and reaches
+  // nobody's rail.
+  site_extract: {
+    queued: "agent.activity.siteExtract.queued",
+    running: "agent.activity.siteExtract.running",
+    stalled: "agent.activity.siteExtract.stalled",
+    done: "agent.activity.siteExtract.done",
+    degraded: "agent.activity.siteExtract.degraded",
+    failed: "agent.activity.siteExtract.failed",
+  },
 
   // The weekly retrospective's sentence. A per-rep occurrence a rep can see —
   // it runs under their own principal over their own week — so it gets real
@@ -152,9 +193,8 @@ export const ACTIVITY_LINE: Readonly<
   ),
   rate_extract: SYSTEM_SWEEP,
   signal_extract: SYSTEM_SWEEP,
-  site_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
-  site_fact_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
-  site_triage: SITE_READ_WATCHED_WHERE_IT_RUNS,
+  site_fact_extract: SITE_READ_STEP,
+  site_triage: SITE_READ_STEP,
   propose_roles: SYSTEM_SWEEP,
   transcript_propose: SYSTEM_SWEEP,
   voice_build: SYSTEM_SWEEP,
@@ -180,8 +220,11 @@ export const ACTIVITY_LINE: Readonly<
  * state) table its test holds to exactly, and a heading in it would be a key no
  * state could reach.
  */
-export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
+export const PANEL_HEADING: Readonly<
+  Record<"running" | "wentWrong", MessageKey>
+> = {
   running: "agent.panel.runningNow",
+  wentWrong: "agent.panel.wentWrong",
 };
 
 /**
@@ -189,11 +232,15 @@ export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
  * name.
  *
  * PARTIAL on purpose, where `ACTIVITY_LINE` is total: a named variant is not
- * something every kind can have. Most occurrences are about no single record,
- * and the ones that are only carry a name when their emitter sends
- * `subject_label` — which today is the document reading and nothing else. A
- * total map here would demand copy for sentences no server can produce, which
- * is the boilerplate the notDisplayed branch exists to avoid.
+ * something every kind can have. The scheduled runs are about no single record
+ * — a morning brief is about the morning — and demanding copy for them would be
+ * the boilerplate the notDisplayed branch exists to avoid. Every kind a person
+ * asks for about ONE record is here, because that is the line the reader is
+ * actually waiting on: "I'm drafting your reply to Anna Berg" is a sentence
+ * about their afternoon, and "I'm drafting your reply" is a sentence about
+ * software. The name is the source's own snapshot (`subject_label`): the
+ * document reader resolves the document's title, and every router-served task
+ * carries the name its caller bound (principal.WithWorkSubject).
  *
  * Each entry is a strict alternative to the unnamed line, never a suffix: "I'm
  * reading Q3-offer.pdf" is one sentence in every locale this ships in, and
@@ -209,7 +256,114 @@ export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
     degraded: "agent.activity.documentExtractNamed.degraded",
     failed: "agent.activity.documentExtractNamed.failed",
   },
+  summarize: {
+    queued: "agent.activity.summarizeNamed.queued",
+    running: "agent.activity.summarizeNamed.running",
+    stalled: "agent.activity.summarizeNamed.stalled",
+    done: "agent.activity.summarizeNamed.done",
+    degraded: "agent.activity.summarizeNamed.degraded",
+    failed: "agent.activity.summarizeNamed.failed",
+  },
+  draft_reply: {
+    queued: "agent.activity.draftReplyNamed.queued",
+    running: "agent.activity.draftReplyNamed.running",
+    stalled: "agent.activity.draftReplyNamed.stalled",
+    done: "agent.activity.draftReplyNamed.done",
+    degraded: "agent.activity.draftReplyNamed.degraded",
+    failed: "agent.activity.draftReplyNamed.failed",
+  },
+  offer_draft: {
+    queued: "agent.activity.offerDraftNamed.queued",
+    running: "agent.activity.offerDraftNamed.running",
+    stalled: "agent.activity.offerDraftNamed.stalled",
+    done: "agent.activity.offerDraftNamed.done",
+    degraded: "agent.activity.offerDraftNamed.degraded",
+    failed: "agent.activity.offerDraftNamed.failed",
+  },
+  growth_fit: {
+    queued: "agent.activity.growthFitNamed.queued",
+    running: "agent.activity.growthFitNamed.running",
+    stalled: "agent.activity.growthFitNamed.stalled",
+    done: "agent.activity.growthFitNamed.done",
+    degraded: "agent.activity.growthFitNamed.degraded",
+    failed: "agent.activity.growthFitNamed.failed",
+  },
+  corpus_ask: {
+    queued: "agent.activity.corpusAskNamed.queued",
+    running: "agent.activity.corpusAskNamed.running",
+    stalled: "agent.activity.corpusAskNamed.stalled",
+    done: "agent.activity.corpusAskNamed.done",
+    degraded: "agent.activity.corpusAskNamed.degraded",
+    failed: "agent.activity.corpusAskNamed.failed",
+  },
+  cold_start: {
+    queued: "agent.activity.coldStartNamed.queued",
+    running: "agent.activity.coldStartNamed.running",
+    stalled: "agent.activity.coldStartNamed.stalled",
+    done: "agent.activity.coldStartNamed.done",
+    degraded: "agent.activity.coldStartNamed.degraded",
+    failed: "agent.activity.coldStartNamed.failed",
+  },
+  site_extract: {
+    queued: "agent.activity.siteExtractNamed.queued",
+    running: "agent.activity.siteExtractNamed.running",
+    stalled: "agent.activity.siteExtractNamed.stalled",
+    done: "agent.activity.siteExtractNamed.done",
+    degraded: "agent.activity.siteExtractNamed.degraded",
+    failed: "agent.activity.siteExtractNamed.failed",
+  },
 };
+
+/**
+ * Why a run stopped, and what the reader can do about it — one sentence per
+ * value of the router's closed `degrade_reason` vocabulary.
+ *
+ * `degrade_reason` is server-authored operator vocabulary: a sentinel like
+ * `provider_quota`, never a provider's own message. It reaches the reader ONLY
+ * through this table, in their locale, as a cause paired with a repair — "the
+ * provider's quota is used up; top it up or bind another model under Settings"
+ * — because a stopped run with no reason is a fault the reader can only
+ * shrug at, and a raw token is a fault they cannot read. A value with no entry
+ * draws nothing, which is how a carrier's own prose (the scheduled runner
+ * writes full sentences here, in English) and any vocabulary this build has not
+ * heard of stay off the reader's screen rather than appearing verbatim.
+ *
+ * The keys are the sentinels `classifyError` and the attempt reasons the router
+ * writes (ai/callstore.go, ai/logicalcall.go). PARTIAL over strings by
+ * construction — the wire types the field as free text — so this is the one
+ * map here the compiler cannot hold total; its test holds every key to real
+ * copy instead.
+ */
+export const REASON_LINE: Readonly<Record<string, MessageKey>> = {
+  budget_deferred: "agent.activity.reason.budgetDeferred",
+  budget_degrade: "agent.activity.reason.budgetDegrade",
+  budget_unavailable: "agent.activity.reason.budgetUnavailable",
+  metering_failed: "agent.activity.reason.meteringFailed",
+  request_failed: "agent.activity.reason.requestFailed",
+  schema_invalid: "agent.activity.reason.schemaInvalid",
+  provider_quota: "agent.activity.reason.providerQuota",
+  provider_throttled: "agent.activity.reason.providerThrottled",
+  provider_refused: "agent.activity.reason.providerRefused",
+  provider_error: "agent.activity.reason.providerError",
+};
+
+/**
+ * The reader's sentence for why a run stopped, or null when the run stopped
+ * for no reason this build can put into words.
+ *
+ * `Object.hasOwn`, not a bare lookup: the value comes off the wire, and
+ * `constructor` would otherwise answer from the prototype with a function.
+ */
+export function reasonFor(
+  item: Readonly<{ degrade_reason?: string | null }>,
+  t: (key: MessageKey) => string,
+): string | null {
+  const reason = item.degrade_reason ?? "";
+  if (reason === "" || !Object.hasOwn(REASON_LINE, reason)) {
+    return null;
+  }
+  return t(REASON_LINE[reason]);
+}
 
 /**
  * What to say about one item, or nothing at all.

@@ -3135,7 +3135,149 @@ export const en = {
   "agent.activity.offerDraft.failed": "I couldn't draft your offer.",
   "agent.activity.offerDraft.stalled":
     "Drafting your offer has taken unusually long. It may have stopped.",
+  // The AI reading up on a company, a corpus or a website for the person who
+  // asked, and the NAMED variants of every line about one record. Same rules
+  // as above: first person, result first, never a word that reads as finished
+  // on a run that stopped part-way. {name} is the source's own snapshot of what
+  // the product calls the record — a person, a company, a deal, a website's
+  // host — and every named line is a whole sentence in its own right, never a
+  // suffix pasted onto the unnamed one.
+  "agent.activity.growthFit.queued":
+    "Judging how well this company fits is queued.",
+  "agent.activity.growthFit.running":
+    "I'm judging how well this company fits what we sell.",
+  "agent.activity.growthFit.stalled":
+    "Judging this company's fit has taken unusually long. It may have stopped.",
+  "agent.activity.growthFit.done": "This company's fit is assessed.",
+  "agent.activity.growthFit.degraded":
+    "I judged this company's fit from part of the evidence and stopped.",
+  "agent.activity.growthFit.failed":
+    "I couldn't judge how well this company fits.",
+  "agent.activity.growthFitNamed.queued":
+    "Judging how well {name} fits is queued.",
+  "agent.activity.growthFitNamed.running":
+    "I'm judging how well {name} fits what we sell.",
+  "agent.activity.growthFitNamed.stalled":
+    "Judging the fit of {name} has taken unusually long. It may have stopped.",
+  "agent.activity.growthFitNamed.done": "The fit of {name} is assessed.",
+  "agent.activity.growthFitNamed.degraded":
+    "I judged the fit of {name} from part of the evidence and stopped.",
+  "agent.activity.growthFitNamed.failed":
+    "I couldn't judge how well {name} fits.",
+  "agent.activity.corpusAsk.queued":
+    "Your question to the documents is queued.",
+  "agent.activity.corpusAsk.running":
+    "I'm answering your question from the documents.",
+  "agent.activity.corpusAsk.stalled":
+    "Answering from the documents has taken unusually long. It may have stopped.",
+  "agent.activity.corpusAsk.done": "Your answer from the documents is ready.",
+  "agent.activity.corpusAsk.degraded":
+    "I answered from part of the documents and stopped.",
+  "agent.activity.corpusAsk.failed": "I couldn't answer from the documents.",
+  "agent.activity.corpusAskNamed.queued": "Your question to {name} is queued.",
+  "agent.activity.corpusAskNamed.running":
+    "I'm answering your question from {name}.",
+  "agent.activity.corpusAskNamed.stalled":
+    "Answering from {name} has taken unusually long. It may have stopped.",
+  "agent.activity.corpusAskNamed.done": "Your answer from {name} is ready.",
+  "agent.activity.corpusAskNamed.degraded":
+    "I answered from part of {name} and stopped.",
+  "agent.activity.corpusAskNamed.failed": "I couldn't answer from {name}.",
+  "agent.activity.coldStart.queued":
+    "Reading this company's website is queued.",
+  "agent.activity.coldStart.running": "I'm reading this company's website.",
+  "agent.activity.coldStart.stalled":
+    "Reading this company's website has taken unusually long. It may have stopped.",
+  "agent.activity.coldStart.done": "I've read this company's website.",
+  "agent.activity.coldStart.degraded":
+    "I read part of this company's website and stopped.",
+  "agent.activity.coldStart.failed": "I couldn't read this company's website.",
+  "agent.activity.coldStartNamed.queued": "{name} is queued to be read.",
+  "agent.activity.coldStartNamed.running": "I'm reading {name}.",
+  "agent.activity.coldStartNamed.stalled":
+    "Reading {name} has taken unusually long. It may have stopped.",
+  "agent.activity.coldStartNamed.done": "I've read {name}.",
+  "agent.activity.coldStartNamed.degraded":
+    "I read part of {name} and stopped.",
+  "agent.activity.coldStartNamed.failed": "I couldn't read {name}.",
+  "agent.activity.siteExtract.queued":
+    "A deep read of this company's website is queued.",
+  "agent.activity.siteExtract.running":
+    "I'm reading through this company's website.",
+  "agent.activity.siteExtract.stalled":
+    "Reading through this company's website has taken unusually long. It may have stopped.",
+  "agent.activity.siteExtract.done":
+    "I've read through this company's website.",
+  "agent.activity.siteExtract.degraded":
+    "I read through part of this company's website and stopped.",
+  "agent.activity.siteExtract.failed":
+    "I couldn't read through this company's website.",
+  "agent.activity.siteExtractNamed.queued": "A deep read of {name} is queued.",
+  "agent.activity.siteExtractNamed.running": "I'm reading through {name}.",
+  "agent.activity.siteExtractNamed.stalled":
+    "Reading through {name} has taken unusually long. It may have stopped.",
+  "agent.activity.siteExtractNamed.done": "I've read through {name}.",
+  "agent.activity.siteExtractNamed.degraded":
+    "I read through part of {name} and stopped.",
+  "agent.activity.siteExtractNamed.failed": "I couldn't read through {name}.",
+  "agent.activity.summarizeNamed.queued": "Reading up on {name} is queued.",
+  "agent.activity.summarizeNamed.running":
+    "I'm pulling together what I know about {name}.",
+  "agent.activity.summarizeNamed.stalled":
+    "Reading up on {name} has taken unusually long. It may have stopped.",
+  "agent.activity.summarizeNamed.done": "What I know about {name} is ready.",
+  "agent.activity.summarizeNamed.degraded":
+    "I gathered some of what I know about {name} and stopped.",
+  "agent.activity.summarizeNamed.failed":
+    "I couldn't finish reading up on {name}.",
+  "agent.activity.draftReplyNamed.queued":
+    "Your reply to {name} is queued to be drafted.",
+  "agent.activity.draftReplyNamed.running":
+    "I'm drafting your reply to {name}.",
+  "agent.activity.draftReplyNamed.stalled":
+    "Drafting your reply to {name} has taken unusually long. It may have stopped.",
+  "agent.activity.draftReplyNamed.done": "Your draft reply to {name} is ready.",
+  "agent.activity.draftReplyNamed.degraded":
+    "I got partway through your reply to {name} and stopped.",
+  "agent.activity.draftReplyNamed.failed":
+    "I couldn't draft your reply to {name}.",
+  "agent.activity.offerDraftNamed.queued":
+    "Your offer for {name} is queued to be drafted.",
+  "agent.activity.offerDraftNamed.running":
+    "I'm drafting your offer for {name}.",
+  "agent.activity.offerDraftNamed.stalled":
+    "Drafting your offer for {name} has taken unusually long. It may have stopped.",
+  "agent.activity.offerDraftNamed.done":
+    "Your draft offer for {name} is ready.",
+  "agent.activity.offerDraftNamed.degraded":
+    "I got partway through your offer for {name} and stopped.",
+  "agent.activity.offerDraftNamed.failed":
+    "I couldn't draft your offer for {name}.",
+  // Why a run stopped, and what to do about it — one per value of the router's
+  // closed degrade_reason vocabulary (ai/callstore.go). A cause with no repair
+  // is a fault the reader can only shrug at, so every line carries both.
+  "agent.activity.reason.budgetDeferred":
+    "This month's AI budget is used up, so the work is waiting for next month. An admin can raise the budget under Settings → AI to run it now.",
+  "agent.activity.reason.budgetDegrade":
+    "This month's AI budget is nearly used up, so I ran on a smaller model. An admin can raise the budget under Settings → AI.",
+  "agent.activity.reason.budgetUnavailable":
+    "I couldn't read the AI budget, so nothing ran. Try again in a moment; if it keeps happening, tell an admin.",
+  "agent.activity.reason.meteringFailed":
+    "The answer came back but couldn't be recorded against the budget, so it was discarded. Try again in a moment.",
+  "agent.activity.reason.requestFailed":
+    "The request couldn't be put together from the record. Try again; if it keeps happening, tell an admin.",
+  "agent.activity.reason.schemaInvalid":
+    "The model's answer didn't come back in a shape I could use. Try again.",
+  "agent.activity.reason.providerQuota":
+    "The AI provider's quota is used up. An admin can top it up or bind another model under Settings → AI.",
+  "agent.activity.reason.providerThrottled":
+    "The AI provider is rate-limiting requests. Wait a moment and try again.",
+  "agent.activity.reason.providerRefused":
+    "The AI provider refused the request. Try again; if it keeps happening, an admin can check the provider under Settings → AI.",
+  "agent.activity.reason.providerError":
+    "The AI provider didn't answer. Try again in a moment; if it keeps happening, an admin can check the provider under Settings → AI.",
   "agent.panel.runningNow": "Running now",
+  "agent.panel.wentWrong": "What went wrong today",
 
   "agents.connected": "Connected agents",
   "agents.connectedSub":

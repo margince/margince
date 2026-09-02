@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -151,7 +152,7 @@ func floorSection(floor []Section, kind crmcontracts.MeetingBriefSectionKind) (S
 }
 
 func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) ([]Section, error) {
-	resp, err := lane.Complete(ctx, BriefRequest(in, lang))
+	resp, err := lane.Complete(principal.WithWorkSubject(ctx, in.Company), BriefRequest(in, lang))
 	if err != nil {
 		return nil, err
 	}

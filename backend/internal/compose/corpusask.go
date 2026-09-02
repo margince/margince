@@ -58,6 +58,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/vectorkit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -242,7 +243,7 @@ func AnswerCorpus(
 		return answer
 	}
 
-	written, err := askCorpusLane(ctx, lane, question, passages, lang)
+	written, err := askCorpusLane(ctx, lane, state.Corpus.Name, question, passages, lang)
 	if err != nil {
 		// The degrade is declared, but a SILENT one is indistinguishable from a
 		// lane nobody wired: the outcome tells the reader nothing read the
@@ -268,11 +269,13 @@ func AnswerCorpus(
 	return answer
 }
 
-// askCorpusLane makes the call and keeps what survives the quote check.
+// askCorpusLane makes the call and keeps what survives the quote check. The
+// corpus is named for the AI-activity rail, so the line under the orb says
+// which corpus is being asked rather than that one is.
 func askCorpusLane(
-	ctx context.Context, lane corpusAskLane, question string, passages []knowledge.Passage, lang string,
+	ctx context.Context, lane corpusAskLane, corpus, question string, passages []knowledge.Passage, lang string,
 ) ([]crmcontracts.KnowledgeClaim, error) {
-	resp, err := lane.Complete(ctx, CorpusAskRequest(question, passages, lang))
+	resp, err := lane.Complete(principal.WithWorkSubject(ctx, corpus), CorpusAskRequest(question, passages, lang))
 	if err != nil {
 		return nil, fmt.Errorf("the corpus ask lane: %w", err)
 	}

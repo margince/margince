@@ -21,6 +21,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -214,6 +215,7 @@ func (m *CallMeter) announceRail(ctx context.Context, tx pgx.Tx, terminal Call) 
 		// No lease: the occurrence is settled when it is written, so there is
 		// no live attempt whose believability could expire.
 		DegradeReason: railDegradeReason(terminal),
+		SubjectLabel:  railSubject(terminal),
 	}
 	if err := storekit.EmitPipelinePayload(ctx, tx, ledgerID, payload); err != nil {
 		return fmt.Errorf("ai: publish rail state change: %w", err)
@@ -300,6 +302,31 @@ func railState(c Call) string {
 	default:
 		return railStateDone
 	}
+}
+
+// railSubjectBound is the contract's cap on subject_label, applied here rather
+// than at the wire: the projection stores what it is handed, so an over-long
+// name would fail the write instead of being shortened on read.
+const railSubjectBound = 120
+
+// railSubject names what the call was about, or nothing when the caller bound
+// no subject.
+//
+// Runes, not bytes: the name is a person's or a company's and the cut has to
+// land between characters in every script the product ships in, or a German
+// umlaut or a Vietnamese vowel at the boundary becomes a broken byte in front
+// of a reader. Nil rather than the empty string for the unnamed case, so the
+// projection's upsert keeps a name an earlier event carried instead of
+// overwriting it with a blank.
+func railSubject(c Call) *string {
+	label := strings.TrimSpace(c.SubjectLabel)
+	if label == "" {
+		return nil
+	}
+	if runes := []rune(label); len(runes) > railSubjectBound {
+		label = string(runes[:railSubjectBound])
+	}
+	return &label
 }
 
 // railDegradeReason says why the occurrence did not finish cleanly, in a closed

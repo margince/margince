@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const replyActivityMaxRunes = 12_000
@@ -139,7 +140,10 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	// timestamp tells them apart.
 	state := d.conversationState(activity)
 	envelope := d.envelope.Resolve(ctx, body, state)
-	recipient, surname := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
+	recipient, surname, fullName := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
+	// The rail names who the reply is to; the greeting below picks its own
+	// register from the two halves.
+	ctx = principal.WithWorkSubject(ctx, fullName)
 
 	fallbackSubject, fallbackBody := activities.DeterministicEmailDraft(activities.DraftContext{
 		Topic:     topic,
@@ -204,22 +208,24 @@ const recipientMaxRunes = 200
 // linked to nobody, and in both cases an unnamed greeting is the honest answer.
 // The reason is logged, so a lookup that breaks for some other cause is visible
 // rather than silently reading as "no recipient".
-// It answers both names because the two greeting registers take different
+// It answers both greeting names because the two registers take different
 // ones: the familiar form uses the first name, the formal form the surname.
-// Resolving them together keeps one read behind one greeting.
-func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) (greeting, surname string) {
+// The full name rides beside them for the AI-activity rail, which names the
+// person the way their record does. Resolving all three together keeps one
+// read behind one greeting and one rail line.
+func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) (greeting, surname, fullName string) {
 	if d.store == nil {
-		return "", ""
+		return "", "", ""
 	}
 	recipient, err := d.store.ReplyRecipientFor(ctx, anchor)
 	if err != nil {
 		d.logger().WarnContext(ctx, "reply recipient unavailable; drafting without a greeting name", "err", err)
-		return "", ""
+		return "", "", ""
 	}
 	if recipient.FirstName != "" {
-		return recipient.FirstName, recipient.LastName
+		return recipient.FirstName, recipient.LastName, recipient.FullName
 	}
-	return recipient.FullName, recipient.LastName
+	return recipient.FullName, recipient.LastName, recipient.FullName
 }
 
 // conversationState places the message being answered on the silence axis.

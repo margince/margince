@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -212,7 +213,9 @@ func ParseBrief(text, orgID string, in Input) ([]Sentence, error) {
 
 func writeWithModel(ctx context.Context, lane Completer, orgID string, in Input, lang string) ([]Section, error) {
 	req := BriefRequest(in, lang)
-	resp, err := lane.Complete(ctx, req)
+	// Named for the rail, so the line under the orb says which company is
+	// being read up on rather than that one is.
+	resp, err := lane.Complete(principal.WithWorkSubject(ctx, in.Name), req)
 	if err != nil {
 		return nil, err
 	}

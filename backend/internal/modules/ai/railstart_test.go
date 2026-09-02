@@ -132,7 +132,7 @@ func TestServingACallAnnouncesItsStartToTheRail(t *testing.T) {
 		false, nil,
 	)
 	corr := ids.NewV7()
-	ctx := principal.WithCorrelationID(wsCtx(), corr)
+	ctx := principal.WithWorkSubject(principal.WithCorrelationID(wsCtx(), corr), "Zenloop GmbH")
 
 	if _, _, err := r.serveCompletion(ctx, TaskSummarize, []Tier{TierCheapCloud}, model.Request{}); err != nil {
 		t.Fatalf("serving the call: %v", err)
@@ -149,6 +149,20 @@ func TestServingACallAnnouncesItsStartToTheRail(t *testing.T) {
 	// carrying a different one opens an occurrence the flush never closes.
 	if got.CorrelationID == nil || *got.CorrelationID != corr {
 		t.Errorf("the start carried correlation %v, want %s — the settle would land on a different occurrence", got.CorrelationID, corr)
+	}
+	// The name rides the START, because the start is the line a waiting reader
+	// watches: named only at the settle, the rail would say "reading up on this
+	// company" for the whole of the work and "Zenloop GmbH" only after it.
+	if got.SubjectLabel != "Zenloop GmbH" {
+		t.Errorf("the start carried subject %q, want the name bound on the context", got.SubjectLabel)
+	}
+	// And the settle carries it too, off the same context, so the two halves of
+	// one occurrence never disagree about what it was about.
+	if len(starter.recorded) == 0 {
+		t.Fatal("the call was never recorded, so nothing settles the occurrence")
+	}
+	if term := starter.recorded[len(starter.recorded)-1]; term.SubjectLabel != "Zenloop GmbH" {
+		t.Errorf("the settle carried subject %q, want the same name as the start", term.SubjectLabel)
 	}
 }
 

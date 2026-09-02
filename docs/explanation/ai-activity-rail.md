@@ -128,6 +128,18 @@ provider's or a parser's message: those carry vendor text and can echo credentia
 material, and this field reaches an ordinary rep. `MarkFailed` takes a typed
 `runner.FailureReason` so a raw error **fails to compile**.
 
+`subject_label` is what the occurrence was ABOUT, named the way the product
+titles the record elsewhere. Two sources fill it. The document reader resolves
+the attachment's title itself. Every router-served task carries whatever its
+caller bound with `principal.WithWorkSubject` — the person a reply is drafted
+to, the company being read up on, the deal an offer is for, the host of the
+website being read — and the router stamps it on both the opening `running`
+announcement and the settle (`ai/railstart.go`, `ai/railemit.go`, bounded to
+the contract's 120 runes in `railSubject`). The binding sits in the compose
+service that already loaded the record under the caller's own visibility gate,
+so the name reaches only the person the record was shown to. A caller that
+binds nothing leaves the field null, and the client draws its generic sentence.
+
 **`kinds` is how a client that draws part of the record asks for its part**, and
 it is applied BEFORE the bounds. Every task reports, so a caller that renders six
 kinds and is served the newest ten of twenty-three can be handed ten it draws
@@ -155,29 +167,43 @@ orphan guard in `i18n.test.ts` counts a key as rendered when it starts with a
 template stem, so an interpolated key would vouch for the whole namespace forever
 and a retired kind's copy would sit in three catalogs with nothing to flag it.
 
-**Six kinds are narrated**, in en/de/vi, total over all six states:
+**Eleven kinds are narrated**, in en/de/vi, total over all six states — and
+every kind a person asks for about ONE record also carries a **named** variant
+(`NAMED_LINE`), used whenever the feed sent a `subject_label`:
 
 | Kind | Reported by | The line a rep sees |
 |---|---|---|
 | `morning_brief` | carrier (`agent_runner`) | the scheduled brief |
 | `overnight_at_risk_sweep` | carrier (`agent_runner`) | the scheduled sweep |
-| `document_extract` | carrier (`attachment_extraction`) | reading a document you attached |
-| `summarize` | router | "I'm writing your summary." |
-| `draft_reply` | router | "I'm drafting your reply." |
-| `offer_draft` | router | "I'm drafting your offer." |
+| `weekly_review` | router | the weekly retrospective |
+| `document_extract` | carrier (`attachment_extraction`) | "I'm reading Q3-offer.pdf." |
+| `summarize` | router | "I'm pulling together what I know about Zenloop GmbH." |
+| `draft_reply` | router | "I'm drafting your reply to Anna Berg." |
+| `offer_draft` | router | "I'm drafting your offer for Zenloop renewal." |
+| `growth_fit` | router | "I'm judging how well Zenloop GmbH fits what we sell." |
+| `corpus_ask` | router | "I'm answering your question from Product docs." |
+| `cold_start` | router | "I'm reading zenloop.com." (the Enrich card's website read) |
+| `site_extract` | router | "I'm reading through zenloop.com." (the deep read) |
 
-For the three router-owned ones, `queued` copy exists and **is unreachable**: the
+The account-reading kinds used to be withheld as "watched by the asker", on the
+argument that the result lands on the surface that asked. They are drawn now
+because the orb is the one place a reader looks to learn the AI is at work at
+all: a card that fills in forty seconds later tells nobody what was happening
+during the forty seconds. Each is personal — the handler runs under the asker's
+own principal, or compose binds them as `on_behalf_of` — so each reaches exactly
+the feed of the person who asked.
+
+For the router-owned ones, `queued` copy exists and **is unreachable**: the
 router announces a call it is ABOUT to serve, never one waiting, and no carrier
 owns these tasks. The key exists because the state axis is total and the compiler
 requires it — not because a producer is missing.
 
-**Seventeen are not narrated**, and each reason is a different kind of fact:
+**Twelve are not narrated**, and each reason is a different kind of fact:
 
 | Reason | Kinds | Why |
 |---|---|---|
-| Watched by the asker | `growth_fit`, `cold_start` | The work lands on the surface that asked and changes it on arrival. `growth_fit` renders the band it returns on the panel that asked. `cold_start` runs behind TWO product surfaces and both need naming (it declares four invocation *sites* in `aitaskregistry.go`, which is a different count and not the one that matters here): onboarding, whose screen is deliberately RAILLESS (`onboarding` is a member of `RAIL_LESS_SCREENS` in `nav.ts`, which `shell.tsx` reads to drop the chrome), and the organization page's Enrich card — `cmd/api/modelwiring.go` wires `WithScrape` with the cold-start brain — where a rail does exist and the card itself renders the proposal. |
-| System sweep | `brief_ranking`, `capture_classify`, `capture_counterparty_verdict`, `rate_extract`, `signal_extract`, `transcript_propose`, `voice_build` | Background workspace work that belongs to nobody in particular, so it has no personal line to draw. |
-| Watched where it runs | `site_extract`, `site_fact_extract`, `site_triage` | Attribution here is a fact about the READ, not the task: a human-requested read carries that person as `on_behalf_of` and IS personal to them; a domain-triage or auto-enrich read names no human and is workspace-scoped. Neither wants a line. The human's read is already drawn live where it was started (the organization page polls the read's own status), and the system's read belongs to nobody. A grain problem seals it: the occurrence key is correlation+task and a read's correlation is its `site_read` row id, so one read files one occurrence per lane it runs — and only a domain-triage read reaches all three (`site_triage` fires solely for `isDomainTriageRequest`). |
+| System sweep | `brief_ranking`, `capture_classify`, `capture_confidentiality_verdict`, `capture_counterparty_verdict`, `rate_extract`, `signal_extract`, `propose_roles`, `transcript_propose`, `voice_build` | Background workspace work that belongs to nobody in particular, so it has no personal line to draw. |
+| A step of a read already narrated | `site_fact_extract`, `site_triage` | One website read files one occurrence per lane it runs, because the occurrence key is correlation+task and a read's correlation is its `site_read` row id. `site_extract` is the profile lane every human-requested read runs and is the one drawn; `site_fact_extract` is that read's page-parallel fact pass, and `site_triage` fires only for a domain-triage read no human requested (`isDomainTriageRequest`), which is workspace-scoped and reaches nobody's feed anyway. Drawing either would list one read two or three times over. |
 | Reaches nobody, and would not be worth showing | `enrich` | Both halves matter. **Reachability:** its one production site is the signature-enrichment pass, which runs under a system principal with no `on_behalf_of` — so every occurrence is workspace-scoped with a NULL `actor_user_id`, and the personal feed selects on `actor_user_id`. **Worth:** it could not be per-person even if it were reachable. The pass mints ONE correlation id for the whole run (`capture_enrich`, up to 100 candidates in series) and the occurrence key is correlation+task, so every candidate collapses into one row — a per-person subject would make that row flap rather than narrate anybody. What a reader wants from it is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the person record. |
 | An operator's measurement | `cert_judge` | The certification lane grading this build's own answers — not a rep's work. |
 | Declared, not built | `deal_health`, `nl_search`, `transcript` | Named in `api/ai-tasks.yaml`; no site runs them, so nothing reports them yet. |
@@ -189,19 +215,54 @@ ticker's own `enrich` key names DIFFERENT work — a provider run on a person
 runs `cold_start`, not this task. The deep read rides its own `site-read` ticker
 key, not this one.
 
+### Why a run stopped, and what to do about it
+
+`degrade_reason` reaches the reader ONLY through `REASON_LINE`
+(`ai-activity-lines.ts`): one translated sentence per value of the router's
+closed vocabulary (`classifyError` and the attempt reasons in
+`ai/callstore.go`, `ai/logicalcall.go`), each pairing the cause with a repair —
+"the provider's quota is used up; an admin can top it up or bind another model
+under Settings → AI". The panel lists every run that failed or stopped early
+today under **What went wrong today**, the run's own line first and the reason
+under it. A value off the vocabulary draws nothing: the scheduled runner's
+`FailureReason` sentences are English prose an ordinary rep is not shown, and
+a raw token is a fault they cannot read.
+
+### A fault flashes or holds, by who was watching
+
+`useAgentFault` (`agent-fault.ts`) colours the orb for a run that failed or
+degraded, and how long it stays coloured depends on whether anybody was there
+when it broke:
+
+- **Scheduled and background work** — the brief, the sweep, the review, a
+  document reading — fails while nobody is looking and has no other screen to
+  land on. Its fault **holds until the panel is opened**, however many hours
+  that takes, and opening the panel acknowledges every fault it delivered.
+- **Attended work** — the kinds a person asked for and waited on (`ATTENDED`:
+  the drafts, the brief, the fit, the answer, the reads) — is reported on the
+  screen that asked, the moment it happens. Its fault **flashes** for eight
+  seconds and then counts as seen on its own, staying in the panel's
+  "What went wrong today" list for the rest of the day. Holding it until the
+  panel was opened kept the orb red through the afternoon over a draft the
+  reader had already retried and sent.
+
 ### Two surfaces, one action, no double narration
 
 The taskbar ticker narrates **this tab's own react-query cache**; the rail
-narrates **the server's feed**. Three ticker entries describe work the rail now
-covers, and they do not collide: the bar renders the ticker line OR the rail line
+narrates **the server's feed**. The bar renders the ticker line OR the rail line
 as one `if/else` on a single span (`agentrail.tsx`), so a reader never sees one
-action twice.
+action twice — and where a ticker key and a displayed kind name the same action,
+the ticker entry goes (the `COLLISIONS` test in `ai-activity-lines.test.ts`
+pins the pairs).
 
 One collision was real and was fixed at the key rather than the table: removing
 the ticker's `email` entry to end a two-vocabulary clash also silenced email
 SENDS, because four mutations shared that key — two drafts and two sends. The key
 is now split (`email-draft` for the rail, `email` for the ticker), so each action
-is narrated exactly once by whichever surface actually knows about it.
+is narrated exactly once by whichever surface actually knows about it. The
+ticker's `site-read` entry went the same way once the rail began drawing
+`site_extract`: the rail names the site for as long as the AI is reading it,
+which is the line the click was standing in for.
 
 ## The gates that hold it
 
@@ -220,6 +281,8 @@ emitters at once.
 | Every spec name can be a message-key segment | `TestEverySpecNameCanBeAMessageKeySegment` |
 | Every contract kind is displayed or carries a written reason | the TypeScript `Record` type — a **compile error**, not a test |
 | Every displayed kind has copy in en/de/vi, for all six states | the `LineSet` type + the i18n catalogs |
+| Every kind a person asks for about one record has a named variant, and every router sentinel a reason line | `ai-activity-lines.test.ts` |
+| A router occurrence carries the subject its caller bound, at the start and the settle | `TestServingACallAnnouncesItsStartToTheRail`, `TestRailSubjectIsTheBoundedNameOrNothing` (`internal/modules/ai`) |
 
 The census gate is deliberately derived rather than listed: the router announces
 for every task the registry leaves to it, and that set grows the moment somebody
@@ -229,19 +292,18 @@ reporting nothing at all.
 
 ## Known limits
 
-- **Five tasks report settled-only** ([#2272]). `transcript_propose`,
-  `site_extract`, `site_fact_extract`, `site_triage` and `voice_build` each
-  already have a durable, attributable row that COULD say `queued`/`running`, but
-  none is registered as a carrier. For long work, settled-only is worse than
-  silence: a rep clicks "read this site", sees nothing for forty seconds, then it
-  appears already finished.
+- **A router-owned line begins at the model call, not at the click** ([#2272]).
+  The router says `running` the instant it starts serving, and never `queued`;
+  a deep read crawls before its profile lane calls a model, so the rail's
+  `site_extract` line appears once the crawl has pages to read from, and the
+  organization page's own read status covers the crawl. `transcript_propose`,
+  `site_fact_extract`, `site_triage` and `voice_build` each have a durable,
+  attributable row that could say `queued`, but none is registered as a carrier.
 - **One site read files one occurrence per lane it runs** ([#2272]). Its
   correlation id is the `site_read` row id, so the router's
   `correlation_id + task` key produces a separate line per task under one read.
-  Only a domain-triage read reaches all three — `site_triage` fires solely for
-  `isDomainTriageRequest`, so an ordinary human-requested read does not run it.
-  Harmless while the rail narrates none of them; it becomes visible the moment
-  anybody writes the copy.
+  The client draws `site_extract` and treats the other two as steps of the same
+  read, which is what keeps one read from listing three times.
 - **A multi-call unit reopens its occurrence once per call** ([#2276]).
   `CompleteStructured` walks the ladder three times, and the lease is announced
   once and cannot be renewed.
@@ -289,7 +351,9 @@ reporting nothing at all.
 | Attribution | `aiactivity/actor.go` — `ResolveActor` |
 | The event | `ai_task.state_changed` (`shared/kernel/events/catalog.go`; payload generated into `internalevents_gen.go`) |
 | The wire | `AiActivity` / `AiActivityKind` / `AiActivityItem` + `GET /me/ai-activity` (`backend/api/crm.yaml`) |
-| What is drawn, and what is not | `frontend/src/app/ai-activity-lines.ts` |
+| What is drawn, and what is not; the named variants; the reason lines | `frontend/src/app/ai-activity-lines.ts` |
+| Naming the record a request is about | `principal.WithWorkSubject` (`shared/kernel/principal`), bound in the compose services; stamped by `ai/tracing.go` `newAttemptTrace` and `ai/railstart.go` |
+| Which faults flash and which hold | `frontend/src/app/agent-fault.ts` — `ATTENDED` |
 | The rail component + poll | `frontend/src/app/agentrail.tsx`, `ai-activity.ts` |
 | The census gate | `backend/gates/aiactivitycatalogparity_test.go` |
 

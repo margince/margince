@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { components } from "../api/schema";
 
 type AiActivityItem = components["schemas"]["AiActivityItem"];
+type ActivityKind = AiActivityItem["kind"];
 
 /**
  * The run that broke, held on the orb until somebody has actually looked at it.
@@ -37,6 +38,47 @@ const SEEN_KEY = "margince.agent.faults-seen";
  * that the feed no longer carries.
  */
 const SEEN_CAP = 20;
+
+/**
+ * The kinds a person asks for and then waits on, where the surface that asked
+ * reports the outcome itself: the composer shows the draft that came back or
+ * the floor it fell to, the company page shows the brief, the fit, the answer,
+ * the read.
+ *
+ * A fault in one of these is DELIVERED the moment it happens, on the screen the
+ * reader is looking at, so the orb has nothing left to hold it for. It still
+ * colours — a reader glancing at the corner should see that the ask broke — but
+ * for FLASH_MS and no longer, after which it counts as seen and stays in the
+ * panel's list of what went wrong today. Holding it until the panel was opened
+ * kept the orb red through the whole afternoon over a draft the reader had
+ * already retried and sent.
+ *
+ * Everything not named here is the scheduled and background work — the brief,
+ * the sweep, the review, the document reading — that fails while nobody is
+ * looking and has no other screen to land on. Those hold until acknowledged,
+ * which is the rule this module was built for.
+ *
+ * Typed against the contract's own kinds, so a renamed task fails the build
+ * here rather than quietly falling into the held-until-seen half.
+ */
+const ATTENDED: ReadonlySet<ActivityKind> = new Set<ActivityKind>([
+  "summarize",
+  "draft_reply",
+  "offer_draft",
+  "growth_fit",
+  "corpus_ask",
+  "cold_start",
+  "site_extract",
+]);
+
+/**
+ * How long an attended fault colours the orb before it counts as seen.
+ *
+ * Long enough to be noticed by a reader who looked away from the screen that
+ * reported it, short enough that it is over before they have finished reading
+ * the reason that screen gave them.
+ */
+const FLASH_MS = 8_000;
 
 /** `failed` is red; a run that kept partial state is amber and not a break. */
 export type FaultSeverity = "error" | "warning";
@@ -132,21 +174,41 @@ export function useAgentFault(
     [recent, seen],
   );
 
-  const acknowledge = useCallback(() => {
-    if (unacknowledged.length === 0) {
+  const markSeen = useCallback((ids: readonly string[]) => {
+    if (ids.length === 0) {
       return;
     }
     setSeen((current) => {
-      const next = [
-        ...unacknowledged.map((entry) => entry.item.id),
-        ...current,
-      ].slice(0, SEEN_CAP);
+      const next = [...ids, ...current].slice(0, SEEN_CAP);
       writeSeen(next);
       return next;
     });
-  }, [unacknowledged]);
+  }, []);
+
+  const acknowledge = useCallback(() => {
+    markSeen(unacknowledged.map((entry) => entry.item.id));
+  }, [markSeen, unacknowledged]);
 
   // The orb carries one state, so it carries the FIRST fault: `recent` is
   // newest-first, and the newest break is the one worth colouring for.
-  return { fault: unacknowledged[0] ?? null, acknowledge };
+  const fault = unacknowledged[0] ?? null;
+
+  // An attended fault times out on its own. Keyed on the fault's id, so a
+  // second attended fault arriving behind the first gets its own flash rather
+  // than inheriting the tail of one that was already mostly over.
+  const flashing = fault !== null && ATTENDED.has(fault.item.kind);
+  const flashingID = flashing ? fault.item.id : null;
+  useEffect(() => {
+    if (flashingID === null) {
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      markSeen([flashingID]);
+    }, FLASH_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [flashingID, markSeen]);
+
+  return { fault, acknowledge };
 }
