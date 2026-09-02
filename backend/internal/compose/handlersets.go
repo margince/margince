@@ -112,7 +112,12 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// opened minutes before a meeting, so a stored artifact would be the one
 	// thing it must not be. Same deterministic floor and the same
 	// generated_by honesty as the brief above.
-	s.meetingBriefSvc = meetingbrief.NewService(pool, s.person360Svc, s.peopleStore, time.Now)
+	// The same membership seam the Worklist reads. Coaching asks "may this lead
+	// speak into that rep's day"; the Worklist asks "may this lead open it".
+	// One edge, one answer — two derivations would drift, and the pair that
+	// drifts is exactly those two.
+	s.meetingBriefSvc = meetingbrief.NewService(pool, s.person360Svc, s.peopleStore, time.Now).
+		WithTeammates(newTeammatesSeam(pool))
 	s.meetingBriefHandlers = meetingbrief.NewHandlers(s.meetingBriefSvc, s.sorDispatch.isOverlay)
 	// The deal's status card reads the deal, its health, timeline, tasks and
 	// Deal Room through their own gates. It performs nothing: the click goes

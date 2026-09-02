@@ -10,8 +10,6 @@ package meetingbrief
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -22,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -67,6 +64,10 @@ type Service struct {
 	// lane rewrites the deterministic floor in Margince's voice when a
 	// deployment binds one. Nil is the floor, which is not an error state.
 	lane Completer
+	// teammates answers whether the reader shares a live team with somebody in
+	// the room, which is half the coaching rule. Nil is a composition that
+	// wired no coaching, and projects none.
+	teammates Teammates
 }
 
 // NewService binds the brief to the reads it is written from.
@@ -152,55 +153,20 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	// to "what language is AI writing in" — the admin's setting — and a brief
 	// that asked the browser instead would be the single surface disagreeing
 	// with every other one.
-	// The two halves are written CONCURRENTLY. They share a lane and nothing
-	// else: the sections say what is known, the plan says what to do, and
-	// running them in sequence would make a reader wait for the first before
-	// the second even started. Each degrades to its own floor, so one slow or
-	// failing call cannot take the other down.
-	//
-	// The plan gets its OWN ranked claim set rather than the one the sections
-	// consumed. `take` marks a claim as spoken so no section repeats another,
-	// and the plan is not a tenth section: it is the same facts read for what
-	// to DO about them, so the promise the goal names is also the promise the
-	// objective aims at. Sharing one set would have the plan silently skip
-	// whatever the sections had already used.
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	floor := DeterministicPlan(in, rankClaims(in))
-	var (
-		sections    []Section
-		writtenBy   crmcontracts.WrittenBy
-		planWritten Plan
-		planBy      crmcontracts.WrittenBy
-		both        sync.WaitGroup
-	)
-	both.Add(2)
-	go func() {
-		defer both.Done()
-		// A panic in a goroutine takes the PROCESS down, not the request. The
-		// whole posture of both writers is that a model failure degrades to
-		// the floor, and a nil map or a bad index in a rewrite path would
-		// otherwise be the one model failure that ends the server.
-		defer func() {
-			if recovered := recover(); recovered != nil {
-				slog.ErrorContext(ctx, "meeting brief: the sections writer panicked; serving the deterministic floor", "panic", recovered)
-				sections, writtenBy = Deterministic(in), crmcontracts.Deterministic
-			}
-		}()
-		sections, writtenBy = Write(ctx, s.lane, in, lang)
-	}()
-	go func() {
-		defer both.Done()
-		defer func() {
-			if recovered := recover(); recovered != nil {
-				slog.ErrorContext(ctx, "meeting brief: the plan writer panicked; serving the deterministic floor", "panic", recovered)
-				planWritten, planBy = floor, crmcontracts.Deterministic
-			}
-		}()
-		planWritten, planBy = WritePlan(ctx, s.lane, in, floor, lang)
-	}()
-	both.Wait()
-	plan := wirePlan(planWritten, in)
-	plan.GeneratedBy = planBy
+	written := s.write(ctx, in)
+	plan := wirePlan(written.plan, in)
+	plan.GeneratedBy = written.planBy
+	// Coaching is attached OVER the finished plan, never generated beside it.
+	// The plan above was built blind to who is reading it, so a lead and their
+	// rep are looking at the same meeting and the lead is looking at one more
+	// thing — which is the property the "same facts" test holds.
+	coached, err := s.coachingProjected(ctx, in.Seats)
+	if err != nil {
+		return crmcontracts.MeetingBrief{}, nil, err
+	}
+	if coached {
+		plan.ManagerCoaching = wireCoaching(coachingFor(written.plan))
+	}
 	var filed *ids.UUID
 	if in.Project != nil {
 		id, err := ids.Parse(in.Project.ID)
@@ -216,9 +182,9 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		// Always the instant of the read. Nothing is stored, so there is no
 		// older instant this could honestly report.
 		GeneratedAt: s.now().UTC(),
-		GeneratedBy: writtenBy,
+		GeneratedBy: written.sectionsBy,
 		Scope:       scope,
-		Sections:    wireSections(sections),
+		Sections:    wireSections(written.sections),
 		Omitted:     omissions(in),
 		Plan:        &plan,
 	}, filed, nil
@@ -264,6 +230,34 @@ func isAre(count int) string {
 	return "are"
 }
 
+// foldRoom turns what the transaction read into the shape the writers take.
+//
+// Its own step because it is its own concept: the read above decides what this
+// caller may SEE, and this decides what the brief is written FROM. Keeping them
+// in one function meant eleven locals threaded through a closure, which is more
+// than a reader can hold while also following the gating.
+func (s *Service) foldRoom(
+	room meeting,
+	perAttendee map[ids.UUID][]crmcontracts.ConversationClaim,
+	earlier []priorMeeting,
+	lastSpoke *time.Time,
+	moves []DealMoveIn,
+	roomHidden bool,
+	history []HistoryIn,
+	excerpts []ExcerptIn,
+	seats []ids.UUID,
+) Input {
+	in := FromMeeting(room, perAttendee, s.now().UTC())
+	in.PriorMeetings = foldPriorMeetings(earlier)
+	in.LastSpokeAt = lastSpoke
+	in.DealMoves = moves
+	in.RoomHidden = roomHidden
+	in.History = history
+	in.Excerpts = excerpts
+	in.Seats = seats
+	return in
+}
+
 // assembleInput gathers everything the brief is written from.
 //
 // The meeting and its room come from ONE transaction, because they are one
@@ -286,6 +280,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var roomHidden bool
 	var history []HistoryIn
 	var excerpts []ExcerptIn
+	var seats []ids.UUID
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The requested project is gated BEFORE the meeting is read, because
 		// the meeting read already narrows by it (the attendees' last-touch
@@ -322,6 +317,10 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		if err != nil {
 			return err
 		}
+		seats, err = s.readSeats(ctx, tx, activityID)
+		if err != nil {
+			return err
+		}
 		excerpts, err = s.readExcerpts(ctx, tx,
 			excerptTargets(clusterThreads(threadsOf(history))))
 		if err != nil {
@@ -347,13 +346,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		return Input{}, nil, err
 	}
 
-	in := FromMeeting(room, perAttendee, s.now().UTC())
-	in.PriorMeetings = foldPriorMeetings(earlier)
-	in.LastSpokeAt = lastSpoke
-	in.DealMoves = moves
-	in.RoomHidden = roomHidden
-	in.History = history
-	in.Excerpts = excerpts
+	in := s.foldRoom(room, perAttendee, earlier, lastSpoke, moves, roomHidden, history, excerpts, seats)
 	if len(room.Attendees) == 0 {
 		// Nobody in the room this caller may see. The header still stands, and
 		// assembling a 360 for a person nobody named would be a read of a

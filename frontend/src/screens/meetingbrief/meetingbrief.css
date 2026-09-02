@@ -240,3 +240,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+.mb-coach-lead {
+  margin: 0;
+  color: var(--textPrimary);
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-semibold);
+}
+
+.mb-coach-mode {
+  margin: var(--space-2) 0 var(--space-4);
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}

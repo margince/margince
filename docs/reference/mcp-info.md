@@ -13,10 +13,10 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 59 |
 | Resources | 9 |
-| Tool catalog | 168.4 KB |
+| Tool catalog | 169.0 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 43986 |
-| Largest tool | `prep_for_meeting` (8.2 KB) |
+| Approx. wire tokens | 44142 |
+| Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the WIRE bytes: they carry each tool's output schema and the governance
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 80.3 KB | 47% | **No** — a result's shape, never listed to a model |
+| Output schemas | 80.9 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 39.1 KB | 23% | Yes, every step |
 | Input schemas | 36.5 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.5 KB | 7% | Partly |
@@ -91,7 +91,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.8 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
-| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.1 KB |
+| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.2 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.0 KB |
@@ -5828,6 +5828,71 @@ Get ready for a specific meeting: given the meeting, the same written brief a pe
                     "type": "object"
                   },
                   "type": "array"
+                },
+                "manager_coaching": {
+                  "properties": {
+                    "failure_mode": {
+                      "type": "string"
+                    },
+                    "focus": {
+                      "type": "string"
+                    },
+                    "intervene_if": {
+                      "type": "string"
+                    },
+                    "listen_for": {
+                      "type": "string"
+                    },
+                    "paths": {
+                      "items": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "play": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "label",
+                          "play"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "watch_for": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "failure_mode",
+                    "focus",
+                    "intervene_if",
+                    "listen_for",
+                    "watch_for"
+                  ],
+                  "type": "object"
                 },
                 "meeting_type": {
                   "type": "string"

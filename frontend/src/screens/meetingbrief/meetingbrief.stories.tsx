@@ -3,6 +3,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
 import { PersonMeetingBrief } from "./drawer";
 import {
   briefEmpty,
+  briefManager,
   briefModel,
   briefOmitted,
   briefReady,
@@ -124,6 +125,21 @@ export const WithPlanDark: Story = {
 
 export const WithPlanPhone: Story = {
   render: () => drawer(() => jsonResponse(briefWithPlan)),
+  globals: { viewport: { value: "mobile1" } },
+};
+
+// What a lead sees: the same brief, with one layer on top.
+export const ManagerCoaching: Story = {
+  render: () => drawer(() => jsonResponse(briefManager)),
+};
+
+export const ManagerCoachingDark: Story = {
+  render: () => drawer(() => jsonResponse(briefManager)),
+  globals: { theme: "dark" },
+};
+
+export const ManagerCoachingPhone: Story = {
+  render: () => drawer(() => jsonResponse(briefManager)),
   globals: { viewport: { value: "mobile1" } },
 };
 

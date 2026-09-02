@@ -3945,6 +3945,71 @@
                       ]
                     }
                   },
+                  "manager_coaching": {
+                    "type": "object",
+                    "properties": {
+                      "failure_mode": {
+                        "type": "string"
+                      },
+                      "focus": {
+                        "type": "string"
+                      },
+                      "intervene_if": {
+                        "type": "string"
+                      },
+                      "listen_for": {
+                        "type": "string"
+                      },
+                      "paths": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "evidence": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "record_id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "record_type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "record_id",
+                                  "record_type"
+                                ]
+                              }
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "play": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "evidence",
+                            "label",
+                            "play"
+                          ]
+                        }
+                      },
+                      "watch_for": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "failure_mode",
+                      "focus",
+                      "intervene_if",
+                      "listen_for",
+                      "watch_for"
+                    ]
+                  },
                   "meeting_type": {
                     "type": "string"
                   },
