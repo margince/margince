@@ -80,24 +80,29 @@ func (s *VoiceStore) ActiveVoiceForActor(ctx context.Context) (VoiceProfile, Voi
 
 // voiceSender answers whose voice a draft on this call is written in.
 //
-// The explicit sender wins over the actor, and the ORDER is the whole of it: on
-// an automation's firing the actor is the system principal, which names no
-// person, so reading the actor first would resolve nothing and the bound owner
-// would never be reached. Everywhere else no sender is bound and the actor is
-// the sender, which is why this is a fallback rather than a second parameter on
-// every drafting call.
+// An ACTOR THAT NAMES A PERSON is that person, and no bound sender may override
+// them. This ordering is a boundary, not a preference: a voice profile holds its
+// owner's verbatim written text, so a call that could name somebody else's owner
+// is a read of that person's private writing. A human call already knows whose
+// voice it wants — their own — and admitting an override there would make this
+// value an authorization input, which it must never be.
+//
+// The bound sender is consulted only when the actor names nobody. That is the
+// automation's firing: the engine composes under the system principal so its
+// writes stay attributed to the system, while the mail leaves under the
+// automation owner's name. There is no person to override in that case, which
+// is why the override is safe exactly there and nowhere else.
 //
 // A false answer is a caller with nobody to write as — a system job with no
 // owner behind it — and the read above refuses rather than guessing.
 func voiceSender(ctx context.Context) (ids.UUID, bool) {
+	if actor, ok := principal.Actor(ctx); ok && !actor.UserID.IsZero() {
+		return actor.UserID, true
+	}
 	if sender, ok := principal.SendingHuman(ctx); ok {
 		return sender, true
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return ids.Nil, false
-	}
-	return actor.UserID, true
+	return ids.Nil, false
 }
 
 // RecordDraftedSignal remembers that a voice draft was served, keyed by the

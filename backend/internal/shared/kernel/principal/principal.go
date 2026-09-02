@@ -309,6 +309,12 @@ func AgentRunID(ctx context.Context) (ids.UUID, bool) {
 // the audit trail, the row scope and the permission checks along with it, which
 // is a far larger claim than "sign this in their voice". Nothing may authorize
 // a read or a write from this value.
+//
+// And it may only be CONSULTED where the actor names nobody. The one thing it
+// selects — which voice profile is loaded — is a read of that person's verbatim
+// writing, so a reader that let this override an actor who already names a
+// person would have made it an authorization input by the back door. ai's
+// voiceSender is that reader, and it asks the actor first.
 func WithSendingHuman(ctx context.Context, id ids.UUID) context.Context {
 	return context.WithValue(ctx, sendingHumanKey, id)
 }

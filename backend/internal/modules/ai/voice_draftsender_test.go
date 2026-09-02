@@ -47,14 +47,15 @@ func TestTheVoiceSenderIsTheHumanTheMailGoesOutAs(t *testing.T) {
 			want: owner,
 			ok:   true,
 		},
-		// The bound sender WINS over an actor that could also have answered.
-		// Without this the order is untested: both fields are populated on an
-		// agent call, and reading the actor first would send a colleague's mail
-		// out in the acting agent's owner's voice.
-		"a bound sender beside a human actor": {
+		// A human actor CANNOT be overridden. A voice profile holds its owner's
+		// verbatim written text, so honouring a bound sender here would turn
+		// this value into an authorization input: a call acting as one person
+		// would read another person's private writing. The actor already knows
+		// whose voice they want.
+		"a bound sender never overrides a human actor": {
 			ctx: principal.WithSendingHuman(
 				principal.WithActor(context.Background(), human), owner),
-			want: owner,
+			want: rep,
 			ok:   true,
 		},
 		// A system job nobody owns has no voice to write in, and guessing one
@@ -79,6 +80,36 @@ func TestTheVoiceSenderIsTheHumanTheMailGoesOutAs(t *testing.T) {
 				t.Errorf("the draft would be written in %s's voice, want %s", got, tc.want)
 			}
 		})
+	}
+}
+
+// A bound sender cannot make one person's call read another's voice profile.
+//
+// A profile carries its owner's verbatim written text — the personality they
+// typed and excerpts of their own mail — so "whose profile is loaded" is a read
+// of somebody's private writing. The sending human exists for a principal that
+// names nobody, and letting it override a principal that DOES name somebody
+// would make it an authorization input.
+func TestABoundSenderCannotRedirectAHumansVoiceRead(t *testing.T) {
+	rep := ids.NewV7()
+	victim := ids.NewV7()
+
+	ctx := principal.WithSendingHuman(
+		principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:" + rep.String(), UserID: rep,
+		}), victim)
+
+	got, ok := voiceSender(ctx)
+	if !ok {
+		t.Fatal("a human call resolved no sender at all")
+	}
+	if got == victim {
+		t.Fatalf("a bound sender redirected the voice read to %s, whose profile holds their own "+
+			"verbatim writing — this value selects whose private text is loaded and must never "+
+			"override an actor who names a person", victim)
+	}
+	if got != rep {
+		t.Errorf("the voice read resolved %s, want the acting rep %s", got, rep)
 	}
 }
 
