@@ -64,7 +64,7 @@ func TestTheEndpointRanksOnConvertedFigures(t *testing.T) {
 			riskyDeal("euro", eur(8_000_000), ids.UUID{}),
 		})
 
-	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25)
+	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestOpeningANamedRepsQueueReachesTheProjection(t *testing.T) {
 			riskyDeal("somebody elses", eur(900_000), ids.MustParse("01a05500-0000-7000-8000-0000000000cc")),
 		})
 
-	day, err := svc.Worklist(meetingPrepReader(), "", "", lena, 25)
+	day, err := svc.Worklist(meetingPrepReader(), "", "", lena, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)
 	}
