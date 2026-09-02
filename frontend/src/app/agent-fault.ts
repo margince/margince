@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { components } from "../api/schema";
 
 type AiActivityItem = components["schemas"]["AiActivityItem"];
@@ -193,22 +193,49 @@ export function useAgentFault(
   // newest-first, and the newest break is the one worth colouring for.
   const fault = unacknowledged[0] ?? null;
 
-  // An attended fault times out on its own. Keyed on the fault's id, so a
-  // second attended fault arriving behind the first gets its own flash rather
-  // than inheriting the tail of one that was already mostly over.
-  const flashing = fault !== null && ATTENDED.has(fault.item.kind);
-  const flashingID = flashing ? fault.item.id : null;
+  // EVERY attended fault times out on its own, not only the one the orb happens
+  // to show. A scheduled fault that arrived later stands in front of an older
+  // attended one, and a timer armed for the front of the list alone would leave
+  // that attended fault waiting behind it — to flash, hours late, the moment
+  // the scheduled one was acknowledged. Each attended fault gets its own clock
+  // from the moment it is first seen, kept in a ref rather than re-armed on
+  // every render, so a neighbour arriving does not restart a flash that was
+  // already mostly over.
+  const attended = unacknowledged
+    .filter((entry) => ATTENDED.has(entry.item.kind))
+    .map((entry) => entry.item.id);
+  const flashes = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   useEffect(() => {
-    if (flashingID === null) {
-      return undefined;
+    const live = new Set(attended);
+    for (const [id, timer] of flashes.current) {
+      if (!live.has(id)) {
+        clearTimeout(timer);
+        flashes.current.delete(id);
+      }
     }
-    const timer = setTimeout(() => {
-      markSeen([flashingID]);
-    }, FLASH_MS);
+    for (const id of attended) {
+      if (!flashes.current.has(id)) {
+        flashes.current.set(
+          id,
+          setTimeout(() => {
+            flashes.current.delete(id);
+            markSeen([id]);
+          }, FLASH_MS),
+        );
+      }
+    }
+  }, [attended, markSeen]);
+  // The last word belongs to the unmount: a timer left behind would mark a
+  // fault seen on a rail that no longer exists.
+  useEffect(() => {
+    const armed = flashes.current;
     return () => {
-      clearTimeout(timer);
+      for (const timer of armed.values()) {
+        clearTimeout(timer);
+      }
+      armed.clear();
     };
-  }, [flashingID, markSeen]);
+  }, []);
 
   return { fault, acknowledge };
 }

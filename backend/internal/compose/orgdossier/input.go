@@ -72,7 +72,11 @@ var (
 
 // BuildInput reads the sidecars under the caller's own scope.
 func BuildInput(ctx context.Context, facts Facts, id ids.OrganizationID) (Input, error) {
-	org, err := facts.GetOrganization(ctx, id, storekit.LiveOnly)
+	// IncludeArchived, like the organization page's own read and the two
+	// sidecar reads below, neither of which filters archived rows: an archived
+	// company still has a page, and a dossier that refused it while its facts
+	// were readable would 404 a record the reader is looking at.
+	org, err := facts.GetOrganization(ctx, id, storekit.IncludeArchived)
 	if err != nil {
 		return Input{}, err
 	}
