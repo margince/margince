@@ -280,6 +280,7 @@ function ImportWizard({
           commitBusy={commit.isPending}
           undoError={undo.error}
           undoBusy={undo.isPending}
+          contextTagID={flow.contextTagID}
         />
       ) : null}
 
@@ -308,6 +309,7 @@ function ImportOutcome({
   commitBusy,
   undoError,
   undoBusy,
+  contextTagID,
 }: Readonly<{
   report: ImportReport;
   run: ImportRun;
@@ -328,6 +330,8 @@ function ImportOutcome({
   commitBusy: boolean;
   undoError: unknown;
   undoBusy: boolean;
+  /** The word this run files its created records under, empty for none. */
+  contextTagID: string;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -350,6 +354,10 @@ function ImportOutcome({
       <h3 className="import__outcomeTitle">
         {committed ? t("import.outcomeTitle") : t("import.previewTitle")}
       </h3>
+      {/* What the approver is about to apply. The mapping step is off screen by
+          now, so without this the word chosen there is invisible at exactly the
+          moment somebody decides whether to commit. */}
+      <ImportContextTagSummary tagID={contextTagID} />
       {/* A run the reader did not just cause, shown as though they had, reads as
           an import that ran by itself — so the card says when it happened. */}
       {resumed ? (
@@ -701,6 +709,33 @@ function ImportMappingStep({
 }
 
 /**
+ * What the approver is committing to, named rather than implied.
+ *
+ * The picker lives on the mapping step, which is off screen once a report
+ * exists — so the run's word would otherwise be invisible at the one moment
+ * somebody decides whether to write it onto every created record.
+ */
+export function ImportContextTagSummary({
+  tagID,
+}: Readonly<{ tagID: string }>) {
+  const t = useT();
+  const vocabulary = useTagVocabulary();
+  if (tagID === "") {
+    return null;
+  }
+  const word = vocabulary.data?.tags.find((tag) => tag.id === tagID);
+  return (
+    <p className="import__hint">
+      {word
+        ? t("import.contextTagChosen", { name: word.name })
+        : // The vocabulary has not landed, or no longer holds the word. Saying
+          // "a tag" is honest; naming the wrong one, or none, is not.
+          t("import.contextTagChosenUnnamed")}
+    </p>
+  );
+}
+
+/**
  * The word every record this run CREATES is filed under.
  *
  * Optional, and an existing word only: an import that coined one would hand the
@@ -711,7 +746,7 @@ function ImportMappingStep({
  * already held leaves its tags alone — the run did not put it there, and
  * tagging it would claim the batch contains records it only touched.
  */
-function ImportContextTag({
+export function ImportContextTag({
   value,
   onChange,
 }: Readonly<{ value: string; onChange: (next: string) => void }>) {
@@ -724,7 +759,18 @@ function ImportContextTag({
     return null;
   }
   return (
-    <Field label={t("import.contextTag")} hint={t("import.contextTagHint")}>
+    <Field
+      label={t("import.contextTag")}
+      hint={
+        // The catalog is capped and carries no cursor, so past the cap a word
+        // that exists cannot be picked — and an importer who cannot find the
+        // word they meant would file the batch under nothing, or ask an admin
+        // to coin a duplicate.
+        vocabulary.data?.truncated
+          ? `${t("import.contextTagHint")} ${t("tags.catalogTruncated")}`
+          : t("import.contextTagHint")
+      }
+    >
       {(control) => (
         <Select
           {...control}

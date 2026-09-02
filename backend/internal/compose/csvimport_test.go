@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -681,5 +682,30 @@ func TestTaggableObjectFollowsTheRecordVocabulary(t *testing.T) {
 	}
 	if _, ok := taggableObjectOf("activity"); ok {
 		t.Fatal("an object outside the record vocabulary was accepted as taggable")
+	}
+}
+
+// A word that cannot be applied is refused where the CALLER can still fix it.
+//
+// The dry run writes no rows, so nothing else exercises the tag before a human
+// approves the report — and the apply's own refusal would then fail the run at
+// some row, on a report that never mentioned the word.
+func TestAnUnparseableContextTagIsRefusedAtCreate(t *testing.T) {
+	t.Parallel()
+
+	h := importHandlers{}
+	err := h.contextTagIsApplicable(context.Background(), "not-a-uuid")
+	if err == nil {
+		t.Fatal("a mapping carrying an unparseable tag was staged; the run would fail at the first created row")
+	}
+}
+
+// A run that named no word asks nothing and is not refused for it.
+func TestNoContextTagAsksNothing(t *testing.T) {
+	t.Parallel()
+
+	h := importHandlers{}
+	if err := h.contextTagIsApplicable(context.Background(), ""); err != nil {
+		t.Fatalf("a run naming no word was refused: %v", err)
 	}
 }

@@ -93,3 +93,23 @@ type TagSummary struct {
 	Color    string
 	Archived bool
 }
+
+// TagIsLive answers whether this id names a word that can still be applied.
+//
+// Asked BEFORE a long write that will apply it many times. The apply itself
+// answers not-found for a missing or retired tag, and an importer discovering
+// that at row 40,000 fails a run a human already approved — on a report that
+// never mentioned the word. Cheaper than GetTag, which also counts usage: this
+// asks one question and returns one boolean.
+func (s *Store) TagIsLive(ctx context.Context, id ids.TagID) (bool, error) {
+	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
+		return false, err
+	}
+	var live bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1 AND archived_at IS NULL)`,
+			id).Scan(&live)
+	})
+	return live, err
+}

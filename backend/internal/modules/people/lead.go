@@ -444,6 +444,14 @@ func (s *Store) DisqualifyLead(ctx context.Context, id ids.LeadID, in Disqualify
 			id, in.ReasonID, in.Note, setBy); err != nil {
 			return err
 		}
+		// A retired record carries no tags, the same rule the company and person
+		// archive paths hold. It matters here because an import files what it
+		// creates under one word: an undone run archives the lead, and a lead
+		// left tagged still answers a filter for the batch that was reversed.
+		if _, err := tx.Exec(ctx,
+			`DELETE FROM taggable WHERE entity_type = 'lead' AND entity_id = $1`, id); err != nil {
+			return fmt.Errorf("drop the lead's tags: %w", err)
+		}
 		after := map[string]any{leadStatusColumn: "disqualified"}
 		if in.ReasonID != nil {
 			after["disqualify_reason_id"] = *in.ReasonID

@@ -1748,6 +1748,10 @@ export const de = {
   "tagAdmin.listLabel": "Vokabular",
   "tagAdmin.empty": "Noch keine Tags. Legen Sie das erste Wort an.",
   "import.contextTag": "Diesen Stapel unter einem Tag ablegen",
+  "import.contextTagChosen":
+    "Neu angelegte Datensätze werden unter {name} abgelegt.",
+  "import.contextTagChosenUnnamed":
+    "Neu angelegte Datensätze werden unter dem für diesen Lauf gewählten Tag abgelegt.",
   "import.contextTagHint":
     "Wird auf neu angelegte Datensätze angewendet, damit der Stapel auffindbar bleibt. Aktualisierte Datensätze behalten ihre Tags.",
   "import.contextTagNone": "Kein Tag",

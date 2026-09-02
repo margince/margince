@@ -1736,6 +1736,10 @@ export const vi = {
   "tagAdmin.listLabel": "Từ vựng",
   "tagAdmin.empty": "Chưa có tag nào. Hãy thêm từ đầu tiên.",
   "import.contextTag": "Gắn lô này vào một tag",
+  "import.contextTagChosen":
+    "Bản ghi do lần nhập này tạo ra sẽ được gắn {name}.",
+  "import.contextTagChosenUnnamed":
+    "Bản ghi do lần nhập này tạo ra sẽ được gắn tag đã chọn cho lần chạy này.",
   "import.contextTagHint":
     "Áp dụng cho bản ghi mà lần nhập này tạo ra, để lô vẫn tìm được. Bản ghi được cập nhật giữ nguyên tag cũ.",
   "import.contextTagNone": "Không tag",
