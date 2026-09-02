@@ -439,13 +439,6 @@ func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmco
 	s.attentionHandlers.GetWorklist(w, r, params)
 }
 
-// GetResponseMetrics forwards the reading of how fast the workspace replies.
-func (s Server) GetResponseMetrics(
-	w http.ResponseWriter, r *http.Request, params crmcontracts.GetResponseMetricsParams,
-) {
-	s.attentionHandlers.GetResponseMetrics(w, r, params)
-}
-
 // GetHiddenBacklog forwards the guardrail over the queue's own hiding rules.
 func (s Server) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 	s.attentionHandlers.GetHiddenBacklog(w, r)

@@ -2334,6 +2334,14 @@ export const en = {
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.eyebrow": "Your morning",
+  "brief.eyebrow.weekly": "Your week",
+  // The Brief's two dials. Which brief, and whose.
+  "brief.view.label": "Which brief",
+  "brief.view.morning": "Morning",
+  "brief.view.weekly": "Weekly",
+  "brief.scope.label": "Whose brief",
+  "brief.scope.mine": "Mine",
+  "brief.scope.team": "Team",
   "brief.sentence.clear": "Nothing is waiting on you this morning.",
   "brief.sentence.one": "First: {lead}",
   "brief.sentence.oneWithCost": "First: {lead} — {consequence}",

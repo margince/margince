@@ -2297,6 +2297,14 @@ export const de = {
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.eyebrow": "Dein Morgen",
+  "brief.eyebrow.weekly": "Deine Woche",
+  // Die zwei Regler des Briefings: welches, und für wen.
+  "brief.view.label": "Welches Briefing",
+  "brief.view.morning": "Morgen",
+  "brief.view.weekly": "Woche",
+  "brief.scope.label": "Wessen Briefing",
+  "brief.scope.mine": "Meins",
+  "brief.scope.team": "Team",
   "brief.sentence.clear": "Heute Morgen wartet nichts auf dich.",
   "brief.sentence.one": "Zuerst: {lead}",
   "brief.sentence.oneWithCost": "Zuerst: {lead} — {consequence}",

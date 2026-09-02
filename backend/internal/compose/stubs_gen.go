@@ -2239,10 +2239,6 @@ func (stubs) GetHiddenBacklog(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetHiddenBacklog")
 }
 
-func (stubs) GetResponseMetrics(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetResponseMetricsParams) {
-	httperr.NotImplemented(w, r, "GetResponseMetrics")
-}
-
 func (stubs) GetTeamBoard(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetTeamBoard")
 }

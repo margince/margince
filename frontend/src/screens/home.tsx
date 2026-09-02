@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
+import { useUrlParams } from "../app/urlstate";
 import type { DecisionDeckItem } from "../design-system/decisiondeck";
 import { PageZones } from "../design-system/pagezones";
 import type { SectionState } from "../design-system/surfacestate";
@@ -11,9 +12,11 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
+import { BriefDials } from "./brief.dials";
 import { DoNext } from "./brief.donext";
 import { PlanSection } from "./brief.plan";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
+import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
 import { DecisionsSection } from "./home.decisions";
@@ -194,6 +197,7 @@ function HomeWork({
   teamOffered,
   day,
   dayState,
+  address,
   onAlreadyDecided,
 }: Readonly<{
   items: readonly DecisionDeckItem[];
@@ -210,6 +214,8 @@ function HomeWork({
   // Worklist cannot disagree about what is waiting.
   day: Worklist | undefined;
   dayState: SectionState;
+  /** Which Brief the reader asked for, from the address. */
+  address: BriefAddress;
   onAlreadyDecided: () => void;
 }>) {
   const decisions = (
@@ -252,9 +258,30 @@ function HomeWork({
   // wrong half — decision 3 of the Brief plan, and the reason this section
   // exists at all.
   const doNext = <DoNext key="donext" day={day} state={dayState} />;
+  const board = <HomeTeamBoard key="board" offered={teamOffered} />;
+
+  // ONE VIEW AT A TIME, and every combination the dials offer has a surface
+  // behind it — decision 5 of the plan, which is the sequencing defect it
+  // exists to prevent: a dial that resolves to a legacy screen, an empty state
+  // standing in for an unbuilt one, or nothing at all.
+  //
+  // Morning · mine — the decisions waiting, what to do next, the opportunity
+  //   queue. Weekly · mine — the week that closed, then the week being planned.
+  // Morning · team — who on the team is carrying what, right now.
+  // Weekly · team — the team's frozen week.
+  //
+  // The team views are reachable only when the reader's scope admits them
+  // (`teamOffered`), which is also what draws the scope dial: the control and
+  // the surface read one answer, so neither can offer what the other refuses.
+  if (address.scope === "team") {
+    return address.view === "weekly" ? [teamWeek] : [board];
+  }
+  if (address.view === "weekly") {
+    return [lastWeek, nextWeek];
+  }
   return items.length > 0
-    ? [decisions, doNext, today, lastWeek, teamWeek, nextWeek]
-    : [doNext, today, decisions, lastWeek, teamWeek, nextWeek];
+    ? [decisions, doNext, today]
+    : [doNext, today, decisions];
 }
 
 /**
@@ -325,6 +352,16 @@ export function HomeScreen() {
   // reads beside it. Same query key as the Worklist screen, so the two cannot
   // disagree about what was read.
   const worklistQuery = useWorklist("mine", "all");
+  // Whether this reader's scope reaches a team, off the read the page already
+  // makes. It decides BOTH which dials are drawn and which the address may
+  // resolve to, so a control and a surface cannot disagree about it.
+  const teamOffered =
+    worklistQuery.data?.scope_options?.includes("team") ?? false;
+  // The dials live in the ADDRESS, not in state — decision 2. The Brief is a
+  // destination people return to and send each other, which is the case the
+  // Worklist's "dials stay state" choice deliberately excluded.
+  const [params, setParams] = useUrlParams();
+  const address = addressFrom(params, teamOffered);
   const pipelineQuery = usePipelineValue();
 
   const approvals = approvalsQuery.data?.data ?? [];
@@ -377,7 +414,13 @@ export function HomeScreen() {
 
   return (
     <div className="wrap">
+      <BriefDials
+        address={address}
+        offered={teamOffered}
+        onChange={(next) => setParams(paramsFor(next))}
+      />
       <HomeGlance
+        view={address.view}
         day={worklistQuery.data}
         firstName={firstNameOf(me.data?.user?.display_name)}
         now={new Date(nowMs)}
@@ -393,12 +436,6 @@ export function HomeScreen() {
       {/* Before the readings, because a strip of numbers a reader cannot
           trust is worse than one they can qualify. */}
       {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
-      {/* Who on the team is carrying what — a lead's first question, on the
-          page they open first. Behind its own disclosure, so their own day
-          still leads: it is the SECOND thing they came for. */}
-      <HomeTeamBoard
-        offered={worklistQuery.data?.scope_options?.includes("team") ?? false}
-      />
       <HomeReadingsStrip
         decisions={decisionReadings}
         open={openReading}
@@ -422,11 +459,10 @@ export function HomeScreen() {
             // worklist answer that carried no scope_options crashed the whole
             // page, and a page that throws is a worse answer than one that
             // simply does not offer the team view.
-            teamOffered={
-              worklistQuery.data?.scope_options?.includes("team") ?? false
-            }
+            teamOffered={teamOffered}
             day={worklistQuery.data}
             dayState={readState(worklistQuery)}
+            address={address}
             onAlreadyDecided={onAlreadyDecided}
           />
         }

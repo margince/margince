@@ -1,0 +1,8 @@
+/* The two dials, side by side above the page. They wrap on a phone rather than
+   scrolling: a dial the reader has to pan to reach is a dial they will not use. */
+.brief-dials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}

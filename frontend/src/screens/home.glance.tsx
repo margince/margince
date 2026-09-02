@@ -10,6 +10,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { briefSentence } from "./brief.sentence";
+import type { BriefView } from "./brief.view";
 import type { Worklist } from "./worklist.queries";
 
 // The first thing a reader sees each morning: who they are, what hour it is for
@@ -99,6 +100,10 @@ export type GlanceFacts = Readonly<{
    *  while it is in flight or after it failed — the sentence is then absent
    *  rather than guessed at. */
   day: Worklist | undefined;
+  /** Which Brief this is. The eyebrow names it, and the sentence belongs to the
+   *  morning: it is composed from the ranked queue, which says nothing about a
+   *  week that has closed. */
+  view: BriefView;
 }>;
 
 export type GlanceProps = GlanceFacts &
@@ -191,6 +196,7 @@ export function HomeGlance({
   firstName,
   now,
   day,
+  view,
   decisions,
   brief,
   overnight,
@@ -213,13 +219,18 @@ export function HomeGlance({
   // THE DAY IN ONE SENTENCE, from the rows the page is already showing. The
   // lines below say the same facts as separate counts; this says what to do
   // about the first one, which a column of figures cannot.
-  const sentence = briefSentence(day, t, locale);
+  // MORNING ONLY. It is composed from the ranked queue, which is what waits
+  // TODAY — over the weekly it would be describing this morning under a heading
+  // about the week that closed.
+  const sentence = view === "morning" ? briefSentence(day, t, locale) : null;
 
   return (
     <header className="glance arrive" data-testid="home-glance">
       {/* Scope and date, above the greeting. A span rather than a heading: the
           page has ONE h1 and this is its label, not a level of its own. */}
-      <Eyebrow className="glance-eyebrow">{t("brief.eyebrow")}</Eyebrow>
+      <Eyebrow className="glance-eyebrow">
+        {t(view === "weekly" ? "brief.eyebrow.weekly" : "brief.eyebrow")}
+      </Eyebrow>
       <h1 className="glance-greeting t-display">{greeting}</h1>
       {sentence ? (
         <p className="glance-sentence" data-testid="glance-sentence">

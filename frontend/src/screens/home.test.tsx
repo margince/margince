@@ -319,6 +319,7 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
     const view = rtlRender(
       <LocaleProvider initial="en">
         <HomeGlance
+          view="morning"
           firstName={firstName}
           now={new Date(2026, 6, 5, hour, 30, 0)}
           // These cases are about the GREETING's hour. An unread day is the
@@ -364,6 +365,7 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
     rtlRender(
       <LocaleProvider initial="en">
         <HomeGlance
+          view="morning"
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
           day={undefined}
