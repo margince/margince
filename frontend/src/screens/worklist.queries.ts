@@ -32,6 +32,7 @@ export type WorklistDisposition = NonNullable<
 >[number];
 export type TeamBoard = components["schemas"]["TeamBoard"];
 export type TeamBoardMember = components["schemas"]["TeamBoardMember"];
+export type HiddenBacklog = components["schemas"]["HiddenBacklog"];
 
 export const worklistKey = ["worklist"] as const;
 
@@ -85,6 +86,31 @@ export function useTeamBoard(enabled: boolean) {
     queryKey: [...worklistKey, "team"],
     queryFn: async (): Promise<TeamBoard> => {
       const { data, error } = await api.GET("/worklist/team", {});
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
+// What the queue is NOT showing, and which rule holds it back.
+//
+// Read on its own key rather than folded into the day: it is five SQL reads
+// where the queue is one, and a rep opening the Worklist should not wait on a
+// diagnostic to see their work. A slow or failing guardrail must cost the queue
+// nothing, which is what a separate query buys.
+//
+// `enabled` carries the same tier the team board's does. The figures are counted
+// under the caller's own visibility either way, so this is not what makes them
+// safe — it is what keeps a surface the reader has no route to from firing a
+// request behind their back.
+export function useHiddenBacklog(enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: [...worklistKey, "hidden"],
+    queryFn: async (): Promise<HiddenBacklog> => {
+      const { data, error } = await api.GET("/worklist/hidden", {});
       if (error) {
         throwProblem(error);
       }

@@ -7543,6 +7543,25 @@ export const vi = {
     "Việc thường lệ đang chờ sau một quyết định",
   "worklist.readings.truncated":
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+  "worklist.hidden.title": "Những gì danh sách không hiển thị",
+  "worklist.hidden.loading": "Đang kiểm tra những gì bị giữ lại…",
+  "worklist.hidden.clear":
+    "Không có gì bị giữ lại. Mọi khách đang chờ đều đến được một danh sách.",
+  "worklist.hidden.truncated":
+    "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+  "worklist.hidden.count": "{count} đang chờ",
+  "worklist.hidden.pastHorizon": "Quá cũ đối với danh sách",
+  "worklist.hidden.pastHorizon.detail":
+    "Không ai quyết định điều này. Họ viết từ nhiều tháng trước và chưa bao giờ được trả lời.",
+  "worklist.hidden.unlinked": "Không gắn với hồ sơ nào",
+  "worklist.hidden.unlinked.detail":
+    "Thường không phải bán hàng. Đôi khi là khách hàng không ai kịp lưu hồ sơ.",
+  "worklist.hidden.notSales": "Được đánh giá không phải việc bán hàng",
+  "worklist.hidden.notSales.detail": "Ẩn với toàn bộ tổ chức, và không tự bỏ.",
+  "worklist.hidden.setAside": "Bạn đã gác lại",
+  "worklist.hidden.setAside.detail":
+    "Đã hoãn hoặc đánh dấu không phải của bạn. Một lần hoãn sẽ tự quay lại.",
+  "worklist.hidden.shown": "Bản thân danh sách mang {count}.",
   "worklist.filter.label": "Loại công việc",
   "worklist.filter.all": "Tất cả",
   "worklist.filter.customer_waiting": "Khách đang chờ",

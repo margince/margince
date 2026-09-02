@@ -7623,6 +7623,26 @@ export const de = {
     "Routinearbeit, die hinter einer Entscheidung wartet",
   "worklist.readings.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.hidden.title": "Was die Liste nicht zeigt",
+  "worklist.hidden.loading": "Wird geprüft, was zurückgehalten wird…",
+  "worklist.hidden.clear":
+    "Es wird nichts zurückgehalten. Jeder wartende Kunde erreicht eine Liste.",
+  "worklist.hidden.truncated":
+    "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.hidden.count": "{count} warten",
+  "worklist.hidden.pastHorizon": "Zu alt für die Liste",
+  "worklist.hidden.pastHorizon.detail":
+    "Das hat niemand entschieden. Sie schrieben vor Monaten und bekamen nie eine Antwort.",
+  "worklist.hidden.unlinked": "Keinem Datensatz zugeordnet",
+  "worklist.hidden.unlinked.detail":
+    "Meist kein Vertrieb. Manchmal ein Kunde, den niemand zuordnen konnte.",
+  "worklist.hidden.notSales": "Als vertriebsfremd eingestuft",
+  "worklist.hidden.notSales.detail":
+    "Für die gesamte Organisation verborgen, und es hebt sich nicht auf.",
+  "worklist.hidden.setAside": "Von Ihnen zurückgestellt",
+  "worklist.hidden.setAside.detail":
+    "Zurückgestellt oder als nicht Ihre markiert. Eine Zurückstellung kommt von selbst zurück.",
+  "worklist.hidden.shown": "Die Liste selbst führt {count}.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
   "worklist.filter.customer_waiting": "Kunde wartet",

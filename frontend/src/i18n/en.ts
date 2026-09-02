@@ -7690,6 +7690,26 @@ export const en = {
   "worklist.readings.review.detail": "Routine work queued behind a decision",
   "worklist.readings.truncated":
     "There is more work than this could count. These are floors, not totals.",
+  "worklist.hidden.title": "What the queue is not showing",
+  "worklist.hidden.loading": "Checking what is held back…",
+  "worklist.hidden.clear":
+    "Nothing is being held back. Every waiting customer reaches somebody’s queue.",
+  "worklist.hidden.truncated":
+    "There is more work than this could count. These are floors, not totals.",
+  "worklist.hidden.count": "{count} waiting",
+  "worklist.hidden.pastHorizon": "Too old for the queue",
+  "worklist.hidden.pastHorizon.detail":
+    "Nobody decided this. They wrote months ago and were never answered.",
+  "worklist.hidden.unlinked": "Attached to no record",
+  "worklist.hidden.unlinked.detail":
+    "Usually not sales. Sometimes a customer nobody managed to file.",
+  "worklist.hidden.notSales": "Judged not sales work",
+  "worklist.hidden.notSales.detail":
+    "Hidden from the whole organization, and it does not lift.",
+  "worklist.hidden.setAside": "Set aside by you",
+  "worklist.hidden.setAside.detail":
+    "Snoozed or marked not yours. A snooze comes back on its own.",
+  "worklist.hidden.shown": "The queue itself carries {count}.",
   "worklist.filter.label": "Kind of work",
   "worklist.filter.all": "All",
   "worklist.filter.customer_waiting": "Customer waiting",
