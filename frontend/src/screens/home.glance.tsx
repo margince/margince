@@ -237,7 +237,14 @@ export function HomeGlance({
           {t(sentence.key, sentence.values)}
         </p>
       ) : (
-        <p className="glance-intro t-caption">{t("home.glance.intro")}</p>
+        // The weekly has no composed sentence, so the fallback is the only line
+        // under its heading — and the morning's "this is your day" read as the
+        // wrong week entirely beneath "YOUR WEEK". Each view says its own.
+        <p className="glance-intro t-caption">
+          {t(
+            view === "weekly" ? "home.glance.introWeekly" : "home.glance.intro",
+          )}
+        </p>
       )}
       <div className="glance-lines">
         {decisions !== null && decisions.pending === 0 && (

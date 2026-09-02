@@ -2580,6 +2580,7 @@ export const en = {
   "home.glance.eveningAnon": "Good evening.",
   "home.glance.night": "Still at it, {name}.",
   "home.glance.nightAnon": "Still at it.",
+  "home.glance.introWeekly": "This is the week you just closed.",
   "home.glance.intro": "Here is your day.",
   "home.glance.decisionsClear": "Nothing is waiting on you.",
   "home.glance.decisions_one": "decision is waiting on you.",

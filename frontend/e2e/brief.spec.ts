@@ -92,6 +92,14 @@ async function openBrief(page: Page) {
  * so waiting on it would time out on every call. Excluded by name rather than
  * by giving up on the check, which would also excuse a panel still sliding in.
  */
+/** Open the Brief on its weekly view, settled the same way the morning is. */
+async function openWeekly(page: Page) {
+  await page.goto("/#/home?view=weekly", { waitUntil: "networkidle" });
+  await expect(page.locator(GLANCE)).toBeVisible();
+  await expect(page.locator("#home-weekly")).toBeVisible();
+  await settled(page);
+}
+
 async function settled(page: Page) {
   await page.waitForFunction(
     (ambient) =>
@@ -233,24 +241,29 @@ test.describe("the Brief — page shape", () => {
   // The retrospective is LAST, under the work. It is what a rep reads once on
   // Monday, after the work waiting on them today; above either of those it puts
   // last week ahead of this morning.
-  test("keeps last week below today's work", async ({ page }) => {
-    await openBrief(page);
-    await expectShellRendered(page);
-
-    expect(await topOf(page.locator("#home-today"))).toBeLessThan(
-      await topOf(page.locator("#home-weekly")),
-    );
-  });
-
+  // The week lives behind the Weekly dial, not at the foot of the morning. It
+  // moved there when the dials shipped, and these two assertions kept opening
+  // the morning and waiting for a section that is no longer on it.
+  //
   // Frozen past above, live future below: a rep decides what next week holds by
   // reading what this one did.
   test("puts the week's plan under the week's review", async ({ page }) => {
-    await openBrief(page);
+    await openWeekly(page);
     await expectShellRendered(page);
 
     expect(await topOf(page.locator("#home-weekly"))).toBeLessThan(
       await topOf(page.locator("#brief-plan")),
     );
+  });
+
+  // And the morning shows the morning's work — the weekly is a dial away, not
+  // a section further down the same page.
+  test("keeps the week off the morning", async ({ page }) => {
+    await openBrief(page);
+    await expectShellRendered(page);
+
+    await expect(page.locator("#home-focus")).toBeVisible();
+    await expect(page.locator("#home-weekly")).toHaveCount(0);
   });
 
   // At desktop the rail is BESIDE the work, not under it. This is the assertion
