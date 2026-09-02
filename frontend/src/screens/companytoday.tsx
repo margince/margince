@@ -28,6 +28,11 @@ import {
   useAccountStanding,
 } from "./companylookups";
 import { EntityRef } from "./entityref";
+import {
+  MOMENT_EVIDENCE_LABEL,
+  MOMENT_RULE_LABEL,
+  standingTone,
+} from "./persontoday";
 import { BriefTitle, VerdictHead } from "./record360";
 
 // "Today on this account" — the record's daily brief, and the only part of
@@ -220,6 +225,17 @@ export function TodayOnThisAccount({
 
   return (
     <>
+      {/* WHAT WE OWE, first. A promise past its date outranks a reading of the
+          account: one is a thing to do today and the other is context for it.
+          The contact page opens the same way, and on the same card, because a
+          promise is a promise whichever record you came in through. */}
+      {view?.moment && (
+        <AccountMoment
+          moment={view.moment}
+          name={view.organization?.display_name}
+          onOpenRecord={onOpenRecord}
+        />
+      )}
       {/* THE CALL, and the thread it was read from. Its own card, because a
           verdict and a to-do list are two different things to a reader who is
           scanning: one is the account's state and the other is a queue, and
@@ -546,3 +562,70 @@ type TodayContext = {
 type Organization360Contact = NonNullable<
   Organization360["people"]
 >["data"][number];
+
+// What this account owes, as its own card above the reading.
+//
+// The SAME card the contact page opens on, from the same server rule: a
+// promise past its date, or the next one coming due, read from both places a
+// promise gets written down — a task somebody filed, and a commitment an
+// extractor read out of a conversation. Two screens answering "what do we owe
+// them?" differently is what this closes.
+//
+// Its own panel rather than a row inside the reading below, for the reason the
+// reading and the moves are already two panels: a thing to do today and the
+// context for it are different to a reader who is scanning, and sharing a box
+// makes them read as one continuous section.
+function AccountMoment({
+  moment,
+  name,
+  onOpenRecord,
+}: Readonly<{
+  moment: components["schemas"]["PersonMoment"];
+  name?: string;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+}>) {
+  const t = useT();
+  const destination = moment.recommended_action.destination;
+  // The button appears only where the server said the action can be taken AND
+  // named somewhere to go. A card whose verb lands nowhere is worse than a
+  // card with no verb: the reader clicks, nothing happens, and they stop
+  // trusting the ones that work.
+  const canOpen =
+    moment.recommended_action.state === "available" &&
+    destination?.entity_type !== undefined &&
+    destination.entity_id !== undefined;
+  return (
+    <Panel
+      tone="ai"
+      className="co-lead"
+      title={<BriefTitle name={name} />}
+      footer={
+        canOpen ? (
+          <Button
+            variant="ghost"
+            onClick={() =>
+              onOpenRecord?.(
+                destination.entity_type as string,
+                destination.entity_id as string,
+              )
+            }
+          >
+            {moment.recommended_action.label}
+          </Button>
+        ) : undefined
+      }
+    >
+      <VerdictHead
+        label={t(MOMENT_RULE_LABEL[moment.rule])}
+        tone={standingTone(moment.rule)}
+        because={moment.headline}
+        restsOn={moment.evidence.map((item) => ({
+          key: `${item.type}-${item.id ?? item.label}`,
+          quote: item.label,
+          from: t(MOMENT_EVIDENCE_LABEL[item.type]),
+        }))}
+      />
+      <PanelBody>{moment.why_now}</PanelBody>
+    </Panel>
+  );
+}
