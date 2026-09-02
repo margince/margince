@@ -1791,6 +1791,7 @@ export const en = {
   "co.recent.re": "on a deal",
   "co.recent.reNamed": "on {name}",
   "tags.archived": "archived",
+  "tags.loading": "Loading tags…",
   "tags.panelTitle": "Tags",
   "tags.panelSub": "Open a tag, or use its menu to manage this assignment",
   "tags.add": "Add tag",
@@ -1807,6 +1808,8 @@ export const en = {
     "Add durable context such as an event, a relationship, or a cohort.",
   "tags.pickerLabel": "Find a tag",
   "tags.alreadyAdded": "Already added",
+  "tags.catalogTruncated":
+    "This list is shortened, so a word may be missing. Search for it by name before asking for a new one.",
   "tags.noMatch":
     "No tag by that name. An admin or ops seat can add one to the vocabulary.",
   "tagResult.gone":

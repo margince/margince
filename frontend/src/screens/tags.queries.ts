@@ -50,12 +50,16 @@ export function useRecordTags(entityType: TaggableType, entityID: string) {
 export function useTagVocabulary() {
   return useQuery({
     queryKey: ["tags", "vocabulary"],
-    queryFn: async (): Promise<Tag[]> => {
+    // The catalog is capped and has no cursor, so a workspace past the cap gets
+    // a CUT list. Carrying `has_more` through is what lets the picker say the
+    // list is short — without it a word beyond the cap is indistinguishable
+    // from a word that does not exist, and the reader coins a near-duplicate.
+    queryFn: async (): Promise<{ tags: Tag[]; truncated: boolean }> => {
       const { data, error } = await api.GET("/tags", {});
       if (error) {
         throwProblem(error);
       }
-      return data.data;
+      return { tags: data.data, truncated: data.page.has_more };
     },
     staleTime: 5 * 60_000,
   });

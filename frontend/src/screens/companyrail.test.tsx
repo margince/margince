@@ -12,6 +12,7 @@ import "@testing-library/jest-dom/vitest";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { CompanyRail } from "./companyrail";
 
@@ -140,6 +141,15 @@ function stub(
           data: [{ id: "u-1", display_name: "Mira Voss" }],
           page: emptyPage,
         });
+      }
+      // A real seat, spelled out. The catch-all below answers `/me` with an
+      // empty page, which `useCan` reads as a principal holding NO grants — so
+      // every control gated on one stood down and the suite proved nothing
+      // about the controls it names.
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
       }
       if (pathname.endsWith("/signals")) {
         return jsonResponse({ data: [], page: emptyPage });

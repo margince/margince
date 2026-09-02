@@ -1732,6 +1732,7 @@ export const vi = {
   "co.recent.re": "về một deal",
   "co.recent.reNamed": "về {name}",
   "tags.archived": "đã lưu trữ",
+  "tags.loading": "Đang tải tag…",
   "tags.panelTitle": "Tag",
   "tags.panelSub": "Mở tag, hoặc dùng menu của nó để quản lý gán này",
   "tags.add": "Thêm tag",
@@ -1748,6 +1749,8 @@ export const vi = {
     "Thêm ngữ cảnh lâu dài như một sự kiện, một mối quan hệ hoặc một nhóm.",
   "tags.pickerLabel": "Tìm tag",
   "tags.alreadyAdded": "Đã thêm",
+  "tags.catalogTruncated":
+    "Danh sách này đã bị rút gọn nên có thể thiếu một từ. Hãy tìm theo tên trước khi xin thêm từ mới.",
   "tags.noMatch":
     "Không có tag nào tên như vậy. Một chỗ ngồi admin hoặc ops có thể thêm vào từ vựng.",
   "tagResult.gone":

@@ -1744,6 +1744,7 @@ export const de = {
   "co.recent.re": "zu einem Deal",
   "co.recent.reNamed": "zu {name}",
   "tags.archived": "archiviert",
+  "tags.loading": "Tags werden geladen…",
   "tags.panelTitle": "Tags",
   "tags.panelSub": "Tag öffnen oder über das Menü diese Zuordnung verwalten",
   "tags.add": "Tag hinzufügen",
@@ -1761,6 +1762,8 @@ export const de = {
     "Fügen Sie dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
   "tags.pickerLabel": "Tag suchen",
   "tags.alreadyAdded": "Bereits hinzugefügt",
+  "tags.catalogTruncated":
+    "Diese Liste ist gekürzt, ein Wort kann also fehlen. Suchen Sie danach, bevor Sie ein neues anfragen.",
   "tags.noMatch":
     "Kein Tag mit diesem Namen. Ein Admin- oder Ops-Platz kann eines zum Vokabular hinzufügen.",
   "tagResult.gone":

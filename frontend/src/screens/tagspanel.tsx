@@ -41,8 +41,23 @@ export function TagsPanel({
   const [expanded, setExpanded] = useState(false);
   const read = useRecordTags(entityType, entityID);
 
-  if (read.isPending || read.isError) {
+  // The frame stands while the read is in flight. This panel sits in the record
+  // rail beside cards that keep their own frames as the composite read arrives,
+  // and a card that appears only once its request lands makes the column reflow
+  // under the reader's cursor. A failed read draws nothing: there is no honest
+  // thing to say about a record's tags when the answer never came, and an empty
+  // strip would claim it carries none.
+  if (read.isError) {
     return null;
+  }
+  if (read.isPending) {
+    return (
+      <Panel title={t("tags.panelTitle")}>
+        <PanelBody>
+          <p className="tagspanel-note">{t("tags.loading")}</p>
+        </PanelBody>
+      </Panel>
+    );
   }
 
   // Withheld is not empty. A caller who may read the record but not the

@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-
 import type { components } from "../api/schema";
+import { useCan } from "../app/capability";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { AddTagDialog } from "./tagpicker";
 import { useRecordTags } from "./tags.queries";
@@ -45,7 +45,14 @@ function CompanyTags({
   // until the read lands, and says "hidden" when the vocabulary is withheld —
   // so a button gated on permission alone floats above no panel at all, and on
   // a withheld record it opens a picker whose apply the server refuses.
-  const canEdit = !readOnlyReason && read.isSuccess && !read.data.withheld;
+  // Three questions, all of which the server asks before it writes: the object
+  // grant, this row's own writability, and whether the vocabulary is visible at
+  // all. `useCompanyReadOnlyReason` answers only the row — its own comment says
+  // every mount ANDs it with the grant — and apply refuses without `tag.read`,
+  // which is what `withheld` reports.
+  const canUpdate = useCan("organization", "update");
+  const canEdit =
+    canUpdate && !readOnlyReason && read.isSuccess && !read.data.withheld;
 
   return (
     <>

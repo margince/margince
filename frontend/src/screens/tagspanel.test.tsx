@@ -10,7 +10,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
 import { CompanyTagsSection } from "./companyrailtags";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 import { TagsPanel } from "./tagspanel";
 
 // What the panel SAYS in each state. Three of them answer 200 with a list, so
@@ -171,17 +176,18 @@ describe("the company mount's add-tag verb", () => {
     writable: true,
   };
 
-  function mountCompany(withheld: boolean) {
+  function mountCompany(
+    withheld: boolean,
+    grants: Record<string, string[]> = { organization: ["update"] },
+  ) {
     installFetchStub({
+      "GET /me": meRoute(grants as never),
       [`GET /records/organization/${ORG}/tags`]: () =>
         jsonResponse({ data: [], withheld }),
     });
     render(
       <StoryProviders>
-        <CompanyTagsSection
-          organization={ORG_ROW as never}
-          orgId={ORG}
-        />
+        <CompanyTagsSection organization={ORG_ROW as never} orgId={ORG} />
       </StoryProviders>,
     );
   }
@@ -198,6 +204,14 @@ describe("the company mount's add-tag verb", () => {
   it("offers no verb when the vocabulary is withheld", async () => {
     mountCompany(true);
     expect(await screen.findByText(en["tags.withheld"])).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
+  });
+
+  // Applying writes to the RECORD, so the server asks for `organization.update`
+  // as well. A seat without it would be offered a picker whose apply is refused.
+  it("offers no verb to a seat holding no update grant", async () => {
+    mountCompany(false, {});
+    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
   });
 });

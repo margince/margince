@@ -49,7 +49,7 @@ export function AddTagDialog({
   );
 
   const matches = useMemo(() => {
-    const all = vocabulary.data ?? [];
+    const all = vocabulary.data?.tags ?? [];
     if (normalized === "") {
       // Nothing typed: the whole vocabulary, which for a workspace-sized word
       // list is the useful default. A "recently used" section would need a
@@ -92,6 +92,12 @@ export function AddTagDialog({
         </div>
         {normalized !== "" && matches.length === 0 && (
           <Callout>{t("tags.noMatch")}</Callout>
+        )}
+        {/* The catalog was cut. Say so, because a reader who cannot find a word
+            in a SHORT list concludes the workspace lacks it and asks an admin
+            to coin the duplicate this dialog exists to prevent. */}
+        {vocabulary.data?.truncated && (
+          <Callout>{t("tags.catalogTruncated")}</Callout>
         )}
       </div>
     </Modal>
