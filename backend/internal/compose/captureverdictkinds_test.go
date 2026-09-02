@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/mailrole"
 )
 
 func TestEveryVerdictKindHasAnEffect(t *testing.T) {
@@ -166,4 +167,22 @@ func verdictSourceFiles(t *testing.T) []string {
 		t.Fatal("no captureverdict*.go sources found — this gate would pass vacuously")
 	}
 	return out
+}
+
+// The prompt tells the model which local parts make a role mailbox, and the
+// tier ladder refuses the same addresses without asking anybody. Two statements
+// of one rule, and they disagreed: the prompt named `service@` and the
+// deterministic list did not, so `service@` at an ordinary company was created
+// as a contact by the ladder before the model could have refused it.
+//
+// This is the cheap half of keeping them together — every word the prompt offers
+// as an example is one the shared vocabulary actually matches. mailrole's own
+// suite holds the other half.
+func TestThePromptsRoleExamplesComeFromTheOneList(t *testing.T) {
+	t.Parallel()
+	for _, word := range mailrole.PromptExamples() {
+		if !strings.Contains(verdictSystem, word+"@") {
+			t.Errorf("the shared vocabulary offers %q@ as a role example and the prompt does not name it", word)
+		}
+	}
 }

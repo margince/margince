@@ -238,6 +238,100 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 // header, or a machine localpart. Both halves of ADR-0072 §1's promise hold at
 // once: the derivation is suppressed AND the message still reaches the
 // timeline, which is the whole reason a DocuSign envelope is worth capturing.
+// A role mailbox is correspondence-positive exactly like a customer — a mailbox
+// owner writes to `billing@` and `support@` all the time — so T1's evidence is
+// true and its conclusion was still wrong: real correspondence, and no person to
+// name. This is the tier that put contacts called "Billing" and "support" in a
+// founder's CRM, each one a department with a human's shape.
+//
+// The message is kept and stays visible. What is refused is the record.
+func TestCaptureTierGateMintsNoPersonForARoleMailbox(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync, syncSent := env.e, env.sync, env.syncSent
+	for _, tc := range []struct {
+		name, address, display, sentID, replyID string
+	}{
+		{"a billing department", "billing_apac@habyt.com", "APAC Billing", "rm1@myco.example", "rm2@habyt.com"},
+		{"a role behind a ticket tag", "support+idy4dl62@getmyinvoices.zendesk.com", "support", "rm3@myco.example", "rm4@zendesk.com"},
+		{"a compound role local part", "hello.events@thesentry.com.vn", "Events The Sentry", "rm5@myco.example", "rm6@thesentry.com.vn"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// The T1 evidence is genuinely there: the owner wrote to the queue.
+			syncSent(t, map[string]bool{tc.sentID: true},
+				email(captureOwner, "", tc.address, tc.sentID, ""))
+			if n := countRows(t, e, `
+				SELECT count(*) FROM activity
+				WHERE counterparty_email = '`+tc.address+`' AND counterparty_outbound_attested`); n != 1 {
+				t.Fatalf("%d attested outbound activities, want 1 — the T1 evidence must be stamped", n)
+			}
+
+			sync(t, email(tc.address, tc.display, captureOwner, tc.replyID, ""))
+
+			if n := countRows(t, e, `
+				SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+				WHERE pe.email = '`+tc.address+`'`); n != 0 {
+				t.Fatalf("%d persons for a role mailbox, want 0 — a department is not a contact", n)
+			}
+			// The correspondence itself is not the thing being refused: somebody
+			// answers that queue, and losing their mail would cost the owner a
+			// real conversation to spare them a wrong contact.
+			if n := countRows(t, e, `
+				SELECT count(*) FROM activity WHERE source_id = '`+tc.replyID+`'`); n != 1 {
+				t.Fatalf("%d activities for the role mailbox's message, want 1 — the mail must be kept", n)
+			}
+		})
+	}
+}
+
+// A judged queue is not re-judged. The refusal above leaves the address on the
+// ordinary path so a FIRST sighting opens the ledger question — and once that
+// question is answered, later mail must stop asking it.
+//
+// The ladder's settled early return cannot cover this case: reaching it needs
+// !corresponded, and a role mailbox the owner writes to is corresponded by
+// definition. Without a second arm the queue re-defers on every message, the
+// live-row index quietly absorbs each write, and the verdict pass re-answers a
+// settled question for as long as the mailbox keeps writing.
+func TestCaptureTierGateAsksAboutARoleMailboxOnlyOnce(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync, syncSent := env.e, env.sync, env.syncSent
+	const addr = "billing@recur.example"
+
+	syncSent(t, map[string]bool{"rr1@myco.example": true},
+		email(captureOwner, "", addr, "rr1@myco.example", ""))
+	sync(t, email(addr, "Billing", captureOwner, "rr2@recur.example", ""))
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		WHERE email = 'billing@recur.example'`); n != 1 {
+		t.Fatalf("%d ledger rows after first contact, want exactly 1 — the queue must be asked about once", n)
+	}
+
+	// The ledger as the verdict engine leaves it.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_pending_counterparty
+			   SET status = 'real', kind = 'role_mailbox',
+			       disposition_reason = 'capture_counterparty_verdict', resolved_at = now()
+			 WHERE email = $1`, addr)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sync(t, email(addr, "Billing", captureOwner, "rr3@recur.example", ""))
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		WHERE email = 'billing@recur.example' AND resolved_at IS NULL`); n != 0 {
+		t.Fatalf("%d re-opened questions for a settled role mailbox, want 0 — decided means decided", n)
+	}
+	if n := countRows(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = 'billing@recur.example'`); n != 0 {
+		t.Fatalf("%d persons for a settled role mailbox, want 0", n)
+	}
+}
+
 func TestCaptureTierGateSuppressesAMachineLocalpartWithoutLosingTheMessage(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync

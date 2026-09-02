@@ -588,3 +588,52 @@ func TestOnlyThePersonKindCreatesAPerson(t *testing.T) {
 		})
 	}
 }
+
+// A role mailbox is settled by its address, with no model call at all.
+//
+// The lane runs on one small local model, and that model answered `person` for
+// `support+<ticket>@…zendesk.com`, `billing_apac@…` and `hello.events@…` often
+// enough to put departments in a founder's CRM as contacts. The address says
+// what those are; spending a call to be told something we then have to discard
+// is the wrong trade twice over.
+//
+// The default scripted verdict is `person`, so a lane that still asked would
+// create the contact and fail this — the assertion is not merely that the brain
+// went unused.
+func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
+	e := integration.Setup(t)
+	for _, address := range []string{
+		"support+idy4dl62-9rnjp@getmyinvoices.zendesk.com",
+		"billing_apac@habyt.example",
+		"hello.events@thesentry.example",
+	} {
+		t.Run(address, func(t *testing.T) {
+			activity := seedCapturedMail(t, e, address, "hello")
+			id := seedPendingDisposition(t, e, address, "example", activity)
+			brain := &scriptedVerdictBrain{}
+			engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+				t.Fatalf("verdict pass: %v", err)
+			}
+
+			if brain.calls != 0 {
+				t.Errorf("%d model calls for a role mailbox, want 0 — the address already answers", brain.calls)
+			}
+			var kind string
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				return tx.QueryRow(context.Background(),
+					`SELECT COALESCE(kind, '') FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&kind)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if kind != capture.KindRoleMailbox {
+				t.Errorf("kind = %q, want %q", kind, capture.KindRoleMailbox)
+			}
+			if n := countIn(t, e, `
+				SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+				WHERE pe.email = $1`, address); n != 0 {
+				t.Errorf("%d persons for a role mailbox, want 0 — a department is not a contact", n)
+			}
+		})
+	}
+}

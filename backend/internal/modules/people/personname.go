@@ -23,6 +23,8 @@ package people
 import (
 	"strings"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/platform/mailrole"
 )
 
 // ParsedName is what a header could be read as. First and Last are set only
@@ -46,27 +48,6 @@ type ParsedName struct {
 // carrying something that is not a name — a department, a company, a title —
 // and splitting it would invent a surname out of the tail.
 const maxNameTokens = 3
-
-// roleLocalParts are mailboxes an ORGANIZATION answers, not a person. They are
-// the reason `mail@petereich.com` must not become a person called "mail".
-//
-// Capture keeps its own narrower list for a different question (transactional.go
-// asks "is this machine-sent infrastructure"). This one asks "does this local
-// part name a human", so it is wider — `info` and `support` are typed by real
-// people all day and are still nobody's name — and it lives here because a
-// module never imports a sibling.
-var roleLocalParts = map[string]bool{
-	"admin": true, "billing": true, "buchhaltung": true, "career": true,
-	"careers": true, "contact": true, "hello": true, "help": true, "hi": true,
-	"info": true, "invoice": true, "jobs": true, "kontakt": true, "mail": true,
-	"marketing": true, "news": true, "newsletter": true, "office": true,
-	"post": true, "presse": true, "press": true, "privacy": true, "recruiting": true,
-	"sales": true, "service": true, "support": true, "team": true, "vertrieb": true,
-	"welcome": true, "no-reply": true, "noreply": true, "donotreply": true,
-	"do-not-reply": true, "bounce": true, "bounces": true, "mailer-daemon": true,
-	"mailerdaemon": true, "postmaster": true, "notifications": true,
-	"notification": true, "abuse": true, "security": true, "webmaster": true,
-}
 
 // honorifics are stripped off the front of a display name. Deliberately short:
 // only forms that are unambiguously a salutation. "Ing" or "Mag" would swallow
@@ -136,6 +117,12 @@ func parseDisplayName(displayName string) (ParsedName, bool) {
 	name := stripQuotes(strings.TrimSpace(displayName))
 	name = displayNameWithoutAffiliation(name)
 	if name == "" {
+		return ParsedName{}, false
+	}
+	// A display name made only of department words is not somebody's name.
+	// Storing "Billing" or "Support Team" as a full name invents a person, and
+	// the address underneath is a queue the local-part path describes honestly.
+	if mailrole.DisplayName(name) {
 		return ParsedName{}, false
 	}
 	name = uncommaName(name)
@@ -230,18 +217,13 @@ func localPartTokens(local string) ([]string, bool) {
 // rather than a human — the whole of it, or any of its dot/underscore parts.
 // `support.eu@` and `sales.emea@` are the same kind of address as `support@`,
 // and reading them as "Support Eu" invents two people who do not exist.
+//
+// The vocabulary lives in platform/mailrole because capture's tier ladder asks
+// the same question from the other end of the pipeline, and two spellings of it
+// disagreed in front of a user: one door named a contact "Billing" while the
+// other refused to create one at all.
 func hasRoleToken(local string) bool {
-	if roleLocalParts[strings.ToLower(local)] {
-		return true
-	}
-	for _, field := range strings.FieldsFunc(local, func(r rune) bool {
-		return r == '.' || r == '_' || r == '-'
-	}) {
-		if roleLocalParts[strings.ToLower(field)] {
-			return true
-		}
-	}
-	return false
+	return mailrole.IsRoleLocalPart(local)
 }
 
 // isWordLike reports whether a token could be part of a name: letters, plus the
