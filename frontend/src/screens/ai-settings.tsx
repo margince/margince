@@ -6,6 +6,7 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { formatMoney, formatNumber } from "../format/format";
 import { formatElapsed, useNow } from "../format/now";
 import { useLocale, useT } from "../i18n";
+import { AiCertificationCard } from "./ai-certification";
 import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard, useProviderKeys } from "./ai-provider-keys";
 import { AiRoutingCard, useRouting } from "./ai-routing";
@@ -92,10 +93,17 @@ export function AiSettingsTab() {
           strip nobody is looking at spends the installation's read budget on
           screens that are not on screen. */}
       {tab === "routing" && (
-        <AiRoutingCard
-          onDirtyChange={setRoutingDirty}
-          onPriceSheet={() => choose("usage")}
-        />
+        <>
+          <AiRoutingCard
+            onDirtyChange={setRoutingDirty}
+            onPriceSheet={() => choose("usage")}
+          />
+          {/* How well the models bound above actually do each job. It belongs
+              with the BINDING rather than with the lanes' health, because it is
+              a reading OF the binding: change a model here and what is known
+              about the model you chose is in the same place, not a tab away. */}
+          <AiCertificationCard />
+        </>
       )}
       {tab === "providers" && (
         <>
