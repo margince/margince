@@ -18,6 +18,7 @@ import (
 // ceiling, and because these four are the admin surface where tags.go's
 // apply/remove pair is every seat's.
 
+// GetTag serves one word with how much of the workspace carries it.
 func (h Handlers) GetTag(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	tag, usage, err := h.store.GetTag(r.Context(), pathID[ids.TagKind](id))
 	if err != nil {
@@ -27,6 +28,7 @@ func (h Handlers) GetTag(w http.ResponseWriter, r *http.Request, id crmcontracts
 	httperr.WriteJSON(w, http.StatusOK, wireTagDetail(tag, usage))
 }
 
+// UpdateTag renames, recolours or describes a tag, under If-Match.
 func (h Handlers) UpdateTag(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UpdateTagParams) {
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
 	if !ok {
@@ -48,6 +50,7 @@ func (h Handlers) UpdateTag(w http.ResponseWriter, r *http.Request, id crmcontra
 	httperr.WriteJSON(w, http.StatusOK, wireTag(tag))
 }
 
+// RestoreTag brings an archived word back into the vocabulary.
 func (h Handlers) RestoreTag(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	tag, err := h.store.RestoreTag(r.Context(), pathID[ids.TagKind](id))
 	if err != nil {
@@ -57,6 +60,7 @@ func (h Handlers) RestoreTag(w http.ResponseWriter, r *http.Request, id crmcontr
 	httperr.WriteJSON(w, http.StatusOK, wireTag(tag))
 }
 
+// MergeTags folds this tag into another and reports what moved.
 func (h Handlers) MergeTags(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req crmcontracts.MergeTagsRequest
 	if !httperr.Decode(w, r, &req) {

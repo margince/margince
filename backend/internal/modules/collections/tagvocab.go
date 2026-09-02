@@ -9,8 +9,10 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -29,11 +31,37 @@ type TagUsage struct {
 	Deals     int
 }
 
-// advertisedTagTypes are the three record types the product offers tags on.
-// `taggable` admits lead and project too — the column has carried five since
-// the baseline — but nothing in V1 shows or filters those, so counting them
-// here would report a weight no screen can explain.
-var advertisedTagTypes = []string{"person", "organization", "deal"}
+// The three record types the product offers tags on. `taggable` admits lead
+// and project too — the column has carried five since the baseline — but
+// nothing in V1 shows or filters those, so counting them here would report a
+// weight no screen can explain.
+//
+// Named rather than repeated because the list and the switch that reads it
+// have to agree: a type counted in one and missing from the other reports zero
+// for records that carry the tag.
+// uqTagName is the uniqueness index whose violation means "another tag holds
+// this name". It is spelled here rather than at each call site because it is
+// the migration's identifier, not this package's: a rename there has to fail
+// this compile.
+const uqTagName = "uq_tag_name"
+
+// intoTagIDField names the body field a merge's target rides in. It is the
+// wire's spelling, quoted back to the caller in a refusal, so it belongs
+// beside the code that refuses rather than retyped at each.
+const intoTagIDField = "into_tag_id"
+
+// nameField is the audit image's key for a tag's name. The three writers here
+// all record it, and an image keyed differently in one of them would read as a
+// different field to whoever queries the trail.
+const nameField = "name"
+
+const (
+	typePerson       = "person"
+	typeOrganization = "organization"
+	typeDeal         = "deal"
+)
+
+var advertisedTagTypes = []string{typePerson, typeOrganization, typeDeal}
 
 // GetTag reads one tag and how much of the workspace carries it.
 //
@@ -88,11 +116,11 @@ func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 			return TagUsage{}, scanErr
 		}
 		switch entityType {
-		case "person":
+		case typePerson:
 			out.People = n
-		case "organization":
+		case typeOrganization:
 			out.Companies = n
-		case "deal":
+		case typeDeal:
 			out.Deals = n
 		}
 	}
@@ -127,6 +155,13 @@ func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expec
 	}
 	var out tagRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Lock before reading: the version check below and the UPDATE that
+		// follows it are two statements, and without the lock another writer
+		// can land between them — the caller's If-Match would pass against a
+		// version their write then overwrites.
+		if _, err := storekit.LockRow(ctx, tx, "tag", id.UUID, storekit.IncludeArchived); err != nil {
+			return err
+		}
 		before, err := scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -141,23 +176,21 @@ func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expec
 			UPDATE tag
 			   SET name        = COALESCE($2, name),
 			       color       = CASE WHEN $3::boolean THEN $4 ELSE color END,
-			       description = CASE WHEN $5::boolean THEN $6 ELSE description END,
-			       version     = version + 1,
-			       updated_at  = now()
+			       description = CASE WHEN $5::boolean THEN $6 ELSE description END
 			 WHERE id = $1
 			RETURNING `+tagColumns,
 			id, name,
 			in.Color != nil, derefOrNil(in.Color),
 			in.Description != nil, derefOrNil(in.Description))
 		if out, err = scanTag(row); err != nil {
-			if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "uq_tag_name" {
+			if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
 				return fmt.Errorf("a tag already holds that name: %w", apperrors.ErrConflict)
 			}
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "update", "tag", id.UUID,
-			map[string]any{"name": before.Name},
-			map[string]any{"name": out.Name})
+			map[string]any{nameField: before.Name},
+			map[string]any{nameField: out.Name})
 		return err
 	})
 	return out, err
@@ -187,8 +220,14 @@ func (s *Store) RestoreTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 	}
 	var out tagRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Read the archived instant first: the audit row for an update has to
-		// say what the field held, and after the UPDATE it holds NULL.
+		// Lock first: two restores racing would both read an archived row and
+		// both report success, and the audit trail would show the word coming
+		// back twice.
+		if _, err := storekit.LockRow(ctx, tx, "tag", id.UUID, storekit.IncludeArchived); err != nil {
+			return err
+		}
+		// Read the archived instant: the audit row for an update has to say
+		// what the field held, and after the UPDATE it holds NULL.
 		before, err := scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -197,7 +236,7 @@ func (s *Store) RestoreTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 			return err
 		}
 		row := tx.QueryRow(ctx, `
-			UPDATE tag SET archived_at = NULL, version = version + 1, updated_at = now()
+			UPDATE tag SET archived_at = NULL
 			 WHERE id = $1 AND archived_at IS NOT NULL
 			RETURNING `+tagColumns, id)
 		if out, err = scanTag(row); errors.Is(err, pgx.ErrNoRows) {
@@ -205,7 +244,7 @@ func (s *Store) RestoreTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 			// restore, and saying so is more useful than reporting success.
 			return apperrors.ErrNotFound
 		} else if err != nil {
-			if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "uq_tag_name" {
+			if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
 				return fmt.Errorf(
 					"a live tag already holds this name; rename it before restoring this one: %w",
 					apperrors.ErrConflict)
@@ -214,7 +253,7 @@ func (s *Store) RestoreTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 		}
 		_, err = storekit.Audit(ctx, tx, "update", "tag", id.UUID,
 			map[string]any{"archived_at": before.ArchivedAt},
-			map[string]any{"archived_at": nil, "name": out.Name})
+			map[string]any{"archived_at": nil, nameField: out.Name})
 		return err
 	})
 	return out, err
@@ -243,12 +282,18 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID) (MergeR
 	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
 		return MergeResult{}, err
 	}
+	// An absent into_tag_id decodes to the zero UUID with no error, so without
+	// this it reaches a lookup that matches nothing and the caller is told a
+	// tag they never named does not exist.
+	if err := httperr.RequireBodyID(intoTagIDField, target.UUID); err != nil {
+		return MergeResult{}, err
+	}
 	if source == target {
-		return MergeResult{}, &BadInputError{Field: "into_tag_id", Reason: "must name a different tag"}
+		return MergeResult{}, &BadInputError{Field: intoTagIDField, Reason: "must name a different tag"}
 	}
 	var out MergeResult
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := requireLiveTag(ctx, tx, target, "into_tag_id"); err != nil {
+		if err := requireLiveTag(ctx, tx, target, intoTagIDField); err != nil {
 			return err
 		}
 		sourceRow, err := scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", source))
@@ -286,12 +331,12 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID) (MergeR
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			UPDATE tag SET archived_at = now(), version = version + 1, updated_at = now()
+			UPDATE tag SET archived_at = now()
 			 WHERE id = $1 AND archived_at IS NULL`, source); err != nil {
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "update", "tag", source.UUID,
-			map[string]any{"name": sourceRow.Name},
+			map[string]any{nameField: sourceRow.Name},
 			map[string]any{
 				"merged_into": target.UUID,
 				"moved":       out.Moved,

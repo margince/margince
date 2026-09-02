@@ -61,6 +61,16 @@ func (s stubTags) FindTag(_ context.Context, name string) (ids.UUID, bool, error
 // workspace already holds and REFUSES anything else. Returning a fresh id for
 // every name — which the stub it replaced did — would let a test claiming
 // "apply_tag never creates" pass against a tool that creates.
+// GetTag answers a fixed weight: these tests are about the tool's plumbing,
+// and the counting itself is proved against a real database in the collections
+// integration suite, where the numbers can be wrong.
+func (s stubTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
+	return TagDetail{
+		Tag:    Tag{TagID: tagID, Name: knownTagName},
+		People: 2, Companies: 1, Deals: 0,
+	}, nil
+}
+
 func (s stubTags) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
 	if s.ensured != nil {
 		*s.ensured = name
@@ -203,6 +213,10 @@ type refusingTaggable struct {
 
 func (r refusingTaggable) EnsureTaggable(context.Context, string, ids.UUID) error {
 	return errNoSuchRecord
+}
+
+func (r refusingTaggable) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
+	return TagDetail{Tag: Tag{TagID: tagID, Name: knownTagName}}, nil
 }
 
 func (r refusingTaggable) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
