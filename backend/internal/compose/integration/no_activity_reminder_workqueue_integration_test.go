@@ -57,6 +57,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -93,7 +94,9 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 	backdateCreatedAt(t, owner, "deal", dealID, staleTouch)
 
 	seedTaskCreatePermission(t, owner, e.WS, sam)
-	seedOwnedNoActivityReminder(t, owner, e.WS, sam, noActivityDays)
+	params := json.RawMessage(fmt.Sprintf(`{"no_activity_days":%d}`, noActivityDays))
+	seedOwnedAutomation(t, owner, "no_activity_reminder", "No Activity Reminder",
+		`{"schedule":"clock"}`, `{"kind":"create_task"}`, params, sam)
 
 	ApplyRiverSchema(t)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -194,19 +197,20 @@ func seedTaskCreatePermission(t *testing.T, owner *pgx.Conn, ws, user ids.UUID) 
 	}
 }
 
-// seedOwnedNoActivityReminder enrolls one enabled no_activity_reminder
-// instance OWNED BY A HUMAN — unlike seedNoActivityReminder's ownerless
-// system-seed shape (timescan_integration_test.go), a non-null owner_id
-// routes every firing through the Task-13 match-time gate, which is
-// exactly the path AUTO-AC-6 exercises: Sam turned this rule on himself.
-func seedOwnedNoActivityReminder(t *testing.T, owner *pgx.Conn, ws, ownerID ids.UUID, days int) {
+// seedOwnedAutomation enrolls one enabled automation instance OWNED BY A
+// HUMAN: a non-null owner_id routes every firing through the match-time gate
+// (automation/gate.go), which re-resolves that owner's LIVE RBAC through
+// identity.Service — the real resolver compose.NewWorkflowEngine wires in,
+// never the harness's synthetic principal.Permissions used elsewhere for
+// read-side scope tests. One writer for this shape, so a new required
+// column or default is maintained once rather than drifting between callers.
+func seedOwnedAutomation(t *testing.T, owner *pgx.Conn, key, name, trigger, action string, params json.RawMessage, ownerID ids.UUID) {
 	t.Helper()
-	params := fmt.Sprintf(`{"no_activity_days":%d}`, days)
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO automation (id, key, name, trigger, action, params, owner_id, enabled)
-		 VALUES ($1, 'no_activity_reminder', 'No Activity Reminder', '{"schedule":"clock"}', '{"kind":"create_task"}', $2::jsonb, $3, true)`,
-		ids.NewV7(), params, ownerID); err != nil {
-		t.Fatalf("seeding the owner-authored no_activity_reminder instance: %v", err)
+		 VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7, true)`,
+		ids.NewV7(), key, name, trigger, action, params, ownerID); err != nil {
+		t.Fatalf("seeding the owner-authored %s instance: %v", key, err)
 	}
 }
 
