@@ -40,15 +40,27 @@
 # written for it. Clearing the cache is therefore the whole fix — the findings do
 # not come back with local paths, they go away, because locally they are waived.
 #
-# WHAT THIS DOES NOT CATCH, deliberately: nothing about the cache itself. It
-# neither clears it nor partitions it per worktree. Clearing is destructive to a
-# resource other sessions are using concurrently and belongs to the human who
-# knows what else is running; partitioning (GOLANGCI_LINT_CACHE per checkout)
-# costs every worktree a cold analysis cache forever, to buy back a message this
-# prints for free. This targets the misreading, which is what the time went on.
+# AND the cache is partitioned per checkout, unless the caller has already
+# chosen one: with several worktrees linting concurrently by design, one shared
+# cache is both the stale-path source above and a file two sessions write at
+# once. Each checkout gets its own directory, keyed by its absolute path, under
+# ~/.cache/golangci-lint/ — INSIDE golangci's default Linux cache root
+# deliberately, because ci.yml's "Cache the golangci-lint analysis cache" step
+# saves and restores exactly that directory, and a partition outside it would
+# silently turn every CI lint cold. The cost is one cold analysis per new
+# worktree; the detector below stays armed for a caller who points
+# GOLANGCI_LINT_CACHE somewhere shared anyway. Clearing a stale cache remains
+# the human's call, for the reason it always was: destructive to a resource
+# other sessions may be using.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+
+if [[ -z "${GOLANGCI_LINT_CACHE:-}" ]]; then
+  # cksum, not shasum: POSIX, present everywhere this runs. The basename rides
+  # along so a human listing the cache directory can tell the partitions apart.
+  export GOLANGCI_LINT_CACHE="$HOME/.cache/golangci-lint/$(basename "$root")-$(printf '%s' "$root" | cksum | cut -d' ' -f1)"
+fi
 
 # Prefer the version-pinned install from `make tools` over whatever is on PATH,
 # for the reason backend/Makefile spells out: a Homebrew golangci-lint would
