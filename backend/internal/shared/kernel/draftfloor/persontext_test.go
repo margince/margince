@@ -156,3 +156,20 @@ func TestANameInsideAWordIsNotNamedAcrossAMultiByteBoundary(t *testing.T) {
 		}
 	}
 }
+
+// Text that is not valid UTF-8 has no rune at the edge to judge, and the
+// boundary check says so rather than guessing. A model reply is bytes off a
+// wire; a draft carrying a broken sequence must not decide a name by accident.
+func TestABrokenSequenceAtTheEdgeIsNotAWordCharacter(t *testing.T) {
+	t.Parallel()
+	// 0xFF is not a legal UTF-8 start byte, so the rune on either side of the
+	// match decodes as RuneError from a single byte.
+	for name, text := range map[string]string{
+		"broken byte before": "\xffLena wrote",
+		"broken byte after":  "Lena\xff wrote",
+	} {
+		if !NamesPerson(text, "Lena") {
+			t.Errorf("%s: %q names Lena and was refused", name, text)
+		}
+	}
+}
