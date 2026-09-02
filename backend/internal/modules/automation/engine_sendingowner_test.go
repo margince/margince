@@ -75,3 +75,52 @@ func TestBindingTheSenderLeavesTheActingPrincipalAlone(t *testing.T) {
 			"must not widen what the firing may read or write")
 	}
 }
+
+// The firing records its owner as the human it acts for.
+//
+// This is what reaches approval.on_behalf_of when the firing stages a held
+// draft, and it is what the decision-authority predicate narrows that draft by:
+// releasing one sends it from the approver's own mailbox, so only the person it
+// goes out as may release it. A staging with nobody recorded is decidable by
+// nobody, so an unstamped firing does not merely lose a nicety — it strands the
+// card.
+//
+// OnBehalfOf rather than UserID, deliberately. UserID is the row-scope key and
+// setting it would widen what the firing may read; OnBehalfOf is read by the
+// audit trail and the staging layer, and auth.AuthzRule short-circuits on the
+// system principal before ever reaching it.
+func TestAFiringRecordsItsOwnerAsTheHumanItActsFor(t *testing.T) {
+	owner := ids.NewV7()
+	ctx := principal.WithActor(context.Background(),
+		principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
+
+	actor, ok := principal.Actor(withSendingOwner(ctx, workflow.Event{OwnerID: owner}))
+	if !ok {
+		t.Fatal("the firing carries no acting principal at all")
+	}
+	if actor.OnBehalfOf != owner {
+		t.Errorf("the firing acts on behalf of %s, want its owner %s. Anything it stages records that "+
+			"value, and a held draft recording nobody can be released by nobody", actor.OnBehalfOf, owner)
+	}
+}
+
+// A system-seeded firing records nobody, and its staging stays decidable on
+// grants alone.
+//
+// The pair to the test above. Inventing an owner here would hand one arbitrary
+// human the sole right to release what a firing nobody authored composed — and
+// would do it by guessing, which is the one move a message to a customer cannot
+// afford.
+func TestASystemSeededFiringRecordsNoHuman(t *testing.T) {
+	ctx := principal.WithActor(context.Background(),
+		principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
+
+	actor, ok := principal.Actor(withSendingOwner(ctx, workflow.Event{}))
+	if !ok {
+		t.Fatal("the firing carries no acting principal at all")
+	}
+	if actor.OnBehalfOf != ids.Nil {
+		t.Errorf("a firing no human authored acts on behalf of %s; there is nobody it could honestly "+
+			"name, and naming one decides whose message it is by guessing", actor.OnBehalfOf)
+	}
+}
