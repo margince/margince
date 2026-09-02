@@ -662,7 +662,7 @@ func TestOverlayRefetchWorkerFreshensTheMirrorRecord(t *testing.T) {
 // TestOverlayRefetchWorkerShedsWhenBudgetExhausted proves the OVB gate: when the
 // meter sheds (here a fail-closed meter with no window), the worker skips the
 // incumbent read entirely — nothing is ingested, and the poller heals the gap.
-// This is the "never spend live quota we cannot account for" invariant for the
+// This is the "never spend live volume budget we cannot account for" invariant for the
 // webhook lane.
 func TestOverlayRefetchWorkerShedsWhenBudgetExhausted(t *testing.T) {
 	e := integration.Setup(t)

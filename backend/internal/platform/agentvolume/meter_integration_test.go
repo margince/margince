@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package agentquota
+package agentvolume
 
 import (
 	"context"
@@ -199,7 +199,7 @@ func TestASecondCrossingAfterAReleaseNeedsASecondDecision(t *testing.T) {
 
 // A release of one counter does not widen another. Sharing them would mean a
 // human confirming "keep reading" also lifted the send ceiling, which is the
-// tightest quota on the surface and the one nothing may release at all.
+// tightest volume budget on the surface and the one nothing may release at all.
 func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(budgettest.Client(t), Limits{Reads: 10, Writes: 10}, time.Hour, frozen(&at))
@@ -225,7 +225,7 @@ func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 
 // The four governed counters are four independent windows for one Passport. A
 // shared one would let a busy reader exhaust its own send allowance — or, worse,
-// let a caller spend the loose quota to escape the tight one.
+// let a caller spend the loose volume budget to escape the tight one.
 func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(budgettest.Client(t),

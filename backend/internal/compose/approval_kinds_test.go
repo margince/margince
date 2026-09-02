@@ -40,8 +40,8 @@ import (
 // never stages, it only reads the declared surface.
 type stubApprovals struct{}
 
-// StageQuotaRelease satisfies the seam; a step-up never reaches these tests.
-func (stubApprovals) StageQuotaRelease(_ context.Context, _ agents.QuotaReleaseRequest) (ids.ApprovalID, bool, error) {
+// StageVolumeRelease satisfies the seam; a step-up never reaches these tests.
+func (stubApprovals) StageVolumeRelease(_ context.Context, _ agents.VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil
 }
 
@@ -420,7 +420,7 @@ func collectStringConsts(file *ast.File, into map[string]string) {
 // gatekit:fixture the value each exported approvals kind constant carries —
 // resolved constant data, not a cost.
 var exportedApprovalKinds = map[string]string{
-	"KindQuotaRelease":      approvals.KindQuotaRelease,
+	"KindVolumeRelease":     approvals.KindVolumeRelease,
 	"KindScheduledSendHeld": approvals.KindScheduledSendHeld,
 	"KindImportCommit":      approvals.KindImportCommit,
 }
@@ -430,7 +430,7 @@ var exportedApprovalKinds = map[string]string{
 // gatekit:fixture the value each cross-package kind constant carries, keyed as
 // written at the call site — resolved constant data, not a cost.
 var crossPackageKinds = map[string]string{
-	"approvals.KindQuotaRelease":      approvals.KindQuotaRelease,
+	"approvals.KindVolumeRelease":     approvals.KindVolumeRelease,
 	"approvals.KindScheduledSendHeld": approvals.KindScheduledSendHeld,
 	"deals.CloseDateCorrectionKind":   deals.CloseDateCorrectionKind,
 	"deals.FollowUpReconcileKind":     deals.FollowUpReconcileKind,

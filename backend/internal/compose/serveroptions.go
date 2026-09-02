@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -329,14 +329,14 @@ func WithOverlayMeter(meter *overlaybudget.Meter) Option {
 	return func(s *Server, _ *pgxpool.Pool) { s.overlayMeter.RebindFrom(meter) }
 }
 
-// WithAgentQuota Rebinds the Server's shared MCP-SESS-* meter to the live,
+// WithAgentVolume Rebinds the Server's shared MCP-SESS-* meter to the live,
 // Redis-backed one cmd built. newServer constructs it fail-closed (nil Redis)
 // and hands that ONE pointer to both halves of the bound — the admission gate
 // that refuses on it and the tool registry that charges it — so this
 // RebindFrom reaches both together and they can never end up counting against
 // different windows.
 //
-// Taking the already-built *agentquota.Meter (not a *redis.Client) keeps the
+// Taking the already-built *agentvolume.Meter (not a *redis.Client) keeps the
 // raw-Redis dependency in cmd, never in compose. Without this option the meter
 // stays fail-closed: a role serving the agent surface with no Redis cannot
 // tell whether an agent has passed any of its bounds, and answers that it has.
@@ -345,9 +345,9 @@ func WithOverlayMeter(meter *overlaybudget.Meter) Option {
 // that division live behind the pool this option is handed: the workspace's AI
 // budget and the credentials sharing it. cmd owns the Redis client; compose
 // owns what the workspace's own numbers mean.
-func WithAgentQuota(meter *agentquota.Meter) Option {
+func WithAgentVolume(meter *agentvolume.Meter) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.quotaMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool, meter.Window())))
+		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool, meter.Window())))
 	}
 }
 

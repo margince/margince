@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -475,9 +475,9 @@ func TestAQueryIsChargedPerRecordIncludingItsHops(t *testing.T) {
 	if charger.reads() != 4 {
 		t.Errorf("charged %d records for 3 rows sharing 1 hop, want 4", charger.reads())
 	}
-	if charger.times[agentquota.Reads] != 1 {
+	if charger.times[agentvolume.Reads] != 1 {
 		t.Errorf("the read bound was consulted %d times, want one charge for the whole answer",
-			charger.times[agentquota.Reads])
+			charger.times[agentvolume.Reads])
 	}
 }
 

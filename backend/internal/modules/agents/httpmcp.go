@@ -123,7 +123,7 @@ func writeRPCResponse(w http.ResponseWriter, r *http.Request, resp rpcResponse, 
 // can land on any api replica because there is nothing here for it to have
 // landed on before. What the in-process session registry used to hold was
 // bookkeeping plus an implicit volume bound, and the bound now lives in Redis
-// (platform/agentquota) where every replica reads the same number.
+// (platform/agentvolume) where every replica reads the same number.
 type httpMCPHandler struct {
 	// server is the SAME dispatcher the stdio transport runs, built once:
 	// method dispatch, the tool surface and the scrubbed-error rules are

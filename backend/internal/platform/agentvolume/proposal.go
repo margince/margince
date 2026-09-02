@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package agentquota
+package agentvolume
 
 // The question a human is asked when an agent crosses a releasable threshold,
 // and the answer that widens the window.
@@ -50,7 +50,7 @@ type ReleaseProposal struct {
 	// row, and whichever lender answers releases only the other's passport —
 	// leaving one agent refused with no question anybody can see.
 	//
-	// It is NOT authority. applyQuotaRelease takes the passport from the staged
+	// It is NOT authority. applyVolumeRelease takes the passport from the staged
 	// row's own passport_id, stamped from the authenticated principal, precisely
 	// so an edited payload cannot re-aim a release.
 	Passport string `json:"passport"`
@@ -80,11 +80,11 @@ func NewReleaseProposal(reading Reading, passport ids.UUID, tool string) Release
 func DecodeReleaseProposal(raw json.RawMessage) (ReleaseProposal, error) {
 	var p ReleaseProposal
 	if err := json.Unmarshal(raw, &p); err != nil {
-		return ReleaseProposal{}, fmt.Errorf("agentquota: reading a staged release proposal: %w", err)
+		return ReleaseProposal{}, fmt.Errorf("agentvolume: reading a staged release proposal: %w", err)
 	}
 	if !p.Counter.Releasable() {
 		return ReleaseProposal{}, fmt.Errorf(
-			"agentquota: a staged release names %q, which is not a quota a human can release", p.Counter)
+			"agentvolume: a staged release names %q, which is not a counter a human can release", p.Counter)
 	}
 	return p, nil
 }
@@ -95,7 +95,7 @@ func DecodeReleaseProposal(raw json.RawMessage) (ReleaseProposal, error) {
 func (p ReleaseProposal) Window() (int64, error) {
 	bucket, err := strconv.ParseInt(p.Bucket, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("agentquota: a staged release names window %q, which is not a window: %w", p.Bucket, err)
+		return 0, fmt.Errorf("agentvolume: a staged release names window %q, which is not a window: %w", p.Bucket, err)
 	}
 	return bucket, nil
 }
@@ -116,7 +116,7 @@ func (p ReleaseProposal) Identity() (json.RawMessage, error) {
 		Passport string  `json:"passport"`
 	}{p.Counter, p.Bucket, p.Passport})
 	if err != nil {
-		return nil, fmt.Errorf("agentquota: naming a release proposal's identity: %w", err)
+		return nil, fmt.Errorf("agentvolume: naming a release proposal's identity: %w", err)
 	}
 	return raw, nil
 }

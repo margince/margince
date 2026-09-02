@@ -281,7 +281,7 @@ func (v Verb) validateGovernance() error {
 	// was expressible, and the first unit to use the secrets surface expressed
 	// it: its store-signing-key operation declared neither, the object check in the
 	// serving adapter therefore never ran, and the operation was admitted on
-	// scope ∧ seat ∧ tier ∧ quota alone. For a cookie-session human that is any
+	// scope ∧ seat ∧ tier ∧ volume alone. For a cookie-session human that is any
 	// authenticated seat. A read-only user replaced the installation's signing
 	// key, on the REST route and through the agent, and every signature after it
 	// was made with the key they chose. Found by the tier's UAT re-run (R1).
@@ -301,7 +301,7 @@ func (v Verb) validateGovernance() error {
 	if v.RequestedScope == ScopeWrite || v.RequestedScope == ScopeDraft {
 		return fmt.Errorf("operation %s requests the %q scope but declares no RBAC object — an operation that "+
 			"changes this installation's state must name something a role document can withhold, or it is "+
-			"admitted on scope, seat, tier and quota alone (i.e. any authenticated seat). "+
+			"admitted on scope, seat, tier and volume budget alone (i.e. any authenticated seat). "+
 			"Declare x-rbac-object (ext_%s_<object>) and x-rbac-action",
 			v.OperationID, string(v.RequestedScope), strings.ReplaceAll(string(v.Unit), "-", "_"))
 	}

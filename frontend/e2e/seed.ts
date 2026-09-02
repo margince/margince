@@ -455,7 +455,7 @@ export const aiHealth = {
       healthy: false,
       calls: 7,
       failures: 7,
-      last_sentinel: "provider_quota",
+      last_sentinel: "provider_budget",
       last_call_at: "2026-07-13T09:12:00Z",
       median_latency_ms: 2_180,
     },

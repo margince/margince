@@ -145,7 +145,7 @@ func newRetryFixture(t *testing.T) *retryFixture {
 		charger: newCountingCharger(),
 	}
 	f.registry = NewRegistry(nil, auth.NewGate(fullSeatAuthority{}),
-		WithIdempotency(f.claims), WithReplayReader(f.reader), WithQuotaCharger(f.charger))
+		WithIdempotency(f.claims), WithReplayReader(f.reader), WithVolumeCharger(f.charger))
 	f.registry.Register(f.tool)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	f.ctx = principal.WithActor(ctx, principal.Principal{
@@ -310,7 +310,7 @@ func TestAReplayThatNamesNoRecordIsRefused(t *testing.T) {
 func TestAReplayIsRefusedWhenNoReaderIsWired(t *testing.T) {
 	f := newRetryFixture(t)
 	f.registry = NewRegistry(nil, auth.NewGate(fullSeatAuthority{}),
-		WithIdempotency(f.claims), WithQuotaCharger(f.charger))
+		WithIdempotency(f.claims), WithVolumeCharger(f.charger))
 	f.registry.Register(f.tool)
 	f.claims.verdict = Claim{State: ClaimReplay, Result: json.RawMessage(fmt.Sprintf(
 		`{"schema_version":"1.0.0","evidence":[{"record_type":"deal","record_id":"%s"}]}`, ids.NewV7()))}
@@ -516,7 +516,7 @@ func TestBookkeepingFailuresNeverChangeWhatTheCallerIsTold(t *testing.T) {
 // irreversible act.
 func TestAKeyIsRefusedOnASurfaceThatCannotClaimIt(t *testing.T) {
 	f := newRetryFixture(t)
-	f.registry = NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithQuotaCharger(f.charger))
+	f.registry = NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithVolumeCharger(f.charger))
 	f.registry.Register(f.tool)
 
 	_, err := f.invoke(t, `{"idempotency_key":"k-1"}`)
@@ -566,11 +566,11 @@ func (a *consumingApprovals) StageCall(context.Context, StageRequest) (ids.Appro
 	return a.staged, false, a.stageErr
 }
 
-// StageQuotaRelease is the §2.4 step-up, which none of these scenarios reaches:
-// they are about the approval a 🟡 call already carries, not about a quota
+// StageVolumeRelease is the §2.4 step-up, which none of these scenarios reaches:
+// they are about the approval a 🟡 call already carries, not about a volume budget
 // ceiling. It answers "nothing staged" so a test that DID reach it would fail
 // on the missing step-up rather than pass on a fabricated one.
-func (a *consumingApprovals) StageQuotaRelease(context.Context, QuotaReleaseRequest) (ids.ApprovalID, bool, error) {
+func (a *consumingApprovals) StageVolumeRelease(context.Context, VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil
 }
 
@@ -606,7 +606,7 @@ func approvedRetryFixture(t *testing.T) (*retryFixture, *consumingApprovals) {
 	f.tool.records = []ids.UUID{ids.NewV7()}
 	approvals := &consumingApprovals{staged: ids.From[ids.ApprovalKind](ids.NewV7())}
 	f.registry = NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}),
-		WithIdempotency(f.claims), WithReplayReader(f.reader), WithQuotaCharger(f.charger))
+		WithIdempotency(f.claims), WithReplayReader(f.reader), WithVolumeCharger(f.charger))
 	f.registry.Register(f.tool)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	f.ctx = principal.WithActor(ctx, principal.Principal{

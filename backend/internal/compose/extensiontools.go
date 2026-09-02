@@ -192,7 +192,7 @@ func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension
 	// The object and the action are carried onto the adapted tool for the same
 	// reason unit is: the composed declaration is the only place they exist,
 	// and mcp.ToolSpec has no field for either — the core gate's model is
-	// scope ∧ seat ∧ tier ∧ quota, and object-level RBAC is enforced by the
+	// scope ∧ seat ∧ tier ∧ volume, and object-level RBAC is enforced by the
 	// handler at every core store rather than by the gate. So this adapter is
 	// where an extension's declared grant becomes a live check; see Handle.
 	return extensionTool{
@@ -381,7 +381,7 @@ func (t extensionTool) Spec() mcp.ToolSpec { return t.spec }
 // the call it was granted for.
 func (t extensionTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	// Object-level RBAC, and this is the ONE place it can be: the core gate
-	// decides scope ∧ seat ∧ tier ∧ quota and knows nothing about objects, so
+	// decides scope ∧ seat ∧ tier ∧ volume and knows nothing about objects, so
 	// without this line a declared x-rbac-object would register into the
 	// vocabulary, reach /me, and gate nothing — a screen would hide a control
 	// the same principal could still reach through the agent.

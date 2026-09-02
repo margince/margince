@@ -3,10 +3,10 @@
 
 package compose
 
-// MCP-SESS-COST, joined up: the AI runtime knows what a call cost, the quota
+// MCP-SESS-COST, joined up: the AI runtime knows what a call cost, the volume budget
 // meter knows whose window to put it in, and neither may import the other.
 //
-// The spec words this quota as "tenant budget ÷ active sessions, soft". ADR-0092
+// The spec words this volume budget as "tenant budget ÷ active sessions, soft". ADR-0092
 // deletes the divisor's subject — there are no sessions once the registry goes —
 // so the share is re-keyed exactly as the read bound was: the workspace's own
 // budget, divided by the credentials sharing it.
@@ -20,30 +20,30 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AgentTokenSpend adapts the quota meter to the AI runtime's token seam, so a
+// AgentTokenSpend adapts the volume meter to the AI runtime's token seam, so a
 // served model call is charged to the agent that caused it.
 //
 // Exported because the two things it joins are assembled in cmd: the meter is
 // built there (the raw-Redis dependency stays out of compose) and so is the
 // model path. This is the one line that makes the join, and it is the whole of
 // what cmd has to remember.
-type AgentTokenSpend struct{ Meter *agentquota.Meter }
+type AgentTokenSpend struct{ Meter *agentvolume.Meter }
 
 // SpendAgentTokens records tokens against the calling Passport's cost window.
 // A human's model call records nothing — the meter's own governed check decides
 // that, so this side never has to re-answer "which callers are metered".
 func (s AgentTokenSpend) SpendAgentTokens(ctx context.Context, tokens int) error {
-	return s.Meter.Consume(ctx, agentquota.Cost, tokens)
+	return s.Meter.Consume(ctx, agentvolume.Cost, tokens)
 }
 
-// budgetShareWindow is how much of the month one quota window covers. The
-// workspace budget is monthly and the quota window is a rolling day, so a share
+// budgetShareWindow is how much of the month one volume window covers. The
+// workspace budget is monthly and the volume window is a rolling day, so a share
 // of the budget has to be pro-rated to the window or the comparison is between
 // two different spans — which would leave the counter warning about nothing.
 const budgetShareWindowDays = 30
@@ -56,7 +56,7 @@ const budgetShareWindowDays = 30
 const shareCacheTTL = 5 * time.Minute
 
 // passportShareCeiling answers how many model tokens ONE Passport may spend
-// inside a quota window: the workspace's monthly budget, pro-rated to the
+// inside a volume window: the workspace's monthly budget, pro-rated to the
 // window, divided by the live agent credentials sharing it.
 //
 // Dividing by the LIVE passports rather than by a constant is what keeps the

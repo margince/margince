@@ -16,12 +16,12 @@ package ai
 import "context"
 
 // AgentTokenSpender records model tokens against the calling agent's own
-// per-Passport window. It is a narrow seam rather than the quota meter itself so
+// per-Passport window. It is a narrow seam rather than the volume meter itself so
 // this module stays unaware of how that window is keyed or stored; compose
 // bridges the two.
 //
 // A call with no agent principal records nothing — the implementation decides
-// that, not this module, because "which callers are governed" is the quota's own
+// that, not this module, because "which callers are governed" is the volume budget's own
 // rule and a second copy of it here would be a second answer.
 type AgentTokenSpender interface {
 	SpendAgentTokens(ctx context.Context, tokens int) error
