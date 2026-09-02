@@ -453,7 +453,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     leads: ({ id }) => (id ? <LeadScreen id={id} /> : <LeadsScreen />),
     deals: ({ id, id2 }) => <DealsRoute id={id} id2={id2} />,
     projects: ({ id }) => (id ? <ProjectScreen id={id} /> : <ProjectsScreen />),
-    worklist: () => <WorklistScreen />,
+    // One segment, and it is WHOSE day — the door a team board row needs. The
+    // other three dials stay state: putting one of four in the address would
+    // make it describe a fraction of what the reader is looking at.
+    worklist: ({ id }) => <WorklistScreen opensOn={id} />,
     reports: () => <ReportsScreen />,
     ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names
