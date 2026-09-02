@@ -2309,6 +2309,7 @@ export const de = {
   "home.weekly.sincePrior": "{delta} ggü. Vorwoche",
   "home.weekly.leadsAnswered": "Leads rechtzeitig beantwortet",
   "home.weekly.ofRouted": "{answered} von {routed}",
+  "home.weekly.promisesKept": "Zusagen eingehalten",
   "home.weekly.meetingsHeld": "Meetings mit nächstem Schritt",
   "home.weekly.ofMeetings": "{withStep} von {held}",
   "home.weekly.carriedOver": "Übernommen",

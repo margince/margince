@@ -91,6 +91,8 @@ components:
         - engagement.reply
         - comms.delivery_bounced
         - notice.created
+        - weekly_plan.updated
+        - weekly_plan.help_requested
         - activity.disposition_recorded
         - notice.read
         - intro_request.created
@@ -1791,6 +1793,62 @@ components:
           $ref: '#/components/schemas/PublicEventActivityChangedFields'
       additionalProperties: false
 
+    PublicEventWeeklyPlanUpdated:
+      type: object
+      x-event-type: weekly_plan.updated
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for weekly_plan.updated — a rep's plan for the week changed:
+        opened, a commitment added, edited or settled. The entity is the rep
+        whose week it is, because that is who the record belongs to.
+        `changed_fields` names WHAT moved rather than carrying it; the labels
+        and the help text stay on the row, since prose on two wires drifts.
+      required:
+        - plan_id
+        - owner_user_id
+        - changed_fields
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        owner_user_id:
+          type: string
+          format: uuid
+        changed_fields:
+          type: array
+          items:
+            type: string
+          description: Which parts of the plan moved — status, commitments.
+      additionalProperties: false
+    PublicEventWeeklyPlanHelpRequested:
+      type: object
+      x-event-type: weekly_plan.help_requested
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for weekly_plan.help_requested — a rep asked their lead for
+        help on one commitment. Its own type rather than another
+        weekly_plan.updated, because this is the one change somebody else is
+        meant to act on: an automation notifying a lead subscribes to this and
+        not to every edit of a checkbox.
+        The request text is NOT here. It stays on the row the lead opens, so
+        what a rep says about being stuck does not ride a fan-out.
+      required:
+        - plan_id
+        - commitment_id
+        - owner_user_id
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        commitment_id:
+          type: string
+          format: uuid
+        owner_user_id:
+          type: string
+          format: uuid
+      additionalProperties: false
     PublicEventNoticeCreated:
       type: object
       x-event-type: notice.created

@@ -317,6 +317,8 @@ const (
 	VoiceProfileCreated                   SubscribableEventType = "voice.profile_created"
 	VoiceProfileUpdated                   SubscribableEventType = "voice.profile_updated"
 	VoiceVersionChanged                   SubscribableEventType = "voice.version_changed"
+	WeeklyPlanHelpRequested               SubscribableEventType = "weekly_plan.help_requested"
+	WeeklyPlanUpdated                     SubscribableEventType = "weekly_plan.updated"
 )
 
 // Valid indicates whether the value is a known member of the SubscribableEventType enum.
@@ -537,6 +539,10 @@ func (e SubscribableEventType) Valid() bool {
 	case VoiceProfileUpdated:
 		return true
 	case VoiceVersionChanged:
+		return true
+	case WeeklyPlanHelpRequested:
+		return true
+	case WeeklyPlanUpdated:
 		return true
 	default:
 		return false
@@ -1936,6 +1942,21 @@ type PublicEventVoiceVersionChanged struct {
 	Status string `json:"status"`
 }
 
+// PublicEventWeeklyPlanHelpRequested Payload for weekly_plan.help_requested — a rep asked their lead for help on one commitment. Its own type rather than another weekly_plan.updated, because this is the one change somebody else is meant to act on: an automation notifying a lead subscribes to this and not to every edit of a checkbox. The request text is NOT here. It stays on the row the lead opens, so what a rep says about being stuck does not ride a fan-out.
+type PublicEventWeeklyPlanHelpRequested struct {
+	CommitmentId openapi_types.UUID `json:"commitment_id"`
+	OwnerUserId  openapi_types.UUID `json:"owner_user_id"`
+	PlanId       openapi_types.UUID `json:"plan_id"`
+}
+
+// PublicEventWeeklyPlanUpdated Payload for weekly_plan.updated — a rep's plan for the week changed: opened, a commitment added, edited or settled. The entity is the rep whose week it is, because that is who the record belongs to. `changed_fields` names WHAT moved rather than carrying it; the labels and the help text stay on the row, since prose on two wires drifts.
+type PublicEventWeeklyPlanUpdated struct {
+	// ChangedFields Which parts of the plan moved — status, commitments.
+	ChangedFields []string           `json:"changed_fields"`
+	OwnerUserId   openapi_types.UUID `json:"owner_user_id"`
+	PlanId        openapi_types.UUID `json:"plan_id"`
+}
+
 // SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/organization, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
 type SubscribableEventType string
 
@@ -2383,6 +2404,14 @@ func (PublicEventVoiceVersionChanged) EventType() string { return "voice.version
 
 func (PublicEventVoiceVersionChanged) EntityType() string { return "voice_profile" }
 
+func (PublicEventWeeklyPlanHelpRequested) EventType() string { return "weekly_plan.help_requested" }
+
+func (PublicEventWeeklyPlanHelpRequested) EntityType() string { return "user" }
+
+func (PublicEventWeeklyPlanUpdated) EventType() string { return "weekly_plan.updated" }
+
+func (PublicEventWeeklyPlanUpdated) EntityType() string { return "user" }
+
 // PublicEventVersions maps every subscribable event type carrying a
 // PublicEvent<Event> schema to that schema's x-version extension
 // (default 1 when absent). It is the single generated source of truth for
@@ -2497,4 +2526,6 @@ var PublicEventVersions = map[string]int{
 	"voice.profile_created":                     1,
 	"voice.profile_updated":                     1,
 	"voice.version_changed":                     1,
+	"weekly_plan.help_requested":                1,
+	"weekly_plan.updated":                       1,
 }

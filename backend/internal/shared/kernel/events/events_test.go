@@ -126,6 +126,11 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// activity stream — which also carries captures and edits — the
 		// distinction is the whole point of the type.
 		"disposition_recorded": true,
+		// Same shape and the same reason: "requested" alone would not say what
+		// was asked for, and a weekly plan's stream also carries its ordinary
+		// updates — the distinction is the point of the type, because this is
+		// the one change somebody else is meant to act on.
+		"help_requested": true,
 	}
 
 	for _, typ := range Types() {

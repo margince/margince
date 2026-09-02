@@ -10373,6 +10373,156 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/weekly-plans/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's plan for this week — what they said they would do.
+         * @description The forward half of the Brief's weekly. `/weekly-reviews/latest` is the week that
+         *     closed, frozen and edited by nobody; this is the week running, authored by the rep.
+         *
+         *     Whose plan is not a parameter. A plan is a personal record and the caller's own is
+         *     the only one this path answers for; a lead reads a rep's through
+         *     `/weekly-plans/{owner_id}/current`, which states whose week it wants.
+         *
+         *     404 when the rep has not started one. The read never writes: creating a plan here
+         *     would put an empty week in every rep's history the first time they opened the page,
+         *     and "did this person plan their week" would stop being answerable.
+         */
+        get: operations["getCurrentWeeklyPlan"];
+        put?: never;
+        /**
+         * Open a plan for this week.
+         * @description Idempotent: a second call answers the plan the first opened rather than reporting a
+         *     race. Two tabs pressing "plan my week" produce one plan.
+         */
+        post: operations["startWeeklyPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/{owner_id}/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A teammate's plan for this week, for their lead.
+         * @description The second reader, and the only path that names a person. Gated on the same
+         *     shared-live-team question that decides whether a lead may open a rep's queue or put
+         *     a notice in it — one seam, never a fourth spelling of "is this my colleague".
+         *
+         *     404 rather than 403 for a reader who is not their lead: whether a person has a plan
+         *     is itself something a stranger may not learn.
+         */
+        get: operations["getTeammateWeeklyPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write one thing onto this week's plan.
+         * @description Onto the CALLER's own plan, opening one for the week if they have none. There is no
+         *     plan id in the body: a plan id would be a way to write onto somebody else's week,
+         *     and there is no reason for one to exist.
+         */
+        post: operations["addWeeklyPlanCommitment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments/{id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Mark one commitment done, reopen it, or drop it.
+         * @description `missed` is not settable. It is what the week's CLOSE writes over a commitment left
+         *     open, not something a rep declares about themselves — a rep who decides they will
+         *     not do a thing drops it, which says something different and truer.
+         */
+        put: operations["setWeeklyPlanCommitmentState"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments/{id}/help": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say what you need from your lead on one commitment.
+         * @description An empty ask withdraws a standing request. The withdrawal emits the ordinary plan
+         *     update rather than the help-requested event, so retracting a request does not page
+         *     a lead a second time.
+         */
+        put: operations["askForWeeklyPlanHelp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments/{id}/response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Answer a teammate's request for help.
+         * @description The lead's one write, and it touches three columns together — the answer, who wrote
+         *     it and when — because an answer with nobody behind it cannot be shown to the person
+         *     who asked.
+         *
+         *     It touches nothing else. A lead may answer a request; they may not settle a
+         *     commitment, reword it or drop it, and there is no argument here by which they could.
+         */
+        put: operations["answerWeeklyPlanCommitment"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notices": {
         parameters: {
             query?: never;
@@ -21432,12 +21582,80 @@ export interface components {
             } | null;
         };
         /**
+         * @description One rep's week as they meant it to go — the forward counterpart to the frozen
+         *     WeeklyReview beside it.
+         */
+        WeeklyPlan: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description The Monday of the week planned, in the installation reporting timezone.
+             */
+            local_week_start: string;
+            /**
+             * @description `closed` once the weekly job has settled the week and frozen its outcome into the
+             *     review. A closed plan stops accepting edits, which is what keeps the review's
+             *     counts true.
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            commitments: components["schemas"]["WeeklyPlanCommitment"][];
+        };
+        /** @description One thing a rep said they would do this week. */
+        WeeklyPlanCommitment: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            /**
+             * @description The record this is about, when it names one. Carried as a type and an id and
+             *     NEVER resolved here — the client asks the record's own endpoint, so a record the
+             *     reader may not see simply does not resolve, and a deleted one stops resolving
+             *     without erasing the commitment that named it.
+             */
+            linked_record?: components["schemas"]["WeeklyPlanLink"];
+            /** Format: date */
+            due_on?: string | null;
+            /**
+             * @description `missed` is written by the week's close over a commitment left open; a rep
+             *     settles their own as done or dropped. Dropped counts as neither owed nor kept:
+             *     deciding a thing is not worth doing is not failing to do it.
+             * @enum {string}
+             */
+            state: "open" | "done" | "missed" | "dropped";
+            /** @description What the rep needs from their lead, absent when they have asked nothing. */
+            help_requested?: string | null;
+            /** @description What the lead answered, absent until they have. */
+            manager_response?: string | null;
+            /** Format: uuid */
+            manager_user_id?: string | null;
+            /** Format: date-time */
+            responded_at?: string | null;
+            /** Format: date-time */
+            completed_at?: string | null;
+            /** @description The order the rep put them in. */
+            position: number;
+        };
+        WeeklyPlanLink: {
+            /** @enum {string} */
+            type: "deal" | "lead" | "person" | "organization" | "project";
+            /** Format: uuid */
+            id: string;
+        };
+        NewWeeklyPlanCommitment: {
+            label: string;
+            /** @description Both halves or neither — a type with no id names nothing. */
+            linked_record?: components["schemas"]["WeeklyPlanLink"];
+            /** Format: date */
+            due_on?: string | null;
+        };
+        /**
          * @description The closed set of RBAC-governed object types (features/04 §1).
          *     The web client types every capability check against this enum, which openapi-typescript renders as a string union — so a misspelled object is a compile error there.
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction";
+        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -25426,6 +25644,15 @@ export interface components {
             brief_items_acted: number;
             /** @description And dismissed. */
             brief_items_dismissed: number;
+            /**
+             * @description Commitments the rep stood by in the week's plan. A dropped commitment is in
+             *     neither this nor `commitments_kept`: deciding on Wednesday that a thing is not
+             *     worth doing is not failing to do it, and counting it against a rep teaches them
+             *     to leave dead commitments open rather than say so.
+             */
+            commitments_due: number;
+            /** @description And how many were done. */
+            commitments_kept: number;
             /** @description Inbound leads routed to this rep during the week. */
             leads_routed: number;
             /**
@@ -44079,6 +44306,195 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getCurrentWeeklyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The week as planned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    startWeeklyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plan, whether this call opened it or found it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getTeammateWeeklyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Whose week to read. */
+                owner_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The teammate's week as planned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addWeeklyPlanCommitment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewWeeklyPlanCommitment"];
+            };
+        };
+        responses: {
+            /** @description The commitment as written. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlanCommitment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setWeeklyPlanCommitmentState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    state: "open" | "done" | "dropped";
+                };
+            };
+        };
+        responses: {
+            /** @description Settled. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    askForWeeklyPlanHelp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    help_requested: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    answerWeeklyPlanCommitment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    manager_response: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Answered. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     raiseNotice: {

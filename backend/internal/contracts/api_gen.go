@@ -11815,6 +11815,75 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyPlanStatus.
+const (
+	WeeklyPlanStatusClosed WeeklyPlanStatus = "closed"
+	WeeklyPlanStatusOpen   WeeklyPlanStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanStatus enum.
+func (e WeeklyPlanStatus) Valid() bool {
+	switch e {
+	case WeeklyPlanStatusClosed:
+		return true
+	case WeeklyPlanStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanCommitmentState.
+const (
+	WeeklyPlanCommitmentStateDone    WeeklyPlanCommitmentState = "done"
+	WeeklyPlanCommitmentStateDropped WeeklyPlanCommitmentState = "dropped"
+	WeeklyPlanCommitmentStateMissed  WeeklyPlanCommitmentState = "missed"
+	WeeklyPlanCommitmentStateOpen    WeeklyPlanCommitmentState = "open"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanCommitmentState enum.
+func (e WeeklyPlanCommitmentState) Valid() bool {
+	switch e {
+	case WeeklyPlanCommitmentStateDone:
+		return true
+	case WeeklyPlanCommitmentStateDropped:
+		return true
+	case WeeklyPlanCommitmentStateMissed:
+		return true
+	case WeeklyPlanCommitmentStateOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanLinkType.
+const (
+	WeeklyPlanLinkTypeDeal         WeeklyPlanLinkType = "deal"
+	WeeklyPlanLinkTypeLead         WeeklyPlanLinkType = "lead"
+	WeeklyPlanLinkTypeOrganization WeeklyPlanLinkType = "organization"
+	WeeklyPlanLinkTypePerson       WeeklyPlanLinkType = "person"
+	WeeklyPlanLinkTypeProject      WeeklyPlanLinkType = "project"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanLinkType enum.
+func (e WeeklyPlanLinkType) Valid() bool {
+	switch e {
+	case WeeklyPlanLinkTypeDeal:
+		return true
+	case WeeklyPlanLinkTypeLead:
+		return true
+	case WeeklyPlanLinkTypeOrganization:
+		return true
+	case WeeklyPlanLinkTypePerson:
+		return true
+	case WeeklyPlanLinkTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WeeklyReviewDealOutcome.
 const (
 	WeeklyReviewDealOutcomeLost  WeeklyReviewDealOutcome = "lost"
@@ -14079,22 +14148,43 @@ func (e ListSignalsParamsKind) Valid() bool {
 
 // Defines values for ListSignalsParamsResolutionState.
 const (
-	Dropped       ListSignalsParamsResolutionState = "dropped"
-	LowConfidence ListSignalsParamsResolutionState = "low_confidence"
-	Resolved      ListSignalsParamsResolutionState = "resolved"
-	Unresolved    ListSignalsParamsResolutionState = "unresolved"
+	ListSignalsParamsResolutionStateDropped       ListSignalsParamsResolutionState = "dropped"
+	ListSignalsParamsResolutionStateLowConfidence ListSignalsParamsResolutionState = "low_confidence"
+	ListSignalsParamsResolutionStateResolved      ListSignalsParamsResolutionState = "resolved"
+	ListSignalsParamsResolutionStateUnresolved    ListSignalsParamsResolutionState = "unresolved"
 )
 
 // Valid indicates whether the value is a known member of the ListSignalsParamsResolutionState enum.
 func (e ListSignalsParamsResolutionState) Valid() bool {
 	switch e {
-	case Dropped:
+	case ListSignalsParamsResolutionStateDropped:
 		return true
-	case LowConfidence:
+	case ListSignalsParamsResolutionStateLowConfidence:
 		return true
-	case Resolved:
+	case ListSignalsParamsResolutionStateResolved:
 		return true
-	case Unresolved:
+	case ListSignalsParamsResolutionStateUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
+const (
+	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+)
+
+// Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
+func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
+	switch e {
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
+		return true
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
+		return true
+	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
 		return true
 	default:
 		return false
@@ -22374,6 +22464,15 @@ type MyAgentGrants struct {
 	Data []MyAgentGrant `json:"data"`
 }
 
+// NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
+type NewWeeklyPlanCommitment struct {
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+	Label string              `json:"label"`
+
+	// LinkedRecord Both halves or neither — a type with no id names nothing.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
+}
+
 // Notice One durable line addressed to one person, as the raising call returns it.
 type Notice struct {
 	// Body The coach's note. Absent when none was given.
@@ -29408,6 +29507,70 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
+// WeeklyReview beside it.
+type WeeklyPlan struct {
+	Commitments []WeeklyPlanCommitment `json:"commitments"`
+	Id          openapi_types.UUID     `json:"id"`
+
+	// LocalWeekStart The Monday of the week planned, in the installation reporting timezone.
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Status `closed` once the weekly job has settled the week and frozen its outcome into the
+	// review. A closed plan stops accepting edits, which is what keeps the review's
+	// counts true.
+	Status WeeklyPlanStatus `json:"status"`
+}
+
+// WeeklyPlanStatus `closed` once the weekly job has settled the week and frozen its outcome into the
+// review. A closed plan stops accepting edits, which is what keeps the review's
+// counts true.
+type WeeklyPlanStatus string
+
+// WeeklyPlanCommitment One thing a rep said they would do this week.
+type WeeklyPlanCommitment struct {
+	CompletedAt *time.Time          `json:"completed_at,omitempty"`
+	DueOn       *openapi_types.Date `json:"due_on,omitempty"`
+
+	// HelpRequested What the rep needs from their lead, absent when they have asked nothing.
+	HelpRequested *string            `json:"help_requested,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	Label         string             `json:"label"`
+
+	// LinkedRecord The record this is about, when it names one. Carried as a type and an id and
+	// NEVER resolved here — the client asks the record's own endpoint, so a record the
+	// reader may not see simply does not resolve, and a deleted one stops resolving
+	// without erasing the commitment that named it.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
+
+	// ManagerResponse What the lead answered, absent until they have.
+	ManagerResponse *string             `json:"manager_response,omitempty"`
+	ManagerUserId   *openapi_types.UUID `json:"manager_user_id,omitempty"`
+
+	// Position The order the rep put them in.
+	Position    int        `json:"position"`
+	RespondedAt *time.Time `json:"responded_at,omitempty"`
+
+	// State `missed` is written by the week's close over a commitment left open; a rep
+	// settles their own as done or dropped. Dropped counts as neither owed nor kept:
+	// deciding a thing is not worth doing is not failing to do it.
+	State WeeklyPlanCommitmentState `json:"state"`
+}
+
+// WeeklyPlanCommitmentState `missed` is written by the week's close over a commitment left open; a rep
+// settles their own as done or dropped. Dropped counts as neither owed nor kept:
+// deciding a thing is not worth doing is not failing to do it.
+type WeeklyPlanCommitmentState string
+
+// WeeklyPlanLink defines model for WeeklyPlanLink.
+type WeeklyPlanLink struct {
+	Id   openapi_types.UUID `json:"id"`
+	Type WeeklyPlanLinkType `json:"type"`
+}
+
+// WeeklyPlanLinkType defines model for WeeklyPlanLink.Type.
+type WeeklyPlanLinkType string
+
 // WeeklyReview One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
 // which is why they are stored rather than recomputed.
 type WeeklyReview struct {
@@ -29467,7 +29630,16 @@ type WeeklyReviewCounts struct {
 
 	// BriefItemsDismissed And dismissed.
 	BriefItemsDismissed int `json:"brief_items_dismissed"`
-	DealsLost           int `json:"deals_lost"`
+
+	// CommitmentsDue Commitments the rep stood by in the week's plan. A dropped commitment is in
+	// neither this nor `commitments_kept`: deciding on Wednesday that a thing is not
+	// worth doing is not failing to do it, and counting it against a rep teaches them
+	// to leave dead commitments open rather than say so.
+	CommitmentsDue int `json:"commitments_due"`
+
+	// CommitmentsKept And how many were done.
+	CommitmentsKept int `json:"commitments_kept"`
+	DealsLost       int `json:"deals_lost"`
 
 	// DealsMoved Deals that changed stage, excluding those that closed.
 	DealsMoved int `json:"deals_moved"`
@@ -34616,6 +34788,24 @@ type ListWebhookDeliveriesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// AskForWeeklyPlanHelpJSONBody defines parameters for AskForWeeklyPlanHelp.
+type AskForWeeklyPlanHelpJSONBody struct {
+	HelpRequested string `json:"help_requested"`
+}
+
+// AnswerWeeklyPlanCommitmentJSONBody defines parameters for AnswerWeeklyPlanCommitment.
+type AnswerWeeklyPlanCommitmentJSONBody struct {
+	ManagerResponse string `json:"manager_response"`
+}
+
+// SetWeeklyPlanCommitmentStateJSONBody defines parameters for SetWeeklyPlanCommitmentState.
+type SetWeeklyPlanCommitmentStateJSONBody struct {
+	State SetWeeklyPlanCommitmentStateJSONBodyState `json:"state"`
+}
+
+// SetWeeklyPlanCommitmentStateJSONBodyState defines parameters for SetWeeklyPlanCommitmentState.
+type SetWeeklyPlanCommitmentStateJSONBodyState string
+
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
@@ -35345,6 +35535,18 @@ type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
 
 // UpdateWebhookSubscriptionJSONRequestBody defines body for UpdateWebhookSubscription for application/json ContentType.
 type UpdateWebhookSubscriptionJSONRequestBody = UpdateWebhookSubscriptionRequest
+
+// AddWeeklyPlanCommitmentJSONRequestBody defines body for AddWeeklyPlanCommitment for application/json ContentType.
+type AddWeeklyPlanCommitmentJSONRequestBody = NewWeeklyPlanCommitment
+
+// AskForWeeklyPlanHelpJSONRequestBody defines body for AskForWeeklyPlanHelp for application/json ContentType.
+type AskForWeeklyPlanHelpJSONRequestBody AskForWeeklyPlanHelpJSONBody
+
+// AnswerWeeklyPlanCommitmentJSONRequestBody defines body for AnswerWeeklyPlanCommitment for application/json ContentType.
+type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBody
+
+// SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
+type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
 
 // Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
 // element and whether it was found
@@ -44651,6 +44853,27 @@ type ServerInterface interface {
 	// Rotate a subscription's signing secret (returns the new secret once).
 	// (POST /webhook-subscriptions/{id}/rotate-secret)
 	RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id Id)
+	// Write one thing onto this week's plan.
+	// (POST /weekly-plans/commitments)
+	AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request)
+	// Say what you need from your lead on one commitment.
+	// (PUT /weekly-plans/commitments/{id}/help)
+	AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Answer a teammate's request for help.
+	// (PUT /weekly-plans/commitments/{id}/response)
+	AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Mark one commitment done, reopen it, or drop it.
+	// (PUT /weekly-plans/commitments/{id}/state)
+	SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The caller's plan for this week — what they said they would do.
+	// (GET /weekly-plans/current)
+	GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// Open a plan for this week.
+	// (POST /weekly-plans/current)
+	StartWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// A teammate's plan for this week, for their lead.
+	// (GET /weekly-plans/{owner_id}/current)
+	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID)
 	// The weeks the acting rep has a review for, newest first.
 	// (GET /weekly-reviews)
 	ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
@@ -47936,6 +48159,48 @@ func (_ Unimplemented) ReplayWebhookDelivery(w http.ResponseWriter, r *http.Requ
 // Rotate a subscription's signing secret (returns the new secret once).
 // (POST /webhook-subscriptions/{id}/rotate-secret)
 func (_ Unimplemented) RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Write one thing onto this week's plan.
+// (POST /weekly-plans/commitments)
+func (_ Unimplemented) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what you need from your lead on one commitment.
+// (PUT /weekly-plans/commitments/{id}/help)
+func (_ Unimplemented) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a teammate's request for help.
+// (PUT /weekly-plans/commitments/{id}/response)
+func (_ Unimplemented) AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark one commitment done, reopen it, or drop it.
+// (PUT /weekly-plans/commitments/{id}/state)
+func (_ Unimplemented) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's plan for this week — what they said they would do.
+// (GET /weekly-plans/current)
+func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open a plan for this week.
+// (POST /weekly-plans/current)
+func (_ Unimplemented) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A teammate's plan for this week, for their lead.
+// (GET /weekly-plans/{owner_id}/current)
+func (_ Unimplemented) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71770,6 +72035,208 @@ func (siw *ServerInterfaceWrapper) RotateWebhookSecret(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// AddWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddWeeklyPlanCommitment(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AskForWeeklyPlanHelp operation middleware
+func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AskForWeeklyPlanHelp(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerWeeklyPlanCommitment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetWeeklyPlanCommitmentState operation middleware
+func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetWeeklyPlanCommitmentState(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCurrentWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCurrentWeeklyPlan(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartWeeklyPlan(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTeammateWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeammateWeeklyPlan(w, r, ownerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListWeeklyReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 
@@ -73682,6 +74149,27 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/webhook-subscriptions/{id}/rotate-secret", wrapper.RotateWebhookSecret)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/weekly-plans/commitments", wrapper.AddWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/help", wrapper.AskForWeeklyPlanHelp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/response", wrapper.AnswerWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/state", wrapper.SetWeeklyPlanCommitmentState)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-plans/current", wrapper.GetCurrentWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/weekly-plans/current", wrapper.StartWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-plans/{owner_id}/current", wrapper.GetTeammateWeeklyPlan)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-reviews", wrapper.ListWeeklyReviews)
