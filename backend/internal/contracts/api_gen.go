@@ -20349,6 +20349,66 @@ type HeldThreadListResponse struct {
 	Data []HeldThread `json:"data"`
 }
 
+// HiddenBacklog How much waiting work each hiding rule is keeping off one reader's queue, at one
+// instant. Every count is of THREADS, matching what the queue counts: a customer who
+// wrote three times is waiting once.
+type HiddenBacklog struct {
+	// AsOf The instant every figure below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Clear True when nothing is being held back AND the reads were complete. The
+	// guardrail's target, sent as its own field because a number only ever read beside
+	// other numbers becomes decoration — this is what a check asserts on.
+	Clear bool `json:"clear"`
+
+	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
+	// the judgement worth watching: it hides the thread from the WHOLE workspace and
+	// never lifts, so one rep's mistake removes a customer from everybody's day
+	// permanently.
+	NotSales int `json:"not_sales"`
+
+	// PastHorizon Work older than the queue's horizon with no open deal behind it. NOBODY CHOSE
+	// THIS. A customer who wrote four months ago and was never answered is exactly
+	// the failure a sales queue exists to prevent, and the horizon removes them on a
+	// date with no rep having judged anything.
+	//
+	// Bounded at a year: past that a message is history by any reading, and an
+	// unbounded scan would answer a different question at the cost of a full table
+	// read.
+	PastHorizon int `json:"past_horizon"`
+
+	// SetAside Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
+	// least alarming of the four: a snooze lifts on its own moment, so this includes
+	// work that will come back without anybody remembering it. `not_mine` does not
+	// lift at all.
+	SetAside int `json:"set_aside"`
+
+	// Shown What the queue itself would carry. Here so the others read as a proportion
+	// rather than as bare volumes — three hidden against four shown is a broken
+	// queue, and three against three hundred is a rep tidying up.
+	Shown int `json:"shown"`
+
+	// Truncated True when a read stopped at its own scan bound, which makes every figure above
+	// it a FLOOR rather than a count.
+	//
+	// The bound is on the shared statement, so the strict read and every relaxed read
+	// clip at the same number. On a queue already at the cap all five return it, every
+	// difference is zero, and a guardrail without this flag would report a clear
+	// backlog over the installation most likely to be hiding work.
+	//
+	// `clear` is false whenever this is true. That is not a claim that work IS hidden;
+	// it is a refusal to claim the opposite over a question the scan stopped before
+	// settling.
+	Truncated bool `json:"truncated"`
+
+	// Unlinked Inbound mail that qualifies in every other way and is attached to no record the
+	// workspace sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+	// is right — a rep's dentist is not a customer — and it is also where a real
+	// customer lands when capture failed to link their thread. Its own figure for
+	// that reason rather than folded into a total.
+	Unlinked int `json:"unlinked"`
+}
+
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
 //
@@ -45023,6 +45083,9 @@ type ServerInterface interface {
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
+	// What the queue is not showing, and which rule is holding it back.
+	// (GET /worklist/hidden)
+	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
 	// (GET /worklist/team)
 	GetTeamBoard(w http.ResponseWriter, r *http.Request)
@@ -48341,6 +48404,12 @@ func (_ Unimplemented) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Reques
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the queue is not showing, and which rule is holding it back.
+// (GET /worklist/hidden)
+func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72263,6 +72332,28 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetHiddenBacklog operation middleware
+func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHiddenBacklog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTeamBoard operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 
@@ -74053,6 +74144,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)

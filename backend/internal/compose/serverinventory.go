@@ -439,6 +439,11 @@ func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmco
 	s.attentionHandlers.GetWorklist(w, r, params)
 }
 
+// GetHiddenBacklog forwards the guardrail over the queue's own hiding rules.
+func (s Server) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+	s.attentionHandlers.GetHiddenBacklog(w, r)
+}
+
 // GetTeamBoard forwards the manager's read of the same work.
 func (s Server) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 	s.attentionHandlers.GetTeamBoard(w, r)
