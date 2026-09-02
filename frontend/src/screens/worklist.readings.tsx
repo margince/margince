@@ -35,7 +35,10 @@ export function WorklistReadings({ day }: Readonly<{ day: Worklist }>) {
   // one statement, and a caveat on one of them invites the reading where the
   // other three are exact.
   return (
-    <section className="worklist-readings" aria-label={t("worklist.readings.label")}>
+    <section
+      className="worklist-readings"
+      aria-label={t("worklist.readings.label")}
+    >
       <StatStrip testId="worklist-readings">
         <RevenueStat readings={readings} locale={locale} t={t} />
         <CountStat

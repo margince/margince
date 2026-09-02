@@ -18,7 +18,6 @@ import {
 import { FocusCard, focusOf } from "./worklist.focus";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
-import { WorklistReadings } from "./worklist.readings";
 import {
   useWorklist,
   type Worklist,
@@ -26,6 +25,7 @@ import {
   type WorklistItem,
   type WorklistScope,
 } from "./worklist.queries";
+import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
 import "./worklist.css";
 
