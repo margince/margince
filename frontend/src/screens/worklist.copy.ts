@@ -189,6 +189,12 @@ function known(kind: WorklistReason["kind"]): kind is KnownReason {
 }
 
 // The comparators this build can name, for the same reason.
+//
+// `crowded` reads the other way round from the rest: this row is above because
+// the one BELOW was held back, so a single lane could not own the page. The
+// server sends no values with it deliberately — "8th against 9th" is a fact
+// about the lane rather than about either row. Absent from this list it drew
+// nothing at all, on exactly the row whose position most needs explaining.
 const KNOWN_COMPARATORS = {
   pin: true,
   level: true,
@@ -196,6 +202,7 @@ const KNOWN_COMPARATORS = {
   expected_revenue: true,
   waiting_days: true,
   relationship: true,
+  crowded: true,
 } as const;
 
 function knownComparator(
