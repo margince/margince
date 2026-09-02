@@ -28,6 +28,7 @@ const (
 	caveatCommercial   = "Do not concede on price before the value is agreed."
 	caveatDelivery     = "Do not reopen scope that is already agreed; name what changed and what it costs."
 	caveatUnknown      = "Do not assume what this meeting is for. Ask, then plan the rest of the hour."
+	caveatDemo         = "Do not tour the product. Show the two things they asked about and stop."
 )
 
 func caveatFor(typ MeetingType) string {
@@ -40,6 +41,8 @@ func caveatFor(typ MeetingType) string {
 		return caveatCommercial
 	case crmcontracts.MeetingPlanTypeDelivery, crmcontracts.MeetingPlanTypeRenewalRisk:
 		return caveatDelivery
+	case crmcontracts.MeetingPlanTypeDemo:
+		return caveatDemo
 	default:
 		return caveatUnknown
 	}

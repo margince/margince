@@ -235,3 +235,33 @@ func TestThePlanNeverSpellsARecordIDInItsProse(t *testing.T) {
 		}
 	}
 }
+
+// A caveat that contradicts the meeting type reads as a brief that has not
+// understood the meeting.
+//
+// The default arm is for `unknown` — "do not assume what this meeting is for" —
+// and a demo fell into it, so a brief that had just classified the room as a
+// demo, with medium confidence and a subject saying so, opened by telling the
+// rep it did not know what the meeting was. Found by reading a real brief on a
+// running stack; no unit test would have noticed, because each half was right.
+func TestEveryMeetingKindHasACaveatThatFitsIt(t *testing.T) {
+	for _, kind := range []crmcontracts.MeetingPlanTypeValue{
+		crmcontracts.MeetingPlanTypeRelationship,
+		crmcontracts.MeetingPlanTypeFirstDiscovery,
+		crmcontracts.MeetingPlanTypeFollowupDiscovery,
+		crmcontracts.MeetingPlanTypeDemo,
+		crmcontracts.MeetingPlanTypeCommercial,
+		crmcontracts.MeetingPlanTypeDecision,
+		crmcontracts.MeetingPlanTypeDelivery,
+		crmcontracts.MeetingPlanTypeRenewalRisk,
+	} {
+		if got := caveatFor(MeetingType{Value: kind}); got == caveatUnknown {
+			t.Errorf("a %q meeting is told the plan does not know what it is for", kind)
+		}
+	}
+	// And `unknown` still gets the one that says so, or the check above would
+	// pass by making every kind share a caveat that fits none of them.
+	if got := caveatFor(MeetingType{Value: crmcontracts.MeetingPlanTypeUnknown}); got != caveatUnknown {
+		t.Errorf("an unknown meeting's caveat = %q, want the one that says to ask", got)
+	}
+}
