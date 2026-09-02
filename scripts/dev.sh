@@ -1058,6 +1058,13 @@ up)
   # URL, not localhost, or the advertised MCP resource mismatches and OAuth
   # token exchange fails. Overridable from .env.local (sourced above) so every
   # `make dev` boots tunnel-correct; unset, dev is unchanged.
+  #
+  # BOTH ROLES take it. The worker refuses to boot without a usable origin once
+  # email or a Gmail app is wired (requireUsablePublicOrigin), and it is the
+  # role that renders the links a recipient clicks — so a stack where only the
+  # api carried this died at worker start, with `make dev` failing for anyone
+  # whose .env.local configures Gmail and leaves MARGINCE_PUBLIC_BASE_URL at
+  # its shipped empty default.
   public_base_url_flag=(--public-base-url "${MARGINCE_PUBLIC_BASE_URL:-http://localhost:${fe_port}}")
 
   # Gmail capture connector: when .env.local supplies a Google OAuth app, pass
@@ -1228,6 +1235,7 @@ up)
     MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
+    "${public_base_url_flag[@]}" \
     --retention-interval 720h \
     "${ai_flag[@]+"${ai_flag[@]}"}" "${worker_gmail_flags[@]+"${worker_gmail_flags[@]}"}" > >(log_as worker) 2>&1 &
   worker_pid=$!

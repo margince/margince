@@ -45,6 +45,12 @@ func (w waitingSaying) Unanswered(context.Context, time.Time) ([]WaitingCustomer
 	return w.rows, w.cut, nil
 }
 
+// Nothing hidden: the board is about who is CARRYING what, and a fake that also
+// invented a backlog would let a counting defect read as hidden work.
+func (w waitingSaying) Hidden(context.Context, time.Time) (HiddenWork, error) {
+	return HiddenWork{Shown: len(w.rows)}, nil
+}
+
 // overdueSaying is the counting reader over a fixed tally.
 type overdueSaying map[ids.UUID]int
 

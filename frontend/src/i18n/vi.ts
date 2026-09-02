@@ -481,6 +481,8 @@ export const vi = {
   "common.error": "Không tải được màn hình này.",
   "common.errorNoCause":
     "Yêu cầu thất bại. Không có nguyên nhân nào được báo về.",
+  "common.assistantUnavailable":
+    "Trợ lý chưa phản hồi nên không thể soạn giúp bạn phần này. Quản trị viên có thể kiểm tra liên kết mô hình trong Cài đặt → AI. Không bắt buộc phải có trợ lý — bạn có thể tự nhập các thông tin này.",
   "common.gatewayUnavailable":
     "Máy chủ chưa hoàn tất yêu cầu này kịp thời. Có thể nó vẫn đang chạy — hãy đợi một lát trước khi thử lại, nếu không cùng một công việc sẽ chạy hai lần.",
   "common.permissionDenied":
@@ -2273,6 +2275,24 @@ export const vi = {
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
   "plan.title": "Lập kế hoạch tuần tới",
+  // Phần đầu của danh sách đã xếp hạng, trên trang mở đầu tiên — cùng những
+  // dòng mà Danh sách công việc hiển thị, theo thứ tự máy chủ đã quyết định.
+  "brief.donext.title": "Làm tiếp theo",
+  // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
+  // không do mô hình viết.
+  "brief.eyebrow": "Buổi sáng của bạn",
+  "brief.sentence.clear": "Sáng nay không có gì đang chờ bạn.",
+  "brief.sentence.one": "Trước tiên: {lead}",
+  "brief.sentence.oneWithCost": "Trước tiên: {lead} — {consequence}",
+  "brief.sentence.many": "Trước tiên: {lead} Rồi {rest} mục nữa.",
+  "brief.sentence.manyWithCost":
+    "Trước tiên: {lead} — {consequence} Rồi {rest} mục nữa.",
+
+  "brief.donext.sub": "Một thứ tự, từ danh sách công việc của bạn.",
+  "brief.donext.loading": "Đang đọc những gì đang chờ bạn",
+  "brief.donext.clear": "Hiện không có gì đang chờ bạn.",
+  "brief.donext.rest": "{count} mục khác trong danh sách công việc",
+
   // Tuần của một nhóm, đóng băng khi tuần khép lại. Hai tuần so sánh được vì
   // không tuần nào dịch chuyển dưới phép so sánh.
   "teamweekly.title": "Tuần của nhóm",
@@ -4081,6 +4101,8 @@ export const vi = {
     "Nhà cung cấp từ chối kết nối. Hãy chấp nhận mọi quyền mà nhà cung cấp yêu cầu, rồi thử kết nối lại.",
   "connectors.oauthMisconfigured":
     "Bản triển khai này chưa hoàn tất được kết nối đó — API của nhà cung cấp chưa được bật cho bản này. Cần quản trị viên bật lên; nhật ký máy chủ nêu rõ API nào.",
+  "connectors.oauthBadClient":
+    "Nhà cung cấp đã từ chối thông tin xác thực ứng dụng của bản triển khai này. Quản trị viên cần kiểm tra Client ID và secret trong Cài đặt → Chung; kết nối lại sẽ không tự khắc phục.",
   "connectors.dismissOutcome": "Bỏ qua",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
@@ -7521,6 +7543,25 @@ export const vi = {
     "Việc thường lệ đang chờ sau một quyết định",
   "worklist.readings.truncated":
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+  "worklist.hidden.title": "Những gì danh sách không hiển thị",
+  "worklist.hidden.loading": "Đang kiểm tra những gì bị giữ lại…",
+  "worklist.hidden.clear":
+    "Không có gì bị giữ lại. Mọi khách đang chờ đều đến được một danh sách.",
+  "worklist.hidden.truncated":
+    "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+  "worklist.hidden.count": "{count} đang chờ",
+  "worklist.hidden.pastHorizon": "Quá cũ đối với danh sách",
+  "worklist.hidden.pastHorizon.detail":
+    "Không ai quyết định điều này. Họ viết từ nhiều tháng trước và chưa bao giờ được trả lời.",
+  "worklist.hidden.unlinked": "Không gắn với hồ sơ nào",
+  "worklist.hidden.unlinked.detail":
+    "Thường không phải bán hàng. Đôi khi là khách hàng không ai kịp lưu hồ sơ.",
+  "worklist.hidden.notSales": "Được đánh giá không phải việc bán hàng",
+  "worklist.hidden.notSales.detail": "Ẩn với toàn bộ tổ chức, và không tự bỏ.",
+  "worklist.hidden.setAside": "Bạn đã gác lại",
+  "worklist.hidden.setAside.detail":
+    "Đã hoãn hoặc đánh dấu không phải của bạn. Một lần hoãn sẽ tự quay lại.",
+  "worklist.hidden.shown": "Bản thân danh sách mang {count}.",
   "worklist.filter.label": "Loại công việc",
   "worklist.filter.all": "Tất cả",
   "worklist.filter.customer_waiting": "Khách đang chờ",

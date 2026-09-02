@@ -16,6 +16,7 @@ import {
   sourceUnavailableText,
 } from "./worklist.copy";
 import { FocusCard, focusOf } from "./worklist.focus";
+import { HiddenBacklogPanel } from "./worklist.hidden";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { NextUp, nextUpOf } from "./worklist.nextup";
 import { hasPane, WorklistPane } from "./worklist.pane";
@@ -231,6 +232,10 @@ function WorklistBody({
       {/* The verbs a lead has over somebody else's day. Drawn only on a named
           person's queue: on the reader's own there is nobody to coach. */}
       {owner !== "" && <CoachControl owner={owner} />}
+      {/* What the queue is NOT showing. Beside the team board because it is the
+          same reader's question — a lead asking whether the day their team sees
+          is the day their team has — and on the same tier for the same reason. */}
+      <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
       {/* A day cannot read as clear while something that would have filled it
           was never read. This is the surface speaking about ITSELF, which is
           what Callout is for. */}

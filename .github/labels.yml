@@ -91,8 +91,13 @@
   description: "Reporting, saved views, filters, export"
 
 # ---------------------------------------------------------------------------
-# Status — an issue that is not yet workable.
+# Status — an issue nobody should pick up yet, whether because it cannot be
+# worked or because it is deliberately not now's work. Both colours sit in the
+# needs-decision yellow: same axis, and the paler one is the calmer state.
 # ---------------------------------------------------------------------------
+- name: "status: deferred"
+  color: "FEF2C0"
+  description: "Real and agreed, deliberately not scheduled - no milestone yet. Do not pick it up"
 - name: "status: needs-decision"
   color: "FBCA04"
   description: "Unactionable until someone rules on it - 'decide or decline X'"

@@ -209,6 +209,10 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 	if lastErr != nil {
 		// lastTier names the rung whose failure the caller sees, so the
 		// trace records where the walk died instead of an empty tier.
+		// The sentinel is what lets a HANDLER tell "no model answered" from
+		// "the request was wrong" without matching the message: the two are
+		// different HTTP answers, and a caller that cannot separate them has to
+		// report a dependency being down as an internal fault.
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
 	}
 	return model.Response{}, "", false, nil

@@ -7944,6 +7944,51 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /records/{entity_type}/{entity_id}/tags:
+    parameters:
+      - name: entity_type
+        in: path
+        required: true
+        schema: { type: string, enum: [person, organization, deal] }
+      - name: entity_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Tags]
+      operationId: getRecordTags
+      x-mcp-tool: { verb: get_record_tags, record_type: tag, tier: auto_execute, scope: read }
+      summary: The tags on one record, and who put them there.
+      description: |
+        ONE read for all three record types, because the panel that draws them is one
+        component: a per-type block on each record response would be three copies of one
+        shape, and they would drift.
+
+        Each assignment carries who applied it and when, which the record page shows beside
+        the tag. `assigned_by` is absent for assignments made before the product recorded
+        it — absent means unknown, never "the system".
+
+        The three advertised types only. `taggable` admits lead and project, and this route
+        refuses them: a read that answered for a type no screen offers would be a surface
+        nobody meant to ship.
+
+        Withheld is not empty. A caller who may read the record but not the tag vocabulary
+        gets `withheld: true` and no assignments — distinguishable from a record that simply
+        carries none, because "no tags" is a claim about the record and this caller cannot
+        make it.
+      responses:
+        '200':
+          description: The record's tags.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordTagsResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        # A caller lacking read on the RECORD type is refused outright. Lacking
+        # the tag vocabulary is not a refusal — that answers 200 with withheld.
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /tags/{id}/apply:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -9893,6 +9938,40 @@ paths:
               schema: { $ref: '#/components/schemas/TeamBoard' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /worklist/hidden:
+    get:
+      tags: [Brief]
+      operationId: getHiddenBacklog
+      summary: What the queue is not showing, and which rule is holding it back.
+      description: |
+        The Worklist is designed to look finite: a rep works it to the bottom and the day
+        is done. Five rules make a waiting customer disappear from it, and nothing on the
+        page can say whether any of them is hiding real work — a rep who marks every hard
+        reply `not_sales` produces a page identical to a rep with a clean queue. The
+        failure is invisible by construction, which is the one shape of defect a finite
+        queue cannot report on itself.
+
+        This is the counter-reading. Each figure is the SAME eligibility query the queue
+        runs, with ONE hiding rule relaxed, so a difference is attributable rather than a
+        single number nobody can act on: a reader is told which rule to look at.
+
+        THE TARGET IS ZERO, and every figure is a defect rather than a statistic. Two of
+        the rules are somebody's choice and two are nobody's — see each field.
+
+        Counted under the CALLER's own visibility, like `/worklist/team`'s counts are: a
+        figure summing rows the reader may not open would publish work they have no
+        access to. So this answers "how much is hidden from YOU", which is the only
+        honest reading available without giving one person a licence to read another's
+        records.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: What is being held back.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HiddenBacklog' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /digest:
     get:
       tags: [Capture]
@@ -11420,6 +11499,59 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+  /data-subject-requests/{id}/package:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Compliance]
+      operationId: downloadDataSubjectPackage
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Download the Art. 15 package an access request asks for.
+      description: |
+        Assembles everything this installation holds about the subject and hands it back as a file
+        to forward to them: their record and its identifiers, the conversations they were party to
+        and what was said in them, the attachments, consent and its history, what they themselves
+        submitted through a confirm link, what was read about them from public sources, and the
+        provider originals behind the captured mail.
+
+        A privileged read that deliberately crosses the caller's own row scope, because Art. 15
+        owes the subject everything held rather than the slice one colleague may see. So it takes
+        the same trust erasure does: an ADMIN, human, holding `person.delete`, with unbounded row
+        scope. An agent is refused whatever its passport carries — an admin's read-scoped passport
+        would otherwise assemble a subject's entire record.
+
+        Only an `access` request has a package. An erasure or a rectification is answered by its
+        own path, and handing back a subject's whole record to close a request that asked for
+        something else would be the export nobody asked for.
+
+        The request's `subject_ref` must name a person id. It is free text until somebody resolves
+        it, and a request naming nobody has nothing to assemble — the same refusal fulfilling an
+        erasure gives, for the same reason. A `subject_ref` that is not a person id at all answers
+        422; one that is a well-formed id naming no person answers 404. The two look identical on a
+        stale request row and are worth telling apart.
+
+        **The download is recorded.** Assembling a package writes an audit entry against the person
+        — action `export`, naming the officer who asked and how much it carried. That record is what
+        makes a read this privileged acceptable, and it is written whether or not the package
+        reaches anybody.
+
+        This does NOT change the request's status. Producing the export and deciding the request is
+        answered are two acts by the same person: mark it fulfilled through the PATCH once you have
+        sent it, so a download that never reached anybody does not close the row.
+      responses:
+        '200':
+          description: The package, as a JSON file named after the request.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: |
+                  The assembled package. Its sections follow what the installation actually holds,
+                  and the set grows whenever a new table starts holding subject data — the shape is
+                  deliberately not pinned here, because a schema mirrored in the contract would
+                  drift one release behind the export a gate checks for completeness.
+                additionalProperties: true
   /audit-log:
     get:
       tags: [Compliance]
@@ -29254,6 +29386,44 @@ components:
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
         description: { type: [string, 'null'] }
 
+    RecordTagsResponse:
+      type: object
+      description: |
+        What one record carries. `withheld` says the caller could not read the vocabulary,
+        which is why `data` is empty — a reader has to be able to tell that from a record
+        with no tags on it.
+      required: [data, withheld]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/RecordTag' } }
+        withheld: { type: boolean }
+
+    RecordTag:
+      type: object
+      description: One tag on one record, with the assignment that put it there.
+      required: [tag_id, name, archived, assigned_at]
+      properties:
+        tag_id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
+        # Archived tags stay ON the records that carry them: retiring a word
+        # stops it being applied, it does not un-tag a history that was true.
+        # The panel draws them muted rather than hiding them.
+        archived: { type: boolean }
+        assigned_at: { type: string, format: date-time }
+        # Absent when the assignment predates the product recording it. A reader
+        # sees "added on 3 March" with no name rather than a name nobody chose.
+        assigned_by: { $ref: '#/components/schemas/RecordTagAssigner' }
+
+    RecordTagAssigner:
+      type: object
+      description: Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's.
+      required: [kind]
+      properties:
+        user_id: { type: [string, 'null'], format: uuid }
+        display_name: { type: [string, 'null'] }
+        kind: { type: string, enum: [human, agent, import] }
+
     TagDetail:
       type: object
       description: One tag with how much of the workspace carries it.
@@ -35484,6 +35654,80 @@ components:
             every number above is a floor. Set once for the strip rather than per reading:
             the four are read as one row, and a reader who cannot trust one of them cannot
             trust the row.
+
+    HiddenBacklog:
+      type: object
+      description: |
+        How much waiting work each hiding rule is keeping off one reader's queue, at one
+        instant. Every count is of THREADS, matching what the queue counts: a customer who
+        wrote three times is waiting once.
+      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, truncated, clear]
+      properties:
+        as_of: { type: string, format: date-time, description: 'The instant every figure below was read at.' }
+        shown:
+          type: integer
+          minimum: 0
+          description: |
+            What the queue itself would carry. Here so the others read as a proportion
+            rather than as bare volumes — three hidden against four shown is a broken
+            queue, and three against three hundred is a rep tidying up.
+        set_aside:
+          type: integer
+          minimum: 0
+          description: |
+            Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
+            least alarming of the four: a snooze lifts on its own moment, so this includes
+            work that will come back without anybody remembering it. `not_mine` does not
+            lift at all.
+        not_sales:
+          type: integer
+          minimum: 0
+          description: |
+            Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
+            the judgement worth watching: it hides the thread from the WHOLE workspace and
+            never lifts, so one rep's mistake removes a customer from everybody's day
+            permanently.
+        past_horizon:
+          type: integer
+          minimum: 0
+          description: |
+            Work older than the queue's horizon with no open deal behind it. NOBODY CHOSE
+            THIS. A customer who wrote four months ago and was never answered is exactly
+            the failure a sales queue exists to prevent, and the horizon removes them on a
+            date with no rep having judged anything.
+
+            Bounded at a year: past that a message is history by any reading, and an
+            unbounded scan would answer a different question at the cost of a full table
+            read.
+        unlinked:
+          type: integer
+          minimum: 0
+          description: |
+            Inbound mail that qualifies in every other way and is attached to no record the
+            workspace sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+            is right — a rep's dentist is not a customer — and it is also where a real
+            customer lands when capture failed to link their thread. Its own figure for
+            that reason rather than folded into a total.
+        truncated:
+          type: boolean
+          description: |
+            True when a read stopped at its own scan bound, which makes every figure above
+            it a FLOOR rather than a count.
+
+            The bound is on the shared statement, so the strict read and every relaxed read
+            clip at the same number. On a queue already at the cap all five return it, every
+            difference is zero, and a guardrail without this flag would report a clear
+            backlog over the installation most likely to be hiding work.
+
+            `clear` is false whenever this is true. That is not a claim that work IS hidden;
+            it is a refusal to claim the opposite over a question the scan stopped before
+            settling.
+        clear:
+          type: boolean
+          description: |
+            True when nothing is being held back AND the reads were complete. The
+            guardrail's target, sent as its own field because a number only ever read beside
+            other numbers becomes decoration — this is what a check asserts on.
 
     WorklistItem:
       type: object

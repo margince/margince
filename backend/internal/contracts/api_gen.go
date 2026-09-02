@@ -9289,6 +9289,51 @@ func (e RecordQualifyingEventRequestKind) Valid() bool {
 	}
 }
 
+// Defines values for RecordTagColor.
+const (
+	RecordTagColorAmber RecordTagColor = "amber"
+	RecordTagColorRose  RecordTagColor = "rose"
+	RecordTagColorSlate RecordTagColor = "slate"
+	RecordTagColorTeal  RecordTagColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the RecordTagColor enum.
+func (e RecordTagColor) Valid() bool {
+	switch e {
+	case RecordTagColorAmber:
+		return true
+	case RecordTagColorRose:
+		return true
+	case RecordTagColorSlate:
+		return true
+	case RecordTagColorTeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordTagAssignerKind.
+const (
+	RecordTagAssignerKindAgent  RecordTagAssignerKind = "agent"
+	RecordTagAssignerKindHuman  RecordTagAssignerKind = "human"
+	RecordTagAssignerKindImport RecordTagAssignerKind = "import"
+)
+
+// Valid indicates whether the value is a known member of the RecordTagAssignerKind enum.
+func (e RecordTagAssignerKind) Valid() bool {
+	switch e {
+	case RecordTagAssignerKindAgent:
+		return true
+	case RecordTagAssignerKindHuman:
+		return true
+	case RecordTagAssignerKindImport:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordViewAckEntityType.
 const (
 	RecordViewAckEntityTypeOrganization RecordViewAckEntityType = "organization"
@@ -10431,22 +10476,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	Amber TagDetailColor = "amber"
-	Rose  TagDetailColor = "rose"
-	Slate TagDetailColor = "slate"
-	Teal  TagDetailColor = "teal"
+	TagDetailColorAmber TagDetailColor = "amber"
+	TagDetailColorRose  TagDetailColor = "rose"
+	TagDetailColorSlate TagDetailColor = "slate"
+	TagDetailColorTeal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case Amber:
+	case TagDetailColorAmber:
 		return true
-	case Rose:
+	case TagDetailColorRose:
 		return true
-	case Slate:
+	case TagDetailColorSlate:
 		return true
-	case Teal:
+	case TagDetailColorTeal:
 		return true
 	default:
 		return false
@@ -14190,34 +14235,34 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	All             GetWorklistParamsFilter = "all"
-	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	Decisions       GetWorklistParamsFilter = "decisions"
-	Leads           GetWorklistParamsFilter = "leads"
-	Meetings        GetWorklistParamsFilter = "meetings"
-	System          GetWorklistParamsFilter = "system"
-	Tasks           GetWorklistParamsFilter = "tasks"
+	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
+	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
+	GetWorklistParamsFilterLeads           GetWorklistParamsFilter = "leads"
+	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
+	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case All:
+	case GetWorklistParamsFilterAll:
 		return true
-	case CustomerWaiting:
+	case GetWorklistParamsFilterCustomerWaiting:
 		return true
-	case DealsAtRisk:
+	case GetWorklistParamsFilterDealsAtRisk:
 		return true
-	case Decisions:
+	case GetWorklistParamsFilterDecisions:
 		return true
-	case Leads:
+	case GetWorklistParamsFilterLeads:
 		return true
-	case Meetings:
+	case GetWorklistParamsFilterMeetings:
 		return true
-	case System:
+	case GetWorklistParamsFilterSystem:
 		return true
-	case Tasks:
+	case GetWorklistParamsFilterTasks:
 		return true
 	default:
 		return false
@@ -20302,6 +20347,66 @@ type HeldThread struct {
 // HeldThreadListResponse defines model for HeldThreadListResponse.
 type HeldThreadListResponse struct {
 	Data []HeldThread `json:"data"`
+}
+
+// HiddenBacklog How much waiting work each hiding rule is keeping off one reader's queue, at one
+// instant. Every count is of THREADS, matching what the queue counts: a customer who
+// wrote three times is waiting once.
+type HiddenBacklog struct {
+	// AsOf The instant every figure below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Clear True when nothing is being held back AND the reads were complete. The
+	// guardrail's target, sent as its own field because a number only ever read beside
+	// other numbers becomes decoration — this is what a check asserts on.
+	Clear bool `json:"clear"`
+
+	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
+	// the judgement worth watching: it hides the thread from the WHOLE workspace and
+	// never lifts, so one rep's mistake removes a customer from everybody's day
+	// permanently.
+	NotSales int `json:"not_sales"`
+
+	// PastHorizon Work older than the queue's horizon with no open deal behind it. NOBODY CHOSE
+	// THIS. A customer who wrote four months ago and was never answered is exactly
+	// the failure a sales queue exists to prevent, and the horizon removes them on a
+	// date with no rep having judged anything.
+	//
+	// Bounded at a year: past that a message is history by any reading, and an
+	// unbounded scan would answer a different question at the cost of a full table
+	// read.
+	PastHorizon int `json:"past_horizon"`
+
+	// SetAside Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
+	// least alarming of the four: a snooze lifts on its own moment, so this includes
+	// work that will come back without anybody remembering it. `not_mine` does not
+	// lift at all.
+	SetAside int `json:"set_aside"`
+
+	// Shown What the queue itself would carry. Here so the others read as a proportion
+	// rather than as bare volumes — three hidden against four shown is a broken
+	// queue, and three against three hundred is a rep tidying up.
+	Shown int `json:"shown"`
+
+	// Truncated True when a read stopped at its own scan bound, which makes every figure above
+	// it a FLOOR rather than a count.
+	//
+	// The bound is on the shared statement, so the strict read and every relaxed read
+	// clip at the same number. On a queue already at the cap all five return it, every
+	// difference is zero, and a guardrail without this flag would report a clear
+	// backlog over the installation most likely to be hiding work.
+	//
+	// `clear` is false whenever this is true. That is not a claim that work IS hidden;
+	// it is a refusal to claim the opposite over a question the scan stopped before
+	// settling.
+	Truncated bool `json:"truncated"`
+
+	// Unlinked Inbound mail that qualifies in every other way and is attached to no record the
+	// workspace sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+	// is right — a rep's dentist is not a customer — and it is also where a real
+	// customer lands when capture failed to link their thread. Its own figure for
+	// that reason rather than folded into a total.
+	Unlinked int `json:"unlinked"`
 }
 
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
@@ -26835,6 +26940,40 @@ type RecordQualifyingEventRequest struct {
 // active_deal — are DERIVED from records the product already holds, and a hand-written
 // one would be a second, unbacked answer to a question the data already settles.
 type RecordQualifyingEventRequestKind string
+
+// RecordTag One tag on one record, with the assignment that put it there.
+type RecordTag struct {
+	Archived   bool      `json:"archived"`
+	AssignedAt time.Time `json:"assigned_at"`
+
+	// AssignedBy Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's.
+	AssignedBy  *RecordTagAssigner `json:"assigned_by,omitempty"`
+	Color       *RecordTagColor    `json:"color,omitempty"`
+	Description *string            `json:"description,omitempty"`
+	Name        string             `json:"name"`
+	TagId       openapi_types.UUID `json:"tag_id"`
+}
+
+// RecordTagColor defines model for RecordTag.Color.
+type RecordTagColor string
+
+// RecordTagAssigner Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's.
+type RecordTagAssigner struct {
+	DisplayName *string               `json:"display_name,omitempty"`
+	Kind        RecordTagAssignerKind `json:"kind"`
+	UserId      *openapi_types.UUID   `json:"user_id,omitempty"`
+}
+
+// RecordTagAssignerKind defines model for RecordTagAssigner.Kind.
+type RecordTagAssignerKind string
+
+// RecordTagsResponse What one record carries. `withheld` says the caller could not read the vocabulary,
+// which is why `data` is empty — a reader has to be able to tell that from a record
+// with no tags on it.
+type RecordTagsResponse struct {
+	Data     []RecordTag `json:"data"`
+	Withheld bool        `json:"withheld"`
+}
 
 // RecordViewAck The per-user "I have seen this record" baseline, after an acknowledgment.
 type RecordViewAck struct {
@@ -43768,6 +43907,9 @@ type ServerInterface interface {
 	// Update a data-subject request's status / assignee / resolution.
 	// (PATCH /data-subject-requests/{id})
 	UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Download the Art. 15 package an access request asks for.
+	// (GET /data-subject-requests/{id}/package)
+	DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List Deal Rooms (live by default; cursor-paginated).
 	// (GET /deal-rooms)
 	ListDealRooms(w http.ResponseWriter, r *http.Request, params ListDealRoomsParams)
@@ -44623,6 +44765,9 @@ type ServerInterface interface {
 	// Revoke a manual record grant (human-only).
 	// (DELETE /record-grants/{id})
 	RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams)
+	// The tags on one record, and who put them there.
+	// (GET /records/{entity_type}/{entity_id}/tags)
+	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
 	// Assembled context (related evidence) for one record.
 	// (GET /records/{entity_type}/{id}/context)
 	GetRecordContext(w http.ResponseWriter, r *http.Request, entityType string, id Id, params GetRecordContextParams)
@@ -44941,6 +45086,9 @@ type ServerInterface interface {
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
+	// What the queue is not showing, and which rule is holding it back.
+	// (GET /worklist/hidden)
+	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
 	// (GET /worklist/team)
 	GetTeamBoard(w http.ResponseWriter, r *http.Request)
@@ -45907,6 +46055,12 @@ func (_ Unimplemented) CreateDataSubjectRequest(w http.ResponseWriter, r *http.R
 // Update a data-subject request's status / assignee / resolution.
 // (PATCH /data-subject-requests/{id})
 func (_ Unimplemented) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download the Art. 15 package an access request asks for.
+// (GET /data-subject-requests/{id}/package)
+func (_ Unimplemented) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47620,6 +47774,12 @@ func (_ Unimplemented) RevokeRecordGrant(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The tags on one record, and who put them there.
+// (GET /records/{entity_type}/{entity_id}/tags)
+func (_ Unimplemented) GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Assembled context (related evidence) for one record.
 // (GET /records/{entity_type}/{id}/context)
 func (_ Unimplemented) GetRecordContext(w http.ResponseWriter, r *http.Request, entityType string, id Id, params GetRecordContextParams) {
@@ -48253,6 +48413,12 @@ func (_ Unimplemented) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Reques
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the queue is not showing, and which rule is holding it back.
+// (GET /worklist/hidden)
+func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -54422,6 +54588,38 @@ func (siw *ServerInterfaceWrapper) UpdateDataSubjectRequest(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateDataSubjectRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadDataSubjectPackage operation middleware
+func (siw *ServerInterfaceWrapper) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadDataSubjectPackage(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67235,6 +67433,49 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetRecordTags operation middleware
+func (siw *ServerInterfaceWrapper) GetRecordTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type" -------------
+	var entityType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type", chi.URLParam(r, "entity_type"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", chi.URLParam(r, "entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecordTags(w, r, entityType, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetRecordContext operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordContext(w http.ResponseWriter, r *http.Request) {
 
@@ -72132,6 +72373,28 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetHiddenBacklog operation middleware
+func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHiddenBacklog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTeamBoard operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 
@@ -72746,6 +73009,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/data-subject-requests/{id}", wrapper.UpdateDataSubjectRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/data-subject-requests/{id}/package", wrapper.DownloadDataSubjectPackage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deal-rooms", wrapper.ListDealRooms)
@@ -73603,6 +73869,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/record-grants/{id}", wrapper.RevokeRecordGrant)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{id}/context", wrapper.GetRecordContext)
 	})
 	r.Group(func(r chi.Router) {
@@ -73919,6 +74188,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)

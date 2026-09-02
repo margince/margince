@@ -30,12 +30,21 @@ import (
 
 // The wire field names a DSR ValidationError carries. A client tells a
 // stale-transition refusal apart from a missing-answer one on this exact
-// string (details.errors[].field), so each is spelled once here rather than
-// retyped at every raise site.
+// string (details.errors[].field), so they are constants here rather than
+// string literals at every raise site — a typo in one raise would answer a
+// field name no client is watching for, and nothing would fail.
 const (
+	fieldKind       = "kind"
 	fieldStatus     = "status"
 	fieldSubjectRef = "subject_ref"
 	fieldResolution = "resolution"
+
+	// The request kinds the handlers branch on. Constants for the same reason
+	// as the field names above, and dsrKindErasure carries the higher stake:
+	// its comparison guards an irreversible scrub, so a typo there skips the
+	// erasure silently and reports the request fulfilled.
+	dsrKindAccess  = "access"
+	dsrKindErasure = "erasure"
 )
 
 // illegalTransition is raised from both guards — the pre-erase check and the

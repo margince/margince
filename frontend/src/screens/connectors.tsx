@@ -103,11 +103,14 @@ const OAUTH_DISCONNECT_NOTE: Partial<Record<Provider, MessageKey>> = {
 
 // The OAuth callback lands back on #/settings/connections/{outcome} — the
 // route parses to id2 = "ok" | "denied" | "rejected" | "misconfigured" |
-// "error". Only these are server-defined (contract-first); any other value is
-// silently ignored rather than rendering a raw route segment. "rejected" and
-// "misconfigured" exist so a failure nobody can fix by retrying doesn't tell
-// the reader to retry: the provider refused the grant, or its API was never
-// enabled for this deployment.
+// "bad_client" | "error". Only these are server-defined (contract-first); any
+// other value is silently ignored rather than rendering a raw route segment.
+//
+// Three of them exist so a failure nobody can fix by retrying does not tell the
+// reader to retry, and they are three rather than two because the remedies are
+// different screens: the provider refused the grant (reconnect and accept
+// everything), its API was never enabled (the vendor console), or it refused
+// this deployment's client credentials (the app card in Settings).
 const OAUTH_OUTCOME_NOTE: Record<
   string,
   { key: MessageKey; tone: "success" | "danger" }
@@ -116,6 +119,7 @@ const OAUTH_OUTCOME_NOTE: Record<
   denied: { key: "connectors.oauthDenied", tone: "danger" },
   rejected: { key: "connectors.oauthRejected", tone: "danger" },
   misconfigured: { key: "connectors.oauthMisconfigured", tone: "danger" },
+  bad_client: { key: "connectors.oauthBadClient", tone: "danger" },
   error: { key: "connectors.oauthError", tone: "danger" },
 };
 

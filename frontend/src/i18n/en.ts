@@ -496,6 +496,8 @@ export const en = {
   // fetch and a bug in our own code both report in wording nobody authored for
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
+  "common.assistantUnavailable":
+    "The assistant did not answer, so it cannot draft this for you. An administrator can check the model binding under Settings → AI. Nothing here needs it — the details can be entered by hand.",
   "common.gatewayUnavailable":
     "The server did not finish this request in time. It may still be working — wait a moment before trying again, or the same work can run twice.",
   // Every 403 the server codes `permission_denied`, which is two refusals with
@@ -2326,6 +2328,24 @@ export const en = {
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan next week",
+  // The head of the ranked queue, on the page a rep opens first. The same rows
+  // the Worklist draws, in the order the server decided.
+  "brief.donext.title": "Do next",
+  // The Brief's opening sentence, composed from the rows the page is showing —
+  // never model-written, so it cannot say what the rows contradict.
+  "brief.eyebrow": "Your morning",
+  "brief.sentence.clear": "Nothing is waiting on you this morning.",
+  "brief.sentence.one": "First: {lead}",
+  "brief.sentence.oneWithCost": "First: {lead} — {consequence}",
+  "brief.sentence.many": "First: {lead} Then {rest} more.",
+  "brief.sentence.manyWithCost":
+    "First: {lead} — {consequence} Then {rest} more.",
+
+  "brief.donext.sub": "One order, from your worklist.",
+  "brief.donext.loading": "Reading what waits on you",
+  "brief.donext.clear": "Nothing is waiting on you right now.",
+  "brief.donext.rest": "{count} more on the worklist",
+
   // A team's week, frozen when it closed. Two weeks compare because neither
   // moves under the comparison.
   "teamweekly.title": "The team's week",
@@ -4142,13 +4162,17 @@ export const en = {
   "connectors.oauthDenied": "You declined access — nothing was connected.",
   "connectors.oauthError":
     "The connection couldn't be completed — please try again.",
-  // Two failures that "try again" would be wrong about: the provider refused
-  // the grant (retrying the same way repeats it), and the provider's API isn't
-  // enabled for this deployment (no user action can clear it).
+  // Three failures that "try again" would be wrong about, each fixed somewhere
+  // else: the provider refused the grant (retrying the same way repeats it),
+  // its API is not enabled for this deployment (the vendor's console), and it
+  // refused this deployment's own client credentials (the app card in
+  // Settings). The last two are an administrator's; no user action clears them.
   "connectors.oauthRejected":
     "The provider declined the connection. Make sure you accept every permission it asks for, then try connecting again.",
   "connectors.oauthMisconfigured":
     "This deployment can't complete that connection yet — the provider's API isn't enabled for it. An administrator needs to enable it; the server log names which API.",
+  "connectors.oauthBadClient":
+    "The provider refused this installation's app credentials. An administrator should check the client ID and secret under Settings → General; re-connecting will not clear it on its own.",
   "connectors.dismissOutcome": "Dismiss",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
@@ -7666,6 +7690,26 @@ export const en = {
   "worklist.readings.review.detail": "Routine work queued behind a decision",
   "worklist.readings.truncated":
     "There is more work than this could count. These are floors, not totals.",
+  "worklist.hidden.title": "What the queue is not showing",
+  "worklist.hidden.loading": "Checking what is held back…",
+  "worklist.hidden.clear":
+    "Nothing is being held back. Every waiting customer reaches somebody’s queue.",
+  "worklist.hidden.truncated":
+    "There is more work than this could count. These are floors, not totals.",
+  "worklist.hidden.count": "{count} waiting",
+  "worklist.hidden.pastHorizon": "Too old for the queue",
+  "worklist.hidden.pastHorizon.detail":
+    "Nobody decided this. They wrote months ago and were never answered.",
+  "worklist.hidden.unlinked": "Attached to no record",
+  "worklist.hidden.unlinked.detail":
+    "Usually not sales. Sometimes a customer nobody managed to file.",
+  "worklist.hidden.notSales": "Judged not sales work",
+  "worklist.hidden.notSales.detail":
+    "Hidden from the whole organization, and it does not lift.",
+  "worklist.hidden.setAside": "Set aside by you",
+  "worklist.hidden.setAside.detail":
+    "Snoozed or marked not yours. A snooze comes back on its own.",
+  "worklist.hidden.shown": "The queue itself carries {count}.",
   "worklist.filter.label": "Kind of work",
   "worklist.filter.all": "All",
   "worklist.filter.customer_waiting": "Customer waiting",

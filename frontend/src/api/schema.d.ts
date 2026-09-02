@@ -5204,6 +5204,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/records/{entity_type}/{entity_id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "person" | "organization" | "deal";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The tags on one record, and who put them there.
+         * @description ONE read for all three record types, because the panel that draws them is one
+         *     component: a per-type block on each record response would be three copies of one
+         *     shape, and they would drift.
+         *
+         *     Each assignment carries who applied it and when, which the record page shows beside
+         *     the tag. `assigned_by` is absent for assignments made before the product recorded
+         *     it — absent means unknown, never "the system".
+         *
+         *     The three advertised types only. `taggable` admits lead and project, and this route
+         *     refuses them: a read that answered for a type no screen offers would be a surface
+         *     nobody meant to ship.
+         *
+         *     Withheld is not empty. A caller who may read the record but not the tag vocabulary
+         *     gets `withheld: true` and no assignments — distinguishable from a record that simply
+         *     carries none, because "no tags" is a claim about the record and this caller cannot
+         *     make it.
+         */
+        get: operations["getRecordTags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tags/{id}/apply": {
         parameters: {
             query?: never;
@@ -6656,6 +6694,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the queue is not showing, and which rule is holding it back.
+         * @description The Worklist is designed to look finite: a rep works it to the bottom and the day
+         *     is done. Five rules make a waiting customer disappear from it, and nothing on the
+         *     page can say whether any of them is hiding real work — a rep who marks every hard
+         *     reply `not_sales` produces a page identical to a rep with a clean queue. The
+         *     failure is invisible by construction, which is the one shape of defect a finite
+         *     queue cannot report on itself.
+         *
+         *     This is the counter-reading. Each figure is the SAME eligibility query the queue
+         *     runs, with ONE hiding rule relaxed, so a difference is attributable rather than a
+         *     single number nobody can act on: a reader is told which rule to look at.
+         *
+         *     THE TARGET IS ZERO, and every figure is a defect rather than a statistic. Two of
+         *     the rules are somebody's choice and two are nobody's — see each field.
+         *
+         *     Counted under the CALLER's own visibility, like `/worklist/team`'s counts are: a
+         *     figure summing rows the reader may not open would publish work they have no
+         *     access to. So this answers "how much is hidden from YOU", which is the only
+         *     honest reading available without giving one person a licence to read another's
+         *     records.
+         */
+        get: operations["getHiddenBacklog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/digest": {
         parameters: {
             query?: never;
@@ -7859,6 +7935,57 @@ export interface paths {
         head?: never;
         /** Update a data-subject request's status / assignee / resolution. */
         patch: operations["updateDataSubjectRequest"];
+        trace?: never;
+    };
+    "/data-subject-requests/{id}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download the Art. 15 package an access request asks for.
+         * @description Assembles everything this installation holds about the subject and hands it back as a file
+         *     to forward to them: their record and its identifiers, the conversations they were party to
+         *     and what was said in them, the attachments, consent and its history, what they themselves
+         *     submitted through a confirm link, what was read about them from public sources, and the
+         *     provider originals behind the captured mail.
+         *
+         *     A privileged read that deliberately crosses the caller's own row scope, because Art. 15
+         *     owes the subject everything held rather than the slice one colleague may see. So it takes
+         *     the same trust erasure does: an ADMIN, human, holding `person.delete`, with unbounded row
+         *     scope. An agent is refused whatever its passport carries — an admin's read-scoped passport
+         *     would otherwise assemble a subject's entire record.
+         *
+         *     Only an `access` request has a package. An erasure or a rectification is answered by its
+         *     own path, and handing back a subject's whole record to close a request that asked for
+         *     something else would be the export nobody asked for.
+         *
+         *     The request's `subject_ref` must name a person id. It is free text until somebody resolves
+         *     it, and a request naming nobody has nothing to assemble — the same refusal fulfilling an
+         *     erasure gives, for the same reason. A `subject_ref` that is not a person id at all answers
+         *     422; one that is a well-formed id naming no person answers 404. The two look identical on a
+         *     stale request row and are worth telling apart.
+         *
+         *     **The download is recorded.** Assembling a package writes an audit entry against the person
+         *     — action `export`, naming the officer who asked and how much it carried. That record is what
+         *     makes a read this privileged acceptable, and it is written whether or not the package
+         *     reaches anybody.
+         *
+         *     This does NOT change the request's status. Producing the export and deciding the request is
+         *     answered are two acts by the same person: mark it fulfilled through the PATCH once you have
+         *     sent it, so a download that never reached anybody does not close the row.
+         */
+        get: operations["downloadDataSubjectPackage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/audit-log": {
@@ -21305,6 +21432,36 @@ export interface components {
             color?: "teal" | "amber" | "rose" | "slate" | null;
             description?: string | null;
         };
+        /**
+         * @description What one record carries. `withheld` says the caller could not read the vocabulary,
+         *     which is why `data` is empty — a reader has to be able to tell that from a record
+         *     with no tags on it.
+         */
+        RecordTagsResponse: {
+            data: components["schemas"]["RecordTag"][];
+            withheld: boolean;
+        };
+        /** @description One tag on one record, with the assignment that put it there. */
+        RecordTag: {
+            /** Format: uuid */
+            tag_id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+            description?: string | null;
+            archived: boolean;
+            /** Format: date-time */
+            assigned_at: string;
+            assigned_by?: components["schemas"]["RecordTagAssigner"];
+        };
+        /** @description Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's. */
+        RecordTagAssigner: {
+            /** Format: uuid */
+            user_id?: string | null;
+            display_name?: string | null;
+            /** @enum {string} */
+            kind: "human" | "agent" | "import";
+        };
         /** @description One tag with how much of the workspace carries it. */
         TagDetail: {
             /** Format: uuid */
@@ -26768,6 +26925,77 @@ export interface components {
              *     trust the row.
              */
             more_available: boolean;
+        };
+        /**
+         * @description How much waiting work each hiding rule is keeping off one reader's queue, at one
+         *     instant. Every count is of THREADS, matching what the queue counts: a customer who
+         *     wrote three times is waiting once.
+         */
+        HiddenBacklog: {
+            /**
+             * Format: date-time
+             * @description The instant every figure below was read at.
+             */
+            as_of: string;
+            /**
+             * @description What the queue itself would carry. Here so the others read as a proportion
+             *     rather than as bare volumes — three hidden against four shown is a broken
+             *     queue, and three against three hundred is a rep tidying up.
+             */
+            shown: number;
+            /**
+             * @description Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
+             *     least alarming of the four: a snooze lifts on its own moment, so this includes
+             *     work that will come back without anybody remembering it. `not_mine` does not
+             *     lift at all.
+             */
+            set_aside: number;
+            /**
+             * @description Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
+             *     the judgement worth watching: it hides the thread from the WHOLE workspace and
+             *     never lifts, so one rep's mistake removes a customer from everybody's day
+             *     permanently.
+             */
+            not_sales: number;
+            /**
+             * @description Work older than the queue's horizon with no open deal behind it. NOBODY CHOSE
+             *     THIS. A customer who wrote four months ago and was never answered is exactly
+             *     the failure a sales queue exists to prevent, and the horizon removes them on a
+             *     date with no rep having judged anything.
+             *
+             *     Bounded at a year: past that a message is history by any reading, and an
+             *     unbounded scan would answer a different question at the cost of a full table
+             *     read.
+             */
+            past_horizon: number;
+            /**
+             * @description Inbound mail that qualifies in every other way and is attached to no record the
+             *     workspace sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+             *     is right — a rep's dentist is not a customer — and it is also where a real
+             *     customer lands when capture failed to link their thread. Its own figure for
+             *     that reason rather than folded into a total.
+             */
+            unlinked: number;
+            /**
+             * @description True when a read stopped at its own scan bound, which makes every figure above
+             *     it a FLOOR rather than a count.
+             *
+             *     The bound is on the shared statement, so the strict read and every relaxed read
+             *     clip at the same number. On a queue already at the cap all five return it, every
+             *     difference is zero, and a guardrail without this flag would report a clear
+             *     backlog over the installation most likely to be hiding work.
+             *
+             *     `clear` is false whenever this is true. That is not a claim that work IS hidden;
+             *     it is a refusal to claim the opposite over a question the scan stopped before
+             *     settling.
+             */
+            truncated: boolean;
+            /**
+             * @description True when nothing is being held back AND the reads were complete. The
+             *     guardrail's target, sent as its own field because a number only ever read beside
+             *     other numbers becomes decoration — this is what a check asserts on.
+             */
+            clear: boolean;
         };
         /**
          * @description One thing to do, with the reason it sits where it sits.
@@ -36367,6 +36595,33 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getRecordTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "person" | "organization" | "deal";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record's tags. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordTagsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     applyTag: {
         parameters: {
             query?: never;
@@ -38220,6 +38475,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    getHiddenBacklog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What is being held back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HiddenBacklog"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getMorningDigest: {
         parameters: {
             query?: {
@@ -39631,6 +39908,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DataSubjectRequest"];
+                };
+            };
+        };
+    };
+    downloadDataSubjectPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The package, as a JSON file named after the request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

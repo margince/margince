@@ -3,11 +3,14 @@
 
 import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
+import { Eyebrow } from "../design-system/eyebrow";
 import { type CappedCount, cappedCountLabel } from "../format/cappedcount";
 import { hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { briefSentence } from "./brief.sentence";
+import type { Worklist } from "./worklist.queries";
 
 // The first thing a reader sees each morning: who they are, what hour it is for
 // them, and the day stated in sentences. The readings strip directly below says
@@ -92,6 +95,10 @@ export type GlanceFacts = Readonly<{
   /** Open deals that have gone quiet. */
   /** Open deals gone quiet, as a floor: Home reads one page of deals. */
   stalled: CappedCount | null;
+  /** The ranked queue this page is showing, for the opening sentence. Undefined
+   *  while it is in flight or after it failed — the sentence is then absent
+   *  rather than guessed at. */
+  day: Worklist | undefined;
 }>;
 
 export type GlanceProps = GlanceFacts &
@@ -183,6 +190,7 @@ function GlanceLine({
 export function HomeGlance({
   firstName,
   now,
+  day,
   decisions,
   brief,
   overnight,
@@ -201,10 +209,25 @@ export function HomeGlance({
     ? t(greetingKey(hour), { name: firstName })
     : t(anonGreetingKey(hour));
 
+  const { locale } = useLocale();
+  // THE DAY IN ONE SENTENCE, from the rows the page is already showing. The
+  // lines below say the same facts as separate counts; this says what to do
+  // about the first one, which a column of figures cannot.
+  const sentence = briefSentence(day, t, locale);
+
   return (
     <header className="glance arrive" data-testid="home-glance">
+      {/* Scope and date, above the greeting. A span rather than a heading: the
+          page has ONE h1 and this is its label, not a level of its own. */}
+      <Eyebrow className="glance-eyebrow">{t("brief.eyebrow")}</Eyebrow>
       <h1 className="glance-greeting t-display">{greeting}</h1>
-      <p className="glance-intro t-caption">{t("home.glance.intro")}</p>
+      {sentence ? (
+        <p className="glance-sentence" data-testid="glance-sentence">
+          {t(sentence.key, sentence.values)}
+        </p>
+      ) : (
+        <p className="glance-intro t-caption">{t("home.glance.intro")}</p>
+      )}
       <div className="glance-lines">
         {decisions !== null && decisions.pending === 0 && (
           <p className="glance-line glance-line-plain">

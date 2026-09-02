@@ -477,6 +477,8 @@ export const de = {
   "common.error": "Konnten diese Ansicht nicht laden.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
+  "common.assistantUnavailable":
+    "Der Assistent hat nicht geantwortet und kann das hier nicht entwerfen. Eine Administratorin oder ein Administrator kann die Modellbindung unter Einstellungen → KI prüfen. Nötig ist er nicht — die Angaben lassen sich von Hand eintragen.",
   "common.gatewayUnavailable":
     "Der Server hat diese Anfrage nicht rechtzeitig abgeschlossen. Sie läuft möglicherweise noch — warte einen Moment, bevor du es erneut versuchst, sonst läuft dieselbe Arbeit zweimal.",
   "common.permissionDenied":
@@ -2289,6 +2291,24 @@ export const de = {
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Nächste Woche planen",
+  // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
+  // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
+  "brief.donext.title": "Als Nächstes",
+  // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
+  // Seite zeigt — nie von einem Modell geschrieben.
+  "brief.eyebrow": "Dein Morgen",
+  "brief.sentence.clear": "Heute Morgen wartet nichts auf dich.",
+  "brief.sentence.one": "Zuerst: {lead}",
+  "brief.sentence.oneWithCost": "Zuerst: {lead} — {consequence}",
+  "brief.sentence.many": "Zuerst: {lead} Danach {rest} weitere.",
+  "brief.sentence.manyWithCost":
+    "Zuerst: {lead} — {consequence} Danach {rest} weitere.",
+
+  "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
+  "brief.donext.loading": "Was auf dich wartet, wird gelesen",
+  "brief.donext.clear": "Gerade wartet nichts auf dich.",
+  "brief.donext.rest": "{count} weitere in der Arbeitsliste",
+
   // Die Woche eines Teams, eingefroren beim Abschluss. Zwei Wochen sind
   // vergleichbar, weil keine sich unter dem Vergleich bewegt.
   "teamweekly.title": "Die Woche des Teams",
@@ -4120,6 +4140,8 @@ export const de = {
     "Der Anbieter hat die Verbindung abgelehnt. Bestätige alle angefragten Berechtigungen und versuche es dann erneut.",
   "connectors.oauthMisconfigured":
     "Diese Installation kann die Verbindung noch nicht abschließen — die API des Anbieters ist dafür nicht aktiviert. Ein Administrator muss sie aktivieren; das Server-Log nennt die betroffene API.",
+  "connectors.oauthBadClient":
+    "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Administrator sollte Client-ID und Secret unter Einstellungen → Allgemein prüfen; ein erneuter Verbindungsversuch behebt es nicht von selbst.",
   "connectors.dismissOutcome": "Schließen",
 
   // Das "Verbindung hinzufügen"-Element (Task 1): ein Button in der Kopfzeile
@@ -7601,6 +7623,26 @@ export const de = {
     "Routinearbeit, die hinter einer Entscheidung wartet",
   "worklist.readings.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.hidden.title": "Was die Liste nicht zeigt",
+  "worklist.hidden.loading": "Wird geprüft, was zurückgehalten wird…",
+  "worklist.hidden.clear":
+    "Es wird nichts zurückgehalten. Jeder wartende Kunde erreicht eine Liste.",
+  "worklist.hidden.truncated":
+    "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.hidden.count": "{count} warten",
+  "worklist.hidden.pastHorizon": "Zu alt für die Liste",
+  "worklist.hidden.pastHorizon.detail":
+    "Das hat niemand entschieden. Sie schrieben vor Monaten und bekamen nie eine Antwort.",
+  "worklist.hidden.unlinked": "Keinem Datensatz zugeordnet",
+  "worklist.hidden.unlinked.detail":
+    "Meist kein Vertrieb. Manchmal ein Kunde, den niemand zuordnen konnte.",
+  "worklist.hidden.notSales": "Als vertriebsfremd eingestuft",
+  "worklist.hidden.notSales.detail":
+    "Für die gesamte Organisation verborgen, und es hebt sich nicht auf.",
+  "worklist.hidden.setAside": "Von Ihnen zurückgestellt",
+  "worklist.hidden.setAside.detail":
+    "Zurückgestellt oder als nicht Ihre markiert. Eine Zurückstellung kommt von selbst zurück.",
+  "worklist.hidden.shown": "Die Liste selbst führt {count}.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
   "worklist.filter.customer_waiting": "Kunde wartet",

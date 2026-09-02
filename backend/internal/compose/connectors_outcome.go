@@ -13,10 +13,12 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -58,8 +60,35 @@ const (
 	outcomeDenied        = "denied"
 	outcomeRejected      = "rejected"
 	outcomeMisconfigured = "misconfigured"
-	outcomeError         = "error"
+	// outcomeBadClient is the provider refusing this deployment's OAuth client
+	// — a wrong id or secret. Its own outcome rather than misconfigured's,
+	// because the remedies are different SCREENS: one is the vendor's console,
+	// this one is the app card in Settings. It is also the only one of the two
+	// a Microsoft installation can reach, so folding them left every Entra
+	// credential mistake reading as an unenabled API that does not exist.
+	outcomeBadClient = "bad_client"
+	outcomeError     = "error"
 )
+
+// writeConnectorUnavailable answers a connect request this deployment cannot
+// serve, saying WHICH of the two reasons it is.
+//
+// Both are 501 and they are not the same fact. Without a capture registry this
+// deployment wired no mail capture at all, and no screen an operator can open
+// changes that — the generic sentence is the honest one there. With a registry
+// and no stored app the route WORKS and is waiting, which a Settings-supplied
+// installation passes through on its way in; the generic stub text describes an
+// unbuilt feature and sends that operator looking for a newer build instead of
+// for the screen that fixes it in a minute.
+func writeConnectorUnavailable(w http.ResponseWriter, r *http.Request, provider string, hasRegistry bool) {
+	if !hasRegistry {
+		httperr.NotImplemented(w, r, "ConnectConnector")
+		return
+	}
+	httperr.NotImplementedBecause(w, r,
+		"no "+provider+" OAuth app is configured for this installation — "+
+			"add one under Settings → General, or supply it in the environment")
+}
 
 // disabledProviderAPI reports whether the failure is a provider API that was
 // never enabled for this deployment. The reason vocabulary is Google's, so the
@@ -75,16 +104,21 @@ func disabledProviderAPI(provider string, err error) bool {
 
 // connectFailureOutcome picks the landing outcome for a failed consent
 // completion, so what the human reads matches what they can actually do about
-// it. Two distinct deployment faults land on misconfigured — a provider API that
-// was never enabled, and an OAuth client the provider refused to authenticate
-// (a wrong client id/secret, which is provider-independent) — because a human
-// re-consenting clears neither. Anything we cannot attribute to the provider
-// stays the generic error: an honest "we don't know yet", never a guess at whose
-// fault it is.
+// it. Anything we cannot attribute to the provider stays the generic error: an
+// honest "we don't know yet", never a guess at whose fault it is.
+//
+// The two DEPLOYMENT faults are separate answers, in the same order
+// logConnectFailure raises them: a provider API nobody enabled is fixed in the
+// vendor's console, and a refused OAuth client is fixed on the app card in
+// Settings. They were one answer once, and the log has always told them apart
+// — which meant a screen naming the wrong remedy while the line beside it named
+// the right one.
 func connectFailureOutcome(provider string, err error) string {
 	switch {
-	case disabledProviderAPI(provider, err), oauthflow.Misconfigured(err):
+	case disabledProviderAPI(provider, err):
 		return outcomeMisconfigured
+	case oauthflow.Misconfigured(err):
+		return outcomeBadClient
 	case errors.Is(err, connector.ErrAuthRejected):
 		return outcomeRejected
 	default:

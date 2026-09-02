@@ -11,6 +11,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
+import { DoNext } from "./brief.donext";
 import { PlanSection } from "./brief.plan";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
 import { BriefCoverage } from "./briefcoverage";
@@ -37,7 +38,7 @@ import { HomeReadingsStrip } from "./home.readings";
 import { HomeTeamBoard } from "./home.teamboard";
 import { TodaySection } from "./home.today";
 import { WeeklySection } from "./home.weekly";
-import { useWorklist } from "./worklist.queries";
+import { useWorklist, type Worklist } from "./worklist.queries";
 import "./home.css";
 
 // Home — the morning handover.
@@ -191,6 +192,8 @@ function HomeWork({
   deals,
   briefState,
   teamOffered,
+  day,
+  dayState,
   onAlreadyDecided,
 }: Readonly<{
   items: readonly DecisionDeckItem[];
@@ -202,6 +205,11 @@ function HomeWork({
   // Whether the reader's scope reaches a team, off the worklist read the page
   // already makes. The same gate the team BOARD uses, so one tier decides both.
   teamOffered: boolean;
+  // The ONE ranked order, already read by the page for its coverage line. Do
+  // next shows its head, from the same query key — so the Brief and the
+  // Worklist cannot disagree about what is waiting.
+  day: Worklist | undefined;
+  dayState: SectionState;
   onAlreadyDecided: () => void;
 }>) {
   const decisions = (
@@ -239,9 +247,14 @@ function HomeWork({
   // next week holds by reading what this one did, so the frozen past leads and
   // the live future follows.
   const nextWeek = <PlanSection key="plan" />;
+  // WHAT IS ALREADY WAITING, above what is worth pursuing. The deal queue below
+  // answers a different question, and a morning that led with it led with the
+  // wrong half — decision 3 of the Brief plan, and the reason this section
+  // exists at all.
+  const doNext = <DoNext key="donext" day={day} state={dayState} />;
   return items.length > 0
-    ? [decisions, today, lastWeek, teamWeek, nextWeek]
-    : [today, decisions, lastWeek, teamWeek, nextWeek];
+    ? [decisions, doNext, today, lastWeek, teamWeek, nextWeek]
+    : [doNext, today, decisions, lastWeek, teamWeek, nextWeek];
 }
 
 /**
@@ -365,6 +378,7 @@ export function HomeScreen() {
   return (
     <div className="wrap">
       <HomeGlance
+        day={worklistQuery.data}
         firstName={firstNameOf(me.data?.user?.display_name)}
         now={new Date(nowMs)}
         decisions={decisionReadings}
@@ -411,6 +425,8 @@ export function HomeScreen() {
             teamOffered={
               worklistQuery.data?.scope_options?.includes("team") ?? false
             }
+            day={worklistQuery.data}
+            dayState={readState(worklistQuery)}
             onAlreadyDecided={onAlreadyDecided}
           />
         }

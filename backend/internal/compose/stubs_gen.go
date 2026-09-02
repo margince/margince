@@ -663,6 +663,10 @@ func (stubs) UpdateDataSubjectRequest(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "UpdateDataSubjectRequest")
 }
 
+func (stubs) DownloadDataSubjectPackage(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "DownloadDataSubjectPackage")
+}
+
 func (stubs) ListDealRooms(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDealRoomsParams) {
 	httperr.NotImplemented(w, r, "ListDealRooms")
 }
@@ -1803,6 +1807,10 @@ func (stubs) RevokeRecordGrant(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "RevokeRecordGrant")
 }
 
+func (stubs) GetRecordTags(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetRecordTags")
+}
+
 func (stubs) GetRecordContext(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, id crmcontracts.Id, params crmcontracts.GetRecordContextParams) {
 	httperr.NotImplemented(w, r, "GetRecordContext")
 }
@@ -2225,6 +2233,10 @@ func (stubs) GetTeamWeeklyReview(w nethttp.ResponseWriter, r *nethttp.Request, p
 
 func (stubs) GetWorklist(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetWorklistParams) {
 	httperr.NotImplemented(w, r, "GetWorklist")
+}
+
+func (stubs) GetHiddenBacklog(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetHiddenBacklog")
 }
 
 func (stubs) GetTeamBoard(w nethttp.ResponseWriter, r *nethttp.Request) {

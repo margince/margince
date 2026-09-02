@@ -41,6 +41,33 @@ func NotImplemented(w http.ResponseWriter, r *http.Request, op string) {
 	})
 }
 
+// Unavailable is ServiceUnavailable with a code of its own.
+//
+// The code is what a UI can translate. `service_unavailable` says only that
+// something is down, so a client with a reader to speak to has to render the
+// detail verbatim — and the detail is written in one language, which is how an
+// English sentence ends up inside a German screen. A named code lets the client
+// carry its own copy and keeps the detail for everyone else: curl, a log, an
+// integrator with no catalog.
+func Unavailable(w http.ResponseWriter, r *http.Request, code, detail string) {
+	writeProblem(w, problem{Status: http.StatusServiceUnavailable, Code: code, Detail: detail})
+}
+
+// NotImplementedBecause is NotImplemented for a route that IS implemented and
+// cannot serve this installation yet.
+//
+// Same status, different sentence. 501 covers both "nobody built this" and
+// "this deployment has not configured it", and only the first is what the
+// generic text describes — so the second one needs to say what is missing, or
+// it sends an operator to look for a build that would not help.
+func NotImplementedBecause(w http.ResponseWriter, r *http.Request, detail string) {
+	writeProblem(w, problem{
+		Status: http.StatusNotImplemented,
+		Code:   "not_implemented",
+		Detail: detail,
+	})
+}
+
 // Validation is the 422 shape with per-field errors.
 func Validation(field, code, message string) *DetailedError {
 	return &DetailedError{
