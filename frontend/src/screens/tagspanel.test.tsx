@@ -215,3 +215,50 @@ describe("the company mount's add-tag verb", () => {
     expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
   });
 });
+
+// The verb belongs to the PANEL, not to each host that mounts it. A person page
+// once shipped with tags a reader could see and no way to add one, because the
+// add button lived in the company wrapper and the person mount never placed it.
+// These assert the shared component carries it, whatever record it is drawn on.
+describe("the add verb travels with the panel", () => {
+  const PERSON = "01a06151-0000-7000-8000-000000000002";
+
+  function mountFor(entityType: "person" | "deal", canEdit: boolean) {
+    installFetchStub({
+      [`GET /records/${entityType}/${PERSON}/tags`]: () =>
+        jsonResponse({ data: [], withheld: false }),
+    });
+    render(
+      <StoryProviders>
+        <TagsPanel
+          entityType={entityType}
+          entityID={PERSON}
+          canEdit={canEdit}
+        />
+      </StoryProviders>,
+    );
+  }
+
+  it.each(["person", "deal"] as const)(
+    "offers the verb on a %s a seat may write",
+    async (entityType) => {
+      mountFor(entityType, true);
+      expect(
+        await screen.findByRole("button", { name: en["tags.add"] }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  // The other half of the same rule: a reader who may not write the record sees
+  // the words and no verb, so the panel is not simply always offering one.
+  it.each(["person", "deal"] as const)(
+    "offers no verb on a %s the seat may only read",
+    async (entityType) => {
+      mountFor(entityType, false);
+      expect(
+        await screen.findByText(en["tags.emptyTitle"]),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
+    },
+  );
+});

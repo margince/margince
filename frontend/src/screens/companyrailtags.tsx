@@ -1,28 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { useCompanyReadOnlyReason } from "./companyheader";
-import { AddTagDialog } from "./tagpicker";
-import { useRecordTags } from "./tags.queries";
-import { AddTagButton, TagsPanel } from "./tagspanel";
-import "./company360.css";
+import { TagsPanel } from "./tagspanel";
 
 type Organization = components["schemas"]["Organization"];
 
 /**
  * The company's tags, drawn by the SHARED panel.
  *
- * This file used to hold a panel of its own, reading the tag names off the
- * account's 360 response. That block carried no assigner, so the menu could
- * not say who applied a word — and a person and a deal had no panel at all.
- * One component for all three answers those together.
- *
- * What stays here is the mount: the add-tag verb needs a resolved
- * Organization to ask `useCompanyReadOnlyReason` about, so the wrapper waits
- * for one rather than calling the hook conditionally.
+ * What stays here is the mount: the write gate needs a resolved Organization to
+ * ask `useCompanyReadOnlyReason` about, so the wrapper waits for one rather
+ * than calling the hook conditionally.
  */
 export function CompanyTagsSection({
   organization,
@@ -39,37 +30,15 @@ function CompanyTags({
   orgId,
 }: Readonly<{ organization: Organization; orgId: string }>) {
   const readOnlyReason = useCompanyReadOnlyReason(organization);
-  const [adding, setAdding] = useState(false);
-  const read = useRecordTags("organization", orgId);
-  // The verb answers to the same read the panel does. The panel draws nothing
-  // until the read lands, and says "hidden" when the vocabulary is withheld —
-  // so a button gated on permission alone floats above no panel at all, and on
-  // a withheld record it opens a picker whose apply the server refuses.
-  // Three questions, all of which the server asks before it writes: the object
-  // grant, this row's own writability, and whether the vocabulary is visible at
-  // all. `useCompanyReadOnlyReason` answers only the row — its own comment says
-  // every mount ANDs it with the grant — and apply refuses without `tag.read`,
-  // which is what `withheld` reports.
+  // The two questions a MOUNT can answer: the object grant, and this row's own
+  // writability. `useCompanyReadOnlyReason` answers only the row — its own
+  // comment says every mount ANDs it with the grant. The third question, whether
+  // the vocabulary is visible at all, belongs to the panel: it draws the
+  // withheld state instead of the words, and its verb never reaches that path.
   const canUpdate = useCan("organization", "update");
-  const canEdit =
-    canUpdate && !readOnlyReason && read.isSuccess && !read.data.withheld;
+  const canEdit = canUpdate && !readOnlyReason;
 
   return (
-    <>
-      <TagsPanel entityType="organization" entityID={orgId} canEdit={canEdit} />
-      {canEdit && (
-        <div className="co-card-actions">
-          <AddTagButton onOpen={() => setAdding(true)} />
-        </div>
-      )}
-      {adding && (
-        <AddTagDialog
-          entityType="organization"
-          entityID={orgId}
-          current={read.data?.data ?? []}
-          onClose={() => setAdding(false)}
-        />
-      )}
-    </>
+    <TagsPanel entityType="organization" entityID={orgId} canEdit={canEdit} />
   );
 }

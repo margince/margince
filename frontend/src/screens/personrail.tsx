@@ -184,7 +184,7 @@ function PersonHoldSection({ view }: Readonly<{ view: Person360 }>) {
 // --- How this contact is filed -----------------------------------------
 
 /**
- * The contact's tags, drawn by the SHARED panel in the rail's section chrome.
+ * The contact's tags, drawn by the SHARED panel.
  *
  * The three questions the server asks before it writes are asked here too: the
  * object grant, this record's own editability, and — inside the panel — whether
@@ -202,7 +202,6 @@ function PersonTagsSection({ view }: Readonly<{ view: Person360 }>) {
       entityType="person"
       entityID={person.id}
       canEdit={canUpdate && !readOnlyReason}
-      chrome="section"
     />
   );
 }
