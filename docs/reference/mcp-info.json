@@ -10,16 +10,16 @@
   "totals": {
     "tools": 59,
     "resources": 9,
-    "tool_catalog_bytes": 173884,
+    "tool_catalog_bytes": 174105,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 44349,
+    "approx_wire_tokens_total": 44404,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 40370,
-      "input_schema_bytes": 37376,
+      "description_bytes": 40525,
+      "input_schema_bytes": 37442,
       "output_schema_bytes": 83313,
-      "description_plus_input_schema_bytes": 77746
+      "description_plus_input_schema_bytes": 77967
     }
   },
   "tools": {
@@ -736,7 +736,7 @@
           "readOnlyHint": false,
           "title": "Apply a tag to a record"
         },
-        "description": "Tag a person, company, deal, lead or project by tag_id, or by tag_name, which reuses the workspace's word or coins it. Prefer a tag_id from list_tags: a name matches case-insensitively, and a near-miss makes a NEW word. The same tag twice is a conflict. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Tag a person, company, deal, lead or project by tag_id, or by tag_name, which must name a tag the workspace already has. This tool never creates a tag: an unknown name is refused, and only an admin or ops seat can add a word to the vocabulary. A name matches case-insensitively; an archived word is refused as archived rather than as unknown. Prefer a tag_id from list_tags. The same tag twice is a conflict. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -764,8 +764,8 @@
               "type": "string"
             },
             "tag_name": {
-              "description": "Instead of tag_id: the tag is created if the workspace has no such word",
-              "maxLength": 120,
+              "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+              "maxLength": 64,
               "type": "string"
             }
           },
@@ -9083,8 +9083,8 @@
               "type": "string"
             },
             "tag_name": {
-              "description": "Instead of tag_id: the tag is created if the workspace has no such word",
-              "maxLength": 120,
+              "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+              "maxLength": 64,
               "type": "string"
             }
           },

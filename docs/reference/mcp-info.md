@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 59 |
 | Resources | 9 |
-| Tool catalog | 169.8 KB |
+| Tool catalog | 170.0 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 44349 |
+| Approx. wire tokens | 44404 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 81.4 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 39.4 KB | 23% | Yes, every step |
-| Input schemas | 36.5 KB | 21% | Yes, every step |
+| Descriptions (incl. governance clause) | 39.6 KB | 23% | Yes, every step |
+| Input schemas | 36.6 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.5 KB | 7% | Partly |
-| **Description + input schema** | **75.9 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **76.1 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -65,7 +65,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.2 KB |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
-| [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.0 KB |
+| [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.2 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.7 KB |
@@ -1054,7 +1054,7 @@ Write what you found onto the morning brief you just read: one sentence about th
 
 **Apply a tag to a record**
 
-Tag a person, company, deal, lead or project by tag_id, or by tag_name, which reuses the workspace's word or coins it. Prefer a tag_id from list_tags: a name matches case-insensitively, and a near-miss makes a NEW word. The same tag twice is a conflict. (Governance: runs immediately; requires passport scope "write".)
+Tag a person, company, deal, lead or project by tag_id, or by tag_name, which must name a tag the workspace already has. This tool never creates a tag: an unknown name is refused, and only an admin or ops seat can add a word to the vocabulary. A name matches case-insensitively; an archived word is refused as archived rather than as unknown. Prefer a tag_id from list_tags. The same tag twice is a conflict. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -1086,8 +1086,8 @@ Tag a person, company, deal, lead or project by tag_id, or by tag_name, which re
       "type": "string"
     },
     "tag_name": {
-      "description": "Instead of tag_id: the tag is created if the workspace has no such word",
-      "maxLength": 120,
+      "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+      "maxLength": 64,
       "type": "string"
     }
   },
@@ -9804,8 +9804,8 @@ Take one tag off one record — by tag_id or tag_name — leaving the word itsel
       "type": "string"
     },
     "tag_name": {
-      "description": "Instead of tag_id: the tag is created if the workspace has no such word",
-      "maxLength": 120,
+      "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+      "maxLength": 64,
       "type": "string"
     }
   },

@@ -4372,6 +4372,30 @@ func (e CreateStageRequestSemantic) Valid() bool {
 	}
 }
 
+// Defines values for CreateTagRequestColor.
+const (
+	CreateTagRequestColorAmber CreateTagRequestColor = "amber"
+	CreateTagRequestColorRose  CreateTagRequestColor = "rose"
+	CreateTagRequestColorSlate CreateTagRequestColor = "slate"
+	CreateTagRequestColorTeal  CreateTagRequestColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the CreateTagRequestColor enum.
+func (e CreateTagRequestColor) Valid() bool {
+	switch e {
+	case CreateTagRequestColorAmber:
+		return true
+	case CreateTagRequestColorRose:
+		return true
+	case CreateTagRequestColorSlate:
+		return true
+	case CreateTagRequestColorTeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateTaskRequestLinksEntityType.
 const (
 	CreateTaskRequestLinksEntityTypeDeal         CreateTaskRequestLinksEntityType = "deal"
@@ -10375,6 +10399,30 @@ func (e StartBackfillRequestWindow) Valid() bool {
 	case StartBackfillRequestWindowN60m:
 		return true
 	case StartBackfillRequestWindowN6m:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TagColor.
+const (
+	TagColorAmber TagColor = "amber"
+	TagColorRose  TagColor = "rose"
+	TagColorSlate TagColor = "slate"
+	TagColorTeal  TagColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the TagColor enum.
+func (e TagColor) Valid() bool {
+	switch e {
+	case TagColorAmber:
+		return true
+	case TagColorRose:
+		return true
+	case TagColorSlate:
+		return true
+	case TagColorTeal:
 		return true
 	default:
 		return false
@@ -18744,9 +18792,13 @@ type CreateStageRequestSemantic string
 
 // CreateTagRequest defines model for CreateTagRequest.
 type CreateTagRequest struct {
-	Color *string `json:"color,omitempty"`
-	Name  string  `json:"name"`
+	Color       *CreateTagRequestColor `json:"color,omitempty"`
+	Description *string                `json:"description,omitempty"`
+	Name        string                 `json:"name"`
 }
+
+// CreateTagRequestColor defines model for CreateTagRequest.Color.
+type CreateTagRequestColor string
 
 // CreateTaskRequest What a task needs. Stored as an activity of kind `task`.
 type CreateTaskRequest struct {
@@ -28043,13 +28095,17 @@ type StartCompanySiteReadRequest struct {
 
 // Tag A tag. Mirrors the `tag` table.
 type Tag struct {
-	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
-	Color      *string            `json:"color,omitempty"`
-	CreatedAt  *time.Time         `json:"created_at,omitempty"`
-	Id         openapi_types.UUID `json:"id"`
-	Name       string             `json:"name"`
-	UpdatedAt  *time.Time         `json:"updated_at,omitempty"`
+	ArchivedAt  *time.Time         `json:"archived_at,omitempty"`
+	Color       *TagColor          `json:"color,omitempty"`
+	CreatedAt   *time.Time         `json:"created_at,omitempty"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	Name        string             `json:"name"`
+	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
 }
+
+// TagColor defines model for Tag.Color.
+type TagColor string
 
 // TagListResponse defines model for TagListResponse.
 type TagListResponse struct {
