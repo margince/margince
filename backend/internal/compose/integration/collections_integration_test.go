@@ -36,7 +36,8 @@ func TestTagsLifecycleAndApplication(t *testing.T) {
 	var tag struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/tags", AnyMap{"name": "Champion", "color": "#ff6b00"}, nil, &tag); status != http.StatusCreated {
+	// Governed vocabulary (tag_color_check): one of the fixed set, not a hex value.
+	if status := e.Call(t, "POST", "/v1/tags", AnyMap{"name": "Champion", "color": "amber"}, nil, &tag); status != http.StatusCreated {
 		t.Fatalf("create tag → %d", status)
 	}
 	// The name is unique case-insensitively.
