@@ -119,7 +119,7 @@ export function CompanyPrimaryActions({
   // A guard that has not answered yet refuses nothing: claiming a refusal
   // `/me` has not decided is worse than a control that is briefly quiet — the
   // same rule personpage.tsx's writeRefusal states for the identical shape.
-  const logGrantKnown = me.data !== undefined;
+  const logGrantKnown = me.data?.authorization !== undefined;
   const logRefused =
     archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
   const logPending = !archived && !logGrantKnown;

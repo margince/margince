@@ -376,7 +376,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
   // "You do not have permission" sentence on every page load, before the
   // verdict is even in.
   it("stays quiet — disabled, no claimed refusal — while the grant is still in flight", async () => {
-    stubMeInFlight();
+    const answer = stubMeInFlight();
     renderInApp(
       <CompanyPrimaryActions
         org={ORG}
@@ -394,6 +394,17 @@ describe("Log activity and Add task, gated on the create grant", () => {
         "You do not have permission to log activities on this record.",
       ),
     ).toBeNull();
+
+    // Settled before the test ends, or the mocked request outlives it — the
+    // same reason stubRosterInFlight's own test resolves its capture above.
+    for (const resolve of answer) {
+      resolve(
+        new Response(JSON.stringify(meFixture({ allow: {} })), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    }
   });
 });
 

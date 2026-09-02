@@ -818,7 +818,7 @@ function PersonActions({
   // A guard that has not answered yet refuses nothing: claiming a refusal
   // `/me` has not decided is worse than a control that is briefly quiet —
   // the same rule writeRefusal states for the identical shape, above.
-  const logGrantKnown = me.data !== undefined;
+  const logGrantKnown = me.data?.authorization !== undefined;
   const logRefused = logGrantKnown && !canLog ? logRefusedId : undefined;
   const logPending = !logGrantKnown;
   // The transports the composer would offer, read here so the button NAMES
