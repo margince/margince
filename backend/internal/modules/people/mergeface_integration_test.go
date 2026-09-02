@@ -215,3 +215,50 @@ func TestAMergeFacesContactCountCarriesBothObjectGrants(t *testing.T) {
 		})
 	}
 }
+
+// A LEAD IS NAMED BY ITS OWN FIELDS, and its detail prefers the email.
+//
+// The third arm of the read, and the only one whose label can be absent: a lead
+// arrives from a form or a list and may carry a company and no name at all. The
+// fallback matters because a merge card with two blank sides asks somebody to
+// choose between nothing and nothing.
+func TestALeadIsNamedByWhateverItCarries(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	withEmail, companyOnly := ids.NewV7(), ids.NewV7()
+	ctx := e.as(e.owner, principal.RowScopeAll)
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO lead (id, full_name, email, company_name, status, source, captured_by)
+			VALUES ($1, 'Sara Subject', 'sara@weber.test', 'Weber GmbH', 'new', 'seed', 'test')`,
+			withEmail); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO lead (id, company_name, status, source, captured_by)
+			VALUES ($1, 'Weber GmbH', 'new', 'seed', 'test')`, companyOnly)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding leads: %v", err)
+	}
+
+	faces, err := e.store.DescribeForMerge(e.asOrgReader("lead"), "lead", []ids.UUID{withEmail, companyOnly})
+	if err != nil {
+		t.Fatalf("DescribeForMerge: %v", err)
+	}
+	named := faces[withEmail]
+	if named.Label != "Sara Subject" || named.Detail != "sara@weber.test" {
+		t.Errorf("face = %+v, want the lead's name with the address that tells it from its twin", named)
+	}
+	if named.CreatedAt.IsZero() {
+		t.Error("the lead carries no arrival instant, which is half of what a merge card compares")
+	}
+	bare := faces[companyOnly]
+	if bare.Label != "" || bare.Detail != "Weber GmbH" {
+		t.Errorf("face = %+v, want the company as the detail when there is no address — a card "+
+			"with two blank sides asks somebody to choose between nothing and nothing", bare)
+	}
+	if bare.RelatedCount != nil {
+		t.Errorf("RelatedCount = %d on a lead, want none: nothing hangs off a lead to count",
+			*bare.RelatedCount)
+	}
+}
