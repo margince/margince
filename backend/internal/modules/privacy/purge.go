@@ -43,6 +43,12 @@ const (
 	// PurgePersonalVerdict is the automatic path: a sender the classifier
 	// judged personal, after the undo window closed.
 	PurgePersonalVerdict PurgeReason = "personal_verdict"
+	// PurgeWorkspaceRule is an ADMIN acting on a rule that belongs to the
+	// workspace, destroying every seat's matching mail rather than their own.
+	// Its own reason because the audit row is the only surviving record of a
+	// destruction that reached across colleagues' mailboxes, and "owner_rule"
+	// would tell an auditor one seat destroyed mail of their own.
+	PurgeWorkspaceRule PurgeReason = "workspace_rule"
 )
 
 // PurgeActivities destroys the named messages and everything they left behind.

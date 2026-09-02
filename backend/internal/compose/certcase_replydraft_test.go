@@ -263,7 +263,7 @@ func TestReplyDraftCaseRecordsEveryRequestTheDrafterIssued(t *testing.T) {
 			len(trace.Requests))
 	}
 	voiced, retry, fallback := trace.Requests[0], trace.Requests[1], trace.Requests[2]
-	if !strings.HasPrefix(voiced.System, string(replyDraftVoiceSystem)) {
+	if !strings.HasPrefix(voiced.System, string(voicedSite(replyDraftSystem))) {
 		t.Errorf("the first request is not in the voice variant: %q", voiced.System)
 	}
 	for _, fragment := range []string{"Voice profile:", "Blunt, never hedges.", "We ship Monday."} {

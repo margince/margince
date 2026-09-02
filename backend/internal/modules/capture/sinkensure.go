@@ -208,7 +208,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// sender, not only those a suppression rule matched — since T4 defers the
 	// ambiguous class, the answer now decides create-versus-defer for ordinary
 	// senders too, which is worth a query per captured message.
-	corresponded, err := s.correspondencePositiveTx(ctx, tx, cp.Email)
+	corresponded, correspondedRepeatedly, err := correspondenceDepthTx(ctx, tx, cp.Email)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -219,6 +219,10 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// second question T1 always assumed: is this an address a person could be
 	// reached at?
 	decision.create = corresponded && s.recordWorthy(cp)
+	roleMailbox := refusesToNameAPerson(cp.Email, correspondedRepeatedly)
+	if roleMailbox {
+		decision.create = false
+	}
 
 	// T2 transactional / ESP infrastructure, which T1 outranks.
 	suppressed, suppressReason, err := s.registrySuppresses(ctx, tx, rec, cp, row, corresponded)
@@ -261,7 +265,19 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		// by this point.
 		return decision.traced(TraceCaptured, priorReason), nil
 	}
-	decision.create = decision.create || alreadyKnown
+	// A role mailbox stays refused: `alreadyKnown` is true for it the moment the
+	// verdict answers, and ORing that back on would mint the contact on the very
+	// next message the queue sends.
+	decision.create = (decision.create || alreadyKnown) && !roleMailbox
+	if roleMailbox && settled {
+		// The queue has been judged. Falling through would defer it again on
+		// every later message — the ledger's live-row index absorbs the write,
+		// so nothing looks wrong, and the verdict pass re-answers a settled
+		// question for as long as the mailbox keeps writing. The early return
+		// above cannot cover this: reaching it needs !corresponded, and a role
+		// mailbox the owner writes to is corresponded by definition.
+		return decision.traced(TraceCaptured, TraceReasonRoleMailbox), nil
+	}
 
 	// T3 free-mail (CAP-PARAM-5). A consumer mailbox says what it is not — an
 	// organization — so the org is suppressed either way. What it does NOT say
@@ -285,37 +301,10 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		}
 		return decision.traced(TraceDeferred, deferReason), nil
 	}
+	if err := s.askWhoseRecord(ctx, tx, row); err != nil {
+		return counterpartyDecision{}, err
+	}
 	return decision, nil
-}
-
-// deferAmbiguous is T4: a first-time sender nothing about this address yet calls
-// stranger or customer. ADR-0063's create-on-sight is what manufactured junk
-// from exactly this class, so the message is captured, no record is minted, and
-// the verdict engine answers the question the ledger now holds.
-func (s *Sink) deferAmbiguous(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, row dispositionRow) (string, error) {
-	row.Status = PendingStatusPending
-	capped, err := recordDisposition(ctx, tx, row)
-	if err != nil {
-		return "", err
-	}
-	if capped == "" {
-		return "", nil
-	}
-	// A ceiling is holding this question back, which an outsider can drive by
-	// mailing from fresh addresses. Say so where an operator will see it, and say
-	// WHICH ceiling: silence would read as a sender that was judged and dismissed,
-	// and "the queue is full" would misdescribe one domain flooding it while every
-	// other sender still gets through.
-	detail := "the workspace is at its open-disposition ceiling; the message stands unjudged"
-	if capped == CapReasonDomain {
-		detail = "this sender's domain is at its share of the open-disposition ceiling; the message stands unjudged"
-	}
-	// The ceiling rides its own field, not only the prose: an operator filtering
-	// for one flooding domain should not have to match on a sentence.
-	// The member's answer differs from the operator's here: a capped deferral is
-	// not "waiting for a verdict", it is a question that will never be asked.
-	return TraceReasonDeferralCapped, s.logBreadcrumbTx(ctx, tx, "capture_deferral_capped", rec, detail,
-		map[string]any{"ceiling": capped})
 }
 
 // derivationStart settles whether a derivation is possible at all and builds the

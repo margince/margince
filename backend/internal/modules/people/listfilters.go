@@ -41,7 +41,8 @@ const (
 	filterLifecycle        = "lifecycle"
 	filterRelationshipType = "relationship_type"
 	filterStatus           = "status"
-	filterTag              = "tag"
+	filterTag              = "tag_id"
+	filterTagMode          = "tag_mode"
 	filterDomain           = "domain"
 	filterMinScore         = "min_score"
 	filterPartnerRole      = "partner_role"
@@ -50,7 +51,10 @@ const (
 
 var personListFilters = storekit.FilterSet[ListPeopleInput]{
 	filterOwnerID: storekit.FilterID(func(in *ListPeopleInput, id *ids.UserID) { in.OwnerID = id }),
-	filterTag:     storekit.FilterWord(func(in *ListPeopleInput, v *string) { in.Tag = v }),
+	filterTag:     storekit.FilterIDList[ids.TagKind](func(in *ListPeopleInput, v []ids.UUID) { in.TagIDs = v }),
+	filterTagMode: storekit.FilterWord(func(in *ListPeopleInput, v *string) {
+		in.TagMode = tagModeOrDefault(v)
+	}),
 }
 
 var organizationListFilters = storekit.FilterSet[ListOrganizationsInput]{
@@ -59,6 +63,10 @@ var organizationListFilters = storekit.FilterSet[ListOrganizationsInput]{
 	filterOwnerID:   storekit.FilterID(func(in *ListOrganizationsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
 		func(in *ListOrganizationsInput, v *string) { in.RelationshipType = v }),
+	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListOrganizationsInput, v []ids.UUID) { in.TagIDs = v }),
+	filterTagMode: storekit.FilterWord(func(in *ListOrganizationsInput, v *string) {
+		in.TagMode = tagModeOrDefault(v)
+	}),
 }
 
 // Partner lists by role and certification, the two dials GET /partners already
@@ -91,4 +99,17 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	default:
 		return nil
 	}
+}
+
+// tagModeOrDefault reads a stored mode, falling back to `any`.
+//
+// A saved view is not a request: it has no caller to refuse to, and a view
+// that stopped opening because somebody hand-edited its mode would be worse
+// than one that opens on the contract's own default.
+func tagModeOrDefault(raw *string) storekit.TagMode {
+	mode, err := storekit.ParseTagMode(raw)
+	if err != nil {
+		return storekit.TagModeAny
+	}
+	return mode
 }

@@ -132,6 +132,11 @@ const (
 // unreachable behind them.
 type Tasks interface {
 	OpenForViewer(ctx context.Context, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+	// CountOpenForViewer answers how many there ARE under the same narrowing,
+	// which is not the page length: the lane is capped at a dozen, so a badge
+	// showing the cap tells a reader with thirteen that they have twelve, and
+	// there is no second page to reach the thirteenth by.
+	CountOpenForViewer(ctx context.Context, until time.Time, scope TaskScope, owner ids.UUID) (int, error)
 }
 
 // Task is one piece of agreed work.
@@ -254,6 +259,8 @@ type BriefEntry struct {
 // which is a different fact from "you owe nobody anything today".
 type Commitments interface {
 	DueBy(ctx context.Context, by time.Time, limit int) ([]Commitment, error)
+	// CountDueBy answers how many are due, for the reason Tasks gives.
+	CountDueBy(ctx context.Context, by time.Time) (int, error)
 }
 
 // Commitment is one promise this rep made, with the evidence behind it.

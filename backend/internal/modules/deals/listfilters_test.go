@@ -23,6 +23,7 @@ func TestEveryDeclaredDealsFilterNarrowsSomething(t *testing.T) {
 		"organization_id": id, "owner_id": id, "partner_org_id": id, "partner_sourced": "true",
 		"partner_attribution": "sourced",
 		"pipeline_id":         id, "project_id": id, "stage_id": id, "stalled": "false", "status": "open",
+		"tag_id": id, "tag_mode": "all",
 	})
 }
 
@@ -39,6 +40,7 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		{datasource.EntityDeal, []string{
 			"organization_id", "owner_id", "partner_attribution", "partner_org_id", "partner_sourced",
 			"pipeline_id", "project_id", "stage_id", "stalled", "status",
+			"tag_id", "tag_mode",
 		}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {

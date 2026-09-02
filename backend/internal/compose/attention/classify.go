@@ -36,6 +36,11 @@ const sourceWaiting = "customer_waiting"
 // out of the queue it was asked for.
 const sourceTask = "task"
 
+// sourceClaim names the rep's own promises. keepUnowned reads it: a claim has
+// no assignee column, so the row arrives ownerless while already belonging to
+// the rep whose query produced it.
+const sourceClaim = "conversation_claim"
+
 // sourceAtRisk names the quiet-deal producer. Three readers spell it — the
 // bounds table, the category map and the classifier — which is two more than a
 // literal survives.

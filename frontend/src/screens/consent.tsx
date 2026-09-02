@@ -123,7 +123,9 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
   );
   return (
     <Card as="div" inset className="consent-proof-log">
-      <ul className="timeline">
+      {/* `timeline-plain`: these rows carry their date inline rather than in
+          the chronicle's gutter, so they opt out of its column grid. */}
+      <ul className="timeline timeline-plain">
         {ordered.map((event) => (
           <li key={event.id}>
             <span className="tl-body">

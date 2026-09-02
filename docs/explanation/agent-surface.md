@@ -101,7 +101,7 @@ not architecture**. `internal/modules/ai/` owns it:
 
 ## Honest gaps
 
-- **Per-agent quota is specified but not yet enforced.** The admission gate binds scope ∧ seat ∧ tier
+- **The per-agent volume budget is specified but not yet enforced.** The admission gate binds scope ∧ seat ∧ tier
   today; a per-agent budget ceiling is designed but not wired.
 
 ## Where to go next

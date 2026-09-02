@@ -23,8 +23,10 @@ import (
 	"context"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
 var _ activities.FirstEmailDrafter = replyDrafter{}
@@ -69,16 +71,56 @@ func (d replyDrafter) DraftFirstEmail(ctx context.Context, intent string) (strin
 		Thread: threadFlag(false),
 		Intent: boundedRunes(intent, replyActivityMaxRunes),
 	}
-	// No voice block, which puts this site where the two composers already are:
-	// ai-tasks.yaml records that the reply site alone has a voiced variant, and
-	// the composers gain theirs when Voice DNA reaches them. It is also what
-	// keeps this path free of a learning signal nobody can answer — a rep
-	// rejects a voiced draft through a draft_ref, and this surface returns
-	// text only.
-	draft, err := d.completeChecked(ctx, firstDraftSystem, data, nil)
+	// The message goes out under a person's name, so it is written in that
+	// person's voice — the same rule the reply path obeys, and the reason this
+	// surface may not opt out of it: one rep, one mailbox, two writers is
+	// exactly the split Voice DNA exists to close.
+	//
+	// What it does NOT do is record a learning signal. A rep answers for a
+	// served draft through a draft_ref keyed on the activity it replied to,
+	// and there is no activity here — so a signal written now is one no
+	// feedback could ever land on.
+	draft, err := d.completeFirstVoiced(ctx, data, d.loadVoice(ctx))
 	if err != nil {
 		d.logger().WarnContext(ctx, "model first-message draft unavailable; using deterministic draft", "err", err)
 		return fallbackSubject, fallbackBody, nil
 	}
 	return draft.Subject, draft.Body, nil
+}
+
+// completeFirstVoiced drafts the opening message under the sender's voice when
+// they have one, holding the same deterministic anti-AI floor the reply path
+// holds: detect on the raw draft, one critic retry, sanitize, and on surviving
+// violations serve the plain draft instead.
+//
+// It is separate from completeVoiced because that one's every failure path
+// writes a learning signal against an anchor, and this site has no anchor. What
+// counts as a violation is not restated here: both methods ask
+// draftvoice.Violations and draftvoice.Sanitize, so this one decides only what
+// to do when the floor trips.
+func (d replyDrafter) completeFirstVoiced(ctx context.Context, data replyActivityData, voice draftvoice.Context) (replyDraft, error) {
+	if !voice.OK {
+		return d.completeChecked(ctx, firstDraftSystem, data, nil)
+	}
+	block := voice.Block
+	draft, err := d.completeChecked(ctx, firstDraftSystem, data, block)
+	if err != nil {
+		return replyDraft{}, err
+	}
+	if violations := voiceDraftViolations(draft); len(violations) > 0 {
+		withFeedback := func(fence promptfence.Fence) string {
+			return block(fence) + draftvoice.Feedback(violations)
+		}
+		retried, retryErr := d.completeWith(ctx, firstDraftSystem, data, withFeedback, "")
+		if retryErr == nil {
+			draft = retried
+		}
+	}
+	draft.Subject, draft.Body = draftvoice.Sanitize(draft.Subject, draft.Body)
+	// The sanitizer edits text, so the floor and the shape are re-checked on
+	// what would actually be served.
+	if len(voiceDraftViolations(draft)) > 0 || validateReplyDraft(draft) != nil {
+		return d.completeChecked(ctx, firstDraftSystem, data, nil)
+	}
+	return draft, nil
 }

@@ -244,3 +244,93 @@ export function report(rows: unknown[], excluded = 0): Response {
 }
 
 export const NOT_FOUND = { title: "Not Found", code: "no_digest_yet" };
+
+// ── The readings strip ──────────────────────────────────────────────────────
+
+export type Worklist = components["schemas"]["Worklist"];
+type Readings = components["schemas"]["WorklistReadings"];
+
+/** One meeting row, prepared or not, as the queue would carry it. */
+export function meetingRow(id: string, prepared: boolean): WorklistItem {
+  return {
+    id,
+    source: "meeting",
+    level: 3,
+    category: "meetings",
+    title: "Weber GmbH · quarterly review",
+    because: prepared ? [] : [{ kind: "meeting_unprepared" }],
+    consequence: prepared ? "none" : "meeting_unprepared",
+    actions: ["open"],
+  };
+}
+
+type WorklistItem = components["schemas"]["WorklistItem"];
+
+/** One customer waiting on an answer — the row Do next leads with. */
+export function waitingRow(): WorklistItem {
+  return {
+    id: "w1",
+    source: "customer_waiting",
+    level: 1,
+    category: "customer_waiting",
+    title: "Aster Handel",
+    because: [],
+    consequence: "buyer_waits",
+    actions: ["open"],
+  };
+}
+
+type WorklistCount = components["schemas"]["WorklistCount"];
+
+/**
+ * A morning as the worklist answers it, for the readings strip.
+ *
+ * The meetings COUNT comes from `counts` — every meeting read and ranked, before
+ * the fold and the page cut — while readiness can only be counted off the rows
+ * the page carries. The default makes them agree, which is the ordinary day; a
+ * case that needs them to DISAGREE overrides `counts`, and the strip must then
+ * refuse to state a readiness figure rather than dividing one population by the
+ * other.
+ */
+export function readingsDay(
+  readings: Partial<Readings> = {},
+  queue: WorklistItem[] = [meetingRow("m1", false), meetingRow("m2", true)],
+  counts: WorklistCount[] = [wholeMeetings(queue.length)],
+): Worklist {
+  return {
+    as_of: "2026-08-31T06:42:00Z",
+    scope: "mine",
+    scope_options: ["mine"],
+    queue,
+    summary: { urgent: 0, due: 0, lower_priority: 0, total: queue.length },
+    sources_unavailable: [],
+    reach: [],
+    counts,
+    readings: {
+      revenue_at_risk_minor: null,
+      buyer_replies: 3,
+      prospecting: 2,
+      review: 8,
+      more_available: false,
+      ...readings,
+    },
+  };
+}
+
+/** A meetings count the page carries whole — considered, shown and read to the end. */
+export function wholeMeetings(n: number): WorklistCount {
+  return {
+    category: "meetings",
+    considered: n,
+    shown: n,
+    more_available: false,
+  };
+}
+
+/** A meetings count where more meetings were ranked than the page carries. */
+export function boundedMeetings(
+  considered: number,
+  shown: number,
+): WorklistCount {
+  return { category: "meetings", considered, shown, more_available: true };
+}

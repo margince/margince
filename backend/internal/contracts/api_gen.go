@@ -4417,6 +4417,30 @@ func (e CreateStageRequestSemantic) Valid() bool {
 	}
 }
 
+// Defines values for CreateTagRequestColor.
+const (
+	CreateTagRequestColorAmber CreateTagRequestColor = "amber"
+	CreateTagRequestColorRose  CreateTagRequestColor = "rose"
+	CreateTagRequestColorSlate CreateTagRequestColor = "slate"
+	CreateTagRequestColorTeal  CreateTagRequestColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the CreateTagRequestColor enum.
+func (e CreateTagRequestColor) Valid() bool {
+	switch e {
+	case CreateTagRequestColorAmber:
+		return true
+	case CreateTagRequestColorRose:
+		return true
+	case CreateTagRequestColorSlate:
+		return true
+	case CreateTagRequestColorTeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateTaskRequestLinksEntityType.
 const (
 	CreateTaskRequestLinksEntityTypeDeal         CreateTaskRequestLinksEntityType = "deal"
@@ -9310,6 +9334,51 @@ func (e RecordQualifyingEventRequestKind) Valid() bool {
 	}
 }
 
+// Defines values for RecordTagColor.
+const (
+	RecordTagColorAmber RecordTagColor = "amber"
+	RecordTagColorRose  RecordTagColor = "rose"
+	RecordTagColorSlate RecordTagColor = "slate"
+	RecordTagColorTeal  RecordTagColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the RecordTagColor enum.
+func (e RecordTagColor) Valid() bool {
+	switch e {
+	case RecordTagColorAmber:
+		return true
+	case RecordTagColorRose:
+		return true
+	case RecordTagColorSlate:
+		return true
+	case RecordTagColorTeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordTagAssignerKind.
+const (
+	RecordTagAssignerKindAgent  RecordTagAssignerKind = "agent"
+	RecordTagAssignerKindHuman  RecordTagAssignerKind = "human"
+	RecordTagAssignerKindImport RecordTagAssignerKind = "import"
+)
+
+// Valid indicates whether the value is a known member of the RecordTagAssignerKind enum.
+func (e RecordTagAssignerKind) Valid() bool {
+	switch e {
+	case RecordTagAssignerKindAgent:
+		return true
+	case RecordTagAssignerKindHuman:
+		return true
+	case RecordTagAssignerKindImport:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordViewAckEntityType.
 const (
 	RecordViewAckEntityTypeOrganization RecordViewAckEntityType = "organization"
@@ -9496,6 +9565,30 @@ func (e RetentionScope) Valid() bool {
 	case RetentionScopeLeadunconverted:
 		return true
 	case RetentionScopePersonnoConsentNoDeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RowTagColor.
+const (
+	RowTagColorAmber RowTagColor = "amber"
+	RowTagColorRose  RowTagColor = "rose"
+	RowTagColorSlate RowTagColor = "slate"
+	RowTagColorTeal  RowTagColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the RowTagColor enum.
+func (e RowTagColor) Valid() bool {
+	switch e {
+	case RowTagColorAmber:
+		return true
+	case RowTagColorRose:
+		return true
+	case RowTagColorSlate:
+		return true
+	case RowTagColorTeal:
 		return true
 	default:
 		return false
@@ -9741,6 +9834,7 @@ const (
 	SearchResultTypeOrganization SearchResultType = "organization"
 	SearchResultTypePerson       SearchResultType = "person"
 	SearchResultTypeProject      SearchResultType = "project"
+	SearchResultTypeTag          SearchResultType = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchResultType enum.
@@ -9757,6 +9851,8 @@ func (e SearchResultType) Valid() bool {
 	case SearchResultTypePerson:
 		return true
 	case SearchResultTypeProject:
+		return true
+	case SearchResultTypeTag:
 		return true
 	default:
 		return false
@@ -10426,6 +10522,54 @@ func (e StartBackfillRequestWindow) Valid() bool {
 	}
 }
 
+// Defines values for TagColor.
+const (
+	TagColorAmber TagColor = "amber"
+	TagColorRose  TagColor = "rose"
+	TagColorSlate TagColor = "slate"
+	TagColorTeal  TagColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the TagColor enum.
+func (e TagColor) Valid() bool {
+	switch e {
+	case TagColorAmber:
+		return true
+	case TagColorRose:
+		return true
+	case TagColorSlate:
+		return true
+	case TagColorTeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TagDetailColor.
+const (
+	Amber TagDetailColor = "amber"
+	Rose  TagDetailColor = "rose"
+	Slate TagDetailColor = "slate"
+	Teal  TagDetailColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the TagDetailColor enum.
+func (e TagDetailColor) Valid() bool {
+	switch e {
+	case Amber:
+		return true
+	case Rose:
+		return true
+	case Slate:
+		return true
+	case Teal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TaggableEntityType.
 const (
 	TaggableEntityTypeDeal         TaggableEntityType = "deal"
@@ -11008,6 +11152,33 @@ func (e UpdateStageRequestSemantic) Valid() bool {
 	case UpdateStageRequestSemanticOpen:
 		return true
 	case UpdateStageRequestSemanticWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateTagRequestColor.
+const (
+	UpdateTagRequestColorAmber UpdateTagRequestColor = "amber"
+	UpdateTagRequestColorNone  UpdateTagRequestColor = "none"
+	UpdateTagRequestColorRose  UpdateTagRequestColor = "rose"
+	UpdateTagRequestColorSlate UpdateTagRequestColor = "slate"
+	UpdateTagRequestColorTeal  UpdateTagRequestColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the UpdateTagRequestColor enum.
+func (e UpdateTagRequestColor) Valid() bool {
+	switch e {
+	case UpdateTagRequestColorAmber:
+		return true
+	case UpdateTagRequestColorNone:
+		return true
+	case UpdateTagRequestColorRose:
+		return true
+	case UpdateTagRequestColorSlate:
+		return true
+	case UpdateTagRequestColorTeal:
 		return true
 	default:
 		return false
@@ -12156,49 +12327,49 @@ func (e WorklistItemCategory) Valid() bool {
 
 // Defines values for WorklistItemConsequence.
 const (
-	BuyerWaits            WorklistItemConsequence = "buyer_waits"
-	CustomerNeverReceived WorklistItemConsequence = "customer_never_received"
-	DataDrifts            WorklistItemConsequence = "data_drifts"
-	DealDrifts            WorklistItemConsequence = "deal_drifts"
-	DealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
-	LegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
-	MailboxBlind          WorklistItemConsequence = "mailbox_blind"
-	MeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
-	None                  WorklistItemConsequence = "none"
-	PromiseBreaks         WorklistItemConsequence = "promise_breaks"
-	TaskSlips             WorklistItemConsequence = "task_slips"
-	WorkBlocked           WorklistItemConsequence = "work_blocked"
-	YouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
+	WorklistItemConsequenceBuyerWaits            WorklistItemConsequence = "buyer_waits"
+	WorklistItemConsequenceCustomerNeverReceived WorklistItemConsequence = "customer_never_received"
+	WorklistItemConsequenceDataDrifts            WorklistItemConsequence = "data_drifts"
+	WorklistItemConsequenceDealDrifts            WorklistItemConsequence = "deal_drifts"
+	WorklistItemConsequenceDealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
+	WorklistItemConsequenceLegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
+	WorklistItemConsequenceMailboxBlind          WorklistItemConsequence = "mailbox_blind"
+	WorklistItemConsequenceMeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
+	WorklistItemConsequenceNone                  WorklistItemConsequence = "none"
+	WorklistItemConsequencePromiseBreaks         WorklistItemConsequence = "promise_breaks"
+	WorklistItemConsequenceTaskSlips             WorklistItemConsequence = "task_slips"
+	WorklistItemConsequenceWorkBlocked           WorklistItemConsequence = "work_blocked"
+	WorklistItemConsequenceYouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemConsequence enum.
 func (e WorklistItemConsequence) Valid() bool {
 	switch e {
-	case BuyerWaits:
+	case WorklistItemConsequenceBuyerWaits:
 		return true
-	case CustomerNeverReceived:
+	case WorklistItemConsequenceCustomerNeverReceived:
 		return true
-	case DataDrifts:
+	case WorklistItemConsequenceDataDrifts:
 		return true
-	case DealDrifts:
+	case WorklistItemConsequenceDealDrifts:
 		return true
-	case DealSlipsPastClose:
+	case WorklistItemConsequenceDealSlipsPastClose:
 		return true
-	case LegalDeadlineMissed:
+	case WorklistItemConsequenceLegalDeadlineMissed:
 		return true
-	case MailboxBlind:
+	case WorklistItemConsequenceMailboxBlind:
 		return true
-	case MeetingUnprepared:
+	case WorklistItemConsequenceMeetingUnprepared:
 		return true
-	case None:
+	case WorklistItemConsequenceNone:
 		return true
-	case PromiseBreaks:
+	case WorklistItemConsequencePromiseBreaks:
 		return true
-	case TaskSlips:
+	case WorklistItemConsequenceTaskSlips:
 		return true
-	case WorkBlocked:
+	case WorklistItemConsequenceWorkBlocked:
 		return true
-	case YouBelieveItHappened:
+	case WorklistItemConsequenceYouBelieveItHappened:
 		return true
 	default:
 		return false
@@ -13144,6 +13315,27 @@ func (e ListDealsParamsPartnerAttribution) Valid() bool {
 	}
 }
 
+// Defines values for ListDealsParamsTagMode.
+const (
+	ListDealsParamsTagModeAll  ListDealsParamsTagMode = "all"
+	ListDealsParamsTagModeAny  ListDealsParamsTagMode = "any"
+	ListDealsParamsTagModeNone ListDealsParamsTagMode = "none"
+)
+
+// Valid indicates whether the value is a known member of the ListDealsParamsTagMode enum.
+func (e ListDealsParamsTagMode) Valid() bool {
+	switch e {
+	case ListDealsParamsTagModeAll:
+		return true
+	case ListDealsParamsTagModeAny:
+		return true
+	case ListDealsParamsTagModeNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListDealDocumentsParamsCategory.
 const (
 	ListDealDocumentsParamsCategoryContract          ListDealDocumentsParamsCategory = "contract"
@@ -13546,6 +13738,27 @@ func (e ListOrganizationsParamsSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for ListOrganizationsParamsTagMode.
+const (
+	ListOrganizationsParamsTagModeAll  ListOrganizationsParamsTagMode = "all"
+	ListOrganizationsParamsTagModeAny  ListOrganizationsParamsTagMode = "any"
+	ListOrganizationsParamsTagModeNone ListOrganizationsParamsTagMode = "none"
+)
+
+// Valid indicates whether the value is a known member of the ListOrganizationsParamsTagMode enum.
+func (e ListOrganizationsParamsTagMode) Valid() bool {
+	switch e {
+	case ListOrganizationsParamsTagModeAll:
+		return true
+	case ListOrganizationsParamsTagModeAny:
+		return true
+	case ListOrganizationsParamsTagModeNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListOrganizationContactsParamsSort.
 const (
 	LastInteraction      ListOrganizationContactsParamsSort = "last_interaction"
@@ -13638,22 +13851,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -13738,6 +13951,27 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 	case ListPeopleParamsCapturedByKindHuman:
 		return true
 	case ListPeopleParamsCapturedByKindSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListPeopleParamsTagMode.
+const (
+	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
+	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
+	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
+)
+
+// Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
+func (e ListPeopleParamsTagMode) Valid() bool {
+	switch e {
+	case ListPeopleParamsTagModeAll:
+		return true
+	case ListPeopleParamsTagModeAny:
+		return true
+	case ListPeopleParamsTagModeNone:
 		return true
 	default:
 		return false
@@ -13959,6 +14193,7 @@ const (
 	SearchParamsTypesOrganization SearchParamsTypes = "organization"
 	SearchParamsTypesPerson       SearchParamsTypes = "person"
 	SearchParamsTypesProject      SearchParamsTypes = "project"
+	SearchParamsTypesTag          SearchParamsTypes = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchParamsTypes enum.
@@ -13975,6 +14210,8 @@ func (e SearchParamsTypes) Valid() bool {
 	case SearchParamsTypesPerson:
 		return true
 	case SearchParamsTypesProject:
+		return true
+	case SearchParamsTypesTag:
 		return true
 	default:
 		return false
@@ -14136,34 +14373,34 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	All             GetWorklistParamsFilter = "all"
-	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	Decisions       GetWorklistParamsFilter = "decisions"
-	Leads           GetWorklistParamsFilter = "leads"
-	Meetings        GetWorklistParamsFilter = "meetings"
-	System          GetWorklistParamsFilter = "system"
-	Tasks           GetWorklistParamsFilter = "tasks"
+	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
+	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
+	GetWorklistParamsFilterLeads           GetWorklistParamsFilter = "leads"
+	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
+	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case All:
+	case GetWorklistParamsFilterAll:
 		return true
-	case CustomerWaiting:
+	case GetWorklistParamsFilterCustomerWaiting:
 		return true
-	case DealsAtRisk:
+	case GetWorklistParamsFilterDealsAtRisk:
 		return true
-	case Decisions:
+	case GetWorklistParamsFilterDecisions:
 		return true
-	case Leads:
+	case GetWorklistParamsFilterLeads:
 		return true
-	case Meetings:
+	case GetWorklistParamsFilterMeetings:
 		return true
-	case System:
+	case GetWorklistParamsFilterSystem:
 		return true
-	case Tasks:
+	case GetWorklistParamsFilterTasks:
 		return true
 	default:
 		return false
@@ -15175,6 +15412,9 @@ type Approval struct {
 	// TargetEntityType Entity the effect mutates (for precondition re-validation).
 	TargetEntityType *string `json:"target_entity_type,omitempty"`
 
+	// TargetLabel What the target record was CALLED when this proposal was staged, where its type has a name at all. Resolved at staging time and frozen: the record may be renamed, archived or merged before anyone opens the inbox, and a caption re-resolved then would name something the approver was never shown. Absent means the type carries no name, or the row had already gone — a card then says nothing rather than "unknown".
+	TargetLabel *string `json:"target_label,omitempty"`
+
 	// TargetVersion The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036).
 	TargetVersion *int `json:"target_version,omitempty"`
 }
@@ -15505,6 +15745,11 @@ type Attention struct {
 	// Counts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 	// queue's own count under its both-sides-visible rule, kept separate because the
 	// lane shows a bounded slice of it.
+	//
+	// A lane whose count is its bounded page says so in its own description. `needs_you`,
+	// `planned` and `commitments` report the TOTAL beside a bounded page, because a badge
+	// that stops at the cap tells a reader with thirteen that they have twelve — and these
+	// lanes offer no second page to find the thirteenth by.
 	Counts AttentionCounts `json:"counts"`
 
 	// DidNotRun Decisions THIS reader approved whose released work then failed, reading
@@ -15686,6 +15931,11 @@ type AttentionThisMorningState string
 // AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
+//
+// A lane whose count is its bounded page says so in its own description. `needs_you`,
+// `planned` and `commitments` report the TOTAL beside a bounded page, because a badge
+// that stops at the cap tells a reader with thirteen that they have twelve — and these
+// lanes offer no second page to find the thirteenth by.
 type AttentionCounts struct {
 	// AiWorkHealth How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures.
 	AiWorkHealth *int `json:"ai_work_health,omitempty"`
@@ -15702,7 +15952,7 @@ type AttentionCounts struct {
 	// CaptureHealth How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page.
 	CaptureHealth *int `json:"capture_health,omitempty"`
 
-	// Commitments How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
+	// Commitments How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
 
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
@@ -15723,7 +15973,9 @@ type AttentionCounts struct {
 
 	// Notices How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
 	Notices *int `json:"notices,omitempty"`
-	Planned int  `json:"planned"`
+
+	// Planned How many pieces of agreed work are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it. The lane shows the soonest-due dozen; the number says how many there are, which is the reading `needs_you` has always had.
+	Planned int `json:"planned"`
 
 	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
 	RelationshipDecay *int `json:"relationship_decay,omitempty"`
@@ -16765,6 +17017,12 @@ type CaptureSenderDecision struct {
 
 	// Decision What YOU decided instead, absent when you have not.
 	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
+
+	// DeletesAt When this sender's oldest message is destroyed. Present only for a `personal` verdict
+	// you have not overruled — every other kind is withheld rather than destroyed, and
+	// deciding this sender is business cancels the deletion. Later mail from the same sender
+	// runs its own window, so this date names the next message to go rather than all of them.
+	DeletesAt *time.Time `json:"deletes_at,omitempty"`
 
 	// Kind What the classifier concluded — person, role_mailbox, organization_sender, newsletter,
 	// transactional, spam, personal, advisor — or absent when it has not answered yet.
@@ -18834,9 +19092,13 @@ type CreateStageRequestSemantic string
 
 // CreateTagRequest defines model for CreateTagRequest.
 type CreateTagRequest struct {
-	Color *string `json:"color,omitempty"`
-	Name  string  `json:"name"`
+	Color       *CreateTagRequestColor `json:"color,omitempty"`
+	Description *string                `json:"description,omitempty"`
+	Name        string                 `json:"name"`
 }
+
+// CreateTagRequestColor defines model for CreateTagRequest.Color.
+type CreateTagRequestColor string
 
 // CreateTaskRequest What a task needs. Stored as an activity of kind `task`.
 type CreateTaskRequest struct {
@@ -19066,6 +19328,7 @@ type Deal struct {
 	// Stalled Derived — no activity past the threshold (absolute duration).
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
+	Tags      *[]RowTag  `json:"tags,omitempty"`
 	UpdatedAt time.Time  `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
@@ -20271,6 +20534,66 @@ type HeldThread struct {
 // HeldThreadListResponse defines model for HeldThreadListResponse.
 type HeldThreadListResponse struct {
 	Data []HeldThread `json:"data"`
+}
+
+// HiddenBacklog How much waiting work each hiding rule is keeping off one reader's queue, at one
+// instant. Every count is of THREADS, matching what the queue counts: a customer who
+// wrote three times is waiting once.
+type HiddenBacklog struct {
+	// AsOf The instant every figure below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Clear True when nothing is being held back AND the reads were complete. The
+	// guardrail's target, sent as its own field because a number only ever read beside
+	// other numbers becomes decoration — this is what a check asserts on.
+	Clear bool `json:"clear"`
+
+	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
+	// the judgement worth watching: it hides the thread from the WHOLE workspace and
+	// never lifts, so one rep's mistake removes a customer from everybody's day
+	// permanently.
+	NotSales int `json:"not_sales"`
+
+	// PastHorizon Work older than the queue's horizon with no open deal behind it. NOBODY CHOSE
+	// THIS. A customer who wrote four months ago and was never answered is exactly
+	// the failure a sales queue exists to prevent, and the horizon removes them on a
+	// date with no rep having judged anything.
+	//
+	// Bounded at a year: past that a message is history by any reading, and an
+	// unbounded scan would answer a different question at the cost of a full table
+	// read.
+	PastHorizon int `json:"past_horizon"`
+
+	// SetAside Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
+	// least alarming of the four: a snooze lifts on its own moment, so this includes
+	// work that will come back without anybody remembering it. `not_mine` does not
+	// lift at all.
+	SetAside int `json:"set_aside"`
+
+	// Shown What the queue itself would carry. Here so the others read as a proportion
+	// rather than as bare volumes — three hidden against four shown is a broken
+	// queue, and three against three hundred is a rep tidying up.
+	Shown int `json:"shown"`
+
+	// Truncated True when a read stopped at its own scan bound, which makes every figure above
+	// it a FLOOR rather than a count.
+	//
+	// The bound is on the shared statement, so the strict read and every relaxed read
+	// clip at the same number. On a queue already at the cap all five return it, every
+	// difference is zero, and a guardrail without this flag would report a clear
+	// backlog over the installation most likely to be hiding work.
+	//
+	// `clear` is false whenever this is true. That is not a claim that work IS hidden;
+	// it is a refusal to claim the opposite over a question the scan stopped before
+	// settling.
+	Truncated bool `json:"truncated"`
+
+	// Unlinked Inbound mail that qualifies in every other way and is attached to no record the
+	// workspace sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+	// is right — a rep's dentist is not a customer — and it is also where a real
+	// customer lands when capture failed to link their thread. Its own figure for
+	// that reason rather than folded into a total.
+	Unlinked int `json:"unlinked"`
 }
 
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
@@ -22108,6 +22431,24 @@ type MeetingPlanUnknown struct {
 // MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
 type MeetingPlanUnknownKind string
 
+// MergeTagsRequest defines model for MergeTagsRequest.
+type MergeTagsRequest struct {
+	// IntoTagId The tag that survives. Must be live, and must not be this tag.
+	IntoTagId openapi_types.UUID `json:"into_tag_id"`
+}
+
+// MergeTagsResult What the merge did, in the two numbers that differ.
+type MergeTagsResult struct {
+	// Collapsed Records that already carried both. Their duplicate tagging is dropped rather than
+	// moved, so the target gains nothing from them — which is why this is not folded
+	// into `moved`.
+	Collapsed int                `json:"collapsed"`
+	IntoTagId openapi_types.UUID `json:"into_tag_id"`
+
+	// Moved Records that carried only the source and now carry the target.
+	Moved int `json:"moved"`
+}
+
 // Money Money as integer minor-units + ISO-4217 currency. Never a float.
 type Money struct {
 	// AmountMinor Smallest currency unit (e.g. cents). 100000 EUR-cents = €1,000.00.
@@ -22871,6 +23212,7 @@ type Organization struct {
 
 	// Strength Deterministic org-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.
 	Strength  *RelationshipStrength `json:"strength,omitempty"`
+	Tags      *[]RowTag             `json:"tags,omitempty"`
 	UpdatedAt time.Time             `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
@@ -24825,6 +25167,7 @@ type Person struct {
 
 	// Strength Deterministic relationship-strength (features/07 §4). Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.
 	Strength *RelationshipStrength `json:"strength,omitempty"`
+	Tags     *[]RowTag             `json:"tags,omitempty"`
 
 	// Title Denormalized current title; authoritative title is on the employment relationship.
 	Title     *string   `json:"title,omitempty"`
@@ -26787,6 +27130,40 @@ type RecordQualifyingEventRequest struct {
 // one would be a second, unbacked answer to a question the data already settles.
 type RecordQualifyingEventRequestKind string
 
+// RecordTag One tag on one record, with the assignment that put it there.
+type RecordTag struct {
+	Archived   bool      `json:"archived"`
+	AssignedAt time.Time `json:"assigned_at"`
+
+	// AssignedBy Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's.
+	AssignedBy  *RecordTagAssigner `json:"assigned_by,omitempty"`
+	Color       *RecordTagColor    `json:"color,omitempty"`
+	Description *string            `json:"description,omitempty"`
+	Name        string             `json:"name"`
+	TagId       openapi_types.UUID `json:"tag_id"`
+}
+
+// RecordTagColor defines model for RecordTag.Color.
+type RecordTagColor string
+
+// RecordTagAssigner Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's.
+type RecordTagAssigner struct {
+	DisplayName *string               `json:"display_name,omitempty"`
+	Kind        RecordTagAssignerKind `json:"kind"`
+	UserId      *openapi_types.UUID   `json:"user_id,omitempty"`
+}
+
+// RecordTagAssignerKind defines model for RecordTagAssigner.Kind.
+type RecordTagAssignerKind string
+
+// RecordTagsResponse What one record carries. `withheld` says the caller could not read the vocabulary,
+// which is why `data` is empty — a reader has to be able to tell that from a record
+// with no tags on it.
+type RecordTagsResponse struct {
+	Data     []RecordTag `json:"data"`
+	Withheld bool        `json:"withheld"`
+}
+
 // RecordViewAck The per-user "I have seen this record" baseline, after an acknowledgment.
 type RecordViewAck struct {
 	EntityId     openapi_types.UUID      `json:"entity_id"`
@@ -27069,6 +27446,46 @@ type RescheduleSendRequest struct {
 	ScheduledTz string    `json:"scheduled_tz"`
 }
 
+// ResponseMetrics What the workspace did with its waiting work over one window. Two questions: how
+// fast it answered what it answered, and how much it put down instead.
+type ResponseMetrics struct {
+	// Answered How many inbound sales messages got a reply in the window. It is the
+	// denominator `median_minutes` is worth reading against: a fast median over three
+	// answered messages says less about the workspace than a slower one over three
+	// hundred.
+	Answered int `json:"answered"`
+
+	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
+	// judged not sales.
+	//
+	// Counted from the audit record rather than from what is set aside now. A snooze
+	// that lifted and a not_mine somebody withdrew leave no trace in the current
+	// state, so a figure read from there would FALL as readers tidied up — reporting
+	// less judgement the more of it happened.
+	Disposed int `json:"disposed"`
+
+	// DisposedNotSales How many of those were the workspace-wide judgement. Its own figure because it
+	// is the one that costs everybody: the other two hide a row from one reader, this
+	// one hides the conversation from all of them and does not lift.
+	DisposedNotSales int `json:"disposed_not_sales"`
+
+	// From The start of the window, inclusive.
+	From time.Time `json:"from"`
+
+	// MedianMinutes How long the middle answered message waited, in minutes.
+	//
+	// The MEDIAN rather than the mean, for the reason the material bar takes one: a
+	// single message answered after three weeks drags an average past every figure a
+	// reader would recognise, and the question is what a customer TYPICALLY waits.
+	//
+	// Zero when nothing was answered, which `answered` tells apart from a genuine
+	// zero-minute median.
+	MedianMinutes int `json:"median_minutes"`
+
+	// To The end of the window, exclusive — so consecutive windows partition time and a message on a boundary is counted once.
+	To time.Time `json:"to"`
+}
+
 // RestrictedRecord defines model for RestrictedRecord.
 type RestrictedRecord struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
@@ -27192,6 +27609,18 @@ type Role struct {
 type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 }
+
+// RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
+// assignment — who applied it, when — comes from the record's own tags read, because a
+// page of fifty rows does not need fifty assignments to draw a chip.
+type RowTag struct {
+	Color *RowTagColor       `json:"color,omitempty"`
+	Name  string             `json:"name"`
+	TagId openapi_types.UUID `json:"tag_id"`
+}
+
+// RowTagColor defines model for RowTag.Color.
+type RowTagColor string
 
 // RowVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 // Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -28133,18 +28562,52 @@ type StartCompanySiteReadRequest struct {
 
 // Tag A tag. Mirrors the `tag` table.
 type Tag struct {
-	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
-	Color      *string            `json:"color,omitempty"`
-	CreatedAt  *time.Time         `json:"created_at,omitempty"`
-	Id         openapi_types.UUID `json:"id"`
-	Name       string             `json:"name"`
-	UpdatedAt  *time.Time         `json:"updated_at,omitempty"`
+	ArchivedAt  *time.Time         `json:"archived_at,omitempty"`
+	Color       *TagColor          `json:"color,omitempty"`
+	CreatedAt   *time.Time         `json:"created_at,omitempty"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	Name        string             `json:"name"`
+	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
+	Version     *int64             `json:"version,omitempty"`
 }
+
+// TagColor defines model for Tag.Color.
+type TagColor string
+
+// TagDetail One tag with how much of the workspace carries it.
+type TagDetail struct {
+	ArchivedAt  *time.Time         `json:"archived_at,omitempty"`
+	Color       *TagDetailColor    `json:"color,omitempty"`
+	CreatedAt   *time.Time         `json:"created_at,omitempty"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	Name        string             `json:"name"`
+	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
+
+	// Usage How many records of each advertised type carry this tag, counted within what the
+	// reader may see. Lead and project taggings are storage the product does not advertise
+	// and are not counted.
+	Usage   TagUsage `json:"usage"`
+	Version *int64   `json:"version,omitempty"`
+}
+
+// TagDetailColor defines model for TagDetail.Color.
+type TagDetailColor string
 
 // TagListResponse defines model for TagListResponse.
 type TagListResponse struct {
 	Data []Tag    `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// TagUsage How many records of each advertised type carry this tag, counted within what the
+// reader may see. Lead and project taggings are storage the product does not advertise
+// and are not counted.
+type TagUsage struct {
+	Companies int `json:"companies"`
+	Deals     int `json:"deals"`
+	People    int `json:"people"`
 }
 
 // Taggable defines model for Taggable.
@@ -28923,6 +29386,23 @@ type UpdateStageRequest struct {
 // UpdateStageRequestSemantic defines model for UpdateStageRequest.Semantic.
 type UpdateStageRequestSemantic string
 
+// UpdateTagRequest A partial update: an omitted field is left alone.
+//
+// Clearing is spelled as a VALUE, not as null. `color: "none"` removes the colour and
+// `description: ""` removes the text, because a decoded absent field and a decoded null
+// are the same thing in the generated request type — a contract that promised the two
+// meant different things would be promising something no server can honour.
+//
+// The name cannot be cleared. A tag without one cannot be applied or read.
+type UpdateTagRequest struct {
+	Color       *UpdateTagRequestColor `json:"color,omitempty"`
+	Description *string                `json:"description,omitempty"`
+	Name        *string                `json:"name,omitempty"`
+}
+
+// UpdateTagRequestColor defines model for UpdateTagRequest.Color.
+type UpdateTagRequestColor string
+
 // UpdateTeamRequest defines model for UpdateTeamRequest.
 type UpdateTeamRequest struct {
 	// Archived true archives the team (its memberships stop resolving row scope and shares); false restores it.
@@ -29687,6 +30167,28 @@ type Worklist struct {
 	// is where the queue says which. Empty only when no source was read at all.
 	Reach []WorklistReach `json:"reach"`
 
+	// Readings The day's four OUTCOME figures, for the strip above the queue: what money is
+	// drifting, who is waiting on an answer, how much new business is in hand, and how
+	// much routine work is queued behind a decision.
+	//
+	// These are not the filter pills. `counts` says how many items of a kind the queue
+	// holds; these say what those items MEAN for the day, which is why one of them is a
+	// sum of money rather than a tally. Both are on the page because a rep asks two
+	// different questions — "what is there" and "what is at stake".
+	//
+	// Every figure describes the same set `counts.considered` describes: what this read
+	// weighed AFTER the scope narrowing and BEFORE the category filter, the fold and the
+	// page cut. That is the only set for which the numbers are stable — computed over
+	// the page, the strip would shrink as a reader walked the queue and read as work
+	// disappearing; computed after the filter, opening a pill would empty the other
+	// three.
+	//
+	// `more_available` carries the same honesty `WorklistCount` carries, for the same
+	// reason: a source read to its work bound makes every figure here a FLOOR rather
+	// than a total, and a strip stating "3 buyers waiting" over a scan that stopped
+	// early tells a rep the opposite of the truth.
+	Readings WorklistReadings `json:"readings"`
+
 	// Scope Whose work this read answered for.
 	Scope WorklistScope `json:"scope"`
 
@@ -30110,6 +30612,73 @@ type WorklistReach struct {
 
 // WorklistReachSource Which producer these numbers are about. The same vocabulary as an item source.
 type WorklistReachSource string
+
+// WorklistReadings The day's four OUTCOME figures, for the strip above the queue: what money is
+// drifting, who is waiting on an answer, how much new business is in hand, and how
+// much routine work is queued behind a decision.
+//
+// These are not the filter pills. `counts` says how many items of a kind the queue
+// holds; these say what those items MEAN for the day, which is why one of them is a
+// sum of money rather than a tally. Both are on the page because a rep asks two
+// different questions — "what is there" and "what is at stake".
+//
+// Every figure describes the same set `counts.considered` describes: what this read
+// weighed AFTER the scope narrowing and BEFORE the category filter, the fold and the
+// page cut. That is the only set for which the numbers are stable — computed over
+// the page, the strip would shrink as a reader walked the queue and read as work
+// disappearing; computed after the filter, opening a pill would empty the other
+// three.
+//
+// `more_available` carries the same honesty `WorklistCount` carries, for the same
+// reason: a source read to its work bound makes every figure here a FLOOR rather
+// than a total, and a strip stating "3 buyers waiting" over a scan that stopped
+// early tells a rep the opposite of the truth.
+type WorklistReadings struct {
+	// BuyerReplies How many customers have written and are waiting on an answer.
+	BuyerReplies int `json:"buyer_replies"`
+
+	// MoreAvailable True when any source behind any figure here was read to its work bound, so
+	// every number above is a floor. Set once for the strip rather than per reading:
+	// the four are read as one row, and a reader who cannot trust one of them cannot
+	// trust the row.
+	MoreAvailable bool `json:"more_available"`
+
+	// Prospecting How much new business is in hand and owed a first response.
+	Prospecting int `json:"prospecting"`
+
+	// RevenueAtRiskMinor What the drifting deals are worth, summed over the deals this read PRICED, in
+	// the currency `revenue_currency` names.
+	//
+	// Null when no deal at risk could be priced — no amount recorded, or no stored
+	// rate for its currency. Null is not zero: zero says the pipeline is safe, and
+	// absence says nobody can tell. A deal the estate cannot price is left OUT of
+	// the sum rather than counted as nothing, so a partly priced day reports what it
+	// could price and says so through `revenue_currency`.
+	//
+	// It is a FLOOR on what is drifting, never a total, and two things put work
+	// outside it. A deal nobody could price is one. The other is that only the
+	// at-risk lane goes through the currency conversion, so a deal reaching the page
+	// from the overnight brief draws an amount on its own card and adds nothing
+	// here. Both are why `more_available` matters: read this figure as "at least
+	// this much", and read the `deals_at_risk` entry in `counts` for how many deals
+	// stand behind it.
+	RevenueAtRiskMinor *int64 `json:"revenue_at_risk_minor"`
+
+	// RevenueCurrency The currency `revenue_at_risk_minor` is stated in — the installation's base
+	// currency, once the amounts went through the conversion seam.
+	//
+	// Null when they did not, which makes the sum a total of raw minor units in no
+	// one currency. A client must not format a figure whose units it cannot name:
+	// with this absent the amount is not money yet, and drawing it as money is the
+	// error the conversion seam exists to prevent.
+	RevenueCurrency *string `json:"revenue_currency,omitempty"`
+
+	// Review How much routine work is queued behind a decision. Counted before the fold, so
+	// a hundred alike approvals read as a hundred here even where the queue draws
+	// them as one row — the strip says how much work there is, and the queue says
+	// how much reading it costs.
+	Review int `json:"review"`
+}
 
 // WorklistReason One fact behind an item's rank, as a typed pair rather than a sentence: the
 // product ships three languages and a sentence composed here would reach a German
@@ -31491,6 +32060,19 @@ type ListDealsParams struct {
 
 	// PartnerAttribution Deals a partner brought (`sourced`) or merely helped (`influenced`).
 	PartnerAttribution *ListDealsParamsPartnerAttribution `form:"partner_attribution,omitempty" json:"partner_attribution,omitempty"`
+
+	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
+	//
+	// By ID, not by name: a name is what a person types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
+	//
+	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+	TagMode *ListDealsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 }
 
 // ListDealsParamsStatus defines parameters for ListDeals.
@@ -31498,6 +32080,9 @@ type ListDealsParamsStatus string
 
 // ListDealsParamsPartnerAttribution defines parameters for ListDeals.
 type ListDealsParamsPartnerAttribution string
+
+// ListDealsParamsTagMode defines parameters for ListDeals.
+type ListDealsParamsTagMode string
 
 // CreateDealParams defines parameters for CreateDeal.
 type CreateDealParams struct {
@@ -32466,6 +33051,19 @@ type ListOrganizationsParams struct {
 	// SizeBand How many people work there (DM-VOCAB-2).
 	SizeBand *ListOrganizationsParamsSizeBand `form:"size_band,omitempty" json:"size_band,omitempty"`
 	Q        *string                          `form:"q,omitempty" json:"q,omitempty"`
+
+	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
+	//
+	// By ID, not by name: a name is what a person types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
+	//
+	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+	TagMode *ListOrganizationsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 }
 
 // ListOrganizationsParamsCapturedByKind defines parameters for ListOrganizations.
@@ -32479,6 +33077,9 @@ type ListOrganizationsParamsRelationshipType string
 
 // ListOrganizationsParamsSizeBand defines parameters for ListOrganizations.
 type ListOrganizationsParamsSizeBand string
+
+// ListOrganizationsParamsTagMode defines parameters for ListOrganizations.
+type ListOrganizationsParamsTagMode string
 
 // CreateOrganizationParams defines parameters for CreateOrganization.
 type CreateOrganizationParams struct {
@@ -33105,8 +33706,18 @@ type ListPeopleParams struct {
 	// Q Full-text query over name/title (tsvector).
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
-	// Tag Filter by tag name.
-	Tag *string `form:"tag,omitempty" json:"tag,omitempty"`
+	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
+	//
+	// By ID, not by name: a name is what a person types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
+	//
+	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+	TagMode *ListPeopleParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 
 	// OrganizationId People who work at this account, by their CURRENT PRIMARY employment edge
 	// (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
@@ -33117,6 +33728,9 @@ type ListPeopleParams struct {
 
 // ListPeopleParamsCapturedByKind defines parameters for ListPeople.
 type ListPeopleParamsCapturedByKind string
+
+// ListPeopleParamsTagMode defines parameters for ListPeople.
+type ListPeopleParamsTagMode string
 
 // CreatePersonParams defines parameters for CreatePerson.
 type CreatePersonParams struct {
@@ -34216,6 +34830,16 @@ type ListTagsParams struct {
 	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 }
 
+// UpdateTagParams defines parameters for UpdateTag.
+type UpdateTagParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // CreateTaskParams defines parameters for CreateTask.
 type CreateTaskParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -34762,6 +35386,14 @@ type GetWorklistParamsScope string
 
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
+
+// GetResponseMetricsParams defines parameters for GetResponseMetrics.
+type GetResponseMetricsParams struct {
+	// Days How many days back the window reaches. Capped at 90: past that the figure stops
+	// describing how the workspace works now and starts averaging over a change in
+	// how it works.
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
 
 // LogActivityJSONRequestBody defines body for LogActivity for application/json ContentType.
 type LogActivityJSONRequestBody = CreateActivityRequest
@@ -35345,11 +35977,17 @@ type UpdateStageJSONRequestBody = UpdateStageRequest
 // CreateTagJSONRequestBody defines body for CreateTag for application/json ContentType.
 type CreateTagJSONRequestBody = CreateTagRequest
 
+// UpdateTagJSONRequestBody defines body for UpdateTag for application/json ContentType.
+type UpdateTagJSONRequestBody = UpdateTagRequest
+
 // RemoveTagJSONRequestBody defines body for RemoveTag for application/json ContentType.
 type RemoveTagJSONRequestBody = ApplyTagRequest
 
 // ApplyTagJSONRequestBody defines body for ApplyTag for application/json ContentType.
 type ApplyTagJSONRequestBody = ApplyTagRequest
+
+// MergeTagsJSONRequestBody defines body for MergeTags for application/json ContentType.
+type MergeTagsJSONRequestBody = MergeTagsRequest
 
 // CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
 type CreateTaskJSONRequestBody = CreateTaskRequest
@@ -37415,6 +38053,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "status")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["updated_at"]; found {
 		err = json.Unmarshal(raw, &a.UpdatedAt)
 		if err != nil {
@@ -37653,6 +38299,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 	object["status"], err = json.Marshal(a.Status)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'status': %w", err)
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
+		}
 	}
 
 	object["updated_at"], err = json.Marshal(a.UpdatedAt)
@@ -39997,6 +40650,14 @@ func (a *Organization) UnmarshalJSON(b []byte) error {
 		delete(object, "strength")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["updated_at"]; found {
 		err = json.Unmarshal(raw, &a.UpdatedAt)
 		if err != nil {
@@ -40234,6 +40895,13 @@ func (a Organization) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
+		}
+	}
+
 	object["updated_at"], err = json.Marshal(a.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
@@ -40454,6 +41122,14 @@ func (a *Person) UnmarshalJSON(b []byte) error {
 		delete(object, "strength")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["title"]; found {
 		err = json.Unmarshal(raw, &a.Title)
 		if err != nil {
@@ -40632,6 +41308,13 @@ func (a Person) MarshalJSON() ([]byte, error) {
 		object["strength"], err = json.Marshal(a.Strength)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'strength': %w", err)
+		}
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
 		}
 	}
 
@@ -43390,7 +44073,7 @@ type ServerInterface interface {
 	// Lift an exclusion.
 	// (DELETE /capture/exclusions/{id})
 	DeleteCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id)
-	// Destroy the mail one of your own rules matched.
+	// Destroy the mail one exclusion rule matched.
 	// (POST /capture/exclusions/{id}/purge)
 	PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams)
 	// What your mailbox is holding right now.
@@ -43567,6 +44250,9 @@ type ServerInterface interface {
 	// Update a data-subject request's status / assignee / resolution.
 	// (PATCH /data-subject-requests/{id})
 	UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Download the Art. 15 package an access request asks for.
+	// (GET /data-subject-requests/{id}/package)
+	DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List Deal Rooms (live by default; cursor-paginated).
 	// (GET /deal-rooms)
 	ListDealRooms(w http.ResponseWriter, r *http.Request, params ListDealRoomsParams)
@@ -44422,6 +45108,9 @@ type ServerInterface interface {
 	// Revoke a manual record grant (human-only).
 	// (DELETE /record-grants/{id})
 	RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams)
+	// The tags on one record, and who put them there.
+	// (GET /records/{entity_type}/{entity_id}/tags)
+	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
 	// Assembled context (related evidence) for one record.
 	// (GET /records/{entity_type}/{id}/context)
 	GetRecordContext(w http.ResponseWriter, r *http.Request, entityType string, id Id, params GetRecordContextParams)
@@ -44548,12 +45237,24 @@ type ServerInterface interface {
 	// Archive a tag.
 	// (DELETE /tags/{id})
 	ArchiveTag(w http.ResponseWriter, r *http.Request, id Id)
+	// Read one tag, with how much of the workspace carries it.
+	// (GET /tags/{id})
+	GetTag(w http.ResponseWriter, r *http.Request, id Id)
+	// Rename, recolour or describe a tag.
+	// (PATCH /tags/{id})
+	UpdateTag(w http.ResponseWriter, r *http.Request, id Id, params UpdateTagParams)
 	// Take one tag off one entity, leaving the tag itself in place.
 	// (DELETE /tags/{id}/apply)
 	RemoveTag(w http.ResponseWriter, r *http.Request, id Id)
 	// Apply a tag to an entity (person/org/deal/lead/project).
 	// (POST /tags/{id}/apply)
 	ApplyTag(w http.ResponseWriter, r *http.Request, id Id)
+	// Fold this tag into another, moving every record that carries it.
+	// (POST /tags/{id}/merge)
+	MergeTags(w http.ResponseWriter, r *http.Request, id Id)
+	// Bring an archived tag back into the vocabulary.
+	// (POST /tags/{id}/restore)
+	RestoreTag(w http.ResponseWriter, r *http.Request, id Id)
 	// Create a task — a commitment with an owner, on the records it is about.
 	// (POST /tasks)
 	CreateTask(w http.ResponseWriter, r *http.Request, params CreateTaskParams)
@@ -44728,6 +45429,12 @@ type ServerInterface interface {
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
+	// What the queue is not showing, and which rule is holding it back.
+	// (GET /worklist/hidden)
+	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
+	// How fast the workspace answers, and how much of the queue it puts down.
+	// (GET /worklist/response)
+	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
 	// (GET /worklist/team)
 	GetTeamBoard(w http.ResponseWriter, r *http.Request)
@@ -45343,7 +46050,7 @@ func (_ Unimplemented) DeleteCaptureExclusion(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Destroy the mail one of your own rules matched.
+// Destroy the mail one exclusion rule matched.
 // (POST /capture/exclusions/{id}/purge)
 func (_ Unimplemented) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -45694,6 +46401,12 @@ func (_ Unimplemented) CreateDataSubjectRequest(w http.ResponseWriter, r *http.R
 // Update a data-subject request's status / assignee / resolution.
 // (PATCH /data-subject-requests/{id})
 func (_ Unimplemented) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download the Art. 15 package an access request asks for.
+// (GET /data-subject-requests/{id}/package)
+func (_ Unimplemented) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47407,6 +48120,12 @@ func (_ Unimplemented) RevokeRecordGrant(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The tags on one record, and who put them there.
+// (GET /records/{entity_type}/{entity_id}/tags)
+func (_ Unimplemented) GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Assembled context (related evidence) for one record.
 // (GET /records/{entity_type}/{id}/context)
 func (_ Unimplemented) GetRecordContext(w http.ResponseWriter, r *http.Request, entityType string, id Id, params GetRecordContextParams) {
@@ -47659,6 +48378,18 @@ func (_ Unimplemented) ArchiveTag(w http.ResponseWriter, r *http.Request, id Id)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read one tag, with how much of the workspace carries it.
+// (GET /tags/{id})
+func (_ Unimplemented) GetTag(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename, recolour or describe a tag.
+// (PATCH /tags/{id})
+func (_ Unimplemented) UpdateTag(w http.ResponseWriter, r *http.Request, id Id, params UpdateTagParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Take one tag off one entity, leaving the tag itself in place.
 // (DELETE /tags/{id}/apply)
 func (_ Unimplemented) RemoveTag(w http.ResponseWriter, r *http.Request, id Id) {
@@ -47668,6 +48399,18 @@ func (_ Unimplemented) RemoveTag(w http.ResponseWriter, r *http.Request, id Id) 
 // Apply a tag to an entity (person/org/deal/lead/project).
 // (POST /tags/{id}/apply)
 func (_ Unimplemented) ApplyTag(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Fold this tag into another, moving every record that carries it.
+// (POST /tags/{id}/merge)
+func (_ Unimplemented) MergeTags(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Bring an archived tag back into the vocabulary.
+// (POST /tags/{id}/restore)
+func (_ Unimplemented) RestoreTag(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -48016,6 +48759,18 @@ func (_ Unimplemented) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Reques
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the queue is not showing, and which rule is holding it back.
+// (GET /worklist/hidden)
+func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How fast the workspace answers, and how much of the queue it puts down.
+// (GET /worklist/response)
+func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -54207,6 +54962,38 @@ func (siw *ServerInterfaceWrapper) UpdateDataSubjectRequest(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// DownloadDataSubjectPackage operation middleware
+func (siw *ServerInterfaceWrapper) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadDataSubjectPackage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDealRooms operation middleware
 func (siw *ServerInterfaceWrapper) ListDealRooms(w http.ResponseWriter, r *http.Request) {
 
@@ -55497,6 +56284,32 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_attribution"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_attribution", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_mode", r.URL.Query(), &params.TagMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
 		}
 		return
 	}
@@ -60447,6 +61260,32 @@ func (siw *ServerInterfaceWrapper) ListOrganizations(w http.ResponseWriter, r *h
 		return
 	}
 
+	// ------------- Optional query parameter "tag_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_mode", r.URL.Query(), &params.TagMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListOrganizations(w, r, params)
 	}))
@@ -63459,15 +64298,28 @@ func (siw *ServerInterfaceWrapper) ListPeople(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// ------------- Optional query parameter "tag" -------------
+	// ------------- Optional query parameter "tag_id" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag", r.URL.Query(), &params.Tag, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_id"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_mode", r.URL.Query(), &params.TagMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
 		}
 		return
 	}
@@ -67011,6 +67863,49 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetRecordTags operation middleware
+func (siw *ServerInterfaceWrapper) GetRecordTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type" -------------
+	var entityType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type", chi.URLParam(r, "entity_type"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", chi.URLParam(r, "entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecordTags(w, r, entityType, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetRecordContext operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordContext(w http.ResponseWriter, r *http.Request) {
 
@@ -69071,6 +69966,98 @@ func (siw *ServerInterfaceWrapper) ArchiveTag(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetTag operation middleware
+func (siw *ServerInterfaceWrapper) GetTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTag(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateTag operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateTagParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTag(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveTag operation middleware
 func (siw *ServerInterfaceWrapper) RemoveTag(w http.ResponseWriter, r *http.Request) {
 
@@ -69130,6 +70117,74 @@ func (siw *ServerInterfaceWrapper) ApplyTag(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ApplyTag(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MergeTags operation middleware
+func (siw *ServerInterfaceWrapper) MergeTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeTags(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreTag operation middleware
+func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreTag(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71748,6 +72803,69 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetHiddenBacklog operation middleware
+func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHiddenBacklog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetResponseMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetResponseMetricsParams
+
+	// ------------- Optional query parameter "days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "days", r.URL.Query(), &params.Days, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetResponseMetrics(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTeamBoard operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 
@@ -72362,6 +73480,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/data-subject-requests/{id}", wrapper.UpdateDataSubjectRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/data-subject-requests/{id}/package", wrapper.DownloadDataSubjectPackage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deal-rooms", wrapper.ListDealRooms)
@@ -73219,6 +74340,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/record-grants/{id}", wrapper.RevokeRecordGrant)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{id}/context", wrapper.GetRecordContext)
 	})
 	r.Group(func(r chi.Router) {
@@ -73345,10 +74469,22 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/tags/{id}", wrapper.ArchiveTag)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tags/{id}", wrapper.GetTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/tags/{id}", wrapper.UpdateTag)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/tags/{id}/apply", wrapper.RemoveTag)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tags/{id}/apply", wrapper.ApplyTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tags/{id}/merge", wrapper.MergeTags)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tags/{id}/restore", wrapper.RestoreTag)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tasks", wrapper.CreateTask)
@@ -73523,6 +74659,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/response", wrapper.GetResponseMetrics)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)

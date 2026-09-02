@@ -18,6 +18,12 @@ import (
 )
 
 // tagsSection reads the tags applied to the account.
+//
+// A SECOND reader of the same fact, kept deliberately and only until the
+// company panel moves onto GET /records/{type}/{id}/tags — the one read that
+// serves person, company and deal alike and carries the assigner this one
+// cannot. Removing it here first would break the shipped panel, which still
+// draws from this block. It goes when the panel does.
 func tagsSection(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]crmcontracts.Tag, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT t.id, t.name, t.color, t.created_at, t.updated_at, t.archived_at

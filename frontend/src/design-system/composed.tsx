@@ -19,9 +19,14 @@ import {
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+
+type RowTag = components["schemas"]["RowTag"];
+
+import type { components } from "../api/schema";
 import { Avatar, Badge, Button } from "./atoms";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { FieldGuard } from "./rbac";
+import { RowTags } from "./rowtags";
 import { useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
 import "./composed.css";
@@ -84,6 +89,9 @@ export type BoardDeal = BoardRecord & {
   valueMinor: number | null;
   currency: string | null;
   ageMs: number;
+  /** How this deal is filed. The board draws the same chip strip a list row
+   *  does, so a reader moving between the two reads one thing one way. */
+  tags?: readonly RowTag[];
   stalled?: boolean;
   singleThreaded?: boolean;
   staged?: boolean;
@@ -206,6 +214,7 @@ export function DealCard({
     >
       <span className="deal-name">{deal.name}</span>
       <DealCardCompany deal={deal} />
+      <RowTags tags={deal.tags} />
       <span className="deal-meta">
         <span className="deal-value">
           {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}
@@ -1035,6 +1044,56 @@ function directionClass(direction: TimelineEntry["direction"]): string {
   return direction === "inbound" ? "tl-in" : "";
 }
 
+function noteClass(entry: TimelineEntry): string {
+  return entry.kind === "note" ? "tl-note" : "";
+}
+
+// A conversation is an exchange somebody can answer: mail, or a message on a
+// connected transport. Calls, meetings and notes are events and asides. ONE
+// spelling — the Conversations cut and the whose-move flag both ask it, and
+// two copies would let a new transport join one answer and not the other.
+const CONVERSATION_KINDS: ReadonlySet<string> = new Set(["email", "message"]);
+
+export function isConversationKind(kind: string): boolean {
+  return CONVERSATION_KINDS.has(kind);
+}
+
+/**
+ * MoveFlag is whose move a conversation is waiting on, read off its newest
+ * message: their word standing last means the move is ours. ONE spelling for
+ * every cut — the same chip on the row in the full chronology and in the
+ * Conversations reading, because a thread that read "your move" on one cut
+ * and said nothing on the other would be two claims about one conversation.
+ *
+ * Only on the row that STANDS FOR the conversation — a collapsed thread, or
+ * a lone message — never on the members inside an expanded thread, where
+ * every reply would otherwise carry a verdict about the whole exchange.
+ */
+// Whether the entry carries a direction a move can be read off — the guard
+// both flag sites share, so a wrapper cannot render an empty chip row.
+function conversationDirection(
+  entry: TimelineEntry,
+): "inbound" | "outbound" | undefined {
+  if (!CONVERSATION_KINDS.has(entry.kind)) {
+    return undefined;
+  }
+  return entry.direction === "inbound" || entry.direction === "outbound"
+    ? entry.direction
+    : undefined;
+}
+
+function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  const t = useT();
+  const direction = conversationDirection(entry);
+  if (direction === "inbound") {
+    return <Badge tone="warn">{t("convo.yourMove")}</Badge>;
+  }
+  if (direction === "outbound") {
+    return <Badge quiet>{t("convo.waitingOnThem")}</Badge>;
+  }
+  return null;
+}
+
 function TimelineList({
   entries,
   zone,
@@ -1074,7 +1133,12 @@ export function GroupedTimelineList({
     <ul className="timeline">
       {groups.map((group) =>
         group.kind === "single" ? (
-          <TimelineRow key={group.id} entry={group.entries[0]} zone={zone} />
+          <TimelineRow
+            key={group.id}
+            entry={group.entries[0]}
+            zone={zone}
+            flag={<MoveFlag entry={group.entries[0]} />}
+          />
         ) : (
           <TimelineGroupRow
             key={group.id}
@@ -1132,7 +1196,23 @@ function TimelineGroupRow({
         </span>
       </span>
       <div className="tl-body">
+        {/* Whose move the conversation waits on, on the row that stands for
+            it. A bulk group is one outbound send with no reply expected, so
+            it carries no claim. */}
+        {group.kind === "thread" && conversationDirection(newest) && (
+          <span className="tl-head">
+            <MoveFlag entry={newest} />
+          </span>
+        )}
         <span className="tl-title">{newest.title}</span>
+        {/* The newest message's own words, while the thread is closed: what
+            the conversation is ABOUT, without opening it. Expanded, the
+            members carry their bodies themselves and a preview above them
+            would say the newest one twice. Never for a withheld entry — a
+            summary row must not show a reader words the row itself refuses. */}
+        {!open && newest.body && !newest.withheld && (
+          <TimelineText text={newest.body} email={newest.kind === "email"} />
+        )}
         <span className="tl-meta">
           <span className="tl-group-count">
             {groupCountLabel(group, locale)}
@@ -1207,11 +1287,26 @@ function directionPhrase(
 export function TimelineRow({
   entry,
   zone,
-}: Readonly<{ entry: TimelineEntry; zone: string }>) {
+  flag,
+}: Readonly<{
+  entry: TimelineEntry;
+  zone: string;
+  // A chip qualifying the whole exchange this row STANDS FOR — the whose-move
+  // flag on a lone message. Passed by the grouped list rather than derived
+  // here, because the same row rendered as a member of an expanded thread
+  // must not carry a verdict about the conversation it is one reply in.
+  flag?: ReactNode;
+}>) {
   const { locale } = useLocale();
   const t = useT();
+  // A note is the rep's own words about the record, not an exchange with it,
+  // and the row says so: its body sits on a plate of its own instead of
+  // running in the message rhythm around it.
+  const rowClass = [directionClass(entry.direction), noteClass(entry)]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <li className={directionClass(entry.direction)}>
+    <li className={rowClass}>
       {/* The date leads the row, in its own gutter. A chronology is read down
           the dates — a reader looking for "what happened in August" scans one
           column rather than the end of every line — and the mono face keeps
@@ -1250,6 +1345,7 @@ export function TimelineRow({
             <span className="tl-direction">{directionPhrase(entry, t)}</span>
           )}
           {entry.via}
+          {flag}
         </span>
         {entry.withheld ? (
           <span className="tl-title tl-withheld">
@@ -1259,7 +1355,11 @@ export function TimelineRow({
         ) : (
           <span className="tl-title">{entry.title}</span>
         )}
-        {entry.body && (
+        {/* Never for a withheld entry: the title above already says the
+            content is for participants only, and a row must not show the
+            words it just refused. The server withholds bodies upstream; this
+            is the row keeping its own promise whatever it is handed. */}
+        {entry.body && !entry.withheld && (
           <TimelineText text={entry.body} email={entry.kind === "email"} />
         )}
         {entry.detail}

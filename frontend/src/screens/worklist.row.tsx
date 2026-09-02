@@ -22,6 +22,7 @@ import {
   dealFactsText,
   itemTitle,
   moveHref,
+  moveOpensComposer,
   reasonText,
   rowHref,
 } from "./worklist.copy";
@@ -54,9 +55,18 @@ export function WorklistRow({
   // server already decided as of a fixed instant.
   asOf: string;
   // Whether the pane beside the queue is about this row.
-  selected: boolean;
-  onSelect: () => void;
-  onReview: () => void;
+  //
+  // BOTH CALLBACKS ARE OPTIONAL, because one surface has no pane. The Brief
+  // shows the head of this same queue on the page a rep opens first, and it has
+  // no second column to open a row INTO — so passing a no-op would draw a rank
+  // button that answers nothing, which is exactly the dead control the comment
+  // on that button warns about. Absent means the affordance is not drawn and
+  // the rank reads as the number it is.
+  selected?: boolean;
+  onSelect?: () => void;
+  // Where a grouped row is reviewed. Also a filter change the Brief cannot
+  // make: it shows a fixed cut and has no filter to move.
+  onReview?: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -82,30 +92,12 @@ export function WorklistRow({
         selected ? "worklist-row worklist-row-selected" : "worklist-row"
       }
     >
-      {/* The way INTO the pane. A button on the rank rather than the whole row
-          being pressable: the row already holds links and verbs, and a control
-          wrapping controls is a press whose target the reader has to guess. */}
-      <button
-        type="button"
-        className="worklist-rank-select"
-        aria-pressed={selected}
-        // Names the ROW, not the verb. Every rank button carrying the same
-        // label made them indistinguishable to anybody navigating by name, and
-        // overrode the visible digit — which is the one thing that told them
-        // apart on screen.
-        aria-label={t("worklist.pane.openRow", {
-          position: formatNumber(position, locale),
-          title,
-        })}
-        onClick={onSelect}
-      >
-        {/* The rank is the page's central claim, so it is readable rather than
-          decorative: the list element carries the order for a screen reader and
-          the number states it for everybody else. */}
-        <span className="t-caption worklist-rank">
-          {formatNumber(position, locale)}
-        </span>
-      </button>
+      <Rank
+        position={position}
+        title={title}
+        selected={selected}
+        onSelect={onSelect}
+      />
       <div className="worklist-row-text">
         <p className="t-body worklist-row-title">
           {href ? (
@@ -146,7 +138,7 @@ export function WorklistRow({
             has nothing below it to beat. */}
         {above && <p className="t-caption worklist-row-above">{above}</p>}
       </div>
-      {item.batch ? (
+      {item.batch && onReview ? (
         <BatchVerb onReview={onReview} />
       ) : (
         <RowVerbs item={item} href={href} move={moveHref(item)} />
@@ -167,6 +159,62 @@ export function WorklistRow({
         <NoticeAcknowledge id={item.id} />
       )}
     </PanelRow>
+  );
+}
+
+/**
+ * The rank, and the way INTO the pane where there is one.
+ *
+ * A button on the rank rather than the whole row being pressable: the row
+ * already holds links and verbs, and a control wrapping controls is a press
+ * whose target the reader has to guess.
+ *
+ * Without `onSelect` it is a plain number. The Brief draws these rows on a page
+ * with no second column, so a button there would open nothing — and a control
+ * that answers nothing is worse than no control, because a reader presses it
+ * once and learns the page lies about what is pressable.
+ */
+function Rank({
+  position,
+  title,
+  selected,
+  onSelect,
+}: Readonly<{
+  position: number;
+  title: string;
+  selected?: boolean;
+  onSelect?: () => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  // The rank is the page's central claim, so it is readable rather than
+  // decorative: the list element carries the order for a screen reader and the
+  // number states it for everybody else.
+  const digit = (
+    <span className="t-caption worklist-rank">
+      {formatNumber(position, locale)}
+    </span>
+  );
+  if (!onSelect) {
+    return digit;
+  }
+  return (
+    <button
+      type="button"
+      className="worklist-rank-select"
+      aria-pressed={selected ?? false}
+      // Names the ROW, not the verb. Every rank button carrying the same label
+      // made them indistinguishable to anybody navigating by name, and overrode
+      // the visible digit — which is the one thing that told them apart on
+      // screen.
+      aria-label={t("worklist.pane.openRow", {
+        position: formatNumber(position, locale),
+        title,
+      })}
+      onClick={onSelect}
+    >
+      {digit}
+    </button>
   );
 }
 
@@ -310,7 +358,16 @@ function RowVerbs({
           standing rather than on a screen they have to go and find. */}
       {move && (
         <a className="link-button" href={move}>
-          {t("worklist.verb.draft_reply")}
+          {/* THE LABEL MOVES WITH THE ROUTE. Where the address opens the
+              composer the verb is the act; where it only reaches the record it
+              says so, because a label promising a draft over a link that merely
+              navigates is the overstatement this row refused to make until the
+              route existed. */}
+          {t(
+            moveOpensComposer(item)
+              ? "worklist.verb.draft_reply_now"
+              : "worklist.verb.draft_reply",
+          )}
         </a>
       )}
       {verbs.map(({ action, destination }) => (

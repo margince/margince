@@ -428,6 +428,13 @@ func (a CounterpartyVerdictWorkspaceArgs) WorkspaceID() ids.UUID { return a.Work
 // the pass depends on.
 type counterpartyVerdictWorkspaceWorker struct {
 	engine *CounterpartyVerdictEngine
+	// purger destroys personal mail past its window. Nil in a role with no
+	// object store, and the stage is then skipped rather than half-done.
+	purger *CapturePurger
+	// backlogNotice tells a seat their capture backlog stopped moving. Nil in a
+	// role composed without notices, and the stage is then skipped.
+	backlogNotice BacklogNotifier
+	log           *slog.Logger
 }
 
 func (w *counterpartyVerdictWorkspaceWorker) Work(ctx context.Context, job *river.Job[CounterpartyVerdictWorkspaceArgs]) error {
@@ -460,5 +467,27 @@ func (w *counterpartyVerdictWorkspaceWorker) Work(ctx context.Context, job *rive
 	if err := w.engine.HideNoiseStragglersWorkspace(wsCtx); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return jobs.FaultContext(ctx, w.engine.RedactNoiseWorkspace(wsCtx, capture.NoiseUndoWindow, 0))
+	if err := w.engine.RedactNoiseWorkspace(wsCtx, capture.NoiseUndoWindow, 0); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	// After the stages that MOVE the ledger, so a backlog this pass just cleared
+	// is not reported as stalled on its way out.
+	if err := w.engine.NoticeBacklogStalledWorkspace(wsCtx, w.backlogNotice); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	// Last, and after redaction: a `personal` verdict destroys rather than
+	// hides, so it is the most irreversible thing this pass does and it runs
+	// once everything reversible has settled.
+	if w.purger == nil {
+		return nil
+	}
+	destroyed, err := w.purger.SweepPersonalMail(wsCtx, capture.DefaultPersonalPurgeWindows())
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if destroyed > 0 && w.log != nil {
+		w.log.InfoContext(ctx, "counterparty verdict: destroyed personal mail past its window",
+			"workspace", job.Args.Workspace.String(), "messages", destroyed)
+	}
+	return nil
 }

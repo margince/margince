@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The account's work in flight: one line per open deal, one per live project,
-// each written from that record's own facts.
+// The account's work in flight: one line per open deal, written from that
+// record's own facts.
 //
 // This replaced a written account brief. On an account carrying several
-// engagements the brief blended them — correspondence about one project became
-// a sentence about another, and a figure read out of the blend had nowhere to
-// be checked. So a deal and a project are two stories here, and the structure
-// says so: two groups under their own subheads, never interleaved, and the
-// header above them counts and nothing else.
+// engagements the brief blended them — correspondence about one deal became a
+// sentence about another, and a figure read out of the blend had nowhere to be
+// checked. So every line is one record's own story, and the header above them
+// counts and nothing else.
+//
+// Deals only. The account's projects have exactly one home on the record —
+// the ProjectLinks section, which also holds attach and detach — and a second
+// list of them here was a second answer to "which bodies of work is this part
+// of". hasWorkInFlight still reads the projects half: whether the fit panel
+// stands in for this card is a question about the account, not about what
+// this card draws.
 //
 // Every line is a template over typed fields the server picked. Nothing on
 // this card is model-written, which is what makes each line checkable against
@@ -31,7 +37,6 @@ import {
   formatDate,
   formatMoneyOrAbsent,
   formatNumber,
-  relativeDays,
 } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 // The row shapes this card draws — `co-rowlink`, `co-row-meta` — are the
@@ -51,11 +56,10 @@ type Attention = components["schemas"]["Organization360WorkAttention"];
  * CompanyWorkCard is the overview's lead: what is moving on this account, and
  * for each piece of it, the one reason it wants a person today.
  *
- * The two halves are gated separately because the payload gates them
- * separately. A reader holding the deal grant but not the project one sees
- * the deals and is told the projects are withheld — never a count that folds
- * an unreadable half into a number, and never the fit panel in this card's
- * place, which would read as "there is no pipeline here, go read the fit".
+ * A withheld deals section says so where its rows would have been — never a
+ * count over rows this reader may not see, and never the fit panel in this
+ * card's place, which would read as "there is no pipeline here, go read the
+ * fit".
  */
 export function CompanyWorkCard({
   view,
@@ -76,26 +80,18 @@ export function CompanyWorkCard({
   // account among four, and a card inside a card is two borders around one
   // list.
   bare?: boolean;
-  // What opens a new piece of work, one verb per group. Handed in rather than
-  // built here: whether this reader may write, and what a create costs to
-  // mount, are the page's questions — this card knows only where the verbs go.
-  verbs?: { deal?: ReactNode; project?: ReactNode };
+  // What opens a new deal. Handed in rather than built here: whether this
+  // reader may write, and what a create costs to mount, are the page's
+  // questions — this card knows only where the verb goes.
+  verbs?: { deal?: ReactNode };
 }>) {
   const t = useT();
   const deals = view?.deals;
-  const projects = view?.projects;
   const dealState = sectionState(
     view,
     "deals",
     Boolean(deals),
     deals?.data.length ?? 0,
-    loading,
-  );
-  const projectState = sectionState(
-    view,
-    "projects",
-    Boolean(projects),
-    liveWork(projects).length,
     loading,
   );
   const body = (
@@ -109,21 +105,9 @@ export function CompanyWorkCard({
         action={verbs?.deal}
       >
         {(deals?.data ?? []).map((deal) => (
-          <DealLine key={deal.deal_id} deal={deal} />
-        ))}
-      </WorkGroup>
-      <WorkGroup
-        label={t("co.work.projects")}
-        level={bare ? "h4" : "h3"}
-        state={projectState}
-        emptyLabel={t("co.work.noProjects")}
-        emptyDetail={t("co.work.noProjectsDetail")}
-        action={verbs?.project}
-      >
-        {liveWork(projects).map((project) => (
-          <ProjectLine
-            key={project.project_id}
-            project={project}
+          <DealLine
+            key={deal.deal_id}
+            deal={deal}
             onOpenRecord={onOpenRecord}
           />
         ))}
@@ -373,20 +357,18 @@ function WorkGroup({
  * beside the record it was read from — a summary sentence up here would be
  * the blended narrative this card replaced.
  *
- * It says nothing at all when either half is withheld. "0 in flight" to a
- * reader who can see the deals but not the projects is a false statement
- * about the account, not a partial one.
+ * It counts what the card draws — the open deals — and says nothing at all
+ * when that half is withheld: "0 in flight" to a reader who may not see the
+ * deals is a false statement about the account, not a partial one.
  */
 function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
   const { locale } = useLocale();
-  if (!view?.deals || !view.projects) {
+  if (!view?.deals) {
     return null;
   }
-  const count = view.deals.data.length + liveWork(view.projects).length;
-  // The project list is capped server-side; `projects_page.has_more` is how
-  // the payload says the count is a floor rather than the number.
-  const capped = view.deals.page.has_more || view.projects_page?.has_more;
+  const count = view.deals.data.length;
+  const capped = view.deals.page.has_more;
   return (
     <span className="t-small">
       {capped
@@ -396,12 +378,18 @@ function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
   );
 }
 
-function DealLine({ deal }: Readonly<{ deal: WorkDeal }>) {
+function DealLine({
+  deal,
+  onOpenRecord,
+}: Readonly<{
+  deal: WorkDeal;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
   const status = deal.attention ? (
-    <AttentionLine attention={deal.attention} />
+    <AttentionLine attention={deal.attention} onOpenRecord={onOpenRecord} />
   ) : (
     deal.stalled && <StatusLine>{t("co.work.stalled")}</StatusLine>
   );
@@ -438,59 +426,6 @@ function DealLine({ deal }: Readonly<{ deal: WorkDeal }>) {
           a reason and an overdue task IS one. It is also the only colour the
           item carries — a card where every line is coloured has no colour
           left for the line that needs it. */}
-      {status ? <div className="co-work-item-foot">{status}</div> : null}
-    </article>
-  );
-}
-
-function ProjectLine({
-  project,
-  onOpenRecord,
-}: Readonly<{
-  project: WorkProject;
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useRecordZone();
-  const status = project.attention ? (
-    <AttentionLine attention={project.attention} onOpenRecord={onOpenRecord} />
-  ) : (
-    project.quiet && (
-      <StatusLine>
-        {/* Two sentences, because a project nobody has EVER filed against has
-            no "since" to name. The server measures its quiet from the day it
-            was opened, and the payload carries no created_at — so a single
-            template would print "since never". */}
-        {project.last_activity_at
-          ? t("co.work.quiet", {
-              when: relativeDays(project.last_activity_at, t, locale),
-            })
-          : t("co.work.neverTouched")}
-      </StatusLine>
-    )
-  );
-  // No figure line at all: a project carries no money, and an empty slot where
-  // a figure goes reads as a figure that failed to load.
-  return (
-    <article className="co-work-item">
-      <button
-        type="button"
-        className="co-rowlink co-work-item-name"
-        onClick={() => navigate({ screen: "projects", id: project.project_id })}
-      >
-        {project.key ?? project.name}
-      </button>
-      <span className="co-row-meta">
-        <span>{t(`project.phase.${project.phase}`)}</span>
-        {project.target_end_date && (
-          <span>
-            {t("co.work.targetEnd", {
-              date: formatDate(project.target_end_date, locale, zone),
-            })}
-          </span>
-        )}
-      </span>
       {status ? <div className="co-work-item-foot">{status}</div> : null}
     </article>
   );

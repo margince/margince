@@ -87,6 +87,11 @@ func (s stubDuplicates) DescribeMany(
 type stubTasks struct {
 	rows []Task
 	err  error
+	// total is what the SOURCE holds, which is not len(rows) once the lane's
+	// cap has bitten. Zero means "as many as the page", which is the ordinary
+	// case; a test proving the badge sets it higher.
+	total    int
+	countErr error
 	// until records the window the lane asked for, so a test can prove the
 	// boundary rather than assume it. A pointer receiver only where it is
 	// read back; the value form stays valid for every test that ignores it.
@@ -96,6 +101,18 @@ type stubTasks struct {
 	// afterwards. owner records WHICH person, where the scope names one.
 	scope TaskScope
 	owner ids.UUID
+}
+
+func (s *stubTasks) CountOpenForViewer(
+	_ context.Context, _ time.Time, _ TaskScope, _ ids.UUID,
+) (int, error) {
+	if s.countErr != nil {
+		return 0, s.countErr
+	}
+	if s.total > 0 {
+		return s.total, nil
+	}
+	return len(s.rows), nil
 }
 
 func (s *stubTasks) OpenForViewer(

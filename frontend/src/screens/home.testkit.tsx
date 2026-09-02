@@ -5,6 +5,7 @@ import { vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { readingsDay } from "./home.fixtures";
 import type { Deal, MorningBrief } from "./home.queries";
 
 // Home's suites share one harness, because they share one screen.
@@ -72,6 +73,11 @@ const DEFAULTS: Routes = {
     jsonResponse({ title: "Not Found", code: "no_digest_yet" }, 404),
   "POST /reports/deals-by-stage": () =>
     jsonResponse({ report: "deals-by-stage", plan: {}, columns: [], rows: [] }),
+  // The Brief's strip, sentence and Do next section are all drawn from this ONE
+  // answer, so an unrouted read has to reply with the real shape. The generic
+  // empty page carries no `readings` and no `counts`, and a screen reading a
+  // required field off it fails in a way no server could produce.
+  "GET /worklist": () => jsonResponse(readingsDay({}, [])),
 };
 
 /**

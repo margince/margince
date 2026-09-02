@@ -9,9 +9,10 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { CompanyRail } from "./companyrail";
 
@@ -95,6 +96,24 @@ function render(ui: ReactNode) {
   );
 }
 
+type RailProps = ComponentProps<typeof CompanyRail>;
+
+// Every site below wants the same rail: a writable view, not loading,
+// composer closed, and a no-op tab switch. `overrides` supplies whatever the
+// test is actually varying.
+function renderRail(overrides: Partial<RailProps> = {}) {
+  return render(
+    <CompanyRail
+      orgId="o-1"
+      view={view()}
+      loading={false}
+      composerOpen={false}
+      onTab={onTab}
+      {...overrides}
+    />,
+  );
+}
+
 // The one path every test needs, whatever it is asserting: the finance
 // summary Health reads for its payment dimension, the roster the owner
 // row resolves against, and the signals feed. `overrides` answers with
@@ -123,6 +142,15 @@ function stub(
           page: emptyPage,
         });
       }
+      // A real seat, spelled out. The catch-all below answers `/me` with an
+      // empty page, which `useCan` reads as a principal holding NO grants — so
+      // every control gated on one stood down and the suite proved nothing
+      // about the controls it names.
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
       if (pathname.endsWith("/signals")) {
         return jsonResponse({ data: [], page: emptyPage });
       }
@@ -134,31 +162,13 @@ function stub(
 describe("CompanyRail", () => {
   it("renders nothing while the composer holds the column", () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        withPeople
-        loading={false}
-        composerOpen
-        onTab={onTab}
-      />,
-    );
+    renderRail({ composerOpen: true });
     expect(screen.queryByText("Details")).not.toBeInTheDocument();
   });
 
   it("draws the details grid from the fields the record actually carries", async () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        withPeople
-        loading={false}
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail();
     expect(screen.getByText("Brandt Automotive GmbH")).toBeInTheDocument();
     expect(screen.getByText("Automotive")).toBeInTheDocument();
     expect(screen.getByText("51-200")).toBeInTheDocument();
@@ -186,16 +196,7 @@ describe("CompanyRail", () => {
       domains: [],
       owner_id: null,
     };
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({ organization: bare })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail({ view: view({ organization: bare }) });
     // Every row's LABEL still draws: an absent field is a fact about the
     // record, not a reason to hide the row that would say so. Both Industry
     // (InlineText, which draws no label of its own) and Company size
@@ -235,16 +236,7 @@ describe("CompanyRail", () => {
         return jsonResponse(org);
       },
     });
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        withPeople
-        loading={false}
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail();
     // The value is already set, which is exactly the case that used to render
     // a bare link with no control in any branch — there was nothing to open.
     // Waits for /me's grant to resolve first: the button exists only once
@@ -295,16 +287,7 @@ describe("CompanyRail", () => {
         return jsonResponse(org);
       },
     });
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        withPeople
-        loading={false}
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail();
     await waitFor(() =>
       expect(screen.getByText("Mira Voss")).toBeInTheDocument(),
     );
@@ -358,16 +341,7 @@ describe("CompanyRail", () => {
         return jsonResponse(org);
       },
     });
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        withPeople
-        loading={false}
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail();
     await waitFor(() =>
       expect(screen.getByText("Mira Voss")).toBeInTheDocument(),
     );
@@ -408,16 +382,7 @@ describe("CompanyRail", () => {
         return jsonResponse(org);
       },
     });
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        withPeople
-        loading={false}
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail();
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Account lifecycle" }),
     );
@@ -462,16 +427,7 @@ describe("CompanyRail", () => {
         return jsonResponse(threeDomains);
       },
     });
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({ organization: threeDomains })}
-        withPeople
-        loading={false}
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail({ view: view({ organization: threeDomains }) });
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Domain" }),
     );
@@ -518,16 +474,7 @@ describe("CompanyRail", () => {
         return jsonResponse(org);
       },
     });
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        withPeople
-        loading={false}
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail();
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Domain" }),
     );
@@ -563,16 +510,7 @@ describe("CompanyRail", () => {
         return jsonResponse(org);
       },
     });
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        withPeople
-        loading={false}
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail();
     await userEvent.click(
       await screen.findByRole("button", { name: "Change City" }),
     );
@@ -591,16 +529,7 @@ describe("CompanyRail", () => {
 
   it("marks a withheld section restricted instead of drawing it empty", () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({ sections_omitted: ["people"] })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail({ view: view({ sections_omitted: ["people"] }) });
     expect(
       screen.getAllByText("Hidden — your role cannot read this").length,
     ).toBeGreaterThan(0);
@@ -620,46 +549,39 @@ describe("CompanyRail", () => {
 
   it("draws one row per contact, naming the colleagues already in touch with them", () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          people: {
-            data: [
-              {
-                person_id: "p-1",
-                full_name: "Dana Buyer",
-                title: "VP Procurement",
-                strength: {
-                  score: 40,
-                  bucket: "moderate",
-                  factors: {},
-                  inbound_90d: 1,
-                },
-                deal_roles: [],
-                consent: {},
-                routes: {
-                  top: [
-                    {
-                      user_id: "u-2",
-                      display_name: "Ravi Shah",
-                      strength_bucket: "strong",
-                    },
-                  ],
-                  remainder: 0,
-                  untried: false,
-                },
+    renderRail({
+      view: view({
+        people: {
+          data: [
+            {
+              person_id: "p-1",
+              full_name: "Dana Buyer",
+              title: "VP Procurement",
+              strength: {
+                score: 40,
+                bucket: "moderate",
+                factors: {},
+                inbound_90d: 1,
               },
-            ],
-            page: emptyPage,
-          },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+              deal_roles: [],
+              consent: {},
+              routes: {
+                top: [
+                  {
+                    user_id: "u-2",
+                    display_name: "Ravi Shah",
+                    strength_bucket: "strong",
+                  },
+                ],
+                remainder: 0,
+                untried: false,
+              },
+            },
+          ],
+          page: emptyPage,
+        },
+      }),
+    });
     expect(screen.getByText("Dana Buyer")).toBeInTheDocument();
     expect(screen.getByText("VP Procurement")).toBeInTheDocument();
     // Named again for anyone not reading the stacked avatars as monograms:
@@ -672,44 +594,286 @@ describe("CompanyRail", () => {
     ).toBe("#/contacts/p-1");
   });
 
+  it("shows only the top RAIL_ROW_LIMIT deals, an attention-carrying one among them, while the header names the full count", () => {
+    stub();
+    renderRail({
+      view: view({
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Fleet renewal",
+              status: "open",
+              stage_name: "Negotiation",
+              amount: { amount_minor: 480_000, currency: "EUR" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-2",
+              name: "Spare parts contract",
+              status: "open",
+              stage_name: "Discovery",
+              amount: { amount_minor: 200_000, currency: "EUR" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-3",
+              name: "Service contract",
+              status: "open",
+              stage_name: "Proposal",
+              amount: { amount_minor: 150_000, currency: "EUR" },
+              stalled: false,
+            },
+            // The lowest amount of the five, but carries an attention flag —
+            // the rail's own ranking puts it ahead of every deal that has
+            // nothing pressing about it, amount aside.
+            {
+              deal_id: "d-4",
+              name: "Support renewal",
+              status: "open",
+              stage_name: "Negotiation",
+              amount: { amount_minor: 10_000, currency: "EUR" },
+              stalled: false,
+              attention: {
+                kind: "overdue_task",
+                title: "Send updated quote",
+                who: "Mira Voss",
+                due_at: "2026-05-01T00:00:00Z",
+              },
+            },
+            {
+              deal_id: "d-5",
+              name: "Onboarding add-on",
+              status: "open",
+              stage_name: "Discovery",
+              amount: { amount_minor: 50_000, currency: "EUR" },
+              stalled: false,
+            },
+          ],
+          page: emptyPage,
+          won_lifetime: { amount_minor: 0, currency: null },
+          lost_count: 0,
+        },
+      }),
+    });
+    const dealsPanel = screen
+      .getByRole("heading", { name: "Active deals" })
+      .closest<HTMLElement>(".panel");
+    expect(dealsPanel).not.toBeNull();
+    if (!dealsPanel) {
+      throw new Error("the deals panel has no wrapper");
+    }
+    // The attention-carrying deal first, then the two largest amounts of the
+    // remaining four, all in one currency so the tiebreak is deterministic —
+    // a regression in byDealWeight's amount compare must fail this, not just
+    // the count.
+    expect(within(dealsPanel).getAllByRole("link").length).toBe(3);
+    expect(within(dealsPanel).getByText("Support renewal")).toBeInTheDocument();
+    expect(within(dealsPanel).getByText("Fleet renewal")).toBeInTheDocument();
+    expect(
+      within(dealsPanel).getByText("Spare parts contract"),
+    ).toBeInTheDocument();
+    expect(
+      within(dealsPanel).queryByText("Service contract"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dealsPanel).queryByText("Onboarding add-on"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dealsPanel).getByRole("button", { name: "All 5" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the server's order past the attention split when the amounts span currencies", () => {
+    stub();
+    renderRail({
+      view: view({
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              // The SMALLER raw minor-unit figure stands first in the
+              // server's order, so a naive cross-currency amount sort would
+              // move Tokyo above it — which is exactly the regression this
+              // fixture exists to catch. Yen minor units dwarf euro ones on
+              // digit count alone; ranked honestly the server's order stands.
+              name: "Berlin expansion",
+              status: "open",
+              stage_name: "Discovery",
+              amount: { amount_minor: 100_000, currency: "EUR" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-2",
+              name: "Tokyo rollout",
+              status: "open",
+              stage_name: "Proposal",
+              amount: { amount_minor: 900_000, currency: "JPY" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-3",
+              name: "Support renewal",
+              status: "open",
+              stage_name: "Renewal",
+              amount: { amount_minor: 50_000, currency: "EUR" },
+              stalled: true,
+            },
+          ],
+          page: emptyPage,
+          won_lifetime: { amount_minor: 0, currency: null },
+          lost_count: 0,
+        },
+      }),
+    });
+    const dealsPanel = screen
+      .getByText("Active deals")
+      .closest("section, .panel");
+    if (!(dealsPanel instanceof HTMLElement)) {
+      throw new Error("the deals panel has no wrapper");
+    }
+    // The stalled deal leads on attention; behind it the two clean deals keep
+    // the order the server sent, because a mixed-currency amount compare is
+    // no compare at all.
+    const names = within(dealsPanel)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(names).toEqual([
+      "Support renewal",
+      "Berlin expansion",
+      "Tokyo rollout",
+    ]);
+  });
+
+  it("lets priced deals rank when the only other currency sits on an unpriced deal", () => {
+    stub();
+    renderRail({
+      view: view({
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Berlin expansion",
+              status: "open",
+              stage_name: "Discovery",
+              amount: { amount_minor: 100_000, currency: "EUR" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-2",
+              // A currency with no figure behind it: nothing to rank, so it
+              // must not stop the two priced EUR deals from ranking.
+              name: "US exploratory",
+              status: "open",
+              stage_name: "Discovery",
+              amount: { amount_minor: null, currency: "USD" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-3",
+              name: "Fleet renewal",
+              status: "open",
+              stage_name: "Negotiation",
+              amount: { amount_minor: 480_000, currency: "EUR" },
+              stalled: false,
+            },
+          ],
+          page: emptyPage,
+          won_lifetime: { amount_minor: 0, currency: null },
+          lost_count: 0,
+        },
+      }),
+    });
+    const dealsPanel = screen
+      .getByText("Active deals")
+      .closest("section, .panel");
+    if (!(dealsPanel instanceof HTMLElement)) {
+      throw new Error("the deals panel has no wrapper");
+    }
+    const names = within(dealsPanel)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    // The larger EUR figure leads; the unpriced deal ranks after the priced.
+    expect(names).toEqual([
+      "Fleet renewal",
+      "Berlin expansion",
+      "US exploratory",
+    ]);
+  });
+
+  it("shows only the top RAIL_ROW_LIMIT contacts while the header names the full count", () => {
+    stub();
+    renderRail({
+      view: view({
+        people: {
+          data: [
+            { person_id: "p-1", full_name: "Dana Buyer" },
+            { person_id: "p-2", full_name: "Erik Voss" },
+            { person_id: "p-3", full_name: "Farah Lund" },
+            { person_id: "p-4", full_name: "Gita Reyes" },
+            { person_id: "p-5", full_name: "Hugo Berg" },
+          ].map((contact) => ({
+            ...contact,
+            deal_roles: [],
+            strength: {
+              score: 40,
+              bucket: "moderate",
+              factors: {},
+              inbound_90d: 1,
+            },
+          })),
+          page: emptyPage,
+        },
+      }),
+    });
+    const peoplePanel = screen
+      .getByRole("heading", { name: "Their key people" })
+      .closest<HTMLElement>(".panel");
+    expect(peoplePanel).not.toBeNull();
+    if (!peoplePanel) {
+      throw new Error("the people panel has no wrapper");
+    }
+    expect(
+      within(peoplePanel).getAllByRole("link", {
+        name: /Buyer|Voss|Lund|Reyes|Berg/,
+      }).length,
+    ).toBe(3);
+    expect(
+      within(peoplePanel).getByRole("button", { name: "All 5" }),
+    ).toBeInTheDocument();
+  });
+
   it("draws one row per deal, with its amount and a stage · close-date note", () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          deals: {
-            data: [
-              {
-                deal_id: "d-1",
-                name: "Fleet renewal",
-                status: "open",
-                stage_name: "Negotiation",
-                amount: { amount_minor: 480_000, currency: "EUR" },
-                expected_close_date: "2026-07-01",
-                stalled: false,
-              },
-              {
-                deal_id: "d-2",
-                name: "Spare parts contract",
-                status: "open",
-                stage_name: "Discovery",
-                amount: { amount_minor: null, currency: null },
-                expected_close_date: null,
-                stalled: false,
-              },
-            ],
-            page: emptyPage,
-            won_lifetime: { amount_minor: 0, currency: null },
-            lost_count: 0,
-          },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail({
+      view: view({
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Fleet renewal",
+              status: "open",
+              stage_name: "Negotiation",
+              amount: { amount_minor: 480_000, currency: "EUR" },
+              expected_close_date: "2026-07-01",
+              stalled: false,
+            },
+            {
+              deal_id: "d-2",
+              name: "Spare parts contract",
+              status: "open",
+              stage_name: "Discovery",
+              amount: { amount_minor: null, currency: null },
+              expected_close_date: null,
+              stalled: false,
+            },
+          ],
+          page: emptyPage,
+          won_lifetime: { amount_minor: 0, currency: null },
+          lost_count: 0,
+        },
+      }),
+    });
     expect(screen.getByText("Fleet renewal")).toBeInTheDocument();
     expect(screen.getByText("€4,800.00")).toBeInTheDocument();
     expect(
@@ -723,39 +887,32 @@ describe("CompanyRail", () => {
 
   it("prefixes the note with the deal's own attention ahead of a bare stall flag", () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          deals: {
-            data: [
-              {
-                deal_id: "d-1",
-                name: "Fleet renewal",
-                status: "open",
-                stage_name: "Negotiation",
-                amount: { amount_minor: 480_000, currency: "EUR" },
-                expected_close_date: null,
-                stalled: true,
-                attention: {
-                  kind: "overdue_task",
-                  title: "Send updated quote",
-                  who: "Mira Voss",
-                  due_at: "2026-05-01T00:00:00Z",
-                },
+    renderRail({
+      view: view({
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Fleet renewal",
+              status: "open",
+              stage_name: "Negotiation",
+              amount: { amount_minor: 480_000, currency: "EUR" },
+              expected_close_date: null,
+              stalled: true,
+              attention: {
+                kind: "overdue_task",
+                title: "Send updated quote",
+                who: "Mira Voss",
+                due_at: "2026-05-01T00:00:00Z",
               },
-            ],
-            page: emptyPage,
-            won_lifetime: { amount_minor: 0, currency: null },
-            lost_count: 0,
-          },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+            },
+          ],
+          page: emptyPage,
+          won_lifetime: { amount_minor: 0, currency: null },
+          lost_count: 0,
+        },
+      }),
+    });
     expect(
       screen.getByText("Overdue · Negotiation · no close date"),
     ).toBeInTheDocument();
@@ -764,31 +921,25 @@ describe("CompanyRail", () => {
   it("switches to the Deals tab from the header's own All-N link", async () => {
     const spy = vi.fn();
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          deals: {
-            data: [
-              {
-                deal_id: "d-1",
-                name: "Fleet renewal",
-                status: "open",
-                stage_name: "Negotiation",
-                stalled: false,
-              },
-            ],
-            page: emptyPage,
-            won_lifetime: { amount_minor: 0, currency: null },
-            lost_count: 0,
-          },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={spy}
-      />,
-    );
+    renderRail({
+      view: view({
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Fleet renewal",
+              status: "open",
+              stage_name: "Negotiation",
+              stalled: false,
+            },
+          ],
+          page: emptyPage,
+          won_lifetime: { amount_minor: 0, currency: null },
+          lost_count: 0,
+        },
+      }),
+      onTab: spy,
+    });
     await userEvent.click(screen.getByRole("button", { name: "All 1" }));
     expect(spy).toHaveBeenCalledWith("deals");
   });
@@ -808,16 +959,7 @@ describe("CompanyRail", () => {
           page: emptyPage,
         }),
     });
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail();
     expect(
       screen.getByText("No deals on this account yet."),
     ).toBeInTheDocument();
@@ -838,23 +980,16 @@ describe("CompanyRail", () => {
 
   it("reads a closed-only pipeline as nothing open rather than never started", () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          deals: {
-            data: [],
-            page: emptyPage,
-            won_lifetime: { amount_minor: 250_000, currency: "EUR" },
-            lost_count: 1,
-          },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail({
+      view: view({
+        deals: {
+          data: [],
+          page: emptyPage,
+          won_lifetime: { amount_minor: 250_000, currency: "EUR" },
+          lost_count: 1,
+        },
+      }),
+    });
     expect(
       screen.getByText("Nothing open — only closed history."),
     ).toBeInTheDocument();
@@ -868,16 +1003,7 @@ describe("CompanyRail", () => {
   it("offers to add the account's first contact when it has none", async () => {
     const spy = vi.fn();
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={spy}
-      />,
-    );
+    renderRail({ onTab: spy });
     expect(
       screen.getByText("No contacts yet. Nobody to write to."),
     ).toBeInTheDocument();
@@ -887,36 +1013,9 @@ describe("CompanyRail", () => {
     expect(spy).toHaveBeenCalledWith("people");
   });
 
-  it("shows the applied tags as badges, counted", () => {
-    stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          tags: [{ id: "t-1", workspace_id: "w", name: "Key account" }],
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
-    expect(screen.getByText("Key account")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
-  });
-
   it("offers the add-tag verb once the section has answered, on a writable record", async () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view()}
-        withPeople
-        loading={false}
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail();
     // The section answered `empty` (view()'s tags defaults to []), so the
     // verb renders beside the tags it acts on.
     expect(
@@ -926,18 +1025,11 @@ describe("CompanyRail", () => {
 
   it("withholds the add-tag verb on an archived record", async () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          organization: { ...org, archived_at: "2026-06-02T00:00:00Z" },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail({
+      view: view({
+        organization: { ...org, archived_at: "2026-06-02T00:00:00Z" },
+      }),
+    });
     // The values themselves still draw (this suite's own empty-badges test
     // covers that); only the verb stands down.
     await waitFor(() => {
@@ -957,16 +1049,7 @@ describe("CompanyRail", () => {
   // crash is not the fix — it has to render DIFFERENTLY from the failed case.
   it("reads an in-flight composite read as loading, not unavailable", () => {
     stub();
-    const { container } = render(
-      <CompanyRail
-        orgId="o-1"
-        view={undefined}
-        loading={true}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    const { container } = renderRail({ view: undefined, loading: true });
     // The skeleton placeholder, not the "could not be loaded" sentence.
     expect(container.querySelector(".skeleton")).toBeTruthy();
     expect(
@@ -978,16 +1061,7 @@ describe("CompanyRail", () => {
 
   it("reads a failed composite read (view undefined, not loading) as unavailable", () => {
     stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={undefined}
-        loading={false}
-        withPeople
-        composerOpen={false}
-        onTab={onTab}
-      />,
-    );
+    renderRail({ view: undefined, loading: false });
     // The SAME undefined `view` as the loading test above, but with
     // `loading={false}` — the honest "could not be loaded" sentence, not a
     // skeleton pretending a read is still running.

@@ -156,7 +156,7 @@ export const de = {
   "autonomy.auto": "automatisch",
   "autonomy.confirm": "erst bestätigen",
 
-  "nav.home": "Start",
+  "nav.home": "Briefing",
   "nav.contacts": "Kontakte",
   "nav.companies": "Firmen",
   "nav.leads": "Leads",
@@ -219,6 +219,7 @@ export const de = {
   "search.group.deal": "Deals",
   "search.group.activity": "Aktivitäten",
   "search.group.lead": "Leads",
+  "search.group.tag": "Tags",
   "search.tier.mirrored": "aus einem verbundenen System",
   "search.tier.unverified": "nicht verifiziert",
 
@@ -269,6 +270,8 @@ export const de = {
     "Diese Firma ist archiviert. Stellen Sie sie wieder her, um etwas zu ändern.",
   "record.notYoursToChange":
     "Diese Firma gehört jemand anderem. Bitten Sie den Inhaber um Freigabe, wenn Sie etwas ändern möchten.",
+  "record.logActivityRefused":
+    "Sie haben keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
   "record.moreActions": "Weitere Aktionen",
   "record.fullHistory": "Vollständiger Verlauf",
@@ -475,6 +478,8 @@ export const de = {
   "common.error": "Konnten diese Ansicht nicht laden.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
+  "common.assistantUnavailable":
+    "Der Assistent hat nicht geantwortet und kann das hier nicht entwerfen. Eine Administratorin oder ein Administrator kann die Modellbindung unter Einstellungen → KI prüfen. Nötig ist er nicht — die Angaben lassen sich von Hand eintragen.",
   "common.gatewayUnavailable":
     "Der Server hat diese Anfrage nicht rechtzeitig abgeschlossen. Sie läuft möglicherweise noch — warte einen Moment, bevor du es erneut versuchst, sonst läuft dieselbe Arbeit zweimal.",
   "common.permissionDenied":
@@ -831,7 +836,7 @@ export const de = {
   "co.strip.fin.loading": "Wird geladen…",
   "co.strip.unpriced": "Keine umrechenbaren Beträge hinterlegt",
   "co.strip.pricedPartly": "{priced} von {total} Deals mit Betrag",
-  "co.strip.health": "Beziehung",
+  "co.strip.health": "Austausch",
   "co.strip.healthOneSided": "Einseitig",
   "co.strip.healthBalanced": "Ausgeglichener Austausch",
   "co.strip.replyShare": "{percent}% des Austauschs kommt von ihnen",
@@ -1056,6 +1061,8 @@ export const de = {
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",
+  "finance.syncing":
+    "Abgleich mit der Buchhaltungsquelle läuft. Zahlen erscheinen nach dem ersten Durchlauf.",
   "finance.noConnection":
     "Keine Finanzquelle verbunden — verbinde eine, um zu sehen, was diesem Kunden berechnet wurde und ob er pünktlich zahlt",
   "finance.unmapped":
@@ -1169,7 +1176,7 @@ export const de = {
   "commercial.offer.superseded": "Ersetzt",
   "co.section.restricted":
     "Ausgeblendet \u2014 deine Rolle darf das nicht lesen",
-  "co.next.title": "Nächste Schritte",
+  "co.next.title": "Aufgaben",
   "co.next.empty": "Keine offene Aufgabe zu diesem Account.",
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
@@ -1189,18 +1196,11 @@ export const de = {
   "co.work.count": "{count} laufend",
   "co.work.countAtLeast": "{count}+ laufend",
   "co.work.deals": "Deals",
-  "co.work.projects": "Projekte",
   "co.work.noDealsDetail":
     "Im Deal stehen Betrag und Abschlussdatum. Leg einen an, sobald es etwas zu gewinnen gibt.",
-  "co.work.noProjectsDetail":
-    "Ein Projekt hält die Lieferung zusammen: die Beteiligten, die Deals darunter und den Endtermin.",
   "co.work.noDeals": "Keine offenen Deals.",
-  "co.work.noProjects": "Keine laufenden Projekte.",
   "co.work.closes": "Abschluss {date}",
-  "co.work.targetEnd": "Ende geplant {date}",
   "co.work.stalled": "Zu diesem Deal wurde seit 60 Tagen nichts erfasst.",
-  "co.work.quiet": "Zu diesem Projekt wurde seit {when} nichts erfasst.",
-  "co.work.neverTouched": "Zu diesem Projekt wurde noch nie etwas erfasst.",
   "co.work.overdueTask":
     "{who} sollte \u201a{title}\u2018 bis {date} erledigen und hat es nicht getan.",
   "co.work.overdueTaskUnnamed":
@@ -1287,7 +1287,7 @@ export const de = {
   "approval.kind.send_email": "E-Mail senden",
   "approval.kind.held_draft": "Entworfene E-Mail prüfen",
   "approval.kind.book_meeting": "Termin buchen",
-  "approval.kind.quota_release": "Einen Agenten weiterarbeiten lassen",
+  "approval.kind.volume_release": "Einen Agenten weiterarbeiten lassen",
   "approval.kind.coldstart": "Neuen Account befüllen",
   "approval.kind.enrich": "Aus dem Web anreichern",
   "approval.kind.deepread": "Unternehmensseite lesen",
@@ -1401,6 +1401,7 @@ export const de = {
   "co.rail.people.empty":
     "Noch keine Kontakte. Niemand, dem man schreiben kann.",
   "co.rail.people.add": "Kontakt hinzufügen",
+  "co.rail.people.inTouch": "Bereits mit ihnen in Kontakt",
   "co.rail.details.all": "Alle Felder",
   "co.commercial.title": "Kommerziell",
   "co.commercial.lostFigure": "Verlorene Deals",
@@ -1458,6 +1459,10 @@ export const de = {
   "chronology.changes": "Änderungen",
   "filter.label": "Liste eingrenzen",
   "chronology.all": "Alles",
+  "chronology.conversations": "Gespräche",
+  "chronology.conversationsEmpty": "Noch keine Gespräche mit ihnen.",
+  "convo.yourMove": "Du bist dran",
+  "convo.waitingOnThem": "Wartet auf Antwort",
   "chronology.changesEmpty":
     "Seit dem Anlegen wurde kein Feld dieses Datensatzes geändert.",
   "chronology.allEmpty": "Zu diesem Datensatz ist noch nichts passiert.",
@@ -1717,17 +1722,8 @@ export const de = {
     "{field} ist als \u201e{value}\u201c erfasst. Ihn zu entfernen bedeutet: Das ist kein Fakt über die Firma. Ein späteres Lesen der Website kann ihn erneut erfassen.",
   "co.facts.showAll": "Alle {count} anzeigen",
   "co.facts.showLess": "Weniger anzeigen",
-  "co.tags.tags": "Tags",
-  "co.tags.noTags": "Keine Tags vergeben.",
   "co.project.new": "Neues Projekt",
   "co.deal.new": "Neuer Deal",
-  "co.tags.applied": "Tag „{name}“ hinzugefügt",
-  "co.tags.alreadyThere": "„{name}“ ist bereits an dieser Firma",
-  "co.tags.removed": "Tag „{name}“ entfernt",
-  "co.tags.apply": "Tag hinzufügen",
-  "co.tags.pick": "Tag-Name",
-  "co.tags.overCap":
-    "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
   "co.recent.title": "Was zuletzt passiert ist",
   "co.recent.emptyDetail":
     "Sobald Sie eine E-Mail senden, einen Anruf festhalten oder sich treffen, steht der Austausch hier, mit dem, was jede Seite getan hat.",
@@ -1746,7 +1742,44 @@ export const de = {
   "co.recent.dir.both": "beide Seiten",
   "co.recent.minutes": "{count} Min.",
   "co.recent.re": "zu einem Deal",
-  "co.tags.title": "Tags",
+  "co.recent.reNamed": "zu {name}",
+  "tags.archived": "archiviert",
+  "tags.columnHeader": "Tags",
+  "tags.filterAll": "Beliebiger Tag",
+  "tags.moreUncounted": "weitere",
+  "tags.moreUncountedTip": "Darunter {names}. Alle im Datensatz.",
+  "tags.columnHeaderPartial": "Tags (Teilliste)",
+  "tags.loading": "Tags werden geladen…",
+  "tags.panelTitle": "Tags",
+  "tags.panelSub": "Tag öffnen oder über das Menü diese Zuordnung verwalten",
+  "tags.add": "Tag hinzufügen",
+  "tags.more": "+{count} weitere",
+  "tags.showLess": "Weniger anzeigen",
+  "tags.options": "Optionen für {name}",
+  "tags.addedBy": "Hinzugefügt von {who} · {when}",
+  "tags.addedOn": "Hinzugefügt {when}",
+  "tags.visibleWorkspaceWide":
+    "Tag-Namen sind in der gesamten Organisation sichtbar.",
+  "tags.removeFromRecord": "Von diesem Datensatz entfernen",
+  "tags.withheld": "Verborgen — Ihre Rolle kann das Tag-Vokabular nicht lesen",
+  "tags.emptyTitle": "Noch keine Tags",
+  "tags.emptyBody":
+    "Fügen Sie dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
+  "tags.pickerLabel": "Tag suchen",
+  "tags.alreadyAdded": "Bereits hinzugefügt",
+  "tags.catalogTruncated":
+    "Diese Liste ist gekürzt, ein Wort kann also fehlen. Suchen Sie danach, bevor Sie ein neues anfragen.",
+  "tags.noMatch":
+    "Kein Tag mit diesem Namen. Ein Admin- oder Ops-Platz kann eines zum Vokabular hinzufügen.",
+  "tagResult.gone":
+    "Dieses Tag existiert nicht mehr. Es wurde möglicherweise zusammengeführt.",
+  "tagResult.totalVisible": "{count} sichtbare Zuordnungen",
+  "tagResult.people": "Personen",
+  "tagResult.companies": "Unternehmen",
+  "tagResult.deals": "Deals",
+  "tagResult.viewAll": "Alle {count} {kind} anzeigen",
+  "tagResult.carry": "{count} tragen dieses Tag",
+  "tagResult.none": "Niemand trägt dieses Tag",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
   "co.overlayFallback":
     "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",
@@ -2284,6 +2317,111 @@ export const de = {
     "Heute keine Nacht-Zusammenfassung — Margince hat für diese Lage keinen Durchgang gemacht. Die Reihenfolge unten ist trotzdem die von heute.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
+  // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
+  // einzige Teil dieser Seite, den noch jemand ändern kann.
+  "plan.title": "Nächste Woche planen",
+  // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
+  // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
+  "brief.donext.title": "Als Nächstes",
+  // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
+  // Seite zeigt — nie von einem Modell geschrieben.
+  "brief.eyebrow": "Dein Morgen",
+  "brief.eyebrow.weekly": "Deine Woche",
+  // Die zwei Regler des Briefings: welches, und für wen.
+  "brief.view.label": "Welches Briefing",
+  "brief.view.morning": "Morgen",
+  "brief.view.weekly": "Woche",
+  "brief.scope.label": "Wessen Briefing",
+  "brief.scope.mine": "Meins",
+  "brief.scope.team": "Team",
+  "brief.sentence.clear": "Heute Morgen wartet nichts auf dich.",
+  "brief.sentence.one": "Zuerst: {lead}",
+  "brief.sentence.oneWithCost": "Zuerst: {lead} — {consequence}",
+  "brief.sentence.many": "Zuerst: {lead} Danach {rest} weitere.",
+  "brief.sentence.manyWithCost":
+    "Zuerst: {lead} — {consequence} Danach {rest} weitere.",
+
+  "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
+  "brief.donext.loading": "Was auf dich wartet, wird gelesen",
+  "brief.donext.clear": "Gerade wartet nichts auf dich.",
+  "brief.donext.rest": "{count} weitere in der Arbeitsliste",
+
+  // Die Woche eines Teams, eingefroren beim Abschluss. Zwei Wochen sind
+  // vergleichbar, weil keine sich unter dem Vergleich bewegt.
+  "teamweekly.title": "Die Woche des Teams",
+  "teamweekly.weekOf": "{team} · Woche ab {day}",
+  "teamweekly.frozen": "Eingefroren",
+  "teamweekly.loading": "Teamwoche wird gelesen",
+  "teamweekly.empty": "Für diese Woche gibt es nichts zu zeigen.",
+  "teamweekly.forbidden":
+    "Die Woche eines Teams ist eine Teamfrage, und dein Zugriff reicht nur bis zu deinen eigenen Datensätzen.",
+  "teamweekly.noSnapshot":
+    "Für dieses Team wurde noch keine Woche abgeschlossen. Die erste Momentaufnahme entsteht am Montag nach der ersten vollen Woche.",
+  "teamweekly.pickTeam": "Team auswählen",
+  "teamweekly.repsUnread":
+    "{count} Mitglied(er) konnten nicht gelesen werden. Alle Zahlen hier decken {counted} ab.",
+  "teamweekly.ofTotal": "{part} von {whole}",
+  "teamweekly.headline.plain":
+    "Die Woche lief ohne einen Wert, der in eine Richtung heraussticht.",
+  "teamweekly.headline.healthy":
+    "{reading} ist gesund bei {pct}%, gemessen an einer Schwelle von {bar}%.",
+  "teamweekly.headline.weak":
+    "{reading} ist es nicht, bei {pct}% gegen eine Schwelle von {bar}%.",
+  "teamweekly.reading.firstResponse": "Erstreaktion",
+  "teamweekly.reading.nextStep": "Termine mit nächstem Schritt",
+  "teamweekly.reading.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.firstResponse": "Rechtzeitig beantwortet",
+  "teamweekly.card.firstResponseBasis": "{breached} überschritten",
+  "teamweekly.card.meetings": "Termine mit nächstem Schritt",
+  "teamweekly.card.meetingsBasis": "der gehaltenen Termine",
+  "teamweekly.card.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.commitmentsBasis": "des Zugesagten",
+  "teamweekly.card.won": "Gewonnen",
+  "teamweekly.card.wonBasis": "{lost} verloren",
+  "teamweekly.card.reps": "Gezählte Mitglieder",
+  "teamweekly.card.repsBasis": "deren Woche vollständig gelesen wurde",
+  "teamweekly.movement.title": "Was die Woche bewegt hat",
+  "teamweekly.movement.won": "Gewonnen",
+  "teamweekly.movement.lost": "Verloren",
+  "teamweekly.movement.meetings": "Gehaltene Termine",
+  "teamweekly.movement.leads": "Zugewiesene Leads",
+  "teamweekly.coach.title": "Diese Woche begleiten",
+  "teamweekly.coach.sub":
+    "Ein Schwerpunkt pro Mitglied — auch für das Mitglied, dessen Woche gut lief.",
+  "teamweekly.coach.empty": "In dieser Woche war niemand in diesem Team.",
+  "teamweekly.focus.help_requested": "Hat um Hilfe gebeten",
+  "teamweekly.focus.leads_breached": "Leads blieben unbeantwortet",
+  "teamweekly.focus.commitments_missed": "Zusagen verpasst",
+  "teamweekly.focus.meetings_without_next_step":
+    "Termine ohne nächsten Schritt",
+  "teamweekly.focus.strong_week": "Zum Nachmachen",
+  "teamweekly.focus.quiet_week": "Eine ruhige Woche",
+
+  "plan.sub": "Was du dir vorgenommen hast — und was du dafür brauchst.",
+  "plan.loading": "Plan wird gelesen",
+  "plan.empty": "Noch nichts auf dem Plan.",
+  "plan.none": "Du hast diese Woche noch nicht geplant.",
+  "plan.start": "Meine Woche planen",
+  "plan.add": "Vorhaben hinzufügen",
+  "plan.save_one": "{count} Änderung speichern",
+  "plan.save_other": "{count} Änderungen speichern",
+  "plan.due": "bis {day}",
+  "plan.state.open": "Offen",
+  "plan.state.done": "Erledigt",
+  "plan.state.missed": "Verpasst",
+  "plan.state.dropped": "Verworfen",
+  "plan.help.label": "Was brauchst du von deiner Führungskraft?",
+  "plan.help.ask": "Um Hilfe bitten",
+  "plan.help.edit": "Anfrage bearbeiten",
+  "plan.help.send": "Senden",
+  "plan.help.cancel": "Abbrechen",
+  "plan.help.asked": "Du hast gefragt: {text}",
+  "plan.help.waiting": "Wartet auf deine Führungskraft.",
+  "plan.new.label": "Was wirst du tun?",
+  "plan.new.due": "Bis wann",
+  "plan.new.save": "Hinzufügen",
+  "plan.new.cancel": "Abbrechen",
+
   "home.weekly.pickWeek": "Andere Woche öffnen",
   "home.weekly.none":
     "Noch kein Wochenrückblick — der erste wird am Montag nach deiner ersten vollen Woche geschrieben.",
@@ -2371,18 +2509,23 @@ export const de = {
   "home.panel.watch": "Still geworden",
   "home.overnight.fixConnector": "Verbindung prüfen",
   "home.watch.clear": "Nichts ist still geworden.",
-  "home.readings.decisions": "Wartet auf dich",
-  "home.readings.expiring_one": "1 läuft heute ab",
-  "home.readings.expiring_other": "{count} laufen heute ab",
-  "home.readings.expiringNone": "nichts läuft heute ab",
-  "home.readings.openDeals": "Offene Deals",
-  "home.readings.currencies_one": "in {count} Währung",
-  "home.readings.currencies_other": "in {count} Währungen",
-  "home.readings.ranked": "Heute priorisiert",
-  "home.readings.topScore": "höchster Score {pct} %",
-  "home.readings.noRun": "noch kein Lauf",
-  "home.readings.quiet": "Still geworden",
-  "home.readings.quietNone": "keiner ist verstummt",
+  "home.readings.label": "Dein Morgen in fünf Kennzahlen",
+  "home.readings.truncated":
+    "Eine Quelle wurde bis zur Grenze gelesen, jede Zahl oben ist also ein Mindestwert.",
+  "home.readings.waiting": "Kunden warten",
+  "home.readings.waitingBasis": "warten auf eine Antwort",
+  "home.readings.meetings": "Termine heute",
+  "home.readings.meetingsBasis": "im heutigen Kalender",
+  "home.readings.needsPrep_one": "1 unvorbereitet",
+  "home.readings.needsPrep_other": "{count} unvorbereitet",
+  "home.readings.prepUnknown": "nicht alle prüfbar",
+  "home.readings.prepared": "alle vorbereitet",
+  "home.readings.promises": "Zusagen fällig",
+  "home.readings.promisesBasis": "Zusagen werden noch nicht erfasst",
+  "home.readings.leads": "Erstkontakt",
+  "home.readings.leadsBasis": "warten auf die erste Antwort",
+  "home.readings.quota": "Ziel-Tempo",
+  "home.readings.quotaBasis": "kein Ziel hinterlegt",
   "home.rail": "Kontext",
   "home.pct": "{pct} %",
   "home.deck.later": "Später",
@@ -3871,6 +4014,8 @@ export const de = {
     "Es ist keine Nachricht mehr da, die geteilt werden könnte — die erste Nachricht dieser Konversation wurde gelöscht. Die Zurückhaltung bleibt, damit eine spätere Antwort nicht offen eintrifft.",
   "heldThreads.pending": "Wartet auf Beurteilung",
   "heldThreads.attempts": "{count}-mal angefragt",
+  "heldThreads.backlogStalled":
+    "Zu {count} Threads wurde mehrfach angefragt, ohne Antwort. Solange das anhält, bleibt Post zurückgehalten — nichts geht verloren, und es löst sich von selbst, sobald die Klassifikation wieder antwortet.",
   "heldThreads.heldByOthers":
     "Weiterhin zurückgehalten: {count} weiteres Postfach hat diese Nachricht ebenfalls importiert und nicht freigegeben. Eine Konversation wird erst geöffnet, wenn alle Empfänger zustimmen.",
   "heldThreads.kind.legal": "Rechtliches",
@@ -3892,6 +4037,7 @@ export const de = {
   "senders.recordYes": "Ja",
   "senders.recordNo": "Nein",
   "senders.byYou": "— von Ihnen entschieden",
+  "senders.deletesOn": "Älteste Nachricht wird am {date} gelöscht",
   "senders.markBusiness": "Geschäftlich",
   "senders.keepOut": "Aussperren",
   "senders.withdraw": "Zurücknehmen",
@@ -4038,6 +4184,8 @@ export const de = {
     "Der Anbieter hat die Verbindung abgelehnt. Bestätige alle angefragten Berechtigungen und versuche es dann erneut.",
   "connectors.oauthMisconfigured":
     "Diese Installation kann die Verbindung noch nicht abschließen — die API des Anbieters ist dafür nicht aktiviert. Ein Administrator muss sie aktivieren; das Server-Log nennt die betroffene API.",
+  "connectors.oauthBadClient":
+    "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Administrator sollte Client-ID und Secret unter Einstellungen → Allgemein prüfen; ein erneuter Verbindungsversuch behebt es nicht von selbst.",
   "connectors.dismissOutcome": "Schließen",
 
   // Das "Verbindung hinzufügen"-Element (Task 1): ein Button in der Kopfzeile
@@ -5393,6 +5541,8 @@ export const de = {
     "der Kontaktschritt schlug fehl; die Nachricht selbst ist unberührt",
   "captureActivity.reason.no_counterparty":
     "kein Absender, den dieses CRM erfassen konnte",
+  "captureActivity.reason.role_mailbox":
+    "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
   "captureActivity.reason.transactional_infra":
     "der Absender ist Mail-Infrastruktur, kein Unternehmen, mit dem Sie arbeiten",
   "captureActivity.reason.transactional_prefix":
@@ -5454,6 +5604,8 @@ export const de = {
     "über diesen Absender war bereits entschieden",
   "pipeline.reason.no_counterparty":
     "kein Absender, den dieses CRM erfassen konnte",
+  "pipeline.reason.role_mailbox":
+    "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
   "pipeline.reason.no_granting_human":
     "die Verbindung nennt kein Mitglied, in dessen Namen gehandelt wird",
   "pipeline.reason.derivation_failed":
@@ -5768,7 +5920,7 @@ export const de = {
   "users.teamNobodyToAdd": "Noch keine Benutzer zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
-    "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt keinen Zugriff — Kunden, Kontakte, Leads und Deals dürfen hier ohnehin alle lesen.",
+    "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt den meisten Rollen weiterhin keinen Zugriff — Ausnahme ist die Teamleitung: wird sie einem Team hinzugefügt, kann sie dessen Datensätze lesen und bearbeiten, ohne dass eine Freigabe eingerichtet wird.",
   "users.teamsAdminOnly": "Teams verwalten können nur Admins.",
   "users.deactivated": "{name} deaktiviert",
   "users.reactivated": "{name} reaktiviert",
@@ -6296,6 +6448,26 @@ export const de = {
     "Wirkt ab der nächsten Nachricht. Bereits erfasste Nachrichten bleiben.",
   "captureExclusions.current": "Geltende Regeln",
   "captureExclusions.empty": "Keine Ausschlüsse.",
+  "ownerIdentities.title": "Ihre weiteren Adressen",
+  "ownerIdentities.sub":
+    "Adressen, die auch Sie sind: ein Alias zum Senden, eine private Domain, die Sie lesen, eine Adresse, von der Sie weiterleiten. Post zwischen Ihren eigenen Adressen ist keine Korrespondenz mit jemandem — sie wird nicht erfasst und wird nie ein Kontakt.",
+  "ownerIdentities.add": "Adresse hinzufügen",
+  "ownerIdentities.addLabel": "Eine weitere Adresse als Ihre eigene angeben",
+  "ownerIdentities.addDescription":
+    "Nur Ihre. Kolleginnen und Kollegen sehen nie, was Sie hier eintragen.",
+  "ownerIdentities.current": "Angegeben",
+  "ownerIdentities.notRetroactive":
+    "Gilt ab der nächsten Nachricht. Bereits erfasste Post bleibt, und ein aus einem Alias entstandener Kontakt bleibt, bis Sie ihn zusammenführen oder entfernen.",
+  "ownerIdentities.empty": "Sie haben keine weiteren Adressen angegeben.",
+  "ownerIdentities.remove": "Diese Adresse zurückziehen",
+  "ownerIdentities.added": "Adresse hinzugefügt.",
+  "ownerIdentities.confirm": "Hinzufügen",
+  "ownerIdentities.kindLabel": "Was geben Sie an?",
+  "ownerIdentities.kind.address": "Eine Adresse",
+  "ownerIdentities.kind.domain": "Eine ganze Domain",
+  "ownerIdentities.valueLabel": "Adresse oder Domain",
+  "ownerIdentities.addressPlaceholder": "sie@beispiel.de",
+  "ownerIdentities.domainPlaceholder": "beispiel.de",
   "captureExclusions.scope.user": "Nur ich",
   "captureExclusions.scope.workspace": "Ganze Organisation",
   "captureExclusions.kind.address": "Adresse",
@@ -6736,8 +6908,6 @@ export const de = {
   "person.action.meetings": "Termine ansehen",
   "person.action.addTask": "Aufgabe",
   "person.action.research": "Recherche",
-  "person.action.logRefused":
-    "Sie haben keine Berechtigung, Aktivitäten zu diesem Kontakt zu erfassen.",
 
   "person.strip.lastInbound": "Zuletzt eingehend",
   "person.strip.lastOutbound": "Zuletzt ausgehend",
@@ -7406,6 +7576,7 @@ export const de = {
   "worklist.pane.lastOutbound": "Wir zuletzt geschrieben",
   "worklist.pane.never": "Nie",
   "worklist.focus.title": "Das als Nächstes",
+  "worklist.nextup.title": "Und danach",
   "worklist.focus.verb.decide": "Entscheiden",
   "worklist.focus.verb.merge": "Paar prüfen",
   "worklist.focus.verb.complete": "Erledigen",
@@ -7464,6 +7635,40 @@ export const de = {
   "worklist.board.nobody": "Noch niemand",
   "worklist.board.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.readings.label": "Was heute auf dem Spiel steht",
+  "worklist.readings.revenue": "Umsatz in Gefahr",
+  "worklist.readings.revenue.detail": "Über die heute treibenden Deals",
+  "worklist.readings.revenue.unpriced": "Kein gefährdeter Deal war bewertbar",
+  "worklist.readings.replies": "Kundenantworten",
+  "worklist.readings.replies.detail": "Kunden warten auf eine Antwort",
+  "worklist.readings.prospecting": "Neugeschäft",
+  "worklist.readings.prospecting.detail":
+    "Neugeschäft, das eine erste Antwort schuldet",
+  "worklist.readings.review": "Prüfung",
+  "worklist.readings.review.detail":
+    "Routinearbeit, die hinter einer Entscheidung wartet",
+  "worklist.readings.truncated":
+    "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.hidden.title": "Was die Liste nicht zeigt",
+  "worklist.hidden.loading": "Wird geprüft, was zurückgehalten wird…",
+  "worklist.hidden.clear":
+    "Es wird nichts zurückgehalten. Jeder wartende Kunde erreicht eine Liste.",
+  "worklist.hidden.truncated":
+    "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.hidden.count": "{count} warten",
+  "worklist.hidden.pastHorizon": "Zu alt für die Liste",
+  "worklist.hidden.pastHorizon.detail":
+    "Das hat niemand entschieden. Sie schrieben vor Monaten und bekamen nie eine Antwort.",
+  "worklist.hidden.unlinked": "Keinem Datensatz zugeordnet",
+  "worklist.hidden.unlinked.detail":
+    "Meist kein Vertrieb. Manchmal ein Kunde, den niemand zuordnen konnte.",
+  "worklist.hidden.notSales": "Als vertriebsfremd eingestuft",
+  "worklist.hidden.notSales.detail":
+    "Für die gesamte Organisation verborgen, und es hebt sich nicht auf.",
+  "worklist.hidden.setAside": "Von Ihnen zurückgestellt",
+  "worklist.hidden.setAside.detail":
+    "Zurückgestellt oder als nicht Ihre markiert. Eine Zurückstellung kommt von selbst zurück.",
+  "worklist.hidden.shown": "Die Liste selbst führt {count}.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
   "worklist.filter.customer_waiting": "Kunde wartet",
@@ -7587,6 +7792,8 @@ export const de = {
   "worklist.untitled.batch": "Eine Gruppe Routineentscheidungen",
   "worklist.verb.review_batch": "Durchsehen",
   "worklist.verb.draft_reply": "Zum Antworten öffnen",
+  // Wo der Editor wirklich aufgeht, ist das Verb die HANDLUNG.
+  "worklist.verb.draft_reply_now": "Antwort entwerfen",
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
   "worklist.batch.unnamedCause": "Etwas",

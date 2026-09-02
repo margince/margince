@@ -266,7 +266,12 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		WeeklyReviewBrain:    modelPath.WeeklyReview,
 		// The retrospective's outbound channel, resolved in main from the same
 		// deployment file cmd/api reads. Zero mails nothing.
-		WeeklyMail:             weeklyMail,
+		WeeklyMail: weeklyMail,
+		// The SAME relay and the same origin the weekly resolved. An operator
+		// configures outbound mail once, and deriving the brief's channel here
+		// rather than resolving it a second time is what keeps the two from
+		// disagreeing about whether this installation can send at all.
+		BriefMail:              compose.BriefMailConfig(weeklyMail),
 		TranscriptProposeBrain: modelPath.TranscriptPropose,
 		DocumentExtractBrain:   modelPath.DocumentExtract,
 		OverlayVault:           vault,

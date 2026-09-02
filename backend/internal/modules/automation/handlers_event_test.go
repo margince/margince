@@ -350,7 +350,9 @@ func TestPostMeetingRecapApplyComposesTheDraftDurably(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Plan err = %v, want nil", err)
 	}
-	result, err := w.Apply(context.Background(), workflow.Event{Entity: meeting}, eff, nil)
+	// An OWNED firing: draft_email refuses one with no owner, because a held
+	// draft is released by the person it goes out as.
+	result, err := w.Apply(ownedFiring(), workflow.Event{Entity: meeting}, eff, nil)
 	// The recap composes and then holds its send for a human, so the firing
 	// suspends. The draft it produced still has to reach run history.
 	var staged *workflow.StagedApprovalError

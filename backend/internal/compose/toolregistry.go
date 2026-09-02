@@ -31,12 +31,12 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 	// bound, the other pays into it, and a surface where those were two
 	// counters would step an agent up against a number nothing was charging.
 	s.toolRegistry = registryWithGate(InstallationDB(pool),
-		auth.NewGate(identity.NewService(pool), auth.WithQuota(s.quotaMeter)),
+		auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter)),
 		s.replyDrafter, s.resolveOverlayIncumbent(pool), s.send, companyEnricher{srv: s},
 		s.retrievalEmbedder, s.transcriptOnLanding, importsFor(s),
 		// The SERVER's brief service, not a second one built from the pool: the
 		// model lane is bound to that instance, so a fresh service here would
 		// serve agents the deterministic floor while the person page got prose.
 		meetingBriefReader(s.meetingBriefSvc), s.log,
-		agents.WithQuotaCharger(s.quotaMeter), agents.WithCostShare(s.quotaMeter))
+		agents.WithVolumeCharger(s.volumeMeter), agents.WithCostShare(s.volumeMeter))
 }

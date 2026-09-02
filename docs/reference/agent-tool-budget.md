@@ -24,15 +24,15 @@ feature is expected to argue with.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1661 | 6% | 15339 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2509 | 10% | 14491 | 15 | 8 |
-| _whole served catalog, for scale_ | 59 | 18954 | 78% | — | — | — |
+| `morning_brief` | 5 | 1688 | 7% | 15312 | 6 | 5 |
+| `overnight_at_risk_sweep` | 7 | 2535 | 10% | 14465 | 15 | 8 |
+| _whole served catalog, for scale_ | 61 | 19280 | 80% | — | — | — |
 
 ### `morning_brief`
 
 > Assemble the Morning Brief for this workspace: enumerate open deals, read the ones with recent activity, and produce a ranked list (at most 7) of deals the team can win this week. For each: why it is on the list, what changed recently, and one recommended next move — every claim grounded in a record you actually read, citing its id. A quiet day yields a short list; never pad it.
 
-Attaches 5 tools for 1661 tokens, leaving 15339 of its budget and 22339 tokens of the
+Attaches 5 tools for 1688 tokens, leaving 15312 of its budget and 22312 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -55,7 +55,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2509 tokens, leaving 14491 of its budget and 21491 tokens of the
+Attaches 7 tools for 2535 tokens, leaving 14465 of its budget and 21465 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -123,7 +123,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 275 tokens, mean 320, across 59 served tools.
+Median 274 tokens, mean 315, across 61 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -138,8 +138,8 @@ a term in an addition.
 | `update_record` | 603 | 4 scenarios |
 | `send_account_email` | 545 | — |
 | `resolve_entities` | 513 | — |
+| `list_records` | 501 | — |
 | `query_workspace` | 491 | 3 scenarios |
-| `list_records` | 475 | — |
 | `advance_deal` | 474 | 1 scenario |
 | `send_email` | 471 | 1 scenario |
 | `annotate_brief` | 456 | — |
@@ -168,6 +168,7 @@ a term in an addition.
 | `decide_approval_bundle` | 266 | — |
 | `qualify_lead` | 261 | — |
 | `create_task` | 260 | — |
+| `apply_tag` | 258 | — |
 | `account_coverage` | 252 | 2 scenarios |
 | `relink_activities` | 237 | — |
 | `read_record` | 229 | 2 scenarios |
@@ -176,19 +177,20 @@ a term in an addition.
 | `whats_slipping_this_week` | 218 | 2 scenarios |
 | `at_risk_relationships` | 215 | — |
 | `read_brief` | 213 | — |
-| `apply_tag` | 211 | — |
 | `who_knows` | 201 | — |
 | `list_pipelines` | 198 | — |
+| `remove_tag` | 198 | — |
 | `intro_path_to` | 197 | 2 scenarios |
-| `remove_tag` | 190 | — |
 | `list_channel_providers` | 181 | — |
 | `check_location_support` | 163 | — |
 | `read_project_360` | 163 | — |
 | `read_approval` | 160 | — |
 | `commit_import` | 149 | — |
+| `get_record_tags` | 149 | — |
 | `list_colleagues` | 148 | — |
 | `whoami` | 136 | — |
 | `list_tags` | 102 | — |
+| `get_tag` | 94 | — |
 | `read_import_report` | 80 | — |
 | `read_import_run` | 75 | — |
 

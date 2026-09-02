@@ -142,7 +142,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "tab.deals",
   "deals.pipeline",
   "deal.fcPipeline",
-  "record.timeline",
   "cf.obj.deal",
   "cf.obj.person",
   "cf.obj.lead",

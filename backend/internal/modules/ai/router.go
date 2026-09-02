@@ -255,7 +255,15 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		return out, RouteInfo{Tier: tier, Provider: m.provider, ModelID: m.model, Degraded: degraded}, nil
 	}
 	// The honest degraded state (§4.3): no bound model can serve this.
-	return model.Response{}, RouteInfo{}, fmt.Errorf("ai: no bound tier can serve %s in profile %s", task, b.profile)
+	//
+	// ErrAllTiersFailed, the same as a walk that tried every rung and got
+	// nothing: from a caller's seat the two are one fact — no model answered —
+	// and the distinction that matters to them is against a request that was
+	// wrong. An installation with NOTHING bound is the commonest way to reach
+	// this, so leaving it unmarked is leaving the sentinel off the case a first
+	// run actually hits.
+	return model.Response{}, RouteInfo{},
+		fmt.Errorf("%w: no bound tier can serve %s in profile %s", ErrAllTiersFailed, task, b.profile)
 }
 
 // Invalidate drops a workspace's cached results — the hook the §6

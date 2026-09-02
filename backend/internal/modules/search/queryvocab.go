@@ -220,6 +220,12 @@ func (r *VocabularyResolver) Resolve(ctx context.Context, targets ...string) (Vo
 	// re-read each of them once per target it lists.
 	schema := newSchemaReads(r.columns)
 	for _, branch := range searchBranches {
+		// A text-only branch has no record vocabulary to publish: a tag is a
+		// word, and describing its fields would document a record shape that
+		// does not exist.
+		if branch.textOnly {
+			continue
+		}
 		if len(targets) > 0 && !slices.Contains(targets, branch.entity) {
 			continue
 		}

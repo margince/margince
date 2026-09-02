@@ -487,10 +487,10 @@
         "update": true
       },
       "tag": {
-        "create": true,
-        "delete": true,
+        "create": false,
+        "delete": false,
         "read": true,
-        "update": true
+        "update": false
       },
       "voice_profile": {
         "create": true,
@@ -744,10 +744,10 @@
         "update": true
       },
       "tag": {
-        "create": true,
-        "delete": true,
+        "create": false,
+        "delete": false,
         "read": true,
-        "update": true
+        "update": false
       },
       "voice_profile": {
         "create": true,
@@ -1515,10 +1515,10 @@
         "update": true
       },
       "tag": {
-        "create": true,
+        "create": false,
         "delete": false,
         "read": true,
-        "update": true
+        "update": false
       },
       "voice_profile": {
         "create": true,

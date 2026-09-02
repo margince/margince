@@ -235,6 +235,9 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 	if decided {
 		return e.applyOwnerDecision(ctx, row, kind)
 	}
+	if addressIsARoleMailbox(row.Email) {
+		return e.applyJudged(ctx, row, capture.KindRoleMailbox)
+	}
 	answers, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err
@@ -305,7 +308,7 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 	var acted bool
 	var triageDomain string
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		won, err := e.pending.ResolveAs(ctx, tx, row, verdict, kind, verdictReason)
+		won, err := e.pending.ResolveAs(ctx, tx, row, verdict, kind, verdictReason, ownerSaidSo)
 		if err != nil || !won {
 			return err
 		}
@@ -436,8 +439,25 @@ func (e *CounterpartyVerdictEngine) releaseBatch(ctx context.Context, batch []ca
 // A free-mail domain is skipped: nobody's employer is gmail.com, so there is no
 // company to refuse, and suppressing it would put a consumer mail provider in
 // the admin's blocked list as though it were a decision anyone made.
+// A sender the workspace CORRESPONDS with is never refused a company, whatever
+// the classifier called this particular message. The two facts do not conflict:
+// a supplier's marketing blast is a newsletter and the supplier is still a
+// company this business works with. Hiding that one message is right; refusing
+// the domain on the strength of it is not, and the refusal is the standing,
+// workspace-wide half.
+//
+// This guard became load-bearing when the create tiers started raising verdict
+// questions of their own — before that only unjudged strangers reached the
+// ledger, and correspondence was already excluded by construction.
 func (e *CounterpartyVerdictEngine) suppressSenderDomain(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, kind string) error {
 	if row.Domain == "" {
+		return nil
+	}
+	corresponds, err := e.pending.CorrespondsWith(ctx, tx, row.Email)
+	if err != nil {
+		return err
+	}
+	if corresponds {
 		return nil
 	}
 	return e.people.SuppressBulkSenderDomainTx(ctx, tx, row.Domain,

@@ -70,6 +70,7 @@ const REASONS = [
   "invisible_incumbent",
   "derivation_failed",
   "no_counterparty",
+  "role_mailbox",
   "transactional_infra",
   "transactional_prefix",
 ] as const;

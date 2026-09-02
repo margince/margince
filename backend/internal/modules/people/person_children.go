@@ -366,6 +366,11 @@ func attachPersonChildren(ctx context.Context, tx pgx.Tx, people []crmcontracts.
 	if err := attachPersonSocial(ctx, tx, idx, personIDs); err != nil {
 		return err
 	}
+	if err := storekit.AttachRowTags(ctx, tx, personEntity, people,
+		func(p crmcontracts.Person) ids.UUID { return ids.UUID(p.Id) },
+		func(p *crmcontracts.Person, tags []storekit.RowTag) { p.Tags = wireRowTags(tags) }); err != nil {
+		return err
+	}
 	return attachPersonReachability(ctx, tx, idx, personIDs)
 }
 

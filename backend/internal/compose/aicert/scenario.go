@@ -138,6 +138,16 @@ type Scenario struct {
 	SanitizedBy string       `yaml:"sanitized_by"`
 	Fixture     JSONValue    `yaml:"fixture"`
 	Expect      Expectations `yaml:"expect"`
+	// Path is the file LoadCorpus read this scenario from, so a reader handed a
+	// scenario can open it — a filename and a `name:` are two different things
+	// here, and nothing else in the tree maps one to the other.
+	//
+	// It is set by the loader rather than parsed, and is excluded from both
+	// encodings on purpose: `yaml:"-"` keeps KnownFields(true) refusing a `path:`
+	// key an author might write, and `json:"-"` keeps it out of the certification
+	// stamp, which digests the scenario whole. A stamp that moved when a file was
+	// renamed would discard measurements nothing about the case had changed.
+	Path string `yaml:"-" json:"-"`
 }
 
 // LoadCorpus reads every *.yaml file under dir (recursively, so a task's
@@ -179,6 +189,7 @@ func LoadCorpus(dir string, census *aitasks.Registry) ([]Scenario, error) {
 		if validateErr := validateScenario(sc, path, census); validateErr != nil {
 			return validateErr
 		}
+		sc.Path = path
 		scenarios = append(scenarios, sc)
 		return nil
 	})
@@ -317,5 +328,6 @@ func LoadScenarioFile(path string, census *aitasks.Registry) (Scenario, error) {
 	if len(sc.Fixture) == 0 {
 		return Scenario{}, fmt.Errorf("aicert: %s carries no fixture, so there is nothing to give the site", path)
 	}
+	sc.Path = path
 	return sc, nil
 }

@@ -46,6 +46,20 @@ func (w waitingOwnedBy) Unanswered(context.Context, time.Time) ([]WaitingCustome
 	return []WaitingCustomer(w), false, nil
 }
 
+// Nothing hidden: these tests are about WHOSE rows the queue carries, and a
+// fake that also invented a backlog would let a projection defect show up as a
+// guardrail figure instead of as a missing row.
+// Nothing measured: these tests are about which rows the queue carries, and a
+// fake answering a response time would let a projection defect read as a
+// timing figure.
+func (w waitingOwnedBy) Answered(context.Context, time.Time, time.Time) (AnsweredWork, error) {
+	return AnsweredWork{}, nil
+}
+
+func (w waitingOwnedBy) Hidden(context.Context, time.Time) (HiddenWork, error) {
+	return HiddenWork{Shown: len(w)}, nil
+}
+
 // Opening a named person's queue keeps THEIR waiting customers and drops the
 // reader's own.
 //

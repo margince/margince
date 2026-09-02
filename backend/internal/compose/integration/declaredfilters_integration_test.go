@@ -40,14 +40,16 @@ import (
 func tagCurator(e *Env) context.Context {
 	return e.As(ids.NewV7(), nil, principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
-			"tag":    {Create: true, Read: true, Update: true},
-			"person": {Read: true},
+			"tag": {Create: true, Read: true, Update: true},
+			// update, not merely read: applying a tag writes to the PERSON,
+			// so the curator needs the verb that changes one.
+			"person": {Read: true, Update: true},
 		},
 		RowScope: principal.RowScopeAll,
 	})
 }
 
-func TestThePersonListNarrowsByTagName(t *testing.T) {
+func TestThePersonListNarrowsByTagID(t *testing.T) {
 	e := Setup(t)
 	tagged := e.SeedPerson(t, "Tagged Person", nil)
 	e.SeedPerson(t, "Untagged Person", nil)
@@ -62,25 +64,29 @@ func TestThePersonListNarrowsByTagName(t *testing.T) {
 		t.Fatalf("applying the tag: %v", err)
 	}
 
-	// Folded on both sides: the vocabulary is unique under lower(name), so
-	// the caller's capitalization decides nothing about which tag they named.
-	for _, asked := range []string{"VIP", "vip", " Vip "} {
-		page, _, err := e.People.ListPeople(e.Admin(), people.ListPeopleInput{Tag: &asked})
-		if err != nil {
-			t.Fatalf("listing people by tag %q: %v", asked, err)
-		}
-		if len(page) != 1 || ids.UUID(page[0].Id) != tagged {
-			t.Fatalf("tag=%q returned %d people, want only the tagged one", asked, len(page))
-		}
+	// By ID. The list used to take a NAME and fold its case, which meant a
+	// saved view holding one started selecting a different slice the day an
+	// admin corrected a spelling.
+	page, _, err := e.People.ListPeople(e.Admin(), people.ListPeopleInput{
+		TagIDs: []ids.UUID{vip.ID.UUID},
+	})
+	if err != nil {
+		t.Fatalf("listing people by tag: %v", err)
+	}
+	if len(page) != 1 || ids.UUID(page[0].Id) != tagged {
+		t.Fatalf("the tag filter returned %d people, want only the tagged one", len(page))
 	}
 
-	unknown := "no-such-tag"
-	page, _, err := e.People.ListPeople(e.Admin(), people.ListPeopleInput{Tag: &unknown})
+	// A tag nobody applied selects nobody — not everybody, which is what an
+	// ignored filter would do.
+	page, _, err = e.People.ListPeople(e.Admin(), people.ListPeopleInput{
+		TagIDs: []ids.UUID{ids.NewV7()},
+	})
 	if err != nil {
 		t.Fatalf("listing people by an unused tag: %v", err)
 	}
 	if len(page) != 0 {
-		t.Fatalf("a tag nobody carries returned %d people — a dropped filter answers the whole list", len(page))
+		t.Fatalf("an unused tag returned %d people, want none", len(page))
 	}
 }
 

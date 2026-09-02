@@ -17,6 +17,21 @@ import type { Route } from "./router";
 // own subtitle had to print its own title above it to hang it on, and the
 // shell was already printing that title — the page then named itself twice.
 //
+/**
+ * Screens that head THEMSELVES, so the shell prints no heading above them.
+ *
+ * Home greets the reader by name in its own h1 — "Guten Morgen, Demo." — and
+ * the shell's own nav label above it named the page a second time at heading
+ * level.
+ * Two top-level headings is no outline at all, and it is the same defect the
+ * shell already avoids for a record (whose name is its heading) and a unit.
+ *
+ * A screen earns a place here by rendering an h1 of its own, not by having a
+ * heading somewhere on it. A screen whose own heading is an h2 still wants the
+ * shell to name the page.
+ */
+export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set(["home"]);
+
 // Only a subtitle true of the WHOLE page qualifies. Copy that describes the
 // current tab, filter or segment belongs beside that control, where it changes
 // with it; the page heading cannot see those and would go stale.

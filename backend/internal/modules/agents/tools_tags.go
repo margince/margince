@@ -41,12 +41,55 @@ type Tag struct {
 	Archived bool `json:"archived,omitempty"`
 }
 
+// TagDetail is one word with its weight: how many records of each advertised
+// type carry it. The counts answer "what does retiring this cost", which is
+// the question an agent asks before proposing a cleanup.
+type TagDetail struct {
+	Tag
+	People    int `json:"people"`
+	Companies int `json:"companies"`
+	Deals     int `json:"deals"`
+}
+
+// RecordTagsResult is what one record carries. Withheld says the caller may
+// read the record and not the vocabulary, which is not the same as a record
+// with no tags — a model told "no tags" would report a fact nobody established.
+type RecordTagsResult struct {
+	Tags []RecordTagOnRecord `json:"tags"`
+	// NOT omitempty. The whole point of this field is that a model can tell a
+	// withheld answer from a record with no tags, and omitting it when false
+	// makes the two serialize identically — the same defect the HTTP shape is
+	// built to avoid.
+	Withheld bool `json:"withheld"`
+}
+
+// RecordTagOnRecord is one tag as it sits on one record.
+type RecordTagOnRecord struct {
+	TagID    ids.UUID `json:"tag_id"`
+	Name     string   `json:"name"`
+	Archived bool     `json:"archived,omitempty"`
+	// AssignedBy names the person behind the assignment where the row records
+	// one; AssignedByKind says whether the hand was a human's, an agent's or
+	// an import's.
+	AssignedBy     string `json:"assigned_by,omitempty"`
+	AssignedByKind string `json:"assigned_by_kind,omitempty"`
+	AssignedAt     string `json:"assigned_at"`
+}
+
 // Tags is the seam onto the collections module's tag paths.
 type Tags interface {
-	// ListTags answers the workspace's vocabulary, newest spelling rules and
-	// all. Read before applying: apply_tag creates the word it is given, so a
-	// caller who cannot see the existing ones coins near-duplicates.
+	// ListTags answers the workspace's vocabulary. Read before applying:
+	// apply_tag REFUSES a word the workspace does not hold, so a caller who
+	// cannot see the existing ones asks for a near-duplicate.
 	ListTags(ctx context.Context, includeArchived bool) (tags []Tag, truncated bool, err error)
+	// GetTag answers one word with how much of the workspace carries it.
+	GetTag(ctx context.Context, tagID ids.UUID) (TagDetail, error)
+	// RecordTags answers the tags on one record, with who applied each.
+	RecordTags(ctx context.Context, entityType string, entityID ids.UUID) (RecordTagsResult, error)
+	// RecordTagTypes answers the record types that read serves — the store's
+	// own list, so the tool's schema advertises exactly what it will accept
+	// rather than a copy kept here that can drift from it.
+	RecordTagTypes() []string
 	// EnsureTaggable refuses a record the caller cannot tag, before a tag is
 	// created for it. Same check ApplyTag makes at the end of its own
 	// transaction; asked earlier so a failed apply leaves nothing behind.
@@ -55,10 +98,11 @@ type Tags interface {
 	// ok=false when there is none. Remove uses it: a name that names nothing
 	// means the tagging is already absent.
 	FindTag(ctx context.Context, name string) (ids.UUID, bool, error)
-	// EnsureTag answers the id of the workspace tag with this name, creating
-	// it only when no such word exists. Reuse is the default because a
-	// vocabulary that grows a near-duplicate per call stops being one.
-	EnsureTag(ctx context.Context, name string) (ids.UUID, error)
+	// ResolveTag answers the id of an EXISTING workspace tag with this name
+	// and refuses when there is none. It never creates: the vocabulary is
+	// governed, so a tool that coined a word on a name it did not recognise
+	// would hand every agent the authority only Admin and Ops hold.
+	ResolveTag(ctx context.Context, name string) (ids.UUID, error)
 	ApplyTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error
 	RemoveTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error
 	// TaggableTypes answers the record types a tagging may name — the store's
@@ -74,6 +118,8 @@ func RegisterTagTools(r *Registry, tags Tags) {
 		return
 	}
 	r.Register(listTags{tags: tags})
+	r.Register(getTag{tags: tags})
+	r.Register(getRecordTags{tags: tags, types: tags.RecordTagTypes()})
 	r.Register(applyTag{tags: tags})
 	r.Register(removeTag{tags: tags})
 }
@@ -92,7 +138,7 @@ func taggingSchema(taggableTypes []string) string {
 	}
 	return `{"type":"object","required":["record_type","record_id"],"properties":{
 	"tag_id":{"type":"string","format":"uuid"},
-	"tag_name":{"type":"string","maxLength":120,"description":"Instead of tag_id: the tag is created if the workspace has no such word"},
+	"tag_name":{"type":"string","maxLength":64,"description":"Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created"},
 	"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},
 	"record_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`
 }
@@ -135,6 +181,78 @@ func (t listTags) Handle(ctx context.Context, in json.RawMessage) (json.RawMessa
 	return json.Marshal(ListTagsResult{Tags: tags, Truncated: truncated})
 }
 
+// --- get_tag (🟢 read) ---
+
+type getTag struct{ tags Tags }
+
+func (t getTag) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "get_tag", Title: "Get a tag", Version: toolVersionV1,
+		Description:   getTagCopy.render(),
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "getTag",
+		InputSchema: schema(`{"type":"object","required":["tag_id"],"properties":{
+			"tag_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
+		OutputSchema: schemaFor[TagDetail](),
+	}
+}
+
+func (t getTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args struct {
+		TagID ids.UUID `json:"tag_id"`
+	}
+	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	detail, err := t.tags.GetTag(ctx, args.TagID)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(detail)
+}
+
+// --- get_record_tags (🟢 read) ---
+
+type getRecordTags struct {
+	tags  Tags
+	types []string
+}
+
+func (t getRecordTags) Spec() mcp.ToolSpec {
+	quoted := make([]string, 0, len(t.types))
+	for _, rt := range t.types {
+		quoted = append(quoted, `"`+rt+`"`)
+	}
+	return mcp.ToolSpec{
+		Name: "get_record_tags", Title: "Get a record's tags", Version: toolVersionV1,
+		Description:   getRecordTagsCopy.render(),
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "getRecordTags",
+		InputSchema: schema(`{"type":"object","required":["record_type","record_id"],"properties":{
+			"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},
+			"record_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
+		OutputSchema: schemaFor[RecordTagsResult](),
+	}
+}
+
+func (t getRecordTags) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args struct {
+		RecordType string   `json:"record_type"`
+		RecordID   ids.UUID `json:"record_id"`
+	}
+	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	result, err := t.tags.RecordTags(ctx, args.RecordType, args.RecordID)
+	if err != nil {
+		return nil, err
+	}
+	if result.Tags == nil {
+		result.Tags = []RecordTagOnRecord{}
+	}
+	return json.Marshal(result)
+}
+
 // --- apply_tag / remove_tag (🟢 write) ---
 
 type applyTag struct{ tags Tags }
@@ -163,16 +281,15 @@ func (t applyTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessa
 	// two spellings of the same tag.
 	if args.TagID.IsZero() {
 		if args.TagName == "" {
-			return nil, &BadArgsError{Cause: errors.New("give tag_id, or tag_name to reuse or create one")}
+			return nil, &BadArgsError{Cause: errors.New("give tag_id, or tag_name naming a tag the workspace already has")}
 		}
-		// The TARGET is authorized before anything is created. Creating first
-		// left a live, audited tag behind when the record turned out not to
-		// exist or to be outside the caller's scope — a write nobody asked for,
-		// produced by a call that then failed.
+		// The TARGET is authorized first, so a caller naming a record they
+		// cannot reach is refused for that reason rather than learning which
+		// tags exist from the resolution error.
 		if err := t.tags.EnsureTaggable(ctx, args.RecordType, args.RecordID); err != nil {
 			return nil, err
 		}
-		resolved, err := t.tags.EnsureTag(ctx, args.TagName)
+		resolved, err := t.tags.ResolveTag(ctx, args.TagName)
 		if err != nil {
 			return nil, err
 		}

@@ -52,6 +52,13 @@ function day(queue: WorklistItem[]): Worklist {
       total: queue.length,
     },
     sources_unavailable: [],
+    readings: {
+      revenue_at_risk_minor: null,
+      buyer_replies: 0,
+      prospecting: 0,
+      review: 0,
+      more_available: false,
+    },
     reach: [],
     counts: [],
   };

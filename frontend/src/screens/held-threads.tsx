@@ -65,7 +65,10 @@ export function HeldThreadsCard() {
                 <p className="t-small">{t("heldThreads.empty")}</p>
               </EmptyState>
             ) : (
-              <HeldThreadTable rows={list.data} />
+              <>
+                <BacklogCallout rows={list.data} />
+                <HeldThreadTable rows={list.data} />
+              </>
             )
           }
         </QueryGate>
@@ -199,6 +202,47 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
         </Callout>
       ))}
     </>
+  );
+}
+
+// backlogStallAttempts is when a pending thread has been asked about as often as
+// it ever will be.
+//
+// The ledger claims a row only while `attempts < 2` (PendingMaxAttempts), so 2
+// is the ceiling and a threshold above it can never be crossed — the first
+// version of this used 3 and rendered nothing, ever. A thread sitting at the
+// ceiling and still pending is one the lane has stopped answering: a healthy
+// pass would have resolved it, and a spent one would have retired it to `unsure`
+// and taken it out of this list.
+const backlogStallAttempts = 2;
+
+/**
+ * Whether the classifier is answering at all, derived from the rows already
+ * fetched rather than read from a lane the reader may not query.
+ *
+ * `/ai/health` is the obvious source and the wrong one: it is admin-only, and
+ * the closed RBAC object set carries no AI-runtime entry, so opening it to reps
+ * is a closed-set change plus a product decision. This is also the truer answer
+ * for the reader in front of it — their own backlog, not a global lane that may
+ * be healthy while their mail sits.
+ */
+function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const stalled = rows.filter(
+    (row) => row.pending && row.attempts >= backlogStallAttempts,
+  );
+  if (stalled.length === 0) {
+    // Pending but not yet at the ceiling is ordinary latency, and saying "your
+    // mail is stuck" about it would cry wolf every time a thread arrives.
+    return null;
+  }
+  return (
+    <Callout tone="warn" live="status">
+      {t("heldThreads.backlogStalled", {
+        count: formatNumber(stalled.length, locale),
+      })}
+    </Callout>
   );
 }
 

@@ -18,6 +18,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -44,6 +45,15 @@ type SenderDecision struct {
 	// RecordExists reports whether a contact was actually created, which is
 	// the consequence an owner can see on the rest of the product.
 	RecordExists bool
+	// DeletesAt is when this sender's mail is destroyed, set only for a
+	// `personal` verdict the owner has not overruled. Zero means nothing is
+	// scheduled — every other kind is held rather than destroyed.
+	//
+	// The EARLIEST message's date, because that is the first thing an owner
+	// loses and the deadline the page must name. Later mail from the same
+	// sender goes on its own clock, which is why this moves as the oldest is
+	// destroyed rather than counting down to one moment.
+	DeletesAt time.Time
 }
 
 // Overruled reports whether the owner's decision differs from the machine's.
@@ -66,7 +76,7 @@ func (d SenderDecision) Overruled() bool { return d.Decision != "" }
 // write an override for any address they can guess and read back what the
 // classifier privately concluded about a colleague's correspondence with it —
 // `advisor` among them, which exists to hide that somebody has a lawyer.
-func SendersFor(ctx context.Context, db *database.DB) ([]SenderDecision, error) {
+func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindows) ([]SenderDecision, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return nil, err
 	}
@@ -94,20 +104,46 @@ func SendersFor(ctx context.Context, db *database.DB) ([]SenderDecision, error) 
 			            -- supplied — so an unscoped EXISTS would answer "does
 			            -- your colleague know this person" for any address a
 			            -- seat cares to guess.
-			            AND (pr.visibility <> 'owner' OR pr.owner_id = $1)) AS record_exists
+			            AND (pr.visibility <> 'owner' OR pr.owner_id = $1)) AS record_exists,
+			       -- Only for a personal verdict the owner has not overruled:
+			       -- every other kind is held, and an override cancels the sweep,
+			       -- so a date on either would name a deletion that never comes.
+			       --
+			       -- Over the mail the sweep would ACTUALLY take, not over every
+			       -- message from the address: PersonalPurgeScope is the same
+			       -- clause SelectPersonalPurgeTx applies, so a message under a
+			       -- statutory hold or one a colleague also imported does not
+			       -- set a date for a deletion that never comes. The sole-import
+			       -- test is here rather than in the scope because the sweep
+			       -- RELEASES a shared message instead of destroying it — a
+			       -- different outcome, not an excluded row.
+			       CASE WHEN p.kind = 'personal' AND p.status = 'noise'
+			             AND p.resolved_at IS NOT NULL AND o.decision IS DISTINCT FROM 'business'
+			       THEN (SELECT min(`+PersonalPurgeDeadline("$2", "$3")+`)
+			               FROM activity a
+			               JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
+			              WHERE a.counterparty_email = p.email
+			                AND `+PersonalPurgeScope("$1")+`
+			                AND (SELECT count(*) FROM capture_import c
+			                      WHERE c.activity_id = a.id) = 1)
+			       END AS deletes_at
 			  FROM (SELECT * FROM capture_pending_counterparty WHERE owner_id = $1) p
 			  FULL OUTER JOIN (SELECT * FROM capture_sender_override WHERE user_id = $1) o
 			    ON o.address = p.email
-			 ORDER BY address`, actor.UserID)
+			 ORDER BY address`, actor.UserID, windows.ByOwner, windows.ByClassifier)
 		if err != nil {
 			return fmt.Errorf("capture: listing a seat's sender decisions: %w", err)
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var d SenderDecision
+			var deletesAt *time.Time
 			if err := rows.Scan(&d.Address, &d.Kind, &d.Status,
-				&d.Decision, &d.OverruledKind, &d.RecordExists); err != nil {
+				&d.Decision, &d.OverruledKind, &d.RecordExists, &deletesAt); err != nil {
 				return fmt.Errorf("capture: listing a seat's sender decisions: %w", err)
+			}
+			if deletesAt != nil {
+				d.DeletesAt = *deletesAt
 			}
 			out = append(out, d)
 		}

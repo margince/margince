@@ -38,6 +38,54 @@ type Waiting interface {
 	// also what a smaller, complete installation returns. A caller counting rows
 	// against the bound would read the truncated scan as complete.
 	Unanswered(ctx context.Context, asOf time.Time) (rows []WaitingCustomer, cut bool, err error)
+	// Hidden answers what the queue's own hiding rules are keeping off this
+	// reader's page, one rule at a time.
+	//
+	// On the same seam as the lane it measures rather than on one of its own:
+	// the figures are differences between runs of the query behind Unanswered,
+	// so a second seam would let an installation bind a queue and a guardrail
+	// that disagree about who is waiting.
+	Hidden(ctx context.Context, asOf time.Time) (HiddenWork, error)
+	// Answered says how fast the workspace replied over a window, and how much
+	// of the queue it put down instead.
+	//
+	// On this seam for the reason Hidden is: both are questions about the same
+	// waiting work, and a seam of their own would let an installation bind a
+	// queue and a measurement that disagree about which threads are sales.
+	Answered(ctx context.Context, from, to time.Time) (AnsweredWork, error)
+}
+
+// AnsweredWork is what the workspace did with its waiting work over a window.
+type AnsweredWork struct {
+	Answered         int
+	MedianMinutes    int
+	Disposed         int
+	DisposedNotSales int
+}
+
+// HiddenWork is how much waiting work each rule is holding back, and whether
+// anything is.
+//
+// The module's own struct restated here rather than imported, like every other
+// type across this seam: compose owns the wire shape and modules own their
+// storage, and a projection reaching into a module's struct is the edge the
+// architecture forbids.
+type HiddenWork struct {
+	Shown       int
+	SetAside    int
+	NotSales    int
+	PastHorizon int
+	Unlinked    int
+	// Truncated says a read stopped at its own scan bound, which makes every
+	// figure a floor. The module states why it is fatal to Clear rather than
+	// merely noted beside it.
+	Truncated bool
+}
+
+// Clear reports that nothing is being held back — the guardrail's target.
+func (h HiddenWork) Clear() bool {
+	return !h.Truncated &&
+		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0
 }
 
 // WaitingCustomer is one message nobody has answered.
@@ -107,4 +155,93 @@ type waitingRead struct {
 	rows []WaitingCustomer
 	read bool
 	cut  bool
+}
+
+// HiddenBacklog answers what the queue is not showing this reader.
+//
+// A projection over the seam and nothing more: the arithmetic is the module's,
+// because the figures are differences between runs of ITS query and computing
+// them here would need this package to hold a second copy of the eligibility
+// rules.
+//
+// An unbound seam answers a clear backlog rather than an error. An installation
+// that does not read the mail stream has no waiting queue to hide work from, so
+// "nothing is held back" is the true answer rather than a degraded one.
+func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog, error) {
+	asOf := s.now()
+	if s.waiting == nil {
+		return crmcontracts.HiddenBacklog{AsOf: asOf, Clear: true}, nil
+	}
+	work, err := s.waiting.Hidden(ctx, asOf)
+	if err != nil {
+		return crmcontracts.HiddenBacklog{}, err
+	}
+	return crmcontracts.HiddenBacklog{
+		AsOf:        asOf,
+		Shown:       work.Shown,
+		SetAside:    work.SetAside,
+		NotSales:    work.NotSales,
+		PastHorizon: work.PastHorizon,
+		Unlinked:    work.Unlinked,
+		Truncated:   work.Truncated,
+		// Derived from the same struct the figures came from, so the flag and
+		// the numbers cannot disagree — a client reading `clear` over four
+		// non-zero counts is the one lie this endpoint must not tell.
+		Clear: work.Clear(),
+	}, nil
+}
+
+// responseWindowDays is how far back the reading looks when a caller names no
+// window. A fortnight: long enough that one slow afternoon does not decide the
+// figure, short enough that it still describes how the workspace works now.
+const responseWindowDays = 14
+
+// responseWindowMaxDays is the widest window this reading answers.
+//
+// Clamped HERE and not only in the contract. The generated parameter is a bare
+// *int — OpenAPI's `maximum` is documentation the router does not enforce — so a
+// caller asking for a hundred thousand days would reach the store and scan every
+// message the workspace has ever held. Past ninety days the figure also stops
+// describing how the workspace works now and starts averaging over a change in
+// how it works, so the bound is the same number for both reasons.
+//
+// The HANDLER refuses a window outside 1..this, which is the tree's convention
+// for a published range. This constant is also the service's own last line: a
+// caller reaching the service directly — a future job, a seam — gets the widest
+// honest window rather than an unbounded scan.
+const responseWindowMaxDays = 90
+
+// ResponseMetrics answers how fast the workspace replies, over a window.
+//
+// A projection over the seam, like HiddenBacklog: the arithmetic is a median
+// and a filtered count in SQL, and computing either here would need this
+// package to hold a second definition of what a sales thread is.
+//
+// An unbound seam answers an empty window rather than an error, for the reason
+// the guardrail does: an installation that reads no mail has nothing to have
+// answered slowly.
+func (s *Service) ResponseMetrics(
+	ctx context.Context, days int,
+) (crmcontracts.ResponseMetrics, error) {
+	if days <= 0 {
+		days = responseWindowDays
+	}
+	if days > responseWindowMaxDays {
+		days = responseWindowMaxDays
+	}
+	to := s.now()
+	from := to.AddDate(0, 0, -days)
+	out := crmcontracts.ResponseMetrics{From: from, To: to}
+	if s.waiting == nil {
+		return out, nil
+	}
+	work, err := s.waiting.Answered(ctx, from, to)
+	if err != nil {
+		return crmcontracts.ResponseMetrics{}, err
+	}
+	out.Answered = work.Answered
+	out.MedianMinutes = work.MedianMinutes
+	out.Disposed = work.Disposed
+	out.DisposedNotSales = work.DisposedNotSales
+	return out, nil
 }

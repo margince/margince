@@ -58,7 +58,7 @@ import {
   useAcknowledgeOrganizationView,
   useOrganization360,
 } from "./company360";
-import { NewDealAction, NewProjectAction } from "./companyactions";
+import { NewDealAction } from "./companyactions";
 import { CompanyApprovalsPanel } from "./companyapprovals";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyContractsCard } from "./companycontracts";
@@ -119,6 +119,7 @@ import {
   listFetchLimit,
   useListQuery,
   useOwnerChips,
+  useTagChips,
 } from "./listquery";
 import { PersonMeetingBrief } from "./meetingbrief";
 import { PartnerTab } from "./partners";
@@ -130,15 +131,18 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
+import { ConversationList } from "./recordconversations";
 import {
   createdColumn,
   lastActivityColumn,
   mineEmptyNote,
   ownerColumn,
   standardViews,
+  tagsColumn,
 } from "./recordlist";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
+import { listQueryParams } from "./tagfilter";
 import {
   TaskDetailModal,
   TaskQuickActions,
@@ -199,7 +203,7 @@ async function fetchOrganizationsPage(
         include_archived: query.includeArchived || undefined,
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        ...query.filters,
+        ...listQueryParams(query.filters),
       },
     },
   });
@@ -563,6 +567,7 @@ export function CompaniesScreen() {
   // nothing — the same reason the deal list builds its owner chip this way.
   const viewerId = useViewerId();
   const ownerChips = useOwnerChips();
+  const tagChips = useTagChips();
   const savedViews = useSavedViewTabs("organizations");
   // Beside the owner dial rather than in `chips`, and the reason is the option
   // labels. A `chips` entry runs every label through `t()`, so its options must
@@ -637,6 +642,7 @@ export function CompaniesScreen() {
             header: t("org.description"),
             cell: (org: Organization) => org.description ?? "",
           },
+          tagsColumn<Organization>(t),
           {
             key: "website",
             header: t("org.website"),
@@ -712,7 +718,7 @@ export function CompaniesScreen() {
         tools={<SaveViewAction resource="organizations" query={state.query} />}
         rowKey={(org) => org.id}
         rowRoute={(org) => ({ screen: "companies", id: org.id })}
-        dataChips={[...ownerChips, ...sizeChip]}
+        dataChips={[...ownerChips, ...sizeChip, ...tagChips]}
         chips={[
           {
             key: "lifecycle",
@@ -1543,7 +1549,6 @@ function useChronologySlots({
     records("person", id) ??
     records("deal", id) ??
     records("organization", id);
-  const queryClient = useQueryClient();
   const [filter, setFilter] = useChronologyFilter(org.id);
   const [filters, setFilters] = useTimelineFilters(org.id);
   // The 360's own page seeds the list; older pages and every narrowed read
@@ -1612,49 +1617,51 @@ function useChronologySlots({
       timelineGroups: groupChronology(history.entries, timeline.hasNextPage),
       timelineHeader: (
         <>
-          <ChronologyFilter filter={filter} onFilter={setFilter} />
+          <ChronologyFilter
+            filter={filter}
+            conversations
+            onFilter={setFilter}
+          />
           {filter !== "changes" && (
             <TimelineFilterBar value={filters} onChange={setFilters} />
           )}
         </>
       ),
       timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
-      // The Changes view IS the record's history: one reading of what changed
-      // on this record, and the one that can put a change back. It replaces
-      // the list rather than sitting beside it, because two renderings of the
-      // same audit rows would be two answers to one question and only one of
-      // them would ever carry the control.
+      // Every cut renders through the ONE chronicle: Changes draws the same
+      // change rows the All view interleaves and Conversations the same
+      // thread rows, so no cut is a second rendering of rows another cut
+      // already shows. The By-field reading and the put-back control live in
+      // the record's Full history (the header's overflow menu), the one
+      // surface that carries the restore write.
       timelineNotice:
-        filter === "changes" ? (
-          <RecordHistoryTab
-            kind="organization"
-            id={org.id}
-            restore={{
-              version: org.version,
-              onRestored: () =>
-                invalidateRecord(queryClient, "organization", org.id),
-            }}
+        chronologyNotice(
+          filter === "conversations"
+            ? "chronology.conversationsEmpty"
+            : "co.timeline.empty",
+          {
+            // The two feeds are read together rather than per filter.
+            loading: loading || history.loading || timeline.isPending,
+            failed: failed || history.failed || timeline.isError,
+            // A narrowed read is the list's own and is assembled once it
+            // answers; the unfiltered one is the 360's section.
+            assembled: hasTimelineFilters(filters)
+              ? timeline.isSuccess
+              : Boolean(view?.activities),
+            filter,
+          },
+          history.entries.length,
+          t,
+        ) ??
+        // The Conversations cut narrows the chronicle to the exchanges
+        // somebody can answer, drawn through the same grouped list as every
+        // other cut, standing where the unfiltered list would.
+        (filter === "conversations" ? (
+          <ConversationList
+            groups={groupChronology(history.entries, timeline.hasNextPage)}
+            zone={recordZone}
           />
-        ) : (
-          chronologyNotice(
-            "co.timeline.empty",
-            {
-              // Only Activities and All reach here — the Changes view is the
-              // record's history above and reports its own state — so the two
-              // feeds are read together rather than per filter.
-              loading: loading || history.loading || timeline.isPending,
-              failed: failed || history.failed || timeline.isError,
-              // A narrowed read is the list's own and is assembled once it
-              // answers; the unfiltered one is the 360's section.
-              assembled: hasTimelineFilters(filters)
-                ? timeline.isSuccess
-                : Boolean(view?.activities),
-              filter,
-            },
-            history.entries.length,
-            t,
-          )
-        ),
+        ) : undefined),
     },
   };
 }
@@ -1778,7 +1785,13 @@ function CompanyPage({
   const t = useT();
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
-  const archivedReasonId = useId();
+  const archivedParagraphId = useId();
+  // Only when the paragraph below is actually rendered — the raw `useId()`
+  // value is always truthy, so passing IT unconditionally told
+  // CompanyActionBadges a sentence was already drawn for every account,
+  // archived or not, and left its own fallback (the "not yours to change"
+  // case) pointing `aria-describedby` at an id nothing on the page carries.
+  const archivedReasonId = org.archived_at ? archivedParagraphId : undefined;
   // ONE composer, opened two ways. Anchored on a timeline message it answers
   // that message; anchored on a person it starts a new one and grounds on the
   // account instead of a thread (ADR-0087 §1). Two pieces of state would let
@@ -1823,9 +1836,6 @@ function CompanyPage({
       // undefined `view` alone, and both drawing the loading skeleton is not
       // the same defect as both drawing "could not be loaded".
       loading={loading}
-      // The People tab IS the roster in full, so the rail's summary of it
-      // stands down rather than repeating it beside itself.
-      withPeople={tab !== "people"}
       composerOpen={composerOpen}
       onTab={onTab}
     />
@@ -1882,7 +1892,7 @@ function CompanyPage({
               to whichever group is drawing — stated in each, an archived
               account said the same thing twice as soon as the menu opened. */}
           {org.archived_at && (
-            <p className="t-caption" id={archivedReasonId}>
+            <p className="t-caption" id={archivedParagraphId}>
               {t("record.archivedReadOnly")}
             </p>
           )}
@@ -2139,9 +2149,9 @@ function CompanyRecordBody({
         />
       )}
       {/* The People tab gives the account team the whole middle column, with
-          room for the title and the last exchange beside each name. The rail's
-          copy stands down while it is open — the same roster twice, side by
-          side, is the duplication this page's own rule forbids. */}
+          room for the title and the last exchange beside each name. The
+          rail's capped summary stands beside it — a top-3 glance is the
+          reader's anchor across tabs, not a second copy of the roster. */}
       {tab === "people" && (
         <div className="co-panel-stack">
           {/* The account's people, ranked and paged. One representation, not
@@ -2327,7 +2337,12 @@ function RecentActivitySection360({
       </PanelBody>
     );
   }
-  return <CompanyRecentList activities={logged.slice(0, RECENT_360_LIMIT)} />;
+  return (
+    <CompanyRecentList
+      activities={logged.slice(0, RECENT_360_LIMIT)}
+      nameOf={recordNamesIn(view)}
+    />
+  );
 }
 
 // How many exchanges the reading shows before the History tab takes over. Six
@@ -2396,9 +2411,9 @@ function nothingOnFile(view?: Organization360View): boolean {
   );
 }
 
-// The create verbs the work card carries, one per section the reader may
-// actually read. Undefined for an archived record, which takes no new work at
-// all, and undefined per section for a reader whose grant does not reach it —
+// The create verb the work card carries, only where the reader may actually
+// read the section. Undefined for an archived record, which takes no new work
+// at all, and undefined for a reader whose grant does not reach the deals —
 // a button that can only end in a refusal is worse than no button, and
 // mounting one is a disclosure of its own.
 function workVerbs({
@@ -2409,18 +2424,13 @@ function workVerbs({
   view?: Organization360View;
   org: Organization;
   readOnly: boolean;
-}>): { deal?: ReactNode; project?: ReactNode } | undefined {
+}>): { deal?: ReactNode } | undefined {
   if (readOnly) {
     return undefined;
   }
-  const readable = (section: "deals" | "projects") =>
-    !view?.sections_omitted?.includes(section);
   return {
-    deal: readable("deals") ? (
+    deal: !view?.sections_omitted?.includes("deals") ? (
       <NewDealAction orgId={org.id} orgName={org.display_name} />
-    ) : undefined,
-    project: readable("projects") ? (
-      <NewProjectAction orgId={org.id} orgName={org.display_name} />
     ) : undefined,
   };
 }
@@ -2681,6 +2691,7 @@ function CompanyDealsAndTasksTabs({
   onOpenTask: (activityId: string | null) => void;
   taskUpdate: ReturnType<typeof useTaskUpdate>;
 }>) {
+  const t = useT();
   return (
     <>
       {tab === "deals" && (
@@ -2689,8 +2700,17 @@ function CompanyDealsAndTasksTabs({
               renders when the deals section itself is readable, so a reader
               holding the contract grant and not the deal grant would never see
               what the account is under contract for — a section withheld by
-              somebody else's permission. */}
-          <CompanyContractState view={view} />
+              somebody else's permission.
+              In its own Panel: the block renders PanelBody rows, and standing
+              bare over the deals card it read as a line that fell out of one.
+              The Panel is drawn only when the reader holds the contract grant
+              (the same `contracts` slice the block itself reads), so a reader
+              without it gets no empty card. */}
+          {view?.state_strip?.contracts && (
+            <Panel title={t("co.commercial.title")}>
+              <CompanyContractState view={view} />
+            </Panel>
+          )}
           <CompanyDealsTab
             org={org}
             view={view}

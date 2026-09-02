@@ -196,9 +196,10 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if avail.reason != connectReady {
-		// This installation has not configured an OAuth app for the provider —
-		// its surface keeps the declared 501.
-		httperr.NotImplemented(w, r, "ConnectConnector")
+		// The same refusal the roster already reported, in the words the caller
+		// can act on: a deployment with no registry keeps the bare 501, and a
+		// missing app names where one is added.
+		writeConnectorUnavailable(w, r, string(provider), h.registry != nil)
 		return
 	}
 	app := avail.app

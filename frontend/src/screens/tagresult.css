@@ -1,0 +1,32 @@
+.tagresult {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tagresult-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.tagresult-note {
+  color: var(--textMeta);
+  margin: 0;
+}
+
+/* Three groups side by side on a desk, stacked on a phone. The columns are
+   equal because no one record type is the answer — a reader arrives here
+   asking "what carries this word", not "which people carry it". */
+.tagresult-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-3);
+}
+
+.tagresult-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

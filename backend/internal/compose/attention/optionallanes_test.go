@@ -28,12 +28,25 @@ import (
 type stubCommitments struct {
 	rows []Commitment
 	err  error
+	// total is what the SOURCE holds, for the reason stubTasks carries one.
+	total    int
+	countErr error
 	// calls counts the reads, so a lane assembled twice is caught here rather
 	// than by a reader noticing their withheld lane named twice.
 	calls int
 	// by records the instant the lane asked for, so a test can prove the
 	// window rather than assume it.
 	by *time.Time
+}
+
+func (s *stubCommitments) CountDueBy(_ context.Context, _ time.Time) (int, error) {
+	if s.countErr != nil {
+		return 0, s.countErr
+	}
+	if s.total > 0 {
+		return s.total, nil
+	}
+	return len(s.rows), nil
 }
 
 func (s *stubCommitments) DueBy(_ context.Context, by time.Time, _ int) ([]Commitment, error) {

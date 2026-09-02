@@ -8,6 +8,7 @@ import { AvatarStack } from "../design-system/avatarstack";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Popover } from "../design-system/popover";
 import {
   type SectionState,
   SurfaceState,
@@ -25,7 +26,7 @@ import { NewDealAction } from "./companyactions";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid } from "./companyraildetails";
 import { SectionSummary, sectionAnswered } from "./companyrailshared";
-import { TagsSection } from "./companyrailtags";
+import { CompanyTagsSection } from "./companyrailtags";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { roleOf } from "./provider-status";
 import { signalKindLabel, signalTone } from "./record360";
@@ -68,7 +69,6 @@ export function CompanyRail({
   org,
   view,
   loading,
-  withPeople,
   composerOpen,
   onTab,
 }: Readonly<{
@@ -86,8 +86,6 @@ export function CompanyRail({
   // every one of them reads the failed state for as long as the read runs,
   // flashing "could not be loaded" on every ordinary page open.
   loading: boolean;
-  // False where the page's own body is already the roster in full.
-  withPeople: boolean;
   // A composer drawer is open in this column. The rail stands down entirely
   // rather than narrowing: squeezed to a third of its width it is a column of
   // broken cards, and no mockup draws the two side by side.
@@ -106,10 +104,9 @@ export function CompanyRail({
     // second labelled region inside it would give a reader two names for one
     // column.
     <div className="co-rail">
-      <DealsSection view={view} loading={loading} onTab={onTab} />
-      {withPeople && (
-        <PeopleSection view={view} loading={loading} onTab={onTab} />
-      )}
+      {/* Details lead the column: the account's own fields are the first
+          thing a reader orients by, and they draw from the page's already-
+          resolved record while the composite read below is still arriving. */}
       <Panel
         title={t("co.details.title")}
         titleAction={
@@ -127,11 +124,22 @@ export function CompanyRail({
           <DetailsGrid organization={view?.organization ?? org} />
         </PanelBody>
       </Panel>
+      {/* Both summaries stand on EVERY tab, the open one included: the rail
+          is the reader's anchor while they move between tabs, and each card
+          shows only the top RAIL_ROW_LIMIT rows — a summary beside a tab is
+          not a duplicate of it, a full copy would be. */}
+      <DealsSection view={view} loading={loading} onTab={onTab} />
+      <PeopleSection view={view} loading={loading} onTab={onTab} />
       <CompanyHoldSection organization={view?.organization ?? org} />
-      <TagsSection view={view} orgId={orgId} loading={loading} />
+      <CompanyTagsSection organization={view?.organization} orgId={orgId} />
     </div>
   );
 }
+
+// How many rows a rail card shows before pointing at the tab. The rail is a
+// glance, and a twenty-row card beside the work column is a second page, not
+// an anchor — the "All N" header verb is the way to the rest.
+const RAIL_ROW_LIMIT = 3;
 
 // Keeping a whole account's correspondence private, from the account page.
 //
@@ -177,12 +185,16 @@ function hostOf(website: string | null | undefined): string | undefined {
 }
 
 /**
- * DealsSection is the account's open pipeline: one row per deal, its stage
- * and expected close beside it, the deal's own reason for needing attention
- * ahead of everything else about it. `view.deals.data` is already open-only
- * (the 360's own contract — closed deals are reported through `won_lifetime`
- * and `lost_count`, never listed), so this draws every row it is handed
- * rather than filtering on `status` a second time.
+ * DealsSection is the account's open pipeline at a glance: the top
+ * RAIL_ROW_LIMIT deals, each with its stage, expected close, and the deal's
+ * own reason for needing attention ahead of everything else about it.
+ * `view.deals.data` is already open-only (the 360's own contract — closed
+ * deals are reported through `won_lifetime` and `lost_count`, never listed),
+ * so nothing here filters on `status` a second time.
+ *
+ * "Top" means: a deal carrying an attention flag before one without, and the
+ * larger amount before the smaller — the row a rep would want surfaced is
+ * the one that needs a move or carries the money.
  */
 function DealsSection({
   view,
@@ -196,7 +208,7 @@ function DealsSection({
   const t = useT();
   const { locale } = useLocale();
   const deals = view?.deals;
-  const rows = deals?.data ?? [];
+  const rows = rankedDeals(deals?.data ?? []);
   const state = sectionState(
     view,
     "deals",
@@ -226,7 +238,9 @@ function DealsSection({
       }
     >
       {state === "ready" ? (
-        rows.map((deal) => <DealRailRow key={deal.deal_id} deal={deal} />)
+        rows
+          .slice(0, RAIL_ROW_LIMIT)
+          .map((deal) => <DealRailRow key={deal.deal_id} deal={deal} />)
       ) : (
         <PanelBody>
           <SurfaceState
@@ -267,6 +281,42 @@ function DealsCreateVerb({
       />
     </div>
   );
+}
+
+// The rail's own ranking: a deal that needs a move outranks one that does
+// not, and past that the money decides — but only when every priced deal on
+// the account shares one KNOWN currency, because minor units of different or
+// unrecorded currencies are not comparable and a raw compare would rank ¥
+// over € on digit count. The decision is made ONCE over the whole list, not
+// inside the comparator: a pairwise "these two do not compare" while other
+// pairs still reorder is a non-transitive comparator, and Array.sort answers
+// that with an arbitrary order rather than the server's. When the amounts do
+// not compare, the stable sort keeps the server's own order — the one every
+// other deal surface shows — past the attention split.
+function rankedDeals(rows: readonly Deal[]): Deal[] {
+  // Only PRICED deals vote on comparability: an unpriced deal's currency is
+  // not a figure anybody ranks, and letting it into the set would stop two
+  // priced same-currency deals from ranking on a deal with nothing to rank.
+  const currencies = new Set(
+    rows.flatMap((deal) =>
+      deal.amount?.amount_minor != null && deal.amount.currency
+        ? [deal.amount.currency]
+        : [],
+    ),
+  );
+  const amountsComparable =
+    currencies.size <= 1 &&
+    rows.every(
+      (deal) => deal.amount?.amount_minor == null || deal.amount.currency,
+    );
+  const needsMove = (deal: Deal) => (deal.attention || deal.stalled ? 1 : 0);
+  return [...rows].sort((a, b) => {
+    const moved = needsMove(b) - needsMove(a);
+    if (moved !== 0 || !amountsComparable) {
+      return moved;
+    }
+    return (b.amount?.amount_minor ?? 0) - (a.amount?.amount_minor ?? 0);
+  });
 }
 
 // One flag a deal can carry ahead of its stage and close date: an overdue
@@ -362,7 +412,9 @@ function PeopleSection({
       }
     >
       {state === "ready" ? (
-        contacts.map((contact) => (
+        // The top of the byReach order: the rail glances at who matters most
+        // on the account, and the People tab is the full roster.
+        contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
           <PanelRow key={contact.person_id} className="co-person-row">
             <PersonRow contact={contact} />
           </PanelRow>
@@ -386,6 +438,7 @@ function PeopleSection({
 }
 
 function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
+  const t = useT();
   const colleagues = contact.routes?.top ?? [];
   return (
     <>
@@ -422,16 +475,35 @@ function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
       </span>
       {colleagues.length > 0 && (
         <span className="co-person-routes">
-          {/* The stack has no text of its own, so the names it draws as
-              faces are read again here for anyone not reading them as
-              monograms. A plain <span> carries no accessible name for an
-              aria-label to attach to. */}
-          <span className="sr-only">
-            {colleagues.map((route) => route.display_name).join(", ")}
-          </span>
-          <AvatarStack
-            people={colleagues.map((route) => ({ name: route.display_name }))}
-          />
+          {/* A bare monogram is a mark only its owner recognises, so the
+              stack opens to the sentence it stands for: which colleagues are
+              already in touch with this person. Hover for a passing reader,
+              click and focus for everyone a hover never reaches; the sr-only
+              names double as the trigger's accessible name. */}
+          <Popover
+            onHover
+            label={
+              <>
+                <span className="sr-only">
+                  {colleagues.map((route) => route.display_name).join(", ")}
+                </span>
+                <AvatarStack
+                  people={colleagues.map((route) => ({
+                    name: route.display_name,
+                  }))}
+                />
+              </>
+            }
+          >
+            <p className="t-caption">{t("co.rail.people.inTouch")}</p>
+            <ul className="co-person-routes-list">
+              {colleagues.map((route) => (
+                // Keyed on the id, not the name: two colleagues can share a
+                // display name, and a name key would fold their rows.
+                <li key={route.user_id}>{route.display_name}</li>
+              ))}
+            </ul>
+          </Popover>
         </span>
       )}
     </>

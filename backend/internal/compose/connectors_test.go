@@ -309,8 +309,13 @@ func TestConnectFailureOutcomeMatchesTheRemedy(t *testing.T) {
 		want     string
 	}{
 		{"a disabled provider API needs an administrator", providerGcal, disabledAPI, outcomeMisconfigured},
-		{"a refused OAuth client needs an administrator too", providerGcal, badClient, outcomeMisconfigured},
-		{"a refused OAuth client is provider-independent", providerGraph, badClient, outcomeMisconfigured},
+		// SEPARATE from the disabled API, because the remedies are separate
+		// screens: that one is the vendor's console, this one is the app card in
+		// Settings. Folded together, a Microsoft installation — which can only
+		// ever reach this branch — read every credential mistake as an unenabled
+		// API it does not have.
+		{"a refused OAuth client sends its administrator to the app card", providerGcal, badClient, outcomeBadClient},
+		{"a refused OAuth client is provider-independent", providerGraph, badClient, outcomeBadClient},
 		{"a refused grant needs its human", providerGcal, revokedGrant, outcomeRejected},
 		{"an unreachable provider is worth retrying", providerGcal, unreachable, outcomeError},
 		{"a bare auth sentinel carries no remedy detail", providerGcal, gcal.ErrAuthRejected, outcomeRejected},
@@ -456,5 +461,54 @@ func TestConnectabilityImapIsReadyWithJustTheRegistry(t *testing.T) {
 	var unwired connectorHandlers // zero value: no registry
 	if avail := unwired.connectability(context.Background(), "imap"); avail.reason != connectUnsupported {
 		t.Errorf("connectability(imap) with no registry = %+v, want unsupported", avail)
+	}
+}
+
+// AN INSTALLATION WITH NO APP IS TOLD WHICH APP IS MISSING, not that the
+// feature does not exist.
+//
+// 501 is right for both "nobody built this route" and "this deployment has not
+// configured it", and only the first is what the generic stub text describes.
+// Now that an app can be supplied in Settings, the second is a state a working
+// installation passes through on its way in — and the generic sentence sends an
+// operator looking for a newer build instead of to the screen that fixes it.
+func TestConnectingWithNoStoredAppSaysWhichAppIsMissing(t *testing.T) {
+	// A WIRED deployment with no app for THIS vendor: the registry exists
+	// (gmail is composed), and graph has nothing stored.
+	h := wiredHandlers()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/connectors/graph/connect", nil).WithContext(humanCtx())
+
+	h.ConnectConnector(rec, req, "graph")
+
+	if rec.Code != http.StatusNotImplemented {
+		t.Fatalf("status = %d, want 501 — the declared answer for an unconfigured connector", rec.Code)
+	}
+	body := rec.Body.String()
+	if strings.Contains(body, "not yet implemented") {
+		t.Errorf("the body still reads as an unbuilt feature: %s", body)
+	}
+	for _, want := range []string{"graph", "Settings"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the body does not mention %q, so it does not say what to go do: %s", want, body)
+		}
+	}
+}
+
+// A deployment that wired NO capture keeps the generic sentence. Sending its
+// operator to the app card would be sending them somewhere that cannot make the
+// route work — there is no registry for an app to be resolved against.
+func TestConnectingWithNoCaptureAtAllStaysGeneric(t *testing.T) {
+	h := connectorHandlers{}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/connectors/graph/connect", nil).WithContext(humanCtx())
+
+	h.ConnectConnector(rec, req, "graph")
+
+	if rec.Code != http.StatusNotImplemented {
+		t.Fatalf("status = %d, want 501", rec.Code)
+	}
+	if body := rec.Body.String(); strings.Contains(body, "Settings") {
+		t.Errorf("a deployment with no capture registry was told to visit Settings: %s", body)
 	}
 }

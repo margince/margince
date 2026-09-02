@@ -99,3 +99,26 @@ export const FoldsWithoutAnOrphan: Story = {
     </div>
   ),
 };
+
+// A caveat that belongs to the whole row rather than to one slot: a source read
+// to its limit makes EVERY figure above a floor. Attached to one figure it would
+// invite the reading where the other three are exact, which is why the plate
+// carries it and no slot does.
+export const QualifiedRow: Story = {
+  render: () => (
+    <StatStrip floor="A source was read to its limit, so every figure above is a floor.">
+      <StatCard
+        label="Customer waiting"
+        value="14"
+        detail="waiting on an answer"
+      />
+      <StatCard label="Meetings ahead" value="4" detail="1 needs prep" />
+      <StatCard
+        label="Promises due"
+        value="—"
+        detail="promises are not tracked yet"
+      />
+      <StatCard label="Lead response" value="3" detail="owed a first answer" />
+    </StatStrip>
+  ),
+};

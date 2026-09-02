@@ -11,11 +11,26 @@ var listTagsCopy = toolCopy{
 		"list was cut, so a word missing from it may still exist.",
 }
 
+var getTagCopy = toolCopy{
+	Purpose: "Read one tag and how many people, companies and deals carry it.",
+	Limits: "The counts cover those three record types only. They say how much retiring or " +
+		"merging the word would touch; the records themselves come from list_records.",
+}
+
+var getRecordTagsCopy = toolCopy{
+	Purpose: "Read the tags on one person, company or deal, with who applied each and when.",
+	Limits: "Those three record types only. `withheld` true means the vocabulary is not visible " +
+		"to this caller, so the list is empty for that reason — NOT because the record carries no " +
+		"tags, and it must not be reported as none. An archived tag stays on whatever carries it.",
+}
+
 var applyTagCopy = toolCopy{
-	Purpose: "Tag a person, company, deal, lead or project by tag_id, or by tag_name, which reuses " +
-		"the workspace's word or coins it.",
-	Limits: "Prefer a tag_id from list_tags: a name matches case-insensitively, and a near-miss " +
-		"makes a NEW word. The same tag twice is a conflict.",
+	Purpose: "Tag a person, company, deal, lead or project by tag_id, or by tag_name, which must " +
+		"name a tag the workspace already has.",
+	Limits: "This tool never creates a tag: an unknown name is refused, and only an admin or ops " +
+		"seat can add a word to the vocabulary. A name matches case-insensitively; an archived " +
+		"word is refused as archived rather than as unknown. Prefer a tag_id from list_tags. " +
+		"The same tag twice is a conflict.",
 }
 
 var removeTagCopy = toolCopy{

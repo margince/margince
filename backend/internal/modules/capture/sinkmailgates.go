@@ -134,10 +134,22 @@ func (s *Sink) internalDomainTx(ctx context.Context, tx pgx.Tx, domain string) (
 // and so is any second outbound. The test is the WORDS, not the direction or
 // the order: a rule that demoted every reply would have refused a prospect who
 // wrote first and got answered, which is the most ordinary shape there is.
-func (s *Sink) correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	positive, _, err := correspondenceDepthTx(ctx, tx, email)
+	return positive, err
+}
+
+// correspondenceDepthTx is correspondencePositiveTx plus the one distinction the
+// role-mailbox gate needs: whether the workspace wrote ONCE or repeatedly.
+//
+// A shared mailbox the owner keeps writing to is a counterparty by any honest
+// reading — `sales@` at a supplier answered twice is a working relationship —
+// while a single send to `billing@` is an errand. The query already stopped at
+// exactly this boundary for its own reasons, so reporting it costs nothing.
+func correspondenceDepthTx(ctx context.Context, tx pgx.Tx, email string) (positive, repeated bool, err error) {
 	normalized := normalizeEmail(email)
 	if normalized == "" {
-		return false, nil
+		return false, false, nil
 	}
 	// Body and subject travel SEPARATELY because only the body carries a quoted
 	// thread. Concatenating them first would leave no way to strip the sender's
@@ -149,14 +161,14 @@ func (s *Sink) correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email st
 		   AND `+auth.ActivityAvailableClause("activity")+`
 		 LIMIT 2`, normalized)
 	if err != nil {
-		return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
+		return false, false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 	}
 	defer rows.Close()
 	var texts []string
 	for rows.Next() {
 		var subject, body string
 		if err := rows.Scan(&subject, &body); err != nil {
-			return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
+			return false, false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 		}
 		// Only what the SENDER of this outbound message wrote. A stored body
 		// keeps the quoted thread beneath the reply (mailmap caps it at 8000
@@ -167,20 +179,20 @@ func (s *Sink) correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email st
 		texts = append(texts, subject+" "+textlang.NewTextOnly(body))
 	}
 	if err := rows.Err(); err != nil {
-		return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
+		return false, false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 	}
 	switch len(texts) {
 	case 0:
-		return false, nil
+		return false, false, nil
 	case 1:
-		return !isDecliningReply(texts[0]), nil
+		return !isDecliningReply(texts[0]), false, nil
 	default:
 		// The LIMIT 2 above is why this is safe on a high-volume address: the
 		// query stops at the only distinction that matters, one outbound versus
 		// more than one, and never loads a whole correspondence to count it.
 		// Two or more outbound messages are a correspondence whatever any one of
 		// them says; nobody declines twice and keeps writing.
-		return true, nil
+		return true, true, nil
 	}
 }
 
@@ -276,4 +288,24 @@ func transactionalInput(cp connector.Counterparty) TransactionalInput {
 		Localpart:       local,
 		ListUnsubscribe: cp.ListUnsubscribe,
 	}
+}
+
+// CorrespondsWith reports whether this workspace has provably written to an
+// address — the T1 signal, read back on the verdict side.
+//
+// The verdict engine needs it because a `newsletter` or `spam` answer suppresses
+// the sender's whole DOMAIN, and that effect is workspace-wide and standing.
+// While only unjudged strangers reached the ledger this could not misfire; once
+// a sender the workspace corresponds with can be asked about, an answer of
+// `newsletter` about one marketing blast would refuse a company the business
+// actively works with.
+//
+// It delegates to the ladder's own T1 gate rather than asking the simpler
+// question this effect first asked. The two must agree, and they differ in a
+// case that matters here: a SINGLE outbound whose text declines ("not
+// interested") is not correspondence. A spammer who drew that one reply would
+// otherwise be spared the domain suppression by the very message telling them
+// to stop.
+func (s *PendingStore) CorrespondsWith(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	return correspondencePositiveTx(ctx, tx, email)
 }

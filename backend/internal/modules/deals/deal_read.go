@@ -60,7 +60,16 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 	return maskDealForCaller(ctx, tx, d)
 }
 
+// dealTaggableType is the value taggable.entity_type stores for a deal. It
+// reads the same as dealTable and means something else: one is the column's
+// vocabulary, the other is a relation name.
+const dealTaggableType = "deal"
+
 type ListDealsInput struct {
+	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
+	// The predicate is storekit's, shared with the person and account lists.
+	TagIDs         []ids.UUID
+	TagMode        storekit.TagMode
 	Cursor         *string
 	Limit          *int
 	Query          *string
@@ -107,6 +116,23 @@ var dealListFields = map[string]string{
 	"expected_close_date": fieldcatalog.TypeDate,
 }
 
+// wireRowTags renders one deal row's tag chips. A twin of the people module's:
+// a module never imports a sibling, and the shape is the contract's.
+func wireRowTags(tags []storekit.RowTag) *[]crmcontracts.RowTag {
+	out := make([]crmcontracts.RowTag, 0, len(tags))
+	for _, t := range tags {
+		var color *crmcontracts.RowTagColor
+		if t.Color != nil {
+			c := crmcontracts.RowTagColor(*t.Color)
+			color = &c
+		}
+		out = append(out, crmcontracts.RowTag{
+			TagId: openapi_types.UUID(t.TagID), Name: t.Name, Color: color,
+		})
+	}
+	return &out
+}
+
 func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontracts.Deal, storekit.Page, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
@@ -121,7 +147,14 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 	}
 	return storekit.RunListPage(ctx, s, pre, dealTable, dealColumns, active, where, scanDealPage,
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
-		func(tx pgx.Tx, page []crmcontracts.Deal) error { return maskDeals(ctx, tx, page) })
+		func(tx pgx.Tx, page []crmcontracts.Deal) error {
+			if err := maskDeals(ctx, tx, page); err != nil {
+				return err
+			}
+			return storekit.AttachRowTags(ctx, tx, dealTaggableType, page,
+				func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
+				func(d *crmcontracts.Deal, tags []storekit.RowTag) { d.Tags = wireRowTags(tags) })
+		})
 }
 
 // ListDealsTx is ListDeals inside a caller-opened transaction — the composite
@@ -204,6 +237,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	}
 	if in.OwnerID != nil {
 		where = append(where, storekit.SQLf("owner_id = $%d", arg(*in.OwnerID)))
+	}
+	if clause := storekit.TagFilterClause(ctx, dealTaggableType, "deal.id", in.TagIDs, in.TagMode, arg); clause != "" {
+		where = append(where, clause)
 	}
 	for _, ref := range []struct {
 		column, table string

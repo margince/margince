@@ -43,6 +43,9 @@ const SCREENS = [
   "offers",
   "search",
   "share",
+  // A tag has a page of its own: the records carrying one word, grouped by
+  // type. Every tag pill in the product links here.
+  "tags",
   "onboarding",
   "client",
   "book",
@@ -156,6 +159,16 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   leads: 2,
   deals: WHOLE_ADDRESS,
   projects: WHOLE_ADDRESS,
+  // #/worklist/<owner> and #/worklist/unassigned are real addresses the home
+  // team board navigates to, and App.tsx hands that segment to the screen as
+  // `opensOn`. The screen reads it in useState INITIALISERS, so the remount is
+  // what applies it: lower this and a manager clicking a colleague's name keeps
+  // reading their OWN queue under that colleague's address, with no error and
+  // nothing on screen to say so.
+  //
+  // Held by screens/worklist.identity.test.tsx. Selecting a row here is local
+  // state and never touches the address, which is what makes lowering this look
+  // free — the pane is not what the depth is protecting.
   worklist: WHOLE_ADDRESS,
   // #/reports/<report> — the picker chooses a view of one screen, so switching
   // reports re-renders the panel instead of throwing the screen away.
@@ -168,6 +181,10 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   scheduled: WHOLE_ADDRESS,
   offers: WHOLE_ADDRESS,
   search: WHOLE_ADDRESS,
+  // A different tag is a different page, not a tab of one: the whole address
+  // keys it, so opening a second word starts a fresh read rather than showing
+  // the first one's counts under the second one's name.
+  tags: WHOLE_ADDRESS,
   share: WHOLE_ADDRESS,
   onboarding: WHOLE_ADDRESS,
   client: WHOLE_ADDRESS,

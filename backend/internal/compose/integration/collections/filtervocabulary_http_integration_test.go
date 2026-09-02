@@ -297,11 +297,23 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 	// And the stored filter written against it still evaluates rather than
 	// erroring: the export path resolves the view's predicate through the same
 	// engine a live clause runs on.
-	var exported integration.AnyMap
+	// json, not csv: this asserts the predicate still RESOLVES, and a decoder
+	// pointed at a CSV body fails on the header row for a reason that has
+	// nothing to do with the filter.
+	var exported struct {
+		Object   string `json:"object"`
+		RowCount int    `json:"row_count"`
+	}
 	if status := e.Call(t, "POST", "/v1/exports", integration.AnyMap{
-		"view_id": viewID, "format": "csv",
+		"view_id": viewID, "format": "json",
 	}, nil, &exported); status != http.StatusOK {
 		t.Errorf("the stored filter naming the retired %s no longer evaluates: status=%d", column, status)
+	}
+	// It resolved rather than erroring, and it resolved to the RIGHT object:
+	// a filter that silently evaluated against the wrong resource would also
+	// answer 200.
+	if exported.Object != "person" {
+		t.Errorf("the stored filter exported %q, want person", exported.Object)
 	}
 }
 

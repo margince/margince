@@ -16,6 +16,7 @@ package draftfloor
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -102,7 +103,7 @@ func NamesPerson(text, name string) bool {
 		}
 		start := at + found
 		end := start + len(wanted)
-		if !partOfAWord(folded, start-1) && !partOfAWord(folded, end) {
+		if !wordBefore(folded, start) && !partOfAWord(folded, end) {
 			return true
 		}
 		at = start + 1
@@ -114,8 +115,38 @@ func partOfAWord(text string, i int) bool {
 	if i < 0 || i >= len(text) {
 		return false
 	}
-	r := rune(text[i])
-	return unicode.IsLetter(r) || unicode.IsDigit(r)
+	// Decode the rune rather than widening one byte. text[i] inside a
+	// multi-byte character is a CONTINUATION byte, and most of them widen to
+	// runes unicode.IsLetter rejects — so "MüLena" reported that it names
+	// "Lena", and a draft that buries the reader's name inside another word
+	// passed the check that exists to catch exactly that.
+	r, _ := utf8.DecodeRuneInString(text[i:])
+	return wordRune(r)
+}
+
+// wordBefore reports whether the rune ENDING at i is a letter or digit, which
+// is a different question from partOfAWord: a match's left edge is the rune
+// before it, and in UTF-8 that rune does not start at i-1.
+func wordBefore(text string, i int) bool {
+	if i <= 0 || i > len(text) {
+		return false
+	}
+	r, _ := utf8.DecodeLastRuneInString(text[:i])
+	return wordRune(r)
+}
+
+// wordRune says whether a rune continues a written word.
+//
+// Marks count. "Lena" followed by U+0308 renders as "Lenä", which is a
+// different name than the one asked for — reading the mark as a boundary let
+// the check report that a draft named somebody it did not. RuneError is not a
+// word character: text that is not valid UTF-8 has no rune at that edge to
+// judge, and guessing there would decide a name on a broken sequence.
+func wordRune(r rune) bool {
+	if r == utf8.RuneError {
+		return false
+	}
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsMark(r)
 }
 
 // AIDisclosure is the Art. 50 authorship line, in the draft's own language.

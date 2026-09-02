@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -140,7 +141,10 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 		if _, err := signals.NarrowDerivedForActivity(ctx, tx, activityID, owner); err != nil {
 			return err
 		}
-		if err := activities.RetractDerivedForActivityTx(ctx, tx, activityID); err != nil {
+		// people owns person_profile_field, so the edge is injected here rather
+		// than reached for inside activities.
+		if err := activities.RetractDerivedForActivityTx(
+			ctx, tx, activityID, people.RetractSignatureFieldsTx); err != nil {
 			return err
 		}
 	}

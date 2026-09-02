@@ -142,6 +142,18 @@ func SelectPurgeSubjectTx(
 // capture rule uses: an address matches exactly, a domain matches itself and
 // everything under it.
 func purgeMatchClause(user ids.UUID, kind, value string) (string, []any) {
+	return addressMatch(kind, "a.counterparty_email", "$2"), []any{user, matchValue(kind, value)}
+}
+
+// addressMatch renders the rule against ONE address column.
+//
+// Both purge selectors and both arms of the workspace match call it, so the
+// domain-covers-subdomains reading and the LIKE escaping are decided here rather
+// than at each site.
+//
+// col and arg are caller-supplied SQL fragments and never values off a request:
+// every call site passes a compile-time literal.
+func addressMatch(kind, col, arg string) string {
 	if kind == ExclusionKindDomain {
 		// ESCAPE '\' and the value escaped to match: a rule value reaches a
 		// LIKE pattern here, and `%` or `_` inside one matches far more than
@@ -153,13 +165,60 @@ func purgeMatchClause(user ids.UUID, kind, value string) (string, []any) {
 		// The leading `@` and `.` are what keep `example.test` from matching
 		// `evil-example.test`: an address either ends at the domain or at a
 		// subdomain of it, never mid-label.
-		return `(a.counterparty_email LIKE '%@' || $2 ESCAPE '\'
-		      OR a.counterparty_email LIKE '%.' || $2 ESCAPE '\')`,
-			[]any{user, escapeLikeValue(value)}
+		return `(` + col + ` LIKE '%@' || ` + arg + ` ESCAPE '\'
+		      OR ` + col + ` LIKE '%.' || ` + arg + ` ESCAPE '\')`
 	}
 	// An address matches exactly, so no pattern and nothing to escape. A `%`
 	// in a local part is legal and stays a literal here.
-	return `a.counterparty_email = $2`, []any{user, value}
+	return col + ` = ` + arg
+}
+
+// matchValue is what addressMatch's value placeholder binds: escaped for a
+// domain rule's LIKE, raw for an address rule's equality.
+//
+// The escaping decision is what the two callers share; the seat clause pairs it
+// with a user and the workspace clause has none, so the pairing is theirs.
+func matchValue(kind, value string) string {
+	if kind == ExclusionKindDomain {
+		return escapeLikeValue(value)
+	}
+	return value
+}
+
+// workspaceMatchClause is purgeMatchClause's workspace sibling: it matches the
+// way INGRESS matches, over every address the message named.
+//
+// excludedTx keeps a message out if ANY of its addresses — sender, recipients,
+// copies — hits the rule, so a workspace purge that only read
+// counterparty_email would miss the history the rule caught through To or Cc
+// and report mail as gone while it sat there. The addresses are on
+// activity_participant, written for every captured interaction by
+// StampFurtherParticipants.
+//
+// The participant ADDRESS is trustworthy for this even though the user_id
+// binding beside it is not: that column is gated on the provider attesting our
+// own mailbox sent the message, because binding a colleague from an inbound Cc
+// line would let an outsider manufacture an interaction edge. Matching an
+// address the sender wrote against a rule the WORKSPACE chose only ever
+// destroys more of what the workspace already said it did not want.
+func workspaceMatchClause(kind, value string) (string, []any) {
+	return `(` + addressMatch(kind, "a.counterparty_email", "$1") + `
+		      OR EXISTS (
+		        SELECT 1 FROM activity_participant ap
+		         WHERE ap.activity_id = a.id AND ap.address IS NOT NULL
+		           -- A COLLEAGUE on the line is not the counterparty a rule is
+		           -- about, and admitting one is what turns a rule naming the
+		           -- workspace's own mail domain into a match on nearly every
+		           -- captured message. That matters because the authority is
+		           -- split: writing a workspace rule takes capture_settings.update,
+		           -- which ops holds, while only an admin may press purge — so the
+		           -- rule's REACH is chosen by somebody who may not destroy, and
+		           -- the admin sees a plausible domain cleanup and a count.
+		           AND ap.user_id IS NULL
+		           -- Folded on both sides. Every writer lowercases what it stores
+		           -- today, and this does not depend on all four continuing to.
+		           AND ` + addressMatch(kind, "lower(ap.address)", "$1") + `))`,
+		[]any{matchValue(kind, value)}
 }
 
 // escapeLikeValue neutralises the LIKE metacharacters, so a rule value is
@@ -184,6 +243,29 @@ func ReleaseImportTx(ctx context.Context, tx pgx.Tx, activityID, user ids.UUID) 
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM activity_participant WHERE activity_id = $1 AND user_id = $2`, activityID, user); err != nil {
 		return fmt.Errorf("capture: releasing a seat's participation in a shared message: %w", err)
+	}
+	return nil
+}
+
+// ReleaseEveryImportTx drops every seat's claim on a message that was
+// DESTROYED, not merely released.
+//
+// The seat purge's sibling releases one importer because the message survives
+// for the others. A workspace purge destroys the message, so leaving the claims
+// behind would give every colleague an import row and a participant row pointing
+// at an activity with no content — a stub on their timeline, for mail the
+// workspace was told is gone, that nothing would ever collect.
+//
+// Keyed on the activity alone, which is what makes it right here and wrong for
+// the seat arm: there is no surviving copy to keep a claim on.
+func ReleaseEveryImportTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM capture_import WHERE activity_id = $1`, activityID); err != nil {
+		return fmt.Errorf("capture: releasing every import of a destroyed message: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM activity_participant WHERE activity_id = $1`, activityID); err != nil {
+		return fmt.Errorf("capture: releasing every participation in a destroyed message: %w", err)
 	}
 	return nil
 }
@@ -274,4 +356,64 @@ func SelectPurgeablePeopleTx(
 		return nil, fmt.Errorf("capture: selecting the people a purge may anonymise: %w", err)
 	}
 	return people, nil
+}
+
+// SelectWorkspacePurgeSubjectTx finds what a purge of one WORKSPACE rule would
+// touch, across every seat.
+//
+// The seat-scoped sibling asks "what did this seat import"; this asks "what did
+// this workspace capture", so there is no user arm and every matching activity
+// is destroyed rather than split into sole and shared. A workspace rule belongs
+// to the workspace, and an admin acting on it is not one seat reaching into
+// another's mail — they are the workspace deciding about its own.
+//
+// The capture_import join stays, and it is not decoration: without it a
+// workspace purge starts destroying hand-logged activity that nobody captured
+// and no exclusion rule ever governed. EXISTS rather than a join, because the
+// row is destroyed once however many seats hold it.
+func SelectWorkspacePurgeSubjectTx(
+	ctx context.Context, tx pgx.Tx, kind, value string, floor StatutoryFloor,
+) (PurgeSubject, error) {
+	var subject PurgeSubject
+	if value == "" {
+		return subject, nil
+	}
+	match, args := workspaceMatchClause(kind, value)
+	shielded, args := floor.column(len(args), args)
+	rows, err := tx.Query(ctx, `
+		SELECT a.id,
+		       (a.restricted_at IS NOT NULL OR (`+shielded+`)) AS withheld
+		  FROM activity a
+		 WHERE `+match+`
+		   AND EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id = a.id)
+		 ORDER BY a.id`, args...)
+	if err != nil {
+		return subject, fmt.Errorf("capture: selecting what a workspace purge would destroy: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var withheld bool
+		if err := rows.Scan(&id, &withheld); err != nil {
+			return subject, fmt.Errorf("capture: selecting what a workspace purge would destroy: %w", err)
+		}
+		if withheld {
+			// The same answer the seat purge gives: an obligation the
+			// installation owes somebody else is not the workspace's to
+			// destroy, and it is REPORTED rather than silently skipped.
+			//
+			// Defence in depth, deliberately. A CHECK constraint on the
+			// destroying statement refuses a restricted row anyway, so removing
+			// this arm does not leak the mail — it turns a clean count into a
+			// failed purge that destroys nothing at all, including the rows the
+			// admin could have had.
+			subject.Restricted = append(subject.Restricted, id)
+			continue
+		}
+		subject.SoleImports = append(subject.SoleImports, id)
+	}
+	if err := rows.Err(); err != nil {
+		return subject, fmt.Errorf("capture: selecting what a workspace purge would destroy: %w", err)
+	}
+	return subject, nil
 }

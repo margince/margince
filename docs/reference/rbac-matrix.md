@@ -101,7 +101,7 @@ changes none.
 | `retention_policy` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `saved_view` | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD |
 | `signal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
-| `tag` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
+| `tag` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `voice_profile` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `webhook_subscription` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `weekly_plan` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |

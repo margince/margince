@@ -20,6 +20,8 @@ import (
 // column constants they happen to match today.
 const (
 	filterOrganizationID     = "organization_id"
+	filterTag                = "tag_id"
+	filterTagMode            = "tag_mode"
 	filterOwnerID            = "owner_id"
 	filterPartnerOrgID       = "partner_org_id"
 	filterPartnerAttribution = "partner_attribution"
@@ -34,6 +36,16 @@ const (
 )
 
 var dealListFilters = storekit.FilterSet[ListDealsInput]{
+	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListDealsInput, v []ids.UUID) { in.TagIDs = v }),
+	filterTagMode: storekit.FilterWord(func(in *ListDealsInput, v *string) {
+		// A stored mode the enum does not admit selects `any`, the contract's
+		// default for an absent one: a saved view has no caller to refuse to.
+		mode, err := storekit.ParseTagMode(v)
+		if err != nil {
+			mode = storekit.TagModeAny
+		}
+		in.TagMode = mode
+	}),
 	filterOrganizationID: storekit.FilterID(
 		func(in *ListDealsInput, id *ids.OrganizationID) { in.OrganizationID = id }),
 	filterOwnerID: storekit.FilterID(func(in *ListDealsInput, id *ids.UserID) { in.OwnerID = id }),
