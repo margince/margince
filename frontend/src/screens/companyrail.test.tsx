@@ -12,6 +12,7 @@ import "@testing-library/jest-dom/vitest";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { CompanyRail } from "./companyrail";
 
@@ -140,6 +141,15 @@ function stub(
           data: [{ id: "u-1", display_name: "Mira Voss" }],
           page: emptyPage,
         });
+      }
+      // A real seat, spelled out. The catch-all below answers `/me` with an
+      // empty page, which `useCan` reads as a principal holding NO grants — so
+      // every control gated on one stood down and the suite proved nothing
+      // about the controls it names.
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
       }
       if (pathname.endsWith("/signals")) {
         return jsonResponse({ data: [], page: emptyPage });
@@ -1001,17 +1011,6 @@ describe("CompanyRail", () => {
       screen.getByRole("button", { name: "Add a contact" }),
     );
     expect(spy).toHaveBeenCalledWith("people");
-  });
-
-  it("shows the applied tags as badges, counted", () => {
-    stub();
-    renderRail({
-      view: view({
-        tags: [{ id: "t-1", workspace_id: "w", name: "Key account" }],
-      }),
-    });
-    expect(screen.getByText("Key account")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
   });
 
   it("offers the add-tag verb once the section has answered, on a writable record", async () => {

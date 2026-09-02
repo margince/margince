@@ -20,6 +20,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
+import { useCan } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -134,6 +135,7 @@ import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
+import { TagsPanel } from "./tagspanel";
 import { groupChronology } from "./timelinegroups";
 
 // Deal surfaces (B-EP09.11a/b/c): the five-stage Kanban with drag-to-advance
@@ -3545,6 +3547,25 @@ function DealLead({
   );
 }
 
+/**
+ * The deal's tags, drawn by the SHARED panel.
+ *
+ * Same three questions the server asks before it writes: the object grant,
+ * this record's own editability, and — inside the panel — whether the caller
+ * may see the vocabulary at all.
+ */
+function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
+  const canUpdate = useCan("deal", "update");
+  const overlay = useSorMode() === "overlay";
+  return (
+    <TagsPanel
+      entityType="deal"
+      entityID={deal.id}
+      canEdit={canUpdate && !deal.archived_at && !overlay}
+    />
+  );
+}
+
 function DealOverviewPane({
   deal,
   stages,
@@ -3597,6 +3618,11 @@ function DealOverviewPane({
       {/* A won deal with no project, on a company with exactly one open
           project, is offered that project once. Nothing else here asks. */}
       {!overlay && <StartDeliveryPrompt deal={deal} />}
+      {/* How this deal is filed. It rides in the overview rather than in a
+          rail, because this record page has no rail column: RecordView
+          collapses to one column when it is handed neither, and giving the
+          deal a rail for one card would move every block on the page. */}
+      <DealTagsSection deal={deal} />
       {/* A group, not a nav: these buttons move the deal, they do not take the
           reader anywhere, and a landmark in the navigation list that writes
           when you press it misdescribes what it does. */}

@@ -26,7 +26,7 @@ import { NewDealAction } from "./companyactions";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid } from "./companyraildetails";
 import { SectionSummary, sectionAnswered } from "./companyrailshared";
-import { TagsSection } from "./companyrailtags";
+import { CompanyTagsSection } from "./companyrailtags";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { roleOf } from "./provider-status";
 import { signalKindLabel, signalTone } from "./record360";
@@ -131,7 +131,7 @@ export function CompanyRail({
       <DealsSection view={view} loading={loading} onTab={onTab} />
       <PeopleSection view={view} loading={loading} onTab={onTab} />
       <CompanyHoldSection organization={view?.organization ?? org} />
-      <TagsSection view={view} orgId={orgId} loading={loading} />
+      <CompanyTagsSection organization={view?.organization} orgId={orgId} />
     </div>
   );
 }

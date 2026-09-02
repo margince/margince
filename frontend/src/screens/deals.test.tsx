@@ -404,6 +404,23 @@ function stubBackend(
         page: { next_cursor: null },
       });
     }
+    // The record's tags. Without this the catch-all answers a shape with no
+    // `withheld` key, which the panel reads as visible-and-empty — a state
+    // asserted by accident rather than chosen.
+    if (method === "GET" && url.includes("/tags")) {
+      return jsonResponse({
+        data: [
+          {
+            tag_id: "t-1",
+            name: "Renewal",
+            color: "teal",
+            archived: false,
+            assigned_at: "2026-03-03T10:00:00Z",
+          },
+        ],
+        withheld: false,
+      });
+    }
     if (url.includes("/agent-tools")) {
       return jsonResponse({
         data: opts.agentTools ?? [],
@@ -1887,6 +1904,17 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 
   // A control that can only fail is worse than none: an archived deal is not
   // moved through the pipeline, it is restored first.
+  // The deal's tags ride in the OVERVIEW pane, not in a rail: this record page
+  // hands RecordView neither rail nor aside, so it collapses to one column and
+  // there is no side column for a card to sit in.
+  it("draws the deal's tags on the overview", async () => {
+    const d = deal({ id: "x" });
+    vi.stubGlobal("fetch", stubBackend([d], { single: d }));
+    render(<DealScreen id="x" />);
+
+    expect(await screen.findByText("Renewal")).toBeTruthy();
+  });
+
   it("offers no move on an archived deal", async () => {
     const d = deal({ id: "x", archived_at: "2026-07-01T00:00:00Z" });
     vi.stubGlobal("fetch", stubBackend([d], { single: d }));

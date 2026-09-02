@@ -1,114 +1,75 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
 import type { components } from "../api/schema";
-import { Badge } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
-import { SurfaceState, sectionState } from "../design-system/surfacestate";
-import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import { TagAction } from "./companyactions";
+import { useCan } from "../app/capability";
 import { useCompanyReadOnlyReason } from "./companyheader";
-import { sectionAnswered } from "./companyrailshared";
-// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
-// are defined in company360.css. Imported HERE rather than left to the caller:
-// it works today only because the company record page pulls that stylesheet in
-// for its own sake, so this file renders unstyled anywhere else.
+import { AddTagDialog } from "./tagpicker";
+import { useRecordTags } from "./tags.queries";
+import { AddTagButton, TagsPanel } from "./tagspanel";
 import "./company360.css";
 
-// TagsSection (companyrail.tsx's own section, split into this file so the
-// rail stays under the 500-line ceiling): the tags applied to this account,
-// plus the verb that writes them.
-
-type Organization360 = components["schemas"]["Organization360"];
 type Organization = components["schemas"]["Organization"];
 
 /**
- * TagsSection shows the tags applied to this account and the verb that adds
- * one. It states its own withheld/empty/ready: a caller who may not read tags
- * sees the withheld notice, never a confirmed-empty account.
+ * The company's tags, drawn by the SHARED panel.
  *
- * The add-tag verb lives HERE, under the tags it writes, rather than in a
- * separate strip elsewhere on the page (CompanyFilingActions,
- * organizations.tsx — retired once this landed): reading and writing the same
- * fact from two different columns is the confusion this section exists to
- * close. The verb keeps the gate the old strip enforced — rendered only once
- * the section has answered (ready or empty) — so a caller who cannot read
- * tags is never offered a button to add one, and a section that failed to
- * load cannot say whether the write makes sense.
+ * This file used to hold a panel of its own, reading the tag names off the
+ * account's 360 response. That block carried no assigner, so the menu could
+ * not say who applied a word — and a person and a deal had no panel at all.
+ * One component for all three answers those together.
+ *
+ * What stays here is the mount: the add-tag verb needs a resolved
+ * Organization to ask `useCompanyReadOnlyReason` about, so the wrapper waits
+ * for one rather than calling the hook conditionally.
  */
-export function TagsSection({
-  view,
-  orgId,
-  loading,
-}: Readonly<{ view?: Organization360; orgId: string; loading: boolean }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const tags = view?.tags ?? [];
-  const tagState = sectionState(
-    view,
-    "tags",
-    Boolean(view?.tags),
-    tags.length,
-    loading,
-  );
-  const tagsAnswered = sectionAnswered(tagState);
-  // Absent, not zero, until the section has actually answered: a withheld
-  // section must not read as a confirmed empty account.
-  const count = tagsAnswered ? tags.length : undefined;
-  // Verbs, not values: an archived account still SHOWS its tags above, it
-  // just does not offer to change them. `useCompanyReadOnlyReason` needs a
-  // resolved Organization, so this reads it off `TagsSectionVerb` below, a
-  // component mounted only once `view.organization` exists — keeping that
-  // hook call unconditional (Rules of Hooks) without fabricating a stand-in
-  // record just to satisfy its signature while the 360 read is still in
-  // flight.
-  return (
-    <Panel
-      title={t("co.tags.title")}
-      titleAction={
-        count != null ? <Badge>{formatNumber(count, locale)}</Badge> : undefined
-      }
-    >
-      <PanelBody>
-        <SurfaceState
-          label={t("co.tags.tags")}
-          state={tagState}
-          emptyLabel={t("co.tags.noTags")}
-        >
-          <p className="co-row-meta">
-            {tags.map((tag) => (
-              <Badge key={tag.id}>{tag.name}</Badge>
-            ))}
-          </p>
-        </SurfaceState>
-        {tagsAnswered && view?.organization && (
-          <TagsSectionVerb organization={view.organization} orgId={orgId} />
-        )}
-      </PanelBody>
-    </Panel>
-  );
-}
-
-// The add-tag verb, gated on writability. Split out so
-// `useCompanyReadOnlyReason` — which needs a resolved Organization — is only
-// ever called once one exists (the caller above renders this component only
-// when `view.organization` is set), rather than called conditionally inside
-// TagsSection itself or fed a stand-in record just to satisfy its signature.
-function TagsSectionVerb({
+export function CompanyTagsSection({
   organization,
   orgId,
-}: Readonly<{
-  organization: Organization;
-  orgId: string;
-}>) {
-  const readOnlyReason = useCompanyReadOnlyReason(organization);
-  if (readOnlyReason) {
+}: Readonly<{ organization?: Organization; orgId: string }>) {
+  if (!organization) {
     return null;
   }
+  return <CompanyTags organization={organization} orgId={orgId} />;
+}
+
+function CompanyTags({
+  organization,
+  orgId,
+}: Readonly<{ organization: Organization; orgId: string }>) {
+  const readOnlyReason = useCompanyReadOnlyReason(organization);
+  const [adding, setAdding] = useState(false);
+  const read = useRecordTags("organization", orgId);
+  // The verb answers to the same read the panel does. The panel draws nothing
+  // until the read lands, and says "hidden" when the vocabulary is withheld —
+  // so a button gated on permission alone floats above no panel at all, and on
+  // a withheld record it opens a picker whose apply the server refuses.
+  // Three questions, all of which the server asks before it writes: the object
+  // grant, this row's own writability, and whether the vocabulary is visible at
+  // all. `useCompanyReadOnlyReason` answers only the row — its own comment says
+  // every mount ANDs it with the grant — and apply refuses without `tag.read`,
+  // which is what `withheld` reports.
+  const canUpdate = useCan("organization", "update");
+  const canEdit =
+    canUpdate && !readOnlyReason && read.isSuccess && !read.data.withheld;
+
   return (
-    <div className="co-card-actions">
-      <TagAction orgId={orgId} />
-    </div>
+    <>
+      <TagsPanel entityType="organization" entityID={orgId} canEdit={canEdit} />
+      {canEdit && (
+        <div className="co-card-actions">
+          <AddTagButton onOpen={() => setAdding(true)} />
+        </div>
+      )}
+      {adding && (
+        <AddTagDialog
+          entityType="organization"
+          entityID={orgId}
+          current={read.data?.data ?? []}
+          onClose={() => setAdding(false)}
+        />
+      )}
+    </>
   );
 }
