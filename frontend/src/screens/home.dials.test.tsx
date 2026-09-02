@@ -142,6 +142,12 @@ describe("the Brief's dials", () => {
     expect(await screen.findByText(en["brief.eyebrow.weekly"])).toBeTruthy();
     expect(screen.queryByText(en["brief.eyebrow"])).toBeNull();
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
+    // And the line that stands in for it belongs to the week too. The weekly
+    // NEVER composes a sentence, so the fallback is the only line under its
+    // heading — and the morning's "this is your day" read as the wrong week
+    // entirely beneath "YOUR WEEK".
+    expect(screen.getByText(en["home.glance.introWeekly"])).toBeTruthy();
+    expect(screen.queryByText(en["home.glance.intro"])).toBeNull();
   });
 
   // The morning shows what waits; the weekly shows the week. Neither shows the

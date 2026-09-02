@@ -56,3 +56,36 @@
 .home-weekly-narrative-absent {
   color: var(--textMeta);
 }
+
+/* ── The week's workings ───────────────────────────────────────────────────
+ * Slots six to ten of what used to be one ten-slot strip. A strip is read
+ * ACROSS as a single comparison and ten slots folded into two ranks, which is
+ * a table wearing a strip's clothes; these five are looked up ONE at a time by
+ * somebody who already read the outcomes, so they draw as a definition list.
+ *
+ * Wrapping pairs rather than a grid of fixed columns: the labels differ in
+ * length across three languages, and a fixed track that fits "Decided" leaves
+ * "Zusagen, eingelöst" clipped. */
+
+.home-weekly-workings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: var(--space-4) 0 0;
+}
+
+.home-weekly-working {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.home-weekly-working dt {
+  color: var(--textSecondary);
+}
+
+/* The browser's own indent on a `dd` would stagger every pair by 40px. */
+.home-weekly-working dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
