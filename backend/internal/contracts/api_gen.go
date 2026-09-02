@@ -2056,6 +2056,42 @@ func (e BlockedDomainSource) Valid() bool {
 	}
 }
 
+// Defines values for BriefDeliveryMorningBriefDelivery.
+const (
+	BriefDeliveryMorningBriefDeliveryEmail BriefDeliveryMorningBriefDelivery = "email"
+	BriefDeliveryMorningBriefDeliveryNone  BriefDeliveryMorningBriefDelivery = "none"
+)
+
+// Valid indicates whether the value is a known member of the BriefDeliveryMorningBriefDelivery enum.
+func (e BriefDeliveryMorningBriefDelivery) Valid() bool {
+	switch e {
+	case BriefDeliveryMorningBriefDeliveryEmail:
+		return true
+	case BriefDeliveryMorningBriefDeliveryNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BriefDeliveryWeeklyDelivery.
+const (
+	BriefDeliveryWeeklyDeliveryEmail BriefDeliveryWeeklyDelivery = "email"
+	BriefDeliveryWeeklyDeliveryNone  BriefDeliveryWeeklyDelivery = "none"
+)
+
+// Valid indicates whether the value is a known member of the BriefDeliveryWeeklyDelivery enum.
+func (e BriefDeliveryWeeklyDelivery) Valid() bool {
+	switch e {
+	case BriefDeliveryWeeklyDeliveryEmail:
+		return true
+	case BriefDeliveryWeeklyDeliveryNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureConnectionMailPosture.
 const (
 	CaptureConnectionMailPostureClassified CaptureConnectionMailPosture = "classified"
@@ -12765,67 +12801,67 @@ func (e PersonProfileFieldKey) Valid() bool {
 
 // Defines values for ProfileFieldKey.
 const (
-	ProfileFieldKeyBuyingCenter      ProfileFieldKey = "buying_center"
-	ProfileFieldKeyBuyingIntents     ProfileFieldKey = "buying_intents"
-	ProfileFieldKeyCommonObjections  ProfileFieldKey = "common_objections"
-	ProfileFieldKeyCustomerPains     ProfileFieldKey = "customer_pains"
-	ProfileFieldKeyDesiredOutcomes   ProfileFieldKey = "desired_outcomes"
-	ProfileFieldKeyDisplayName       ProfileFieldKey = "display_name"
-	ProfileFieldKeyHistory           ProfileFieldKey = "history"
-	ProfileFieldKeyIcp               ProfileFieldKey = "icp"
-	ProfileFieldKeyIndustry          ProfileFieldKey = "industry"
-	ProfileFieldKeyLegalForm         ProfileFieldKey = "legal_form"
-	ProfileFieldKeyLegalName         ProfileFieldKey = "legal_name"
-	ProfileFieldKeyOfferSummary      ProfileFieldKey = "offer_summary"
-	ProfileFieldKeyRegisterCourt     ProfileFieldKey = "register_court"
-	ProfileFieldKeyRegisterNumber    ProfileFieldKey = "register_number"
-	ProfileFieldKeyRegisterVat       ProfileFieldKey = "register_vat"
-	ProfileFieldKeyRegisteredAddress ProfileFieldKey = "registered_address"
-	ProfileFieldKeySalesMotion       ProfileFieldKey = "sales_motion"
-	ProfileFieldKeyUsp               ProfileFieldKey = "usp"
-	ProfileFieldKeyValueProposition  ProfileFieldKey = "value_proposition"
+	BuyingCenter      ProfileFieldKey = "buying_center"
+	BuyingIntents     ProfileFieldKey = "buying_intents"
+	CommonObjections  ProfileFieldKey = "common_objections"
+	CustomerPains     ProfileFieldKey = "customer_pains"
+	DesiredOutcomes   ProfileFieldKey = "desired_outcomes"
+	DisplayName       ProfileFieldKey = "display_name"
+	History           ProfileFieldKey = "history"
+	Icp               ProfileFieldKey = "icp"
+	Industry          ProfileFieldKey = "industry"
+	LegalForm         ProfileFieldKey = "legal_form"
+	LegalName         ProfileFieldKey = "legal_name"
+	OfferSummary      ProfileFieldKey = "offer_summary"
+	RegisterCourt     ProfileFieldKey = "register_court"
+	RegisterNumber    ProfileFieldKey = "register_number"
+	RegisterVat       ProfileFieldKey = "register_vat"
+	RegisteredAddress ProfileFieldKey = "registered_address"
+	SalesMotion       ProfileFieldKey = "sales_motion"
+	Usp               ProfileFieldKey = "usp"
+	ValueProposition  ProfileFieldKey = "value_proposition"
 )
 
 // Valid indicates whether the value is a known member of the ProfileFieldKey enum.
 func (e ProfileFieldKey) Valid() bool {
 	switch e {
-	case ProfileFieldKeyBuyingCenter:
+	case BuyingCenter:
 		return true
-	case ProfileFieldKeyBuyingIntents:
+	case BuyingIntents:
 		return true
-	case ProfileFieldKeyCommonObjections:
+	case CommonObjections:
 		return true
-	case ProfileFieldKeyCustomerPains:
+	case CustomerPains:
 		return true
-	case ProfileFieldKeyDesiredOutcomes:
+	case DesiredOutcomes:
 		return true
-	case ProfileFieldKeyDisplayName:
+	case DisplayName:
 		return true
-	case ProfileFieldKeyHistory:
+	case History:
 		return true
-	case ProfileFieldKeyIcp:
+	case Icp:
 		return true
-	case ProfileFieldKeyIndustry:
+	case Industry:
 		return true
-	case ProfileFieldKeyLegalForm:
+	case LegalForm:
 		return true
-	case ProfileFieldKeyLegalName:
+	case LegalName:
 		return true
-	case ProfileFieldKeyOfferSummary:
+	case OfferSummary:
 		return true
-	case ProfileFieldKeyRegisterCourt:
+	case RegisterCourt:
 		return true
-	case ProfileFieldKeyRegisterNumber:
+	case RegisterNumber:
 		return true
-	case ProfileFieldKeyRegisterVat:
+	case RegisterVat:
 		return true
-	case ProfileFieldKeyRegisteredAddress:
+	case RegisteredAddress:
 		return true
-	case ProfileFieldKeySalesMotion:
+	case SalesMotion:
 		return true
-	case ProfileFieldKeyUsp:
+	case Usp:
 		return true
-	case ProfileFieldKeyValueProposition:
+	case ValueProposition:
 		return true
 	default:
 		return false
@@ -13752,22 +13788,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -16465,6 +16501,34 @@ type BlockedDomainListResponse struct {
 	// page size would tell an operator their domain was never refused when it was.
 	Total int `json:"total"`
 }
+
+// BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
+// on a read means they have never chosen, absent on a write means leave it alone.
+type BriefDelivery struct {
+	// DeliveryHourLocal The local hour a delivery should not arrive before, in the installation's
+	// reporting timezone. Absent means the job's own hour, which is what every seat
+	// gets today.
+	DeliveryHourLocal *int `json:"delivery_hour_local,omitempty"`
+
+	// MorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
+	// nothing; absent is not.
+	MorningBriefDelivery *BriefDeliveryMorningBriefDelivery `json:"morning_brief_delivery,omitempty"`
+
+	// QuietDayNotice Whether a day with nothing to act on still gets a message. Its own setting
+	// rather than an implication of the two above: "tell me when there is something"
+	// and "tell me every morning either way" are different asks.
+	QuietDayNotice *bool `json:"quiet_day_notice,omitempty"`
+
+	// WeeklyDelivery The same, for the weekly review.
+	WeeklyDelivery *BriefDeliveryWeeklyDelivery `json:"weekly_delivery,omitempty"`
+}
+
+// BriefDeliveryMorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
+// nothing; absent is not.
+type BriefDeliveryMorningBriefDelivery string
+
+// BriefDeliveryWeeklyDelivery The same, for the weekly review.
+type BriefDeliveryWeeklyDelivery string
 
 // BriefSnoozeRequest Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes.
 type BriefSnoozeRequest struct {
@@ -35347,6 +35411,9 @@ type AddListMemberJSONRequestBody = AddListMemberRequest
 // SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
 type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
 
+// SaveMyBriefDeliveryJSONRequestBody defines body for SaveMyBriefDelivery for application/json ContentType.
+type SaveMyBriefDeliveryJSONRequestBody = BriefDelivery
+
 // SaveMyEmailSignatureJSONRequestBody defines body for SaveMyEmailSignature for application/json ContentType.
 type SaveMyEmailSignatureJSONRequestBody = SaveEmailSignatureRequest
 
@@ -44163,6 +44230,12 @@ type ServerInterface interface {
 	// What the AI is doing for THIS person, right now and lately.
 	// (GET /me/ai-activity)
 	GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams)
+	// What the product may send you about your day and your week.
+	// (GET /me/brief-delivery)
+	GetMyBriefDelivery(w http.ResponseWriter, r *http.Request)
+	// Choose what the product may send you.
+	// (PUT /me/brief-delivery)
+	SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request)
 	// The sign-off appended to mail you send.
 	// (GET /me/email-signature)
 	GetMyEmailSignature(w http.ResponseWriter, r *http.Request)
@@ -46659,6 +46732,18 @@ func (_ Unimplemented) SetMyAgentGrant(w http.ResponseWriter, r *http.Request, s
 // What the AI is doing for THIS person, right now and lately.
 // (GET /me/ai-activity)
 func (_ Unimplemented) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the product may send you about your day and your week.
+// (GET /me/brief-delivery)
+func (_ Unimplemented) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose what the product may send you.
+// (PUT /me/brief-delivery)
+func (_ Unimplemented) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59453,6 +59538,46 @@ func (siw *ServerInterfaceWrapper) GetMyAiActivity(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMyAiActivity(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMyBriefDelivery operation middleware
+func (siw *ServerInterfaceWrapper) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyBriefDelivery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMyBriefDelivery operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyBriefDelivery(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -73522,6 +73647,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/ai-activity", wrapper.GetMyAiActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/brief-delivery", wrapper.GetMyBriefDelivery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/brief-delivery", wrapper.SaveMyBriefDelivery)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/email-signature", wrapper.GetMyEmailSignature)

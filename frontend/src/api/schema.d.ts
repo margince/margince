@@ -11161,6 +11161,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/brief-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the product may send you about your day and your week.
+         * @description Always the CALLER's own. An admin does not read a colleague's inbox preferences
+         *     through this API any more than they read their display language.
+         *
+         *     A field is ABSENT where the member has never chosen, which is not the same as
+         *     choosing `none`: the first follows the installation's default and moves if that
+         *     default moves, the second is a decision that stays.
+         */
+        get: operations["getMyBriefDelivery"];
+        /**
+         * Choose what the product may send you.
+         * @description Always the caller's own — there is no id by which one member sets another's, and
+         *     an agent carrying its grantor's authority does not change what lands in its
+         *     grantor's inbox.
+         *
+         *     A PATCH in shape: an omitted field is left as it was, never cleared. A client that
+         *     renders three controls and sends two must not silently reset the third, and the
+         *     settings page is exactly where that mistake costs somebody their mail without
+         *     anybody choosing it.
+         *
+         *     A save that moves nothing writes nothing and publishes nothing, so a page that
+         *     saves on every render does not fill the ledger with changes nobody made.
+         */
+        put: operations["saveMyBriefDelivery"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/locale": {
         parameters: {
             query?: never;
@@ -21626,6 +21665,35 @@ export interface components {
                 on_behalf_of?: string;
                 scopes?: ("read_only" | "draft_only" | "act_with_approval" | "auto_execute_low_risk")[];
             } | null;
+        };
+        /**
+         * @description What one member wants delivered. Every field is optional in BOTH directions: absent
+         *     on a read means they have never chosen, absent on a write means leave it alone.
+         */
+        BriefDelivery: {
+            /**
+             * @description Whether the morning brief arrives by mail. `none` is a CHOICE to receive
+             *     nothing; absent is not.
+             * @enum {string}
+             */
+            morning_brief_delivery?: "none" | "email";
+            /**
+             * @description The same, for the weekly review.
+             * @enum {string}
+             */
+            weekly_delivery?: "none" | "email";
+            /**
+             * @description Whether a day with nothing to act on still gets a message. Its own setting
+             *     rather than an implication of the two above: "tell me when there is something"
+             *     and "tell me every morning either way" are different asks.
+             */
+            quiet_day_notice?: boolean;
+            /**
+             * @description The local hour a delivery should not arrive before, in the installation's
+             *     reporting timezone. Absent means the job's own hour, which is what every seat
+             *     gets today.
+             */
+            delivery_hour_local?: number;
         };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen
@@ -45526,6 +45594,55 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMyBriefDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's delivery settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BriefDelivery"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    saveMyBriefDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BriefDelivery"];
+            };
+        };
+        responses: {
+            /** @description The settings as they now stand. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BriefDelivery"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

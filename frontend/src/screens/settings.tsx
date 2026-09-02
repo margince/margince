@@ -88,6 +88,7 @@ import { AiSettingsTab } from "./ai-settings";
 import { ActorTag } from "./audit";
 import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
+import { BriefDeliveryRows } from "./briefdelivery";
 import { CaptureActivityTab } from "./capture-activity";
 import { CaptureSendersCard } from "./capture-senders";
 import { CaptureSettingsCard } from "./capture-settings";
@@ -1029,6 +1030,7 @@ function AccountCard() {
           <PasswordSettingRow />
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
+          <BriefDeliveryRows />
         </SettingList>
       </PanelBody>
     </Panel>

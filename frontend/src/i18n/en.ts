@@ -3013,6 +3013,13 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
+  "delivery.morningLabel": "Your morning brief",
+  "delivery.morningHelp":
+    "Whether the day's brief also arrives by email. It is on your Brief page either way.",
+  "delivery.weeklyLabel": "Your weekly review",
+  "delivery.weeklyHelp": "Whether Monday's review also arrives by email.",
+  "delivery.byEmail": "By email",
+  "delivery.none": "Not by email",
   "settings.languageHelp": "Lasts for this session.",
   "role.admin": "Admin",
   "role.management": "Management",

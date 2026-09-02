@@ -183,7 +183,12 @@ var catalog = map[string]struct {
 	// stream for the same reason the sign-off does: it is a fact about that
 	// person rather than about the installation, which names its own language
 	// in a setting and publishes nothing per reader.
-	"user_locale.changed":      {personStreamEntity, 1},
+	"user_locale.changed": {personStreamEntity, 1},
+	// What a member wants DELIVERED rides the identity stream rather than the
+	// person one its neighbour above uses. A display language is something a
+	// subscriber rendering for this person needs; what lands in their inbox is
+	// nobody else's business, and the stream is the first place that is said.
+	"user_delivery.changed":    {identityStreamEntity, 1},
 	"linkedin_account.changed": {personStreamEntity, 1},
 	// One import act, not one row: an export is thousands of rows and a
 	// per-row event would bury every other event in the stream, while the

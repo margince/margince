@@ -306,6 +306,7 @@ const (
 	TeamChanged                           SubscribableEventType = "team.changed"
 	UserActivated                         SubscribableEventType = "user.activated"
 	UserDeactivated                       SubscribableEventType = "user.deactivated"
+	UserDeliveryChanged                   SubscribableEventType = "user_delivery.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
@@ -517,6 +518,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserActivated:
 		return true
 	case UserDeactivated:
+		return true
+	case UserDeliveryChanged:
 		return true
 	case UserInvited:
 		return true
@@ -1751,6 +1754,12 @@ type PublicEventUserDeactivated struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// PublicEventUserDeliveryChanged Payload for user_delivery.changed — a member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way; this is about the nudge toward them, which is the one part a person is entitled to switch off. It names WHAT moved and not what it moved to. What somebody chose about their own inbox is theirs, and a fan-out carrying the values would tell every subscription owner who had turned their mail off — so the values stay on the row, which only that person and the job reads.
+type PublicEventUserDeliveryChanged struct {
+	// ChangedFields Which settings moved. Never empty: this event fires on a change, and a save that moved nothing writes nothing and publishes nothing.
+	ChangedFields []string `json:"changed_fields"`
+}
+
 // PublicEventUserInvited Payload for user.invited — an admin provisioned a new active member with a single-use set-password token (identity/users.go's InviteUser).
 type PublicEventUserInvited struct {
 	// By The admin who issued the invite.
@@ -2360,6 +2369,10 @@ func (PublicEventUserDeactivated) EventType() string { return "user.deactivated"
 
 func (PublicEventUserDeactivated) EntityType() string { return "user" }
 
+func (PublicEventUserDeliveryChanged) EventType() string { return "user_delivery.changed" }
+
+func (PublicEventUserDeliveryChanged) EntityType() string { return "user" }
+
 func (PublicEventUserInvited) EventType() string { return "user.invited" }
 
 func (PublicEventUserInvited) EntityType() string { return "user" }
@@ -2518,6 +2531,7 @@ var PublicEventVersions = map[string]int{
 	"user.invited":                              1,
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
+	"user_delivery.changed":                     1,
 	"user_locale.changed":                       1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,
