@@ -667,3 +667,113 @@ func TestDeclaringACompanionCostsAContradiction(t *testing.T) {
 		t.Fatalf("the borrowed-title claim must be recorded as dropped: %+v", dropped)
 	}
 }
+
+// A TESTIMONIAL THAT PRINTS AN ADDRESS IS STILL A TESTIMONIAL.
+//
+// The published-email floor proves CONTACTABILITY, not affiliation. A wall that
+// prints the quoted person's own address clears it and still yields a lead
+// filed as a contact at the quoting company — which their own job title
+// disproves on the same line, and which then propagates into whatever the
+// account page says.
+func TestAQuotedCustomerWhoPrintsTheirOwnAddressIsStillNotALead(t *testing.T) {
+	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindHome, seedURL,
+		"What our clients say: Marc Costea, CEO at Qilin.Cloud, marc@qilin.example, calls it amazing. "+
+			"Our founder Anna Muster runs the practice, anna@acme.example.")
+	reply := `{"facts":[],"people":[
+		{"n":"Marc Costea","r":"CEO","q":"Marc Costea, CEO at Qilin.Cloud","m":"marc@qilin.example","e":"s0"},
+		{"n":"Anna Muster","r":"founder","q":"Our founder Anna Muster","m":"anna@acme.example","e":"s0"}]}`
+	res, dropped := gatePageFacts(reply, page, menu, idx)
+	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
+		t.Fatalf("only the site's own person may be proposed: %+v", res.people)
+	}
+	if reasons := dropReasons(dropped); reasons["Marc Costea"] != dropEmailOffSiteDomain {
+		t.Fatalf("the quoted customer must drop for the domain, not by luck: %+v", dropped)
+	}
+}
+
+// AND THE SITE'S OWN PEOPLE ARE NOT DROPPED WITH THEM, across the subdomains a
+// site actually uses: the comparison is registrable domains, which is the same
+// "same site" test the crawler's own off-domain gate applies.
+func TestAnAddressOnASubdomainOfTheSiteIsStillTheSiteS(t *testing.T) {
+	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindTeam, "https://www.acme.example/team",
+		"Anna Muster is our Chief Executive Officer, anna@mail.acme.example.")
+	reply := `{"facts":[],"people":[
+		{"n":"Anna Muster","r":"Chief Executive Officer","q":"Anna Muster is our Chief Executive Officer","m":"anna@mail.acme.example","e":"s0"}]}`
+	res, dropped := gatePageFacts(reply, page, menu, idx)
+	if len(res.people) != 1 || res.people[0].Name != "Anna Muster" {
+		t.Fatalf("a www page and a mail subdomain are one site: %+v people=%+v", dropped, res.people)
+	}
+}
+
+// THE COST OF THE RULE, stated as a test so it is a decision rather than a
+// surprise: a member of staff who publishes a personal address becomes
+// unproposable, and the drop census says which rule took them.
+func TestAStaffMemberWithAPersonalAddressIsUnproposableAndSaysSo(t *testing.T) {
+	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindTeam, seedURL+"/team",
+		"Bernd Beispiel leads sales as Head of Sales, bernd.beispiel@gmail.example.")
+	reply := `{"facts":[],"people":[
+		{"n":"Bernd Beispiel","r":"Head of Sales","q":"Bernd Beispiel leads sales as Head of Sales","m":"bernd.beispiel@gmail.example","e":"s0"}]}`
+	res, dropped := gatePageFacts(reply, page, menu, idx)
+	if len(res.people) != 0 {
+		t.Fatalf("a personal address cannot vouch for the affiliation: %+v", res.people)
+	}
+	if reasons := dropReasons(dropped); reasons["Bernd Beispiel"] != dropEmailOffSiteDomain {
+		t.Fatalf("the drop must name the rule that took him: %+v", dropped)
+	}
+}
+
+// AN ADDRESS THAT NAMES NOBODY IS NOT AN ADDRESS.
+//
+// A bare "@acme.example", or a run of words ending in one, carries the site's
+// domain after the last @ and would vouch for the affiliation while naming
+// nobody reachable — the proposal would ask a human to confirm a lead whose
+// only contact detail cannot be sent to. So the address is parsed, not split.
+func TestAnAddressWithNobodyInFrontOfItIsRefused(t *testing.T) {
+	for name, address := range map[string]string{
+		"no local part":    "@acme.example",
+		"words then an at": "not an email@acme.example",
+		"nothing at all":   "acme.example",
+		"a trailing at":    "anna@",
+		"two at signs":     "anna@muster@acme.example",
+	} {
+		t.Run(name, func(t *testing.T) {
+			if addressOnSiteDomain(address, seedURL) {
+				t.Errorf("%q vouched for the site's own domain while naming nobody reachable", address)
+			}
+		})
+	}
+}
+
+// AND A REAL ONE ON THE SITE STILL PASSES, so the check above is not refusing
+// everything.
+func TestAnOrdinaryAddressOnTheSitePasses(t *testing.T) {
+	if !addressOnSiteDomain("anna@acme.example", seedURL) {
+		t.Error("the site's own address was refused, so the parse is rejecting more than malformed input")
+	}
+}
+
+// THE DOMAIN IS WHAT FOLLOWS THE LAST @, because a quoted local part may
+// contain one.
+//
+// Its own case rather than a row in the malformed table above: this address is
+// perfectly well formed and names a reachable mailbox — at other.example. What
+// refuses it is the site-domain rule, and a failure here means the domain was
+// read from the wrong @ rather than that the address named nobody.
+//
+// mail.ParseAddress reads it as the single address `x@acme.example/@other.example`,
+// so cutting at the FIRST @ hands "acme.example/@other.example" to a URL parse
+// that reads its host as acme.example — an address on other.example vouching
+// for an acme page, through the check that exists to stop exactly that.
+func TestTheDomainIsReadFromTheLastAtInTheAddress(t *testing.T) {
+	const address = `"x@acme.example/"@other.example`
+	if addressOnSiteDomain(address, seedURL) {
+		t.Errorf("%s vouched for the acme page: its domain is other.example, and reading it from "+
+			"the first @ finds acme.example in the local part instead", address)
+	}
+	// And the same shape ON the site still passes, so the rule above is about
+	// which @ is read rather than about refusing quoted local parts.
+	if !addressOnSiteDomain(`"x@other.example/"@acme.example`, seedURL) {
+		t.Error("a quoted local part on the site's own domain was refused; the rule is which @ is " +
+			"read, not whether the local part is quoted")
+	}
+}
