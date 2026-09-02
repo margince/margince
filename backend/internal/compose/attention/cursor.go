@@ -144,13 +144,20 @@ func decodeCursor(token, scope, filter string, owner ids.UUID) (worklistCursor, 
 	if err != nil {
 		return worklistCursor{}, err
 	}
-	// Well-formed JSON is not yet a position. `{}` and `null` both decode
-	// cleanly and leave a zero offset with no fingerprint, which would restart a
-	// walk nobody minted a token for; and a NEGATIVE offset — reachable by hand,
-	// because the token is client-supplied and unsigned — reaches `rows[n:]` and
-	// panics. A crafted token must be a 422, never a crash on an authenticated
-	// endpoint.
-	if cursor.At < 0 || cursor.Params == "" {
+	// Well-formed JSON is not yet a position, and the token is client-supplied
+	// and unsigned, so every shape this never mints is refused rather than
+	// interpreted:
+	//
+	//   - A NEGATIVE offset reaches `rows[n:]` and panics. A crafted token must
+	//     be a 422, never a crash on an authenticated endpoint.
+	//   - ZERO is the top of the list, which this only ever reaches by minting a
+	//     token after a full page — so an offset of zero came from somewhere
+	//     else. It grants nothing (an absent cursor answers the same first page)
+	//     and is refused anyway, because a token the server cannot have written
+	//     should not be read as one it did.
+	//   - An EMPTY fingerprint is what `{}` and `null` decode to, and without
+	//     this they would pass as a legitimate first page.
+	if cursor.At <= 0 || cursor.Params == "" {
 		return worklistCursor{}, &storekit.MalformedCursorError{}
 	}
 	if cursor.Params != fingerprint(scope, filter, owner) {

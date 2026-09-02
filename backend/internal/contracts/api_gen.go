@@ -35040,8 +35040,10 @@ type GetWorklistParams struct {
 	//
 	// Such a row is not lost from the product — the next read of the queue ranks it
 	// afresh and shows it — so treat a walk as a way to reach a backlog you already know
-	// is there, not as a transaction over it. If you need the whole day at one instant,
-	// ask for it in one page: `limit` reaches 100.
+	// is there, not as a transaction over it. There is no way to ask for the whole day
+	// at one instant: `limit` stops at 100 and a single category can hold more than that,
+	// because the sources are read to their own bounds well past a page (the decision
+	// lane alone weighs 200). `counts` is what says how much is behind the page.
 	//
 	// The alternative was a token naming the last row it handed you, which is the
 	// obvious design and is worse here. When that row is answered between pages, or

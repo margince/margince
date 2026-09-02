@@ -6,6 +6,7 @@ package attention
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -92,7 +93,13 @@ func TestTheWalkReconcilesAgainstTheCountItReports(t *testing.T) {
 
 	walked := 0
 	cursor := worklistCursor{}
-	for {
+	// Bounded, because a resume that stops advancing walks forever and a test
+	// that hangs reports nothing — the harness kills the whole package and the
+	// defect looks like a slow suite rather than a broken cursor.
+	for page := range rows + 1 {
+		if page == rows {
+			t.Fatalf("the walk did not terminate: %d pages over %d rows", page, rows)
+		}
 		out := svc.worklistFrom(t.Context(), day, scopeAll, "", perPage,
 			waitingRead{}, leadRead{}, cursor)
 		walked += len(out.Queue)
@@ -432,20 +439,41 @@ func TestNamingYourselfAnswersTheSamePageAsOmittingTheOwner(t *testing.T) {
 // The cursor is client-supplied and unsigned, so a caller can hand back any
 // position they like. An unchecked negative reaches `rows[n:]`, which panics —
 // a denial of service on an authenticated endpoint, reachable by hand.
-func TestACursorNamingAPositionBeforeTheFirstRowIsRefused(t *testing.T) {
+func TestACursorNamingAPositionThisEndpointNeverMintsIsRefused(t *testing.T) {
 	t.Parallel()
 
-	forged := base64.RawURLEncoding.EncodeToString([]byte(
-		`{"s":"task","r":"t1","n":-1,"p":"` + fingerprint(scopeMine, "", ids.UUID{}) + `"}`))
+	valid := fingerprint(scopeMine, "", ids.UUID{})
+	for _, tc := range []struct {
+		name, why string
+		at        int
+	}{
+		{
+			name: "a negative offset",
+			at:   -1,
+			why:  "it reaches rows[n:] and panics — a crash on an authenticated endpoint",
+		},
+		{
+			name: "an offset of zero",
+			at:   0,
+			why: "this endpoint mints a token only after a full page, so zero came from " +
+				"somewhere else; it grants nothing, and a shape the server cannot have " +
+				"written must not be read as one it did",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			forged := base64.RawURLEncoding.EncodeToString(
+				fmt.Appendf(nil, `{"n":%d,"p":%q}`, tc.at, valid))
 
-	cursor, err := decodeCursor(forged, scopeMine, "", ids.UUID{})
-	if err == nil {
-		t.Fatalf("a negative position was accepted as %+v; it must be refused", cursor)
-	}
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
-		t.Errorf("a negative position answered %v; it is the caller's mistake and must be "+
-			"malformed_cursor", err)
+			cursor, err := decodeCursor(forged, scopeMine, "", ids.UUID{})
+			if err == nil {
+				t.Fatalf("%s was accepted as %+v; %s", tc.name, cursor, tc.why)
+			}
+			var malformed *storekit.MalformedCursorError
+			if !errors.As(err, &malformed) {
+				t.Errorf("%s answered %v; it is the caller's mistake and must be "+
+					"malformed_cursor", tc.name, err)
+			}
+		})
 	}
 }
 
@@ -531,18 +559,44 @@ func TestARowCrossingThePageBoundaryWaitsForTheNextRead(t *testing.T) {
 		t.Fatalf("decoding page one: %v", err)
 	}
 
-	// cc becomes the most urgent row, crossing above the boundary the caller
-	// has already passed.
+	// cc becomes the most urgent row, crossing above the boundary the caller has
+	// already passed: the order goes aa,bb,cc -> cc,aa,bb.
 	after := crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
 		at("aa", time.Hour), at("bb", 2*time.Hour), at("cc", -5*time.Hour),
 	}}
-	second := svc.worklistFrom(t.Context(), after, scopeAll, "", 1,
-		waitingRead{}, leadRead{}, cursor)
-	if len(second.Queue) == 0 {
-		t.Fatal("the walk ended with rows still owed")
+
+	// Walk the rest of it and record what the caller was actually shown. The
+	// documented consequence is specific and asserted as such: cc is NOT served
+	// on this walk, and aa — which the caller already has — comes back a second
+	// time, because it now stands where the offset points.
+	seen := map[string]int{}
+	for _, row := range first.Queue {
+		seen[row.Id]++
+	}
+	for range 6 {
+		out := svc.worklistFrom(t.Context(), after, scopeAll, "", 1,
+			waitingRead{}, leadRead{}, cursor)
+		for _, row := range out.Queue {
+			seen[row.Id]++
+		}
+		if out.NextCursor == nil {
+			break
+		}
+		cursor, err = decodeCursor(*out.NextCursor, scopeAll, "", ids.UUID{})
+		if err != nil {
+			t.Fatalf("decoding a later cursor: %v", err)
+		}
+	}
+	if seen["cc"] != 0 {
+		t.Errorf("cc was served %d times on this walk; the documented behaviour is that a "+
+			"row overtaking the boundary waits for the next read", seen["cc"])
+	}
+	if seen["aa"] != 2 {
+		t.Errorf("aa was served %d times, want 2: a row the boundary passes over is "+
+			"repeated, which is the half of the trade that is not a loss", seen["aa"])
 	}
 
-	// The delay is bounded: a fresh read leads with it.
+	// And the delay is bounded rather than permanent: a fresh read leads with it.
 	fresh := svc.worklistFrom(t.Context(), after, scopeAll, "", 1,
 		waitingRead{}, leadRead{}, worklistCursor{})
 	if len(fresh.Queue) == 0 || fresh.Queue[0].Id != "cc" {
@@ -551,10 +605,15 @@ func TestARowCrossingThePageBoundaryWaitsForTheNextRead(t *testing.T) {
 }
 
 // A cursor round-trips the position it was minted at, unchanged.
+//
+// Zero is deliberately absent from the cases: this only ever mints a token
+// after a full page, so an offset of zero is a shape the server does not
+// produce, and decodeCursor refuses it. Listing it here as valid would pin the
+// wrong behaviour and break when that guard is tightened rather than confirm it.
 func TestACursorRoundTripsThePositionItWasMintedAt(t *testing.T) {
 	t.Parallel()
 
-	for _, at := range []int{0, 1, 25, 100, 4096} {
+	for _, at := range []int{1, 25, 100, 4096} {
 		token := encodeCursor(at, scopeMine, "", ids.UUID{})
 		if token == "" {
 			t.Fatalf("offset %d minted an empty cursor", at)
