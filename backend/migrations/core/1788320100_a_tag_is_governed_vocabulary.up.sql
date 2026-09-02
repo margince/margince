@@ -46,6 +46,20 @@ ALTER TABLE taggable
     ADD CONSTRAINT taggable_assigned_by_kind_check
     CHECK (assigned_by_kind IS NULL OR assigned_by_kind IN ('human', 'agent', 'import'));
 
+-- Names get the same rule the code now applies. lookupTagByName collapses inner
+-- whitespace before it matches, so a row stored as "Key  Account" would stop
+-- being findable by the very name it displays: apply-by-name would refuse a tag
+-- the workspace can see, and remove-by-name would quietly do nothing. Folding
+-- the stored names is what keeps the column and the lookup agreeing.
+--
+-- The unique index is on lower(name), so two rows can only collide here if they
+-- already differed by spacing alone. That pair is the defect this rule exists to
+-- prevent, and it has to be reported rather than silently merged: the update
+-- fails on the constraint, and whoever runs it decides which word survives.
+UPDATE tag
+   SET name = btrim(regexp_replace(name, '\s+', ' ', 'g'))
+ WHERE name <> btrim(regexp_replace(name, '\s+', ' ', 'g'));
+
 -- The four tones the design system draws. Hex values the product wrote before
 -- the palette existed map onto the nearest tone rather than being dropped: a
 -- tag that loses its colour looks like a tag somebody re-coloured.
@@ -60,3 +74,27 @@ END;
 ALTER TABLE tag
     ADD CONSTRAINT tag_color_check
     CHECK (color IS NULL OR color IN ('teal', 'amber', 'rose', 'slate'));
+
+-- Reach the installations that already exist. seedSystemRoles writes each role
+-- document once at workspace creation and never re-syncs, so narrowing the
+-- compiled defaults alone changes nothing for anyone who bootstrapped earlier:
+-- their management, team-lead and rep seats would keep tag CRUD for good, and
+-- the governance this migration exists for would hold on a fresh database and
+-- nowhere else.
+--
+-- Unlike an ADDED object, this one is a narrowing, so it cannot be guarded on
+-- the key being absent — it is present and wrong. The guard is instead that the
+-- role still carries a WRITE verb on tag: a workspace an operator has already
+-- narrowed by hand is left as they set it, and re-running is a no-op.
+UPDATE role SET permissions = jsonb_set(
+        permissions, '{objects,tag}',
+        '{"create": false, "read": true, "update": false, "delete": false}'::jsonb, true)
+    WHERE is_system
+      AND key IN ('management', 'manager', 'rep')
+      AND permissions ? 'objects'
+      AND (permissions -> 'objects') ? 'tag'
+      AND (
+            ((permissions -> 'objects' -> 'tag' ->> 'create')::boolean IS TRUE)
+         OR ((permissions -> 'objects' -> 'tag' ->> 'update')::boolean IS TRUE)
+         OR ((permissions -> 'objects' -> 'tag' ->> 'delete')::boolean IS TRUE)
+      );

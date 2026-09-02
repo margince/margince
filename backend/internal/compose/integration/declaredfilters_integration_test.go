@@ -40,8 +40,10 @@ import (
 func tagCurator(e *Env) context.Context {
 	return e.As(ids.NewV7(), nil, principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
-			"tag":    {Create: true, Read: true, Update: true},
-			"person": {Read: true},
+			"tag": {Create: true, Read: true, Update: true},
+			// update, not merely read: applying a tag writes to the PERSON,
+			// so the curator needs the verb that changes one.
+			"person": {Read: true, Update: true},
 		},
 		RowScope: principal.RowScopeAll,
 	})

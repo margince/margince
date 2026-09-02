@@ -56,12 +56,12 @@ var demoTags = []struct {
 	// Applies decides which companies carry this tag, from their profile.
 	Applies func(profile) bool
 }{
-	{"Key Account", "#b45309", func(p profile) bool { return p.Lifecycle == "customer" }},
-	{"Churn Risk", "#b91c1c", func(p profile) bool { return p.Lifecycle == "former_customer" }},
-	{"Inbound", "#1d4ed8", func(p profile) bool { return p.LeadState != "" }},
+	{"Key Account", "amber", func(p profile) bool { return p.Lifecycle == "customer" }},
+	{"Churn Risk", "rose", func(p profile) bool { return p.Lifecycle == "former_customer" }},
+	{"Inbound", "teal", func(p profile) bool { return p.LeadState != "" }},
 	// `parked` is not a lifecycle the product carries, so the planner maps it
 	// to `target` and this tag is what preserves the distinction.
-	{"Parked", "#6b7280", func(p profile) bool { return p.Lifecycle == "target" && p.DealStage == "" }},
+	{"Parked", "slate", func(p profile) bool { return p.Lifecycle == "target" && p.DealStage == "" }},
 }
 
 func seedTags(c *client, refs pipelineRefs, plan map[string]profile, mode runMode) (int, error) {

@@ -467,10 +467,15 @@ func (s *Store) NewTag(ctx context.Context, name, color string) (TagSummary, err
 }
 
 func wireTag(t tagRow) crmcontracts.Tag {
+	var color *crmcontracts.TagColor
+	if t.Color != nil {
+		c := crmcontracts.TagColor(*t.Color)
+		color = &c
+	}
 	return crmcontracts.Tag{
 		Id:         openapi_types.UUID(t.ID.UUID),
 		Name:       t.Name,
-		Color:      t.Color,
+		Color:      color,
 		CreatedAt:  &t.CreatedAt,
 		UpdatedAt:  &t.UpdatedAt,
 		ArchivedAt: t.ArchivedAt,

@@ -21188,7 +21188,9 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            color?: string | null;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+            description?: string | null;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -21198,7 +21200,9 @@ export interface components {
         };
         CreateTagRequest: {
             name: string;
-            color?: string | null;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+            description?: string | null;
         };
         Taggable: {
             /** Format: uuid */

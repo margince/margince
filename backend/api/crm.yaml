@@ -29093,8 +29093,12 @@ components:
       required: [id, name]
       properties:
         id: { type: string, format: uuid }
-        name: { type: string }
-        color: { type: [string, 'null'] }
+        name: { type: string, maxLength: 64 }
+        # The palette the design system draws, closed on purpose: a tag is a
+        # shared word, and a colour a reader cannot tell from another one is
+        # not a distinction. Mirrors the tag_color_check constraint.
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -29103,8 +29107,12 @@ components:
       type: object
       required: [name]
       properties:
-        name: { type: string }
-        color: { type: [string, 'null'] }
+        # Bounded because the server bounds it: leading and inner whitespace is
+        # collapsed before the length is measured, so a name that fits once
+        # normalized is accepted even when it was typed longer.
+        name: { type: string, maxLength: 64 }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
 
     Taggable:
       type: object

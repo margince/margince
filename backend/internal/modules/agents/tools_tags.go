@@ -93,7 +93,7 @@ func taggingSchema(taggableTypes []string) string {
 	}
 	return `{"type":"object","required":["record_type","record_id"],"properties":{
 	"tag_id":{"type":"string","format":"uuid"},
-	"tag_name":{"type":"string","maxLength":120,"description":"Instead of tag_id: the tag is created if the workspace has no such word"},
+	"tag_name":{"type":"string","maxLength":64,"description":"Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created"},
 	"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},
 	"record_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`
 }
@@ -164,7 +164,7 @@ func (t applyTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessa
 	// two spellings of the same tag.
 	if args.TagID.IsZero() {
 		if args.TagName == "" {
-			return nil, &BadArgsError{Cause: errors.New("give tag_id, or tag_name to reuse or create one")}
+			return nil, &BadArgsError{Cause: errors.New("give tag_id, or tag_name naming a tag the workspace already has")}
 		}
 		// The TARGET is authorized first, so a caller naming a record they
 		// cannot reach is refused for that reason rather than learning which
