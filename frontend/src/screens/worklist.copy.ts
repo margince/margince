@@ -205,6 +205,29 @@ function knownComparator(
 }
 
 // One fact behind an item's rank.
+/**
+ * The reason kind that reads as a BADGE rather than as a phrase in the line.
+ *
+ * "Nothing prepared" is a state of the meeting, the way `overdue` is a state of
+ * a deadline — not one weighed fact among several. Buried mid-sentence in a
+ * `because` line it reads as background; a rep scanning a rail of meetings for
+ * the one to open before it starts needs it at a glance.
+ *
+ * It is therefore drawn once, as a badge, and left OUT of the phrase line. Said
+ * in both places it would read as two separate findings about one meeting.
+ */
+const BADGED = "meeting_unprepared";
+
+/** Whether this row's meeting has nothing prepared for it. */
+export function isUnprepared(item: WorklistItem): boolean {
+  return item.because.some((reason) => reason.kind === BADGED);
+}
+
+/** The reasons a row says in its phrase line — everything the badges do not. */
+export function phrasedReasons(item: WorklistItem): WorklistReason[] {
+  return item.because.filter((reason) => reason.kind !== BADGED);
+}
+
 export function reasonText(
   reason: WorklistReason,
   t: T,

@@ -37,6 +37,7 @@ import {
 } from "./home.queries";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
+import { PromisesPanel, SchedulePanel } from "./home.schedule";
 import { HomeTeamBoard } from "./home.teamboard";
 import { FocusSection } from "./home.today";
 import { WeeklySection } from "./home.weekly";
@@ -415,8 +416,14 @@ export function HomeScreen() {
         onGoToDuplicates={() => navigate({ screen: "worklist" })}
         onGoToWatch={() => goToSection("home-watch")}
       />
-      {/* Before the readings, because a strip of numbers a reader cannot
-          trust is worse than one they can qualify. */}
+      {/* Before the readings, because a strip of numbers a reader cannot trust
+          is worse than one they can qualify — and in the MAIN column rather
+          than the rail, though the rail is where the Brief plan drew it. This
+          is a callout that appears only when a source was withheld, failed or
+          stopped short, so it is a fact about the whole page rather than
+          context beside it, and it qualifies the strip directly under it. In
+          the rail it would be a warning about the queue, filed away from the
+          queue. */}
       {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
       {/* The strip reads the SAME worklist answer the queue below it reads, so
           the five figures cannot disagree with the rows they summarise. */}
@@ -449,6 +456,18 @@ export function HomeScreen() {
         asideLabel={t("home.rail")}
         aside={
           <>
+            {/* The day's own shape leads the rail: what it is booked with, then
+                what is owed. Both are cuts of the SAME worklist answer the work
+                column is drawn from, so the rail cannot name a meeting the
+                queue has already dropped. */}
+            <SchedulePanel
+              day={worklistQuery.data}
+              state={readState(worklistQuery)}
+            />
+            <PromisesPanel
+              day={worklistQuery.data}
+              state={readState(worklistQuery)}
+            />
             <OvernightPanel />
             <PositionPanel />
             <section id="home-watch">

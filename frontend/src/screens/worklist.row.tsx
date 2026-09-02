@@ -20,9 +20,11 @@ import {
   comparisonText,
   consequenceText,
   dealFactsText,
+  isUnprepared,
   itemTitle,
   moveHref,
   moveOpensComposer,
+  phrasedReasons,
   reasonText,
   rowHref,
 } from "./worklist.copy";
@@ -67,7 +69,9 @@ export function WorklistRow({
   const href = rowHref(item);
   const title = itemTitle(item, t, locale);
   const facts = dealFactsText(item, t, locale, zone);
-  const because = item.because
+  // The badged reasons are drawn as badges above and left out here, so one
+  // meeting does not report the same finding twice in two registers.
+  const because = phrasedReasons(item)
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null)
     .join(" · ");
@@ -96,6 +100,14 @@ export function WorklistRow({
           )}
           <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
           {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
+          {/* A state of the meeting, not a reason among reasons: a rep
+              scanning for the one to open before it starts has to see it
+              without reading the line under the title. Warn rather than
+              danger — an unprepared meeting is work to do, not a deadline
+              already missed. */}
+          {isUnprepared(item) && (
+            <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+          )}
         </p>
         {/* `detail` is not prose on every source: a relationship-decay row
             carries a bare day COUNT there (attention/render.go's lapsedItem,
