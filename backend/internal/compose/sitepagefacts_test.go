@@ -735,12 +735,6 @@ func TestAnAddressWithNobodyInFrontOfItIsRefused(t *testing.T) {
 		"nothing at all":   "acme.example",
 		"a trailing at":    "anna@",
 		"two at signs":     "anna@muster@acme.example",
-		// RFC-valid, and the reason the domain is taken from the LAST @:
-		// mail.ParseAddress reads this as the single address
-		// `x@acme.example/@other.example`, so cutting at the FIRST @ hands
-		// "acme.example/@other.example" to a URL parse that reads its host as
-		// acme.example — an address on other.example vouching for an acme page.
-		"a quoted local part carrying an at": `"x@acme.example/"@other.example`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if addressOnSiteDomain(address, seedURL) {
@@ -755,5 +749,31 @@ func TestAnAddressWithNobodyInFrontOfItIsRefused(t *testing.T) {
 func TestAnOrdinaryAddressOnTheSitePasses(t *testing.T) {
 	if !addressOnSiteDomain("anna@acme.example", seedURL) {
 		t.Error("the site's own address was refused, so the parse is rejecting more than malformed input")
+	}
+}
+
+// THE DOMAIN IS WHAT FOLLOWS THE LAST @, because a quoted local part may
+// contain one.
+//
+// Its own case rather than a row in the malformed table above: this address is
+// perfectly well formed and names a reachable mailbox — at other.example. What
+// refuses it is the site-domain rule, and a failure here means the domain was
+// read from the wrong @ rather than that the address named nobody.
+//
+// mail.ParseAddress reads it as the single address `x@acme.example/@other.example`,
+// so cutting at the FIRST @ hands "acme.example/@other.example" to a URL parse
+// that reads its host as acme.example — an address on other.example vouching
+// for an acme page, through the check that exists to stop exactly that.
+func TestTheDomainIsReadFromTheLastAtInTheAddress(t *testing.T) {
+	const address = `"x@acme.example/"@other.example`
+	if addressOnSiteDomain(address, seedURL) {
+		t.Errorf("%s vouched for the acme page: its domain is other.example, and reading it from "+
+			"the first @ finds acme.example in the local part instead", address)
+	}
+	// And the same shape ON the site still passes, so the rule above is about
+	// which @ is read rather than about refusing quoted local parts.
+	if !addressOnSiteDomain(`"x@other.example/"@acme.example`, seedURL) {
+		t.Error("a quoted local part on the site's own domain was refused; the rule is which @ is " +
+			"read, not whether the local part is quoted")
 	}
 }
