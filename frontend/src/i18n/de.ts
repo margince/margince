@@ -178,6 +178,8 @@ export const de = {
   "shell.aside.show": "Kontextspalte einblenden",
   "shell.skipToContent": "Zum Inhalt springen",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "{company} Startseite, betrieben mit Margince",
+  "shell.poweredBy": "Betrieben mit Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Alles durchsuchen…",
   "shell.breadcrumbAria": "Navigationspfad",
@@ -1714,9 +1716,7 @@ export const de = {
     "{field} ist als \u201e{value}\u201c erfasst. Ihn zu entfernen bedeutet: Das ist kein Fakt über die Firma. Ein späteres Lesen der Website kann ihn erneut erfassen.",
   "co.facts.showAll": "Alle {count} anzeigen",
   "co.facts.showLess": "Weniger anzeigen",
-  "co.tags.lists": "Listen",
   "co.tags.tags": "Tags",
-  "co.tags.noLists": "Auf keiner Liste.",
   "co.tags.noTags": "Keine Tags vergeben.",
   "co.project.new": "Neues Projekt",
   "co.deal.new": "Neuer Deal",
@@ -1727,11 +1727,6 @@ export const de = {
   "co.tags.pick": "Tag-Name",
   "co.tags.overCap":
     "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
-  "co.lists.added": "Zu „{name}“ hinzugefügt",
-  "co.lists.add": "Zu Liste hinzufügen",
-  "co.lists.pick": "Listenname",
-  "co.lists.overCap":
-    "Es gibt mehr Listen, als angezeigt werden können; eine Liste, die hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Listen aufzuräumen, bevor eine neue angelegt wird.",
   "co.recent.title": "Was zuletzt passiert ist",
   "co.recent.emptyDetail":
     "Sobald Sie eine E-Mail senden, einen Anruf festhalten oder sich treffen, steht der Austausch hier, mit dem, was jede Seite getan hat.",
@@ -1751,7 +1746,7 @@ export const de = {
   "co.recent.minutes": "{count} Min.",
   "co.recent.re": "zu einem Deal",
   "co.recent.reNamed": "zu {name}",
-  "co.tags.title": "Listen & Tags",
+  "co.tags.title": "Tags",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
   "co.overlayFallback":
     "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",
@@ -2277,7 +2272,6 @@ export const de = {
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.asOf": "Stand {at}",
-  "home.refresh": "Briefing aktualisieren",
   "home.refreshing": "Sortiere neu…",
   "home.generate": "Briefing jetzt holen",
   "home.noneBody":
@@ -2304,6 +2298,12 @@ export const de = {
     "Keine Zusammenfassung dieser Woche — Margince hat keinen Durchgang gemacht. Die Zahlen unten sind trotzdem die der Woche.",
   "home.weekly.queueWorked": "Morgen-Liste",
   "home.weekly.actedDismissed": "{acted} bearbeitet · {dismissed} weggeklickt",
+  "home.weekly.sincePrior": "{delta} ggü. Vorwoche",
+  "home.weekly.leadsAnswered": "Leads rechtzeitig beantwortet",
+  "home.weekly.ofRouted": "{answered} von {routed}",
+  "home.weekly.promisesKept": "Zusagen eingehalten",
+  "home.weekly.meetingsHeld": "Meetings mit nächstem Schritt",
+  "home.weekly.ofMeetings": "{withStep} von {held}",
   "home.weekly.carriedOver": "Übernommen",
   "home.weekly.outcome.moved": "bewegt",
   "home.weekly.outcome.won": "gewonnen",
@@ -2856,6 +2856,13 @@ export const de = {
   "compose.sendLaterLabel": "Später senden (optional)",
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "Diese E-Mail senden?",
+  "compose.threadHeading": "Dieser Verlauf",
+  "compose.continueHeading": "Einen Verlauf fortsetzen?",
+  "compose.threadLeave": "Anderen wählen",
+  "compose.messageCount_one": "{count} Nachricht",
+  "compose.messageCount_other": "{count} Nachrichten",
+  "compose.threadContinuing": "Der letzte Austausch, den dies fortsetzt",
+  "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
     "Sie senden diese E-Mail jetzt. Dies ist eine ausgehende, unwiderrufliche Aktion.",
   "compose.schedule": "Einplanen",
@@ -2899,6 +2906,9 @@ export const de = {
   "compose.relinkThreadHint":
     "Jede Nachricht dieses Threads, die Sie bearbeiten dürfen, wird in einem Schritt mit verschoben.",
   "compose.emptyRecipients": "Fügen Sie mindestens einen Empfänger hinzu.",
+  "compose.missingSubject": "Gib dieser E-Mail einen Betreff.",
+  "compose.missingBody": "Schreibe die Nachricht, bevor du sie sendest.",
+  "compose.missingPurpose": "Wähle, wozu diese Nachricht dient.",
   "compose.removeRecipient": "{recipient} entfernen",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen.",
@@ -2958,6 +2968,17 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
+  "brief.coverage.summary": "Einige Quellen haben mehr, als diese Seite zeigt",
+  "brief.coverage.bounded":
+    "{shown} von mindestens {considered} gelesenen angezeigt",
+  "delivery.morningLabel": "Ihr Tagesbriefing",
+  "delivery.morningHelp":
+    "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf Ihrer Briefing-Seite steht es ohnehin.",
+  "delivery.weeklyLabel": "Ihr Wochenrückblick",
+  "delivery.weeklyHelp":
+    "Ob der Rückblick am Montag zusätzlich per E-Mail kommt.",
+  "delivery.byEmail": "Per E-Mail",
+  "delivery.none": "Nicht per E-Mail",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
@@ -3934,7 +3955,7 @@ export const de = {
     "Die Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
   "connectors.disconnect": "Trennen",
-  "connectors.signatureEnrich.label": "Signaturen aus diesem Postfach lesen",
+  "connectors.signatureEnrich.label": "Kontaktdaten aus diesem Postfach lesen",
   "connectors.signatureEnrich.followingDefault":
     "Folgt der Einstellung Ihrer Organisation. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
   "connectors.signatureEnrich.ownAnswer":
@@ -5051,6 +5072,11 @@ export const de = {
   "dealmail.sub.fresh": "Schreiben Sie den Beteiligten dieses Deals.",
   "dealmail.reply": "Antwort entwerfen",
   "dealmail.send": "E-Mail senden",
+  "recordmail.title": "E-Mail",
+  "recordmail.sub.reply": "Eine Antwort steht noch aus.",
+  "recordmail.sub.fresh": "Schreiben Sie den Kontakten dieses Datensatzes.",
+  "recordmail.reply": "Antwort entwerfen",
+  "recordmail.send": "E-Mail schreiben",
   "deal360.rewrite": "Neu schreiben",
   "deal360.readFull": "Vollständige Einschätzung lesen",
   "deal360.createTask": "Aufgabe anlegen",
@@ -5117,8 +5143,10 @@ export const de = {
   "prefs.undoExplicit":
     "Ein erneutes Abonnieren ist eine ausdrückliche Zustimmung — wir schalten es nicht stillschweigend wieder ein. Speichere unten, um deine Zustimmung festzuhalten, oder verwirf.",
 
+  "auto.tier.runs": "läuft",
+  "auto.tier.approval": "Freigabe",
   "auto.sub":
-    "ein geschlossener Katalog — Typ wählen, Parameter setzen, aktivieren",
+    'Eine Regel mit "läuft" handelt selbstständig. Eine mit "Freigabe" wandert in den Freigabe-Eingang.',
   "auto.readOnly":
     "Nur-Lese-Ansicht — du hast keine Berechtigung, Automatisierungen zu ändern.",
   "auto.catalog": "Starter-Bibliothek",
@@ -5875,6 +5903,18 @@ export const de = {
   "settings.companyTrust":
     "Nur bestätigtes Wissen — Website-Texte werden nie zu Anweisungen.",
   "settings.companyConfirmed": "bestätigte Aussagen",
+  "settings.companyMark": "Firmenzeichen",
+  "settings.companyMarkPresent":
+    "Wird überall dort gezeigt, wo diese Firma auftaucht, auch oben in der Seitenleiste.",
+  "settings.companyMarkNone":
+    "Noch kein Zeichen, deshalb stehen die Initialen dafür. Ein Website-Auslesen füllt das, oder Sie laden hier eines hoch.",
+  "settings.companyMarkAdd": "Zeichen hinzufügen",
+  "settings.companyMarkReplace": "Ersetzen",
+  "settings.companyMarkRemove": "Entfernen",
+  "settings.companyMarkPick": "Firmenzeichen",
+  "settings.companyMarkHint":
+    "PNG, JPEG, GIF, WebP, ICO oder SVG. Beim Hochladen wird es quadratisch zugeschnitten und verkleinert; ein selbst gewähltes Zeichen bleibt, bis Sie es entfernen.",
+  "settings.companyMarkEmpty": "Bild hierher ziehen oder Datei auswählen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
   "settings.companyWebsiteHint":
     "Die öffentliche Website, von der jede Website-Lesung ausgeht.",
@@ -6052,81 +6092,6 @@ export const de = {
   "countdown.minutesSeconds": "{minutes}m {seconds}s",
   "countdown.expired": "Abgelaufen",
 
-  // Quotas & Zielerreichung (RD-T06): menschlich gesetzte Umsatzziele mit
-  // serverseitig berechneter Zielerreichung, im Reports-Segment „Quotas“.
-  "quotas.tab": "Quotas",
-  // Der Titel des Auswahl-Panels. Die Segmentleiste direkt darüber sagt schon
-  // „Quotas“, deshalb benennt dieser Titel, was die LISTE enthält — eine Zeile
-  // je Inhaber oder Team mit einem Ziel — statt die Seite zu wiederholen.
-  "quotas.selector.title": "Wer eine Quota hat",
-  "quotas.sub": "Umsatzziele — menschlich gesetzt, Zielerreichung berechnet",
-  "quotas.role.owner": "Individuelle Quota",
-  "quotas.role.team": "Team-Quota",
-  "quotas.periodRange": "{start} – {end}",
-  "quotas.empty.title": "Keine Quota gesetzt",
-  "quotas.empty.body":
-    "Eine Quota ist ein Ziel, das ein Mensch setzt — Inhaber oder Team, Zeitraum, Betrag. Wir raten es nicht. Setzen Sie ein Ziel, um die Zielerreichung aus gewonnenen Deals zu verfolgen.",
-  "quotas.empty.cta": "Ziel setzen",
-  "quotas.attained": "erreicht",
-  "quotas.closedWon": "Gewonnen in diesem Zeitraum",
-  "quotas.target": "Ziel",
-  "quotas.gap": "Abstand zum Ziel",
-  "quotas.baseCurrencyNote":
-    "Beträge in der Basiswährung der Organisation ({currency}).",
-  "quotas.pace.ahead":
-    "Vor dem Plan — {pct}% erreicht bei {pace}% des Zeitraums.",
-  "quotas.pace.behind":
-    "Hinter dem Plan — {pct}% erreicht bei {pace}% des Zeitraums.",
-  "quotas.pace.met": "Ziel erreicht — {pct}% erreicht.",
-  "quotas.computed": "serverseitig berechnet",
-  "quotas.contributing.title": "Was zur Zielerreichung zählt",
-  "quotas.contributing.subtitle": "gewonnene Deals · Basiswert im Zeitraum",
-  "quotas.contributing.deal": "Deal",
-  "quotas.contributing.amount": "Gezählter Betrag",
-  "quotas.contributing.total": "Gezählte Summe",
-  "quotas.contributing.caption":
-    "Basiswährung · offene / verlorene / ausgeschlossene Deals ausgenommen",
-  "quotas.explain.formula":
-    "Zielerreichung = Σ(Basiswert gewonnener Deals) ÷ Ziel, auf den Cent",
-  "quotas.explain.closedWon": "gewonnen = {sum} ({count} Deals im Zeitraum)",
-  "quotas.explain.target": "Ziel = {target} (menschlich gesetzt)",
-  "quotas.explain.result": "Zielerreichung = {sum} ÷ {target} = {pct}%",
-  "quotas.explain.exclusions":
-    "offene / verlorene / ausgeschlossene Deals ausgenommen; nur sauberer Kern",
-  "quotas.scopeNote.title": "Was diese Quota bewusst ist",
-  "quotas.scopeNote.flag": "gekennzeichnet, nicht verborgen",
-  "quotas.scopeNote.body":
-    "Das Ziel ist menschlich gesetzt — die KI erfindet keine Quota-Zahl. Die Zielerreichung wird aus dem Basiswert gewonnener Deals berechnet und ist vollständig auditierbar. Es gibt kein KI-gesetztes Ziel, kein Forecast-zu-Quota und keine Provisions-Engine.",
-  "quotas.target.title": "Ziel des Zeitraums",
-  "quotas.target.new": "Ziel setzen",
-  "quotas.target.edit": "Ziel bearbeiten",
-  "quotas.target.save": "Ziel speichern",
-  "quotas.target.note":
-    "Das Bearbeiten schreibt einen menschlich getippten Wert und protokolliert die Änderung. Die Zielerreichung wird neu berechnet.",
-  "quotas.target.sideFixed":
-    "Die Inhaber-/Team-Seite einer Quota ist fest — zum Wechseln archivieren und neu anlegen.",
-  "quotas.side.label": "Zugewiesen an",
-  "quotas.side.owner": "Inhaber",
-  "quotas.side.team": "Team",
-  "quotas.owner": "Inhaber",
-  "quotas.team": "Team",
-  "quotas.pickOwner": "Inhaber auswählen…",
-  "quotas.pickTeam": "Team auswählen…",
-  "quotas.amountHint":
-    "Ganze Einheiten der unten gewählten Währung. Keine Dezimalstellen.",
-  "quotas.periodStart": "Zeitraum-Beginn",
-  "quotas.periodEnd": "Zeitraum-Ende",
-  "quotas.amount": "Zielbetrag",
-  "quotas.currency": "Währung",
-  "quotas.err.targetZero": "Diese Quota hat noch kein Ziel",
-  "quotas.err.computeFailed": "Zielerreichung konnte nicht berechnet werden",
-  "quotas.err.ownerXorTeam": "Wählen Sie genau eines: Inhaber oder Team.",
-  "quotas.saveDone": "Quota gespeichert",
-  "quotas.archiveDone": "Quota archiviert",
-  "quotas.archive.title": "Quota archivieren",
-  "quotas.archive.confirm":
-    "Das Archivieren entfernt diese Quota aus der Liste und stoppt die Verfolgung der Zielerreichung. Archivierte Quotas können nicht bearbeitet werden.",
-
   "installationSettings.orgTitle": "Installation",
   "installationSettings.orgSub":
     "Wie diese Installation heißt und in welcher Zeitzone jede Auswertungsperiode berechnet wird.",
@@ -6167,33 +6132,51 @@ export const de = {
     "Diesen Anbieter auf der Anmeldeseite anbieten. Beim Abschalten brechen auch laufende Anmeldungen ab; bestehende Sitzungen bleiben unberührt.",
   "signInMethods.noneConfigured":
     "Für diese Installation ist kein externer Anbieter konfiguriert, daher steht außer dem Passwort nichts zur Auswahl.",
-  "googleApp.title": "Google-App",
-  "googleApp.sub":
+  "oauthApp.google.title": "Google-App",
+  "oauthApp.google.sub":
     "Postfächer werden über eine eigene Google-OAuth-App verbunden, und die Anmeldung mit Google läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Organisation verwendet und nicht unsere.",
-  "googleApp.configured": "In Verwendung: {clientId}",
-  "googleApp.absent":
+  "oauthApp.google.absent":
     "Aus keiner Quelle ist eine App verfügbar. Gmail und Kalender lassen sich nicht verbinden, und die Anmeldung mit Google kann nicht angeboten werden.",
-  "googleApp.replaceHint":
-    "Ein neues Paar ersetzt das hinterlegte. Bereits bestehende Verbindungen laufen weiter, bis sie neu verbunden werden.",
-  "googleApp.store": "App hinterlegen",
-  "googleApp.replace": "App ersetzen",
-  "googleApp.removeConfirmTitle": "Google-App entfernen?",
-  "googleApp.removeConfirmBody":
-    "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App. Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
-  "googleApp.remove": "App entfernen",
-  "googleApp.redirectCopied": "Kopiert",
-  "googleApp.redirectCopy": "URI für {purpose} kopieren",
-  "googleApp.redirect.mailbox_connect": "Postfach und Kalender",
-  "googleApp.redirect.sign_in": "Anmeldung",
-  "googleApp.redirectSub":
+  "oauthApp.google.redirectSub":
     "Tragen Sie jede der folgenden URIs beim OAuth-Client in der Google Console ein. Fehlt eine, scheitert die Zustimmung mit redirect_uri_mismatch, ohne zu nennen, welche URI falsch war.",
-  "googleApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
-  "googleApp.fromEnvironment":
-    "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App ersetzt sie, solange eine gespeichert ist.",
-  "googleApp.clientId": "Client-ID",
-  "googleApp.clientSecret": "Client-Secret",
-  "googleApp.clientIdPlaceholder":
+  "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
+  "oauthApp.google.removeConfirmTitle": "Google-App entfernen?",
+  "oauthApp.google.removeConfirmBody":
+    "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App. Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
+  "oauthApp.microsoft.title": "Microsoft-App",
+  "oauthApp.microsoft.sub":
+    "Outlook-Postfächer und -Kalender werden über eine eigene Entra-App-Registrierung verbunden, und die Anmeldung mit Microsoft läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Organisation verwendet und nicht unsere.",
+  "oauthApp.microsoft.absent":
+    "Aus keiner Quelle ist eine App verfügbar. Outlook-Mail und -Kalender lassen sich nicht verbinden, und die Anmeldung mit Microsoft kann nicht angeboten werden.",
+  "oauthApp.microsoft.redirectSub":
+    "Tragen Sie jede der folgenden URIs in der Entra-App-Registrierung unter Authentifizierung als Web-Plattform ein. Fehlt eine, scheitert die Zustimmung mit AADSTS50011, ohne zu nennen, welche URI falsch war.",
+  "oauthApp.microsoft.clientIdPlaceholder":
+    "00000000-0000-0000-0000-000000000000",
+  "oauthApp.microsoft.removeConfirmTitle": "Microsoft-App entfernen?",
+  "oauthApp.microsoft.removeConfirmBody":
+    "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus dem Entra-Portal eingetragen werden. Outlook-Mail- und -Kalender-Verbindungen laufen über diese App. Google- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
+  "oauthApp.configured": "In Verwendung: {clientId}",
+  "oauthApp.fromEnvironment":
+    "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App ersetzt sie, solange eine gespeichert ist.",
+  "oauthApp.pinnedToDirectory": "An das Verzeichnis {tenant} gebunden.",
+  "oauthApp.replaceHint":
+    "Ein neues Paar ersetzt das hinterlegte. Bereits bestehende Verbindungen laufen weiter, bis sie neu verbunden werden.",
+  "oauthApp.store": "App hinterlegen",
+  "oauthApp.replace": "App ersetzen",
+  "oauthApp.remove": "App entfernen",
+  "oauthApp.redirectCopied": "Kopiert",
+  "oauthApp.redirectCopy": "URI für {purpose} kopieren",
+  "oauthApp.redirect.mailbox_connect": "Postfach",
+  "oauthApp.redirect.calendar_connect": "Kalender",
+  "oauthApp.redirect.sign_in": "Anmeldung",
+  "oauthApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
+  "oauthApp.clientId": "Client-ID",
+  "oauthApp.clientSecret": "Client-Secret",
+  "oauthApp.tenant": "Verzeichnis-ID (Mandant)",
+  "oauthApp.tenantHint":
+    "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis, sodass nur dessen Mitglieder zustimmen können. Leer lassen, um jede Organisation zuzulassen.",
+  "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":
@@ -6206,11 +6189,61 @@ export const de = {
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
+  "aiSettings.sub":
+    "Wohin der Text dieser Installation geht und was er kostet.",
+  "aiSettings.tabs": "Welcher Teil der KI-Einstellungen offen ist",
+  "aiSettings.tab.routing": "Routing",
+  "aiSettings.tab.providers": "Anbieter",
+  "aiSettings.tab.automations": "Automatisierungen",
+  "aiSettings.tab.usage": "Verbrauch",
+  "aiSettings.tab.logs": "Protokoll",
+  "aiSettings.withheld": "Nicht für Sie einsehbar",
+  "aiSettings.unread": "Konnte nicht gelesen werden",
+  "aiSettings.pending": "Wird gelesen…",
+  "aiSettings.spend.label": "Verbrauch diesen Monat",
+  "aiSettings.spend.value": "{spent} von {budget} Token",
+  "aiSettings.spend.estimated": "≈ {amount} geschätzt",
+  "aiSettings.providers.label": "Anbieter",
+  "aiSettings.providers.value": "{count} mit Schlüssel",
+  "aiSettings.providers.missing": "{count} gebunden, ohne Schlüssel",
+  "aiSettings.providers.lastCall": "letzter Aufruf {elapsed}",
+  "aiSettings.discardTitle": "Änderungen am Routing verwerfen?",
+  "aiSettings.discardBody":
+    "Die geänderten Bindungen sind nicht gespeichert. Wer diesen Tab verlässt, verwirft sie.",
+  "aiSettings.discard": "Verwerfen",
+  "elapsed.justNow": "gerade eben",
+  "elapsed.minutes": "vor {minutes} Min.",
+  "elapsed.hours": "vor {hours} Std.",
+  "elapsed.days": "vor {days} T.",
+  "aiRouting.lane.local_small": "Massen-Klassifikation auf eigener Hardware",
+  "aiRouting.lane.cheap_cloud":
+    "Alltag — Anreicherung, Zusammenfassungen, Triage",
+  "aiRouting.lane.premium": "Alles, was ein Kunde liest",
+  "aiRouting.lane.frontier": "Das schwierigste Denken, sparsam eingesetzt",
+  "aiRouting.lane.local_large":
+    "Schwerere Arbeit, die die eigenen Hosts nicht verlässt",
+  "aiRouting.lane.embeddings": "Suche und Retrieval über die eigenen Daten",
+  "aiRouting.lanes.title": "Routing-Bahnen",
+  "aiRouting.lanes.sub":
+    "Günstigste zuerst. Eine Aufgabe wählt die Bahn, die Bahn wählt das Modell.",
+  "aiRouting.priceSheet": "Preisliste",
+  "aiRouting.provider.label": "Anbieter",
+  "aiRouting.change": "Ändern",
+  "aiRouting.done": "Fertig",
+  "aiRouting.noKey": "kein Schlüssel",
+  "aiRouting.unpriced": "kein Preis",
+  "aiRouting.effect":
+    "Gespeicherte Bindungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
   "aiProviderKeys.title": "Anbieter-Schlüssel",
   "aiProviderKeys.sub":
     "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",
-  "aiProviderKeys.configured": "Schlüssel gespeichert",
-  "aiProviderKeys.absent": "Kein Schlüssel",
+  "aiProviderKeys.keyless": "kein Schlüssel nötig",
+  "aiProviderKeys.field": "API-Schlüssel",
+  "aiProviderKeys.save": "Schlüssel speichern",
+  "aiProviderKeys.adminOnly":
+    "Nur Admin oder Ops können Anbieter-Zugangsdaten ändern.",
+  "aiProviderKeys.configured": "eingerichtet",
+  "aiProviderKeys.absent": "nicht gesetzt",
   "aiProviderKeys.configuredHint":
     "Im Schlüsseltresor versiegelt. Er kann nicht ausgelesen werden — füge einen neuen ein, um ihn zu ersetzen. Er kann auch über {envVar} ankommen.",
   "aiProviderKeys.absentHint":
@@ -6228,10 +6261,15 @@ export const de = {
   "aiRouting.withheld":
     "Nur wer die Modellbindung ändern darf, sieht, welche Modelle diese Installation verwendet.",
   "aiRouting.title": "Modell-Routing",
+  "aiRouting.sheetAsOf":
+    "Die Modelllisten sind die Preisliste mit Stand {date}. Jede neuere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
+  "aiRouting.sheetUnknown":
+    "Die Modelllisten stammen aus der Preisliste, die Sie nicht einsehen dürfen. Jede ID, die Ihr Anbieter bedient, funktioniert — einfach eintippen.",
   "aiRouting.sub":
     "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",
   "aiRouting.unbound":
     "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Die erste Bindung deklariert eine Bereitstellung unter seeds.ai_routing in margince.yaml.",
+  "aiRouting.profile.card": "Bereitstellungsprofil",
   "aiRouting.profile.label": "Standort",
   "aiRouting.profile.help":
     "Wo die Inferenz läuft. Souverän bedeutet kein Datenabfluss: nur Modelle auf eigenen Hosts — abgelehnt beim Speichern, nicht erst beim ersten Aufruf.",
@@ -6241,11 +6279,20 @@ export const de = {
   "aiRouting.dimensions.label": "Vektorbreite",
   "aiRouting.dimensions.help":
     "Leer lassen für den Standard des Anbieters. Ein Wert außerhalb von 1 bis 2000 wird abgelehnt.",
-  "aiRouting.embeddings.label": "Embeddings",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "Die Host-Wurzel des Anbieters, ohne Versionssegment. Der Adapter hängt /v1 an. Für openai_compatible erforderlich, das keinen eigenen Standard hat.",
+  "aiRouting.models.noKey":
+    "Nur die Preisliste — dieser Anbieter hat keinen Schlüssel und kann nicht gefragt werden, was er bedient. Jede ID, die er bedient, funktioniert trotzdem: eintippen.",
+  "aiRouting.models.noEndpoint":
+    "Nur die Preisliste — tragen Sie oben den Host ein, dann kann dieser Anbieter gefragt werden. Jede ID, die er bedient, funktioniert trotzdem: eintippen.",
+  "aiRouting.models.profileForbids":
+    "Nur die Preisliste — dieses Bereitstellungsprofil erlaubt es nicht, diesen Anbieter zu erreichen.",
+  "aiRouting.models.notPublished":
+    "Nur die Preisliste — dieser Anbieter veröffentlicht keine Modellliste.",
+  "aiRouting.models.unreachable":
+    "Nur die Preisliste — dieser Anbieter hat nicht geantwortet. Jede ID, die er bedient, funktioniert trotzdem: eintippen.",
   "aiRouting.model.label": "Modell",
   "aiRouting.model.help":
     "Aufgeführt sind die Modelle, für die diese Installation Preise kennt — je Million Token, Eingabe → Ausgabe. Jede andere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
@@ -6277,10 +6324,9 @@ export const de = {
     "Erfasste Unternehmen automatisch anreichern",
   "captureSettings.autoEnrich.help":
     "Wenn aktiviert, erhält jedes aus erfassten E-Mails erstellte Unternehmen automatisch ein Web-Dossier — seine Website wird gelesen und sein Profil ausgefüllt. Läuft unter einem Tageslimit.",
-  "captureSettings.signatureEnrich.label":
-    "Signaturen für Kontaktdaten auswerten",
+  "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails auswerten",
   "captureSettings.signatureEnrich.help":
-    "Wenn aktiv, übernimmt ein nächtlicher Durchlauf, was ein Kontakt in seiner eigenen Signatur angibt — Position, Telefonnummer, Firma. Nichts wird erschlossen: Was die Signatur nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
+    "Wenn aktiv, übernimmt Margince, was ein Kontakt in E-Mails an Sie unter seinem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
   "captureSettings.adminOnly":
     "Nur ein Administrator oder Ops kann dies ändern.",
 
@@ -6375,6 +6421,8 @@ export const de = {
   "webhooks.deliveries.status.delivered": "Zugestellt",
   "webhooks.deliveries.status.retrying": "Wird wiederholt",
   "webhooks.deliveries.status.dead_lettered": "Dead-Letter",
+  "webhooks.deliveries.status.visibility_revoked":
+    "Gestoppt — nicht mehr sichtbar",
   "webhooks.deliveries.replay": "Erneut zustellen",
   "webhooks.deliveries.replayConfirm.title":
     "Diese Zustellung erneut versuchen?",
@@ -6806,6 +6854,7 @@ export const de = {
   "person.loops.dueInDays": "in {count} Tagen",
   "person.loops.waiting": "wartet",
   "person.loops.open": "offen",
+  "person.loops.atLeast": "mindestens {count}",
 
   "person.memory.title": "Gesprächsgedächtnis",
   "person.memory.empty": "Auf diesem Kanal wurde noch nichts erfasst.",
@@ -6939,6 +6988,35 @@ export const de = {
   "person.meeting.risks": "Risiken und Warnsignale",
   "person.meeting.talking_points": "Vorgeschlagene Gesprächspunkte",
   "person.meeting.company_context": "Letztes Treffen",
+  "person.meeting.objective": "Das angestrebte Ergebnis",
+  "person.meeting.openWith": "Einstieg",
+  "person.meeting.arc": "Der Verlauf des Kontakts",
+  "person.meeting.arcSub":
+    "Nur die Momente, die das heutige Gespräch verändern.",
+  "person.meeting.close": "Das Meeting abschließen",
+  "person.meeting.advance.minimum": "Mindestens",
+  "person.meeting.advance.best": "Bestenfalls",
+  "person.meeting.advance.fallback": "Rückfalloption",
+  "person.meeting.unknowns": "Was der Datensatz nicht hergibt",
+  "person.meeting.likelyAsks": "Womit zu rechnen ist",
+  "person.meeting.beReady": "Darauf vorbereitet sein",
+  "person.meeting.say": "Sagen",
+  "person.meeting.show": "Zeigen",
+  "person.meeting.avoid": "Vermeiden",
+  "person.meeting.scenarios": "Falls das Gespräch anders läuft",
+  "person.meeting.relevance.high": "Wahrscheinlich",
+  "person.meeting.relevance.medium": "Möglich",
+  "person.meeting.relevance.low": "Weniger wahrscheinlich",
+  "person.meeting.coach.title": "Einen Punkt coachen",
+  "person.meeting.coach.eyebrow": "Führungsansicht",
+  "person.meeting.coach.listenFor": "Achte auf",
+  "person.meeting.coach.watchFor": "Warnsignal",
+  "person.meeting.coach.interveneIf": "Nur eingreifen, wenn",
+  "person.meeting.coach.paths": "Mögliche Verläufe",
+  "person.meeting.background": "Hintergrund und Quellen",
+  "person.meeting.omittedSource": "Nicht in diesem Briefing",
+  "person.meeting.preparedFor": "Vorbereitet für {name}",
+  "person.meeting.preparedForAt": "Vorbereitet für {name} · {org}",
 
   "co.strip.healthSummary": "Zustand",
   "co.strip.healthSummary.failingOf": "{failing} von {rated} gefährdet",
@@ -6993,8 +7071,12 @@ export const de = {
   "provider.automaticLookupJurisdiction":
     "Schalt das aus, wenn deine Kontakte einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
   "provider.buyable": "Kauf von {category} erlauben",
-  "provider.buyableHint":
+  "provider.buyableHint_one":
     "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
+  "provider.buyableHint_other":
+    "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
+  "provider.buyableNeeds":
+    "Der Anbieter sucht danach nur zusammen mit {prerequisite}. Einzeln lässt es sich nicht kaufen — erlauben Sie zuerst diese Angabe.",
   "provider.backlog": "Noch nachzuschlagen",
   "provider.backlogRemaining_one": "{count} Kontakt",
   "provider.backlogRemaining_other": "{count} Kontakte",
@@ -7073,6 +7155,8 @@ export const de = {
   "provider.profile.notRequested": "Nie angefragt: {categories}.",
   "provider.profile.buy_one": "{category} kaufen · {credits} Credit",
   "provider.profile.buy_other": "{category} kaufen · {credits} Credits",
+  "provider.profile.buyRebuys":
+    "Im Preis ist {categories} erneut enthalten: Der Anbieter sucht ohne diese Angabe nicht danach und berechnet alles, was er zurückliefert.",
   "provider.freeTier.hint":
     "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Am besten anlassen: jeder neue Kontakt bekommt sie, ohne dass jemand entscheiden muss.",
   "provider.pricedTier.hint":
@@ -7149,10 +7233,6 @@ export const de = {
   "filters.pickRecord": "Eintrag wählen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert wählen",
-  "filters.saveList": "Als Liste speichern",
-  "filters.saveListTitle": "Diesen Filter als dynamische Liste speichern",
-  "filters.listName": "Listenname",
-  "filters.saveListConfirm": "Liste erstellen",
   "filters.exportCsv": "Als CSV exportieren",
   "filters.exportJson": "Als JSON exportieren",
 
@@ -7416,15 +7496,27 @@ export const de = {
   "worklist.manager.kind.next_step": "Der nächste Schritt eines Deals",
   "worklist.manager.kind.review_backlog": "Prüfarbeit",
   "worklist.manager.kind.general": "Etwas anderes",
+  "worklist.board.title": "Wie es meinem Team geht",
+  "worklist.board.loading": "Die Arbeit deines Teams wird gelesen…",
+  "worklist.board.empty": "Bisher ist niemand mit dir in einem Team.",
+  "worklist.board.member": "Wer",
+  "worklist.board.waiting": "Warten auf Antwort",
+  "worklist.board.atRisk": "Gefährdete Deals",
+  "worklist.board.overdue": "Überfällig",
+  "worklist.board.nobody": "Noch niemand",
+  "worklist.board.truncated":
+    "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
   "worklist.filter.customer_waiting": "Kunde wartet",
+  "worklist.filter.leads": "Leads",
   "worklist.filter.deals_at_risk": "Gefährdete Deals",
   "worklist.filter.meetings": "Termine",
   "worklist.filter.tasks": "Aufgaben",
   "worklist.filter.decisions": "Entscheidungen",
   "worklist.filter.system": "System",
   "worklist.category.customer_waiting": "Kunde wartet",
+  "worklist.category.leads": "Lead",
   "worklist.category.deals_at_risk": "Deal gefährdet",
   "worklist.category.meetings": "Termin",
   "worklist.category.tasks": "Aufgabe",
@@ -7456,6 +7548,10 @@ export const de = {
   "worklist.because.repeated_failure": "dasselbe schlägt immer wieder fehl",
   "worklist.because.legal_deadline": "eine gesetzliche Frist läuft",
   "worklist.because.meeting_soon": "beginnt gleich",
+  "worklist.because.meeting_unprepared": "nichts vorbereitet",
+  "worklist.because.response_overdue": "Antwort überfällig",
+  "worklist.because.response_due_soon": "Antwort bald fällig",
+  "worklist.because.unassigned": "niemand zuständig",
   "worklist.because.stale": "wartet schon lange",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
   "worklist.above.level": "Über dem Nächsten, weil es dringlichere Arbeit ist.",
@@ -7497,6 +7593,7 @@ export const de = {
   "worklist.untitled.brief_item": "Die Nacht hat das herausgesucht",
   "worklist.untitled.conversation_claim": "Eine Zusage von dir",
   "worklist.untitled.customer_waiting": "Jemand wartet auf Antwort",
+  "worklist.untitled.lead_response": "Ein Lead",
   "worklist.untitled.deal_at_risk": "Ein Deal treibt ab",
   "worklist.untitled.meeting": "Ein Termin",
   "worklist.untitled.relationship_decay": "Eine Beziehung schläft ein",
@@ -7518,7 +7615,9 @@ export const de = {
   "worklist.verb.open": "Öffnen",
   "worklist.verb.complete": "Öffnen",
   "worklist.verb.snooze": "Öffnen",
-  "worklist.verb.acknowledge": "Öffnen",
+  "worklist.verb.acknowledge": "Verstanden",
+  "worklist.verb.acknowledgeFailed":
+    "Das konnte nicht als gelesen markiert werden.",
   "worklist.source.failed": "{source} konnte nicht gelesen werden",
   "worklist.source.withheld": "{source} ist für dein Konto nicht sichtbar",
   "worklist.untitled.generic": "Etwas braucht dich",

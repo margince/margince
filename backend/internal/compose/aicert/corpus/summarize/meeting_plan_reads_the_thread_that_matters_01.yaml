@@ -1,0 +1,71 @@
+name: meeting_plan_reads_the_thread_that_matters
+task: summarize
+site: meeting_plan
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  subject: Coffee with Rainer
+  company: Asia Flight Services
+  attendee: Rainer Vogt
+  # Two moments and a wall of noise. The wish list is what this meeting is
+  # about; the newsletter is what a recency-ordered reader would have shown
+  # instead, and it is here so that citing the right one is a choice rather
+  # than the only option.
+  messages:
+    - label: wish_list
+      days_ago: 62
+      direction: inbound
+      subject: CRM requirements
+      body: >
+        We keep losing track of issues and quotes. What we need is issue
+        tracking, quote tracking and multi-channel capture in one place, so
+        nobody has to ask three people where a request went. How do we get
+        started on this?
+    - label: ownership_change
+      days_ago: 30
+      direction: inbound
+      subject: Workstream ownership
+      body: >
+        Rainer takes the requirements from here so Nabil can stay on the
+        security work. One point of contact from your side, please.
+    - label: newsletter
+      days_ago: 1
+      direction: outbound
+      subject: Product news for August
+      body: >
+        This month's release notes, plus two customer stories from the
+        logistics sector.
+  claims:
+    - kind: open_question
+      body: How do we get started on the CRM work?
+      from_label: wish_list
+expect:
+  outcome: accepted
+  # A right plan reads the wish list, because that is the conversation this
+  # meeting is about, and says "quote tracking" — a phrase only this account
+  # produced. A plan that cites the newsletter has read the newest thing
+  # rather than the relevant one, which is the failure the whole arc exists
+  # to prevent; a plan that never names what they asked for would read the
+  # same about any prospect, which is criterion 2 of the concept this site
+  # implements.
+  answer:
+    cites_label: wish_list
+    names_token: quote tracking
+  bands:
+    # The plan degrades to a deterministic floor whenever the model is
+    # unavailable or wrong, and the floor is useful on its own. So the bar is
+    # "reliably reads the right conversation", not "flawless": a model that
+    # finds the thread four times in five is worth the call, and one that
+    # finds it half the time is worse than the floor, because the reader
+    # cannot tell which half they are holding.
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the plan is about the conversation this meeting is about —
+    the requirements thread — rather than about the most recent message, and
+    whether its questions name what this account actually asked for in their
+    own words. A plan that reads well and cites the newsletter has read the
+    newest thing rather than the relevant one. A plan whose questions would
+    read identically about another company has not prepared anybody, however
+    well grounded each sentence is.

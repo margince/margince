@@ -276,6 +276,37 @@ const narratedWeek: WeeklyReview = {
     proposals_rejected: 2,
     brief_items_acted: 7,
     brief_items_dismissed: 4,
+    leads_routed: 9,
+    leads_answered_in_target: 7,
+    leads_breached: 2,
+    meetings_held: 5,
+    meetings_with_next_step: 3,
+    commitments_due: 4,
+    commitments_kept: 3,
+  },
+  // The week before, so the strip can show what CHANGED. A story without it
+  // renders the no-prior case, which is a real state but not the ordinary one.
+  prior: {
+    local_week_start: "2026-06-22",
+    counts: {
+      tasks_due: 5,
+      tasks_done: 5,
+      tasks_carried_over: 1,
+      deals_moved: 4,
+      deals_won: 0,
+      deals_lost: 2,
+      proposals_accepted: 6,
+      proposals_rejected: 3,
+      brief_items_acted: 5,
+      brief_items_dismissed: 6,
+      leads_routed: 8,
+      leads_answered_in_target: 4,
+      leads_breached: 4,
+      meetings_held: 5,
+      meetings_with_next_step: 1,
+      commitments_due: 4,
+      commitments_kept: 3,
+    },
   },
   deals: [
     {

@@ -124,6 +124,23 @@ func (r *Router) serveCacheHit(ctx context.Context, b *binding, trace *Call, tas
 	return cached, RouteInfo{Tier: tier, Provider: m.provider, ModelID: m.model, Degraded: degraded, Cached: true}, nil
 }
 
+// ErrAllTiersFailed marks the walk below reaching its END with every bound rung
+// having failed — the model was never served, by anybody, and there is nothing
+// left below to try.
+//
+// It says only THAT, never why: the cause stays wrapped beside it, so the
+// individual failures remain readable. What it buys a caller is the one thing
+// the wrapped cause cannot answer on its own — whether the router has run out
+// of rungs, or returned early with an error worth surfacing as it stands. A
+// caller deciding whether to drive the whole call again needs exactly that, and
+// without a sentinel could only match the message text, which is a second copy
+// of it.
+//
+// A quota refusal never carries it: that walk STOPS at the refusing rung rather
+// than reaching the end, so reporting an exhausted ladder would name rungs
+// nobody called.
+var ErrAllTiersFailed = errors.New("ai: every bound tier failed")
+
 // attemptLadder walks the (already budget- and profile-adjusted) tier
 // ladder, calling the first bound client that succeeds. A provider error
 // falls through to the next rung (§1.2); the last rung's failure is what
@@ -161,7 +178,10 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// because it clears by itself and names no account to fix.
 			if errors.Is(callErr, ErrProviderQuota) {
 				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
-				break
+				// Not an exhausted ladder — the rungs above were never tried.
+				// Reported as the refusal alone so a caller cannot read "every
+				// tier failed" off a walk that stopped at the first one.
+				return model.Response{}, t, false, callErr
 			}
 			if i < len(boundRungs)-1 {
 				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
@@ -189,7 +209,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 	if lastErr != nil {
 		// lastTier names the rung whose failure the caller sees, so the
 		// trace records where the walk died instead of an empty tier.
-		return model.Response{}, lastTier, false, fmt.Errorf("ai: every bound tier failed for %s: %w", task, lastErr)
+		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
 	}
 	return model.Response{}, "", false, nil
 }

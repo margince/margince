@@ -68,7 +68,6 @@ function view(overrides: Record<string, unknown> = {}): Organization360 {
       lost_count: 0,
     },
     tags: [],
-    list_memberships: [],
     ...overrides,
   } as unknown as Organization360;
 }
@@ -873,39 +872,28 @@ describe("CompanyRail", () => {
     expect(spy).toHaveBeenCalledWith("people");
   });
 
-  it("shows tags and list memberships as their own badges, counted together", () => {
+  it("shows the applied tags as badges, counted", () => {
     stub();
     renderRail({
       view: view({
         tags: [{ id: "t-1", workspace_id: "w", name: "Key account" }],
-        list_memberships: [
-          {
-            id: "l-1",
-            workspace_id: "w",
-            name: "Renewal Q3",
-            entity_type: "organization",
-          },
-        ],
       }),
     });
     expect(screen.getByText("Key account")).toBeInTheDocument();
-    expect(screen.getByText("Renewal Q3")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
   });
 
-  it("offers the add-tag and add-to-list verbs once each half has answered, on a writable record", async () => {
+  it("offers the add-tag verb once the section has answered, on a writable record", async () => {
     stub();
     renderRail();
-    // Both halves answered `empty` (view()'s tags/list_memberships default to
-    // []), so both verbs render beside the half they act on.
+    // The section answered `empty` (view()'s tags defaults to []), so the
+    // verb renders beside the tags it acts on.
     expect(
-      await screen.findByRole("button", { name: /add to list/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /add tag/i }),
+      await screen.findByRole("button", { name: /add tag/i }),
     ).toBeInTheDocument();
   });
 
-  it("withholds the add-tag and add-to-list verbs on an archived record", async () => {
+  it("withholds the add-tag verb on an archived record", async () => {
     stub();
     renderRail({
       view: view({
@@ -913,11 +901,8 @@ describe("CompanyRail", () => {
       }),
     });
     // The values themselves still draw (this suite's own empty-badges test
-    // covers that); only the verbs stand down.
+    // covers that); only the verb stands down.
     await waitFor(() => {
-      expect(
-        screen.queryByRole("button", { name: /add to list/i }),
-      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /add tag/i }),
       ).not.toBeInTheDocument();

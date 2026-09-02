@@ -3717,6 +3717,539 @@
               "generated_by": {
                 "type": "string"
               },
+              "plan": {
+                "type": "object",
+                "properties": {
+                  "account_arc": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "evidence": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "record_id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "record_type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "record_id",
+                                  "record_type"
+                                ]
+                              }
+                            },
+                            "nature": {
+                              "type": "string"
+                            },
+                            "text": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "evidence",
+                            "text"
+                          ]
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "summary",
+                        "to"
+                      ]
+                    }
+                  },
+                  "advance": {
+                    "type": "object",
+                    "properties": {
+                      "best": {
+                        "type": "object",
+                        "properties": {
+                          "evidence": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "record_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ]
+                            }
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ]
+                      },
+                      "fallback": {
+                        "type": "object",
+                        "properties": {
+                          "evidence": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "record_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ]
+                            }
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ]
+                      },
+                      "minimum": {
+                        "type": "object",
+                        "properties": {
+                          "evidence": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "record_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ]
+                            }
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "best",
+                      "fallback",
+                      "minimum"
+                    ]
+                  },
+                  "likely_asks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "basis": {
+                          "type": "object",
+                          "properties": {
+                            "evidence": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "record_id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "record_type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "record_id",
+                                  "record_type"
+                                ]
+                              }
+                            },
+                            "nature": {
+                              "type": "string"
+                            },
+                            "text": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "evidence",
+                            "text"
+                          ]
+                        },
+                        "prepare": {
+                          "type": "string"
+                        },
+                        "question": {
+                          "type": "string"
+                        },
+                        "relevance": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "basis",
+                        "prepare",
+                        "question",
+                        "relevance"
+                      ]
+                    }
+                  },
+                  "manager_coaching": {
+                    "type": "object",
+                    "properties": {
+                      "failure_mode": {
+                        "type": "string"
+                      },
+                      "focus": {
+                        "type": "string"
+                      },
+                      "intervene_if": {
+                        "type": "string"
+                      },
+                      "listen_for": {
+                        "type": "string"
+                      },
+                      "paths": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "evidence": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "record_id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "record_type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "record_id",
+                                  "record_type"
+                                ]
+                              }
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "play": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "evidence",
+                            "label",
+                            "play"
+                          ]
+                        }
+                      },
+                      "watch_for": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "failure_mode",
+                      "focus",
+                      "intervene_if",
+                      "listen_for",
+                      "watch_for"
+                    ]
+                  },
+                  "meeting_type": {
+                    "type": "string"
+                  },
+                  "meeting_type_confidence": {
+                    "type": "string"
+                  },
+                  "objective": {
+                    "type": "object",
+                    "properties": {
+                      "evidence": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "record_id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "record_type": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "record_id",
+                            "record_type"
+                          ]
+                        }
+                      },
+                      "nature": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "evidence",
+                      "text"
+                    ]
+                  },
+                  "objective_caveat": {
+                    "type": "string"
+                  },
+                  "opening": {
+                    "type": "object",
+                    "properties": {
+                      "evidence": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "record_id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "record_type": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "record_id",
+                            "record_type"
+                          ]
+                        }
+                      },
+                      "nature": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "evidence",
+                      "text"
+                    ]
+                  },
+                  "questions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ask": {
+                          "type": "string"
+                        },
+                        "evidence": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "record_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ]
+                          }
+                        },
+                        "listen_for": {
+                          "type": "string"
+                        },
+                        "why": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ask",
+                        "evidence",
+                        "listen_for",
+                        "why"
+                      ]
+                    }
+                  },
+                  "readiness": {
+                    "type": "string"
+                  },
+                  "scenarios": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "evidence": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "record_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ]
+                          }
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "play": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "label",
+                        "play"
+                      ]
+                    }
+                  },
+                  "top_risk": {
+                    "type": "object",
+                    "properties": {
+                      "avoid": {
+                        "type": "string"
+                      },
+                      "say": {
+                        "type": "string"
+                      },
+                      "show": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "object",
+                        "properties": {
+                          "evidence": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "record_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ]
+                            }
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "avoid",
+                      "say",
+                      "show",
+                      "text"
+                    ]
+                  },
+                  "unknowns": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string"
+                        },
+                        "question": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "question"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "advance",
+                  "meeting_type",
+                  "meeting_type_confidence",
+                  "readiness"
+                ]
+              },
               "project_id": {
                 "type": "string",
                 "format": "uuid"
@@ -4071,11 +4604,25 @@
                 "assignee_name": {
                   "type": "string"
                 },
+                "claim_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "days_overdue": {
                   "type": "integer"
                 },
                 "due_at": {
                   "type": "string"
+                },
+                "quote": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_activity_id": {
+                  "type": "string",
+                  "format": "uuid"
                 },
                 "state": {
                   "type": "string"
@@ -4090,9 +4637,9 @@
               },
               "required": [
                 "about",
+                "source",
                 "state",
-                "subject",
-                "task_id"
+                "subject"
               ]
             }
           },
@@ -5765,11 +6312,25 @@
                     "assignee_name": {
                       "type": "string"
                     },
+                    "claim_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "days_overdue": {
                       "type": "integer"
                     },
                     "due_at": {
                       "type": "string"
+                    },
+                    "quote": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "source_activity_id": {
+                      "type": "string",
+                      "format": "uuid"
                     },
                     "state": {
                       "type": "string"
@@ -5784,9 +6345,9 @@
                   },
                   "required": [
                     "about",
+                    "source",
                     "state",
-                    "subject",
-                    "task_id"
+                    "subject"
                   ]
                 }
               },
@@ -6920,11 +7481,25 @@
                 "assignee_name": {
                   "type": "string"
                 },
+                "claim_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "days_overdue": {
                   "type": "integer"
                 },
                 "due_at": {
                   "type": "string"
+                },
+                "quote": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_activity_id": {
+                  "type": "string",
+                  "format": "uuid"
                 },
                 "state": {
                   "type": "string"
@@ -6939,9 +7514,9 @@
               },
               "required": [
                 "about",
+                "source",
                 "state",
-                "subject",
-                "task_id"
+                "subject"
               ]
             }
           }

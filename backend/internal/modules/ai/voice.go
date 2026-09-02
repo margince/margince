@@ -153,7 +153,11 @@ func (s *VoiceStore) ListProfiles(ctx context.Context, cursor *string, limit *in
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		page.NextCursor = storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		if err != nil {
+			return VoiceProfilePage{}, err
+		}
+		page.NextCursor = next
 		page.HasMore = true
 	}
 	return page, nil

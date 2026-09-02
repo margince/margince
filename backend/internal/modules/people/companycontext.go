@@ -162,11 +162,10 @@ func assembleCompanyContext(company Company, requested []CompanyContextScope, ge
 		if !known || !selected[scope] {
 			continue
 		}
-		confidence := field.Confidence
 		sections[scope] = append(sections[scope], CompanyContextItem{
 			Key: field.Field, Value: field.Value, Source: field.Source,
 			CapturedBy: field.CapturedBy, SourceURL: field.SourceURL,
-			Confidence: &confidence,
+			Confidence: field.Confidence,
 		})
 		seenDisplayName = seenDisplayName || field.Field == fieldDisplayName
 	}
@@ -190,11 +189,10 @@ func assembleCompanyContext(company Company, requested []CompanyContextScope, ge
 		if !known || !selected[scope] {
 			continue
 		}
-		confidence := fact.Confidence
 		sections[scope] = append(sections[scope], CompanyContextItem{
 			Key: fact.Field, Value: fact.Value, Source: fact.Source,
 			CapturedBy: fact.CapturedBy, SourceURL: fact.SourceURL,
-			Confidence: &confidence,
+			Confidence: fact.Confidence,
 		})
 	}
 

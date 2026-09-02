@@ -1,0 +1,44 @@
+name: a_shared_mailbox_is_real_correspondence_with_nobody_to_name
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Northwind Logistics Customer Service
+  email: service@northwind-logistics.example
+  subject: "Re: week 38 delivery - consignment 8841002"
+  body: |
+    Good afternoon,
+
+    Thanks for getting in touch. Consignment 8841002 left our warehouse on
+    Monday and is scheduled for delivery Tuesday. The Tuesday cutoff from your
+    framework agreement is on file against your account.
+
+    If anything else comes up, just reply to this email.
+
+    Kind regards,
+    Your Customer Service Team
+    Northwind Logistics
+expect:
+  outcome: accepted
+  answer: role_mailbox
+  rubric: >
+    A supplier's service desk answering a delivery query this business raised.
+    Both halves matter and they pull opposite ways: the correspondence is
+    unmistakably genuine — it replies to our own question, cites our framework
+    agreement and invites a reply — and there is no human anywhere in it, only
+    "Your Customer Service Team".
+    "role_mailbox" scores high: it keeps the mail visible and withholds only the
+    contact record, which is exactly right when the address is a function rather
+    than a person. "organization_sender" is a near miss and scores nearly as
+    high — it has the same effect, real correspondence with no person created,
+    and the line between a service desk and the company writing as itself is
+    genuinely thin here. "person" is the junk-record failure this scenario exists
+    to catch and scores zero above the floor: it invents a contact named after a
+    team, which is the defect ADR-0072 was written for. "spam" and "newsletter"
+    are the opposite failure and also score zero — they hide a supplier's answer
+    to a question we asked.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

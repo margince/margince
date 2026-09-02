@@ -204,7 +204,7 @@ per-client throttling at the proxy.
   `shared/{kernel,apperrors,ports}` (stdlib-only leaves), `platform/*`
   (plumbing, owns no domain), twenty `modules/` (identity, people,
   deals, activities, approvals, agents, automation, ai, search, capture,
-  comms, consent, privacy, collections, signals, customfields, quotas,
+  comms, consent, privacy, collections, signals, customfields,
   webhooks, overlay, migration — no sibling imports; the `de`
   jurisdiction pack is an extension, not a module),
   `internal/compose` (the one composition seam), and three process-role

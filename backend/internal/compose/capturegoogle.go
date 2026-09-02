@@ -18,8 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
-	"github.com/margince/margince/backend/internal/modules/capture/graph"
-	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
@@ -73,10 +71,27 @@ func (c GmailConfig) canSignState() bool {
 	return len(c.StateKey) >= minStateKeyLen && c.PublicBaseURL != ""
 }
 
-// Enabled reports whether the connect/callback transport is fully configured —
-// the same condition WithGmailCapture gates on, exported so a caller (cmd) can
-// log accurately rather than guessing from the client id alone.
+// Enabled reports whether this DEPLOYMENT composed a complete connect/callback
+// transport of its own, exported so a caller (cmd) can log accurately rather
+// than guessing from the client id alone.
+//
+// No longer the condition WithGmailCapture gates on: the option mounts on
+// canSignState alone, because the app may arrive at runtime from the stored
+// setting. So a false answer here means "the environment did not supply one",
+// never "the surface is unavailable" — a boot line must say the first.
 func (c GmailConfig) Enabled() bool { return c.canConnect() }
+
+// TransportMountable reports the DEPLOYMENT's half of what WithGmailCapture gates
+// the transport on. Exported because cmd mounts the backfill ops beside it and
+// prints the boot line: both used to key on Enabled, which meant an installation
+// whose app arrived at runtime got no backfill and a boot line saying its
+// surface stayed 501 — on a deployment where the surface was serving.
+//
+// The other half is the vault, which this value cannot see: a config knows
+// nothing about what compose was handed. A caller that mounts or logs on this
+// alone must ask about the vault too, or it claims a transport that was never
+// built.
+func (c GmailConfig) TransportMountable() bool { return c.canSignState() }
 
 //nolint:ireturn // returns the gmail.OAuth seam by design (a fakeable interface)
 func newGmailOAuth(c GmailConfig) gmail.OAuth {
@@ -114,7 +129,7 @@ func newGcalOAuth(c GmailConfig) gcal.OAuth {
 func newCaptureRegistryWithGoogle(
 	pool *pgxpool.Pool,
 	vault keyvault.Vault,
-	resolve googleAppResolver,
+	resolve appResolver,
 	c GmailConfig,
 	cfg CaptureConfig,
 ) *capture.Registry {
@@ -131,7 +146,7 @@ func newCaptureRegistryWithGoogle(
 // the Google app. Registering on neither would leave a connector that fails
 // every call with "no app configured", which is a worse answer than the
 // declared 501: it looks configured and is not.
-func googleAppReachable(resolve googleAppResolver, c GmailConfig) bool {
+func googleAppReachable(resolve appResolver, c GmailConfig) bool {
 	return resolve != nil || c.canSync()
 }
 
@@ -147,12 +162,9 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 	// a mailbox connected against a stored app would connect and then never
 	// sync: the poll would find no Google connector registered and skip it
 	// silently, which reads as an empty inbox rather than as a broken one.
-	reg := newCaptureRegistryWithGoogle(pool, vault, newGoogleAppResolver(pool, vault, log), c, cfg)
-	if g.canSync() {
-		reg.Register(graph.New(newGraphOAuth(g), graph.NewAPI(nil, "")).
-			WithBounceSink(newBounceSink(pool)))
-		reg.Register(graphcal.New(newGraphCalOAuth(g), graphcal.NewAPI(nil, "")))
-	}
+	google, microsoft := newConnectorAppResolvers(pool, vault, log)
+	reg := newCaptureRegistryWithGoogle(pool, vault, google, c, cfg)
+	registerMicrosoftConnectors(reg, microsoft, g, pool)
 	return reg
 }
 
@@ -171,7 +183,7 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 // the order an operator registers them. Each is a SEPARATE route under its own
 // provider key, so registering one does not cover the other.
 var googleBackedConnectors = []struct {
-	purpose  crmcontracts.GoogleAppRedirectUriPurpose
+	purpose  crmcontracts.ConnectorAppRedirectUriPurpose
 	provider string
 }{
 	{crmcontracts.MailboxConnect, providerGmail},
@@ -191,14 +203,19 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// The setup surface reads the same fact. Stamped HERE and only here:
 		// WithGmailCapture requires the vault and so always runs after
 		// WithKeyvault, which means a copy taken there would always read false.
-		s.envGoogleApp = s.gmailAppConfigured
+		// OR, never assignment: the Microsoft option writes the same flag, and
+		// either vendor's environment app finishes the step. A plain assignment
+		// here would reset a Microsoft-only installation to unconfigured on
+		// whichever option order ran this one second.
+		s.envConnectorApp = s.envConnectorApp || s.gmailAppConfigured
 		// The Google-app screen reads the same two-source resolution the connector
 		// performs, so it needs the environment's client id and not merely the
 		// fact that there is one: an operator checking their console against what
 		// this installation actually uses needs the value, and it is not a secret
 		// — it rides in every authorization redirect.
 		if s.gmailAppConfigured {
-			s.envClientID = c.ClientID
+			// Google has no directories, so there is no tenant to report.
+			s.composeEnvApp(capture.AppProviderGoogle, c.ClientID, "")
 		}
 		// Published BEFORE the vault gate below, and for the same reason the
 		// sign-in URI is published before its own completeness gate: an operator
@@ -216,8 +233,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// rows would swap places between boots of the same binary.
 		for _, connector := range googleBackedConnectors {
 			if uri := connectorCallbackURL(c.APIBaseURL, c.PublicBaseURL, connector.provider); uri != "" {
-				s.redirectURIs = append(s.redirectURIs,
-					crmcontracts.GoogleAppRedirectUri{Purpose: connector.purpose, Url: uri})
+				s.addRedirectURI(capture.AppProviderGoogle, connector.purpose, uri)
 			}
 		}
 		// Without a vault the connect flow can't seal the refresh token, so
@@ -261,6 +277,10 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			// Named here because this literal REPLACES the struct: omitting it is
 			// how the stored app became unreachable while every test still passed.
 			googleCredentials: s.googleAppResolver,
+			// Named for the same reason its twin is: this literal REPLACES the
+			// struct, so an omitted resolver is one the next reader cannot see
+			// missing.
+			microsoftCredentials: s.microsoftAppResolver,
 		}
 		// The send pre-flight reads the registry the connect flow just wrote to
 		// — the same one, not a second construction: a mailbox the user connects

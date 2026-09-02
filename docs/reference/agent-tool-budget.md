@@ -25,8 +25,8 @@ feature is expected to argue with.
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1661 | 6% | 15339 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2416 | 10% | 14584 | 15 | 8 |
-| _whole served catalog, for scale_ | 59 | 18861 | 78% | — | — | — |
+| `overnight_at_risk_sweep` | 7 | 2509 | 10% | 14491 | 15 | 8 |
+| _whole served catalog, for scale_ | 59 | 18954 | 78% | — | — | — |
 
 ### `morning_brief`
 
@@ -55,7 +55,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2416 tokens, leaving 14584 of its budget and 21584 tokens of the
+Attaches 7 tools for 2509 tokens, leaving 14491 of its budget and 21491 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -123,7 +123,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 275 tokens, mean 319, across 59 served tools.
+Median 275 tokens, mean 320, across 59 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -147,12 +147,12 @@ a term in an addition.
 | `book_meeting` | 431 | — |
 | `create_record` | 429 | 1 scenario |
 | `enrich` | 424 | — |
+| `review_commitments` | 409 | — |
 | `search_records` | 392 | 6 scenarios |
 | `search_context` | 352 | — |
 | `prep_for_meeting` | 333 | — |
 | `merge_records` | 323 | — |
 | `draft_email` | 317 | — |
-| `review_commitments` | 316 | — |
 | `send_message` | 314 | — |
 | `advance_project_phase` | 310 | — |
 | `relink_activity` | 308 | — |

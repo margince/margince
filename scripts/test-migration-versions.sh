@@ -277,6 +277,33 @@ empties_a_namespace() {
     backend/migrations/core/0003_gamma.down.sql || return 1
 }
 
+# The base moves on while this branch sits: another PR's migration lands on
+# base AFTER the fork point. The branch's tree lacks it, but never contained
+# it either — the merge keeps it, so the vanished-version check must read the
+# absence as staleness, not as a rename, or every migration landing on main
+# fails every open branch until it rebases.
+base_gains_unrelated() {
+  local dir="$1"
+  git -C "$dir" checkout -q base || return 1
+  printf -- '-- probe\n' > "$dir/backend/migrations/core/1799999998_landed.up.sql"
+  printf -- '-- probe\n' > "$dir/backend/migrations/core/1799999998_landed.down.sql"
+  git -C "$dir" add backend/migrations/core || return 1
+  git -C "$dir" commit -qm 'another PR lands a migration' || return 1
+  git -C "$dir" checkout -q - || return 1
+}
+
+# The same moved-on base, but this branch ALSO adds a migration — stamped below
+# the version that landed after the fork. The fork point scopes only the
+# vanished check: ordering is still judged against the base's TIP, because a
+# database that applied the landed migration would otherwise get this one in
+# the wrong place. This is the case that fails if the fork scoping ever leaks
+# into the ordering comparison.
+stale_branch_adds_below_tip() {
+  base_gains_unrelated "$1" || return 1
+  printf -- '-- probe\n' > "$1/backend/migrations/core/1799999997_late.up.sql"
+  printf -- '-- probe\n' > "$1/backend/migrations/core/1799999997_late.down.sql"
+}
+
 # A namespace this branch introduces that the base has never heard of:
 # `migrations_at_base` legitimately finds nothing in it, and that "nothing"
 # must read as zero migrations to sort after, not as a shell error.
@@ -308,6 +335,10 @@ expect "emptying a namespace still reports its vanished versions" \
   1 plain    empties_a_namespace  "but this branch no longer has it"
 expect "a namespace new to the base passes" \
   0 plain    adds_a_namespace     "OK: check-migration-versions"
+expect "a migration landing on base after the fork is not read as vanished" \
+  0 plain    base_gains_unrelated "OK: check-migration-versions"
+expect "the moved-on base still orders what this branch adds" \
+  1 plain    stale_branch_adds_below_tip "sorts at or below"
 
 # The four that decide whether the escape hatch is a gate or a hole.
 expect "a declared consolidation is admitted" \
@@ -337,7 +368,7 @@ expect "a declared reset does not excuse a real collision" \
 # So the total is also pinned. A literal here is not duplication of the case
 # list: it is the one fact the case list cannot state about itself, which is how
 # many of it there should be.
-expected_cases=14
+expected_cases=16
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [ "$ran" -ne "$declared_cases" ]; then

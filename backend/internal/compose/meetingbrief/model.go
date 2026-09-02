@@ -86,7 +86,7 @@ var natureAllowed = map[crmcontracts.MeetingBriefSectionKind]map[string]bool{
 
 // natureFact is the contract's default: an unlabelled claim is read as a fact,
 // which is the strictest reading — it must be grounded and it may not judge.
-const natureFact = string(crmcontracts.Fact)
+const natureFact = string(crmcontracts.OrganizationBriefSentenceNatureFact)
 
 // Write produces the brief's sections. lane may be nil, which is not an error:
 // it is the deployment saying this role runs no model, and the deterministic
@@ -320,6 +320,16 @@ func knownRecords(in Input) map[Evidence]bool {
 	}
 	for _, earlier := range in.PriorMeetings {
 		known[Evidence{EntityType: citeActivity, EntityID: earlier.ID}] = true
+	}
+	// The account history the arc is built from. A conversation this caller may
+	// not READ is deliberately absent: it reached the input as a date and a
+	// count, and a citation pointing at it would send the reader to a record
+	// they cannot open.
+	for _, row := range in.History {
+		if row.Withheld {
+			continue
+		}
+		known[Evidence{EntityType: citeActivity, EntityID: row.ID}] = true
 	}
 	return known
 }

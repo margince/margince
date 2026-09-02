@@ -326,7 +326,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// they must follow kvOpts (and graph follows gmail: WithGraphCapture
 	// joins the connect registry WithGmailCapture builds when both are
 	// configured).
-	gmailOpts, err := gmailOptions(cfg, capCfg, pool, logger, stdout)
+	gmailOpts, err := gmailOptions(cfg, capCfg, pool, vault, logger, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -336,7 +336,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 		return nil, nil, nil, err
 	}
 	opts = append(opts, googleSignInOpts...)
-	graphOpts, err := graphOptions(cfg, pool, logger, stdout)
+	graphOpts, err := graphOptions(cfg, pool, vault, logger, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -93,17 +93,27 @@ func addGraphWatchJobs(reg *jobRegistry, cfg JobRunnerConfig, log *slog.Logger) 
 // fail is worse than no pass: the poll still runs either way, and the difference
 // is a fleet-wide error rate an operator has to explain.
 //
-// The worker registers Graph from ENVIRONMENT credentials alone
-// (CaptureSyncRegistry), where the Google side also resolves a stored app. So a
-// Microsoft app configured in the product reaches the api and not this role, and
-// an operator who sets the notification URL for it gets exactly that failing
-// pass.
+// The registry is the thing asked, rather than the environment that helped build
+// it, because an app configured through the product registers a connector no
+// environment variable names — and the two roles have already come apart over
+// exactly that once.
 //
 // EXPORTED so the boot banner can ask the same question rather than restate it.
 // A banner naming a lane that did not come up is worse than no banner: it is the
 // one place an operator looks to check.
+//
+// ASKED OF THE DECLARATION, not of the fields directly. The periodic schedule
+// gates on api/jobs.yaml's registration.when through the same `registers`, so a
+// condition spelled only here would be one the scheduler does not know about —
+// and it enqueues under its own answer. That divergence does not fail loudly:
+// the rows are inserted, no worker claims them, and the lane looks idle rather
+// than broken.
 func GraphWatchWillRun(reg *capture.Registry, cfg GraphWatchConfig) bool {
-	return reg != nil && cfg.NotificationURL != "" && registryOffers(reg, providerGraph)
+	spec, declared := jobs.SpecFor(graphWatchKind)
+	if !declared {
+		panic("compose: api/jobs.yaml does not declare " + graphWatchKind)
+	}
+	return registers(JobRunnerConfig{GmailRegistry: reg, GraphWatch: cfg}, spec.Registration)
 }
 
 // registryOffers reports whether reg holds a connector for provider.
@@ -430,7 +440,13 @@ func renewOneWatch(
 type GraphWatchArgs struct{}
 
 // Kind is the stable job identifier River persists in river_job.
-func (GraphWatchArgs) Kind() string { return "graph_watch_renew" }
+func (GraphWatchArgs) Kind() string { return graphWatchKind }
+
+// graphWatchKind is the kind string, named so the registration can be read from
+// api/jobs.yaml without constructing the args — a dispatcher literal outside
+// periodicFor is what jobdispatcherenqueue_test refuses, and rightly: building
+// one to ask a question looks exactly like building one to enqueue it.
+const graphWatchKind = "graph_watch_renew"
 
 // FleetWide marks this a dispatcher: it enumerates and enqueues, and does no
 // tenant work of its own (jobs.FleetWide).

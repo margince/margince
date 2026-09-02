@@ -17,14 +17,12 @@ package compose
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -88,12 +86,17 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 // disagree about which deals are in trouble. Only the patience differs, and it
 // is named here rather than buried: a queue exists to warn, and the stalled
 // threshold is a status rather than a warning.
-type attentionAtRisk struct{ lister agents.SlippingLister }
+// The depth-reporting scanner, not the plain SlippingLister: the team board
+// needs to know whether the sweep was cut, and that cannot be recovered from the
+// rows it returns.
+type attentionAtRisk struct {
+	lister func(context.Context) ([]agents.SlippingDeal, bool, error)
+}
 
-func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, error) {
-	candidates, err := a.lister(ctx)
+func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool, error) {
+	candidates, cut, err := a.lister(ctx)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	now := clockNow()
 	risky := make([]attention.RiskyDeal, 0, len(candidates))
@@ -110,7 +113,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, erro
 			ExpectedCloseDate: deal.ExpectedCloseDate,
 		})
 	}
-	return risky, nil
+	return risky, cut, nil
 }
 
 // idleDaysOf is how long the deal has been quiet, counted from the base the
@@ -251,11 +254,20 @@ type attentionWaiting struct {
 // The instant comes from the caller so the whole read is one snapshot. Asking
 // the clock again here would let the anti-joins judge against a moment the rest
 // of the day was not read at.
-func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]attention.WaitingCustomer, error) {
+func (w attentionWaiting) Unanswered(
+	ctx context.Context, asOf time.Time,
+) ([]attention.WaitingCustomer, bool, error) {
 	rows, err := w.store.WaitingReplies(ctx, asOf)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
+	// Asked of what the STORE returned, before keepWaitingCustomers runs.
+	//
+	// That filter drops machine senders and folds duplicate threads, so what it
+	// returns is smaller than what was read — and a caller comparing the
+	// SURVIVORS against the scan bound would read a full scan whose survivors
+	// are few as a complete one. This is the only place both numbers exist.
+	cut := len(rows) >= activities.WaitingScanCap
 	out := make([]attention.WaitingCustomer, 0, len(rows))
 	for _, row := range keepWaitingCustomers(rows) {
 		out = append(out, attention.WaitingCustomer{
@@ -266,9 +278,10 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 			OrganizationID: row.OrganizationID,
 			DealID:         row.DealID,
 			HasOpenDeal:    row.HasOpenDeal,
+			OwnerID:        row.OwnerID,
 		})
 	}
-	return out, nil
+	return out, cut, nil
 }
 
 // keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
@@ -309,71 +322,6 @@ func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingRe
 		kept = append(kept, row)
 	}
 	return kept
-}
-
-// attentionMeetings reads today's remaining meetings through the activities
-// store — the same gated list every other activity surface reads.
-//
-// The WINDOW is applied in SQL, not here. An earlier cut read ten times the
-// lane and narrowed the time range in Go, which is lossy in the one direction
-// that hides itself: a day with more than the scan's worth of later activity
-// pushes a real meeting off the page, and the lane draws a free afternoon over
-// a booked one. ListActivitiesInput carries OccurredAfter/OccurredBefore and
-// the store applies both as predicates, so the bound is the day rather than a
-// guess about how busy the day might be.
-//
-// The STATUS filter stays in Go: the store has no dial for it, and the set it
-// removes is bounded by the window the database already applied.
-type attentionMeetings struct{ store *activities.Store }
-
-func (m attentionMeetings) Today(
-	ctx context.Context, from, until time.Time, limit int,
-) ([]attention.Meeting, error) {
-	kind := string(crmcontracts.ActivityKindMeeting)
-	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{
-		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until, Limit: &limit,
-	})
-	if err != nil {
-		return nil, err
-	}
-	ahead := make([]attention.Meeting, 0, len(rows))
-	for _, row := range rows {
-		if !meetingStillWorthPreparing(row) {
-			continue
-		}
-		ahead = append(ahead, attention.Meeting{
-			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
-		})
-	}
-	// Soonest first: the lane is a countdown, and the store returns activities
-	// newest-first, which is the opposite order for a day still ahead.
-	sort.SliceStable(ahead, func(i, j int) bool { return ahead[i].StartsAt.Before(ahead[j].StartsAt) })
-	return ahead, nil
-}
-
-// meetingStillWorthPreparing keeps the meetings a rep can still do something
-// about: booked, rather than held, cancelled or a no-show. The time window is
-// the database's to apply.
-//
-// A meeting with no status is treated as booked. Capture writes calendar events
-// without one, and dropping them would empty this lane on exactly the
-// installations whose calendars are connected.
-func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
-	return row.MeetingStatus == nil || *row.MeetingStatus == crmcontracts.ActivityMeetingStatusBooked
-}
-
-// subjectOfMeeting is the line a meeting shows, or NOTHING.
-//
-// A calendar event with a blank title is a real thing a provider hands over,
-// and the empty answer is the honest one: the product ships three languages, so
-// a placeholder composed here reaches a German reader in English — and
-// "(untitled meeting)" is a parenthetical stand-in rather than a sentence
-// anybody wrote. The client writes "A meeting" in the reader's own words.
-func subjectOfMeeting(row crmcontracts.Activity) string {
-	if row.Subject != nil {
-		return *row.Subject
-	}
-	return ""
 }
 
 // attentionDealFacts reads deal figures through the deals store, under the
@@ -469,4 +417,26 @@ func (t attentionTasks) OpenForViewer(
 		})
 	}
 	return open, nil
+}
+
+// attentionOverdue counts overdue tasks per assignee for the team board.
+//
+// A second reader over the same table attentionTasks lists from, and the reason
+// is the bound rather than the rows: that lane stops at a dozen, so a board that
+// counted its answer would report every loaded rep as holding exactly twelve.
+// The store's aggregate is unbounded and answers the count itself.
+type attentionOverdue struct{ store *activities.Store }
+
+func (o attentionOverdue) OverduePerAssignee(
+	ctx context.Context, asOf time.Time,
+) (map[ids.UUID]int, error) {
+	rows, err := o.store.OverdueLoadByAssignee(ctx, asOf)
+	if err != nil {
+		return nil, err
+	}
+	per := make(map[ids.UUID]int, len(rows))
+	for _, row := range rows {
+		per[row.OwnerID] = row.Overdue
+	}
+	return per, nil
 }

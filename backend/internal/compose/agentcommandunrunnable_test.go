@@ -142,7 +142,6 @@ func bodyFixture(path, body, member string) unrunnableCall {
 var unrunnableCalls = map[string]unrunnableCall{
 	"archiveActivity":      malformedRoutedID(http.MethodDelete, "/activities"),
 	"archiveDeal":          malformedRoutedID(http.MethodDelete, "/deals"),
-	"archiveList":          malformedRoutedID(http.MethodDelete, "/lists"),
 	"archiveTag":           malformedRoutedID(http.MethodDelete, "/tags"),
 	"archiveOffer":         malformedRoutedID(http.MethodDelete, "/offers"),
 	"archiveOfferTemplate": malformedRoutedID(http.MethodDelete, "/offer-templates"),

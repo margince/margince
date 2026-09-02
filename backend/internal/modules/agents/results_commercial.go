@@ -20,8 +20,25 @@ import (
 
 // CommitmentItem is one open promise as review_commitments reports it.
 type CommitmentItem struct {
-	TaskID  ids.UUID `json:"task_id"`
-	Subject string   `json:"subject"`
+	// TaskID is the task row a promise was filed as, absent for a promise read
+	// out of a conversation and never written down as one. Source says which.
+	TaskID *ids.UUID `json:"task_id,omitempty"`
+	// ClaimID is the extracted commitment a promise was read from, absent for a
+	// promise somebody typed. Exactly one of TaskID and ClaimID is set.
+	ClaimID *ids.UUID `json:"claim_id,omitempty"`
+	// Source is `task` | `conversation`, so a reader knows which id to expect
+	// and how the promise came to be recorded. A promise made out loud and
+	// extracted from the thread is as owed as one somebody typed; where it was
+	// written down is a fact about this system, not about the debt.
+	Source string `json:"source"`
+	// SourceActivityID is the message a conversation-sourced promise was read
+	// from — what a reader opens to check the quote against what was written.
+	SourceActivityID *ids.UUID `json:"source_activity_id,omitempty"`
+	// Quote is the sentence the promise was read from, present only for a
+	// conversation source. A task carries what somebody retyped and has nothing
+	// to quote.
+	Quote   string `json:"quote,omitempty"`
+	Subject string `json:"subject"`
 	// DueAt is absent for a promise nobody dated, which is a different state
 	// from one that is late — see State.
 	DueAt *time.Time `json:"due_at,omitempty"`

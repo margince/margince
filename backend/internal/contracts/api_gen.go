@@ -433,33 +433,6 @@ func (e AddConsumerMailDomainRequestKind) Valid() bool {
 	}
 }
 
-// Defines values for AddListMemberRequestEntityType.
-const (
-	AddListMemberRequestEntityTypeDeal         AddListMemberRequestEntityType = "deal"
-	AddListMemberRequestEntityTypeLead         AddListMemberRequestEntityType = "lead"
-	AddListMemberRequestEntityTypeOrganization AddListMemberRequestEntityType = "organization"
-	AddListMemberRequestEntityTypePerson       AddListMemberRequestEntityType = "person"
-	AddListMemberRequestEntityTypeProject      AddListMemberRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the AddListMemberRequestEntityType enum.
-func (e AddListMemberRequestEntityType) Valid() bool {
-	switch e {
-	case AddListMemberRequestEntityTypeDeal:
-		return true
-	case AddListMemberRequestEntityTypeLead:
-		return true
-	case AddListMemberRequestEntityTypeOrganization:
-		return true
-	case AddListMemberRequestEntityTypePerson:
-		return true
-	case AddListMemberRequestEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for AdvanceDealRequestStatus.
 const (
 	AdvanceDealRequestStatusLost AdvanceDealRequestStatus = "lost"
@@ -1393,6 +1366,7 @@ const (
 	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
 	AttentionItemSourceFailedApproval      AttentionItemSource = "failed_approval"
 	AttentionItemSourceIntroductionRequest AttentionItemSource = "introduction_request"
+	AttentionItemSourceLeadResponse        AttentionItemSource = "lead_response"
 	AttentionItemSourceMeeting             AttentionItemSource = "meeting"
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
@@ -1429,6 +1403,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceFailedApproval:
 		return true
 	case AttentionItemSourceIntroductionRequest:
+		return true
+	case AttentionItemSourceLeadResponse:
 		return true
 	case AttentionItemSourceMeeting:
 		return true
@@ -1834,6 +1810,51 @@ func (e AutomationRunTier) Valid() bool {
 	}
 }
 
+// Defines values for AvailableModelLane.
+const (
+	AvailableModelLaneChat       AvailableModelLane = "chat"
+	AvailableModelLaneEmbeddings AvailableModelLane = "embeddings"
+)
+
+// Valid indicates whether the value is a known member of the AvailableModelLane enum.
+func (e AvailableModelLane) Valid() bool {
+	switch e {
+	case AvailableModelLaneChat:
+		return true
+	case AvailableModelLaneEmbeddings:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AvailableModelListUnavailable.
+const (
+	NoEndpoint     AvailableModelListUnavailable = "no_endpoint"
+	NoKey          AvailableModelListUnavailable = "no_key"
+	NotPublished   AvailableModelListUnavailable = "not_published"
+	ProfileForbids AvailableModelListUnavailable = "profile_forbids"
+	Unreachable    AvailableModelListUnavailable = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the AvailableModelListUnavailable enum.
+func (e AvailableModelListUnavailable) Valid() bool {
+	switch e {
+	case NoEndpoint:
+		return true
+	case NoKey:
+		return true
+	case NotPublished:
+		return true
+	case ProfileForbids:
+		return true
+	case Unreachable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BackfillPreviewEstimateQuality.
 const (
 	BackfillPreviewEstimateQualityHeuristic BackfillPreviewEstimateQuality = "heuristic"
@@ -2002,6 +2023,42 @@ func (e BlockedDomainSource) Valid() bool {
 	case BlockedDomainSourceHuman:
 		return true
 	case BlockedDomainSourceVerdict:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BriefDeliveryMorningBriefDelivery.
+const (
+	BriefDeliveryMorningBriefDeliveryEmail BriefDeliveryMorningBriefDelivery = "email"
+	BriefDeliveryMorningBriefDeliveryNone  BriefDeliveryMorningBriefDelivery = "none"
+)
+
+// Valid indicates whether the value is a known member of the BriefDeliveryMorningBriefDelivery enum.
+func (e BriefDeliveryMorningBriefDelivery) Valid() bool {
+	switch e {
+	case BriefDeliveryMorningBriefDeliveryEmail:
+		return true
+	case BriefDeliveryMorningBriefDeliveryNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BriefDeliveryWeeklyDelivery.
+const (
+	BriefDeliveryWeeklyDeliveryEmail BriefDeliveryWeeklyDelivery = "email"
+	BriefDeliveryWeeklyDeliveryNone  BriefDeliveryWeeklyDelivery = "none"
+)
+
+// Valid indicates whether the value is a known member of the BriefDeliveryWeeklyDelivery enum.
+func (e BriefDeliveryWeeklyDelivery) Valid() bool {
+	switch e {
+	case BriefDeliveryWeeklyDeliveryEmail:
+		return true
+	case BriefDeliveryWeeklyDeliveryNone:
 		return true
 	default:
 		return false
@@ -3307,6 +3364,66 @@ func (e ConnectConnectorRequestReturnTo) Valid() bool {
 	}
 }
 
+// Defines values for ConnectorAppProvider.
+const (
+	ConnectorAppProviderGoogle    ConnectorAppProvider = "google"
+	ConnectorAppProviderMicrosoft ConnectorAppProvider = "microsoft"
+)
+
+// Valid indicates whether the value is a known member of the ConnectorAppProvider enum.
+func (e ConnectorAppProvider) Valid() bool {
+	switch e {
+	case ConnectorAppProviderGoogle:
+		return true
+	case ConnectorAppProviderMicrosoft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectorAppSource.
+const (
+	ConnectorAppSourceEnvironment ConnectorAppSource = "environment"
+	ConnectorAppSourceNone        ConnectorAppSource = "none"
+	ConnectorAppSourceStored      ConnectorAppSource = "stored"
+)
+
+// Valid indicates whether the value is a known member of the ConnectorAppSource enum.
+func (e ConnectorAppSource) Valid() bool {
+	switch e {
+	case ConnectorAppSourceEnvironment:
+		return true
+	case ConnectorAppSourceNone:
+		return true
+	case ConnectorAppSourceStored:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectorAppRedirectUriPurpose.
+const (
+	CalendarConnect ConnectorAppRedirectUriPurpose = "calendar_connect"
+	MailboxConnect  ConnectorAppRedirectUriPurpose = "mailbox_connect"
+	SignIn          ConnectorAppRedirectUriPurpose = "sign_in"
+)
+
+// Valid indicates whether the value is a known member of the ConnectorAppRedirectUriPurpose enum.
+func (e ConnectorAppRedirectUriPurpose) Valid() bool {
+	switch e {
+	case CalendarConnect:
+		return true
+	case MailboxConnect:
+		return true
+	case SignIn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConsentEventActorType.
 const (
 	ConsentEventActorTypeAgent     ConsentEventActorType = "agent"
@@ -3928,51 +4045,6 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	case CreateLeadRequestStatusNew:
 		return true
 	case CreateLeadRequestStatusPromoted:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreateListRequestEntityType.
-const (
-	CreateListRequestEntityTypeDeal         CreateListRequestEntityType = "deal"
-	CreateListRequestEntityTypeLead         CreateListRequestEntityType = "lead"
-	CreateListRequestEntityTypeOrganization CreateListRequestEntityType = "organization"
-	CreateListRequestEntityTypePerson       CreateListRequestEntityType = "person"
-	CreateListRequestEntityTypeProject      CreateListRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the CreateListRequestEntityType enum.
-func (e CreateListRequestEntityType) Valid() bool {
-	switch e {
-	case CreateListRequestEntityTypeDeal:
-		return true
-	case CreateListRequestEntityTypeLead:
-		return true
-	case CreateListRequestEntityTypeOrganization:
-		return true
-	case CreateListRequestEntityTypePerson:
-		return true
-	case CreateListRequestEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreateListRequestListType.
-const (
-	CreateListRequestListTypeDynamic CreateListRequestListType = "dynamic"
-	CreateListRequestListTypeStatic  CreateListRequestListType = "static"
-)
-
-// Valid indicates whether the value is a known member of the CreateListRequestListType enum.
-func (e CreateListRequestListType) Valid() bool {
-	switch e {
-	case CreateListRequestListTypeDynamic:
-		return true
-	case CreateListRequestListTypeStatic:
 		return true
 	default:
 		return false
@@ -5218,48 +5290,6 @@ func (e FinanceSummaryState) Valid() bool {
 	}
 }
 
-// Defines values for GoogleAppSource.
-const (
-	GoogleAppSourceEnvironment GoogleAppSource = "environment"
-	GoogleAppSourceNone        GoogleAppSource = "none"
-	GoogleAppSourceStored      GoogleAppSource = "stored"
-)
-
-// Valid indicates whether the value is a known member of the GoogleAppSource enum.
-func (e GoogleAppSource) Valid() bool {
-	switch e {
-	case GoogleAppSourceEnvironment:
-		return true
-	case GoogleAppSourceNone:
-		return true
-	case GoogleAppSourceStored:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GoogleAppRedirectUriPurpose.
-const (
-	CalendarConnect GoogleAppRedirectUriPurpose = "calendar_connect"
-	MailboxConnect  GoogleAppRedirectUriPurpose = "mailbox_connect"
-	SignIn          GoogleAppRedirectUriPurpose = "sign_in"
-)
-
-// Valid indicates whether the value is a known member of the GoogleAppRedirectUriPurpose enum.
-func (e GoogleAppRedirectUriPurpose) Valid() bool {
-	switch e {
-	case CalendarConnect:
-		return true
-	case MailboxConnect:
-		return true
-	case SignIn:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -5553,16 +5583,16 @@ func (e InstallationSettingsBaseLanguage) Valid() bool {
 
 // Defines values for InstallationSetupStepStep.
 const (
-	InstallationSetupStepStepAiModels  InstallationSetupStepStep = "ai_models"
-	InstallationSetupStepStepGoogleApp InstallationSetupStepStep = "google_app"
+	AiModels InstallationSetupStepStep = "ai_models"
+	OauthApp InstallationSetupStepStep = "oauth_app"
 )
 
 // Valid indicates whether the value is a known member of the InstallationSetupStepStep enum.
 func (e InstallationSetupStepStep) Valid() bool {
 	switch e {
-	case InstallationSetupStepStepAiModels:
+	case AiModels:
 		return true
-	case InstallationSetupStepStepGoogleApp:
+	case OauthApp:
 		return true
 	default:
 		return false
@@ -5998,78 +6028,6 @@ func (e LicenseEntitlementState) Valid() bool {
 	}
 }
 
-// Defines values for ListEntityType.
-const (
-	ListEntityTypeDeal         ListEntityType = "deal"
-	ListEntityTypeLead         ListEntityType = "lead"
-	ListEntityTypeOrganization ListEntityType = "organization"
-	ListEntityTypePerson       ListEntityType = "person"
-	ListEntityTypeProject      ListEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListEntityType enum.
-func (e ListEntityType) Valid() bool {
-	switch e {
-	case ListEntityTypeDeal:
-		return true
-	case ListEntityTypeLead:
-		return true
-	case ListEntityTypeOrganization:
-		return true
-	case ListEntityTypePerson:
-		return true
-	case ListEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListListType.
-const (
-	ListListTypeDynamic ListListType = "dynamic"
-	ListListTypeStatic  ListListType = "static"
-)
-
-// Valid indicates whether the value is a known member of the ListListType enum.
-func (e ListListType) Valid() bool {
-	switch e {
-	case ListListTypeDynamic:
-		return true
-	case ListListTypeStatic:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListMemberEntityType.
-const (
-	ListMemberEntityTypeDeal         ListMemberEntityType = "deal"
-	ListMemberEntityTypeLead         ListMemberEntityType = "lead"
-	ListMemberEntityTypeOrganization ListMemberEntityType = "organization"
-	ListMemberEntityTypePerson       ListMemberEntityType = "person"
-	ListMemberEntityTypeProject      ListMemberEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListMemberEntityType enum.
-func (e ListMemberEntityType) Valid() bool {
-	switch e {
-	case ListMemberEntityTypeDeal:
-		return true
-	case ListMemberEntityTypeLead:
-		return true
-	case ListMemberEntityTypeOrganization:
-		return true
-	case ListMemberEntityTypePerson:
-		return true
-	case ListMemberEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for MeResponsePassportScopes.
 const (
 	MeResponsePassportScopesActWithApproval    MeResponsePassportScopes = "act_with_approval"
@@ -6145,6 +6103,117 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	case MeetingBriefSectionKindTalkingPoints:
 		return true
 	case MeetingBriefSectionKindWhatChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanReadiness.
+const (
+	MeetingPlanReadinessOutline  MeetingPlanReadiness = "outline"
+	MeetingPlanReadinessPrepared MeetingPlanReadiness = "prepared"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanReadiness enum.
+func (e MeetingPlanReadiness) Valid() bool {
+	switch e {
+	case MeetingPlanReadinessOutline:
+		return true
+	case MeetingPlanReadinessPrepared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanTier.
+const (
+	MeetingPlanTierHigh   MeetingPlanTier = "high"
+	MeetingPlanTierLow    MeetingPlanTier = "low"
+	MeetingPlanTierMedium MeetingPlanTier = "medium"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanTier enum.
+func (e MeetingPlanTier) Valid() bool {
+	switch e {
+	case MeetingPlanTierHigh:
+		return true
+	case MeetingPlanTierLow:
+		return true
+	case MeetingPlanTierMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanTypeValue.
+const (
+	MeetingPlanTypeCommercial        MeetingPlanTypeValue = "commercial"
+	MeetingPlanTypeDecision          MeetingPlanTypeValue = "decision"
+	MeetingPlanTypeDelivery          MeetingPlanTypeValue = "delivery"
+	MeetingPlanTypeDemo              MeetingPlanTypeValue = "demo"
+	MeetingPlanTypeFirstDiscovery    MeetingPlanTypeValue = "first_discovery"
+	MeetingPlanTypeFollowupDiscovery MeetingPlanTypeValue = "followup_discovery"
+	MeetingPlanTypeRelationship      MeetingPlanTypeValue = "relationship"
+	MeetingPlanTypeRenewalRisk       MeetingPlanTypeValue = "renewal_risk"
+	MeetingPlanTypeUnknown           MeetingPlanTypeValue = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanTypeValue enum.
+func (e MeetingPlanTypeValue) Valid() bool {
+	switch e {
+	case MeetingPlanTypeCommercial:
+		return true
+	case MeetingPlanTypeDecision:
+		return true
+	case MeetingPlanTypeDelivery:
+		return true
+	case MeetingPlanTypeDemo:
+		return true
+	case MeetingPlanTypeFirstDiscovery:
+		return true
+	case MeetingPlanTypeFollowupDiscovery:
+		return true
+	case MeetingPlanTypeRelationship:
+		return true
+	case MeetingPlanTypeRenewalRisk:
+		return true
+	case MeetingPlanTypeUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanUnknownKind.
+const (
+	MeetingPlanUnknownAttendeesNotVisible      MeetingPlanUnknownKind = "attendees_not_visible"
+	MeetingPlanUnknownDecisionRouteNotCaptured MeetingPlanUnknownKind = "decision_route_not_captured"
+	MeetingPlanUnknownIntentNotCaptured        MeetingPlanUnknownKind = "intent_not_captured"
+	MeetingPlanUnknownNoCommitmentsCaptured    MeetingPlanUnknownKind = "no_commitments_captured"
+	MeetingPlanUnknownNoHistory                MeetingPlanUnknownKind = "no_history"
+	MeetingPlanUnknownNoOpenDeal               MeetingPlanUnknownKind = "no_open_deal"
+	MeetingPlanUnknownNoPriorMeeting           MeetingPlanUnknownKind = "no_prior_meeting"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanUnknownKind enum.
+func (e MeetingPlanUnknownKind) Valid() bool {
+	switch e {
+	case MeetingPlanUnknownAttendeesNotVisible:
+		return true
+	case MeetingPlanUnknownDecisionRouteNotCaptured:
+		return true
+	case MeetingPlanUnknownIntentNotCaptured:
+		return true
+	case MeetingPlanUnknownNoCommitmentsCaptured:
+		return true
+	case MeetingPlanUnknownNoHistory:
+		return true
+	case MeetingPlanUnknownNoOpenDeal:
+		return true
+	case MeetingPlanUnknownNoPriorMeeting:
 		return true
 	default:
 		return false
@@ -6643,7 +6712,7 @@ const (
 	Organization360SectionsOmittedDeals            Organization360SectionsOmitted = "deals"
 	Organization360SectionsOmittedHealth           Organization360SectionsOmitted = "health"
 	Organization360SectionsOmittedLastTouch        Organization360SectionsOmitted = "last_touch"
-	Organization360SectionsOmittedListMemberships  Organization360SectionsOmitted = "list_memberships"
+	Organization360SectionsOmittedMoments          Organization360SectionsOmitted = "moments"
 	Organization360SectionsOmittedNextMeeting      Organization360SectionsOmitted = "next_meeting"
 	Organization360SectionsOmittedNextSteps        Organization360SectionsOmitted = "next_steps"
 	Organization360SectionsOmittedPendingApprovals Organization360SectionsOmitted = "pending_approvals"
@@ -6667,7 +6736,7 @@ func (e Organization360SectionsOmitted) Valid() bool {
 		return true
 	case Organization360SectionsOmittedLastTouch:
 		return true
-	case Organization360SectionsOmittedListMemberships:
+	case Organization360SectionsOmittedMoments:
 		return true
 	case Organization360SectionsOmittedNextMeeting:
 		return true
@@ -7056,19 +7125,19 @@ func (e OrganizationBriefSectionKind) Valid() bool {
 
 // Defines values for OrganizationBriefSentenceNature.
 const (
-	Assessment     OrganizationBriefSentenceNature = "assessment"
-	Fact           OrganizationBriefSentenceNature = "fact"
-	Recommendation OrganizationBriefSentenceNature = "recommendation"
+	OrganizationBriefSentenceNatureAssessment     OrganizationBriefSentenceNature = "assessment"
+	OrganizationBriefSentenceNatureFact           OrganizationBriefSentenceNature = "fact"
+	OrganizationBriefSentenceNatureRecommendation OrganizationBriefSentenceNature = "recommendation"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationBriefSentenceNature enum.
 func (e OrganizationBriefSentenceNature) Valid() bool {
 	switch e {
-	case Assessment:
+	case OrganizationBriefSentenceNatureAssessment:
 		return true
-	case Fact:
+	case OrganizationBriefSentenceNatureFact:
 		return true
-	case Recommendation:
+	case OrganizationBriefSentenceNatureRecommendation:
 		return true
 	default:
 		return false
@@ -9076,27 +9145,6 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	}
 }
 
-// Defines values for QuotaAttainmentBand.
-const (
-	Accent QuotaAttainmentBand = "accent"
-	Behind QuotaAttainmentBand = "behind"
-	Met    QuotaAttainmentBand = "met"
-)
-
-// Valid indicates whether the value is a known member of the QuotaAttainmentBand enum.
-func (e QuotaAttainmentBand) Valid() bool {
-	switch e {
-	case Accent:
-		return true
-	case Behind:
-		return true
-	case Met:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for RecordClaimRecordType.
 const (
 	RecordClaimRecordTypeDeal         RecordClaimRecordType = "deal"
@@ -9711,16 +9759,16 @@ func (e SetActivityDispositionRequestDisposition) Valid() bool {
 
 // Defines values for SetAiModelRateRequestLane.
 const (
-	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
-	SetAiModelRateRequestLaneEmbeddings SetAiModelRateRequestLane = "embeddings"
+	Chat       SetAiModelRateRequestLane = "chat"
+	Embeddings SetAiModelRateRequestLane = "embeddings"
 )
 
 // Valid indicates whether the value is a known member of the SetAiModelRateRequestLane enum.
 func (e SetAiModelRateRequestLane) Valid() bool {
 	switch e {
-	case SetAiModelRateRequestLaneChat:
+	case Chat:
 		return true
-	case SetAiModelRateRequestLaneEmbeddings:
+	case Embeddings:
 		return true
 	default:
 		return false
@@ -10354,6 +10402,36 @@ func (e TaggableEntityType) Valid() bool {
 	case TaggableEntityTypePerson:
 		return true
 	case TaggableEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyRepFocusKind.
+const (
+	CommitmentsMissed       TeamWeeklyRepFocusKind = "commitments_missed"
+	HelpRequested           TeamWeeklyRepFocusKind = "help_requested"
+	LeadsBreached           TeamWeeklyRepFocusKind = "leads_breached"
+	MeetingsWithoutNextStep TeamWeeklyRepFocusKind = "meetings_without_next_step"
+	QuietWeek               TeamWeeklyRepFocusKind = "quiet_week"
+	StrongWeek              TeamWeeklyRepFocusKind = "strong_week"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyRepFocusKind enum.
+func (e TeamWeeklyRepFocusKind) Valid() bool {
+	switch e {
+	case CommitmentsMissed:
+		return true
+	case HelpRequested:
+		return true
+	case LeadsBreached:
+		return true
+	case MeetingsWithoutNextStep:
+		return true
+	case QuietWeek:
+		return true
+	case StrongWeek:
 		return true
 	default:
 		return false
@@ -11595,10 +11673,11 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
-	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
-	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
-	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusDeadLettered      WebhookDeliveryStatus = "dead_lettered"
+	WebhookDeliveryStatusDelivered         WebhookDeliveryStatus = "delivered"
+	WebhookDeliveryStatusPending           WebhookDeliveryStatus = "pending"
+	WebhookDeliveryStatusRetrying          WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusVisibilityRevoked WebhookDeliveryStatus = "visibility_revoked"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
@@ -11611,6 +11690,8 @@ func (e WebhookDeliveryStatus) Valid() bool {
 	case WebhookDeliveryStatusPending:
 		return true
 	case WebhookDeliveryStatusRetrying:
+		return true
+	case WebhookDeliveryStatusVisibilityRevoked:
 		return true
 	default:
 		return false
@@ -11629,6 +11710,75 @@ func (e WebhookSubscriptionState) Valid() bool {
 	case WebhookSubscriptionStateActive:
 		return true
 	case WebhookSubscriptionStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanStatus.
+const (
+	WeeklyPlanStatusClosed WeeklyPlanStatus = "closed"
+	WeeklyPlanStatusOpen   WeeklyPlanStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanStatus enum.
+func (e WeeklyPlanStatus) Valid() bool {
+	switch e {
+	case WeeklyPlanStatusClosed:
+		return true
+	case WeeklyPlanStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanCommitmentState.
+const (
+	WeeklyPlanCommitmentStateDone    WeeklyPlanCommitmentState = "done"
+	WeeklyPlanCommitmentStateDropped WeeklyPlanCommitmentState = "dropped"
+	WeeklyPlanCommitmentStateMissed  WeeklyPlanCommitmentState = "missed"
+	WeeklyPlanCommitmentStateOpen    WeeklyPlanCommitmentState = "open"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanCommitmentState enum.
+func (e WeeklyPlanCommitmentState) Valid() bool {
+	switch e {
+	case WeeklyPlanCommitmentStateDone:
+		return true
+	case WeeklyPlanCommitmentStateDropped:
+		return true
+	case WeeklyPlanCommitmentStateMissed:
+		return true
+	case WeeklyPlanCommitmentStateOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanLinkType.
+const (
+	WeeklyPlanLinkTypeDeal         WeeklyPlanLinkType = "deal"
+	WeeklyPlanLinkTypeLead         WeeklyPlanLinkType = "lead"
+	WeeklyPlanLinkTypeOrganization WeeklyPlanLinkType = "organization"
+	WeeklyPlanLinkTypePerson       WeeklyPlanLinkType = "person"
+	WeeklyPlanLinkTypeProject      WeeklyPlanLinkType = "project"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanLinkType enum.
+func (e WeeklyPlanLinkType) Valid() bool {
+	switch e {
+	case WeeklyPlanLinkTypeDeal:
+		return true
+	case WeeklyPlanLinkTypeLead:
+		return true
+	case WeeklyPlanLinkTypeOrganization:
+		return true
+	case WeeklyPlanLinkTypePerson:
+		return true
+	case WeeklyPlanLinkTypeProject:
 		return true
 	default:
 		return false
@@ -11662,6 +11812,7 @@ const (
 	WorklistFilterCustomerWaiting WorklistFilter = "customer_waiting"
 	WorklistFilterDealsAtRisk     WorklistFilter = "deals_at_risk"
 	WorklistFilterDecisions       WorklistFilter = "decisions"
+	WorklistFilterLeads           WorklistFilter = "leads"
 	WorklistFilterMeetings        WorklistFilter = "meetings"
 	WorklistFilterSystem          WorklistFilter = "system"
 	WorklistFilterTasks           WorklistFilter = "tasks"
@@ -11677,6 +11828,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterDealsAtRisk:
 		return true
 	case WorklistFilterDecisions:
+		return true
+	case WorklistFilterLeads:
 		return true
 	case WorklistFilterMeetings:
 		return true
@@ -11832,6 +11985,7 @@ const (
 	WorklistCountCategoryCustomerWaiting WorklistCountCategory = "customer_waiting"
 	WorklistCountCategoryDealsAtRisk     WorklistCountCategory = "deals_at_risk"
 	WorklistCountCategoryDecisions       WorklistCountCategory = "decisions"
+	WorklistCountCategoryLeads           WorklistCountCategory = "leads"
 	WorklistCountCategoryMeetings        WorklistCountCategory = "meetings"
 	WorklistCountCategorySystem          WorklistCountCategory = "system"
 	WorklistCountCategoryTasks           WorklistCountCategory = "tasks"
@@ -11845,6 +11999,8 @@ func (e WorklistCountCategory) Valid() bool {
 	case WorklistCountCategoryDealsAtRisk:
 		return true
 	case WorklistCountCategoryDecisions:
+		return true
+	case WorklistCountCategoryLeads:
 		return true
 	case WorklistCountCategoryMeetings:
 		return true
@@ -11925,6 +12081,7 @@ const (
 	WorklistItemCategoryCustomerWaiting WorklistItemCategory = "customer_waiting"
 	WorklistItemCategoryDealsAtRisk     WorklistItemCategory = "deals_at_risk"
 	WorklistItemCategoryDecisions       WorklistItemCategory = "decisions"
+	WorklistItemCategoryLeads           WorklistItemCategory = "leads"
 	WorklistItemCategoryMeetings        WorklistItemCategory = "meetings"
 	WorklistItemCategorySystem          WorklistItemCategory = "system"
 	WorklistItemCategoryTasks           WorklistItemCategory = "tasks"
@@ -11939,6 +12096,8 @@ func (e WorklistItemCategory) Valid() bool {
 		return true
 	case WorklistItemCategoryDecisions:
 		return true
+	case WorklistItemCategoryLeads:
+		return true
 	case WorklistItemCategoryMeetings:
 		return true
 	case WorklistItemCategorySystem:
@@ -11952,49 +12111,49 @@ func (e WorklistItemCategory) Valid() bool {
 
 // Defines values for WorklistItemConsequence.
 const (
-	WorklistItemConsequenceBuyerWaits            WorklistItemConsequence = "buyer_waits"
-	WorklistItemConsequenceCustomerNeverReceived WorklistItemConsequence = "customer_never_received"
-	WorklistItemConsequenceDataDrifts            WorklistItemConsequence = "data_drifts"
-	WorklistItemConsequenceDealDrifts            WorklistItemConsequence = "deal_drifts"
-	WorklistItemConsequenceDealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
-	WorklistItemConsequenceLegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
-	WorklistItemConsequenceMailboxBlind          WorklistItemConsequence = "mailbox_blind"
-	WorklistItemConsequenceMeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
-	WorklistItemConsequenceNone                  WorklistItemConsequence = "none"
-	WorklistItemConsequencePromiseBreaks         WorklistItemConsequence = "promise_breaks"
-	WorklistItemConsequenceTaskSlips             WorklistItemConsequence = "task_slips"
-	WorklistItemConsequenceWorkBlocked           WorklistItemConsequence = "work_blocked"
-	WorklistItemConsequenceYouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
+	BuyerWaits            WorklistItemConsequence = "buyer_waits"
+	CustomerNeverReceived WorklistItemConsequence = "customer_never_received"
+	DataDrifts            WorklistItemConsequence = "data_drifts"
+	DealDrifts            WorklistItemConsequence = "deal_drifts"
+	DealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
+	LegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
+	MailboxBlind          WorklistItemConsequence = "mailbox_blind"
+	MeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
+	None                  WorklistItemConsequence = "none"
+	PromiseBreaks         WorklistItemConsequence = "promise_breaks"
+	TaskSlips             WorklistItemConsequence = "task_slips"
+	WorkBlocked           WorklistItemConsequence = "work_blocked"
+	YouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemConsequence enum.
 func (e WorklistItemConsequence) Valid() bool {
 	switch e {
-	case WorklistItemConsequenceBuyerWaits:
+	case BuyerWaits:
 		return true
-	case WorklistItemConsequenceCustomerNeverReceived:
+	case CustomerNeverReceived:
 		return true
-	case WorklistItemConsequenceDataDrifts:
+	case DataDrifts:
 		return true
-	case WorklistItemConsequenceDealDrifts:
+	case DealDrifts:
 		return true
-	case WorklistItemConsequenceDealSlipsPastClose:
+	case DealSlipsPastClose:
 		return true
-	case WorklistItemConsequenceLegalDeadlineMissed:
+	case LegalDeadlineMissed:
 		return true
-	case WorklistItemConsequenceMailboxBlind:
+	case MailboxBlind:
 		return true
-	case WorklistItemConsequenceMeetingUnprepared:
+	case MeetingUnprepared:
 		return true
-	case WorklistItemConsequenceNone:
+	case None:
 		return true
-	case WorklistItemConsequencePromiseBreaks:
+	case PromiseBreaks:
 		return true
-	case WorklistItemConsequenceTaskSlips:
+	case TaskSlips:
 		return true
-	case WorklistItemConsequenceWorkBlocked:
+	case WorkBlocked:
 		return true
-	case WorklistItemConsequenceYouBelieveItHappened:
+	case YouBelieveItHappened:
 		return true
 	default:
 		return false
@@ -12077,6 +12236,7 @@ const (
 	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
 	WorklistItemSourceFailedApproval      WorklistItemSource = "failed_approval"
 	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
+	WorklistItemSourceLeadResponse        WorklistItemSource = "lead_response"
 	WorklistItemSourceMeeting             WorklistItemSource = "meeting"
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
@@ -12115,6 +12275,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceFailedApproval:
 		return true
 	case WorklistItemSourceIntroductionRequest:
+		return true
+	case WorklistItemSourceLeadResponse:
 		return true
 	case WorklistItemSourceMeeting:
 		return true
@@ -12164,11 +12326,13 @@ const (
 	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
 	WorklistReachSourceFailedApproval      WorklistReachSource = "failed_approval"
 	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
+	WorklistReachSourceLeadResponse        WorklistReachSource = "lead_response"
 	WorklistReachSourceMeeting             WorklistReachSource = "meeting"
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
 	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
+	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the WorklistReachSource enum.
@@ -12202,6 +12366,8 @@ func (e WorklistReachSource) Valid() bool {
 		return true
 	case WorklistReachSourceIntroductionRequest:
 		return true
+	case WorklistReachSourceLeadResponse:
+		return true
 	case WorklistReachSourceMeeting:
 		return true
 	case WorklistReachSourceNotice:
@@ -12211,6 +12377,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceSyncHealth:
 		return true
 	case WorklistReachSourceTask:
+		return true
+	case WorklistReachSourceUndelivered:
 		return true
 	default:
 		return false
@@ -12229,14 +12397,18 @@ const (
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
+	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
 	WorklistReasonKindQuietDays          WorklistReasonKind = "quiet_days"
 	WorklistReasonKindRepeatedFailure    WorklistReasonKind = "repeated_failure"
+	WorklistReasonKindResponseDueSoon    WorklistReasonKind = "response_due_soon"
+	WorklistReasonKindResponseOverdue    WorklistReasonKind = "response_overdue"
 	WorklistReasonKindRoutine            WorklistReasonKind = "routine"
 	WorklistReasonKindStale              WorklistReasonKind = "stale"
+	WorklistReasonKindUnassigned         WorklistReasonKind = "unassigned"
 	WorklistReasonKindWaitingDays        WorklistReasonKind = "waiting_days"
 )
 
@@ -12263,6 +12435,8 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindMeetingSoon:
 		return true
+	case WorklistReasonKindMeetingUnprepared:
+		return true
 	case WorklistReasonKindNoChampion:
 		return true
 	case WorklistReasonKindOverdue:
@@ -12275,9 +12449,15 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindRepeatedFailure:
 		return true
+	case WorklistReasonKindResponseDueSoon:
+		return true
+	case WorklistReasonKindResponseOverdue:
+		return true
 	case WorklistReasonKindRoutine:
 		return true
 	case WorklistReasonKindStale:
+		return true
+	case WorklistReasonKindUnassigned:
 		return true
 	case WorklistReasonKindWaitingDays:
 		return true
@@ -12453,67 +12633,67 @@ func (e PersonProfileFieldKey) Valid() bool {
 
 // Defines values for ProfileFieldKey.
 const (
-	ProfileFieldKeyBuyingCenter      ProfileFieldKey = "buying_center"
-	ProfileFieldKeyBuyingIntents     ProfileFieldKey = "buying_intents"
-	ProfileFieldKeyCommonObjections  ProfileFieldKey = "common_objections"
-	ProfileFieldKeyCustomerPains     ProfileFieldKey = "customer_pains"
-	ProfileFieldKeyDesiredOutcomes   ProfileFieldKey = "desired_outcomes"
-	ProfileFieldKeyDisplayName       ProfileFieldKey = "display_name"
-	ProfileFieldKeyHistory           ProfileFieldKey = "history"
-	ProfileFieldKeyIcp               ProfileFieldKey = "icp"
-	ProfileFieldKeyIndustry          ProfileFieldKey = "industry"
-	ProfileFieldKeyLegalForm         ProfileFieldKey = "legal_form"
-	ProfileFieldKeyLegalName         ProfileFieldKey = "legal_name"
-	ProfileFieldKeyOfferSummary      ProfileFieldKey = "offer_summary"
-	ProfileFieldKeyRegisterCourt     ProfileFieldKey = "register_court"
-	ProfileFieldKeyRegisterNumber    ProfileFieldKey = "register_number"
-	ProfileFieldKeyRegisterVat       ProfileFieldKey = "register_vat"
-	ProfileFieldKeyRegisteredAddress ProfileFieldKey = "registered_address"
-	ProfileFieldKeySalesMotion       ProfileFieldKey = "sales_motion"
-	ProfileFieldKeyUsp               ProfileFieldKey = "usp"
-	ProfileFieldKeyValueProposition  ProfileFieldKey = "value_proposition"
+	BuyingCenter      ProfileFieldKey = "buying_center"
+	BuyingIntents     ProfileFieldKey = "buying_intents"
+	CommonObjections  ProfileFieldKey = "common_objections"
+	CustomerPains     ProfileFieldKey = "customer_pains"
+	DesiredOutcomes   ProfileFieldKey = "desired_outcomes"
+	DisplayName       ProfileFieldKey = "display_name"
+	History           ProfileFieldKey = "history"
+	Icp               ProfileFieldKey = "icp"
+	Industry          ProfileFieldKey = "industry"
+	LegalForm         ProfileFieldKey = "legal_form"
+	LegalName         ProfileFieldKey = "legal_name"
+	OfferSummary      ProfileFieldKey = "offer_summary"
+	RegisterCourt     ProfileFieldKey = "register_court"
+	RegisterNumber    ProfileFieldKey = "register_number"
+	RegisterVat       ProfileFieldKey = "register_vat"
+	RegisteredAddress ProfileFieldKey = "registered_address"
+	SalesMotion       ProfileFieldKey = "sales_motion"
+	Usp               ProfileFieldKey = "usp"
+	ValueProposition  ProfileFieldKey = "value_proposition"
 )
 
 // Valid indicates whether the value is a known member of the ProfileFieldKey enum.
 func (e ProfileFieldKey) Valid() bool {
 	switch e {
-	case ProfileFieldKeyBuyingCenter:
+	case BuyingCenter:
 		return true
-	case ProfileFieldKeyBuyingIntents:
+	case BuyingIntents:
 		return true
-	case ProfileFieldKeyCommonObjections:
+	case CommonObjections:
 		return true
-	case ProfileFieldKeyCustomerPains:
+	case CustomerPains:
 		return true
-	case ProfileFieldKeyDesiredOutcomes:
+	case DesiredOutcomes:
 		return true
-	case ProfileFieldKeyDisplayName:
+	case DisplayName:
 		return true
-	case ProfileFieldKeyHistory:
+	case History:
 		return true
-	case ProfileFieldKeyIcp:
+	case Icp:
 		return true
-	case ProfileFieldKeyIndustry:
+	case Industry:
 		return true
-	case ProfileFieldKeyLegalForm:
+	case LegalForm:
 		return true
-	case ProfileFieldKeyLegalName:
+	case LegalName:
 		return true
-	case ProfileFieldKeyOfferSummary:
+	case OfferSummary:
 		return true
-	case ProfileFieldKeyRegisterCourt:
+	case RegisterCourt:
 		return true
-	case ProfileFieldKeyRegisterNumber:
+	case RegisterNumber:
 		return true
-	case ProfileFieldKeyRegisterVat:
+	case RegisterVat:
 		return true
-	case ProfileFieldKeyRegisteredAddress:
+	case RegisteredAddress:
 		return true
-	case ProfileFieldKeySalesMotion:
+	case SalesMotion:
 		return true
-	case ProfileFieldKeyUsp:
+	case Usp:
 		return true
-	case ProfileFieldKeyValueProposition:
+	case ValueProposition:
 		return true
 	default:
 		return false
@@ -12723,16 +12903,16 @@ func (e OidcSignInCallbackParamsProvider) Valid() bool {
 
 // Defines values for StartOidcSignInParamsProvider.
 const (
-	StartOidcSignInParamsProviderGoogle    StartOidcSignInParamsProvider = "google"
-	StartOidcSignInParamsProviderMicrosoft StartOidcSignInParamsProvider = "microsoft"
+	Google    StartOidcSignInParamsProvider = "google"
+	Microsoft StartOidcSignInParamsProvider = "microsoft"
 )
 
 // Valid indicates whether the value is a known member of the StartOidcSignInParamsProvider enum.
 func (e StartOidcSignInParamsProvider) Valid() bool {
 	switch e {
-	case StartOidcSignInParamsProviderGoogle:
+	case Google:
 		return true
-	case StartOidcSignInParamsProviderMicrosoft:
+	case Microsoft:
 		return true
 	default:
 		return false
@@ -13177,33 +13357,6 @@ func (e ListLeadsParamsSlaState) Valid() bool {
 	}
 }
 
-// Defines values for ListListsParamsEntityType.
-const (
-	ListListsParamsEntityTypeDeal         ListListsParamsEntityType = "deal"
-	ListListsParamsEntityTypeLead         ListListsParamsEntityType = "lead"
-	ListListsParamsEntityTypeOrganization ListListsParamsEntityType = "organization"
-	ListListsParamsEntityTypePerson       ListListsParamsEntityType = "person"
-	ListListsParamsEntityTypeProject      ListListsParamsEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListListsParamsEntityType enum.
-func (e ListListsParamsEntityType) Valid() bool {
-	switch e {
-	case ListListsParamsEntityTypeDeal:
-		return true
-	case ListListsParamsEntityTypeLead:
-		return true
-	case ListListsParamsEntityTypeOrganization:
-		return true
-	case ListListsParamsEntityTypePerson:
-		return true
-	case ListListsParamsEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GetOnboardingCompanyProposalParamsLocale.
 const (
 	OnboardingProposalLocaleDE GetOnboardingCompanyProposalParamsLocale = "de"
@@ -13440,22 +13593,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -13869,22 +14022,43 @@ func (e ListSignalsParamsKind) Valid() bool {
 
 // Defines values for ListSignalsParamsResolutionState.
 const (
-	Dropped       ListSignalsParamsResolutionState = "dropped"
-	LowConfidence ListSignalsParamsResolutionState = "low_confidence"
-	Resolved      ListSignalsParamsResolutionState = "resolved"
-	Unresolved    ListSignalsParamsResolutionState = "unresolved"
+	ListSignalsParamsResolutionStateDropped       ListSignalsParamsResolutionState = "dropped"
+	ListSignalsParamsResolutionStateLowConfidence ListSignalsParamsResolutionState = "low_confidence"
+	ListSignalsParamsResolutionStateResolved      ListSignalsParamsResolutionState = "resolved"
+	ListSignalsParamsResolutionStateUnresolved    ListSignalsParamsResolutionState = "unresolved"
 )
 
 // Valid indicates whether the value is a known member of the ListSignalsParamsResolutionState enum.
 func (e ListSignalsParamsResolutionState) Valid() bool {
 	switch e {
-	case Dropped:
+	case ListSignalsParamsResolutionStateDropped:
 		return true
-	case LowConfidence:
+	case ListSignalsParamsResolutionStateLowConfidence:
 		return true
-	case Resolved:
+	case ListSignalsParamsResolutionStateResolved:
 		return true
-	case Unresolved:
+	case ListSignalsParamsResolutionStateUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
+const (
+	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+)
+
+// Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
+func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
+	switch e {
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
+		return true
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
+		return true
+	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
 		return true
 	default:
 		return false
@@ -13921,6 +14095,7 @@ const (
 	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
 	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
 	Decisions       GetWorklistParamsFilter = "decisions"
+	Leads           GetWorklistParamsFilter = "leads"
 	Meetings        GetWorklistParamsFilter = "meetings"
 	System          GetWorklistParamsFilter = "system"
 	Tasks           GetWorklistParamsFilter = "tasks"
@@ -13936,6 +14111,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case DealsAtRisk:
 		return true
 	case Decisions:
+		return true
+	case Leads:
 		return true
 	case Meetings:
 		return true
@@ -14304,15 +14481,6 @@ type AddDealRoomDocumentRequest struct {
 	Title                *string                `json:"title,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
-
-// AddListMemberRequest defines model for AddListMemberRequest.
-type AddListMemberRequest struct {
-	EntityId   openapi_types.UUID             `json:"entity_id"`
-	EntityType AddListMemberRequestEntityType `json:"entity_type"`
-}
-
-// AddListMemberRequestEntityType defines model for AddListMemberRequest.EntityType.
-type AddListMemberRequestEntityType string
 
 // Address Structured postal address.
 type Address struct {
@@ -15995,6 +16163,36 @@ type AutonomySettings struct {
 	Data []KindAutonomy `json:"data"`
 }
 
+// AvailableModel One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+type AvailableModel struct {
+	// DisplayName The vendor's own human label, absent where it publishes none.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// Id The string a binding names, exactly as the vendor spells it.
+	Id string `json:"id"`
+
+	// Lane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+	Lane *AvailableModelLane `json:"lane,omitempty"`
+}
+
+// AvailableModelLane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+type AvailableModelLane string
+
+// AvailableModelList One vendor's own answer about what it serves.
+// An empty `models` with NO `unavailable` is a vendor that answered and serves nothing — a local runner with no model pulled onto it is the ordinary case. It is a different state from a vendor that could not be asked, which always sets `unavailable`, and a client that folded the two would tell a reader to paste a key they already have.
+type AvailableModelList struct {
+	Models []AvailableModel `json:"models"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
+}
+
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+type AvailableModelListUnavailable string
+
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
 type BackfillPreview struct {
 	ComputedAt time.Time `json:"computed_at"`
@@ -16099,6 +16297,34 @@ type BlockedDomainListResponse struct {
 	// page size would tell an operator their domain was never refused when it was.
 	Total int `json:"total"`
 }
+
+// BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
+// on a read means they have never chosen, absent on a write means leave it alone.
+type BriefDelivery struct {
+	// DeliveryHourLocal The local hour a delivery should not arrive before, in the installation's
+	// reporting timezone. Absent means the job's own hour, which is what every seat
+	// gets today.
+	DeliveryHourLocal *int `json:"delivery_hour_local,omitempty"`
+
+	// MorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
+	// nothing; absent is not.
+	MorningBriefDelivery *BriefDeliveryMorningBriefDelivery `json:"morning_brief_delivery,omitempty"`
+
+	// QuietDayNotice Whether a day with nothing to act on still gets a message. Its own setting
+	// rather than an implication of the two above: "tell me when there is something"
+	// and "tell me every morning either way" are different asks.
+	QuietDayNotice *bool `json:"quiet_day_notice,omitempty"`
+
+	// WeeklyDelivery The same, for the weekly review.
+	WeeklyDelivery *BriefDeliveryWeeklyDelivery `json:"weekly_delivery,omitempty"`
+}
+
+// BriefDeliveryMorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
+// nothing; absent is not.
+type BriefDeliveryMorningBriefDelivery string
+
+// BriefDeliveryWeeklyDelivery The same, for the weekly review.
+type BriefDeliveryWeeklyDelivery string
 
 // BriefSnoozeRequest Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes.
 type BriefSnoozeRequest struct {
@@ -16279,13 +16505,14 @@ type CaptureConnection struct {
 	// Scopes The granted provider scopes.
 	Scopes []string `json:"scopes"`
 
-	// SignatureEnrichEnabled This mailbox's own answer to the nightly signature pass, or null to follow the
-	// tenant default (`CaptureSettings.signature_enrich`). Null is a third state and not
-	// a missing value: a mailbox that never chose moves with the default, and one that
-	// did keeps its answer whatever the default becomes.
+	// SignatureEnrichEnabled This mailbox's own answer to reading contact details out of its mail, or null to
+	// follow the tenant default (`CaptureSettings.signature_enrich`). Null is a third state
+	// and not a missing value: a mailbox that never chose moves with the default, and one
+	// that did keeps its answer whatever the default becomes.
 	//
-	// False means no mail from this mailbox is ever SELECTED for enrichment — the pass
-	// never reads it, rather than reading it and discarding the result.
+	// False means no mail from this mailbox is ever SELECTED — neither its signatures are
+	// read nor its attached vCards imported. The passes never reach it, rather than
+	// reading it and discarding the result.
 	SignatureEnrichEnabled *bool `json:"signature_enrich_enabled,omitempty"`
 
 	// Status Connection state; `reauth_required` when the stored token expired/was revoked upstream.
@@ -16502,13 +16729,15 @@ type CaptureSettings struct {
 	// mail already captured. It governs what a seat may newly ask for.
 	SharedPostureAllowed bool `json:"shared_posture_allowed"`
 
-	// SignatureEnrich The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
-	// number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
-	// a value the signature does not state is not written.
+	// SignatureEnrich The workspace DEFAULT for reading stated contact details — a title, a phone number, an
+	// address, a company — out of mail a contact sent us. It governs both readers: the
+	// signature of the message, and a vCard attached to it. Nothing is inferred: a value the
+	// mail does not state is not written. Reading happens within minutes of the mail arriving;
+	// a daily pass is the backstop.
 	//
 	// A mailbox can override it (`CaptureConnection.signature_enrich_enabled`), and one that
 	// never chose follows this. Distinct from the exclusion list, which keeps whole messages
-	// out of capture by address or domain and says nothing about reading a signature.
+	// out of capture by address or domain and says nothing about reading contact details.
 	// Default is ON.
 	//
 	// "Workspace" here is the storage tenant, not the word the product shows a reader —
@@ -17001,6 +17230,14 @@ type CompanyProfile struct {
 
 	// LegalName The registered legal entity, when it differs from display_name.
 	LegalName *string `json:"legal_name,omitempty"`
+
+	// LogoUrl Where to fetch the installation's own company logo — the same `getOrganizationLogo`
+	// path `Organization.logo_url` carries for that record, cookie-authenticated and
+	// same-origin. The mark is whichever one the company is wearing: the one a website
+	// read resolved from its own site, or the one a person uploaded through
+	// `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
+	// is never an error: a client draws the deterministic monogram then.
+	LogoUrl *string `json:"logo_url,omitempty"`
 
 	// MinimumComplete True when display_name, offer_summary and icp are confirmed.
 	MinimumComplete *bool `json:"minimum_complete,omitempty"`
@@ -17498,6 +17735,59 @@ type ConnectProviderRequest struct {
 	// Configuration Omit for automatic-on-create + Full enrichment defaults.
 	Configuration *ProviderConfiguration `json:"configuration,omitempty"`
 }
+
+// ConnectorApp defines model for ConnectorApp.
+type ConnectorApp struct {
+	// ClientId The vendor's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses.
+	ClientId string `json:"client_id"`
+
+	// Configured Whether this vendor's app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can this vendor's mail and calendar be connected", which is a different question from where the app came from.
+	Configured bool `json:"configured"`
+
+	// Provider Which vendor's app this describes, echoed so a cached response cannot be misread.
+	Provider ConnectorAppProvider `json:"provider"`
+
+	// RedirectUris Every callback URL that must be registered as a redirect URI on the vendor's OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause.
+	RedirectUris []ConnectorAppRedirectUri `json:"redirect_uris"`
+
+	// Source Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+	Source ConnectorAppSource `json:"source"`
+
+	// Tenant The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any organization — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent.
+	Tenant *string `json:"tenant,omitempty"`
+}
+
+// ConnectorAppProvider Which vendor's app this describes, echoed so a cached response cannot be misread.
+type ConnectorAppProvider string
+
+// ConnectorAppSource Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+type ConnectorAppSource string
+
+// ConnectorAppInput defines model for ConnectorAppInput.
+type ConnectorAppInput struct {
+	// ClientId The vendor's OAuth client id. Google's end in `.apps.googleusercontent.com`; Microsoft's is the Application (client) ID from the Entra app registration's Overview, a GUID. A value of neither shape is refused: it is almost always a neighbouring field copied from the same console screen — the project number, an API key, or the app's display name.
+	ClientId string `json:"client_id"`
+
+	// ClientSecret The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
+	ClientSecret *string `json:"client_secret,omitempty"`
+
+	// Tenant The Entra directory (tenant) id to pin a `microsoft` app to, so only that directory's members may authorize. Omit it to authorize any organization, which is what a multi-tenant registration is for. Refused for `google`, and refused for the authority aliases `common`, `organizations` and `consumers` — each of those widens the app to a population nobody vetted, and an empty field says the same thing without an alias a reader has to know to interpret.
+	Tenant *string `json:"tenant,omitempty"`
+}
+
+// ConnectorAppRedirectUri One callback URL that must be registered as a redirect URI on the vendor's OAuth client. The `url` is the exact value this deployment sends the vendor, byte for byte — paste it as given rather than reconstructing it.
+type ConnectorAppRedirectUri struct {
+	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+	// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
+	Purpose ConnectorAppRedirectUriPurpose `json:"purpose"`
+
+	// Url The absolute URL to register, exactly as it must be pasted.
+	Url string `json:"url"`
+}
+
+// ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
+type ConnectorAppRedirectUriPurpose string
 
 // ConsentEvent An append-only proof row (Art. 7 demonstrability). Never updated or deleted.
 type ConsentEvent struct {
@@ -18198,22 +18488,6 @@ type CreateLeadSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// CreateListRequest defines model for CreateListRequest.
-type CreateListRequest struct {
-	Definition *map[string]interface{}     `json:"definition,omitempty"`
-	EntityType CreateListRequestEntityType `json:"entity_type"`
-	ListType   *CreateListRequestListType  `json:"list_type,omitempty"`
-	Name       string                      `json:"name"`
-	OwnerId    *openapi_types.UUID         `json:"owner_id,omitempty"`
-	TeamId     *openapi_types.UUID         `json:"team_id,omitempty"`
-}
-
-// CreateListRequestEntityType defines model for CreateListRequest.EntityType.
-type CreateListRequestEntityType string
-
-// CreateListRequestListType defines model for CreateListRequest.ListType.
-type CreateListRequestListType string
-
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// BuyerOrgId Defaults to the deal's organization.
@@ -18358,21 +18632,6 @@ type CreateProjectRequest struct {
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
-}
-
-// CreateQuotaRequest Exactly one of owner_id/team_id must be non-null — supplying both or neither is a 422
-// validation_error carrying a distinct, machine-branchable details.errors[].code
-// (owner_xor_team_required), not the generic per-field validation code (see
-// createQuota's 422 examples). Not expressed as an OpenAPI 3.1 oneOf here — a prose
-// note plus a 422 on mismatch, matching how CreateCustomFieldRequest documents its
-// conditional currency/options requirement (CF-T01).
-type CreateQuotaRequest struct {
-	Currency    string              `json:"currency"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	PeriodEnd   openapi_types.Date  `json:"period_end"`
-	PeriodStart openapi_types.Date  `json:"period_start"`
-	TargetMinor int64               `json:"target_minor"`
-	TeamId      *openapi_types.UUID `json:"team_id,omitempty"`
 }
 
 // CreateRecordGrantRequest defines model for CreateRecordGrantRequest.
@@ -18683,7 +18942,7 @@ type Deal struct {
 	FxRateToBase *string            `json:"fx_rate_to_base,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
-	// LastActivityAt Drives the deterministic stalled flag.
+	// LastActivityAt Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LostReason Required when status=lost.
@@ -19751,26 +20010,23 @@ type FilterVocabularyFieldReferences string
 // record. The type decides the operators, which is why it is here.
 type FilterVocabularyFieldType string
 
-// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported), or a `list_id` (a dynamic list whose definition is exported). The slice is always row-scoped to the caller through the one filter engine.
+// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`) or a `view_id` (a saved view whose filter state is exported). The slice is always row-scoped to the caller through the one filter engine.
 type FilteredExportRequest struct {
 	// Filter The canonical §13.5 predicate tree (nested and/or groups over typed leaves). Required with `object`.
 	Filter *map[string]interface{}     `json:"filter,omitempty"`
 	Format FilteredExportRequestFormat `json:"format"`
 
-	// ListId Export the definition of a dynamic list. Mutually exclusive with object/view_id.
-	ListId *openapi_types.UUID `json:"list_id,omitempty"`
-
-	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
+	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
 	Object *FilteredExportRequestObject `json:"object,omitempty"`
 
-	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
+	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object.
 	ViewId *openapi_types.UUID `json:"view_id,omitempty"`
 }
 
 // FilteredExportRequestFormat defines model for FilteredExportRequest.Format.
 type FilteredExportRequestFormat string
 
-// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
+// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
 type FilteredExportRequestObject string
 
 // FinanceInvoice One mirrored invoice, in the currency it was issued in.
@@ -19833,47 +20089,6 @@ type FxRateListResponse struct {
 	BaseCurrency *string  `json:"base_currency,omitempty"`
 	Data         []FxRate `json:"data"`
 }
-
-// GoogleApp defines model for GoogleApp.
-type GoogleApp struct {
-	// ClientId Google's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses.
-	ClientId string `json:"client_id"`
-
-	// Configured Whether a Google app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can Gmail and Calendar be connected", which is a different question from where the app came from.
-	Configured bool `json:"configured"`
-
-	// RedirectUris Every callback URL that must be registered as an Authorized redirect URI on the Google OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause.
-	RedirectUris []GoogleAppRedirectUri `json:"redirect_uris"`
-
-	// Source Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
-	Source GoogleAppSource `json:"source"`
-}
-
-// GoogleAppSource Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
-type GoogleAppSource string
-
-// GoogleAppInput defines model for GoogleAppInput.
-type GoogleAppInput struct {
-	// ClientId Google's OAuth client id, which ends in `.apps.googleusercontent.com`. A value that does not is refused: it is almost always the project number or an API key copied from the same console screen.
-	ClientId string `json:"client_id"`
-
-	// ClientSecret The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
-	ClientSecret *string `json:"client_secret,omitempty"`
-}
-
-// GoogleAppRedirectUri One callback URL that must be registered as an Authorized redirect URI on the Google OAuth client. Built by the code that SENDS it, so the value shown to an operator and the value Google receives cannot be different bytes.
-type GoogleAppRedirectUri struct {
-	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are SEPARATE connectors served on different paths — one Google app backs all three, and registering only some of them fails the others with `redirect_uri_mismatch`.
-	// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts.
-	Purpose GoogleAppRedirectUriPurpose `json:"purpose"`
-
-	// Url The absolute URL to register, exactly as it must be pasted.
-	Url string `json:"url"`
-}
-
-// GoogleAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are SEPARATE connectors served on different paths — one Google app backs all three, and registering only some of them fails the others with `redirect_uri_mismatch`.
-// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts.
-type GoogleAppRedirectUriPurpose string
 
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //
@@ -20493,11 +20708,11 @@ type InstallationSetupStep struct {
 	// Configured Whether this step is done.
 	Configured bool `json:"configured"`
 
-	// Step Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
+	// Step Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `oauth_app` is a connector OAuth app — Google's or Microsoft's, either of which makes mailbox and calendar capture connectable, so the step is done once ANY vendor's app is available.
 	Step InstallationSetupStepStep `json:"step"`
 }
 
-// InstallationSetupStepStep Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
+// InstallationSetupStepStep Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `oauth_app` is a connector OAuth app — Google's or Microsoft's, either of which makes mailbox and calendar capture connectable, so the step is done once ANY vendor's app is available.
 type InstallationSetupStepStep string
 
 // IntegrationsSettings The installation's provider-lookup posture. Read by every role, changed only by
@@ -21436,53 +21651,6 @@ type LinkedInReachResponse struct {
 	UnresolvedConnections int `json:"unresolved_connections"`
 }
 
-// List A static membership set or a dynamic segment. Mirrors the `list` table.
-type List struct {
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
-	CreatedAt  *time.Time `json:"created_at,omitempty"`
-
-	// Definition Dynamic — validated query plan; static — null.
-	Definition *map[string]interface{} `json:"definition,omitempty"`
-	EntityType ListEntityType          `json:"entity_type"`
-	Id         openapi_types.UUID      `json:"id"`
-	ListType   ListListType            `json:"list_type"`
-	Name       string                  `json:"name"`
-	OwnerId    *openapi_types.UUID     `json:"owner_id,omitempty"`
-	TeamId     *openapi_types.UUID     `json:"team_id,omitempty"`
-	UpdatedAt  *time.Time              `json:"updated_at,omitempty"`
-}
-
-// ListEntityType defines model for List.EntityType.
-type ListEntityType string
-
-// ListListType defines model for List.ListType.
-type ListListType string
-
-// ListListResponse defines model for ListListResponse.
-type ListListResponse struct {
-	Data []List   `json:"data"`
-	Page PageInfo `json:"page"`
-}
-
-// ListMember defines model for ListMember.
-type ListMember struct {
-	AddedBy    *string              `json:"added_by,omitempty"`
-	CreatedAt  *time.Time           `json:"created_at,omitempty"`
-	EntityId   openapi_types.UUID   `json:"entity_id"`
-	EntityType ListMemberEntityType `json:"entity_type"`
-	Id         openapi_types.UUID   `json:"id"`
-	ListId     openapi_types.UUID   `json:"list_id"`
-}
-
-// ListMemberEntityType defines model for ListMember.EntityType.
-type ListMemberEntityType string
-
-// ListMemberListResponse defines model for ListMemberListResponse.
-type ListMemberListResponse struct {
-	Data []ListMember `json:"data"`
-	Page PageInfo     `json:"page"`
-}
-
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	Email    openapi_types.Email `json:"email"`
@@ -21565,6 +21733,20 @@ type MeetingBrief struct {
 	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
 	Omitted *[]MeetingBriefOmission `json:"omitted,omitempty"`
 
+	// Plan The preparation plan: what to DO in the room, as against `sections`, which is what is
+	// KNOWN about it.
+	//
+	// Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+	// reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+	// UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+	// generated from the ABSENCE of a record, never from a writer leaving a field out, which
+	// is the difference between "nobody captured the decision route" and "the model forgot to
+	// mention it".
+	//
+	// Assessments and recommendations cite records the caller can open, or they are dropped
+	// whole — the same grounding rule every sentence in `sections` runs.
+	Plan *MeetingPlan `json:"plan,omitempty"`
+
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
 	// guessing. Present only when the request named a `project_id`.
@@ -21631,6 +21813,210 @@ type MeetingBriefSection struct {
 // `talking_points` — each tied to a specific captured statement.
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
+
+// MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
+// KNOWN about it.
+//
+// Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+// reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+// UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+// generated from the ABSENCE of a record, never from a writer leaving a field out, which
+// is the difference between "nobody captured the decision route" and "the model forgot to
+// mention it".
+//
+// Assessments and recommendations cite records the caller can open, or they are dropped
+// whole — the same grounding rule every sentence in `sections` runs.
+type MeetingPlan struct {
+	// AccountArc The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it.
+	AccountArc []MeetingPlanArcMoment `json:"account_arc"`
+
+	// Advance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
+	Advance MeetingPlanAdvance `json:"advance"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// LikelyAsks What the other side is likely to ask, each an assessment with the record behind it.
+	LikelyAsks []MeetingPlanAsk `json:"likely_asks"`
+
+	// ManagerCoaching The coaching layer, for a lead reading a teammate's meeting.
+	//
+	// It adds a READING of how this meeting could go wrong for this rep. It adds no account
+	// fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+	// and this is attached over it — so a lead and their rep are looking at the same meeting,
+	// and the lead is looking at one more thing.
+	//
+	// Who gets it is decided by the server, never asked for by a client. The rule is the
+	// same one that governs raising a coaching notice: a seat that may coach at all, and a
+	// live team shared with somebody in the room.
+	ManagerCoaching *MeetingPlanCoaching `json:"manager_coaching,omitempty"`
+	MeetingType     MeetingPlanType      `json:"meeting_type"`
+
+	// Objective The outcome to earn, and the reminder not to force it.
+	Objective *MeetingPlanObjective      `json:"objective,omitempty"`
+	Opening   *OrganizationBriefSentence `json:"opening,omitempty"`
+
+	// Questions What to ask them, ranked. Three is a plan a rep can hold; the cap is five.
+	Questions []MeetingPlanQuestion `json:"questions"`
+
+	// Readiness How much of a preparation this plan actually is, so a surface can decide whether to lead
+	// with it.
+	//
+	// `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+	// for. Useful, but not yet the thing a rep walks in holding.
+	// `prepared` — it also carries the risk with its response, at least two likely asks and at
+	// least three questions. A client leads with the plan at `prepared` and keeps the cited
+	// summary in front at `outline`, so a half-built plan never displaces what already worked.
+	Readiness MeetingPlanReadiness  `json:"readiness"`
+	Scenarios []MeetingPlanScenario `json:"scenarios"`
+
+	// TopRisk The one thing that can change this conversation, and what to do when it does.
+	TopRisk *MeetingPlanRisk `json:"top_risk,omitempty"`
+
+	// Unknowns What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked.
+	Unknowns []MeetingPlanUnknown `json:"unknowns"`
+}
+
+// MeetingPlanAdvance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
+type MeetingPlanAdvance struct {
+	Best     OrganizationBriefSentence `json:"best"`
+	Fallback OrganizationBriefSentence `json:"fallback"`
+	Minimum  OrganizationBriefSentence `json:"minimum"`
+}
+
+// MeetingPlanArcMoment One stretch of the relationship that still bears on today. A moment, not a message: it spans the conversations it was built from, and cites them.
+type MeetingPlanArcMoment struct {
+	From    time.Time                 `json:"from"`
+	Summary OrganizationBriefSentence `json:"summary"`
+	Title   string                    `json:"title"`
+	To      time.Time                 `json:"to"`
+}
+
+// MeetingPlanAsk defines model for MeetingPlanAsk.
+type MeetingPlanAsk struct {
+	Basis OrganizationBriefSentence `json:"basis"`
+
+	// Prepare How to answer it.
+	Prepare string `json:"prepare"`
+
+	// Question What they are likely to ask, in their own words where the record has them.
+	Question string `json:"question"`
+
+	// Relevance A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+	Relevance MeetingPlanTier `json:"relevance"`
+}
+
+// MeetingPlanCoaching The coaching layer, for a lead reading a teammate's meeting.
+//
+// It adds a READING of how this meeting could go wrong for this rep. It adds no account
+// fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+// and this is attached over it — so a lead and their rep are looking at the same meeting,
+// and the lead is looking at one more thing.
+//
+// Who gets it is decided by the server, never asked for by a client. The rule is the
+// same one that governs raising a coaching notice: a seat that may coach at all, and a
+// live team shared with somebody in the room.
+type MeetingPlanCoaching struct {
+	// FailureMode How this meeting most plausibly goes wrong for this rep, given this account.
+	FailureMode string `json:"failure_mode"`
+
+	// Focus The ONE thing to coach on. A list of five is a list nobody coaches from.
+	Focus string `json:"focus"`
+
+	// InterveneIf The narrow condition under which a lead should step in. Narrow on purpose: a lead who takes over a rep's meeting has coached nobody.
+	InterveneIf string `json:"intervene_if"`
+
+	// ListenFor What a good version of this conversation sounds like.
+	ListenFor string `json:"listen_for"`
+
+	// Paths The ways this meeting can go, for a lead to rehearse against.
+	Paths []MeetingPlanCoachingPath `json:"paths"`
+
+	// WatchFor The move that says it is going wrong.
+	WatchFor string `json:"watch_for"`
+}
+
+// MeetingPlanCoachingPath defines model for MeetingPlanCoachingPath.
+type MeetingPlanCoachingPath struct {
+	Label string `json:"label"`
+	Play  string `json:"play"`
+}
+
+// MeetingPlanObjective The outcome to earn, and the reminder not to force it.
+type MeetingPlanObjective struct {
+	// Caveat The one-line "do not force this" reminder. Fixed product copy keyed to the meeting type, not read from the records, which is why it carries no evidence of its own.
+	Caveat   string                    `json:"caveat"`
+	Sentence OrganizationBriefSentence `json:"sentence"`
+}
+
+// MeetingPlanQuestion One question to ask, with why it matters here and what the answer sounds like. Evidence is required: a question no record motivated is a question that would read the same on any account, which is the failure this whole shape exists to prevent.
+type MeetingPlanQuestion struct {
+	Ask       string                      `json:"ask"`
+	Evidence  []OrganizationBriefEvidence `json:"evidence"`
+	ListenFor string                      `json:"listen_for"`
+	Why       string                      `json:"why"`
+}
+
+// MeetingPlanReadiness How much of a preparation this plan actually is, so a surface can decide whether to lead
+// with it.
+//
+// `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+// for. Useful, but not yet the thing a rep walks in holding.
+// `prepared` — it also carries the risk with its response, at least two likely asks and at
+// least three questions. A client leads with the plan at `prepared` and keeps the cited
+// summary in front at `outline`, so a half-built plan never displaces what already worked.
+type MeetingPlanReadiness string
+
+// MeetingPlanResponse What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+type MeetingPlanResponse struct {
+	Avoid string `json:"avoid"`
+	Say   string `json:"say"`
+	Show  string `json:"show"`
+}
+
+// MeetingPlanRisk The one thing that can change this conversation, and what to do when it does.
+type MeetingPlanRisk struct {
+	// ResponsePlan What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+	ResponsePlan MeetingPlanResponse       `json:"response_plan"`
+	Text         OrganizationBriefSentence `json:"text"`
+}
+
+// MeetingPlanScenario What the meeting may turn into, and what to do if it does.
+type MeetingPlanScenario struct {
+	Evidence []OrganizationBriefEvidence `json:"evidence"`
+	Label    string                      `json:"label"`
+	Play     string                      `json:"play"`
+}
+
+// MeetingPlanTier A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+type MeetingPlanTier string
+
+// MeetingPlanType defines model for MeetingPlanType.
+type MeetingPlanType struct {
+	// Confidence A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+	Confidence MeetingPlanTier `json:"confidence"`
+
+	// Value What kind of meeting this is, which decides what a good plan for it looks like. `unknown` is a first-class answer rather than a failure: it means the records do not say what this meeting is for, and the plan then opens by asking rather than by guessing.
+	Value MeetingPlanTypeValue `json:"value"`
+}
+
+// MeetingPlanTypeValue What kind of meeting this is, which decides what a good plan for it looks like. `unknown` is a first-class answer rather than a failure: it means the records do not say what this meeting is for, and the plan then opens by asking rather than by guessing.
+type MeetingPlanTypeValue string
+
+// MeetingPlanUnknown defines model for MeetingPlanUnknown.
+type MeetingPlanUnknown struct {
+	// Kind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
+	Kind MeetingPlanUnknownKind `json:"kind"`
+
+	// Question The question to ask in the room that would close this gap.
+	Question string `json:"question"`
+}
+
+// MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
+type MeetingPlanUnknownKind string
 
 // Money Money as integer minor-units + ISO-4217 currency. Never a float.
 type Money struct {
@@ -21890,6 +22276,15 @@ type MyAgentGrants struct {
 	Data []MyAgentGrant `json:"data"`
 }
 
+// NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
+type NewWeeklyPlanCommitment struct {
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+	Label string              `json:"label"`
+
+	// LinkedRecord Both halves or neither — a type with no id names nothing.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
+}
+
 // Notice One durable line addressed to one person, as the raising call returns it.
 type Notice struct {
 	// Body The coach's note. Absent when none was given.
@@ -22078,7 +22473,7 @@ type OfferListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
-// OfferTemplate A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like Quota/CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema.
+// OfferTemplate A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema.
 type OfferTemplate struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
 	CreatedAt  time.Time          `json:"created_at"`
@@ -22343,7 +22738,8 @@ type Organization struct {
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
 	IsAnchor *bool `json:"is_anchor,omitempty"`
 
-	// LastActivityAt When something last happened with this account — the newest `occurred_at` of an activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first linked activity. Sortable (DM-VOCAB-2).
+	// LastActivityAt When something last happened with this account — the newest `occurred_at` of a WORKSPACE-AUDIENCE activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	LegalName      *string    `json:"legal_name,omitempty"`
 
@@ -22443,8 +22839,11 @@ type Organization360 struct {
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
 	// LastOutboundAt When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
-	LastOutboundAt  *time.Time `json:"last_outbound_at,omitempty"`
-	ListMemberships *[]List    `json:"list_memberships,omitempty"`
+	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// Moment The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's people — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
+	// The schema is `PersonMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
+	Moment *PersonMoment `json:"moment,omitempty"`
 
 	// NextMeeting The next meeting with this account that has not happened yet, and who is in it.
 	//
@@ -25456,7 +25855,7 @@ type Project struct {
 	// Key The short handle a human writes in a subject line. Letter-led and bounded so it can never be a bare number, which would match dates, amounts and order numbers. Unique among LIVE projects; archiving frees it.
 	Key *string `json:"key,omitempty"`
 
-	// LastActivityAt Maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly.
+	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// MaskedFields The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
@@ -25630,7 +26029,7 @@ type Project360Rollups struct {
 	// ActivityCount Every live activity filed under the project.
 	ActivityCount int `json:"activity_count"`
 
-	// LastActivityAt The newest activity filed under the project; null when nothing is filed yet.
+	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
 	LastActivityAt *time.Time `json:"last_activity_at"`
 
 	// OpenCommitments Open tasks filed under the project, whole lifecycle.
@@ -26159,97 +26558,6 @@ type QuickCapturePersonResult struct {
 
 	// Person A contact. Mirrors the `person` table.
 	Person Person `json:"person"`
-}
-
-// Quota A per-owner or per-team revenue target for one period (RD-DDL-2). Exactly one of
-// owner_id/team_id is non-null (CHECK constraint) — never both, never neither;
-// createQuota/updateQuota document and enforce this (422 owner_xor_team_required).
-// target_minor is always human-set: no AI-guessed quota, no default, no
-// server-computed fallback (RD-PARAM-3). Deliberately carries no
-// source/captured_by/created_by provenance columns — unlike custom_field's
-// created_by (CF-T01), RD-DDL-2's column list has none. Attainment is a separate
-// read (getQuotaAttainment, RD-WIRE-3) — this schema never carries attainment
-// fields itself.
-type Quota struct {
-	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
-	CreatedAt  time.Time          `json:"created_at"`
-	Currency   string             `json:"currency"`
-	Id         openapi_types.UUID `json:"id"`
-
-	// OwnerId Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	PeriodEnd   openapi_types.Date  `json:"period_end"`
-	PeriodStart openapi_types.Date  `json:"period_start"`
-
-	// TargetMinor Human-set revenue target, integer minor units (RD-PARAM-3) — never an AI-guessed or server-computed field.
-	TargetMinor int64 `json:"target_minor"`
-
-	// TeamId Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-	TeamId    *openapi_types.UUID `json:"team_id,omitempty"`
-	UpdatedAt time.Time           `json:"updated_at"`
-
-	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
-	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
-	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
-	Version *RowVersion `json:"version,omitempty"`
-}
-
-// QuotaAttainment RD-WIRE-3 / RD-FORM-2 — server-computed attainment for one quota, decomposed for
-// "explain this number": attainment = Σ(closed-won base_value_minor in the quota's
-// period) ÷ target_minor, base-currency converted, in integer minor units. Never
-// client-summed — contributing_deals always sums to closed_won_minor. Rides as a
-// sub-resource of the quota (mirrors /organizations/{id}/hierarchy-rollup's
-// "computed read with decomposition" shape) rather than an inline field on Quota or
-// a GET ?include= expansion — chosen once, applied consistently; the plain Quota
-// response (list or single-get) never carries attainment fields. A failed or absent
-// computation is an honest error (getQuotaAttainment's 422 responses), never a
-// cached or invented figure (RD-AC-4).
-type QuotaAttainment struct {
-	// AsOfDate The date this attainment was computed.
-	AsOfDate openapi_types.Date `json:"as_of_date"`
-
-	// AttainmentPct closed_won_minor ÷ target_minor × 100 (RD-FORM-2). Uncapped raw value — e.g. 113 for the worked example — display capping (the ring visual stops at a full circle) is a RD-PARAM-4 UI concern, not this field's.
-	AttainmentPct float32 `json:"attainment_pct"`
-
-	// Band Server-computed display band (RD-PARAM-4): met >= 100%, accent 60-99%, behind < 60%. The client never recomputes this from raw attainment_pct.
-	Band QuotaAttainmentBand `json:"band"`
-
-	// ClosedWonMinor Σ base_value_minor over closed-won deals in the quota's period (RD-FORM-2).
-	ClosedWonMinor int64 `json:"closed_won_minor"`
-
-	// ContributingDeals Per-deal decomposition for "Explain This Number"; sums to closed_won_minor.
-	ContributingDeals []QuotaAttainmentDeal `json:"contributing_deals"`
-
-	// Currency The workspace base currency — every money figure here (closed_won_minor, target_minor, gap_minor) is denominated in it, NOT in Quota.currency.
-	Currency string `json:"currency"`
-
-	// GapMinor Signed gap to target — closed_won_minor minus target_minor (RD-FORM-2's worked example: +33.872,00 EUR once closed-won exceeds target); positive once attainment exceeds 100%, negative while short of target.
-	GapMinor int64 `json:"gap_minor"`
-
-	// PacePct Percent of the quota period elapsed at as_of_date (RD-PARAM-4 pace indicator): 0 before period_start, 100 at/after period_end, linear between. Carries period progress ONLY — comparing it against attainment_pct (ahead/behind pace) is the consumer's step, not encoded in this field.
-	PacePct float32            `json:"pace_pct"`
-	QuotaId openapi_types.UUID `json:"quota_id"`
-
-	// TargetMinor The BASE-CONVERTED target this attainment is measured against — Quota.target_minor converted into the workspace base currency at the as_of_date FX rate. It equals Quota.target_minor only when the quota is set in the base currency; a cross-currency quota's echo differs, so gap arithmetic never mixes currencies.
-	TargetMinor int64 `json:"target_minor"`
-}
-
-// QuotaAttainmentBand Server-computed display band (RD-PARAM-4): met >= 100%, accent 60-99%, behind < 60%. The client never recomputes this from raw attainment_pct.
-type QuotaAttainmentBand string
-
-// QuotaAttainmentDeal One row of RD-FORM-2's per-deal breakdown — a closed-won deal counted toward this quota's attainment.
-type QuotaAttainmentDeal struct {
-	// BaseValueMinor This deal's counted amount toward closed_won_minor (base currency, minor units).
-	BaseValueMinor int64              `json:"base_value_minor"`
-	DealId         openapi_types.UUID `json:"deal_id"`
-}
-
-// QuotaListResponse defines model for QuotaListResponse.
-type QuotaListResponse struct {
-	Data []Quota  `json:"data"`
-	Page PageInfo `json:"page"`
 }
 
 // RaiseNoticeRequest defines model for RaiseNoticeRequest.
@@ -27418,6 +27726,16 @@ type SetSignatureEnrichmentRequest struct {
 	Enabled *bool `json:"enabled"`
 }
 
+// ShareCaptureHoldHistoryResponse defines model for ShareCaptureHoldHistoryResponse.
+type ShareCaptureHoldHistoryResponse struct {
+	// Released How many of the caller's own imports stopped being held for this reason. Not the same
+	// as how many messages the workspace can now read: a message a colleague also holds
+	// stays limited, because the audience is the strictest answer across every seat that
+	// imported it. Zero means every message the caller's holds caught is held for some
+	// other reason too, or was captured before the product recorded more than one reason.
+	Released int `json:"released"`
+}
+
 // SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
 type SignInProvider struct {
 	// Enabled Whether this installation currently offers it on the login screen.
@@ -27764,10 +28082,137 @@ type Team struct {
 	UpdatedAt    *time.Time          `json:"updated_at,omitempty"`
 }
 
+// TeamBoard Who on the team is carrying what. One row per live teammate, plus the work that
+// reached nobody.
+type TeamBoard struct {
+	// AsOf The instant every count below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Members The live human seats sharing a live team with the caller, the caller included,
+	// ordered by display name. Never empty: a caller on no team is their own single
+	// row, because "only you" and "nobody" are different answers and the second reads
+	// as an outage.
+	Members []TeamBoardMember `json:"members"`
+
+	// Truncated True when a count was read to its work bound, so the real figure may be higher
+	// than what is shown. The waiting-customer read scans a bounded number of threads
+	// across the whole installation, so a busy installation reports a floor — and says
+	// so here rather than presenting a floor as a total.
+	Truncated bool `json:"truncated"`
+
+	// Unassigned Three counts of work somebody owes, all read under the CALLER's visibility rather
+	// than the teammate's — so this is how much of their load the reader can see.
+	Unassigned TeamBoardCounts `json:"unassigned"`
+}
+
+// TeamBoardCounts Three counts of work somebody owes, all read under the CALLER's visibility rather
+// than the teammate's — so this is how much of their load the reader can see.
+type TeamBoardCounts struct {
+	// AtRisk Open deals gone quiet or already past their expected close date.
+	AtRisk int `json:"at_risk"`
+
+	// Overdue Open tasks whose due moment has already passed.
+	Overdue int `json:"overdue"`
+
+	// Waiting Customers who wrote and have had no reply, attributed by the record the thread is
+	// filed under: deal, then lead, then person, then organization, first owner found.
+	// The same eligibility the ranked queue applies, so the board and the day agree.
+	Waiting int `json:"waiting"`
+}
+
+// TeamBoardMember One teammate and the work they are answerable for.
+type TeamBoardMember struct {
+	// Counts Three counts of work somebody owes, all read under the CALLER's visibility rather
+	// than the teammate's — so this is how much of their load the reader can see.
+	Counts TeamBoardCounts `json:"counts"`
+
+	// DisplayName The teammate, as the roster names them.
+	DisplayName string `json:"display_name"`
+
+	// UserId Whose row this is. It is what `GET /worklist?owner=` takes, which is the
+	// drill-down the board routes to.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // TeamListResponse defines model for TeamListResponse.
 type TeamListResponse struct {
 	Data []Team   `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// TeamWeeklyCounts defines model for TeamWeeklyCounts.
+type TeamWeeklyCounts struct {
+	CommitmentsDue        int `json:"commitments_due"`
+	CommitmentsKept       int `json:"commitments_kept"`
+	DealsLost             int `json:"deals_lost"`
+	DealsWon              int `json:"deals_won"`
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+	LeadsBreached         int `json:"leads_breached"`
+	LeadsRouted           int `json:"leads_routed"`
+	MeetingsHeld          int `json:"meetings_held"`
+	MeetingsWithNextStep  int `json:"meetings_with_next_step"`
+
+	// RepsCounted Members whose week was read and totalled.
+	RepsCounted int `json:"reps_counted"`
+}
+
+// TeamWeeklyRep One member's week as their lead reads it, with the one thing to raise.
+type TeamWeeklyRep struct {
+	CommitmentsDue  int `json:"commitments_due"`
+	CommitmentsKept int `json:"commitments_kept"`
+	DealsWon        int `json:"deals_won"`
+
+	// DisplayName What they were called that week — frozen, and it survives the seat being deleted.
+	DisplayName string `json:"display_name"`
+
+	// FocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
+	// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
+	// outranks any metric, because walking past a request to raise a number is the
+	// fastest way to teach them not to ask.
+	FocusKind TeamWeeklyRepFocusKind `json:"focus_kind"`
+
+	// FocusLabel The focus in words, composed from the stored figures — never model-written, so it
+	// cannot say something the snapshot does not hold.
+	FocusLabel string `json:"focus_label"`
+
+	// HelpRequested Commitments they asked for help on.
+	HelpRequested int                `json:"help_requested"`
+	LeadsBreached int                `json:"leads_breached"`
+	MeetingsHeld  int                `json:"meetings_held"`
+	UserId        openapi_types.UUID `json:"user_id"`
+}
+
+// TeamWeeklyRepFocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
+// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
+// outranks any metric, because walking past a request to raise a number is the
+// fastest way to teach them not to ask.
+type TeamWeeklyRepFocusKind string
+
+// TeamWeeklyReview One team's week, as it was measured when the week closed.
+type TeamWeeklyReview struct {
+	AsOf           time.Time          `json:"as_of"`
+	Counts         TeamWeeklyCounts   `json:"counts"`
+	GeneratedAt    time.Time          `json:"generated_at"`
+	Id             openapi_types.UUID `json:"id"`
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
+	// be converted — summing only the ones that did would be a confident number quietly
+	// missing a rep.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// Reps Who was on the team that week — the frozen membership, which a join against the
+	// live team could never answer.
+	Reps []TeamWeeklyRep `json:"reps"`
+
+	// RepsUnread Members whose week could not be read at all. Zero is the claim that every member's
+	// week was counted.
+	RepsUnread *int               `json:"reps_unread,omitempty"`
+	TeamId     openapi_types.UUID `json:"team_id"`
+
+	// TeamName What the team was called that week. Frozen, so a team renamed in June does not
+	// relabel March's snapshot.
+	TeamName string `json:"team_name"`
 }
 
 // TechnicalEnrichLane What one public source last did.
@@ -27978,7 +28423,7 @@ type UpdateCaptureSettingsRequest struct {
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
 	SharedPostureAllowed *bool `json:"shared_posture_allowed,omitempty"`
 
-	// SignatureEnrich Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it.
+	// SignatureEnrich Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.
 	SignatureEnrich *bool `json:"signature_enrich,omitempty"`
 }
 
@@ -28328,16 +28773,6 @@ type UpdateProjectRequest struct {
 // UpdateProviderConnectionRequest defines model for UpdateProviderConnectionRequest.
 type UpdateProviderConnectionRequest struct {
 	Configuration ProviderConfigurationPatch `json:"configuration"`
-}
-
-// UpdateQuotaRequest Merge-PATCH (API-CONV-1). Re-validates owner-XOR-team after the merge is applied — patching the row into a both-set or neither-set state is refused with the same 422 owner_xor_team_required shape as createQuota, not silently accepted. Switching a quota between owner- and team-scoped is archive-and-recreate: merge-PATCH cannot express the null clear (omitted and null are the same wire shape), so a PATCH can only reassign within the side the row already carries.
-type UpdateQuotaRequest struct {
-	Currency    *string             `json:"currency,omitempty"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	PeriodEnd   *openapi_types.Date `json:"period_end,omitempty"`
-	PeriodStart *openapi_types.Date `json:"period_start,omitempty"`
-	TargetMinor *int64              `json:"target_minor,omitempty"`
-	TeamId      *openapi_types.UUID `json:"team_id,omitempty"`
 }
 
 // UpdateRelationshipRequest defines model for UpdateRelationshipRequest.
@@ -28872,6 +29307,70 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
+// WeeklyReview beside it.
+type WeeklyPlan struct {
+	Commitments []WeeklyPlanCommitment `json:"commitments"`
+	Id          openapi_types.UUID     `json:"id"`
+
+	// LocalWeekStart The Monday of the week planned, in the installation reporting timezone.
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Status `closed` once the weekly job has settled the week and frozen its outcome into the
+	// review. A closed plan stops accepting edits, which is what keeps the review's
+	// counts true.
+	Status WeeklyPlanStatus `json:"status"`
+}
+
+// WeeklyPlanStatus `closed` once the weekly job has settled the week and frozen its outcome into the
+// review. A closed plan stops accepting edits, which is what keeps the review's
+// counts true.
+type WeeklyPlanStatus string
+
+// WeeklyPlanCommitment One thing a rep said they would do this week.
+type WeeklyPlanCommitment struct {
+	CompletedAt *time.Time          `json:"completed_at,omitempty"`
+	DueOn       *openapi_types.Date `json:"due_on,omitempty"`
+
+	// HelpRequested What the rep needs from their lead, absent when they have asked nothing.
+	HelpRequested *string            `json:"help_requested,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	Label         string             `json:"label"`
+
+	// LinkedRecord The record this is about, when it names one. Carried as a type and an id and
+	// NEVER resolved here — the client asks the record's own endpoint, so a record the
+	// reader may not see simply does not resolve, and a deleted one stops resolving
+	// without erasing the commitment that named it.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
+
+	// ManagerResponse What the lead answered, absent until they have.
+	ManagerResponse *string             `json:"manager_response,omitempty"`
+	ManagerUserId   *openapi_types.UUID `json:"manager_user_id,omitempty"`
+
+	// Position The order the rep put them in.
+	Position    int        `json:"position"`
+	RespondedAt *time.Time `json:"responded_at,omitempty"`
+
+	// State `missed` is written by the week's close over a commitment left open; a rep
+	// settles their own as done or dropped. Dropped counts as neither owed nor kept:
+	// deciding a thing is not worth doing is not failing to do it.
+	State WeeklyPlanCommitmentState `json:"state"`
+}
+
+// WeeklyPlanCommitmentState `missed` is written by the week's close over a commitment left open; a rep
+// settles their own as done or dropped. Dropped counts as neither owed nor kept:
+// deciding a thing is not worth doing is not failing to do it.
+type WeeklyPlanCommitmentState string
+
+// WeeklyPlanLink defines model for WeeklyPlanLink.
+type WeeklyPlanLink struct {
+	Id   openapi_types.UUID `json:"id"`
+	Type WeeklyPlanLinkType `json:"type"`
+}
+
+// WeeklyPlanLinkType defines model for WeeklyPlanLink.Type.
+type WeeklyPlanLinkType string
+
 // WeeklyReview One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
 // which is why they are stored rather than recomputed.
 type WeeklyReview struct {
@@ -28903,6 +29402,25 @@ type WeeklyReview struct {
 	// It adds nothing: every fact it may state is already in the counts and the lines
 	// beside it, which is what makes the whole lane safe to lose.
 	Narrative *string `json:"narrative,omitempty"`
+
+	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
+	// applied when the review was written.
+	//
+	// ABSENT when the week held a deal that could not be converted — an open deal freezes no
+	// rate, so a currency with no usable rate makes the whole figure unanswerable. A total
+	// covering three of four deals would be a confident number that is quietly short, and
+	// nothing is ever converted at an invented rate of 1. Absent is also the answer when the
+	// installation names no base currency.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// Prior The same rep's previous review, so a reader can see what CHANGED rather than only what
+	// happened. Absent for their first week.
+	//
+	// The counts of a frozen earlier row, not a stored delta: two frozen rows and one
+	// subtraction cannot disagree, and a stored delta could. It is their most recent earlier
+	// review rather than "last week" — a rep with a gap has a previous week that is not seven
+	// days back.
+	Prior *WeeklyReviewPrior `json:"prior,omitempty"`
 }
 
 // WeeklyReviewCounts defines model for WeeklyReviewCounts.
@@ -28912,11 +29430,40 @@ type WeeklyReviewCounts struct {
 
 	// BriefItemsDismissed And dismissed.
 	BriefItemsDismissed int `json:"brief_items_dismissed"`
-	DealsLost           int `json:"deals_lost"`
+
+	// CommitmentsDue Commitments the rep stood by in the week's plan. A dropped commitment is in
+	// neither this nor `commitments_kept`: deciding on Wednesday that a thing is not
+	// worth doing is not failing to do it, and counting it against a rep teaches them
+	// to leave dead commitments open rather than say so.
+	CommitmentsDue int `json:"commitments_due"`
+
+	// CommitmentsKept And how many were done.
+	CommitmentsKept int `json:"commitments_kept"`
+	DealsLost       int `json:"deals_lost"`
 
 	// DealsMoved Deals that changed stage, excluding those that closed.
 	DealsMoved int `json:"deals_moved"`
 	DealsWon   int `json:"deals_won"`
+
+	// LeadsAnsweredInTarget Of those, the ones answered before the first-response target ran out. Read from the
+	// stamps the SLA writer maintained at the time, never recomputed from today's policy —
+	// a week is judged by the target that applied to it.
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+
+	// LeadsBreached And the ones whose target ran out.
+	LeadsBreached int `json:"leads_breached"`
+
+	// LeadsRouted Inbound leads routed to this rep during the week.
+	LeadsRouted int `json:"leads_routed"`
+
+	// MeetingsHeld Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+	// week can be judged by, and counting it would credit a conversation that never occurred.
+	MeetingsHeld int `json:"meetings_held"`
+
+	// MeetingsWithNextStep Of those, the ones that left a task behind against a record the meeting was also filed
+	// under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
+	// is the pattern this figure exists to make visible.
+	MeetingsWithNextStep int `json:"meetings_with_next_step"`
 
 	// ProposalsAccepted Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
 	// `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
@@ -28965,6 +29512,34 @@ type WeeklyReviewIndex struct {
 	Weeks []openapi_types.Date `json:"weeks"`
 }
 
+// WeeklyReviewPipeline Money the week added to and took out of the pipeline, in one currency.
+type WeeklyReviewPipeline struct {
+	// CreatedMinor Value of the deals opened in the week, converted at the latest rate on or before the
+	// week's end and frozen here.
+	CreatedMinor int64 `json:"created_minor"`
+
+	// Currency The currency the three figures are in, stored beside them: the installation's base
+	// currency is an operator-mutable setting, and re-reading it later would re-label old
+	// reviews with a currency their numbers were never in.
+	Currency string `json:"currency"`
+
+	// LostMinor The same, for deals lost.
+	LostMinor int64 `json:"lost_minor"`
+
+	// WonMinor Value of the deals won in the week, at each deal's own close-time rate — the honest
+	// figure for money that has already moved.
+	WonMinor int64 `json:"won_minor"`
+}
+
+// WeeklyReviewPrior The week before this one, for comparison.
+type WeeklyReviewPrior struct {
+	Counts         WeeklyReviewCounts `json:"counts"`
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Pipeline Absent under the same rule as the current week's.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+}
+
 // Worklist The rep's day, ranked. One list rather than fourteen lanes, because a reader
 // cannot compare the position of one lane with another to work out that an item
 // several screens down matters more.
@@ -28994,6 +29569,25 @@ type Worklist struct {
 
 	// Filter The narrowing this read applied.
 	Filter *WorklistFilter `json:"filter,omitempty"`
+
+	// NextCursor Send this back as `cursor` to continue past the last row of this page. See that
+	// parameter for what a walk does and does not guarantee.
+	//
+	// ABSENT MEANS THE WALK IS OVER — nothing was left behind this page. It is
+	// deliberately not minted on a final page: a cursor there invites one more request
+	// that can only answer empty, and a client walking until the cursor disappears
+	// would never stop.
+	//
+	// Absent is therefore a claim, not a silence, and it is the one this field must
+	// never make wrongly. It is a claim about THIS READ of the day: work that arrives
+	// afterwards, or that overtakes rows already handed out, appears on the next read
+	// rather than extending a finished walk.
+	//
+	// `reach` and `counts` answer a different question — how deep each SOURCE was read,
+	// which is a bound on work rather than the end of a page — so a walk that has ended
+	// can still sit above sources that were cut short, and both statements are true at
+	// once.
+	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// Queue Everything actionable, best-first. The order is the product of this endpoint.
 	Queue []WorklistItem `json:"queue"`
@@ -29679,6 +30273,10 @@ type ListActivitiesParams struct {
 
 	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
+
+	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+	// Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified. `false` asks for nothing and is accepted in either mode.
+	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
 }
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
@@ -29923,6 +30521,12 @@ type ResetDataJSONBody struct {
 type ListAiModelRatesParams struct {
 	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
 	ModelId  *string `form:"model_id,omitempty" json:"model_id,omitempty"`
+}
+
+// ListAvailableModelsParams defines parameters for ListAvailableModels.
+type ListAvailableModelsParams struct {
+	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default.
+	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
 }
 
 // ListAiCallsParams defines parameters for ListAiCalls.
@@ -30308,6 +30912,11 @@ type DecideCommissionEntryParams struct {
 type GetCompanyContextParams struct {
 	// Scopes Comma-separated context scopes. Omit for the bounded default set.
 	Scopes *string `form:"scopes,omitempty" json:"scopes,omitempty"`
+}
+
+// UploadCompanyLogoMultipartBody defines parameters for UploadCompanyLogo.
+type UploadCompanyLogoMultipartBody struct {
+	File openapi_types.File `json:"file"`
 }
 
 // StartCompanySiteReadParams defines parameters for StartCompanySiteRead.
@@ -31397,33 +32006,6 @@ type ExplainLeadScoreParams struct {
 	// History Return the retained score series instead of the current explanation.
 	History *bool `form:"history,omitempty" json:"history,omitempty"`
 
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
-// ListListsParams defines parameters for ListLists.
-type ListListsParams struct {
-	EntityType *ListListsParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
-
-	// IncludeArchived Include soft-deleted (archived) rows. Default false.
-	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
-}
-
-// ListListsParamsEntityType defines parameters for ListLists.
-type ListListsParamsEntityType string
-
-// ListListMembersParams defines parameters for ListListMembers.
-type ListListMembersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
@@ -33106,82 +33688,6 @@ type ListBuyerRoomThreadsParams struct {
 	DocumentId *openapi_types.UUID `form:"document_id,omitempty" json:"document_id,omitempty"`
 }
 
-// ListQuotasParams defines parameters for ListQuotas.
-type ListQuotasParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
-	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
-	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
-	// accepted multi-field spelling; any other comma-separated multi-field spec returns
-	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-	// enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-	// columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-	// an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
-	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
-
-	// IncludeArchived Include soft-deleted (archived) rows. Default false.
-	IncludeArchived *IncludeArchived    `form:"include_archived,omitempty" json:"include_archived,omitempty"`
-	OwnerId         *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
-	TeamId          *openapi_types.UUID `form:"team_id,omitempty" json:"team_id,omitempty"`
-}
-
-// CreateQuotaParams defines parameters for CreateQuota.
-type CreateQuotaParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// UpdateQuotaParams defines parameters for UpdateQuota.
-type UpdateQuotaParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
-	// the last-seen entity `version`. If the row's current `version` differs, the write is
-	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
-	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
-	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
-	IfMatch *IfMatch `json:"If-Match,omitempty"`
-}
-
 // ListRecordGrantsParams defines parameters for ListRecordGrants.
 type ListRecordGrantsParams struct {
 	RecordType  *ListRecordGrantsParamsRecordType  `form:"record_type,omitempty" json:"record_type,omitempty"`
@@ -33998,9 +34504,37 @@ type ListWebhookDeliveriesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// AskForWeeklyPlanHelpJSONBody defines parameters for AskForWeeklyPlanHelp.
+type AskForWeeklyPlanHelpJSONBody struct {
+	HelpRequested string `json:"help_requested"`
+}
+
+// AnswerWeeklyPlanCommitmentJSONBody defines parameters for AnswerWeeklyPlanCommitment.
+type AnswerWeeklyPlanCommitmentJSONBody struct {
+	ManagerResponse string `json:"manager_response"`
+}
+
+// SetWeeklyPlanCommitmentStateJSONBody defines parameters for SetWeeklyPlanCommitmentState.
+type SetWeeklyPlanCommitmentStateJSONBody struct {
+	State SetWeeklyPlanCommitmentStateJSONBodyState `json:"state"`
+}
+
+// SetWeeklyPlanCommitmentStateJSONBodyState defines parameters for SetWeeklyPlanCommitmentState.
+type SetWeeklyPlanCommitmentStateJSONBodyState string
+
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
+	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
+}
+
+// GetTeamWeeklyReviewParams defines parameters for GetTeamWeeklyReview.
+type GetTeamWeeklyReviewParams struct {
+	// Team Which team's week to read.
+	Team openapi_types.UUID `form:"team" json:"team"`
+
+	// Week The Monday of the week wanted. Omitted means the most recent snapshot this team
+	// has.
 	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
 }
 
@@ -34019,8 +34553,15 @@ type GetWorklistParams struct {
 	// it at any tier: nothing in it belongs to a colleague, which is what unassigned
 	// means. It exists because `mine` is exact — a task with no assignee is no
 	// longer folded into every reader's own queue, so it needs a queue of its own or
-	// the product would have stopped mentioning it. Tasks only: a message has no
-	// assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
+	// the product would have stopped mentioning it.
+	//
+	// It carries unanswered mail too, and that is the case it matters most for. A
+	// message has no assignee, so its owner is the owner of the record it is filed
+	// under — deal, then lead, then person, then organization, first owner found. A
+	// thread no owned record attributes to anybody is the customer nobody is looking
+	// at, which is exactly what this queue is opened to find. Such a message stays
+	// reachable from `mine` as well, on the ground that an unowned customer writing
+	// in is everybody's until somebody takes them.
 	//
 	// WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
 	// going quiet, meetings and duplicate pairs are read under the caller's row
@@ -34037,6 +34578,64 @@ type GetWorklistParams struct {
 
 	// Limit How many ranked items to return.
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Where to continue a walk, from a prior response's `next_cursor`. Omitted starts at
+	// the top, which is what every reader opening their day wants.
+	//
+	// NOT the shared keyset cursor the CRUD lists use, and the difference is why this
+	// endpoint declares its own. Those walk rows a database already ordered, so their
+	// token carries a sort key and the next page is a WHERE clause. This queue has no
+	// such column: it assembles from a dozen lanes and ranks them by a comparator
+	// reading facts no table holds — whether a wait is crowded, what a deal is worth in
+	// base currency, which band a row landed in. So the token carries a POSITION in that
+	// ranking, and the next page re-assembles the day, ranks it the same way, and starts
+	// there.
+	//
+	// It encodes the `scope`, `filter` and `owner` it was minted under, NORMALISED, so
+	// that two spellings of one question share a cursor: an omitted `filter` and
+	// `filter=all` weigh the same candidates, and naming yourself as `owner` is the
+	// question the default already answers. Sending a cursor alongside a genuinely
+	// different scope, filter or owner returns `422 code: cursor_param_mismatch` rather
+	// than continuing into another question — page two of your own tasks silently
+	// becoming the team's deals is what that prevents, and nothing in the response would
+	// have said so. `limit` is deliberately NOT fingerprinted: it decides how many rows
+	// a page carries, not which rows exist, so changing it mid-walk is legitimate.
+	//
+	// A token that does not decode returns `422 code: malformed_cursor`. The token is
+	// opaque, NOT authenticated: it is base64 of a small JSON object and a caller who
+	// studies it can construct one. That grants nothing. A cursor only chooses where to
+	// resume inside a page that is re-assembled from scratch under the caller's own
+	// principal, so every row it can reach is one the caller could already read, and no
+	// forged token widens scope or row visibility.
+	//
+	// WHAT A WALK GUARANTEES, and what it does not. This is live work, so the day moves
+	// between pages: a rep answers a message, a deal closes, a colleague takes a task.
+	//
+	// Guaranteed: the walk TERMINATES, and over a day that does not move it reaches
+	// every row exactly once. The offset advances on every page and the candidate set is
+	// bounded, so no arrangement of arrivals, answers and reprioritisations makes a
+	// client paging to exhaustion loop.
+	//
+	// Not guaranteed: a stable snapshot, which a set re-assembled and re-ranked on every
+	// read cannot offer. One consequence, and it is the whole cost of this design: A ROW
+	// THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO READS IS SERVED TWICE OR NOT AT ALL ON
+	// THIS WALK. A deal that turns urgent moves up past where you have got to; one that
+	// is answered lets everything below it move up by one.
+	//
+	// Such a row is not lost from the product — the next read of the queue ranks it
+	// afresh and shows it — so treat a walk as a way to reach a backlog you already know
+	// is there, not as a transaction over it. There is no way to ask for the whole day
+	// at one instant: `limit` stops at 100 and a single category can hold more than that,
+	// because the sources are read to their own bounds well past a page (the decision
+	// lane alone weighs 200). `counts` is what says how much is behind the page.
+	//
+	// The alternative was a token naming the last row it handed you, which is the
+	// obvious design and is worse here. When that row is answered between pages, or
+	// sinks to the end of the ranking, "everything after it" is empty and the walk
+	// reports itself finished while work is still owed. A queue whose purpose is that
+	// work is not forgotten cannot fail that way, so it accepts the boundary case above
+	// instead.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Owner Whose queue to answer, when it is somebody else's. A manager reading a team
 	// exception is told which rep it belongs to, and the next question is always
@@ -34214,6 +34813,9 @@ type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
 // PutCompanyJSONRequestBody defines body for PutCompany for application/json ContentType.
 type PutCompanyJSONRequestBody = CompanyProfileInput
 
+// UploadCompanyLogoMultipartRequestBody defines body for UploadCompanyLogo for multipart/form-data ContentType.
+type UploadCompanyLogoMultipartRequestBody UploadCompanyLogoMultipartBody
+
 // StartCompanySiteReadJSONRequestBody defines body for StartCompanySiteRead for application/json ContentType.
 type StartCompanySiteReadJSONRequestBody = StartCompanySiteReadRequest
 
@@ -34334,8 +34936,8 @@ type CreateImportRunJSONRequestBody = CreateImportRunRequest
 // UploadImportSourceMultipartRequestBody defines body for UploadImportSource for multipart/form-data ContentType.
 type UploadImportSourceMultipartRequestBody UploadImportSourceMultipartBody
 
-// SetGoogleAppJSONRequestBody defines body for SetGoogleApp for application/json ContentType.
-type SetGoogleAppJSONRequestBody = GoogleAppInput
+// SetOauthAppJSONRequestBody defines body for SetOauthApp for application/json ContentType.
+type SetOauthAppJSONRequestBody = ConnectorAppInput
 
 // UpdateInstallationSettingsJSONRequestBody defines body for UpdateInstallationSettings for application/json ContentType.
 type UpdateInstallationSettingsJSONRequestBody = UpdateInstallationSettingsRequest
@@ -34397,14 +34999,11 @@ type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
 // PromoteLeadJSONRequestBody defines body for PromoteLead for application/json ContentType.
 type PromoteLeadJSONRequestBody = PromoteLeadRequest
 
-// CreateListJSONRequestBody defines body for CreateList for application/json ContentType.
-type CreateListJSONRequestBody = CreateListRequest
-
-// AddListMemberJSONRequestBody defines body for AddListMember for application/json ContentType.
-type AddListMemberJSONRequestBody = AddListMemberRequest
-
 // SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
 type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
+
+// SaveMyBriefDeliveryJSONRequestBody defines body for SaveMyBriefDelivery for application/json ContentType.
+type SaveMyBriefDeliveryJSONRequestBody = BriefDelivery
 
 // SaveMyEmailSignatureJSONRequestBody defines body for SaveMyEmailSignature for application/json ContentType.
 type SaveMyEmailSignatureJSONRequestBody = SaveEmailSignatureRequest
@@ -34604,12 +35203,6 @@ type OpenBuyerRoomThreadJSONRequestBody = OpenDealRoomThreadRequest
 // ReplyBuyerRoomThreadJSONRequestBody defines body for ReplyBuyerRoomThread for application/json ContentType.
 type ReplyBuyerRoomThreadJSONRequestBody = PostDealRoomCommentRequest
 
-// CreateQuotaJSONRequestBody defines body for CreateQuota for application/json ContentType.
-type CreateQuotaJSONRequestBody = CreateQuotaRequest
-
-// UpdateQuotaJSONRequestBody defines body for UpdateQuota for application/json ContentType.
-type UpdateQuotaJSONRequestBody = UpdateQuotaRequest
-
 // CreateRecordGrantJSONRequestBody defines body for CreateRecordGrant for application/json ContentType.
 type CreateRecordGrantJSONRequestBody = CreateRecordGrantRequest
 
@@ -34717,6 +35310,18 @@ type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
 
 // UpdateWebhookSubscriptionJSONRequestBody defines body for UpdateWebhookSubscription for application/json ContentType.
 type UpdateWebhookSubscriptionJSONRequestBody = UpdateWebhookSubscriptionRequest
+
+// AddWeeklyPlanCommitmentJSONRequestBody defines body for AddWeeklyPlanCommitment for application/json ContentType.
+type AddWeeklyPlanCommitmentJSONRequestBody = NewWeeklyPlanCommitment
+
+// AskForWeeklyPlanHelpJSONRequestBody defines body for AskForWeeklyPlanHelp for application/json ContentType.
+type AskForWeeklyPlanHelpJSONRequestBody AskForWeeklyPlanHelpJSONBody
+
+// AnswerWeeklyPlanCommitmentJSONRequestBody defines body for AnswerWeeklyPlanCommitment for application/json ContentType.
+type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBody
+
+// SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
+type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
 
 // Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
 // element and whether it was found
@@ -42469,6 +43074,9 @@ type ServerInterface interface {
 	// Enqueue an async model-cost refresh (stages 🟡 proposals).
 	// (POST /ai-model-rates/propose-refresh)
 	ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request)
+	// What one vendor says it serves today (admin/ops).
+	// (GET /ai/available-models/{provider})
+	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -42664,6 +43272,9 @@ type ServerInterface interface {
 	// Keep one party's mail to the people on it.
 	// (POST /capture/counterparty-holds)
 	CreateCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request)
+	// Re-open the mail the caller's counterparty holds already caught.
+	// (POST /capture/counterparty-holds/share-history)
+	ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request)
 	// Lift a counterparty hold.
 	// (DELETE /capture/counterparty-holds/{id})
 	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
@@ -42763,6 +43374,12 @@ type ServerInterface interface {
 	// Get the effective server-side company-context rollout capability.
 	// (GET /company/context/capabilities)
 	GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request)
+	// Take the installation's own company mark off the record.
+	// (DELETE /company/logo)
+	DeleteCompanyLogo(w http.ResponseWriter, r *http.Request)
+	// Replace the installation's own company mark with an uploaded image.
+	// (POST /company/logo)
+	UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
 	// Start an optional progressive website read before the anchor company exists.
 	// (POST /company/site-reads)
 	StartCompanySiteRead(w http.ResponseWriter, r *http.Request, params StartCompanySiteReadParams)
@@ -43039,18 +43656,18 @@ type ServerInterface interface {
 	// Reverse a completed CSV import run.
 	// (POST /imports/{id}/undo)
 	UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Remove the installation's Google OAuth app (admin/ops).
-	// (DELETE /installation/google-app)
-	DeleteGoogleApp(w http.ResponseWriter, r *http.Request)
-	// Whether this installation has a Google OAuth app, and which one.
-	// (GET /installation/google-app)
-	GetGoogleApp(w http.ResponseWriter, r *http.Request)
-	// Store the installation's Google OAuth app (admin/ops).
-	// (PUT /installation/google-app)
-	SetGoogleApp(w http.ResponseWriter, r *http.Request)
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
+	// Remove one vendor's OAuth app (admin/ops).
+	// (DELETE /installation/oauth-apps/{provider})
+	DeleteOauthApp(w http.ResponseWriter, r *http.Request, provider string)
+	// Whether this installation has one vendor's OAuth app, and which one.
+	// (GET /installation/oauth-apps/{provider})
+	GetOauthApp(w http.ResponseWriter, r *http.Request, provider string)
+	// Store one vendor's OAuth app for this installation (admin/ops).
+	// (PUT /installation/oauth-apps/{provider})
+	SetOauthApp(w http.ResponseWriter, r *http.Request, provider string)
 	// The installation's own settings.
 	// (GET /installation/settings)
 	GetInstallationSettings(w http.ResponseWriter, r *http.Request)
@@ -43171,24 +43788,6 @@ type ServerInterface interface {
 	// Explain This Score — the weighted-factor decomposition behind a lead's score.
 	// (GET /leads/{id}/score)
 	ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams)
-	// List lists (static + dynamic segments).
-	// (GET /lists)
-	ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams)
-	// Create a list (static set or dynamic segment).
-	// (POST /lists)
-	CreateList(w http.ResponseWriter, r *http.Request)
-	// Archive a list.
-	// (DELETE /lists/{id})
-	ArchiveList(w http.ResponseWriter, r *http.Request, id Id)
-	// Get a list by id.
-	// (GET /lists/{id})
-	GetList(w http.ResponseWriter, r *http.Request, id Id)
-	// List a list's members — explicit rows for a static list, or the live filter evaluation for a dynamic segment.
-	// (GET /lists/{id}/members)
-	ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams)
-	// Add a member to a static list.
-	// (POST /lists/{id}/members)
-	AddListMember(w http.ResponseWriter, r *http.Request, id Id)
 	// Get the current authenticated principal (user or agent).
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
@@ -43201,6 +43800,12 @@ type ServerInterface interface {
 	// What the AI is doing for THIS person, right now and lately.
 	// (GET /me/ai-activity)
 	GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams)
+	// What the product may send you about your day and your week.
+	// (GET /me/brief-delivery)
+	GetMyBriefDelivery(w http.ResponseWriter, r *http.Request)
+	// Choose what the product may send you.
+	// (PUT /me/brief-delivery)
+	SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request)
 	// The sign-off appended to mail you send.
 	// (GET /me/email-signature)
 	GetMyEmailSignature(w http.ResponseWriter, r *http.Request)
@@ -43714,24 +44319,6 @@ type ServerInterface interface {
 	// Reply in a thread as the buyer.
 	// (POST /public/rooms/threads/{threadId}/comments)
 	ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID)
-	// List quotas (cursor-paginated).
-	// (GET /quotas)
-	ListQuotas(w http.ResponseWriter, r *http.Request, params ListQuotasParams)
-	// Create a quota (owner XOR team revenue target for one period).
-	// (POST /quotas)
-	CreateQuota(w http.ResponseWriter, r *http.Request, params CreateQuotaParams)
-	// Archive (soft-delete) a quota.
-	// (DELETE /quotas/{id})
-	ArchiveQuota(w http.ResponseWriter, r *http.Request, id Id)
-	// Get a quota by id.
-	// (GET /quotas/{id})
-	GetQuota(w http.ResponseWriter, r *http.Request, id Id)
-	// Update a quota (partial).
-	// (PATCH /quotas/{id})
-	UpdateQuota(w http.ResponseWriter, r *http.Request, id Id, params UpdateQuotaParams)
-	// Server-computed attainment for this quota (RD-WIRE-3), decomposed per closed-won deal.
-	// (GET /quotas/{id}/attainment)
-	GetQuotaAttainment(w http.ResponseWriter, r *http.Request, id Id)
 	// List manual per-record grants, filtered by record or by subject (A52/ADR-0039).
 	// (GET /record-grants)
 	ListRecordGrants(w http.ResponseWriter, r *http.Request, params ListRecordGrantsParams)
@@ -44014,15 +44601,42 @@ type ServerInterface interface {
 	// Rotate a subscription's signing secret (returns the new secret once).
 	// (POST /webhook-subscriptions/{id}/rotate-secret)
 	RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id Id)
+	// Write one thing onto this week's plan.
+	// (POST /weekly-plans/commitments)
+	AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request)
+	// Say what you need from your lead on one commitment.
+	// (PUT /weekly-plans/commitments/{id}/help)
+	AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Answer a teammate's request for help.
+	// (PUT /weekly-plans/commitments/{id}/response)
+	AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Mark one commitment done, reopen it, or drop it.
+	// (PUT /weekly-plans/commitments/{id}/state)
+	SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The caller's plan for this week — what they said they would do.
+	// (GET /weekly-plans/current)
+	GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// Open a plan for this week.
+	// (POST /weekly-plans/current)
+	StartWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// A teammate's plan for this week, for their lead.
+	// (GET /weekly-plans/{owner_id}/current)
+	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID)
 	// The weeks the acting rep has a review for, newest first.
 	// (GET /weekly-reviews)
 	ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
 	// The acting rep's most recent weekly review, or a named week's.
 	// (GET /weekly-reviews/latest)
 	GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request, params GetLatestWeeklyReviewParams)
+	// A team's week, frozen — what each member's week came to, and the one thing to raise.
+	// (GET /weekly-reviews/team)
+	GetTeamWeeklyReview(w http.ResponseWriter, r *http.Request, params GetTeamWeeklyReviewParams)
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
+	// One row per teammate — who is carrying what, so a lead can see where to help.
+	// (GET /worklist/team)
+	GetTeamBoard(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -44188,6 +44802,12 @@ func (_ Unimplemented) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 // Enqueue an async model-cost refresh (stages 🟡 proposals).
 // (POST /ai-model-rates/propose-refresh)
 func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What one vendor says it serves today (admin/ops).
+// (GET /ai/available-models/{provider})
+func (_ Unimplemented) ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -44581,6 +45201,12 @@ func (_ Unimplemented) CreateCaptureCounterpartyHold(w http.ResponseWriter, r *h
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Re-open the mail the caller's counterparty holds already caught.
+// (POST /capture/counterparty-holds/share-history)
+func (_ Unimplemented) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Lift a counterparty hold.
 // (DELETE /capture/counterparty-holds/{id})
 func (_ Unimplemented) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id) {
@@ -44776,6 +45402,18 @@ func (_ Unimplemented) GetCompanyContext(w http.ResponseWriter, r *http.Request,
 // Get the effective server-side company-context rollout capability.
 // (GET /company/context/capabilities)
 func (_ Unimplemented) GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take the installation's own company mark off the record.
+// (DELETE /company/logo)
+func (_ Unimplemented) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the installation's own company mark with an uploaded image.
+// (POST /company/logo)
+func (_ Unimplemented) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -45331,27 +45969,27 @@ func (_ Unimplemented) UndoImportRun(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Remove the installation's Google OAuth app (admin/ops).
-// (DELETE /installation/google-app)
-func (_ Unimplemented) DeleteGoogleApp(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Whether this installation has a Google OAuth app, and which one.
-// (GET /installation/google-app)
-func (_ Unimplemented) GetGoogleApp(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Store the installation's Google OAuth app (admin/ops).
-// (PUT /installation/google-app)
-func (_ Unimplemented) SetGoogleApp(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // The installation's entitlement and seat usage (admin/ops).
 // (GET /installation/license)
 func (_ Unimplemented) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove one vendor's OAuth app (admin/ops).
+// (DELETE /installation/oauth-apps/{provider})
+func (_ Unimplemented) DeleteOauthApp(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether this installation has one vendor's OAuth app, and which one.
+// (GET /installation/oauth-apps/{provider})
+func (_ Unimplemented) GetOauthApp(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Store one vendor's OAuth app for this installation (admin/ops).
+// (PUT /installation/oauth-apps/{provider})
+func (_ Unimplemented) SetOauthApp(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -45595,42 +46233,6 @@ func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List lists (static + dynamic segments).
-// (GET /lists)
-func (_ Unimplemented) ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Create a list (static set or dynamic segment).
-// (POST /lists)
-func (_ Unimplemented) CreateList(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Archive a list.
-// (DELETE /lists/{id})
-func (_ Unimplemented) ArchiveList(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Get a list by id.
-// (GET /lists/{id})
-func (_ Unimplemented) GetList(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List a list's members — explicit rows for a static list, or the live filter evaluation for a dynamic segment.
-// (GET /lists/{id}/members)
-func (_ Unimplemented) ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Add a member to a static list.
-// (POST /lists/{id}/members)
-func (_ Unimplemented) AddListMember(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Get the current authenticated principal (user or agent).
 // (GET /me)
 func (_ Unimplemented) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
@@ -45652,6 +46254,18 @@ func (_ Unimplemented) SetMyAgentGrant(w http.ResponseWriter, r *http.Request, s
 // What the AI is doing for THIS person, right now and lately.
 // (GET /me/ai-activity)
 func (_ Unimplemented) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the product may send you about your day and your week.
+// (GET /me/brief-delivery)
+func (_ Unimplemented) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose what the product may send you.
+// (PUT /me/brief-delivery)
+func (_ Unimplemented) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -46681,42 +47295,6 @@ func (_ Unimplemented) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List quotas (cursor-paginated).
-// (GET /quotas)
-func (_ Unimplemented) ListQuotas(w http.ResponseWriter, r *http.Request, params ListQuotasParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Create a quota (owner XOR team revenue target for one period).
-// (POST /quotas)
-func (_ Unimplemented) CreateQuota(w http.ResponseWriter, r *http.Request, params CreateQuotaParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Archive (soft-delete) a quota.
-// (DELETE /quotas/{id})
-func (_ Unimplemented) ArchiveQuota(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Get a quota by id.
-// (GET /quotas/{id})
-func (_ Unimplemented) GetQuota(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Update a quota (partial).
-// (PATCH /quotas/{id})
-func (_ Unimplemented) UpdateQuota(w http.ResponseWriter, r *http.Request, id Id, params UpdateQuotaParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Server-computed attainment for this quota (RD-WIRE-3), decomposed per closed-won deal.
-// (GET /quotas/{id}/attainment)
-func (_ Unimplemented) GetQuotaAttainment(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // List manual per-record grants, filtered by record or by subject (A52/ADR-0039).
 // (GET /record-grants)
 func (_ Unimplemented) ListRecordGrants(w http.ResponseWriter, r *http.Request, params ListRecordGrantsParams) {
@@ -47281,6 +47859,48 @@ func (_ Unimplemented) RotateWebhookSecret(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Write one thing onto this week's plan.
+// (POST /weekly-plans/commitments)
+func (_ Unimplemented) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what you need from your lead on one commitment.
+// (PUT /weekly-plans/commitments/{id}/help)
+func (_ Unimplemented) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a teammate's request for help.
+// (PUT /weekly-plans/commitments/{id}/response)
+func (_ Unimplemented) AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark one commitment done, reopen it, or drop it.
+// (PUT /weekly-plans/commitments/{id}/state)
+func (_ Unimplemented) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's plan for this week — what they said they would do.
+// (GET /weekly-plans/current)
+func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open a plan for this week.
+// (POST /weekly-plans/current)
+func (_ Unimplemented) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A teammate's plan for this week, for their lead.
+// (GET /weekly-plans/{owner_id}/current)
+func (_ Unimplemented) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The weeks the acting rep has a review for, newest first.
 // (GET /weekly-reviews)
 func (_ Unimplemented) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
@@ -47293,9 +47913,21 @@ func (_ Unimplemented) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// A team's week, frozen — what each member's week came to, and the one thing to raise.
+// (GET /weekly-reviews/team)
+func (_ Unimplemented) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Request, params GetTeamWeeklyReviewParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One row per teammate — who is carrying what, so a lead can see where to help.
+// (GET /worklist/team)
+func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47503,6 +48135,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "occurred_before"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "occurred_before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "waiting_reply" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "waiting_reply", r.URL.Query(), &params.WaitingReply, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "waiting_reply"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "waiting_reply", Err: err})
 		}
 		return
 	}
@@ -48637,6 +49282,54 @@ func (siw *ServerInterfaceWrapper) ProposeAiModelRateRefresh(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ProposeAiModelRateRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAvailableModels operation middleware
+func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAvailableModelsParams
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAvailableModels(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -50945,6 +51638,26 @@ func (siw *ServerInterfaceWrapper) CreateCaptureCounterpartyHold(w http.Response
 	handler.ServeHTTP(w, r)
 }
 
+// ShareCaptureCounterpartyHoldHistory operation middleware
+func (siw *ServerInterfaceWrapper) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ShareCaptureCounterpartyHoldHistory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteCaptureCounterpartyHold operation middleware
 func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request) {
 
@@ -51882,6 +52595,46 @@ func (siw *ServerInterfaceWrapper) GetCompanyContextCapabilities(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCompanyContextCapabilities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCompanyLogo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadCompanyLogo(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -56220,66 +56973,6 @@ func (siw *ServerInterfaceWrapper) UndoImportRun(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
-// DeleteGoogleApp operation middleware
-func (siw *ServerInterfaceWrapper) DeleteGoogleApp(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteGoogleApp(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetGoogleApp operation middleware
-func (siw *ServerInterfaceWrapper) GetGoogleApp(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetGoogleApp(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetGoogleApp operation middleware
-func (siw *ServerInterfaceWrapper) SetGoogleApp(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetGoogleApp(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetLicenseEntitlement operation middleware
 func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
 
@@ -56291,6 +56984,102 @@ func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLicenseEntitlement(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteOauthApp operation middleware
+func (siw *ServerInterfaceWrapper) DeleteOauthApp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteOauthApp(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOauthApp operation middleware
+func (siw *ServerInterfaceWrapper) GetOauthApp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOauthApp(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetOauthApp operation middleware
+func (siw *ServerInterfaceWrapper) SetOauthApp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetOauthApp(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -57910,247 +58699,6 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// ListLists operation middleware
-func (siw *ServerInterfaceWrapper) ListLists(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListListsParams
-
-	// ------------- Optional query parameter "entity_type" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "include_archived" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListLists(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateList operation middleware
-func (siw *ServerInterfaceWrapper) CreateList(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateList(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ArchiveList operation middleware
-func (siw *ServerInterfaceWrapper) ArchiveList(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveList(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetList operation middleware
-func (siw *ServerInterfaceWrapper) GetList(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetList(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListListMembers operation middleware
-func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListListMembersParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListListMembers(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// AddListMember operation middleware
-func (siw *ServerInterfaceWrapper) AddListMember(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.AddListMember(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetCurrentPrincipal operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 
@@ -58255,6 +58803,46 @@ func (siw *ServerInterfaceWrapper) GetMyAiActivity(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMyAiActivity(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMyBriefDelivery operation middleware
+func (siw *ServerInterfaceWrapper) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyBriefDelivery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMyBriefDelivery operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyBriefDelivery(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -66103,334 +66691,6 @@ func (siw *ServerInterfaceWrapper) ReplyBuyerRoomThread(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
-// ListQuotas operation middleware
-func (siw *ServerInterfaceWrapper) ListQuotas(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListQuotasParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "sort" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "include_archived" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "owner_id" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_id", r.URL.Query(), &params.OwnerId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_id"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "team_id" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "team_id", r.URL.Query(), &params.TeamId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team_id"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team_id", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListQuotas(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateQuota operation middleware
-func (siw *ServerInterfaceWrapper) CreateQuota(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params CreateQuotaParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateQuota(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ArchiveQuota operation middleware
-func (siw *ServerInterfaceWrapper) ArchiveQuota(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveQuota(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetQuota operation middleware
-func (siw *ServerInterfaceWrapper) GetQuota(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetQuota(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UpdateQuota operation middleware
-func (siw *ServerInterfaceWrapper) UpdateQuota(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params UpdateQuotaParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "If-Match" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
-		var IfMatch IfMatch
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
-			return
-		}
-
-		params.IfMatch = &IfMatch
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateQuota(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetQuotaAttainment operation middleware
-func (siw *ServerInterfaceWrapper) GetQuotaAttainment(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetQuotaAttainment(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListRecordGrants operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordGrants(w http.ResponseWriter, r *http.Request) {
 
@@ -70969,6 +71229,208 @@ func (siw *ServerInterfaceWrapper) RotateWebhookSecret(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// AddWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddWeeklyPlanCommitment(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AskForWeeklyPlanHelp operation middleware
+func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AskForWeeklyPlanHelp(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerWeeklyPlanCommitment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetWeeklyPlanCommitmentState operation middleware
+func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetWeeklyPlanCommitmentState(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCurrentWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCurrentWeeklyPlan(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartWeeklyPlan(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTeammateWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeammateWeeklyPlan(w, r, ownerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListWeeklyReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 
@@ -71023,6 +71485,60 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLatestWeeklyReview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTeamWeeklyReview operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTeamWeeklyReviewParams
+
+	// ------------- Required query parameter "team" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "team", r.URL.Query(), &params.Team, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "week" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "week", r.URL.Query(), &params.Week, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "week"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "week", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamWeeklyReview(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71088,6 +71604,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "owner" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner", r.URL.Query(), &params.Owner, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
@@ -71103,6 +71632,28 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWorklist(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTeamBoard operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamBoard(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71307,6 +71858,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai-model-rates/propose-refresh", wrapper.ProposeAiModelRateRefresh)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)
 	})
 	r.Group(func(r chi.Router) {
@@ -71502,6 +72056,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/capture/counterparty-holds", wrapper.CreateCaptureCounterpartyHold)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/counterparty-holds/share-history", wrapper.ShareCaptureCounterpartyHoldHistory)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)
 	})
 	r.Group(func(r chi.Router) {
@@ -71599,6 +72156,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/company/context/capabilities", wrapper.GetCompanyContextCapabilities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/company/logo", wrapper.DeleteCompanyLogo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/company/logo", wrapper.UploadCompanyLogo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads", wrapper.StartCompanySiteRead)
@@ -71877,16 +72440,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/imports/{id}/undo", wrapper.UndoImportRun)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/installation/google-app", wrapper.DeleteGoogleApp)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/installation/google-app", wrapper.GetGoogleApp)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/installation/google-app", wrapper.SetGoogleApp)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.DeleteOauthApp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.GetOauthApp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.SetOauthApp)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/settings", wrapper.GetInstallationSettings)
@@ -72009,24 +72572,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/leads/{id}/score", wrapper.ExplainLeadScore)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lists", wrapper.ListLists)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/lists", wrapper.CreateList)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/lists/{id}", wrapper.ArchiveList)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lists/{id}", wrapper.GetList)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lists/{id}/members", wrapper.ListListMembers)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/lists/{id}/members", wrapper.AddListMember)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetCurrentPrincipal)
 	})
 	r.Group(func(r chi.Router) {
@@ -72037,6 +72582,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/ai-activity", wrapper.GetMyAiActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/brief-delivery", wrapper.GetMyBriefDelivery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/brief-delivery", wrapper.SaveMyBriefDelivery)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/email-signature", wrapper.GetMyEmailSignature)
@@ -72552,24 +73103,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/public/rooms/threads/{threadId}/comments", wrapper.ReplyBuyerRoomThread)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/quotas", wrapper.ListQuotas)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/quotas", wrapper.CreateQuota)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/quotas/{id}", wrapper.ArchiveQuota)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/quotas/{id}", wrapper.GetQuota)
-	})
-	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/quotas/{id}", wrapper.UpdateQuota)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/quotas/{id}/attainment", wrapper.GetQuotaAttainment)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-grants", wrapper.ListRecordGrants)
 	})
 	r.Group(func(r chi.Router) {
@@ -72852,13 +73385,40 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/webhook-subscriptions/{id}/rotate-secret", wrapper.RotateWebhookSecret)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/weekly-plans/commitments", wrapper.AddWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/help", wrapper.AskForWeeklyPlanHelp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/response", wrapper.AnswerWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/state", wrapper.SetWeeklyPlanCommitmentState)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-plans/current", wrapper.GetCurrentWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/weekly-plans/current", wrapper.StartWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-plans/{owner_id}/current", wrapper.GetTeammateWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-reviews", wrapper.ListWeeklyReviews)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-reviews/latest", wrapper.GetLatestWeeklyReview)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-reviews/team", wrapper.GetTeamWeeklyReview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)
 	})
 
 	return r

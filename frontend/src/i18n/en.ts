@@ -185,6 +185,8 @@ export const en = {
   "shell.aside.show": "Show the context panel",
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "{company} home, powered by Margince",
+  "shell.poweredBy": "Powered by Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
@@ -1761,9 +1763,7 @@ export const en = {
     "{field} is recorded as \u201c{value}\u201d. Removing it says this is not a fact about the company. A later read of their website may state it again.",
   "co.facts.showAll": "Show all {count}",
   "co.facts.showLess": "Show fewer",
-  "co.tags.lists": "Lists",
   "co.tags.tags": "Tags",
-  "co.tags.noLists": "Not on any list.",
   "co.tags.noTags": "No tags applied.",
   "co.project.new": "New project",
   "co.deal.new": "New deal",
@@ -1774,11 +1774,6 @@ export const en = {
   "co.tags.pick": "Tag name",
   "co.tags.overCap":
     "There are more tags than this list can show, so a tag missing from it may still exist. Ask an admin to prune the tags before adding a new one.",
-  "co.lists.added": "Added to “{name}”",
-  "co.lists.add": "Add to list",
-  "co.lists.pick": "List name",
-  "co.lists.overCap":
-    "There are more lists than can be shown, so a list missing from them may still exist. Ask an admin to prune the lists before adding a new one.",
   "co.recent.title": "What happened lately",
   "co.recent.emptyDetail":
     "Once you send an email, log a call or hold a meeting, the exchange appears here, with who did what on each side.",
@@ -1798,7 +1793,7 @@ export const en = {
   "co.recent.minutes": "{count} min",
   "co.recent.re": "on a deal",
   "co.recent.reNamed": "on {name}",
-  "co.tags.title": "Lists & tags",
+  "co.tags.title": "Tags",
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
@@ -2319,7 +2314,6 @@ export const en = {
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
   "home.asOf": "as of {at}",
-  "home.refresh": "Refresh brief",
   "home.refreshing": "Ranking…",
   "home.generate": "Get today's brief now",
   "home.noneBody":
@@ -2351,6 +2345,12 @@ export const en = {
     "No summary of this week — Margince did not run a pass over it. The numbers below are still the week's own.",
   "home.weekly.queueWorked": "Morning queue",
   "home.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
+  "home.weekly.sincePrior": "{delta} vs last week",
+  "home.weekly.leadsAnswered": "Leads answered in time",
+  "home.weekly.ofRouted": "{answered} of {routed}",
+  "home.weekly.promisesKept": "Promises kept",
+  "home.weekly.meetingsHeld": "Meetings with a next step",
+  "home.weekly.ofMeetings": "{withStep} of {held}",
   "home.weekly.carriedOver": "Carried over",
   "home.weekly.outcome.moved": "moved",
   "home.weekly.outcome.won": "won",
@@ -2900,6 +2900,13 @@ export const en = {
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send this email?",
+  "compose.threadHeading": "This conversation",
+  "compose.continueHeading": "Continue a conversation?",
+  "compose.threadLeave": "Choose another",
+  "compose.messageCount_one": "{count} message",
+  "compose.messageCount_other": "{count} messages",
+  "compose.threadContinuing": "The last exchange, which this will continue",
+  "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "You are sending this email now. This is an outbound, irreversible action.",
   // A moment picked in the field above turns this dialog into a different
@@ -2947,6 +2954,9 @@ export const en = {
   "compose.relinkThreadHint":
     "Every message in this thread you can edit moves with it, in one step.",
   "compose.emptyRecipients": "Add at least one recipient.",
+  "compose.missingSubject": "Give this email a subject.",
+  "compose.missingBody": "Write the message before sending it.",
+  "compose.missingPurpose": "Choose what this message is for.",
   "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 
@@ -3005,6 +3015,15 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
+  "brief.coverage.summary": "Some sources have more than this page shows",
+  "brief.coverage.bounded": "{shown} shown of at least {considered} read",
+  "delivery.morningLabel": "Your morning brief",
+  "delivery.morningHelp":
+    "Whether the day's brief also arrives by email. It is on your Brief page either way.",
+  "delivery.weeklyLabel": "Your weekly review",
+  "delivery.weeklyHelp": "Whether Monday's review also arrives by email.",
+  "delivery.byEmail": "By email",
+  "delivery.none": "Not by email",
   "settings.languageHelp": "Lasts for this session.",
   "role.admin": "Admin",
   "role.management": "Management",
@@ -3979,7 +3998,7 @@ export const en = {
     "Mail capture isn't configured in this deployment.",
   "connectors.reconnect": "Reconnect",
   "connectors.disconnect": "Disconnect",
-  "connectors.signatureEnrich.label": "Read signatures from this mailbox",
+  "connectors.signatureEnrich.label": "Read contact details from this mailbox",
   "connectors.signatureEnrich.followingDefault":
     "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
   "connectors.signatureEnrich.ownAnswer":
@@ -5124,6 +5143,11 @@ export const en = {
   "dealmail.sub.fresh": "Write to the people on this deal.",
   "dealmail.reply": "Draft the reply",
   "dealmail.send": "Send an email",
+  "recordmail.title": "Email",
+  "recordmail.sub.reply": "An answer is owed.",
+  "recordmail.sub.fresh": "Write to this record's contacts.",
+  "recordmail.reply": "Draft the reply",
+  "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
   "deal360.readFull": "Read the full briefing",
   "deal360.createTask": "Add this task",
@@ -5192,7 +5216,10 @@ export const en = {
   "prefs.undoExplicit":
     "Re-subscribing is an explicit opt-in — we won't silently turn it back on. Save below to record your consent, or discard.",
 
-  "auto.sub": "a closed catalog — pick a type, set its parameters, enable it",
+  "auto.tier.runs": "runs",
+  "auto.tier.approval": "approval",
+  "auto.sub":
+    'A rule marked "runs" acts on its own. One marked "approval" stages into the approval inbox.',
   "auto.readOnly":
     "Read-only view — you do not have permission to change automations.",
   "auto.catalog": "Starter library",
@@ -5933,6 +5960,18 @@ export const en = {
   "settings.companyTrust":
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
+  "settings.companyMark": "Company mark",
+  "settings.companyMarkPresent":
+    "Shown wherever this company appears, including the top of the sidebar.",
+  "settings.companyMarkNone":
+    "No mark yet, so the initials stand in. A website read fills this in, or add one here.",
+  "settings.companyMarkAdd": "Add a mark",
+  "settings.companyMarkReplace": "Replace",
+  "settings.companyMarkRemove": "Remove",
+  "settings.companyMarkPick": "Company mark",
+  "settings.companyMarkHint":
+    "PNG, JPEG, GIF, WebP, ICO or SVG. It is squared and resized on upload, and a mark you choose stays until you remove it.",
+  "settings.companyMarkEmpty": "Drop an image here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",
@@ -6105,81 +6144,6 @@ export const en = {
   "countdown.minutesSeconds": "{minutes}m {seconds}s",
   "countdown.expired": "Expired",
 
-  // Quotas & attainment (RD-T06): human-set revenue targets with
-  // server-computed attainment, surfaced under the Reports "Quotas" segment.
-  "quotas.tab": "Quotas",
-  // The selector panel's own title. The Reports segment picker directly above
-  // it already reads "Quotas", so this names what the LIST holds — one row per
-  // owner or team carrying a target — rather than repeating the page.
-  "quotas.selector.title": "Who has a quota",
-  "quotas.sub": "revenue targets — human-set, attainment computed",
-  "quotas.role.owner": "Individual quota",
-  "quotas.role.team": "Team quota",
-  "quotas.periodRange": "{start} – {end}",
-  "quotas.empty.title": "No quota set",
-  "quotas.empty.body":
-    "A quota is a target a human sets — owner or team, period, amount. We don't guess one for you. Set a target to start tracking attainment from closed-won deals.",
-  "quotas.empty.cta": "Set a target",
-  "quotas.attained": "attained",
-  "quotas.closedWon": "Closed-won this period",
-  "quotas.target": "Target",
-  "quotas.gap": "Gap to target",
-  "quotas.baseCurrencyNote":
-    "Figures in the organization's base currency ({currency}).",
-  "quotas.pace.ahead":
-    "Ahead of pace — {pct}% attained vs {pace}% of period elapsed.",
-  "quotas.pace.behind":
-    "Behind pace — {pct}% attained vs {pace}% of period elapsed.",
-  "quotas.pace.met": "Target met — {pct}% attained.",
-  "quotas.computed": "computed server-side",
-  "quotas.contributing.title": "What counts toward attainment",
-  "quotas.contributing.subtitle": "closed-won deals · base value in the period",
-  "quotas.contributing.deal": "Deal",
-  "quotas.contributing.amount": "Counted amount",
-  "quotas.contributing.total": "Counted total",
-  "quotas.contributing.caption":
-    "Base currency · open / lost / omitted deals excluded",
-  "quotas.explain.formula":
-    "attainment = Σ(closed-won base value) ÷ target, to the cent",
-  "quotas.explain.closedWon":
-    "closed-won = {sum} ({count} deals in the period)",
-  "quotas.explain.target": "target = {target} (human-set)",
-  "quotas.explain.result": "attainment = {sum} ÷ {target} = {pct}%",
-  "quotas.explain.exclusions":
-    "open / lost / omitted deals are excluded; clean-core only",
-  "quotas.scopeNote.title": "What this quota deliberately is",
-  "quotas.scopeNote.flag": "flagged, not hidden",
-  "quotas.scopeNote.body":
-    "The target is human-set — the AI never invents a quota number. Attainment is computed from closed-won base value and is fully auditable. There is no AI-set goal, no forecast-to-quota auto-fill, and no comp/commission engine yet.",
-  "quotas.target.title": "Period target",
-  "quotas.target.new": "Set a target",
-  "quotas.target.edit": "Edit target",
-  "quotas.target.save": "Save target",
-  "quotas.target.note":
-    "Editing writes a human-typed value and logs the change. Attainment recomputes against it.",
-  "quotas.target.sideFixed":
-    "A quota's owner/team side is fixed — switch it by archiving and recreating.",
-  "quotas.side.label": "Assigned to",
-  "quotas.side.owner": "Owner",
-  "quotas.side.team": "Team",
-  "quotas.owner": "Owner",
-  "quotas.team": "Team",
-  "quotas.pickOwner": "Select an owner…",
-  "quotas.pickTeam": "Select a team…",
-  "quotas.amountHint": "Whole units of the currency below. No decimals.",
-  "quotas.periodStart": "Period start",
-  "quotas.periodEnd": "Period end",
-  "quotas.amount": "Target amount",
-  "quotas.currency": "Currency",
-  "quotas.err.targetZero": "This quota has no target yet",
-  "quotas.err.computeFailed": "Attainment couldn't be computed",
-  "quotas.err.ownerXorTeam": "Choose exactly one of owner or team.",
-  "quotas.saveDone": "Quota saved",
-  "quotas.archiveDone": "Quota archived",
-  "quotas.archive.title": "Archive quota",
-  "quotas.archive.confirm":
-    "Archiving drops this quota from the list and stops tracking its attainment. Archived quotas can't be edited.",
-
   "installationSettings.orgTitle": "Installation",
   "installationSettings.orgSub":
     "What this installation is called, and the zone every reporting period is computed in.",
@@ -6220,33 +6184,51 @@ export const en = {
     "Offer this provider on the login screen. Turning it off stops sign-ins already in progress, and existing sessions are unaffected.",
   "signInMethods.noneConfigured":
     "This deployment has no external provider configured, so there is nothing to offer besides a password.",
-  "googleApp.title": "Google app",
-  "googleApp.sub":
+  "oauthApp.google.title": "Google app",
+  "oauthApp.google.sub":
     "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your organization’s own credentials are used rather than ours.",
-  "googleApp.configured": "In use: {clientId}",
-  "googleApp.absent":
+  "oauthApp.google.absent":
     "No app is available from any source. Gmail and Calendar cannot be connected, and Google sign-in cannot be offered.",
-  "googleApp.replaceHint":
-    "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
-  "googleApp.store": "Store app",
-  "googleApp.replace": "Replace app",
-  "googleApp.removeConfirmTitle": "Remove the Google app?",
-  "googleApp.removeConfirmBody":
-    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
-  "googleApp.remove": "Remove app",
-  "googleApp.redirectCopied": "Copied",
-  "googleApp.redirectCopy": "Copy {purpose} URI",
-  "googleApp.redirect.mailbox_connect": "Mailbox and calendar",
-  "googleApp.redirect.sign_in": "Sign-in",
-  "googleApp.redirectSub":
+  "oauthApp.google.redirectSub":
     "Register every URI below on the OAuth client in the Google console. A missing one fails at the consent screen with redirect_uri_mismatch, which does not say which URI was wrong.",
-  "googleApp.redirectTitle": "Authorized redirect URIs",
-  "googleApp.fromEnvironment":
-    "In use from this deployment’s configuration: {clientId}. Storing an app here replaces it for as long as one is stored.",
-  "googleApp.clientId": "Client ID",
-  "googleApp.clientSecret": "Client secret",
-  "googleApp.clientIdPlaceholder":
+  "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
+  "oauthApp.google.removeConfirmTitle": "Remove the Google app?",
+  "oauthApp.google.removeConfirmBody":
+    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
+  "oauthApp.microsoft.title": "Microsoft app",
+  "oauthApp.microsoft.sub":
+    "Outlook mailboxes and calendars are connected, and people sign in with Microsoft, through an Entra app registration you own. Your organization’s own credentials are used rather than ours.",
+  "oauthApp.microsoft.absent":
+    "No app is available from any source. Outlook mail and calendar cannot be connected, and Microsoft sign-in cannot be offered.",
+  "oauthApp.microsoft.redirectSub":
+    "Register every URI below under Authentication on the Entra app registration, as a Web platform. A missing one fails at the consent screen with AADSTS50011, which does not say which URI was wrong.",
+  "oauthApp.microsoft.clientIdPlaceholder":
+    "00000000-0000-0000-0000-000000000000",
+  "oauthApp.microsoft.removeConfirmTitle": "Remove the Microsoft app?",
+  "oauthApp.microsoft.removeConfirmBody":
+    "The client secret cannot be read back, so removing it means re-entering both halves from the Entra portal. Outlook mail and calendar connections are made through this app. Google and IMAP mailboxes are not affected. First-run setup will ask for one again.",
+  "oauthApp.configured": "In use: {clientId}",
+  "oauthApp.fromEnvironment":
+    "In use from this deployment’s configuration: {clientId}. Storing an app here replaces it for as long as one is stored.",
+  "oauthApp.pinnedToDirectory": "Pinned to directory {tenant}.",
+  "oauthApp.replaceHint":
+    "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
+  "oauthApp.store": "Store app",
+  "oauthApp.replace": "Replace app",
+  "oauthApp.remove": "Remove app",
+  "oauthApp.redirectCopied": "Copied",
+  "oauthApp.redirectCopy": "Copy {purpose} URI",
+  "oauthApp.redirect.mailbox_connect": "Mailbox",
+  "oauthApp.redirect.calendar_connect": "Calendar",
+  "oauthApp.redirect.sign_in": "Sign-in",
+  "oauthApp.redirectTitle": "Authorized redirect URIs",
+  "oauthApp.clientId": "Client ID",
+  "oauthApp.clientSecret": "Client secret",
+  "oauthApp.tenant": "Directory (tenant) ID",
+  "oauthApp.tenantHint":
+    "Optional. Pins the app to one Entra directory, so only its members may authorize. Leave it empty to allow any organization.",
+  "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
@@ -6261,11 +6243,58 @@ export const en = {
   "firstRun.ai.embedModel": "Embedding model",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
+  "aiSettings.sub": "Where this installation's text goes, and what it costs.",
+  "aiSettings.tabs": "Which part of the AI settings is open",
+  "aiSettings.tab.routing": "Routing",
+  "aiSettings.tab.providers": "Providers",
+  "aiSettings.tab.automations": "Automations",
+  "aiSettings.tab.usage": "Usage",
+  "aiSettings.tab.logs": "Logs",
+  "aiSettings.withheld": "Not yours to see",
+  "aiSettings.unread": "Could not be read",
+  "aiSettings.pending": "Reading…",
+  "aiSettings.spend.label": "Spend this month",
+  "aiSettings.spend.value": "{spent} of {budget} tokens",
+  "aiSettings.spend.estimated": "≈ {amount} estimated",
+  "aiSettings.providers.label": "Providers",
+  "aiSettings.providers.value": "{count} keyed",
+  "aiSettings.providers.missing": "{count} bound with no key",
+  "aiSettings.providers.lastCall": "last call {elapsed}",
+  "aiSettings.discardTitle": "Leave the routing edits behind?",
+  "aiSettings.discardBody":
+    "The bindings you changed have not been saved. Leaving this tab discards them.",
+  "aiSettings.discard": "Discard",
+  "elapsed.justNow": "just now",
+  "elapsed.minutes": "{minutes} min ago",
+  "elapsed.hours": "{hours} h ago",
+  "elapsed.days": "{days} d ago",
+  "aiRouting.lane.local_small": "Bulk classifying, on your own hardware",
+  "aiRouting.lane.cheap_cloud": "Everyday work — enrichment, summaries, triage",
+  "aiRouting.lane.premium": "Anything a customer will read",
+  "aiRouting.lane.frontier": "The hardest reasoning, used sparingly",
+  "aiRouting.lane.local_large": "Heavier work that must not leave your hosts",
+  "aiRouting.lane.embeddings": "Search and retrieval across your records",
+  "aiRouting.lanes.title": "Routing lanes",
+  "aiRouting.lanes.sub":
+    "Cheapest first. A task picks a lane; the lane picks the model.",
+  "aiRouting.priceSheet": "Price sheet",
+  "aiRouting.provider.label": "Provider",
+  "aiRouting.change": "Change",
+  "aiRouting.done": "Done",
+  "aiRouting.noKey": "no key",
+  "aiRouting.unpriced": "unpriced",
+  "aiRouting.effect":
+    "Saved bindings reach every process within a minute, without a restart.",
   "aiProviderKeys.title": "Model provider keys",
   "aiProviderKeys.sub":
     "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",
-  "aiProviderKeys.configured": "Key stored",
-  "aiProviderKeys.absent": "No key",
+  "aiProviderKeys.keyless": "no key needed",
+  "aiProviderKeys.field": "API key",
+  "aiProviderKeys.save": "Save key",
+  "aiProviderKeys.adminOnly":
+    "Only an admin or ops can change a provider credential.",
+  "aiProviderKeys.configured": "configured",
+  "aiProviderKeys.absent": "not set",
   "aiProviderKeys.configuredHint":
     "Sealed in the key vault. It cannot be read back — paste a new one to replace it. It may also arrive as {envVar}.",
   "aiProviderKeys.absentHint":
@@ -6283,10 +6312,15 @@ export const en = {
   "aiRouting.withheld":
     "Only an operator who may change the model binding can see which models this installation uses.",
   "aiRouting.title": "Model routing",
+  "aiRouting.sheetAsOf":
+    "Model lists are the price sheet as of {date}. Any newer id your provider serves works too — type it.",
+  "aiRouting.sheetUnknown":
+    "Model lists come from the price sheet, which is not yours to read. Any id your provider serves works — type it.",
   "aiRouting.sub":
     "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",
   "aiRouting.unbound":
     "This installation has no models bound, so its AI features are off. A deployment declares its first binding under seeds.ai_routing in margince.yaml.",
+  "aiRouting.profile.card": "Deployment profile",
   "aiRouting.profile.label": "Location",
   "aiRouting.profile.help":
     "Where inference runs. Sovereign means zero egress: only models on your own hosts, refused at save time rather than at the first call.",
@@ -6296,11 +6330,20 @@ export const en = {
   "aiRouting.dimensions.label": "Vector width",
   "aiRouting.dimensions.help":
     "Leave blank for the provider's default. A value outside 1 to 2000 is refused.",
-  "aiRouting.embeddings.label": "Embeddings",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "The vendor's host root, with no version segment. The adapter adds /v1. Required for openai_compatible, which has no default of its own.",
+  "aiRouting.models.noKey":
+    "Showing the price sheet only — this vendor holds no key, so it cannot be asked what it serves. Any id it serves still works: type it.",
+  "aiRouting.models.noEndpoint":
+    "Showing the price sheet only — fill in the host above and this vendor can be asked what it serves. Any id it serves still works: type it.",
+  "aiRouting.models.profileForbids":
+    "Showing the price sheet only — this deployment profile does not permit reaching this vendor.",
+  "aiRouting.models.notPublished":
+    "Showing the price sheet only — this vendor publishes no model list.",
+  "aiRouting.models.unreachable":
+    "Showing the price sheet only — this vendor did not answer. Any id it serves still works: type it.",
   "aiRouting.model.label": "Model",
   "aiRouting.model.help":
     "The models listed are the ones this installation can price, per million tokens in → out. Any other id your provider serves works too — type it.",
@@ -6331,10 +6374,9 @@ export const en = {
   "captureSettings.autoEnrich.label": "Auto-enrich captured companies",
   "captureSettings.autoEnrich.help":
     "When on, each new company created from captured mail gets an automatic web dossier — its site is read and its profile filled in. Runs under a daily limit.",
-  "captureSettings.signatureEnrich.label":
-    "Read signatures for contact details",
+  "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, a nightly pass lifts what a contact states under their own name in mail they sent you — a title, a phone number, a company. Nothing is inferred: a detail the signature does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
+    "When on, Margince reads what a contact states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
 
   "ownDomains.companyTitle": "Company domains",
@@ -6427,6 +6469,8 @@ export const en = {
   "webhooks.deliveries.status.delivered": "Delivered",
   "webhooks.deliveries.status.retrying": "Retrying",
   "webhooks.deliveries.status.dead_lettered": "Dead-lettered",
+  "webhooks.deliveries.status.visibility_revoked":
+    "Stopped — no longer visible",
   "webhooks.deliveries.replay": "Replay",
   "webhooks.deliveries.replayConfirm.title": "Replay this delivery?",
   "webhooks.deliveries.replayConfirm.body":
@@ -6863,6 +6907,7 @@ export const en = {
   "person.loops.dueInDays": "in {count} days",
   "person.loops.waiting": "waiting",
   "person.loops.open": "open",
+  "person.loops.atLeast": "at least {count}",
 
   "person.memory.title": "Conversation memory",
   "person.memory.empty": "Nothing captured on this channel yet.",
@@ -6994,6 +7039,34 @@ export const en = {
   "person.meeting.risks": "Risks and watch-outs",
   "person.meeting.talking_points": "Suggested talking points",
   "person.meeting.company_context": "When you last met",
+  "person.meeting.objective": "The outcome to earn",
+  "person.meeting.openWith": "Open with",
+  "person.meeting.arc": "The account arc",
+  "person.meeting.arcSub": "Only the moments that change today's conversation.",
+  "person.meeting.close": "Close the meeting",
+  "person.meeting.advance.minimum": "Minimum advance",
+  "person.meeting.advance.best": "Best advance",
+  "person.meeting.advance.fallback": "Fallback",
+  "person.meeting.unknowns": "What the record does not show",
+  "person.meeting.likelyAsks": "What they are likely to ask",
+  "person.meeting.beReady": "Be ready for this",
+  "person.meeting.say": "Say",
+  "person.meeting.show": "Show",
+  "person.meeting.avoid": "Avoid",
+  "person.meeting.scenarios": "If the meeting goes another way",
+  "person.meeting.relevance.high": "Likely",
+  "person.meeting.relevance.medium": "Possible",
+  "person.meeting.relevance.low": "Less likely",
+  "person.meeting.coach.title": "Coach the rep on one thing",
+  "person.meeting.coach.eyebrow": "Manager view",
+  "person.meeting.coach.listenFor": "Listen for",
+  "person.meeting.coach.watchFor": "Watch for",
+  "person.meeting.coach.interveneIf": "Step in only if",
+  "person.meeting.coach.paths": "How this meeting can go",
+  "person.meeting.background": "Background and sources",
+  "person.meeting.omittedSource": "Not in this brief",
+  "person.meeting.preparedFor": "Prepared for {name}",
+  "person.meeting.preparedForAt": "Prepared for {name} · {org}",
 
   "co.strip.healthSummary": "Health",
   "co.strip.healthSummary.failingOf": "{failing} of {rated} at risk",
@@ -7047,8 +7120,12 @@ export const en = {
   "provider.automaticLookupJurisdiction":
     "Switch this off if your contacts fall under a law that forbids trading personal data, Vietnam's among them. The button on each contact still works, which keeps the decision with the person making it.",
   "provider.buyable": "Allow buying {category}",
-  "provider.buyableHint":
+  "provider.buyableHint_one":
     "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credit, so somebody can buy this detail for one person at a time.",
+  "provider.buyableHint_other":
+    "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credits, so somebody can buy this detail for one person at a time.",
+  "provider.buyableNeeds":
+    "The provider looks for this only alongside the {prerequisite}, so it cannot be bought on its own. Allow that one first.",
   "provider.backlog": "Still to look up",
   "provider.backlogRemaining_one": "{count} contact",
   "provider.backlogRemaining_other": "{count} contacts",
@@ -7131,6 +7208,8 @@ export const en = {
   // The price rides the button because the decision IS the spend.
   "provider.profile.buy_one": "Buy {category} · {credits} credit",
   "provider.profile.buy_other": "Buy {category} · {credits} credits",
+  "provider.profile.buyRebuys":
+    "The price includes the {categories} again: the provider will not look for this without it, and it charges for whatever it sends back.",
   "provider.freeTier.hint":
     "LinkedIn profile, current role and work history cost no credits. Leave this on: every new contact gets them without anybody deciding.",
   "provider.pricedTier.hint":
@@ -7220,10 +7299,6 @@ export const en = {
   "filters.pickRecord": "Choose one",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Choose a value",
-  "filters.saveList": "Save as list",
-  "filters.saveListTitle": "Save this filter as a dynamic list",
-  "filters.listName": "List name",
-  "filters.saveListConfirm": "Create list",
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 
@@ -7452,6 +7527,8 @@ export const en = {
   "worklist.focus.verb.merge": "Review the pair",
   "worklist.focus.verb.complete": "Complete it",
   "worklist.focus.verb.act": "Act on it",
+  // Required by the template's key type, never produced: worthFocusing
+  // excludes primary_action "acknowledge" before this key is ever built.
   "worklist.focus.verb.acknowledge": "Acknowledge",
   "worklist.focus.verb.open": "Open it",
   "worklist.focus.verb.snooze": "Open it",
@@ -7496,15 +7573,27 @@ export const en = {
   "worklist.manager.kind.next_step": "A deal's next step",
   "worklist.manager.kind.review_backlog": "Review work",
   "worklist.manager.kind.general": "Something else",
+  "worklist.board.title": "How my team is doing",
+  "worklist.board.loading": "Reading your team's work…",
+  "worklist.board.empty": "Nobody has been put on a team with you yet.",
+  "worklist.board.member": "Who",
+  "worklist.board.waiting": "Waiting on a reply",
+  "worklist.board.atRisk": "Deals at risk",
+  "worklist.board.overdue": "Past due",
+  "worklist.board.nobody": "Nobody yet",
+  "worklist.board.truncated":
+    "There is more work than this could count. These are floors, not totals.",
   "worklist.filter.label": "Kind of work",
   "worklist.filter.all": "All",
   "worklist.filter.customer_waiting": "Customer waiting",
+  "worklist.filter.leads": "Leads",
   "worklist.filter.deals_at_risk": "Deals at risk",
   "worklist.filter.meetings": "Meetings",
   "worklist.filter.tasks": "Tasks",
   "worklist.filter.decisions": "Decisions",
   "worklist.filter.system": "System",
   "worklist.category.customer_waiting": "Customer waiting",
+  "worklist.category.leads": "Lead",
   "worklist.category.deals_at_risk": "Deal at risk",
   "worklist.category.meetings": "Meeting",
   "worklist.category.tasks": "Task",
@@ -7535,6 +7624,10 @@ export const en = {
   "worklist.because.repeated_failure": "the same thing keeps failing",
   "worklist.because.legal_deadline": "a legal deadline is running",
   "worklist.because.meeting_soon": "starting shortly",
+  "worklist.because.meeting_unprepared": "nothing prepared",
+  "worklist.because.response_overdue": "reply overdue",
+  "worklist.because.response_due_soon": "reply due soon",
+  "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
@@ -7574,6 +7667,7 @@ export const en = {
   "worklist.untitled.brief_item": "The night picked this out",
   "worklist.untitled.conversation_claim": "A promise you made",
   "worklist.untitled.customer_waiting": "Someone is waiting for a reply",
+  "worklist.untitled.lead_response": "A lead",
   "worklist.untitled.deal_at_risk": "A deal is drifting",
   "worklist.untitled.meeting": "A meeting",
   "worklist.untitled.relationship_decay": "A relationship is going quiet",
@@ -7593,7 +7687,8 @@ export const en = {
   "worklist.verb.open": "Open",
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
-  "worklist.verb.acknowledge": "Open",
+  "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.source.failed": "{source} could not be read",
   "worklist.source.withheld": "{source} is hidden from your account",
   "worklist.untitled.generic": "Something needs you",

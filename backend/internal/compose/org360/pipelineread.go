@@ -251,38 +251,38 @@ func openPipeline(
 func priceOpenDeals(
 	ctx context.Context, tx pgx.Tx, open []openRow, baseCcy string, now time.Time,
 ) error {
-	rates := deals.NewFXRates(baseCcy, now.UTC())
+	// Priced through deals.PriceAll, which is the loop the Worklist's ranking
+	// runs too. Its leave-it-unpriced policy is this page's: an amount with no
+	// rate, or one whose converted value does not fit a bigint, is a deal the
+	// figure cannot cover, and priced_count is what says so.
+	//
+	// The hierarchy rollup refuses the whole read on the same conditions, and
+	// the two differ for one reason: it reports ONE number for a set of
+	// accounts, where a partial total presented as a total is a lie, and this
+	// page reports a figure beside the count of deals it covers. That policy
+	// difference is the only thing the two are allowed to disagree about, and
+	// it is why the rollup asks FXRates.For per deal rather than reaching here.
+	priceable := make([]deals.CurrencyAmount, 0, len(open))
+	rows := make([]*openRow, 0, len(open))
 	for i := range open {
 		row := &open[i]
 		if row.amountMinor == nil || row.currency == nil {
 			continue
 		}
-		rate, found, err := rates.For(ctx, tx, *row.currency)
-		if err != nil {
-			return fmt.Errorf("price the account's open pipeline: %w", err)
-		}
-		if !found {
+		priceable = append(priceable, deals.CurrencyAmount{Minor: *row.amountMinor, Currency: *row.currency})
+		rows = append(rows, row)
+	}
+	priced, err := deals.PriceAll(ctx, tx, deals.NewFXRates(baseCcy, now.UTC()), priceable)
+	if err != nil {
+		return fmt.Errorf("price the account's open pipeline: %w", err)
+	}
+	for i, figure := range priced {
+		if !figure.Priced {
 			continue
 		}
-		converted, err := deals.ConvertToBase(*row.amountMinor, rate.Rate)
-		if err != nil {
-			// UNPRICED, not refused, and this is a decision rather than a
-			// swallow. An amount whose converted value does not fit a bigint is
-			// one deal the figure cannot cover, and priced_count is what says
-			// so — the same answer organization_open_pipeline_rollup gives the
-			// same deal, because one implausible amount must not take a company
-			// record offline.
-			//
-			// The hierarchy rollup refuses the whole read on this error, and
-			// the two differ for the reason they differ on a missing rate: it
-			// reports ONE number for a set of accounts, where a partial total
-			// presented as a total is a lie, and this page reports a figure
-			// beside the count of deals it covers.
-			continue
-		}
-		row.valueBase = &converted
-		on := rate.On
-		row.rateDate = &on
+		minor, on := figure.Minor, figure.RateOn
+		rows[i].valueBase = &minor
+		rows[i].rateDate = &on
 	}
 	return nil
 }

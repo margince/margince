@@ -11,9 +11,8 @@ package integration
 // offertemplate_integration_test.go's store-level suite never drives —
 // the two named 409 shapes (offer_template_name_duplicate,
 // offer_template_default_conflict), the full-replace PUT's version-skew
-// 409, and the JSON response shape. Rides the same real-handler-stack
-// e2e harness as quotas_http_integration_test.go (TLS httptest server,
-// session cookie, workspace header).
+// 409, and the JSON response shape. Rides the real-handler-stack e2e
+// harness (TLS httptest server, session cookie, workspace header).
 
 import (
 	"net/http"

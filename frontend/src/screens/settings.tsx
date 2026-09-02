@@ -84,15 +84,11 @@ import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { AiHealthCard } from "./ai-health";
-import { AiProviderKeysCard } from "./ai-provider-keys";
-import { AiRoutingCard } from "./ai-routing";
-import { AiCallsCard } from "./aicalls";
-import { AiUsageCard } from "./aiusage";
+import { AiSettingsTab } from "./ai-settings";
 import { ActorTag } from "./audit";
-import { AutomationsAdmin } from "./automations";
 import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
+import { BriefDeliveryRows } from "./briefdelivery";
 import { CaptureActivityTab } from "./capture-activity";
 import { CaptureSendersCard } from "./capture-senders";
 import { CaptureSettingsCard } from "./capture-settings";
@@ -119,7 +115,6 @@ import { EmbedReindexCard } from "./embedreindex";
 import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
-import { GoogleAppCard } from "./google-app";
 import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
@@ -136,6 +131,7 @@ import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard } from "./mail-sharing";
+import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OverlayCard } from "./overlay";
 import { MirrorUserMapCard } from "./overlay-usermap";
@@ -144,7 +140,7 @@ import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ConsentPurposesCard, PrivacyInboxCard } from "./privacy";
 import { ProductsAdmin } from "./products";
-import { FxRatesCard, ModelCostsCard } from "./rates";
+import { FxRatesCard } from "./rates";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
 import { SignInMethodsCard } from "./sign-in-methods";
@@ -293,7 +289,7 @@ export function tabContent(id: SettingsTabId): ReactNode {
       // before they were merged the lock reason was explained on one tab while
       // the consequence landed on another.
       //
-      // The Google app goes LAST for that reason, not because it matters least.
+      // The vendor OAuth apps go LAST for that reason, not because it matters least.
       // It is here at all because the same OAuth client now serves sign-in as
       // well as mailbox connection, so filing it under Capture said it belonged
       // to one of the two.
@@ -303,7 +299,8 @@ export function tabContent(id: SettingsTabId): ReactNode {
           <FxRatesCard />
           <CompanyContextCard />
           <SignInMethodsCard />
-          <GoogleAppCard />
+          <OAuthAppCard provider="google" />
+          <OAuthAppCard provider="microsoft" />
         </>
       );
     case "extensions":
@@ -935,54 +932,6 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   );
 }
 
-// The organization's AI, read in the order the questions arrive: WHAT RUNS
-// unattended, what it spent, what it charges per model, and — last, because it is
-// a debugging instrument rather than a setting — the per-call trace.
-//
-// The old order was exactly backwards. It opened on spend and put the automations
-// that CAUSE the spend at the bottom, four screens down, past a price table with
-// one row per model; and for manager, rep and read_only the two spend cards say
-// only that they are withheld, so the page opened on a price sheet and buried the
-// one surface they came to use.
-//
-// Automations render here rather than in the rail: they are set-and-forget
-// configuration, and the product already offered a second door to them from
-// this very tab. They gate themselves per affordance on the automation grants.
-//
-// Every card here gates ITSELF, which is why this composes four unconditionally.
-// The spend card and the call trace are reads the server gates on
-// automation:update — the AI runtime's spend is treated as operator information,
-// so seeing it takes the automation write grant and not any AI-named object — and
-// each keeps its place and says so rather than vanishing, because an absent spend
-// card claims nothing was spent. The gate belongs in the card for the same reason
-// the retention ladder's does: a caller composing a page cannot state a denial on
-// a surface's behalf.
-function AiSettingsTab() {
-  return (
-    <>
-      {/* Which vendor the installation's text is sent to, first: it is the
-          decision the three cards under it report against. */}
-      <AiRoutingCard />
-      {/* Directly under the binding, because the two are one decision read in
-          two halves: which vendor serves a tier, and whether this installation
-          can call it at all. A binding whose vendor holds no key fails closed,
-          and this is where a reader finds out why. */}
-      <AiProviderKeysCard />
-      {/* And whether the lanes those two cards configure are actually
-          ANSWERING. It sits here rather than under the spend cards because it
-          completes the binding's own story: which vendor serves a tier, whether
-          we hold a key for it, whether it replied. Under the capture posture
-          the last one is the expensive gap — mail stays held whether the
-          classifier judged it or never ran. */}
-      <AiHealthCard />
-      <AutomationsAdmin />
-      <AiUsageCard />
-      <ModelCostsCard />
-      <AiCallsCard />
-    </>
-  );
-}
-
 // This person's own agent authority: what an agent may do unattended, the
 // credentials they have minted, the clients holding one, and the governed tools
 // those credentials reach. Every seat gets it, ungated — a connection's
@@ -1081,6 +1030,7 @@ function AccountCard() {
           <PasswordSettingRow />
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
+          <BriefDeliveryRows />
         </SettingList>
       </PanelBody>
     </Panel>

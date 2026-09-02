@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "b3ca6c28bcfe1f1769cbf17311159a17711b6899f40d4fb10e7a0ec4df9ea854"
+const JobContractHash = "cc0508aa4201841e43826e2e824e02354b75b567add7d526a6757bf30d1f5d01"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -529,7 +529,7 @@ var specs = map[string]Spec{
 		FanOutTo:     "graph_watch_renew_connection",
 		OptsOwner:    OptsCaller,
 		Cadence:      Cadence{OperatorField: "GraphWatch.Interval", ScheduleWhenPositive: "GraphWatch.Interval"},
-		Registration: Registration{When: []string{"GmailRegistry", "GraphWatch.NotificationURL"}},
+		Registration: Registration{When: []string{"GmailRegistry.OffersGraph", "GraphWatch.NotificationURL"}},
 	},
 	"graph_watch_renew_connection": {
 		Kind:         "graph_watch_renew_connection",
@@ -539,7 +539,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		MaxAttempts:  3,
 		OptsOwner:    OptsFanOut,
-		Registration: Registration{When: []string{"GmailRegistry", "GraphWatch.NotificationURL"}},
+		Registration: Registration{When: []string{"GmailRegistry.OffersGraph", "GraphWatch.NotificationURL"}},
 		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Workspace"}},
 	},
 	"idempotency_retention": {

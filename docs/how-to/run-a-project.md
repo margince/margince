@@ -253,7 +253,7 @@ exact or confirmed by a person.
 
 Three project reports are built and answer over the API
 (`GET /reports/{report}`), but the **Reports** screen does not offer them yet —
-it lists the deal reports and quotas only:
+it lists the deal reports only:
 
 - **Projects by phase** — how many projects sit in each phase, and their won
   and open deal value.

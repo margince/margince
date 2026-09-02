@@ -1,6 +1,17 @@
 import type { Page, Route } from "@playwright/test";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
+import {
+  briefEmpty,
+  briefManager,
+  briefOmitted,
+  briefWithPlan,
+} from "../src/screens/meetingbrief/fixtures";
 import { type MockProject, projectMock } from "./projectmock";
+
+// The booked meeting the person record offers a brief for. Its id is the one
+// the brief fixtures were written against, so the drawer's request and the
+// answer describe the same room.
+const MEETING_ACTIVITY = "3f7c1a90-0000-4000-8000-00000000a001";
 
 // The AC specs drive an admin, and the UI now scopes every write affordance on
 // the grant map /me carries rather than on the role name — so the mock has to
@@ -901,6 +912,9 @@ export type MockApiOptions = Readonly<{
   // is what proves it. A test that wants to SEE the federated block seeds it
   // here — this option is the only place in this repo where a provider exists.
   oidcProviders?: ReadonlyArray<{ key: string; label: string }>;
+  // Which meeting brief the drawer gets. The default is the everyday one,
+  // carrying a withheld source so the AC that reads it has something to read.
+  meetingBrief?: "rep" | "plan" | "manager" | "empty" | "failed";
 }>;
 
 export async function mockApi(
@@ -1072,28 +1086,58 @@ export async function mockApi(
         system_of_record: { mode: sorMode },
       });
     }
-    if (path === "/installation/google-app" && method === "GET") {
-      // Answered explicitly: the catch-all would hand back a list envelope, and
-      // the Google-app card would then read a source and a redirect list off a
-      // body that carries neither — taking the whole settings screen down.
+    if (path.startsWith("/installation/oauth-apps/") && method === "GET") {
+      // Answered explicitly, per vendor: the catch-all would hand back a list
+      // envelope, and the card would then read a source and a redirect list off
+      // a body that carries neither — taking the whole settings screen down.
+      // The screen renders one card per vendor, so a route that answered only
+      // Google would leave the Microsoft one on the fallback.
       //
       // `environment` because it is the state the card was rewritten for: an app
       // the deployment supplies rather than one stored here, which the surface
       // used to report as no app at all.
+      const microsoft = path.endsWith("/microsoft");
       return json({
+        provider: microsoft ? "microsoft" : "google",
         configured: true,
-        client_id: "000000000000-brandt.apps.googleusercontent.com",
+        client_id: microsoft
+          ? "11111111-2222-3333-4444-555555555555"
+          : "000000000000-brandt.apps.googleusercontent.com",
+        // Only Microsoft has directories, and this app is pinned to one — the
+        // state the card reports back and carries through a rotation.
+        ...(microsoft
+          ? { tenant: "99999999-8888-7777-6666-555555555555" }
+          : {}),
         source: "environment",
-        redirect_uris: [
-          {
-            purpose: "sign_in",
-            url: "https://api.brandt.example/v1/auth/oidc/google/callback",
-          },
-          {
-            purpose: "mailbox_connect",
-            url: "https://api.brandt.example/v1/connectors/google/callback",
-          },
-        ],
+        redirect_uris: microsoft
+          ? [
+              {
+                purpose: "sign_in",
+                url: "https://api.brandt.example/v1/auth/oidc/microsoft/callback",
+              },
+              {
+                purpose: "mailbox_connect",
+                url: "https://api.brandt.example/v1/connectors/graph/callback",
+              },
+              {
+                purpose: "calendar_connect",
+                url: "https://api.brandt.example/v1/connectors/graphcal/callback",
+              },
+            ]
+          : [
+              {
+                purpose: "sign_in",
+                url: "https://api.brandt.example/v1/auth/oidc/google/callback",
+              },
+              {
+                purpose: "mailbox_connect",
+                url: "https://api.brandt.example/v1/connectors/gmail/callback",
+              },
+              {
+                purpose: "calendar_connect",
+                url: "https://api.brandt.example/v1/connectors/gcal/callback",
+              },
+            ],
       });
     }
     if (path === "/installation/settings" && method === "GET") {
@@ -1362,6 +1406,20 @@ export async function mockApi(
       return json({
         as_of: "2026-06-20T09:00:00Z",
         person: anna,
+        // A booked meeting, so the meetings tab has a "Brief me" to press. The
+        // overlay mirror holds no natively captured interaction, so it holds no
+        // meeting either.
+        next_meeting:
+          sorMode === "overlay"
+            ? undefined
+            : {
+                activity_id: MEETING_ACTIVITY,
+                starts_at: "2026-06-24T13:00:00Z",
+                subject: "Retrofit-Abstimmung",
+                participants: [
+                  { person_id: "p-anna", full_name: "Anna Weber" },
+                ],
+              },
         last_inbound_at:
           sorMode === "overlay" ? undefined : "2026-06-18T08:00:00Z",
         last_outbound_at:
@@ -1383,6 +1441,32 @@ export async function mockApi(
               ]
             : [],
       });
+    }
+    // The meeting brief, from the same fixtures the stories and the unit tests
+    // read. One shape for all three, so a story cannot show a surface the e2e
+    // run never serves.
+    if (method === "GET" && /^\/activities\/[^/]+\/meeting-brief$/.test(path)) {
+      switch (options?.meetingBrief) {
+        case "empty":
+          return json(briefEmpty);
+        case "failed":
+          return json(
+            {
+              type: "about:blank",
+              title: "Not found",
+              status: 404,
+              code: "not_found",
+              detail: "That meeting is filed under a different engagement.",
+            },
+            404,
+          );
+        case "plan":
+          return json(briefWithPlan);
+        case "manager":
+          return json(briefManager);
+        default:
+          return json(briefOmitted);
+      }
     }
     if (method === "GET" && /^\/people\/[^/]+\/brief$/.test(path)) {
       return json({

@@ -13,6 +13,7 @@ import {
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useViewerId } from "./common";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
@@ -21,7 +22,6 @@ import { interactionIcon, useInteractionLabel } from "./interactionchrome";
 
 type Person360 = components["schemas"]["Person360"];
 type PersonBrief = components["schemas"]["PersonBrief"];
-type ConversationClaim = components["schemas"]["ConversationClaim"];
 type Activity = components["schemas"]["Activity"];
 type BriefEvidence = components["schemas"]["OrganizationBriefEvidence"];
 
@@ -37,6 +37,7 @@ export function PersonBriefCard({
   view: Person360;
 }>) {
   const t = useT();
+  const viewerId = useViewerId();
   const { locale } = useLocale();
   const firstName = view.person.full_name.split(" ")[0];
   // The timeline the page already read, by id. A citation is resolved from it
@@ -102,7 +103,7 @@ export function PersonBriefCard({
           <h3 className="pe-brief-label t-caption">
             {t("person.loops.title")}
           </h3>
-          <p className="pe-brief-line">{commitmentsLine(view, t)}</p>
+          <p className="pe-brief-line">{commitmentsLine(view, viewerId, t)}</p>
         </div>
         <div className="pe-brief-block">
           <h3 className="pe-brief-label t-caption">
@@ -380,25 +381,113 @@ const LOOPS: ReadonlyArray<{ kind: string; prefixKey: MessageKey | null }> = [
 // card's row list runs, so an empty band block and an empty panel are always
 // the same fact rather than two independent reads of the claims.
 export function hasCommitments(view: Person360): boolean {
-  const claims = view.claims ?? [];
-  return LOOPS.some((loop) =>
-    claims.some(
-      (claim) => claim.kind === loop.kind && claim.status !== "dismissed",
-    ),
-  );
+  // The band asks only WHETHER there is anything to show, which does not
+  // depend on who is reading.
+  return openLoops(view, undefined).length > 0;
 }
 
-function commitmentsLine(view: Person360, t: ReturnType<typeof useT>): string {
+// Everything this record owes, from BOTH places a promise is written down: a
+// claim an extractor read out of a conversation, and a task somebody filed.
+// The card once read claims alone, so a record whose only open promise was a
+// task — which is what an accepted transcript proposal becomes — said "nothing
+// has been promised" directly under a headline naming the promise.
+//
+// Tasks lead: one was typed or confirmed by a person, a claim was inferred.
+// The task list arrives ordered by urgency (the next-steps read), and that
+// order is kept.
+function openLoops(
+  view: Person360,
+  viewerId: string | undefined,
+): readonly OpenLoop[] {
   const claims = view.claims ?? [];
-  const openCount = LOOPS.flatMap((loop) =>
-    claims.filter(
-      (claim) => claim.kind === loop.kind && claim.status !== "dismissed",
-    ),
-  ).length;
+  const tasks = (view.next_steps?.data ?? []).map(
+    (task): OpenLoop => ({
+      key: task.id,
+      // A task can arrive without a subject — one filed without one, and one
+      // whose content this reader may not see, which the server nulls. Both
+      // are still owed, and the card names them the way the backend's own
+      // card does rather than printing a bare "You:".
+      body: task.subject ?? "an open task",
+      // "You" only when the task is not somebody else's. The activity writer
+      // assigns every human-written task to its author, so "has an assignee"
+      // is true of nearly all of them and would drop the prefix from the
+      // reader's own work; the comparison that matters is against the reader.
+      // While /me is in flight the id is unknown, and an unattributed row is
+      // the honest reading — better than telling someone they owe a
+      // colleague's promise.
+      prefixKey: heldByReader(task.assignee_id, viewerId)
+        ? "person.loops.ours"
+        : null,
+      dueAt: task.due_at ?? null,
+      done: task.is_done === true,
+      theirs: false,
+    }),
+  );
+  const fromClaims = LOOPS.flatMap((loop) =>
+    claims
+      .filter(
+        (claim) => claim.kind === loop.kind && claim.status !== "dismissed",
+      )
+      .map(
+        (claim): OpenLoop => ({
+          key: claim.id,
+          body: claim.body,
+          prefixKey: loop.prefixKey,
+          dueAt: claim.due_at ?? null,
+          done: claim.status === "done",
+          theirs: loop.kind === "commitment_theirs",
+        }),
+      ),
+  );
+  return [...tasks, ...fromClaims];
+}
+
+// One line of the card, whatever it was read from: a claim carries its kind
+// in a prefix, a task is always ours.
+type OpenLoop = {
+  key: string;
+  body: string;
+  // The word before the promise. Null means the contact's own name, which no
+  // catalog can carry.
+  prefixKey: MessageKey | null;
+  dueAt: string | null;
+  done: boolean;
+  // Whether the OTHER side owes it, which decides the badge when no date is set.
+  theirs: boolean;
+};
+
+// Whether this task is the reader's to deliver. Unassigned work is the
+// workspace's, and the reader is the workspace.
+function heldByReader(
+  assigneeId: string | null | undefined,
+  viewerId: string | undefined,
+): boolean {
+  if (!assigneeId) {
+    return true;
+  }
+  return viewerId !== undefined && assigneeId === viewerId;
+}
+
+function commitmentsLine(
+  view: Person360,
+  viewerId: string | undefined,
+  t: ReturnType<typeof useT>,
+): string {
+  const openCount = openLoops(view, viewerId).length;
   if (openCount === 0) {
     return t("person.loops.empty");
   }
-  return `${openCount} ${t("person.loops.open")}`;
+  // The sections this counts are summaries the server caps, so the number is a
+  // floor whenever one of them ran out of room. Printing it flat said "25
+  // open" on a record holding thirty-one, and the six it did not mention are
+  // exactly the ones nobody is looking at.
+  const count = `${openCount} ${t("person.loops.open")}`;
+  return truncated(view) ? t("person.loops.atLeast", { count }) : count;
+}
+
+// Whether either section this card reads has more rows than it carried.
+function truncated(view: Person360): boolean {
+  return view.next_steps?.page.has_more === true;
 }
 
 export function PersonCommitmentsCard({
@@ -406,14 +495,7 @@ export function PersonCommitmentsCard({
   firstName,
 }: Readonly<{ view: Person360; firstName: string }>) {
   const t = useT();
-  const claims = view.claims ?? [];
-  const rows = LOOPS.flatMap((loop) =>
-    claims
-      .filter(
-        (claim) => claim.kind === loop.kind && claim.status !== "dismissed",
-      )
-      .map((claim) => ({ claim, loop })),
-  );
+  const rows = openLoops(view, useViewerId());
   return (
     <Panel title={t("person.loops.title")}>
       {rows.length === 0 && (
@@ -423,8 +505,8 @@ export function PersonCommitmentsCard({
           <p className="pe-prose">{t("person.loops.empty")}</p>
         </PanelBody>
       )}
-      {rows.map(({ claim, loop }) => (
-        <PanelRow className="pe-loop" key={claim.id}>
+      {rows.map((loop) => (
+        <PanelRow className="pe-loop" key={loop.key}>
           {/* A read of the claim's done state, never a write: disabled so a
               click can't nudge the tick, and the accessible name lives here
               (sr-only) because the visible body sits in its own cell so the
@@ -433,17 +515,17 @@ export function PersonCommitmentsCard({
             label={
               <span className="sr-only">
                 {loopPrefix(loop, firstName, t)}
-                {claim.body}
+                {loop.body}
               </span>
             }
-            checked={claim.status === "done"}
+            checked={loop.done}
             disabled
           />
           <span className="pe-loop-body">
             {loopPrefix(loop, firstName, t)}
-            {claim.body}
+            {loop.body}
           </span>
-          <LoopStatus claim={claim} />
+          <LoopStatus loop={loop} />
         </PanelRow>
       ))}
     </Panel>
@@ -451,22 +533,24 @@ export function PersonCommitmentsCard({
 }
 
 function loopPrefix(
-  loop: { kind: string; prefixKey: MessageKey | null },
+  loop: OpenLoop,
   firstName: string,
   t: ReturnType<typeof useT>,
 ): string {
-  if (loop.kind === "commitment_theirs") {
+  if (loop.theirs) {
     return `${firstName}: `;
   }
+  // No prefix at all for a task somebody else holds: the card does not know
+  // their name, and naming the wrong desk is worse than naming none.
   return loop.prefixKey ? `${t(loop.prefixKey)}: ` : "";
 }
 
-function LoopStatus({ claim }: Readonly<{ claim: ConversationClaim }>) {
+function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
   const t = useT();
   const { locale } = useLocale();
-  // An unreadable due instant names no deadline, so the claim reads as one with
+  // An unreadable due instant names no deadline, so the row reads as one with
   // no date rather than as a promise due at some NaN o'clock.
-  const dueMs = claim.due_at ? Date.parse(claim.due_at) : Number.NaN;
+  const dueMs = loop.dueAt ? Date.parse(loop.dueAt) : Number.NaN;
   if (!Number.isNaN(dueMs)) {
     // The verdict comes from the instant and the count only picks the wording:
     // a promise 23 hours past due is late by no whole days and still late, and
@@ -489,7 +573,7 @@ function LoopStatus({ claim }: Readonly<{ claim: ConversationClaim }>) {
       </span>
     );
   }
-  if (claim.kind === "commitment_theirs") {
+  if (loop.theirs) {
     return <Badge tone="accent">{t("person.loops.waiting")}</Badge>;
   }
   return <Badge>{t("person.loops.open")}</Badge>;

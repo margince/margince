@@ -1,0 +1,12 @@
+-- Nothing to undo, and nothing that COULD be undone honestly.
+--
+-- The up migration reopened a set of domain verdicts for another look. Rolling
+-- that back would mean writing 'no_site' onto whatever those domains say now —
+-- including the ones the retry has since read properly and turned into
+-- companies, which would be inventing a verdict rather than restoring one. The
+-- rows carry no record of the state they held before, so there is no restore
+-- available even in principle.
+--
+-- Reopening a domain costs one site read that the sweep bounds anyway, so the
+-- forward direction is safe to leave in place.
+SELECT 1;

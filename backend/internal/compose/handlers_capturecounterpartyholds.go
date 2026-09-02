@@ -20,6 +20,11 @@ import (
 
 type captureCounterpartyHoldHandlers struct {
 	store *capture.CounterpartyHoldStore
+	// The two seams re-opening a hold's history needs, injected here because a
+	// module never imports a sibling: the audience derivation and the clearing
+	// of the row-level hold both belong to activities.
+	recompute capture.AudienceRecomputer
+	clearHold capture.CounterpartyHoldClearer
 }
 
 func (h captureCounterpartyHoldHandlers) ListCaptureCounterpartyHolds(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +53,17 @@ func (h captureCounterpartyHoldHandlers) CreateCaptureCounterpartyHold(w http.Re
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, toContractCounterpartyHold(hold))
+}
+
+func (h captureCounterpartyHoldHandlers) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request) {
+	released, err := h.store.ShareHistory(r.Context(), h.recompute, h.clearHold)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ShareCaptureHoldHistoryResponse{
+		Released: released,
+	})
 }
 
 func (h captureCounterpartyHoldHandlers) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

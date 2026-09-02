@@ -75,6 +75,10 @@ var ErrDeltaGone = fmt.Errorf("graphcal: delta cursor no longer valid: %w", conn
 // this package owns no duplicate token plumbing.
 type OAuth = graph.OAuth
 
+// Authorizer is the token half the connector holds — the same split graph makes,
+// on the same handshake.
+type Authorizer = graph.Authorizer
+
 // OAuthConfig wires the calendar OAuth client. Tenant/AuthURL/TokenURL default
 // to Microsoft's own endpoints; tests override TokenURL.
 type OAuthConfig struct {

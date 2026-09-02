@@ -89,6 +89,9 @@ var errNoSubscriptionOwner = fmt.Errorf(
 type Subscription struct {
 	ID         string
 	Expiration time.Time
+	// NotificationURL is where Microsoft says it delivers this subscription's
+	// notifications — the field a renewal checks before extending one.
+	NotificationURL string
 }
 
 // subscription is Microsoft's wire shape for one, in the fields this connector
@@ -166,7 +169,81 @@ func (c *Connector) Watch(ctx context.Context, auth connector.Auth, notification
 	if sub.Expiration.After(deadline) {
 		sub.Expiration = deadline
 	}
-	return connector.WatchResult{ExpiresAt: sub.Expiration}, nil
+	return connector.WatchResult{ExpiresAt: sub.Expiration, Ref: sub.ID}, nil
+}
+
+// RenewWatch extends the subscription named by ref (connector.WatchRenewer).
+//
+// The whole of what this saves is the LISTING. Watch has to make sure a
+// subscription exists, and without a handle that means walking GET
+// /subscriptions — paged, once per mailbox, every renewal cycle — to find the
+// one this installation made. A renewal that already knows the id asks
+// Microsoft to extend it and is done in one call.
+//
+// A ref Microsoft no longer knows — or one naming a subscription that points
+// somewhere else — falls through to Watch, which is where the listing belongs: a subscription dropped for repeated delivery failures, or one
+// made by an installation that has since been restored from a backup, is exactly
+// the case a recovery path is for.
+func (c *Connector) RenewWatch(
+	ctx context.Context, auth connector.Auth, notificationURL, ref string,
+) (connector.WatchResult, error) {
+	// A ref that cannot name a subscription is settled without spending a token
+	// on it: Watch refreshes one of its own, and this is the ordinary path
+	// rather than a rare one — a first registration and every connection made
+	// before handles existed both arrive here.
+	if !isSubscriptionID(ref) {
+		return c.Watch(ctx, auth, notificationURL)
+	}
+	st, err := graphconn.Read(connectorName, auth)
+	if err != nil {
+		return connector.WatchResult{}, err
+	}
+	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	if err != nil {
+		return connector.WatchResult{}, err
+	}
+	// READ IT BEFORE EXTENDING IT. A renewal only ever moves a deadline; it
+	// never re-states where the subscription points. EnsureSubscription looked
+	// its subscription up BY notificationURL, so a deployment whose webhook URL
+	// had moved got a fresh subscription on the new endpoint without anyone
+	// arranging it, and renewing by id alone would lose that — Microsoft would
+	// keep delivering to an endpoint nobody serves while the new webhook stayed
+	// poll-only.
+	//
+	// Asked of Microsoft rather than remembered beside the handle: that URL
+	// carries the operator token that admits a notification, and the handle is
+	// stored in an ordinary column that reaches every database reader and every
+	// backup. This way nothing about the endpoint is written down at all, and
+	// the answer is the provider's own rather than a copy that can go stale.
+	existing, err := c.api.GetSubscription(ctx, access, ref)
+	if errors.Is(err, ErrSubscriptionGone) || (err == nil && existing.NotificationURL != notificationURL) {
+		// Either way there is no subscription at this endpoint to extend, and
+		// Watch settles it: it looks up what actually points there and registers
+		// when nothing does. That listing is where a recovery path belongs.
+		return c.Watch(ctx, auth, notificationURL)
+	}
+	if err != nil {
+		return connector.WatchResult{}, err
+	}
+	deadline := c.now().Add(maxSubscriptionMinutes * time.Minute).UTC()
+	sub, err := c.api.RenewSubscription(ctx, access, ref, deadline)
+	if errors.Is(err, ErrSubscriptionGone) {
+		return c.Watch(ctx, auth, notificationURL)
+	}
+	if err != nil {
+		return connector.WatchResult{}, err
+	}
+	if sub.Expiration.IsZero() {
+		return connector.WatchResult{}, errNoSubscriptionDeadline
+	}
+	// The same ceiling Watch applies, and for the same reason: a deadline
+	// further out than Microsoft can grant is a connection the renewal scan
+	// never picks up again, while the real subscription lapses within three days
+	// and the mailbox falls back to the poll with nothing failing to say so.
+	if sub.Expiration.After(deadline) {
+		sub.Expiration = deadline
+	}
+	return connector.WatchResult{ExpiresAt: sub.Expiration, Ref: sub.ID}, nil
 }
 
 // EnsureSubscription renews the subscription already pointing at
@@ -184,24 +261,29 @@ func (a *httpAPI) EnsureSubscription(
 		return Subscription{}, err
 	}
 	if existing != "" {
-		renewed, err := a.renewSubscription(ctx, accessToken, existing, deadline)
+		renewed, err := a.RenewSubscription(ctx, accessToken, existing, deadline)
 		if err == nil {
 			return renewed, nil
 		}
 		// Gone since the list named it — Microsoft drops a subscription whose
 		// endpoint failed too often, and the recovery is a new one rather than a
 		// failed round. Any other fault stops here.
-		if !errors.Is(err, errSubscriptionGone) {
+		if !errors.Is(err, ErrSubscriptionGone) {
 			return Subscription{}, err
 		}
 	}
 	return a.createSubscription(ctx, accessToken, notificationURL, clientState, deadline)
 }
 
-// errSubscriptionGone is a renewal Microsoft refused because the subscription is
-// no longer there. Internal to this file: the caller's answer is to create one,
-// never to report it.
-var errSubscriptionGone = errors.New("graph: the subscription no longer exists")
+// ErrSubscriptionGone is a renewal Microsoft refused because the subscription is
+// no longer there.
+//
+// EXPORTED, because the answer to it now lives at two levels: EnsureSubscription
+// creates one and never reports it, and RenewWatch — which is handed a stored
+// handle by the registry — falls back to the listing Ensure does. A caller that
+// cannot tell "gone" from "unreachable" would leave the mailbox on the poll for
+// as long as the stored id kept failing.
+var ErrSubscriptionGone = errors.New("graph: the subscription no longer exists")
 
 // findSubscription returns the id of this app's subscription for this user
 // pointing at notificationURL, or empty.
@@ -246,28 +328,74 @@ func (a *httpAPI) findSubscription(ctx context.Context, accessToken, notificatio
 	return "", errSubscriptionListUnbounded
 }
 
+// isSubscriptionID reports whether id can be spliced into a URL path as ONE
+// segment naming a subscription.
+//
+// The test is that the id is ALREADY its own escaping, plus the two dot
+// segments that survive escaping untouched. Anything needing an escape — a
+// separator, a query or fragment marker, a space, a stray percent — is not an
+// identifier Microsoft minted, and `.` and `..` are path instructions wearing an
+// id's clothes.
+//
+// Stated as what an id IS rather than as a list of traversal spellings: a
+// blacklist is a list somebody has to keep complete, against an input whose
+// whole point is that it was chosen by the far end.
+func isSubscriptionID(id string) bool {
+	return id != "" && id != "." && id != ".." && url.PathEscape(id) == id
+}
+
 // errSubscriptionListUnbounded is a subscription listing that would not end.
 var errSubscriptionListUnbounded = fmt.Errorf(
 	"graph: the subscription listing did not end within %d pages: %w", maxSubscriptionPages, ErrUnreachable,
 )
 
-func (a *httpAPI) renewSubscription(ctx context.Context, accessToken, id string, deadline time.Time) (Subscription, error) {
+func (a *httpAPI) RenewSubscription(ctx context.Context, accessToken, id string, deadline time.Time) (Subscription, error) {
+	// REFUSED, not merely escaped. The id arrives as a decoded field of a
+	// provider response, and one carrying a path segment would aim this
+	// authenticated PATCH — the user's own delegated token on it — at another
+	// resource. url.PathEscape alone does not settle that: it escapes the
+	// separators and leaves `..` intact, so a server that decodes %2F before
+	// resolving the path still walks out of the collection. Rejecting the id
+	// does not depend on how the far end normalizes.
+	if !isSubscriptionID(id) {
+		// GONE, not unreachable: the subscription this names cannot be
+		// addressed, so from the round's seat there is nothing to renew — and
+		// the round answers that by creating one, which is the safe direction.
+		// Failing instead would leave the mailbox on the poll for as long as
+		// the provider kept answering with an id like this.
+		return Subscription{}, ErrSubscriptionGone
+	}
 	var out subscription
-	// Escaped even though Microsoft mints it: it arrives as a decoded field of a
-	// provider response, and an id carrying a path segment or a query would aim
-	// this authenticated PATCH — the user's own delegated token on it — at a
-	// different resource. Only identifiers are ever formatted into a URL here,
-	// and never unescaped.
 	status, err := a.writeJSON(ctx, http.MethodPatch,
 		a.base+subscriptionsPath+"/"+url.PathEscape(id), accessToken,
 		subscriptionRequest{Expiration: deadline}, &out)
 	if err != nil {
 		if status == http.StatusNotFound {
-			return Subscription{}, errSubscriptionGone
+			return Subscription{}, ErrSubscriptionGone
 		}
 		return Subscription{}, err
 	}
-	return Subscription{ID: out.ID, Expiration: out.Expiration}, nil
+	return Subscription{ID: out.ID, Expiration: out.Expiration, NotificationURL: out.NotificationURL}, nil
+}
+
+// GetSubscription reads one subscription by id.
+func (a *httpAPI) GetSubscription(ctx context.Context, accessToken, id string) (Subscription, error) {
+	// The same refusal RenewSubscription makes, for the same reason: the id
+	// arrives as a decoded field of a provider response, and one carrying a path
+	// segment would aim this authenticated GET — the user's own delegated token
+	// on it — at another resource.
+	if !isSubscriptionID(id) {
+		return Subscription{}, ErrSubscriptionGone
+	}
+	var out subscription
+	status, err := a.get(ctx, accessToken, a.base+subscriptionsPath+"/"+url.PathEscape(id), nil, &out)
+	if err != nil {
+		if status == http.StatusNotFound {
+			return Subscription{}, ErrSubscriptionGone
+		}
+		return Subscription{}, err
+	}
+	return Subscription{ID: out.ID, Expiration: out.Expiration, NotificationURL: out.NotificationURL}, nil
 }
 
 func (a *httpAPI) createSubscription(

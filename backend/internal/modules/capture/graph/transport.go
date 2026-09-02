@@ -134,7 +134,14 @@ func (a *httpAPI) get(ctx context.Context, accessToken, fullURL string, hdr http
 }
 
 // writeJSON performs a JSON-bodied request (POST or PATCH) and decodes the
-// response into out, which may be nil for a call that answers with nothing.
+// response into out.
+//
+// out is never nil: both writes this client makes read the subscription back,
+// and a nil-output fast path would have to decide what an unread body means.
+// Skipping the read error there reports an oversized or failed response as a
+// success; honouring it reports a write the server ACCEPTED as failed, and the
+// caller creates a second subscription on the retry. Neither is right, so the
+// branch does not exist.
 //
 // Beside get rather than inside each caller: the Authorization header, the
 // bounded read, the status classification and the "a truncated prefix is not a
@@ -166,9 +173,6 @@ func (a *httpAPI) writeJSON(ctx context.Context, method, fullURL, accessToken st
 	body, readErr := readBounded(resp)
 	if err := classifyStatus(resp, a.requestOp(fullURL), body); err != nil {
 		return resp.StatusCode, err
-	}
-	if out == nil {
-		return resp.StatusCode, nil
 	}
 	if readErr != nil {
 		return resp.StatusCode, fmt.Errorf("graph: reading response: %w", ErrUnreachable)

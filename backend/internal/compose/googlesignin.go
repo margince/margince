@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -134,10 +135,8 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// origin. What an incomplete config withholds is the ROUTE, not the URL
 		// the route will answer on once the operator finishes.
 		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
-			s.redirectURIs = append(s.redirectURIs, crmcontracts.GoogleAppRedirectUri{
-				Purpose: crmcontracts.SignIn,
-				Url:     identity.SignInRedirectURI(base, googleProviderKey),
-			})
+			s.addRedirectURI(capture.AppProviderGoogle, crmcontracts.SignIn,
+				identity.SignInRedirectURI(base, googleProviderKey))
 		}
 		if !cfg.Enabled() {
 			return

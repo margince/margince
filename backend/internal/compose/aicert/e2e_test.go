@@ -25,11 +25,13 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // TestE2ECertify runs one certification pass against the configured
@@ -37,21 +39,89 @@ import (
 // the lane gate itself; the rest default to "certify everything the
 // corpus covers, on the routing file's own bindings, Run's own default
 // repeat count."
+// logResolvedBindings prints what a routed run decided BEFORE it spends: which
+// rung each shipped task landed on and the model bound there. A paid run that
+// measured the wrong deployment is only obvious from this list.
+func logResolvedBindings(t *testing.T, routing ai.RoutingConfig) {
+	t.Helper()
+	for _, task := range ai.AllTasks() {
+		if ai.Status(task) != ai.StatusShipped {
+			continue
+		}
+		lead := ai.LeadingTier(task)
+		if b, ok := routing.Tiers[lead]; ok {
+			t.Logf("routed: %-34s %-12s %s:%s", task, lead, b.Provider, b.Model)
+		}
+	}
+}
+
+// judgeBaseURL is the host root the grader is reached on.
+//
+// It falls back to the CANDIDATE's host only for an openai_compatible judge,
+// which fails closed without one and in practice rides the same broker. A native
+// vendor is left empty on purpose: inheriting a broker host would point, say, an
+// anthropic judge at OpenRouter and grade through a serving path the record does
+// not name. JUDGE_BASE_URL= still overrides both.
+func judgeBaseURL() string {
+	if own := os.Getenv("MARGINCE_AICERT_JUDGE_BASE_URL"); own != "" {
+		return own
+	}
+	if strings.HasPrefix(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"), "openai_compatible:") {
+		return os.Getenv("MARGINCE_AICERT_BASE_URL")
+	}
+	return ""
+}
+
+// TestE2ECertify is the paid certification lane: it drives the shipped corpus
+// against real models and writes one record per task.
+//
+// What to certify is stated, never inherited from a file on the runner's disk:
+// ROUTING= names a deployment and certifies the model bound at each task's first
+// bound ladder rung, MODEL= names one candidate. Exactly one of the two.
 func TestE2ECertify(t *testing.T) {
 	if os.Getenv("MARGINCE_AICERT") == "" {
 		t.Fatal("TestE2ECertify requires MARGINCE_AICERT=1 (set by `make e2e-ai`) — " +
 			"this lane costs real tokens and real network, so it never runs implicitly")
 	}
-	// The binding is stated outright. There is no routing file to inherit one
-	// from any more, and a certification record should name the model it
-	// measured rather than whatever a file on the runner's disk happened to say.
-	binding, err := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_MODEL"), os.Getenv("MARGINCE_AICERT_BASE_URL"))
-	if err != nil {
-		t.Fatalf("MARGINCE_AICERT_MODEL: %v", err)
+	// Two ways to say what to certify, and they are different questions.
+	//
+	// ROUTING= names a DEPLOYMENT: its seeds.ai_routing binds a model per tier,
+	// and each task is certified against the model at its leading rung — the one
+	// that would actually serve it. MODEL= names one candidate and binds it to
+	// every tier, which is how a prompt fix is A/B'd against a single model.
+	//
+	// Neither is a default read off the runner's disk. A verdict recorded against
+	// whatever a file happened to bind was never comparable with anybody else's,
+	// so the path is stated and the resolved model is printed below.
+	var routing *ai.RoutingConfig
+	var binding ai.ProviderConfig
+	routingPath, modelSpec := os.Getenv("MARGINCE_AICERT_ROUTING"), os.Getenv("MARGINCE_AICERT_MODEL")
+	// Refused HERE, because the runner's own both-are-set check cannot see this:
+	// under ROUTING= the branch below never parses MODEL=, so cfg.Binding stays
+	// zero and the refusal never fires. An engineer who passed both would believe
+	// they were A/B-ing one model while paying to certify a whole deployment.
+	if routingPath != "" && modelSpec != "" {
+		t.Fatalf("both ROUTING=%s and MODEL=%s were given — the first certifies the models a deployment binds, "+
+			"the second one model you name; a run cannot report both, so pass one", routingPath, modelSpec)
 	}
+	if routingPath != "" {
+		resolved, rerr := compose.RoutingFromDeployConfig(routingPath, runtimeenv.Development)
+		if rerr != nil {
+			t.Fatalf("MARGINCE_AICERT_ROUTING=%s: %v", routingPath, rerr)
+		}
+		routing = &resolved
+		logResolvedBindings(t, resolved)
+	} else {
+		parsed, perr := ai.ParseBinding(modelSpec, os.Getenv("MARGINCE_AICERT_BASE_URL"))
+		if perr != nil {
+			t.Fatalf("MARGINCE_AICERT_MODEL: %v", perr)
+		}
+		binding = parsed
+	}
+
 	// The judge is a SECOND model on purpose: one grading itself is certified by
 	// construction. Run refuses the two being equal before a call is paid for.
-	judge, err := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"), os.Getenv("MARGINCE_AICERT_JUDGE_BASE_URL"))
+	judge, err := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"), judgeBaseURL())
 	if err != nil {
 		t.Fatalf("MARGINCE_AICERT_JUDGE_MODEL: %v", err)
 	}
@@ -79,17 +149,29 @@ func TestE2ECertify(t *testing.T) {
 	cfg := aicert.RunnerConfig{
 		Census:       census,
 		Binding:      binding,
+		Routing:      routing,
 		JudgeBinding: judge,
-		Profile:      ai.Profile(os.Getenv("MARGINCE_AICERT_PROFILE")),
-		TaskFilter:   os.Getenv("MARGINCE_AICERT_TASK"),
-		Repeats:      repeats,
-		CorpusDir:    "corpus",
-		RecordDir:    "records",
+		// Under ROUTING= the profile is the FILE's own, not the environment's: it
+		// is part of a record's identity and part of what ValidateTierBinding
+		// enforces, so taking it from anywhere but the config that names the
+		// models would file a record under an environment class nobody declared.
+		// Under ROUTING= this is ignored: Run takes the profile from the routing
+		// itself (RunnerConfig.recordProfile), so the record's environment class
+		// comes from the same document that named the models.
+		Profile:    ai.Profile(os.Getenv("MARGINCE_AICERT_PROFILE")),
+		TaskFilter: os.Getenv("MARGINCE_AICERT_TASK"),
+		Repeats:    repeats,
+		CorpusDir:  "corpus",
+		RecordDir:  "records",
 		// MARGINCE_AICERT_TRACE names a directory for the payload trace
 		// (every candidate+judge request/response, ai_call_payload shape);
 		// unset = no trace. `make e2e-ai` sets it to the repo-root
 		// .tmp/aicert default (TRACE=1); pass TRACE= to disable.
 		TraceDir: os.Getenv("MARGINCE_AICERT_TRACE"),
+		// MARGINCE_AICERT_RESUME names a directory for the resume journal;
+		// unset = every run is paid for. `make e2e-ai` sets it to the repo-root
+		// .tmp/aicert/resume default (RESUME=1); pass RESUME= to disable.
+		ResumeDir: os.Getenv("MARGINCE_AICERT_RESUME"),
 	}
 
 	records, runErr := aicert.Run(context.Background(), cfg, slog.Default())

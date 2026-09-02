@@ -321,8 +321,8 @@ describe("what an edit is a reading of", () => {
   // The same reading has to be the diff baseline, or an untouched field whose
   // value moved under the dialog reads as this person's edit and is sent —
   // overwriting a change nobody here made.
-  // A screen can swap the record under an open dialog without remounting it —
-  // the quota rail does exactly this. The form is then showing one record's
+  // A screen can swap the record under an open dialog without remounting it.
+  // The form is then showing one record's
   // values while the caller's write addresses another, and the frozen reading
   // would send the FIRST record's version against the second record's id.
   it("re-reads when the record under the dialog is a different one", async () => {

@@ -36,7 +36,7 @@ type PersonMomentAction = components["schemas"]["PersonMomentAction"];
 // rather than left implicit: "Gone quiet" and "Promise overdue" lead to
 // different moves, and a reader who sees only the sentence has to infer which
 // kind of thing they are looking at.
-const MOMENT_RULE_LABEL = {
+export const MOMENT_RULE_LABEL = {
   meeting_prep: "person.moment.rule.meeting_prep",
   re_engaged: "person.moment.rule.re_engaged",
   job_change: "person.moment.rule.job_change",
@@ -50,7 +50,7 @@ const MOMENT_RULE_LABEL = {
   nothing_needed: "person.moment.rule.nothing_needed",
 } as const satisfies Record<PersonMoment["rule"], MessageKey>;
 
-const MOMENT_EVIDENCE_LABEL = {
+export const MOMENT_EVIDENCE_LABEL = {
   activity: "person.moment.evidence.activity",
   task: "person.moment.evidence.task",
   relationship_change: "person.moment.evidence.relationship_change",
@@ -63,11 +63,19 @@ const MOMENT_EVIDENCE_LABEL = {
 // read as warnings; the quiet success state reads as settled rather than as
 // something nobody has judged. Everything else is a live thread — a fact about
 // the relationship that wants a move rather than a verdict on it.
-function standingTone(rule: PersonMoment["rule"]): StandingTone {
-  if (rule === "gone_quiet" || rule === "overdue_promise") {
+export function standingTone(rule: PersonMoment["rule"]): StandingTone {
+  if (isLate(rule)) {
     return "warn";
   }
   return rule === "nothing_needed" ? "calm" : "accent";
+}
+
+// The two rules that mean somebody is being kept waiting. A promise past its
+// date is late whether it was read out of an email or filed as a task — one
+// rung covers both — while a promise not yet due is a live thread, not a
+// warning.
+export function isLate(rule: PersonMoment["rule"]): boolean {
+  return rule === "gone_quiet" || rule === "overdue_promise";
 }
 
 export function PersonToday({
@@ -85,8 +93,7 @@ export function PersonToday({
   // The amber treatment is the finding itself — a relationship that stopped,
   // or a promise that is late — so it colours the card rather than a badge
   // inside it.
-  const warn =
-    moment.rule === "gone_quiet" || moment.rule === "overdue_promise";
+  const warn = isLate(moment.rule);
   const secondary = moment.secondary_actions ?? [];
   // What the moment rests on, in the shape every claim on a record states it:
   // the label a reader can act on, and the kind of record it was read from.

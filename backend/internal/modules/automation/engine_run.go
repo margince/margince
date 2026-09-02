@@ -113,6 +113,18 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 		// claiming a terminal run row over an infrastructure blip.
 		return err
 	}
+	if !decision.blocked {
+		// The match-time AUDIENCE gate (audiencegate.go). The check above asks
+		// whether the owner's grants permit the action; this asks whether they
+		// may read the record it fired on, which no grant answers — an activity
+		// limited to its participants is unreadable to a colleague holding
+		// every permission there is. Second, because a firing the object gate
+		// already refused needs no second reason, and this one costs a query.
+		decision, err = checkOwnerCanReadSubject(ctx, e.db, e.resolver, ev)
+		if err != nil {
+			return err
+		}
+	}
 	if decision.blocked {
 		return e.recordBlocked(ctx, h, ev, plannedJSON, decision.reason)
 	}

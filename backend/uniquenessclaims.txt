@@ -31,7 +31,6 @@
 # is whatever this file holds, and a second copy of it drifts.
 #
 # Sorted, one key per line: <path>#<declaration>.
-
 ../cli/craft/gate/anthropic.go#func NewAnthropicClient
 ../cli/craft/main.go#func pinnedModel
 ../desktop/launcher/console.go#func say
@@ -71,7 +70,7 @@ internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes
 internal/compose/agentgatecanon.go#const keyBindsTheRetry
 internal/compose/agentgatestaging.go#func resolveStagedTarget
-internal/compose/agentsplit.go#const block at const opAddListMember
+internal/compose/agentsplit.go#const block at const opApplyTag
 internal/compose/agenttasks.go#const taskColumns
 internal/compose/aicert/record.go#type Record.Scenarios
 internal/compose/aicert/reportcmd/report.go#var reportColumns

@@ -52,6 +52,9 @@ type stubDuplicates struct {
 	unreadable ids.UUID
 	// describeErr is a read that BROKE rather than one that was refused.
 	describeErr error
+	// asked records every batch the lane requested, so a test can count the
+	// reads rather than assume them.
+	asked *[]string
 }
 
 func (s stubDuplicates) OpenCandidates(context.Context, int) ([]DuplicatePair, error) {
@@ -60,16 +63,25 @@ func (s stubDuplicates) OpenCandidates(context.Context, int) ([]DuplicatePair, e
 
 func (s stubDuplicates) CountOpen(context.Context) (int, error) { return s.open, s.err }
 
-func (s stubDuplicates) Describe(
-	_ context.Context, _ string, id ids.UUID,
-) (RecordFace, error) {
+func (s stubDuplicates) DescribeMany(
+	_ context.Context, entityType string, rowIDs []ids.UUID,
+) (map[ids.UUID]RecordFace, error) {
+	if s.asked != nil {
+		*s.asked = append(*s.asked, entityType)
+	}
 	if s.describeErr != nil {
-		return RecordFace{}, s.describeErr
+		return nil, s.describeErr
 	}
-	if id == s.unreadable {
-		return RecordFace{}, apperrors.ErrNotFound
+	faces := make(map[ids.UUID]RecordFace, len(rowIDs))
+	for _, id := range rowIDs {
+		if id == s.unreadable {
+			// ABSENT rather than an error: a row the reader may not see is one
+			// the batched read leaves out, which is what its not-found meant.
+			continue
+		}
+		faces[id] = RecordFace{Label: "Record " + id.String()[:8]}
 	}
-	return RecordFace{Label: "Record " + id.String()[:8]}, nil
+	return faces, nil
 }
 
 type stubTasks struct {

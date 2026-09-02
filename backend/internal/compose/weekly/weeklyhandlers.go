@@ -80,22 +80,55 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 	for _, line := range review.Deals {
 		deals = append(deals, dealLineToWire(line))
 	}
-	c := review.Counts
-	return crmcontracts.WeeklyReview{
+	out := crmcontracts.WeeklyReview{
 		Id:             openapi_types.UUID(review.ID),
 		LocalWeekStart: openapi_types.Date{Time: review.LocalWeekStart},
 		GeneratedAt:    review.GeneratedAt,
 		AsOf:           review.AsOf,
 		Narrative:      nullableText(review.Narrative),
 		NarratedAt:     review.NarratedAt,
-		Counts: crmcontracts.WeeklyReviewCounts{
-			TasksDue: c.TasksDue, TasksDone: c.TasksDone,
-			TasksCarriedOver: c.TasksCarriedOver,
-			DealsMoved:       c.DealsMoved, DealsWon: c.DealsWon, DealsLost: c.DealsLost,
-			ProposalsAccepted: c.ProposalsAccepted, ProposalsRejected: c.ProposalsRejected,
-			BriefItemsActed: c.BriefItemsActed, BriefItemsDismissed: c.BriefItemsDismissed,
-		},
-		Deals: deals,
+		Counts:         countsToWire(review.Counts),
+		Pipeline:       pipelineToWire(review.Money),
+		Deals:          deals,
+	}
+	if review.Prior != nil {
+		out.Prior = &crmcontracts.WeeklyReviewPrior{
+			LocalWeekStart: openapi_types.Date{Time: review.Prior.LocalWeekStart},
+			Counts:         countsToWire(review.Prior.Counts),
+			Pipeline:       pipelineToWire(review.Prior.Money),
+		}
+	}
+	return out
+}
+
+func countsToWire(c Counts) crmcontracts.WeeklyReviewCounts {
+	return crmcontracts.WeeklyReviewCounts{
+		TasksDue: c.TasksDue, TasksDone: c.TasksDone,
+		TasksCarriedOver: c.TasksCarriedOver,
+		DealsMoved:       c.DealsMoved, DealsWon: c.DealsWon, DealsLost: c.DealsLost,
+		ProposalsAccepted: c.ProposalsAccepted, ProposalsRejected: c.ProposalsRejected,
+		BriefItemsActed: c.BriefItemsActed, BriefItemsDismissed: c.BriefItemsDismissed,
+		CommitmentsDue: c.CommitmentsDue, CommitmentsKept: c.CommitmentsKept,
+		LeadsRouted: c.LeadsRouted, LeadsAnsweredInTarget: c.LeadsAnsweredInTarget,
+		LeadsBreached: c.LeadsBreached,
+		MeetingsHeld:  c.MeetingsHeld, MeetingsWithNextStep: c.MeetingsWithNextStep,
+	}
+}
+
+// pipelineToWire renders the money, or nothing.
+//
+// Absent rather than a block of zeros when the week could not be converted: a
+// reader cannot tell a zero that means "nothing happened" from one that means
+// "we could not work it out", and only one of those is true.
+func pipelineToWire(money Money) *crmcontracts.WeeklyReviewPipeline {
+	if !money.Known {
+		return nil
+	}
+	return &crmcontracts.WeeklyReviewPipeline{
+		CreatedMinor: money.CreatedMinor,
+		WonMinor:     money.WonMinor,
+		LostMinor:    money.LostMinor,
+		Currency:     money.Currency,
 	}
 }
 

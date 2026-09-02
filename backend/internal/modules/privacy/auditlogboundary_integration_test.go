@@ -23,13 +23,17 @@ package privacy
 
 import (
 	"context"
+	"encoding/json"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -42,6 +46,11 @@ type auditBoundaryEnv struct {
 	owner  *pgx.Conn
 	ws     ids.UUID
 	user   ids.UUID
+	// other is a SECOND seat, the one who captured the held mail in the
+	// audience tests next door. The audience arm admits a row's own capturer
+	// (`captured_by LIKE '%:<uuid>'`), so a fixture where the reader captured
+	// the activity would pass whatever the redaction did.
+	other ids.UUID
 }
 
 func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
@@ -65,6 +74,7 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 	}
 
 	ws, user, person := ids.NewV7(), ids.NewV7(), ids.New[ids.PersonKind]()
+	other := ids.NewV7()
 	for _, seed := range []struct {
 		statement string
 		args      []any
@@ -73,6 +83,10 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 		{
 			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
 			[]any{user, "admin-" + user.String() + "@boundary.test"},
+		},
+		{
+			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Colleague')`,
+			[]any{other, "other-" + other.String() + "@boundary.test"},
 		},
 		{`INSERT INTO person (id, full_name, source, captured_by)
 		  VALUES ($1, 'Sara Subject', 'manual', 'user:'||$2::text)`, []any{person, user}},
@@ -95,6 +109,7 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 		owner:  owner,
 		ws:     ws,
 		user:   user,
+		other:  other,
 	}
 }
 
@@ -401,13 +416,7 @@ func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
 		t.Run(entityType, func(t *testing.T) {
 			e := setupAuditBoundary(t)
 			id := ids.NewV7()
-			if _, err := e.owner.Exec(context.Background(),
-				`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, after, occurred_at)
-				 VALUES ($1, 'human', 'user:'||$2::text, 'create', $3, $4,
-				         '{"filename":"sara-subject-passport.pdf","subject":"Sara Subject contract"}'::jsonb, $5)`,
-				ids.NewV7(), e.user, entityType, id, boundaryEarlier); err != nil {
-				t.Fatalf("seeding the %s image: %v", entityType, err)
-			}
+			e.collateralImage(t, entityType, id)
 			if _, err := e.owner.Exec(context.Background(),
 				`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
 				 VALUES ($1, 'human', 'user:'||$2::text, 'erase', $3, $4, $5)`,
@@ -420,22 +429,91 @@ func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ListAuditLog: %v", err)
 			}
-			// The create row must be THERE and withheld. Checking absence alone
-			// would pass on an empty page, or on a page holding only the
-			// tombstone — which carries no image to leak.
-			var found bool
-			for _, entry := range page.Entries {
-				if entry.Action != "create" {
-					continue
-				}
-				found = true
-				if strings.Contains(string(entry.After), "Sara Subject") {
-					t.Errorf("an erased %s still names the subject: %s", entityType, entry.After)
-				}
-			}
-			if !found {
-				t.Fatalf("the %s's create row is absent from the page, so this proved nothing", entityType)
+			// The create row must be THERE and withheld, which is what
+			// namesTheSubject insists on: absence alone would pass on an empty
+			// page, or on one holding only the tombstone.
+			if survivors := contentSurvivingOnTheCreateRow(t, page); len(survivors) > 0 {
+				t.Errorf("an erased %s still carries %v", entityType, survivors)
 			}
 		})
 	}
+}
+
+// AN ATTACHMENT WHOSE ROW IS GONE IS GOVERNED, not ungoverned.
+//
+// The audit trail outlives what it describes, so the route's question — is this
+// content governed by an activity's audience — is asked of a row that may no
+// longer be there, and a scalar subquery over no row answers NULL. NULL is not a
+// third answer: it is not knowing, and not knowing has to read as governed.
+//
+// Reading it the other way would make a vanished attachment's image MORE
+// readable than a live one's, which is the wrong direction for a boundary. No
+// erasure here on purpose — a tombstone withholds the image on its own, so a
+// case that had one would pass whichever way this resolved.
+func TestAnAttachmentWithNoRowLeftIsWithheldRatherThanReleased(t *testing.T) {
+	e := setupAuditBoundary(t)
+	entityType := "attachment"
+	id := ids.NewV7()
+	e.collateralImage(t, entityType, id)
+
+	limit := 50
+	page, err := ListAuditLog(e.ctx, e.db, AuditFilter{EntityType: &entityType, EntityID: &id, Limit: &limit})
+	if err != nil {
+		t.Fatalf("ListAuditLog: %v", err)
+	}
+	if survivors := contentSurvivingOnTheCreateRow(t, page); len(survivors) > 0 {
+		t.Errorf("an attachment whose row is gone still carries %v — a boundary that opens when "+
+			"it cannot tell is not a boundary", survivors)
+	}
+}
+
+// collateralImage seeds a create row over one of the collateral types, carrying
+// the image both boundary cases are about withholding. A helper rather than a
+// block in each test, so a change to the fixture reaches both readings of it.
+func (e *auditBoundaryEnv) collateralImage(t *testing.T, entityType string, id ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, after, occurred_at)
+		 VALUES ($1, 'human', 'user:'||$2::text, 'create', $3, $4,
+		         '{"filename":"sara-subject-passport.pdf","subject":"Sara Subject contract"}'::jsonb, $5)`,
+		ids.NewV7(), e.user, entityType, id, boundaryEarlier); err != nil {
+		t.Fatalf("seeding the %s image: %v", entityType, err)
+	}
+}
+
+// contentSurvivingOnTheCreateRow names what the create row's image still
+// carries beyond the withheld marker, so a failure says WHICH key leaked.
+//
+// The whole image, not one string in it. The fixture carries a filename as well
+// as a subject, and an image that dropped the subject while keeping
+// sara-subject-passport.pdf has disclosed the same person — a boundary asserted
+// one substring at a time is one that holds until somebody adds a second field.
+//
+// It fails the test when there is no create row to judge: absence would
+// otherwise pass on an empty page, or on one holding only the tombstone.
+func contentSurvivingOnTheCreateRow(t *testing.T, page AuditPage) []string {
+	t.Helper()
+	for _, entry := range page.Entries {
+		if entry.Action != "create" {
+			continue
+		}
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(entry.After, &fields); err != nil {
+			t.Fatalf("the create image is not an object: %s", entry.After)
+		}
+		state, marked := fields["content_state"]
+		if !marked || string(state) != strconv.Quote(string(crmcontracts.ActivityContentStateWithheld)) {
+			t.Errorf("the create image carries no withheld marker: %s", entry.After)
+		}
+		var survivors []string
+		for key := range fields {
+			if key != "content_state" {
+				survivors = append(survivors, key)
+			}
+		}
+		sort.Strings(survivors)
+		return survivors
+	}
+	t.Fatal("the create row is absent from the page, so this proved nothing")
+	return nil
 }

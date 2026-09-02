@@ -320,18 +320,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Its `User` fixtures carry the member's own stored `timezone`, which is a field on the wire rather than a zone this code renders in.",
   },
   {
-    file: "screens/quotas.forms.stories.tsx",
-    why: "The `me` fixture behind the quota forms carries the reader's stored `timezone` as wire data.",
-  },
-  {
-    file: "screens/quotas.stories.tsx",
-    why: "Same `me` fixture behind the quotas story: a stored user setting the story has to supply.",
-  },
-  {
-    file: "screens/quotas.test.tsx",
-    why: "Same `me` fixture behind the quotas suite: a stored user setting, not a formatting decision.",
-  },
-  {
     file: "screens/scheduledsends.stories.tsx",
     why: "A scheduled send carries the zone the human picked it in; the story needs one that is NOT the host's, so it picks whichever of two named zones differs.",
   },

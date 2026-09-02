@@ -32,6 +32,11 @@ const SWEEP_TRUNCATED = "sweep_truncated";
 
 type Commitment = {
   subject: string;
+  // Which of the two places the promise was recorded. A conversation promise
+  // can quote the sentence it was read from; a task carries only what somebody
+  // retyped, so the two rows say different amounts about the same kind of debt.
+  source: string;
+  quote: string;
   state: string;
   dueAt: string;
   daysOverdue: unknown;
@@ -49,7 +54,9 @@ function known(data: Record<string, unknown>): Commitment[] {
       (c): c is Record<string, unknown> => typeof c === "object" && c !== null,
     )
     .map((c) => ({
-      subject: asText(c.subject) || "Untitled task",
+      subject: asText(c.subject) || "Untitled promise",
+      source: asText(c.source),
+      quote: asText(c.quote),
       state: asText(c.state),
       dueAt: asText(c.due_at),
       daysOverdue: c.days_overdue,
@@ -96,14 +103,27 @@ function commitmentRow(commitment: Commitment): HTMLElement {
     el("span", stateClass(commitment.state), stateText(commitment)),
   );
   row.appendChild(head);
+  // The sentence the promise was made in, where there is one. It is the whole
+  // reason a conversation promise is checkable: a reader can see what was
+  // actually written rather than trusting a summary of it.
+  if (commitment.quote !== "") {
+    row.appendChild(el("div", "quote", `“${commitment.quote}”`));
+  }
   const facts = el("div", "factors");
   // "unowned" rather than an empty space: a promise nobody holds is the single
   // most useful thing on this panel, so it is said out loud.
+  // "unowned" is right for a task nobody holds. A conversation promise has no
+  // assignee to be missing — it records what was said, not who was handed it —
+  // so saying "unowned" there would report an absence that is not one.
   facts.appendChild(
     el(
       "span",
       "factor",
-      commitment.owner === "" ? "unowned" : commitment.owner,
+      commitment.source === "conversation"
+        ? "from a conversation"
+        : commitment.owner === ""
+          ? "unowned"
+          : commitment.owner,
     ),
   );
   facts.appendChild(
@@ -128,7 +148,7 @@ function metaLine(found: number, asOf: string, bounded: boolean): string {
   if (bounded) {
     return `${found} shown — more are outstanding than are listed here${judged}`;
   }
-  return `${found} open commitment(s), oldest promise first${judged}`;
+  return `${found} open commitment(s), most overdue first${judged}`;
 }
 
 export function render(
@@ -174,7 +194,7 @@ export function render(
         "div",
         "empty",
         "Nothing is outstanding. That is the answer, not a gap — " +
-          "though only promises written down as tasks are counted.",
+          "though a promise made where nothing was captured is not counted.",
       ),
     );
     return;

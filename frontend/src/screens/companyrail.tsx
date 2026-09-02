@@ -259,7 +259,7 @@ function DealsSection({
 }
 
 // The create-deal verb, gated on writability the same way TagsSection's own
-// add-tag/add-to-list verbs are: `useCompanyReadOnlyReason` needs a resolved
+// add-tag verb is: `useCompanyReadOnlyReason` needs a resolved
 // Organization, so this is its own component mounted only once one exists,
 // rather than a conditional hook call inside DealsSection itself.
 function DealsCreateVerb({

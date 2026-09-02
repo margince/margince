@@ -194,7 +194,13 @@ func TestOrganization360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// per project, and the open commitment they made to us per project. Each
 	// is one statement over the whole page's ids, so the cost is flat in the
 	// number of deals and projects exactly like the sections they decorate.
-	const budget = 42
+	//
+	// 43 since the account owes card (#3629): one read of the open promises
+	// filed against the account, bounded by its own limit rather than by how
+	// many there are — the same statement the next-steps section already ran,
+	// asked a second time at a different bound. Flat in the size of the
+	// account, like every section above.
+	const budget = 43
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

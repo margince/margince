@@ -160,6 +160,10 @@ const KNOWN_REASONS = {
   repeated_failure: true,
   legal_deadline: true,
   meeting_soon: true,
+  meeting_unprepared: true,
+  response_overdue: true,
+  response_due_soon: true,
+  unassigned: true,
   stale: true,
 } as const;
 
@@ -346,8 +350,13 @@ export function dealFactsText(
 // message on its timeline, one press from the draft — and naming the step
 // honestly is worth more than a label that overstates it.
 //
-// Opening the composer from here needs a deep link the app does not have. That
-// is its own change, and the label moves back when it lands.
+// Opening the composer from here needs a deep link the app does not have. The
+// meeting brief has one now (`?prep=<activityId>` on the contact record), but
+// the composer does not: it picks its transport from the person's own
+// reachability rather than from a thread a caller names, so an address could
+// open it without opening it ON the message this row is about. The worklist
+// sends no `prepare_meeting` move either — `WorklistMove.action` has one value.
+// Both are their own change, and the label moves back when they land.
 export function moveHref(item: WorklistItem): string | undefined {
   if (item.move?.action !== "draft_reply") {
     return undefined;
@@ -406,12 +415,21 @@ export function sourceUnavailableText(
   missing: NonNullable<Worklist["sources_unavailable"]>[number],
   t: T,
 ): string {
-  const name = knownSource(missing.source as WorklistItem["source"])
-    ? t(`worklist.untitled.${missing.source as keyof typeof KNOWN_SOURCES}`)
-    : t("worklist.untitled.generic");
+  const name = sourceName(missing.source, t);
   return missing.reason === "withheld"
     ? t("worklist.source.withheld", { source: name })
     : t("worklist.source.failed", { source: name });
+}
+
+// One source, in the reader's words.
+//
+// Through the same known-source check the titles use, so a source this build
+// has never heard of is described generically rather than printed as its own
+// identifier — a reader must never be shown `ai_work_health` as a noun.
+export function sourceName(source: string, t: T): string {
+  return knownSource(source as WorklistItem["source"])
+    ? t(`worklist.untitled.${source as keyof typeof KNOWN_SOURCES}`)
+    : t("worklist.untitled.generic");
 }
 
 // The sources this build can name without its own sentence.
@@ -422,6 +440,7 @@ const KNOWN_SOURCES = {
   brief_item: true,
   conversation_claim: true,
   customer_waiting: true,
+  lead_response: true,
   deal_at_risk: true,
   meeting: true,
   relationship_decay: true,

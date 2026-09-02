@@ -208,7 +208,7 @@ func reportPipeline(n pipelineCounts) {
 		n.rooms.rooms, n.rooms.documents, n.rooms.participants, n.rooms.threads, n.rooms.comments)
 	fmt.Printf("fx rates:      %d loaded\n", n.fxRates)
 	fmt.Printf("projects:      %d new\n", n.projects)
-	fmt.Printf("surfaces:      %d new (tags, lists, project staffing, quotas)\n", n.surfaces)
+	fmt.Printf("surfaces:      %d new (tags, lists, project staffing)\n", n.surfaces)
 	fmt.Printf("partner edges: %d new (referrals, co-sells, served accounts)\n", n.partnerEdges)
 	fmt.Printf("rel. types:    %d set (what each company IS to us)\n", n.relTypes)
 	fmt.Printf("dual partners: %d customer(s) also promoted to partner\n", n.dualPartners)

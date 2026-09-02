@@ -114,7 +114,11 @@ func (all approvalTable) page(t *testing.T, in ListInput) ([]row, storekit.Page)
 			scanned = append(scanned, a)
 		}
 	}
-	return capPage(scanned, in.Limit, nil)
+	rows, page, err := capPage(scanned, in.Limit, nil)
+	if err != nil {
+		panic(err) //craft:ignore panic-in-domain test double; a token that will not mint means the fixture is wrong, not the code
+	}
+	return rows, page
 }
 
 // The whole point of next_cursor: a client told there is more can fetch it, and
@@ -146,7 +150,11 @@ func TestPagingTheInboxSeesEveryRowExactlyOnce(t *testing.T) {
 			t.Fatal("has_more is true with no next_cursor — the client has no way to ask for the rest")
 		}
 		last := got[len(got)-1]
-		if want := storekit.EncodeCursor(last.CreatedAt, last.ID.UUID); page.NextCursor != want {
+		want, err := storekit.EncodeCursor(last.CreatedAt, last.ID.UUID)
+		if err != nil {
+			t.Fatalf("minting the expected token: %v", err)
+		}
+		if page.NextCursor != want {
 			t.Fatalf("next_cursor is %q, want the token of the last returned row %q", page.NextCursor, want)
 		}
 		in.Cursor = page.NextCursor
@@ -284,7 +292,10 @@ func TestTheWholeTargetPairAndKindBind(t *testing.T) {
 	kind := "site_lead"
 	status := crmcontracts.ListApprovalsParamsStatusPending
 	limit := 25
-	cursor := storekit.EncodeCursor(time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC), ids.NewV7())
+	cursor, err := storekit.EncodeCursor(time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC), ids.NewV7())
+	if err != nil {
+		t.Fatalf("minting the cursor: %v", err)
+	}
 
 	in, invalid := listInput(crmcontracts.ListApprovalsParams{
 		Status: &status, Kind: &kind, Limit: &limit, Cursor: &cursor,

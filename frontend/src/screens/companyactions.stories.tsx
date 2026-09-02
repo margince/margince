@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ListAction, NewDealAction, TagAction } from "./companyactions";
+import { NewDealAction, TagAction } from "./companyactions";
 import {
   installFetchStub,
   jsonResponse,
@@ -30,7 +30,6 @@ import {
 
 type Pipeline = components["schemas"]["Pipeline"];
 type Tag = components["schemas"]["Tag"];
-type List = components["schemas"]["List"];
 
 const page = { has_more: false, next_cursor: null };
 
@@ -327,118 +326,5 @@ export const TagFailed: Story = {
     );
     await userEvent.click(body.getByRole("button", { name: "Create" }));
     await body.findByText(/cannot tag this account/);
-  },
-};
-
-// The list a name with no static match is made as — same reason as
-// mintedTagId: membership is written against a resolved list.
-const mintedListId = "l-9";
-
-function ListCompany({
-  lists,
-  addMember,
-}: Readonly<{
-  lists: List[];
-  addMember?: (body: unknown) => Response | Promise<Response>;
-}>) {
-  installFetchStub({
-    // Match an existing static list, make one when nothing matches, add the
-    // company to it — membership is an update on the list itself.
-    "GET /me": meRoute({ list: ["read", "create", "update"] }),
-    "GET /lists": () => jsonResponse({ data: lists, page }),
-    "POST /lists": () => jsonResponse({ id: mintedListId }, 201),
-    ...(addMember
-      ? { [`POST /lists/${mintedListId}/members`]: addMember }
-      : {}),
-  });
-  return (
-    <StoryProviders>
-      <ListAction orgId="o-1" />
-    </StoryProviders>
-  );
-}
-
-// Resting: same one-field shape as TagAction, for the same reason (see
-// ListAction's docblock) — only static lists are ever matched or made.
-export const ListResting: Story = {
-  render: () => (
-    <ListCompany
-      lists={[
-        {
-          id: "l-1",
-          name: "Renewal Q3",
-          entity_type: "organization",
-          list_type: "static",
-        },
-      ]}
-    />
-  ),
-};
-
-export const ListOpen: Story = {
-  render: () => <ListCompany lists={[]} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Add to list" }),
-    );
-    await body.findByRole("textbox", { name: "List name" });
-  },
-};
-
-// Pending: the name is typed, Save is clicked, and the membership call never
-// resolves.
-export const ListPending: Story = {
-  render: () => (
-    <ListCompany lists={[]} addMember={() => new Promise(() => {})} />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Add to list" }),
-    );
-    await userEvent.type(
-      await body.findByRole("textbox", { name: "List name" }),
-      "Renewal Q3",
-    );
-    await userEvent.click(body.getByRole("button", { name: "Create" }));
-    await expectCreating(body);
-  },
-};
-
-// Failed: the membership write refuses for a reason other than "already a
-// member" (that case is folded into success — see ListAction's own comment).
-// The session holds list:update for the same reason TagFailed holds
-// tag:update — the account is what the server refuses, not the verb.
-export const ListFailed: Story = {
-  render: () => (
-    <ListCompany
-      lists={[]}
-      addMember={() =>
-        jsonResponse(
-          {
-            code: "forbidden",
-            title: "Not permitted",
-            detail: "You cannot add this account to a list.",
-          },
-          403,
-        )
-      }
-    />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Add to list" }),
-    );
-    await userEvent.type(
-      await body.findByRole("textbox", { name: "List name" }),
-      "Renewal Q3",
-    );
-    await userEvent.click(body.getByRole("button", { name: "Create" }));
-    await body.findByText(/cannot add this account/);
   },
 };

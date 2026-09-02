@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import {
-  AttainmentRing,
   Avatar,
   Badge,
   Button,
@@ -540,8 +539,8 @@ export const Toggles: Story = {
       <Checkbox label="Notify the deal owner" disabled />
       <fieldset className="field-multiselect">
         <legend className="t-label">Target</legend>
-        <Radio name="quota-side" label="Owner" defaultChecked />
-        <Radio name="quota-side" label="Team" />
+        <Radio name="owner-side" label="Owner" defaultChecked />
+        <Radio name="owner-side" label="Team" />
       </fieldset>
     </div>
   ),
@@ -781,7 +780,7 @@ function ToolbarDemo() {
         value={side}
         onChange={setSide}
         labels={SIDE_LABELS}
-        label="Quota target"
+        label="Target amount"
       />
       {/* `counts`: how much is behind each option, for a strip that chooses
           between bodies of a record. Partial on purpose — the first option
@@ -924,20 +923,6 @@ export const Tables: Story = {
         rowKey={(deal) => deal.id}
       />
       <EmptyState>No deals in this pipeline yet.</EmptyState>
-    </div>
-  ),
-};
-
-// All three bands, and the over-100% case with them: the arc caps at a full
-// circle while the figure keeps reading the real number. The band is the
-// server's, never re-derived from pct — showing 113% next to 72% and 41% is
-// what makes that separation visible.
-export const Attainment: Story = {
-  render: () => (
-    <div style={row}>
-      <AttainmentRing pct={113} band="met" caption="attained" />
-      <AttainmentRing pct={72} band="accent" caption="attained" />
-      <AttainmentRing pct={41} band="behind" caption="attained" />
     </div>
   ),
 };

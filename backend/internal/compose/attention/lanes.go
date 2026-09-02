@@ -63,13 +63,18 @@ type ApprovalQuery struct {
 // Duplicates is the dedupe queue, read through the people module. Every method
 // carries that module's both-sides-visible rule; nothing here re-derives it.
 //
-// Describe names the two records of a pair. It is separate from OpenCandidates
-// because naming a record is a READ of that record: the queue row proves a pair
-// was detected, never that this reader may see what it points at.
+// DescribeMany names records of ONE entity type. It is separate from
+// OpenCandidates because naming a record is a READ of that record: the queue row
+// proves a pair was detected, never that this reader may see what it points at.
+//
+// A SET at a time, not a record at a time. The lane renders up to ten pairs, so
+// naming them one by one is twenty scoped reads on the surface a rep opens first
+// every morning. An id the reader may not see is simply ABSENT from the answer,
+// which is what its refusal meant.
 type Duplicates interface {
 	OpenCandidates(ctx context.Context, limit int) ([]DuplicatePair, error)
 	CountOpen(ctx context.Context) (int, error)
-	Describe(ctx context.Context, entityType string, id ids.UUID) (RecordFace, error)
+	DescribeMany(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]RecordFace, error)
 }
 
 // DuplicatePair is one open candidate: the pair, and what the detector saw.
@@ -127,19 +132,6 @@ const (
 // unreachable behind them.
 type Tasks interface {
 	OpenForViewer(ctx context.Context, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
-}
-
-// Teammates answers whether a named user is on a team with the reader.
-//
-// The reader is the authenticated caller and is not passed: the module behind
-// this takes it from the principal, so the question can only ever be asked
-// about an edge the asker is themselves an end of.
-//
-// Asked only when a TEAM-scoped reader names somebody else's queue. An
-// unbounded reader reaches every row and needs no such question; an own-scoped
-// reader is refused before it is asked.
-type Teammates interface {
-	SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error)
 }
 
 // Task is one piece of agreed work.
@@ -288,7 +280,16 @@ type Commitment struct {
 // Optional exactly as Commitments is: nil means this feed does not do deal risk,
 // which is a different fact from a pipeline with nothing wrong in it.
 type AtRisk interface {
-	Quiet(ctx context.Context) ([]RiskyDeal, error)
+	// The bool reports that the read was CUT — the lane scanned to its own bound
+	// and deals may sit past it.
+	//
+	// It travels beside the rows rather than being inferred from their number,
+	// because this lane FILTERS after it scans: it returns only what is quiet or
+	// overdue out of a bounded sweep, so ten rows can be the survivors of a full
+	// fifty. A caller counting rows against the bound would read a truncated
+	// scan with few survivors as a complete one — under-reporting, which is the
+	// one direction a work figure must never fail in.
+	Quiet(ctx context.Context) ([]RiskyDeal, bool, error)
 }
 
 // RiskyDeal is one deal the pipeline should worry about, and the ground it is
@@ -348,35 +349,6 @@ type QuietRelationship struct {
 	LastAt time.Time
 }
 
-// Waiting is who has written to this workspace and had no reply.
-//
-// Its own reader rather than a filter over AtRisk, because a fresh inbound
-// makes a deal LESS quiet: deriving "waiting" from "quiet" loses the newest
-// cases, which are the ones a rep most needs. It also reaches a person with no
-// deal at all, whom the deal-shaped lanes never see.
-type Waiting interface {
-	Unanswered(ctx context.Context, asOf time.Time) ([]WaitingCustomer, error)
-}
-
-// WaitingCustomer is one message nobody has answered.
-type WaitingCustomer struct {
-	// ActivityID is the message itself — what a reply would be drafted to.
-	ActivityID ids.UUID
-	Subject    string
-	// Since is when they wrote. The wait is measured from it, and it is what
-	// the card says out loud.
-	Since time.Time
-	// The record the thread is filed under, most specific first. Any may be
-	// zero: a message from a stranger names nobody.
-	PersonID       ids.UUID
-	OrganizationID ids.UUID
-	DealID         ids.UUID
-	// HasOpenDeal reports whether money this reader can see is still on this
-	// thread. It is what keeps a long wait in execution instead of sending it
-	// to review.
-	HasOpenDeal bool
-}
-
 // DealFacts answers the figures behind deals a row names but does not carry.
 //
 // Most rows arrive with their deal's numbers already on them, because the lane
@@ -422,6 +394,22 @@ type Meeting struct {
 	ID       ids.UUID
 	Subject  string
 	StartsAt time.Time
+
+	// NeedsPrep is true when nothing has been written down for a meeting that
+	// is about to happen: no agenda or notes body, and nobody outside this
+	// organization recorded on it.
+	//
+	// It is a THREE-state answer squeezed into a bool plus its guard below, and
+	// the third state is why: a meeting whose content this reader may not read
+	// arrives with an empty body for a reason that has nothing to do with
+	// preparation. Calling that "needs prep" would tell a rep to prepare a
+	// meeting they cannot see, so the lane leaves PrepKnown false instead and
+	// the surface says nothing rather than something false.
+	NeedsPrep bool
+
+	// PrepKnown reports whether NeedsPrep was answerable at all. False when the
+	// row's content is withheld from this reader.
+	PrepKnown bool
 }
 
 // Notices is the acting person's own unread notices — the durable

@@ -171,6 +171,17 @@ func (w *weeklyGenerateWorkspaceWorker) measureWorkspace(
 			principal.WithActor(ctx, ready.rep), ids.NewV7())
 		w.mailWeekly(sendCtx, ready.reviewID, now)
 	}
+	// The team snapshots THIRD, and last for a reason of its own: each one is a
+	// total over member reviews, so a snapshot assembled while reps were still
+	// being measured would freeze a team that was half-counted and nothing
+	// afterwards would say so. It runs after the mail because it is the least
+	// urgent of the three — a lead reads it on Monday, and a tick that ran out
+	// of budget here costs a snapshot the next tick rebuilds, not a review.
+	//
+	// Failures are collected, not returned: one team that cannot be assembled
+	// must not report the whole workspace's reviews as failed when they are
+	// written and committed.
+	failures = append(failures, w.snapshotTeams(sysCtx, wsID, now)...)
 	if len(failures) > 0 {
 		return fmt.Errorf("weekly_review_generate_workspace: %d of %d reps: %w",
 			len(failures), len(due), errors.Join(failures...))

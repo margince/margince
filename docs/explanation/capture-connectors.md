@@ -60,11 +60,31 @@ Every integration implements `connector.Connector`
 | `Normalize(raw)` | Maps ONE raw provider record to domain structs. **Pure — no I/O** — so the mapping is the agent-edited, test-guarded surface. Returns `ErrSkip` for deliberately excluded input. |
 | `HealthCheck(auth)` | Feeds the ops surface; an outage degrades capture, never blocks the CRM. |
 
-Two **optional** seams a connector implements only when its provider supports them — the registry
+Three **optional** seams a connector implements only when its provider supports them — the registry
 type-asserts and skips a connector that doesn't:
 
 - **`Watcher`** — a renewable push subscription (Gmail's 7-day Pub/Sub watch, Graph's under-3-day
   change-notification subscription). A provider with no renewable push simply is not a `Watcher`.
+- **`WatchRenewer`** — renewal BY THE HANDLE the provider gave out, for a provider that mints one.
+  `Watch` says "make sure there is a subscription", which without a handle means finding one first;
+  `RenewWatch` says "extend THIS one". A connector that implements it returns an opaque `Ref` from
+  `Watch`, the registry stores it in `capture_connection.watch_ref` and hands it back on the next
+  renewal, and a handle the provider no longer knows falls back to `Watch` inside the connector rather
+  than surfacing as an error. Gmail implements none of it: a Pub/Sub watch is addressed by the mailbox
+  and the topic, so there is no handle to remember.
+
+  The `Ref` is **opaque to everything outside the connector that minted it**, which lets each connector
+  decide what a renewal needs to hold. For Graph it is the subscription id and nothing else: a renewal
+  reads the subscription back before extending it, so whether it still points at the endpoint being
+  renewed is Microsoft's answer rather than a remembered one. Nothing about the endpoint is written
+  down, which matters because Microsoft signs nothing on a change notification — the operator token in
+  that URL is the only thing admitting one, and `watch_ref` reaches every database reader and every
+  backup.
+
+  The registry's half of the contract is to store it verbatim, to CLEAR it when the connection is
+  rebound to a different account (a handle names a subscription in the mailbox it was made against),
+  and to fence the write that stores it on the connection's `generation` — a renewal is a round trip,
+  and one that started before a rebind landed would otherwise put the previous mailbox's handle back.
 - **`Backfiller`** — bounded date-backward enumeration of a mailbox (`EstimateBackfill` +
   `BackfillPage`). A provider that can't page backward is not a `Backfiller`, and the backfill engine
   refuses honestly rather than pretending.
@@ -228,9 +248,15 @@ link (`ErrDeltaGone`, HTTP 410) re-anchors to a bounded 7-day window. It impleme
 renewed by the worker every `6h`, `24h` ahead of its deadline. That deadline is under **three days**
 where Gmail's watch lasts seven, which is why the two passes carry different defaults rather than one.
 
-The subscription is addressed by an id Microsoft mints. Rather than storing it, a renewal round ASKS —
-Microsoft lists the subscriptions this app holds for this user, and the one pointing at our notification
-URL is ours, so a subscription left by an earlier deployment is adopted rather than duplicated. A
+The subscription is addressed by an id Microsoft mints, and the connector stores it as its
+`WatchRenewer` handle, so a renewal is a GET and a PATCH rather than a paged listing. The GET is what
+confirms the subscription still points at the notification URL being renewed; without a usable handle
+— a first registration, a connection older than the handle, a rebind that cleared it, or a
+subscription that points somewhere else — the round ASKS instead: Microsoft lists the subscriptions this app
+holds for this user, and the one pointing at our notification URL is ours, so a subscription left by an
+earlier deployment is adopted rather than duplicated. That listing is also the recovery path when
+Microsoft answers a stored handle with 404, which is what it does for a subscription dropped after
+repeated delivery failures. A
 notification's `resource` names a directory object id this system never stored, so the subscription
 carries the mailbox owner's address in `clientState`, which Microsoft echoes verbatim; the webhook
 routes on that and authenticates on the operator token in the URL. Microsoft signs nothing on a change
@@ -303,6 +329,12 @@ Capture spans both process roles ([the four `cmd/<role>` binaries](architecture.
   (`30s`) → per-connection `SyncOnce`, the backfill engine (one page/tick), each vendor's
   watch-renewal scan (`6h`), and the nightly capture suite (classify hourly, enrich + digest daily). The Surface-B agent
   runner shares the worker process but is a *separate* scheduler — it does not run capture.
+
+  The enrich pass has a second door: `activity.captured` queues it for the workspace that
+  received the mail, so contact details land within minutes rather than overnight. A pass that
+  fills its candidate limit and moved somebody queues the next slice itself. The daily run is
+  the backstop for whatever those miss — a mailbox that was switched off, a model that was
+  unavailable, a message the freshness window had already passed.
 
 Gmail/Graph OAuth needs its config on **both** roles (the api connects, the worker syncs). The full
 flag/env table is [reference/configuration.md → Capture connector OAuth](../reference/configuration.md).
@@ -387,7 +419,7 @@ The pipeline is live; these were scoped out, not missed:
 
 | | |
 |---|---|
-| The connector seam (Connector / Watcher / Backfiller / Sink / NormalizedRecord) | `internal/shared/ports/connector/connector.go` |
+| The connector seam (Connector / Watcher / WatchRenewer / Backfiller / Sink / NormalizedRecord) | `internal/shared/ports/connector/connector.go` |
 | The credential-rotation seam (CredentialRotator / CredentialSink) | `internal/shared/ports/connector/rotation.go`, `internal/modules/capture/registry_rotation.go` |
 | The one Sink + write shape + idempotency | `internal/modules/capture/sink.go` |
 | The registry — scope intersection, Connect/Disconnect, SyncOnce, backfill, watch | `internal/modules/capture/registry.go`, `registry_connections.go`, `registry_watch.go`, `backfill.go` |

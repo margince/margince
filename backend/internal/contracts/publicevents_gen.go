@@ -306,6 +306,7 @@ const (
 	TeamChanged                           SubscribableEventType = "team.changed"
 	UserActivated                         SubscribableEventType = "user.activated"
 	UserDeactivated                       SubscribableEventType = "user.deactivated"
+	UserDeliveryChanged                   SubscribableEventType = "user_delivery.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
@@ -317,6 +318,8 @@ const (
 	VoiceProfileCreated                   SubscribableEventType = "voice.profile_created"
 	VoiceProfileUpdated                   SubscribableEventType = "voice.profile_updated"
 	VoiceVersionChanged                   SubscribableEventType = "voice.version_changed"
+	WeeklyPlanHelpRequested               SubscribableEventType = "weekly_plan.help_requested"
+	WeeklyPlanUpdated                     SubscribableEventType = "weekly_plan.updated"
 )
 
 // Valid indicates whether the value is a known member of the SubscribableEventType enum.
@@ -516,6 +519,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case UserDeactivated:
 		return true
+	case UserDeliveryChanged:
+		return true
 	case UserInvited:
 		return true
 	case UserLocaleChanged:
@@ -537,6 +542,10 @@ func (e SubscribableEventType) Valid() bool {
 	case VoiceProfileUpdated:
 		return true
 	case VoiceVersionChanged:
+		return true
+	case WeeklyPlanHelpRequested:
+		return true
+	case WeeklyPlanUpdated:
 		return true
 	default:
 		return false
@@ -1745,6 +1754,12 @@ type PublicEventUserDeactivated struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// PublicEventUserDeliveryChanged Payload for user_delivery.changed — a member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way; this is about the nudge toward them, which is the one part a person is entitled to switch off. It names WHAT moved and not what it moved to. What somebody chose about their own inbox is theirs, and a fan-out carrying the values would tell every subscription owner who had turned their mail off — so the values stay on the row, which only that person and the job reads.
+type PublicEventUserDeliveryChanged struct {
+	// ChangedFields Which settings moved. Never empty: this event fires on a change, and a save that moved nothing writes nothing and publishes nothing.
+	ChangedFields []string `json:"changed_fields"`
+}
+
 // PublicEventUserInvited Payload for user.invited — an admin provisioned a new active member with a single-use set-password token (identity/users.go's InviteUser).
 type PublicEventUserInvited struct {
 	// By The admin who issued the invite.
@@ -1934,6 +1949,21 @@ type PublicEventVoiceVersionChanged struct {
 
 	// Status The version's status after this change (candidate | active | superseded | rejected).
 	Status string `json:"status"`
+}
+
+// PublicEventWeeklyPlanHelpRequested Payload for weekly_plan.help_requested — a rep asked their lead for help on one commitment. Its own type rather than another weekly_plan.updated, because this is the one change somebody else is meant to act on: an automation notifying a lead subscribes to this and not to every edit of a checkbox. The request text is NOT here. It stays on the row the lead opens, so what a rep says about being stuck does not ride a fan-out.
+type PublicEventWeeklyPlanHelpRequested struct {
+	CommitmentId openapi_types.UUID `json:"commitment_id"`
+	OwnerUserId  openapi_types.UUID `json:"owner_user_id"`
+	PlanId       openapi_types.UUID `json:"plan_id"`
+}
+
+// PublicEventWeeklyPlanUpdated Payload for weekly_plan.updated — a rep's plan for the week changed: opened, a commitment added, edited or settled. The entity is the rep whose week it is, because that is who the record belongs to. `changed_fields` names WHAT moved rather than carrying it; the labels and the help text stay on the row, since prose on two wires drifts.
+type PublicEventWeeklyPlanUpdated struct {
+	// ChangedFields Which parts of the plan moved — status, commitments.
+	ChangedFields []string           `json:"changed_fields"`
+	OwnerUserId   openapi_types.UUID `json:"owner_user_id"`
+	PlanId        openapi_types.UUID `json:"plan_id"`
 }
 
 // SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/organization, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
@@ -2339,6 +2369,10 @@ func (PublicEventUserDeactivated) EventType() string { return "user.deactivated"
 
 func (PublicEventUserDeactivated) EntityType() string { return "user" }
 
+func (PublicEventUserDeliveryChanged) EventType() string { return "user_delivery.changed" }
+
+func (PublicEventUserDeliveryChanged) EntityType() string { return "user" }
+
 func (PublicEventUserInvited) EventType() string { return "user.invited" }
 
 func (PublicEventUserInvited) EntityType() string { return "user" }
@@ -2382,6 +2416,14 @@ func (PublicEventVoiceProfileUpdated) EntityType() string { return "voice_profil
 func (PublicEventVoiceVersionChanged) EventType() string { return "voice.version_changed" }
 
 func (PublicEventVoiceVersionChanged) EntityType() string { return "voice_profile" }
+
+func (PublicEventWeeklyPlanHelpRequested) EventType() string { return "weekly_plan.help_requested" }
+
+func (PublicEventWeeklyPlanHelpRequested) EntityType() string { return "user" }
+
+func (PublicEventWeeklyPlanUpdated) EventType() string { return "weekly_plan.updated" }
+
+func (PublicEventWeeklyPlanUpdated) EntityType() string { return "user" }
 
 // PublicEventVersions maps every subscribable event type carrying a
 // PublicEvent<Event> schema to that schema's x-version extension
@@ -2489,6 +2531,7 @@ var PublicEventVersions = map[string]int{
 	"user.invited":                              1,
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
+	"user_delivery.changed":                     1,
 	"user_locale.changed":                       1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,
@@ -2497,4 +2540,6 @@ var PublicEventVersions = map[string]int{
 	"voice.profile_created":                     1,
 	"voice.profile_updated":                     1,
 	"voice.version_changed":                     1,
+	"weekly_plan.help_requested":                1,
+	"weekly_plan.updated":                       1,
 }

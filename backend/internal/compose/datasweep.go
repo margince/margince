@@ -70,6 +70,16 @@ var preservedResetTables = map[string]bool{
 	// `setting`: the migration seeds the built-ins and an administrator shapes
 	// the rest, and neither is a record of this workspace's customers.
 	"lead_source": true, "lead_disqualify_reason": true,
+	// How many minor units each currency has, where that is not two: ISO
+	// reference data a migration seeds, not anybody's records. Two reasons it
+	// is here rather than swept and re-seeded, and either alone is sufficient.
+	// The rows are the SQL mirror of values.currencyMinorDigits, so a reset
+	// that emptied them would leave every foreign conversion in SQL scaling at
+	// two digits — right for most currencies, a hundredfold wrong for a yen
+	// one, and invisible. And the sweep runs as the application role, which
+	// holds SELECT alone on this table by design, so the DELETE is refused
+	// outright and aborts the whole reset transaction.
+	"currency_minor_digits": true,
 	// in-flight delivery: drained by the outbox pass, not deleted under it
 	"event_outbox": true,
 	// The retention floor's evidence (A165, migration 0289). Preserved from the

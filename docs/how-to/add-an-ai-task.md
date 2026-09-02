@@ -204,6 +204,7 @@ and it caps how much of the site one certification run can cover:
    | a `planned` task carrying a corpus scenario | `planned tasks carry corpus scenarios: […] — a task nobody built cannot be certified` |
    | a `planned` task carrying a certification record | `planned tasks carry certification records: […] — the record claims a band for a prompt that does not ship` |
    | a fixture that is not the shape its site takes | `TestEveryCorpusScenarioPreparesAgainstItsSite` |
+   | a closed answer enum with a kind no accepted scenario names | `TestEveryClosedAnswerKindCarriesAScenario` — one scenario per site is not one per kind, and an unscored kind is a prompt branch no model has been graded on |
    | a task with no lane, or a lane no role wires | `TestEveryCensusedSiteRidesALaneAProcessRoleWires` |
    | a new `.go` file with no SPDX header | `TestEveryHandWrittenGoFileCarriesTheLicenseHeader` |
 
@@ -221,7 +222,7 @@ and it caps how much of the site one certification run can cover:
    make e2e-ai TASK=<your task> \
      MODEL=gemini:gemini-3.1-flash-lite \
      JUDGE=anthropic:claude-sonnet-4-6
-   make e2e-ai-report                # free: band, scope, binding, counts
+   make e2e-ai-report                # free: band, scope, binding, counts, scenario coverage
    ```
 
    `TASK=` takes the name you declared in step 1. A name with no scenarios behind

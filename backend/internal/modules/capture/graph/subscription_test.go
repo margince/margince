@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -127,7 +128,22 @@ func TestARoundRenewsTheSubscriptionItAlreadyHasRatherThanAddingOne(t *testing.T
 }
 
 // A URL that is not ours is somebody else's subscription, including one left by
-// a rotated operator token: it is replaced, not extended.
+// a rotated operator token: a new one is created beside it rather than the old
+// one being re-pointed.
+//
+// The old one is NOT deleted — nothing here can prove it is ours to delete —
+// so a rotation does leave a duplicate delivering to an endpoint that now
+// refuses it. That is bounded and self-healing: exactly one, because the next
+// round matches the new URL exactly, and Microsoft drops a subscription whose
+// endpoint keeps failing.
+//
+// The alternative is matching on the resource and re-pointing whatever watches
+// `/me/messages`. It is rejected deliberately. Graph lists subscriptions per
+// APP, so two deployments sharing one Entra registration — a staging and a
+// production, the ordinary case — see each other's, and re-pointing would take
+// the other's notifications and give back nothing. The token in the URL is what
+// tells those two apart, which is the whole reason it is there. A bounded
+// duplicate beats an unbounded hijack.
 func TestASubscriptionForADifferentURLIsNotAdopted(t *testing.T) {
 	var created, renewed int
 	srv := subscriptionStub(t, subscriptionStubState{
@@ -287,7 +303,12 @@ func TestASubscriptionIsFoundOnAPageAfterTheFirst(t *testing.T) {
 // token — at a path built from a provider-supplied id. An id carrying a path
 // segment must not redirect it at another resource.
 func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
-	var patched string
+	// Guarded for the reason oneSubscriptionStub gives below: the write happens
+	// on the server's goroutine and the read on this one.
+	var (
+		mu      sync.Mutex
+		patched string
+	)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/subscriptions", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, map[string]any{"value": []subscription{{
@@ -295,8 +316,14 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 			NotificationURL: "https://api.example/webhooks/graph?token=t",
 		}}})
 	})
+	// The RAW path, as it went over the wire. r.URL.Path is the decoded view,
+	// which is the wrong thing to assert on twice over: it would read
+	// `/subscriptions/../../me/messages` as though the escaping had failed, and
+	// it hides that the bytes sent never left the collection.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		patched = r.URL.Path
+		mu.Lock()
+		patched = r.URL.EscapedPath()
+		mu.Unlock()
 		writeJSON(w, map[string]any{
 			"id": "sub-1", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 		})
@@ -304,12 +331,40 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
+	// The round SUCCEEDS: refusing the id is not refusing the mailbox. It falls
+	// through to creating a subscription, which is the safe direction — a
+	// duplicate notification costs one redundant sync, where declining to renew
+	// costs the mailbox its push.
 	if _, err := NewAPI(srv.Client(), srv.URL).EnsureSubscription(context.Background(), "at",
 		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour)); err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
-	if !strings.HasPrefix(patched, subscriptionsPath+"/") {
-		t.Errorf("the renewal reached %q — a provider-supplied id steered it out of the subscription collection", patched)
+	// Nothing was PATCHed at all: the id is refused before a request is built,
+	// so this does not rest on how the far end normalizes what it received.
+	mu.Lock()
+	sent := patched
+	mu.Unlock()
+	if sent != "" {
+		t.Errorf("a renewal was sent to %q for a provider-supplied id that is not a subscription id", sent)
+	}
+}
+
+// The refusal itself, at the seam, so the case above cannot pass by accident of
+// routing. Every spelling here is one a server that decodes before resolving
+// would walk out of the subscription collection on, whatever url.PathEscape did
+// to the separators.
+func TestOnlyASubscriptionIDCanAddressARenewal(t *testing.T) {
+	for _, id := range []string{
+		"", "../../me/messages", "..", "a/b", `a\b`, "sub 1", "sub?x=1", "sub#f", "%2e%2e",
+	} {
+		if isSubscriptionID(id) {
+			t.Errorf("%q was accepted as a subscription id", id)
+		}
+	}
+	// And a real one still is, or the refusal above would be refusing every
+	// renewal this client ever makes.
+	if !isSubscriptionID("0fc1b2a3-3d4e-5f60-8a1b-2c3d4e5f6071") {
+		t.Error("a GUID Microsoft would mint was refused as a subscription id")
 	}
 }
 
@@ -330,5 +385,300 @@ func TestASubscriptionIsNotCreatedForACredentialNamingNoMailbox(t *testing.T) {
 	}
 	if api.subCalls != 0 {
 		t.Errorf("%d subscription(s) created for a credential that could not be routed", api.subCalls)
+	}
+}
+
+// A RENEWAL ADDRESSES THE SUBSCRIPTION IT STORED, and does not go looking.
+//
+// Watch has to make sure a subscription exists, and without a handle that means
+// walking GET /subscriptions — paged, once per mailbox, every cycle — to find
+// the one this installation made. The handle turns that into one call.
+// testNotifyURL is the endpoint every subscription test registers against, so a
+// fake reading a subscription back can report "nothing has moved" by default.
+const testNotifyURL = "https://api.example/webhooks/graph?token=t"
+
+func TestARenewalExtendsTheStoredSubscriptionWithoutListingAnything(t *testing.T) {
+	api := &fakeAPI{email: owner}
+	c := pinnedConn(api)
+
+	res, err := c.RenewWatch(context.Background(), authBytes(t),
+		testNotifyURL, "sub-stored")
+	if err != nil {
+		t.Fatalf("RenewWatch: %v", err)
+	}
+	if api.renewCalls != 1 || api.renewID != "sub-stored" {
+		t.Fatalf("renewed %d time(s) naming %q, want one naming the stored id", api.renewCalls, api.renewID)
+	}
+	if api.subCalls != 0 {
+		t.Errorf("%d EnsureSubscription call(s) — a renewal that knows the id paid for the listing "+
+			"anyway, which is the round trip per mailbox per cycle this exists to save", api.subCalls)
+	}
+	want := pinned.Add(maxSubscriptionMinutes * time.Minute).UTC()
+	if !res.ExpiresAt.Equal(want) {
+		t.Errorf("reported %v, want the deadline Microsoft honored", res.ExpiresAt)
+	}
+	if res.Ref != "sub-stored" {
+		t.Errorf("Ref = %q, want the id that was renewed — the registry stores this and the next "+
+			"renewal addresses it", res.Ref)
+	}
+}
+
+// AND A HANDLE MICROSOFT NO LONGER KNOWS falls back to the listing, which is
+// where a recovery path belongs.
+//
+// A subscription dropped for repeated delivery failures, or one made by an
+// installation since restored from a backup, is exactly the case Ensure's
+// renew-then-create answers. Reporting the error instead would leave the mailbox
+// on the poll for as long as the stored id kept failing.
+func TestARenewalWhoseSubscriptionIsGoneRegistersAFreshOne(t *testing.T) {
+	api := &fakeAPI{email: owner, renewErr: ErrSubscriptionGone}
+	c := pinnedConn(api)
+
+	res, err := c.RenewWatch(context.Background(), authBytes(t),
+		testNotifyURL, "sub-vanished")
+	if err != nil {
+		t.Fatalf("RenewWatch on a subscription Microsoft has dropped: %v — the mailbox would stay "+
+			"on the poll for as long as the stored id kept failing", err)
+	}
+	if api.subCalls != 1 {
+		t.Errorf("%d EnsureSubscription call(s), want one — the fallback IS the listing", api.subCalls)
+	}
+	if res.Ref == "" || res.Ref == "sub-vanished" {
+		t.Errorf("Ref = %q, want the id of the subscription that now exists", res.Ref)
+	}
+}
+
+// AND A HANDLE NAMING A SUBSCRIPTION THAT POINTS ELSEWHERE is not renewed.
+//
+// A renewal extends a deadline; it never re-states where the subscription
+// points. Before a handle existed, every renewal went through
+// EnsureSubscription, which looks its subscription up BY notificationURL — so a
+// deployment whose webhook URL had moved got a fresh subscription on the new
+// endpoint without anyone arranging it. Extending the stored one instead would
+// keep Microsoft delivering to an endpoint nobody serves, and leave the new
+// webhook poll-only with nothing failing to say so.
+func TestARenewalWhoseEndpointMovedRegistersAtTheNewOne(t *testing.T) {
+	api := &fakeAPI{email: owner, getSubURL: "https://api.example/webhooks/graph?token=OLD"}
+	c := pinnedConn(api)
+
+	res, err := c.RenewWatch(context.Background(), authBytes(t), testNotifyURL, "sub-at-old-endpoint")
+	if err != nil {
+		t.Fatalf("RenewWatch: %v", err)
+	}
+	if api.renewCalls != 0 {
+		t.Errorf("renewed %d time(s) naming %q — extending a subscription registered against the "+
+			"previous endpoint keeps notifications going where nobody is listening", api.renewCalls, api.renewID)
+	}
+	if api.subCalls != 1 {
+		t.Errorf("%d EnsureSubscription call(s), want one: it is the call that looks a subscription "+
+			"up BY the endpoint, and registers when none points there", api.subCalls)
+	}
+	if res.Ref == "" {
+		t.Error("Ref is empty — the freshly registered subscription's id is what the next renewal " +
+			"addresses, and without it every cycle repeats the listing")
+	}
+}
+
+// A RENEWAL READS THE SUBSCRIPTION BEFORE IT EXTENDS ONE, and reads it from
+// MICROSOFT rather than from anything stored beside the handle: the endpoint
+// carries the token that admits a notification, and watch_ref is an ordinary
+// column.
+func TestARenewalReadsTheSubscriptionBeforeExtendingIt(t *testing.T) {
+	api := &fakeAPI{email: owner}
+	c := pinnedConn(api)
+
+	if _, err := c.RenewWatch(context.Background(), authBytes(t), testNotifyURL, "sub-stored"); err != nil {
+		t.Fatalf("RenewWatch: %v", err)
+	}
+	if api.getSubCalls != 1 || api.getSubID != "sub-stored" {
+		t.Errorf("read the subscription %d time(s) naming %q, want one naming the stored id — "+
+			"without it a renewal cannot tell that the endpoint has not moved", api.getSubCalls, api.getSubID)
+	}
+}
+
+// AND A REF THAT CANNOT NAME A SUBSCRIPTION falls back rather than failing,
+// which is what makes a first registration — and a connection stored before
+// handles existed — cost one listing and no incident.
+func TestARefThatNamesNoSubscriptionFallsBackRatherThanFailing(t *testing.T) {
+	for name, stored := range map[string]string{
+		"empty":        "",
+		"a path step":  "..",
+		"a path":       "../../me/messages",
+		"needs escape": "sub 1/../x",
+	} {
+		t.Run(name, func(t *testing.T) {
+			api := &fakeAPI{email: owner}
+			c := pinnedConn(api)
+			if _, err := c.RenewWatch(context.Background(), authBytes(t), testNotifyURL, stored); err != nil {
+				t.Fatalf("RenewWatch: %v", err)
+			}
+			if api.getSubCalls != 0 {
+				t.Errorf("read a subscription %d time(s) for a ref that names none", api.getSubCalls)
+			}
+			if api.renewCalls != 0 || api.subCalls != 1 {
+				t.Errorf("renewed %d and ensured %d, want 0 and 1 — a ref that names no "+
+					"subscription answers nothing a renewal is asking",
+					api.renewCalls, api.subCalls)
+			}
+		})
+	}
+}
+
+// THE STORED HANDLE CARRIES NOTHING BUT THE SUBSCRIPTION ID.
+//
+// Microsoft signs nothing on a change notification, so the operator token in the
+// notification URL is the only thing admitting one. watch_ref reaches every
+// database reader and every backup, and a renewal has no need to remember the
+// endpoint there: it asks Microsoft.
+func TestAStoredHandleCarriesNothingButTheID(t *testing.T) {
+	const url = "https://api.example/webhooks/graph?token=OPERATOR-SECRET"
+	api := &fakeAPI{email: owner, subResult: Subscription{ID: "sub-1", Expiration: pinned.Add(time.Hour)}}
+	c := pinnedConn(api)
+
+	res, err := c.Watch(context.Background(), authBytes(t), url)
+	if err != nil {
+		t.Fatalf("Watch: %v", err)
+	}
+	if res.Ref != "sub-1" {
+		t.Fatalf("Ref = %q, want the subscription id", res.Ref)
+	}
+	for _, leak := range []string{"OPERATOR-SECRET", "api.example", "token=", "https"} {
+		if strings.Contains(res.Ref, leak) {
+			t.Errorf("the stored handle %q carries %q — that column is not a place for the "+
+				"factor that admits a notification, nor for anything an offline guess could "+
+				"be checked against", res.Ref, leak)
+		}
+	}
+}
+
+// A FALLBACK REFRESHES THE TOKEN ONCE, not twice: Watch refreshes one of its
+// own, and the fallback is the ordinary path for a first registration rather
+// than a rare one.
+func TestAFallbackDoesNotRefreshTheTokenTwice(t *testing.T) {
+	api := &fakeAPI{email: owner}
+	oauth := &countingOAuth{OAuth: &fakeOAuth{access: "access-1"}}
+	c := New(oauth, api)
+	c.now = func() time.Time { return pinned }
+
+	if _, err := c.RenewWatch(context.Background(), authBytes(t),
+		testNotifyURL, ""); err != nil {
+		t.Fatalf("RenewWatch: %v", err)
+	}
+	if oauth.calls != 1 {
+		t.Errorf("refreshed the access token %d time(s), want one — a first registration is the "+
+			"ordinary case here, so a doubled refresh is doubled token traffic on every mailbox",
+			oauth.calls)
+	}
+}
+
+// countingOAuth counts access-token refreshes and does nothing else.
+type countingOAuth struct {
+	OAuth
+	calls int
+}
+
+func (o *countingOAuth) AccessToken(ctx context.Context, refresh string) (string, error) {
+	o.calls++
+	return o.OAuth.AccessToken(ctx, refresh)
+}
+
+// oneSubscriptionStub answers GET /subscriptions/{id} with the given status and
+// body, and returns a reader for the raw path the request took.
+//
+// Through a mutex rather than a bare pointer: the handler runs on the server's
+// own goroutine, and nothing in net/http promises the test goroutine an edge to
+// read across afterwards, so -race is entitled to call the plain version a data
+// race whatever it does in practice.
+func oneSubscriptionStub(t *testing.T, status int, body map[string]any) (*httptest.Server, func() string) {
+	t.Helper()
+	var (
+		mu   sync.Mutex
+		path string
+	)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		path = r.URL.EscapedPath()
+		mu.Unlock()
+		if status != http.StatusOK {
+			w.WriteHeader(status)
+			return
+		}
+		writeJSON(w, body)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv, func() string {
+		mu.Lock()
+		defer mu.Unlock()
+		return path
+	}
+}
+
+func TestReadingASubscriptionReportsWhereItDelivers(t *testing.T) {
+	deadline := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	srv, path := oneSubscriptionStub(t, http.StatusOK, map[string]any{
+		"id":                 "sub-1",
+		"notificationUrl":    testNotifyURL,
+		"expirationDateTime": deadline.Format(time.RFC3339),
+	})
+
+	sub, err := NewAPI(srv.Client(), srv.URL).GetSubscription(context.Background(), "at", "sub-1")
+	if err != nil {
+		t.Fatalf("GetSubscription: %v", err)
+	}
+	if sub.ID != "sub-1" || !sub.Expiration.Equal(deadline) {
+		t.Errorf("sub = %+v, want the id and deadline Microsoft reported", sub)
+	}
+	if sub.NotificationURL != testNotifyURL {
+		t.Errorf("NotificationURL = %q, want the endpoint — it is the whole reason for this read",
+			sub.NotificationURL)
+	}
+	if got := path(); got != "/subscriptions/sub-1" {
+		t.Errorf("read %q, want the subscription addressed inside its own collection", got)
+	}
+}
+
+// A SUBSCRIPTION MICROSOFT NO LONGER KNOWS reads as gone, so the renewal above
+// it registers afresh rather than reporting a fault the caller cannot act on.
+func TestReadingAVanishedSubscriptionIsGoneRatherThanAnError(t *testing.T) {
+	srv, _ := oneSubscriptionStub(t, http.StatusNotFound, nil)
+	if _, err := NewAPI(srv.Client(), srv.URL).
+		GetSubscription(context.Background(), "at", "sub-gone"); !errors.Is(err, ErrSubscriptionGone) {
+		t.Fatalf("err = %v, want ErrSubscriptionGone", err)
+	}
+}
+
+// AND A READ CANNOT BE AIMED BY A PROVIDER-SUPPLIED ID. The id arrives as a
+// decoded field of a provider response, and one carrying a path segment would
+// aim this authenticated GET — the user's own delegated token on it — at
+// another resource. Refused rather than escaped: url.PathEscape leaves `..`
+// intact, so a server that decodes %2F before resolving still walks out of the
+// collection.
+func TestAReadCannotBeAimedByAProviderSuppliedID(t *testing.T) {
+	srv, path := oneSubscriptionStub(t, http.StatusOK, map[string]any{"id": "x"})
+	if _, err := NewAPI(srv.Client(), srv.URL).
+		GetSubscription(context.Background(), "at", "../../me/messages"); !errors.Is(err, ErrSubscriptionGone) {
+		t.Fatalf("err = %v, want ErrSubscriptionGone for an id that cannot be addressed", err)
+	}
+	if got := path(); got != "" {
+		t.Errorf("the request went out to %q — an id like this must not reach the wire at all", got)
+	}
+}
+
+// A FAULT READING THE SUBSCRIPTION IS REPORTED, not turned into a fresh
+// registration. Microsoft being unreachable for a moment is not evidence that
+// the subscription is gone, and registering on it would leave the mailbox with
+// a second subscription delivering the same notifications.
+func TestAFaultReadingTheSubscriptionDoesNotRegisterASecondOne(t *testing.T) {
+	api := &fakeAPI{email: owner, getSubErr: ErrUnreachable}
+	c := pinnedConn(api)
+
+	if _, err := c.RenewWatch(context.Background(), authBytes(t), testNotifyURL, "sub-stored"); !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("err = %v, want the fault reported", err)
+	}
+	if api.subCalls != 0 || api.renewCalls != 0 {
+		t.Errorf("ensured %d and renewed %d after a failed read, want neither — a moment's "+
+			"unreachability is not evidence the subscription is gone", api.subCalls, api.renewCalls)
 	}
 }

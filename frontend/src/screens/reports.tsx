@@ -27,7 +27,6 @@ import {
   useSorMode,
 } from "./common";
 import { EntityRef } from "./entityref";
-import { QuotasView } from "./quotas";
 
 // Reports (B-EP09.12c, D-11): a picker over three reports — deals-by-stage
 // (unweighted next to weighted), forecast (category readings, each showing
@@ -57,16 +56,12 @@ type StageAgg = {
 
 type ReportKey = "deals-by-stage" | "forecast" | "open-deals-per-company";
 
-// The Reports picker adds the human-set quotas surface alongside the three
-// deal reports. Quotas runs its own query lifecycle (no /reports/{report}
-// call), so the report machinery below is gated off while it is active.
-type Segment = ReportKey | "quotas";
+type Segment = ReportKey;
 
 const SEGMENTS: readonly Segment[] = [
   "deals-by-stage",
   "forecast",
   "open-deals-per-company",
-  "quotas",
 ];
 
 /** isSegment narrows a URL segment, which is any string a reader can type. */
@@ -150,7 +145,6 @@ const REPORT_LABEL_KEY = {
 // caption: an explanation of the report beside it is worse than none.
 const segmentSub: Partial<Record<Segment, MessageKey>> = {
   "deals-by-stage": "reports.sub",
-  quotas: "quotas.sub",
 };
 
 type ReportAggregate = NonNullable<
@@ -507,8 +501,8 @@ function DerivationRows({ derivation }: Readonly<{ derivation: Derivation }>) {
   );
 }
 
-// "Explain this number", as the same titled Card the quotas surface draws for
-// the same feature — one route, one feature, one surface.
+// "Explain this number": the titled Card that shows where a figure came from,
+// so a number on this screen is never presented without its derivation.
 function ExplainCard({
   id,
   url,
@@ -572,15 +566,12 @@ export function ReportsScreen() {
       : "deals-by-stage";
   const setSegment = (next: Segment) =>
     navigate({ screen: "reports", id: next });
-  // The report machinery needs a valid ReportKey; while "quotas" is active the
-  // report/pipeline queries are disabled, so this fallback key is inert.
-  const report: ReportKey = segment === "quotas" ? "deals-by-stage" : segment;
+  const report: ReportKey = segment;
   // Deal reports aggregate over the pipeline/stage structure the overlay mirror
   // does not hold (the report endpoints answer 422 unsupported_by_sor in
-  // overlay), so the report segments show the honest unavailable state; the
-  // native quotas tab still works.
+  // overlay), so the report segments show the honest unavailable state.
   const overlay = useSorMode() === "overlay";
-  const reportActive = segment !== "quotas" && !overlay;
+  const reportActive = !overlay;
 
   const pipelineQuery = useQuery({
     queryKey: ["pipelines"],
@@ -640,19 +631,13 @@ export function ReportsScreen() {
     },
   });
 
-  // Header + segment picker are shared by both the report bodies and the
-  // quotas surface; factored so the report body below stays at one depth
-  // (quotas takes an early return rather than nesting the whole report tree).
+  // Header + segment picker are shared by every report body; factored so the
+  // report body below stays at one depth.
   const header = (
     <div className="filter-tabs">
       <SegmentedControl
         options={
-          [
-            "deals-by-stage",
-            "forecast",
-            "open-deals-per-company",
-            "quotas",
-          ] as const
+          ["deals-by-stage", "forecast", "open-deals-per-company"] as const
         }
         value={segment}
         onChange={setSegment}
@@ -662,7 +647,6 @@ export function ReportsScreen() {
           "open-deals-per-company": t(
             REPORT_LABEL_KEY["open-deals-per-company"],
           ),
-          quotas: t("quotas.tab"),
         }}
       />
       {/* Only where the copy is true of the SELECTED segment. `reports.sub`
@@ -674,15 +658,6 @@ export function ReportsScreen() {
       )}
     </div>
   );
-
-  if (segment === "quotas") {
-    return (
-      <div className="wrap">
-        {header}
-        <QuotasView />
-      </div>
-    );
-  }
 
   if (overlay) {
     return (
@@ -716,8 +691,7 @@ export function ReportsScreen() {
               <div className="card-actions">
                 {/* A toggle, and it says so: the button reveals and hides the
                     card below, so it announces the open state and names what
-                    it controls — the same pair the quotas surface draws for
-                    the same feature. */}
+                    it controls. */}
                 <Button
                   small
                   aria-expanded={explain}

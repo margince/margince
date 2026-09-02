@@ -11,18 +11,14 @@ package person360
 // scroll through seven rule bodies to find out.
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -35,7 +31,7 @@ import (
 // for a signal the system does not produce is a contract question, tracked
 // separately; what must not happen meanwhile is the page telling a rep that
 // somebody's seat moved on the strength of a reply.
-func roleChangeMoment(_ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+func roleChangeMoment(_ context.Context, _ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	change, ok := findChange(page, relstrength.ChangeRepliedAfterGap)
 	if !ok {
 		return crmcontracts.PersonMoment{}, false
@@ -84,7 +80,7 @@ func withheld(page *crmcontracts.Person360, sections ...crmcontracts.Person360Se
 
 // missingNextStepMoment: there is an open deal and nothing scheduled with the
 // person who sits on it. The gap is the finding.
-func missingNextStepMoment(_ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	// "Nothing is scheduled" is only true if this reader could see the schedule.
 	if withheld(page, crmcontracts.Person360SectionsOmittedNextMeeting,
 		crmcontracts.Person360SectionsOmittedNextSteps,
@@ -130,7 +126,7 @@ func missingNextStepMoment(_ time.Time, page *crmcontracts.Person360) (crmcontra
 // and because saying it too eagerly on a record whose activity section was
 // simply withheld would be a lie. Both inputs must be READ and empty, not
 // absent.
-func thinRelationshipMoment(_ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+func thinRelationshipMoment(_ context.Context, _ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	if page.Activities == nil || page.Network == nil {
 		// A section the caller may not read contributes no moment. Absent is
 		// not the same as empty, and only one of them is a fact about the
@@ -216,34 +212,6 @@ func bookMeeting() crmcontracts.PersonMomentAction {
 	}
 }
 
-// oldestOverdueCommitment finds the promise of OURS that has been late longest.
-//
-// Oldest rather than newest: the one that has been waiting longest is the one
-// with the most damage already done, and the one a reader would be most
-// embarrassed to discover from the other side.
-func oldestOverdueCommitment(now time.Time, page *crmcontracts.Person360) (crmcontracts.ConversationClaim, bool) {
-	if page.Claims == nil {
-		return crmcontracts.ConversationClaim{}, false
-	}
-	var oldest *crmcontracts.ConversationClaim
-	for i := range *page.Claims {
-		claim := &(*page.Claims)[i]
-		if claim.Kind != crmcontracts.CommitmentOurs || claim.Status != crmcontracts.ConversationClaimStatusOpen {
-			continue
-		}
-		if !deadline.Passed(claim.DueAt, now) {
-			continue
-		}
-		if oldest == nil || claim.DueAt.Before(*oldest.DueAt) {
-			oldest = claim
-		}
-	}
-	if oldest == nil {
-		return crmcontracts.ConversationClaim{}, false
-	}
-	return *oldest, true
-}
-
 // inboundEvidence names the actual message where the page is showing it, and
 // falls back to the bare fact when the timeline is capped past it.
 //
@@ -310,28 +278,20 @@ func findActivityAt(page *crmcontracts.Person360, at time.Time) (crmcontracts.Ac
 // fingerprintOf digests what a moment fired on, so a dismissal can be held
 // against the evidence rather than against the moment's name.
 //
-// It hashes the identity and timing of each piece — not the label, which is
-// prose this build may reword without the underlying fact having moved. A
-// reworded headline must not silently un-dismiss a moment the reader put away.
+// The digest itself is kernel/owedwork's, shared with the company page's card:
+// two spellings of one hash do not fail loudly when they drift, they silently
+// stop matching, and every dismissal a reader ever made stops working at once.
+// This maps the contract's evidence into the marks that hash reads.
 func fingerprintOf(evidence []crmcontracts.PersonMomentEvidence) string {
-	// Built as one string and hashed once. sha256's Write never returns an
-	// error, but writing through it would still spread unchecked returns
-	// across four calls to say something a single Sum says here.
-	var b strings.Builder
+	marks := make([]owedwork.Mark, 0, len(evidence))
 	for _, e := range evidence {
-		b.WriteString(string(e.Type))
-		b.WriteByte(0)
+		mark := owedwork.Mark{Kind: string(e.Type), At: e.ObservedAt}
 		if e.Id != nil {
-			b.WriteString(e.Id.String())
+			mark.ID = e.Id.String()
 		}
-		b.WriteByte(0)
-		if e.ObservedAt != nil {
-			b.WriteString(strconv.FormatInt(e.ObservedAt.UTC().UnixNano(), 10))
-		}
-		b.WriteByte(0)
+		marks = append(marks, mark)
 	}
-	sum := sha256.Sum256([]byte(b.String()))
-	return hex.EncodeToString(sum[:])
+	return owedwork.Fingerprint(marks)
 }
 
 // entityType lifts a destination's entity type, which the contract models as a
@@ -342,126 +302,3 @@ func entityType(v crmcontracts.PersonMomentDestinationEntityType) *crmcontracts.
 
 // prefill lifts the string map the contract carries as an optional object.
 func prefill(v map[string]string) *map[string]string { return &v }
-
-// openPromiseMoment: an open task is filed against them and nobody has done
-// it. Dated or not — the transcript reader files "I'll send you the
-// whitepaper" without a date, and it is owed either way.
-//
-// Below gone_quiet on purpose: a promise with no clock on it can wait for a
-// day, a contact who stopped answering is already costing something. Above
-// role_change and everything under it, because a thing we said we would do
-// outranks a thing we might do next. The overdue rung above reads claims
-// from correspondence; this one reads the task list, so a promise the reader
-// accepted from a transcript reaches the card the moment it becomes a task.
-func openPromiseMoment(now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
-	task, ok := nearestOpenTask(page)
-	if !ok {
-		return crmcontracts.PersonMoment{}, false
-	}
-	// A task filed without a subject is still owed; the card names it as the
-	// task list does rather than printing an empty promise.
-	subject := "an open task"
-	if task.Subject != nil && *task.Subject != "" {
-		subject = *task.Subject
-	}
-	// The evidence is dated by when the promise was filed, not when it falls
-	// due: a task due next month is not "updated today", and the due date is
-	// the reason's to state.
-	observed := task.OccurredAt
-	evidence := []crmcontracts.PersonMomentEvidence{{
-		Type:       crmcontracts.PersonMomentEvidenceTypeTask,
-		Id:         ptr(task.Id),
-		Label:      subject,
-		ObservedAt: &observed,
-	}}
-	return crmcontracts.PersonMoment{
-		ClaimKey:            "moment:open_promise",
-		Rule:                crmcontracts.PersonMomentRuleOpenPromise,
-		RuleVersion:         ptr(ruleVersion),
-		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            openPromiseHeadline(task, subject),
-		WhyNow:              openPromiseWhyNow(now, task),
-		Confidence:          crmcontracts.PersonMomentConfidenceObservedFact,
-		Evidence:            evidence,
-		FreshnessAt:         &observed,
-		// Writing to them is the one move every promise shares, whether it is
-		// a document to send or a room to book they are waiting to hear about.
-		// The composer opens on the promise itself, so the label says what the
-		// button does rather than presuming the promise is a thing to send.
-		RecommendedAction: crmcontracts.PersonMomentAction{
-			Kind:  crmcontracts.PersonMomentActionKindDraftReply,
-			Label: "Write to them about it",
-			State: crmcontracts.PersonMomentActionStateWillConfirm,
-			Destination: &crmcontracts.PersonMomentDestination{
-				Surface: crmcontracts.PersonMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": subject}),
-			},
-		},
-	}, true
-}
-
-// openPromiseHeadline names who owes it. A task with an assignee is that
-// person's, and the card is read by the whole workspace — "you owe them" to a
-// reader whose colleague holds the task attributes a promise to the wrong
-// desk. Unassigned, it is the workspace's, and the reader is the workspace.
-func openPromiseHeadline(task crmcontracts.Activity, subject string) string {
-	if task.AssigneeId != nil {
-		return fmt.Sprintf("Owed to them: %s", subject)
-	}
-	return fmt.Sprintf("You owe them: %s", subject)
-}
-
-// nearestOpenTask picks the one open task the card speaks for: the earliest
-// due date first, and among undated ones the oldest filed. One promise on the
-// card, not a list — the task list below it is where the rest live.
-func nearestOpenTask(page *crmcontracts.Person360) (crmcontracts.Activity, bool) {
-	if page.NextSteps == nil {
-		return crmcontracts.Activity{}, false
-	}
-	var pick *crmcontracts.Activity
-	for i := range page.NextSteps.Data {
-		task := &page.NextSteps.Data[i]
-		if pick == nil || openTaskSooner(task, pick) {
-			pick = task
-		}
-	}
-	if pick == nil {
-		return crmcontracts.Activity{}, false
-	}
-	return *pick, true
-}
-
-// openTaskSooner orders two open tasks: a dated one before an undated one,
-// then by due date, then by when it was filed. Two tasks due the same day
-// fall through to the filing order on purpose: the section lists newest
-// first, and without the fall-through the card switched to whichever task
-// was logged last rather than the one that has waited longest.
-func openTaskSooner(a, b *crmcontracts.Activity) bool {
-	switch {
-	case a.DueAt != nil && b.DueAt != nil && !a.DueAt.Equal(*b.DueAt):
-		return a.DueAt.Before(*b.DueAt)
-	case a.DueAt != nil && b.DueAt == nil:
-		return true
-	case a.DueAt == nil && b.DueAt != nil:
-		return false
-	default:
-		return a.OccurredAt.Before(b.OccurredAt)
-	}
-}
-
-// openPromiseWhyNow says what the date on the promise is, in the reader's
-// terms: a deadline still ahead, one already behind, or none at all.
-func openPromiseWhyNow(now time.Time, task crmcontracts.Activity) string {
-	if task.DueAt == nil {
-		return fmt.Sprintf("Promised on %s with no date set. It stays open until you do it or close it.", task.OccurredAt.Format("2 Jan"))
-	}
-	if past, ok := deadline.DaysPast(task.DueAt, now); ok {
-		return fmt.Sprintf("Due %d days ago and still open.", past)
-	}
-	// A task logged from the record page carries today's date unless the
-	// writer picks another, so "in 0 days" is the common case, not a corner.
-	if days := elapsed.Days(now, *task.DueAt); days > 0 {
-		return fmt.Sprintf("Due in %d days.", days)
-	}
-	return "Due today."
-}

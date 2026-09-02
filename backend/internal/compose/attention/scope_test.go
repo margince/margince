@@ -141,7 +141,7 @@ func TestAPageOfTheReadersOwnIsNotShortenedByColleaguesRows(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
 
-	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3, nil)
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3, waitingRead{}, leadRead{}, worklistCursor{})
 
 	if len(out.Queue) != 3 {
 		t.Fatalf("a reader with three of their own rows got a page of %d", len(out.Queue))
@@ -312,15 +312,24 @@ func TestAFailedMembershipReadRefusesAndReportsTheFailure(t *testing.T) {
 // Naming yourself is the question the default already answers, so every tier
 // may ask it. A rep following a link that spells out their own id must not be
 // refused their own day.
-func TestNamingYourselfNeedsNoWiderTier(t *testing.T) {
+//
+// It resolves to the SAME answer as the default — the zero owner — rather than
+// to their id, because "the same question" has to mean one resolved question
+// downstream and not two. The two spellings already read identically (TasksMine
+// files the query under actor.UserID, TasksOwnedBy under owner, one value
+// here); resolving them apart made every later reader of the resolved owner see
+// two different questions, and a continuation token minted under one spelling
+// was refused under the other.
+func TestNamingYourselfResolvesToTheDefaultQuestion(t *testing.T) {
 	me := ids.MustParse("01a05500-0000-7000-8000-000000000001")
 
 	got, err := (&Service{}).resolveOwner(readerAt(principal.RowScopeOwn), me)
 	if err != nil {
 		t.Fatalf("a reader was refused their OWN queue: %v", err)
 	}
-	if got != me {
-		t.Fatalf("asking for their own queue answered %v", got)
+	if !got.IsZero() {
+		t.Fatalf("naming yourself resolved to %v; it is the question the default answers, "+
+			"and resolving it apart makes one question look like two", got)
 	}
 }
 
@@ -357,7 +366,7 @@ func TestOpeningAnothersQueueCarriesTheirWorkAndNotTheReadersOwn(t *testing.T) {
 	}
 	reader := &Service{taskOwner: lena, taskScope: TasksOwnedBy}
 
-	out := reader.worklistFrom(context.Background(), day, scopeMine, "", 25, nil)
+	out := reader.worklistFrom(context.Background(), day, scopeMine, "", 25, waitingRead{}, leadRead{}, worklistCursor{})
 
 	var ids []string
 	for _, row := range out.Queue {
@@ -382,9 +391,19 @@ func (t teammatesSaying) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bo
 	return bool(t), nil
 }
 
+// The roster half answers the reader alone, which is what a caller on no team
+// gets from the real reader. These tests are about the yes/no half.
+func (t teammatesSaying) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return []TeamMember{{UserID: ids.UUID{1}, DisplayName: "the reader"}}, false, nil
+}
+
 // teammatesFailing is the membership read that could not answer.
 type teammatesFailing struct{}
 
 func (teammatesFailing) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bool, error) {
 	return false, errors.New("reading team membership")
+}
+
+func (teammatesFailing) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return nil, false, errors.New("reading team membership")
 }

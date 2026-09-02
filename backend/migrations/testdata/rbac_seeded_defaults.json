@@ -205,12 +205,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
       "relationship": {
         "create": true,
         "delete": true,
@@ -248,6 +242,12 @@
         "update": true
       },
       "webhook_subscription": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "weekly_plan": {
         "create": true,
         "delete": true,
         "read": true,
@@ -462,12 +462,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": true,
         "delete": true,
@@ -509,6 +503,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "weekly_plan": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
       }
     },
     "row_scope": "all"
@@ -719,12 +719,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": true,
         "delete": true,
@@ -766,6 +760,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "weekly_plan": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
       }
     },
     "row_scope": "team"
@@ -976,12 +976,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
       "relationship": {
         "create": true,
         "delete": true,
@@ -1019,6 +1013,12 @@
         "update": true
       },
       "webhook_subscription": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "weekly_plan": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1233,12 +1233,6 @@
         "read": true,
         "update": false
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": false,
         "delete": false,
@@ -1276,6 +1270,12 @@
         "update": false
       },
       "webhook_subscription": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "weekly_plan": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1490,12 +1490,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": true,
         "delete": false,
@@ -1537,6 +1531,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "weekly_plan": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
       }
     },
     "row_scope": "own"

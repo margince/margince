@@ -94,7 +94,7 @@ function setupReport(
     complete: ai,
     steps: [
       { step: "ai_models", configured: ai, blocking: true },
-      { step: "google_app", configured: google, blocking: false },
+      { step: "oauth_app", configured: google, blocking: false },
     ],
   };
 }
@@ -179,7 +179,7 @@ describe("the first-run setup gate", () => {
 
   // A frontend older than its server, meeting a blocking step it has no panel
   // for. It lets the reader PAST rather than drawing the panel it does have —
-  // the model form under a `google_app` heading would take a reader's API key
+  // the model form under an `oauth_app` heading would take a reader's API key
   // against a step they were never asked about — and past is what matters,
   // because the caller gates on this same predicate and would otherwise hold an
   // empty screen in front of them forever. The server pins ai_models as the
@@ -190,7 +190,7 @@ describe("the first-run setup gate", () => {
       complete: false,
       steps: [
         { step: "ai_models", configured: true, blocking: true },
-        { step: "google_app", configured: false, blocking: true },
+        { step: "oauth_app", configured: false, blocking: true },
       ],
     };
     // The caller's own question, asked the caller's way. An empty screen alone

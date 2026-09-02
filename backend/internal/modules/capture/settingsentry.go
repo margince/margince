@@ -24,7 +24,7 @@ const captureSettingsObject = "capture_settings"
 
 // SettingsObject is the same object, for compose.
 //
-// Exported because the Google-app transport has to take the gate BEFORE it can
+// Exported because the OAuth-app transport has to take the gate BEFORE it can
 // see whether the store exists — a wiring check that answers first turns the
 // status code into an oracle for whether this installation has a vault. The
 // unexported spelling stays the one this package uses, so there is one value
@@ -85,9 +85,18 @@ var SharedPostureAllowed = settings.Define[bool](
 	nil, // every bool is a valid posture; a validator here would be ceremony
 ).MachineryApplied() // SetMailPosture reads it inside the write it gates
 
-// SignatureEnrich is the workspace DEFAULT for the nightly pass that lifts
-// stated fields out of an email signature — a title, a phone number, the
-// company somebody types under their own name.
+// SignatureEnrich is the workspace DEFAULT for reading contact details out of
+// captured mail — a title, a phone number, an address, the company somebody
+// types under their own name.
+//
+// It governs BOTH readers, which is why its name is narrower than its subject:
+// the signature pass, and the ingest of a vCard attached to a message
+// (compose/vcardingest.go reads this same key). One switch, because somebody
+// turning it off means "do not take contact details off my mail", and a card
+// attached to that mail is the same answer to the same question.
+//
+// The pass runs within minutes of a message arriving; the daily cycle is the
+// backstop rather than the trigger.
 //
 // It is the default rather than the answer: `capture_connection.signature_enrich_enabled`
 // overrides it per mailbox, and a mailbox that never chose follows this. That
@@ -97,7 +106,7 @@ var SharedPostureAllowed = settings.Define[bool](
 //
 // Distinct from the exclusion list, which is a different lever entirely: that
 // keeps whole MESSAGES out of capture by address or domain, and says nothing
-// about whether captured mail may be read for a signature.
+// about whether captured mail may be read for contact details.
 //
 // Default true: the pass reads only what a person put under their own name in
 // mail they sent us, which is the least-surprising enrichment in the product.
@@ -114,5 +123,8 @@ var SignatureEnrich = settings.Define[bool](
 // such function, so this is opt-in rather than an interface every module must
 // satisfy.
 func Definitions() []settings.Definition {
-	return []settings.Definition{AutoEnrich, MailSharing, SharedPostureAllowed, SignatureEnrich, GoogleAppSetting}
+	return []settings.Definition{
+		AutoEnrich, MailSharing, SharedPostureAllowed, SignatureEnrich,
+		GoogleAppSetting, MicrosoftAppSetting,
+	}
 }

@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -94,36 +93,32 @@ func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]a
 	return pairs, nil
 }
 
-// Describe names one side of a pair, under the reader's own scope.
+// DescribeMany names records of one entity type, under the reader's own scope.
 //
-// Each branch is that record's ordinary get, so a reader who may not see the
-// record gets the same refusal here as anywhere else. The pair's own row is not
-// permission to read what it points at.
-func (d attentionDuplicates) Describe(
-	ctx context.Context, entityType string, id ids.UUID,
-) (attention.RecordFace, error) {
-	switch entityType {
-	case flipObjectPerson:
-		row, err := d.store.GetPerson(ctx, ids.From[ids.PersonKind](id), storekit.LiveOnly)
-		if err != nil {
-			return attention.RecordFace{}, err
-		}
-		return personFace(row), nil
-	case flipObjectOrganization:
-		row, err := d.store.GetOrganization(ctx, ids.From[ids.OrganizationKind](id), storekit.LiveOnly)
-		if err != nil {
-			return attention.RecordFace{}, err
-		}
-		return organizationFace(row), nil
-	case flipObjectLead:
-		row, err := d.store.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
-		if err != nil {
-			return attention.RecordFace{}, err
-		}
-		return leadFace(row), nil
-	default:
-		return attention.RecordFace{}, apperrors.ErrNotFound
+// The store read carries the same object grant and the same row scope the
+// ordinary get applies — the pair's own row is not permission to read what it
+// points at — and asks the scope of the whole set at once, which is what turns
+// a page of ten pairs from twenty transactions into three.
+func (d attentionDuplicates) DescribeMany(
+	ctx context.Context, entityType string, rowIDs []ids.UUID,
+) (map[ids.UUID]attention.RecordFace, error) {
+	if entityType != flipObjectPerson && entityType != flipObjectOrganization && entityType != flipObjectLead {
+		return nil, apperrors.ErrNotFound
 	}
+	described, err := d.store.DescribeForMerge(ctx, entityType, rowIDs)
+	if err != nil {
+		return nil, err
+	}
+	faces := make(map[ids.UUID]attention.RecordFace, len(described))
+	for id, row := range described {
+		faces[id] = attention.RecordFace{
+			Label:        row.Label,
+			Detail:       row.Detail,
+			CreatedAt:    &row.CreatedAt,
+			RelatedCount: row.RelatedCount,
+		}
+	}
+	return faces, nil
 }
 
 func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
@@ -377,7 +372,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// behind it keeps its own integration test — what is NOT tested is
 		// the seam wiring itself, because nothing wires it.
 		nil,
-		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
+		attentionAtRisk{lister: quietDealScan(pool, deals.QuietThresholdDays)},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
@@ -435,9 +430,24 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
 		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
+		// The base-currency conversion the ranked queue's money comparisons
+		// run in — the same engine every other money surface prices with.
+		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
 		// Whether a team-scoped reader may open a named person's queue. Bound
 		// unconditionally: unbound, that reader is refused, so a seam that
 		// dropped this would present as a Team Lead unable to open their own
 		// rep's day rather than as one able to open a stranger's.
-		WithTeammates(newTeammatesSeam(pool))
+		WithTeammates(newTeammatesSeam(pool)).
+		// The inbound leads still owed a first reply. The store answers the
+		// ordering and the state; this lane only ranks them against the rest of
+		// the day.
+		WithLeadResponses(attentionLeadResponses{
+			store:     people.NewStore(db),
+			teammates: newTeammatesSeam(pool),
+		}).
+		// How many promises each teammate has already missed, for the team
+		// board. Counted rather than listed, because the task lane above stops
+		// at a dozen and a board built from it would call every loaded rep
+		// equally loaded.
+		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
 }

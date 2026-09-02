@@ -1354,7 +1354,11 @@ export function Modal({
   labelledBy: string;
   // "wide" roomier variant for content-dense dialogs (code/YAML previews);
   // "default" keeps the compact form width every confirm/create modal uses.
-  size?: "default" | "wide";
+  // "split" is a drawer holding TWO columns rather than one — the conversation
+  // being answered beside the reply being written. It is a width because that
+  // is what a second column costs; a drawer at the wide clamp splits into two
+  // unreadable halves.
+  size?: "default" | "wide" | "split";
   // "right" anchors the dialog to the right edge, full height — the drawer
   // form the composer and the evidence receipt use, where the record behind
   // stays visible as context rather than being covered by a centred box.
@@ -1485,17 +1489,29 @@ export function Modal({
 
 // A right-anchored dialog draws its width from the viewport, so the `size`
 // variants — which exist to widen a centred box — do not apply to it.
-function modalClass(size: "default" | "wide", placement: "center" | "right") {
+function modalClass(
+  size: "default" | "wide" | "split",
+  placement: "center" | "right",
+) {
   if (placement === "right") {
     // A drawer's width normally comes from the viewport, but a surface a rep
     // WORKS in — a numbered claim list, a message being written — wraps into an
     // unreadable column at the default clamp. `size` is what asks for the
     // roomier one, and it brings sticky header and footer with it.
+    //
+    // A split drawer is the wide one plus the room its second column needs, so
+    // it keeps the wide band behaviour rather than restating it.
+    if (size === "split") {
+      return "modal modal-drawer modal-drawer-wide modal-drawer-split";
+    }
     return size === "wide"
       ? "modal modal-drawer modal-drawer-wide"
       : "modal modal-drawer";
   }
-  return size === "wide" ? "modal modal-wide" : "modal";
+  // Centred, a split has no second column to hold — the layout that earns the
+  // extra width is the drawer's — so it falls back to the roomy box rather
+  // than to a width nothing on screen uses.
+  return size === "default" ? "modal" : "modal modal-wide";
 }
 
 // Keep Tab inside the dialog. `aria-modal` tells a screen reader the rest of
@@ -1535,70 +1551,6 @@ const FOCUSABLE =
 function focusableWithin(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
     (element) => !element.hasAttribute("disabled") && element.tabIndex !== -1,
-  );
-}
-
-// The attainment band the server computes (met ≥ 100, accent 60–99,
-// behind < 60). The ring and any echoing Badge take this verbatim — the
-// client never recomputes it from a raw percentage.
-export type AttainmentBand = "met" | "accent" | "behind";
-
-const BAND_STROKE: Record<AttainmentBand, string> = {
-  met: "var(--online)",
-  accent: "var(--accent)",
-  behind: "var(--away)",
-};
-
-// AttainmentRing (RD-PARAM-4): an SVG progress ring whose arc length reflects
-// `pct` (the server's raw, uncapped attainment percentage) capped at a full
-// circle, and whose colour is the server-computed `band` — never re-derived
-// here from `pct`. Pure and prop-driven: no fetch, so Storybook and tests
-// render it directly. The centred figure is the real rounded percentage
-// (which can read past 100%) above a caption slot.
-export function AttainmentRing({
-  pct,
-  band,
-  caption,
-}: Readonly<{
-  pct: number;
-  band: AttainmentBand;
-  caption: string;
-}>) {
-  const { locale } = useLocale();
-  const radius = 68;
-  const circumference = 2 * Math.PI * radius;
-  const fraction = Math.min(pct / 100, 1);
-  const offset = circumference * (1 - fraction);
-  return (
-    <div className="attain-ring">
-      <svg width={160} height={160} viewBox="0 0 160 160" aria-hidden="true">
-        <circle
-          cx={80}
-          cy={80}
-          r={radius}
-          fill="none"
-          stroke="var(--bgCard)"
-          strokeWidth={14}
-        />
-        <circle
-          cx={80}
-          cy={80}
-          r={radius}
-          fill="none"
-          stroke={BAND_STROKE[band]}
-          strokeWidth={14}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-        />
-      </svg>
-      <div className="attain-ring-center">
-        <span className="attain-ring-pct t-mono">
-          {formatNumber(Math.round(pct), locale)}%
-        </span>
-        <span className="attain-ring-lbl">{caption}</span>
-      </div>
-    </div>
   );
 }
 

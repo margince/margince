@@ -98,7 +98,7 @@ type Server struct {
 	ownDomainHandlers
 	installationSettingsHandlers
 	licenseHandlers
-	googleAppHandlers
+	connectorAppHandlers
 	installationSetupHandlers
 	consumerMailDomainHandlers
 	blockedDomainHandlers
@@ -117,7 +117,6 @@ type Server struct {
 	orgRollupHandlers
 	strengthHandlers
 	customfieldsHandlers
-	quotasHandlers
 	attachmentExtractionHandlers
 	overlayHandlers
 	embedReindexHandlers
@@ -153,6 +152,9 @@ type Server struct {
 	// The notices transport: one verb (mark read); the content reaches the
 	// reader on the Worklist's notices lane.
 	noticesHandlers
+	// The week ahead: the rep's own plan, and the one write their lead has on
+	// it. The week just gone is weeklyHandlers, which shares no table with it.
+	weeklyPlanHandlers
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
@@ -267,15 +269,17 @@ type Server struct {
 	// providers, so both reach the pre-flight and a missing field would report
 	// a configured deployment as unable to send.
 	graphAppConfigured bool
-	// googleAppResolver resolves the installation's STORED Google app, built by
-	// WithKeyvault and named in every connectorHandlers literal.
+	// googleAppResolver and microsoftAppResolver resolve the installation's
+	// STORED app for each vendor, built by WithKeyvault and named in every
+	// connectorHandlers literal.
 	//
-	// It lives on the Server rather than only inside those handlers because the
+	// They live on the Server rather than only inside those handlers because the
 	// struct is REPLACED wholesale in two places, and a field assigned beside a
 	// composite literal is one the next literal drops without a word — which is
 	// exactly how this arrived inert the first time. Kept here, each construction
-	// has to name it, and a reader sees the omission.
-	googleAppResolver googleAppResolver
+	// has to name them, and a reader sees the omission.
+	googleAppResolver    appResolver
+	microsoftAppResolver appResolver
 
 	// schemaPoolReady is the /readyz schema-pool probe, injected only by
 	// WithSchemaPool — a role that never mounted --schema-dsn declares
@@ -433,4 +437,9 @@ func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
 // GetWorklist forwards the ranked read to the same assembled surface.
 func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmcontracts.GetWorklistParams) {
 	s.attentionHandlers.GetWorklist(w, r, params)
+}
+
+// GetTeamBoard forwards the manager's read of the same work.
+func (s Server) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+	s.attentionHandlers.GetTeamBoard(w, r)
 }

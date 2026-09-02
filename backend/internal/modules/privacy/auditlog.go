@@ -12,7 +12,6 @@ package privacy
 // that would misread as "nothing happened".
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -98,87 +97,6 @@ type AuditPage struct {
 // audience the row's author set can be asked about it. It is deliberately not
 // `a` or one of the app_user aliases already in the statement.
 const auditActivityAlias = "aud_activity"
-
-// auditActivityJoin reaches the activity an audit row describes, and only for
-// rows that describe one. entity_id is a bare uuid across every entity type, so
-// the entity_type test is what stops a person's id colliding with an activity's
-// and withholding an image that has no audience to answer to.
-const auditActivityJoin = `
-		LEFT JOIN activity ` + auditActivityAlias + `
-		  ON a.entity_type = 'activity' AND ` + auditActivityAlias + `.id = a.entity_id`
-
-// auditImageGovernanceKeys are the keys an activity's audit image may carry
-// that describe the MUTATION rather than the activity's content — who the
-// audience became, which record a relink pointed at, which fields moved.
-//
-// The audience governs an activity's CONTENT. It has no claim over the record
-// of an administrative act performed on that activity, and withholding one
-// destroys governance data rather than protecting anything: the row recording
-// "this conversation was limited to its participants, naming 3 members" carries
-// nothing a reader outside the audience is not entitled to, and is precisely
-// what a compliance reader is looking for.
-//
-// The map is an ALLOWLIST and the redaction is fail-closed: a key that is not
-// here is dropped, so a new writer that starts recording content into an audit
-// image cannot leak it by default.
-//
-// ⚠️ SCOPE, narrower than "the audience is honoured on this endpoint": this map
-// is consulted only for an audit row whose entity_type is `activity`. Other
-// entity types that hang off an activity — `attachment`, whose image carries
-// the user-supplied filename, plus `attachment_extraction`, `transcript_read`
-// and `scheduled_send` — are not joined to their activity and are not
-// redacted, so a reader outside the audience receives those images whole.
-//
-// Each entry carries a predicate on the VALUE, because a key alone is not a
-// safety property. `body` is the case that forced it: the writer reduces it to a
-// presence flag and says so in a comment, but nothing bound the READER to that —
-// one plausible edit turning `delta["body"] = true` into the body itself would
-// have handed an out-of-audience admin the confidential text of a limited
-// conversation through this endpoint, passing every gate in the tree.
-//
-// `body` is the only entry actually constrained. The rest are anyValue, so the
-// "a writer starts nesting content under this key" scenario applies unchanged
-// to `kind`, `source_system` or a timestamp: those are judged safe by what the
-// activity read surface answers for them, which is a claim about today's
-// writers rather than a guard. Tightening one is a one-line predicate.
-//
-// TestRedactionKeepsGovernanceAndDropsContent pins both directions, including
-// a `body` carrying something other than a boolean.
-var auditImageGovernanceKeys = map[string]func(json.RawMessage) bool{
-	"audience": anyValue, "member_count": anyValue,
-	"entity_type": anyValue, "entity_id": anyValue, "replaced": anyValue,
-	"merged_into_id": anyValue,
-	// Mirrors what the activity READ surface keeps on a withheld row
-	// (activityread.go): kind, direction, occurred_at and source_system are
-	// markers it answers; subject, body and SOURCE_ID are what it nils. source_id
-	// is deliberately absent here for that reason — it identifies the message at
-	// the provider, the capture sink writes it onto the audit image, and admitting
-	// it would have this endpoint answer what the record's own read refuses.
-	"kind": anyValue, "direction": anyValue, "source_system": anyValue,
-	"occurred_at": anyValue, "due_at": anyValue, "remind_at": anyValue,
-	"assignee_id": anyValue, "is_done": anyValue,
-	// Presence only, and enforced HERE rather than trusted from the writer.
-	"body": isJSONBool,
-}
-
-// anyValue admits a key whose every possible value is metadata about the
-// mutation. Named rather than written as an inline closure so the exceptions —
-// today just `body` — stand out at a glance in the map above.
-func anyValue(json.RawMessage) bool { return true }
-
-// isJSONBool admits only a literal JSON `true` or `false`.
-//
-// The null check is not redundant: json.Unmarshal into a bool accepts JSON null
-// and leaves the bool at its zero value, so a bare Unmarshal admits
-// `"body": null` — the one shape where a non-boolean body would survive
-// redaction, and survive it with no marker to say anything was examined.
-func isJSONBool(raw json.RawMessage) bool {
-	if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
-		return false
-	}
-	var flag bool
-	return json.Unmarshal(raw, &flag) == nil
-}
 
 // UnscrubbedImageSQL renders the erasure boundary as a predicate over one
 // audit_log row, aliased for the query using it.
@@ -274,8 +192,9 @@ func scanAuditEntry(rows pgx.Rows) (AuditEntry, error) {
 // policy fired, which rule admitted it — not the record content the audience
 // governs.
 func withholdAuditImage(e *AuditEntry) {
-	e.Before = redactAuditImage(e.Before)
-	e.After = redactAuditImage(e.After)
+	keys := governanceKeysFor(e.EntityType)
+	e.Before = redactAuditImage(e.Before, keys)
+	e.After = redactAuditImage(e.After, keys)
 }
 
 // redactAuditImage keeps the governance keys of one image and marks the rest
@@ -286,7 +205,7 @@ func withholdAuditImage(e *AuditEntry) {
 // ledger never asked. An UNREADABLE one is withheld whole — it cannot be
 // redacted key by key, and passing it through would be the disclosure. The two
 // are different answers and must not be collapsed into one word.
-func redactAuditImage(raw []byte) []byte {
+func redactAuditImage(raw []byte, governance map[string]func(json.RawMessage) bool) []byte {
 	if len(raw) == 0 {
 		return raw
 	}
@@ -299,7 +218,7 @@ func redactAuditImage(raw []byte) []byte {
 	kept := make(map[string]json.RawMessage, len(fields))
 	withheld := false
 	for key, value := range fields {
-		if admits, ok := auditImageGovernanceKeys[key]; ok && admits(value) {
+		if admits, ok := governance[key]; ok && admits(value) {
 			kept[key] = value
 			continue
 		}
@@ -369,13 +288,31 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 	// holes in it is its own defect: the row, its actor, its action and its
 	// timestamp are all still answered, and only the IMAGE is withheld.
 	//
-	// A non-activity row has no audience to answer to and is untouched. An
-	// activity row whose record is GONE is withheld, not passed through: the
-	// join failing is not evidence that the caller may read the image, and a
-	// predicate spelled `id IS NULL OR audience` would answer "readable" for
-	// exactly the rows whose audience can no longer be checked. Nothing purges
-	// activity rows today, so this is the latent direction — but it is the
-	// direction that re-opens the disclosure silently, and no test would notice.
+	// Two conditions, not one. The TYPE says whether this kind of row can carry
+	// an activity's content; the route's `governed` column says whether THIS row
+	// actually hangs off an activity, which for an attachment depends on its
+	// polymorphic parent. A contract filed on a deal is an attachment and is not
+	// governed by anybody's audience, and withholding its filename would destroy
+	// audit data to protect an audience that does not exist.
+	//
+	// A row that IS governed and whose activity does not resolve is withheld, not
+	// passed through: an unresolvable route is not evidence that the caller may
+	// read the image, and a predicate answering "readable" for exactly the rows
+	// whose audience cannot be checked re-opens the disclosure silently. That is
+	// reachable today — an unreleased account-origin scheduled_send has no
+	// activity at all, by its own CHECK constraint.
+	//
+	// The same rule covers a route that cannot say whether the row is governed:
+	// an attachment whose own row is gone — erased, which is exactly when the
+	// image left behind matters — resolves `governed` to NULL, and NULL is not
+	// "not governed". It is read as governed, so the image is withheld rather
+	// than the predicate coming back NULL and the scan failing on the row.
+	//
+	// The four collateral types are governed for the same reason the activity is:
+	// their images carry its content. An attachment's image carries the
+	// user-supplied filename, which is why a `Kuendigung.pdf` on a limited thread
+	// was legible to every admin before this predicate read auditGovernedTypes
+	// rather than the single literal 'activity'.
 	audience, err := auth.ActivityAudienceArm(ctx, auditActivityAlias, argN)
 	if err != nil {
 		return AuditPage{}, err
@@ -388,7 +325,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			        a.action, a.entity_type, a.entity_id, a.before, a.after, a.authorization_rule,
 			        a.evidence, a.occurred_at,
 			        actor_user.display_name, obo.display_name,
-			        (a.entity_type <> 'activity'
+			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND coalesce(aud_route.governed, true))
 			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
 			        `+UnscrubbedImageSQL("a", arg(ScrubVerbs()))+` AS images_readable
 			 FROM audit_log a`+auditActorNameJoins+auditActivityJoin+`
@@ -415,7 +352,11 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 	if len(page.Entries) > limit {
 		page.Entries = page.Entries[:limit]
 		last := page.Entries[len(page.Entries)-1]
-		page.NextCursor = storekit.EncodeCursor(last.OccurredAt, last.ID)
+		next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+		if err != nil {
+			return AuditPage{}, err
+		}
+		page.NextCursor = next
 		page.HasMore = true
 	}
 	return page, nil

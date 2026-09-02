@@ -101,6 +101,16 @@ type ListActivitiesInput struct {
 	// [day 00:00, next day 00:00) with no double-counting at midnight.
 	OccurredAfter  *time.Time
 	OccurredBefore *time.Time
+	// WaitingReplyAsOf narrows the list to the SAME thread walk WaitingReplies
+	// answers for the Worklist: the newest inbound message per thread that
+	// nobody has answered, as of this instant. Nil means the filter is off.
+	//
+	// An instant rather than a plain bool, for the reason OpenAndDueBy is one:
+	// the caller resolves it (the store's own clock for an HTTP read, a fixed
+	// moment for a test), so the whole read stays one snapshot rather than
+	// this filter and the rest of the page judging against two different
+	// clock reads.
+	WaitingReplyAsOf *time.Time
 	// OpenAndDueBy narrows to tasks still open and already due at an instant:
 	// the day's work, asked as one question.
 	//
@@ -175,7 +185,11 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if len(activities) > limit {
 		activities = activities[:limit]
 		last := activities[len(activities)-1]
-		page = storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))}
+		next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		page = storekit.Page{HasMore: true, NextCursor: next}
 	}
 	if err := attachLinks(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
@@ -203,6 +217,29 @@ func readActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived st
 	if err := auth.EnsureActivityVisible(ctx, tx, id.UUID); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	return readActivityRow(ctx, tx, id, archived)
+}
+
+// readHeldActivity is readActivity for a caller in lockActivityForWrite's
+// held branch, who already proved the row exists (the row lock) and that
+// they hold write authority over it (auth.EnsureActivityWritableIn's
+// ownership arm, asked independently of discoverability for exactly this
+// reason). It skips readActivity's own DISCOVER gate deliberately:
+// auth.ActivityAvailableClause folds `restricted_at IS NULL` into that gate
+// unconditionally, so calling readActivity here would answer not-found no
+// matter what the archived filter said — this read does not re-decide
+// either question the caller already settled, only avoids asking a gate
+// that would answer the wrong one. gates/restrictedreaders_test.go's
+// call-graph walk credits it through lockActivityForWrite's own
+// restricted_at check one hop away, rather than through a waiver entry.
+func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
+	return readActivityRow(ctx, tx, id, archived)
+}
+
+// readActivityRow is the SELECT + scan + link attachment readActivity and
+// readHeldActivity share; it carries no row-scope gate of its own, so every
+// caller composes one first.
+func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
 	args := []any{id}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	content, err := auth.ActivityAudienceArm(ctx, "a", arg)

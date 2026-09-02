@@ -10,8 +10,9 @@ package deals
 // two readers outside the module ask the same question of it: the hierarchy
 // rollup's weighted pipeline, and the company page's own open-pipeline read.
 // They had one implementation each — Go over big.Int in one, a SQL lateral with
-// Postgres round() in the other — encoding the same four decisions: the
-// direction, the as-of cutoff, newest-wins, and the multiply-and-round.
+// Postgres round() in the other — encoding the same five decisions: the
+// direction, the as-of cutoff, newest-wins, the multiply-and-round, and the
+// minor-unit scales the two sides count in.
 //
 // The two agreed. Nothing made them keep agreeing, and the first divergence
 // would have been rounding — half-away-from-zero against Postgres round() — so
@@ -34,6 +35,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // FXRate is one stored rate and the day it is dated. They are ONE answer and
@@ -113,27 +116,137 @@ func oneRate() pgtype.Numeric {
 	return pgtype.Numeric{Int: big.NewInt(1), Exp: 0, Valid: true}
 }
 
-// ConvertToBase rounds amountMinor × rate half away from zero, in EXACT decimal
-// arithmetic over the rate's stored numeric digits (Int × 10^Exp).
+// The two ways a conversion refuses, as sentinels rather than as one opaque
+// error, because a caller must be able to tell them apart and one of them
+// silently was not.
+//
+// ErrAmountOutOfRange is about ONE amount: this deal's converted value does not
+// fit money's range. A surface reporting a partial figure skips that row and
+// counts it.
+//
+// ErrRateNotFinite is about the ESTATE: a stored fx_rate row holds NaN or an
+// infinity, so every amount in that currency is unconvertible and will stay so
+// until an operator corrects the row. Skipping it row by row would report a
+// short total as a whole one, quietly, for as long as the bad row survives —
+// which is the shape of defect this whole file exists to remove.
+var (
+	ErrRateNotFinite    = errors.New("stored FX rate is not a finite number; correct the fx_rate row before retrying")
+	ErrAmountOutOfRange = errors.New("converted amount exceeds the representable money range in the base currency")
+)
+
+// PricedAmount is what one amount came to in the base currency, and at which
+// day's rate. Both or neither: an amount the estate cannot price answers
+// Priced false, and the two fields together are the only honest way to state a
+// converted figure — a date coalesced from elsewhere could name a day whose
+// rate is not the rate this figure was computed at.
+type PricedAmount struct {
+	Minor  int64
+	RateOn time.Time
+	Priced bool
+}
+
+// PriceAll converts a batch of amounts to the base currency, leaving the ones
+// the estate cannot price UNPRICED rather than refusing the whole batch.
+//
+// This is the loop every open-money surface runs — the Worklist's ranking, the
+// company page's open pipeline — spelled once beside the engine it drives, so
+// the four decisions inside it (which rate, what a missing one means, what an
+// unrepresentable product means, and the two minor-unit scales) cannot come
+// apart between callers. It was two copies before, agreeing by inspection, and
+// they stopped agreeing on the fourth.
+//
+// Held by: TestOnlyOnePlaceMultipliesAnAmountByAStoredRate
+// (backend/gates/fxconversioncallers_test.go), which fails when a second Go
+// site multiplies an amount by a stored rate itself. The SQL spellings are
+// outside what that test can read; the gate's own comment says which tests
+// hold those.
+//
+// A caller wanting the OTHER missing-rate policy — refuse the read rather than
+// report a partial figure, which is what the hierarchy rollup owes its readers
+// — asks per amount through FXRates.For instead. That difference is the one
+// thing this deliberately does not decide; the file header says why.
+func PriceAll(
+	ctx context.Context, tx pgx.Tx, rates *FXRates, amounts []CurrencyAmount,
+) ([]PricedAmount, error) {
+	out := make([]PricedAmount, len(amounts))
+	for i, amount := range amounts {
+		rate, found, err := rates.For(ctx, tx, amount.Currency)
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			continue
+		}
+		converted, err := ConvertToBase(amount.Minor, rate.Rate, amount.Currency, rates.Base())
+		switch {
+		case errors.Is(err, ErrAmountOutOfRange):
+			// UNPRICED, not refused — a decision rather than a swallow. An
+			// amount whose converted value does not fit money's range is one
+			// row the surface cannot state, and a caller reports that with its
+			// own count of what the figure covers. One implausible amount must
+			// not take a whole page offline.
+			continue
+		case err != nil:
+			// Anything else is a fault about the ESTATE rather than about this
+			// amount — a corrupt stored rate makes every amount in that
+			// currency unconvertible — so it travels to the caller instead of
+			// being counted as one unpriced row.
+			return nil, err
+		}
+		out[i] = PricedAmount{Minor: converted, RateOn: rate.On, Priced: true}
+	}
+	return out, nil
+}
+
+// CurrencyAmount is one figure in the currency its own record carries — the
+// input side of a conversion, before it is comparable to anything.
+type CurrencyAmount struct {
+	Minor    int64
+	Currency string
+}
+
+// ConvertToBase converts an amount of `from`'s minor units into `base`'s,
+// rounding half away from zero in EXACT decimal arithmetic over the rate's
+// stored numeric digits (Int × 10^Exp).
 //
 // Never float64, so a converted amount carries the same exactness Postgres
 // ROUND over numeric gives a closed deal's frozen figure, and an amount past
 // float64's 2^53 exact-integer ceiling cannot lose a minor unit.
 //
+// THE MINOR-UNIT SCALES MUST BOTH BE APPLIED, and this is the whole reason the
+// function takes two currency codes rather than a bare amount. A stored rate
+// says what ONE MAJOR UNIT is worth — the ingestion prompt reads "1 <from> =
+// <rate> <to>" off a rates page — while the amounts on both sides are counts
+// of MINOR units. Those scales differ: JPY has no minor unit and EUR has two,
+// so ¥5,000,000 (five million yen) × 0.006 gives 30,000, which is read as
+// €300.00 and is a hundredth of the €30,000 the deal is worth. Multiplying a
+// minor-unit amount by a major-unit rate is only correct while both currencies
+// happen to carry two digits, which every pair in the demo data does.
+//
+// So the amount is taken up to major units by `from`'s scale and back down by
+// `base`'s, as one exact fraction — never as two roundings, which would lose a
+// minor unit on the way through.
+//
 // A non-finite rate or an overflowing result refuses loudly: both would
 // otherwise put a silently wrong number in a money total.
-func ConvertToBase(amountMinor int64, rate pgtype.Numeric) (int64, error) {
+func ConvertToBase(amountMinor int64, rate pgtype.Numeric, from, base string) (int64, error) {
 	if !rate.Valid || rate.NaN || rate.InfinityModifier != pgtype.Finite {
-		return 0, errors.New("stored FX rate is not a finite number; correct the fx_rate row before retrying")
+		return 0, ErrRateNotFinite
 	}
-	product := new(big.Int).Mul(big.NewInt(amountMinor), rate.Int)
+	// numerator/denominator is amountMinor × rate × 10^base ÷ 10^from, kept as
+	// one fraction so the single rounding at the end is the only one.
+	numerator := new(big.Int).Mul(big.NewInt(amountMinor), rate.Int)
+	denominator := big.NewInt(1)
 	if rate.Exp >= 0 {
-		product.Mul(product, Pow10(int64(rate.Exp)))
+		numerator.Mul(numerator, Pow10(int64(rate.Exp)))
 	} else {
-		product = DivRoundHalfAwayFromZero(product, Pow10(int64(-rate.Exp)))
+		denominator.Mul(denominator, Pow10(int64(-rate.Exp)))
 	}
+	numerator.Mul(numerator, Pow10(int64(values.MinorUnitDigits(base))))
+	denominator.Mul(denominator, Pow10(int64(values.MinorUnitDigits(from))))
+	product := DivRoundHalfAwayFromZero(numerator, denominator)
 	if !product.IsInt64() {
-		return 0, errors.New("converted amount exceeds the representable money range in the base currency")
+		return 0, ErrAmountOutOfRange
 	}
 	return product.Int64(), nil
 }

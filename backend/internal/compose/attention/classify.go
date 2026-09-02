@@ -48,16 +48,16 @@ const subjectDeal = "deal"
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes
 // are walked in whatever order reads clearest here.
-func classifyDay(day crmcontracts.Attention, asOf time.Time) []ranked {
+func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []ranked {
 	rows := make([]ranked, 0, 64)
-	bar := materialBarOf(day)
+	bar := materialBarOf(day, money)
 	rows = appendLane(rows, day.Meetings, asOf, classifyMeeting)
 	rows = appendLane(rows, &day.ThisMorning, asOf, classifyBriefItem)
 	rows = appendLane(rows, day.Commitments, asOf, classifyCommitment)
 	rows = appendLane(rows, day.DidNotRun, asOf, classifyFailedApproval)
 	rows = appendLane(rows, day.Dsr, asOf, classifyDSR)
 	rows = appendLane(rows, day.AtRisk, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
-		return classifyRisk(item, at, bar)
+		return classifyRisk(item, at, bar, money)
 	})
 	rows = appendLane(rows, &day.Planned, asOf, classifyTask)
 	rows = appendLane(rows, day.Bounces, asOf, classifyBounce)
@@ -126,23 +126,6 @@ func carriedActions(actions []crmcontracts.AttentionItemActions) []crmcontracts.
 		out = append(out, crmcontracts.WorklistItemActions(action))
 	}
 	return out
-}
-
-// classifyMeeting: a meeting starting within the horizon is the most urgent
-// thing on the page, because it happens whether or not the reader acts.
-func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	level := levelAgreed
-	reasons := []crmcontracts.WorklistReason{}
-	if item.DueAt != nil && item.DueAt.Sub(asOf) <= meetingHorizon {
-		level = levelWaiting
-		reasons = append(reasons, reason("meeting_soon", nil))
-	}
-	row := base(item, level, "meetings", "meeting_unprepared")
-	// A meeting's start time IS a deadline the reader is racing, so it counts
-	// as work due — unlike a proposal's expiry, which merely lapses.
-	stampDeadline(&row, item.DueAt, asOf)
-	row.Because = reasons
-	return ranked{item: row, deadlineAt: deadlineOf(item.DueAt), occurredAt: occurredOf(item, asOf)}
 }
 
 // classifyCommitment: a promise the rep made. Level 2 whether or not it is
@@ -317,6 +300,11 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		waitingDays: days,
 		waitingRank: ordering,
 		occurredAt:  waiting.Since,
+		// Who owes the reply, so the scope filters can judge this row the way
+		// they judge a deal-bearing one. A wait carries no deal on the wire, and
+		// without this it is a row the filters cannot place: a named owner's
+		// queue dropped every one of them.
+		owner: waiting.OwnerID,
 	}
 }
 

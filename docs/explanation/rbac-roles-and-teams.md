@@ -33,7 +33,7 @@ workspace. Its `permissions` JSONB holds two things:
 
 - **`objects`** — a per-object-type grant of `{create, read, update, delete}` over the 29 core
   objects (`person`, `organization`, `deal`, `lead`, `activity`, `pipeline`, `list`, `custom_field`,
-  `quota`, …). The closed set is `policy.coreObjects`, published cell-by-cell in
+  `offer_template`, …). The closed set is `policy.coreObjects`, published cell-by-cell in
   [reference/rbac-matrix.md](../reference/rbac-matrix.md).
 - **`row_scope`** — `own` | `team` | `all` (see below).
 
@@ -47,7 +47,7 @@ same values by a test and so cannot drift from them. The shape:
 |---|---|---|
 | `admin` | Full CRUD on everything (config included). | `all` |
 | `ops` | Same CRUD reach as admin — the operations counterpart. | `all` |
-| `manager` | CRUD on records; **read-only** on most config (pipeline, automation, custom_field, quota); **no access at all** to the admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `team` |
+| `manager` | CRUD on records; **read-only** on most config (pipeline, automation, custom_field); **no access at all** to the admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `team` |
 | `rep` | Create/read/update records (delete only where it's routine, e.g. disqualify a lead); **read-only** on config. | `own` |
 | `read_only` | Reads every record kind and every config surface a rep can see; writes nothing except its own saved views. The four admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`) are closed to it entirely — not even read. | `all` |
 
@@ -60,7 +60,7 @@ Two things surprise people:
 - **`manager` is `row_scope: team`, and it is the only seeded role that is.** A Team Lead writes
   their teammates' records as well as their own, resolved through live team membership. The seat
   above it, `management`, is the same object grid at `all` — the sales leader over every row.
-- **Config objects (pipeline, custom_field, automation, quota) are read-only below admin/ops.** This
+- **Config objects (pipeline, custom_field, automation) are read-only below admin/ops.** This
   is why a `rep` gets `pipeline.read: permission denied`-adjacent behaviour only when they have **no
   role at all** — with the `rep` role they *can* read pipelines; they just can't edit them.
 
@@ -209,6 +209,19 @@ A **team** (`team` table) is a named group; **`team_membership`** joins users to
 
 Teams do **not** carry their own permissions — a team is not a role. (A role *assignment* can be
 scoped to a team, but the grants still come from the role.)
+
+3. **They answer "may I speak into this colleague's work?"** — a question row scope cannot answer,
+   because it is not about which rows may be read. Two surfaces ask it: raising a coaching notice
+   into somebody's Worklist, and the coaching layer on their meeting brief. Both ask it the same
+   way and in the same order — `auth.RequireCoach` for the SEAT (a human holding `admin`,
+   `management` or `manager`; `rep` is excluded deliberately, or a rep on a team would coach their
+   teammates), then a live shared team for the EDGE, through one membership seam so the two cannot
+   drift. Membership resolves through `team_membership` and live teams only; the parent hierarchy
+   is not walked, matching row scope.
+
+   Neither surface WIDENS what the asker may read. The coaching layer on a meeting brief attaches
+   to the brief that lead would have got anyway — a lead and their rep still see two differently
+   scoped briefs of one meeting, because every read here is caller-scoped.
 
 ## A user with no role sees nothing
 

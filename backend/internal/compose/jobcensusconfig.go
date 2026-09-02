@@ -65,14 +65,6 @@ func everyDeclaredDependencySupplied(cfg JobRunnerConfig) error {
 		strings.Join(slices.Sorted(maps.Keys(unmet)), "\n  "))
 }
 
-// censusJobConfig is the maximally-configured role: every credential
-// custodian, connector registry, model lane and operator dial the declaration
-// names, so that every kind the contract declares is one this assembly wires.
-//
-// It is not a deployment anyone runs. A real role supplies what it can reach,
-// and which kinds that leaves wired is the whole subject of the registration
-// postures; this one exists so the census reads the contract's full extent
-// rather than one deployment's slice of it.
 // censusCaptureRegistry is a registry holding the connectors the census needs a
 // job to be able to look up. Only Graph today: it is the one watch pass that
 // asks, because it is the one whose worker role registers its connector from
@@ -83,6 +75,14 @@ func censusCaptureRegistry() *capture.Registry {
 	return reg
 }
 
+// censusJobConfig is the maximally-configured role: every credential
+// custodian, connector registry, model lane and operator dial the declaration
+// names, so that every kind the contract declares is one this assembly wires.
+//
+// It is not a deployment anyone runs. A real role supplies what it can reach,
+// and which kinds that leaves wired is the whole subject of the registration
+// postures; this one exists so the census reads the contract's full extent
+// rather than one deployment's slice of it.
 func censusJobConfig() JobRunnerConfig {
 	seam := censusSeam{}
 	return JobRunnerConfig{

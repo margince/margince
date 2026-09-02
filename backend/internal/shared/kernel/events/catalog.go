@@ -183,7 +183,12 @@ var catalog = map[string]struct {
 	// stream for the same reason the sign-off does: it is a fact about that
 	// person rather than about the installation, which names its own language
 	// in a setting and publishes nothing per reader.
-	"user_locale.changed":      {personStreamEntity, 1},
+	"user_locale.changed": {personStreamEntity, 1},
+	// What a member wants DELIVERED rides the identity stream rather than the
+	// person one its neighbour above uses. A display language is something a
+	// subscriber rendering for this person needs; what lands in their inbox is
+	// nobody else's business, and the stream is the first place that is said.
+	"user_delivery.changed":    {identityStreamEntity, 1},
 	"linkedin_account.changed": {personStreamEntity, 1},
 	// One import act, not one row: an export is thousands of rows and a
 	// per-row event would bury every other event in the stream, while the
@@ -301,6 +306,14 @@ var catalog = map[string]struct {
 	// read is the recipient settling it.
 	"notice.created": {identityStreamEntity, 1},
 	"notice.read":    {identityStreamEntity, 1},
+
+	// A weekly plan belongs to one rep, so its changes ride the same identity
+	// stream a notice does. help_requested is its own type rather than another
+	// updated: it is the one change somebody else is meant to act on, and an
+	// automation notifying a lead subscribes to that and not to every tick of
+	// a checkbox.
+	"weekly_plan.updated":        {identityStreamEntity, 1},
+	"weekly_plan.help_requested": {identityStreamEntity, 1},
 
 	// An introduction request is about a CONTACT — who can open a door to
 	// them, and what came of asking — so it rides the person stream a

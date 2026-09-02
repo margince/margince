@@ -146,8 +146,9 @@ func (t prepareHandoff) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	}
 	commitments := make([]CommitmentItem, 0, len(facts.OpenCommitments))
 	for _, c := range facts.OpenCommitments {
-		noteEvidence(ctx, datasource.EntityActivity, c.TaskID)
-		commitments = append(commitments, c.wire(facts.AsOf))
+		item := c.wire(facts.AsOf)
+		noteCommitmentEvidence(ctx, item)
+		commitments = append(commitments, item)
 	}
 	if facts.CommitmentsTruncated || facts.DealsTruncated || facts.StakeholdersTruncated {
 		noteWarning(ctx, warningSweepTruncated, handoffTruncatedMessage)
