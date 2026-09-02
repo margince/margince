@@ -164,22 +164,15 @@ async function recordHeader(): Promise<HTMLElement> {
   return header;
 }
 
-// The page's ONE primary action, once the reads it depends on have arrived: the
+// The header's writing verb, once the reads it depends on have arrived: the
 // consent guard decides whether it may be pressed and the transport directory
 // names a channel, so the first paint is not the answer. Waiting on the LABEL
 // is what makes that wait a condition rather than a duration.
-//
-// Asserting the primary variant is half the point of every case below: what is
-// under test is what the page's ONE green verb claims, not that some button
-// somewhere carries the word.
 async function leadVerb(label: string): Promise<HTMLButtonElement> {
   const header = await recordHeader();
   const lead = await within(header).findByRole("button", { name: label });
   if (!(lead instanceof HTMLButtonElement)) {
     throw new Error(`the header's "${label}" verb is not a button`);
-  }
-  if (!lead.classList.contains("btn-primary")) {
-    throw new Error(`"${label}" is not the page's primary action`);
   }
   return lead;
 }
@@ -362,7 +355,7 @@ const mailBlocked: PersonConsentGuardEntry = {
   reason: "opt-out recorded 12 July",
 };
 
-describe("the page's one primary action", () => {
+describe("the header's writing verb", () => {
   // The two sentences a refusal can say. Held as constants because the point of
   // the last case is that these two are never the same sentence.
   const NO_TRANSPORT = "No address, and no conversation to reply to.";

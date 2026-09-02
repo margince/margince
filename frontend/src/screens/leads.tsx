@@ -84,7 +84,7 @@ import {
   TodayPanel,
   TodoRow,
 } from "./record360";
-import { RecordEmailAside } from "./recordemail";
+import { RecordEmailAside, RecordEmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
 import "./leads.css";
@@ -1413,6 +1413,8 @@ function LeadOverviewPane({
   const { locale } = useLocale();
   return (
     <div className="record-stack">
+      {/* The readings open the overview, as they do on every record page. */}
+      <LeadReadings lead={lead} />
       {/* A promoted lead's page leads with what the promotion did — the
           reader arrived asking whether this became a contact, and which one. */}
       {lead.promoted_person_id && (
@@ -1511,6 +1513,15 @@ function LeadActions({
         >
           {t("lead.promote")}
         </Button>
+      )}
+      {/* The shared Email verb every record header carries. Not in overlay,
+          where the mirror owns the lead's mail. */}
+      {!overlay && (
+        <RecordEmailVerb
+          entityType="lead"
+          entityId={id}
+          disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
+        />
       )}
       {/* A terminal lead keeps its controls, DISABLED with the reason
           (STATE-4a): the reason is the information, and hiding the control
@@ -1723,8 +1734,8 @@ function LeadRecord({
           <ContactLink
             kind="email"
             value={lead.email}
-            className="link-button t-mono lead-email"
-            textClassName="t-mono lead-email"
+            className="link-button lead-email"
+            textClassName="lead-email"
           />
         ) : null
       }
@@ -1765,12 +1776,8 @@ function LeadRecord({
         { overlay, pending: timelineQuery.isPending },
         t,
       )}
-      // The readings ride the band, above the columns: they describe the
-      // PROSPECT, and a strip that vanished on the History tab would move the
-      // tab bar and re-flow the page under the reader.
       band={
         <>
-          <LeadReadings lead={lead} />
           {/* The page's one write serves both columns and every tab, so what
               it REFUSES is stated where both are visible. In the ladder panel
               this reached only the Overview tab, and a rail write refused

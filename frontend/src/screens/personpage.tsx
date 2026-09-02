@@ -31,6 +31,7 @@ import type { MessageKey } from "../i18n/en";
 import { throwProblem, useSorMode } from "./common";
 import { ComposeModal } from "./compose";
 import { ConsentSection } from "./consent";
+import { OwnerName } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { PersonMeetingBrief } from "./meetingbrief";
 import {
@@ -59,7 +60,7 @@ import { PersonToday } from "./persontoday";
 import type { Transport } from "./persontransports";
 import { primaryTransportAction, useTransports } from "./persontransports";
 import { RecordReading, RecordReadingPair } from "./record360";
-import { RecordEmailAside } from "./recordemail";
+import { EmailVerb, RecordEmailAside } from "./recordemail";
 import "./person360.css";
 import { buyingRoleLabel } from "./companypeople/summary";
 
@@ -654,9 +655,10 @@ function PersonIdentityLine({
         )}
         <span className="pe-meta-fact pe-meta-quiet">
           {t("person.page.owner")}:{" "}
-          {view.person.owner_id
-            ? t("person.page.ownerAssigned")
-            : t("person.page.ownerUnassigned")}
+          <OwnerName
+            ownerId={view.person.owner_id}
+            unowned={t("person.page.ownerUnassigned")}
+          />
         </span>
       </div>
     </div>
@@ -742,8 +744,9 @@ function PersonMailDrawer({
   );
 }
 
-// The primary actions, in the concept's order (§5.2). Writing leads and is the
-// only green one: a page with two primary actions has none.
+// The header's verbs, in the order every record page carries them: writing
+// first, then the record's other doors. None of them is filled — the move
+// worth doing is the one the call names, and that one carries the colour.
 function PersonActions({
   view,
   consentAllows,
@@ -783,18 +786,16 @@ function PersonActions({
   const mailOnly = transports.length === 1 && transports[0].id === "email";
   return (
     <>
-      {/* The lead verb, and the only green one: a page with two primary
-          actions has none. It says which transport it will open when there is
-          exactly one, stays neutral when the composer will ask, and explains
+      {/* The shared Email verb, wearing the transport it will open when there
+          is exactly one, neutral when the composer will ask, and explaining
           itself rather than merely dimming when it may not be pressed. */}
-      <Button
-        variant="primary"
+      <EmailVerb
+        label={write.label}
+        icon={<WriteIcon size={15} aria-hidden="true" />}
         disabled={!consentKnown}
         reason={refusal}
         onClick={mailOnly ? onWriteMail : onWrite}
-      >
-        <WriteIcon size={15} aria-hidden="true" /> {write.label}
-      </Button>
+      />
       {/* Square, because a phone and a calendar are verbs a reader already
           knows from the glyph — and five labelled buttons in a row is a header
           that reads as a toolbar, with the one action the page is FOR no more
@@ -812,12 +813,6 @@ function PersonActions({
           navigate({ screen: "contacts", id: personId, id2: "meetings" })
         }
       />
-      {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
-          squaring this one would name the opposite of what it does. */}
-      <Button onClick={() => navigate({ screen: "worklist" })}>
-        <CheckSquare size={15} aria-hidden="true" />{" "}
-        {t("person.action.addTask")}
-      </Button>
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in; the moment card offers the same form
           when its rung decides logging is the thing to do next. */}
@@ -827,6 +822,12 @@ function PersonActions({
         onClick={onLogActivity}
       >
         <FileText size={15} aria-hidden="true" /> {t("log.title")}
+      </Button>
+      {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
+          squaring this one would name the opposite of what it does. */}
+      <Button onClick={() => navigate({ screen: "worklist" })}>
+        <CheckSquare size={15} aria-hidden="true" />{" "}
+        {t("person.action.addTask")}
       </Button>
       {/* A real menu. This was a button labelled "More actions" that navigated
           to the timeline tab — the same place the Call button went — so the one

@@ -504,6 +504,13 @@
   padding: 0;
 }
 
+/* A record's CHANGE history carries its date inside the body, under the
+   sentence, and draws no rail: its rows are the body alone, across the whole
+   grid, rather than a body squeezed into the date gutter. */
+.timeline li > .tl-body:first-child {
+  grid-column: 1 / -1;
+}
+
 /* Set on the first line's own baseline, so the date reads level with the kind
    beside it rather than floating at the top of a three-line row. */
 .timeline .tl-when {
@@ -704,6 +711,10 @@
   padding: 0;
   border: 0;
   min-inline-size: 0;
+}
+/* In a record stack the stack's own gap is the interval. */
+.record-stack > .stepper {
+  margin: 0;
 }
 .stepper .step {
   font-size: 12.5px;

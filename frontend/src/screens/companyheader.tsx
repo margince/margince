@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Mail } from "lucide-react";
 import { Fragment, type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -8,7 +7,6 @@ import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
-import { IconAction } from "../design-system/iconaction";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
@@ -37,6 +35,7 @@ import {
   mapOrgUpdate,
   searchOrgTargets,
 } from "./organizations";
+import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 
 // The account header: the verbs a rep reaches for, the two values they change
@@ -146,27 +145,13 @@ function WriteEmailAction({
   onOpen: (open: boolean) => void;
   disabledReasonId?: string;
 }>) {
-  const t = useT();
   return (
     <>
-      {/* One of three equal verbs, not the record's primary action. A filled
-          button among two outlined ones says writing is what a reader came to
-          do, and on an account it is one of several things they might — the
-          move worth doing is the one the Brief names, and that one carries the
-          fill. The icon is what makes this one findable instead.
-
-          The icon alone, in fact: mail is one of the glyphs the catalog names
-          as needing no gloss, and the words cost the record's own NAME the room
-          it needs on a tablet — the header truncated the account a reader came
-          to read in order to spell a verb its icon had already said.
-          `IconAction` is what keeps the name reachable for both readers, one
-          string spoken through `aria-label` and shown through the tooltip. */}
-      <IconAction
-        label={t("co.writeEmail")}
-        icon={<Mail aria-hidden="true" />}
-        reasonId={disabledReasonId}
-        onClick={() => onOpen(true)}
-      />
+      {/* One of three equal verbs, not the record's primary action: on an
+          account writing is one of several things a reader might do, and the
+          move worth doing is the one the Brief names. The same verb every
+          record page draws, so it is found by its place and its word. */}
+      <EmailVerb reasonId={disabledReasonId} onClick={() => onOpen(true)} />
       {open && (
         // Keyed by the record, so navigating to another company while the
         // composer is open REMOUNTS it rather than re-pointing it. Without the

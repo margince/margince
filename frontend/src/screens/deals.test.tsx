@@ -2117,6 +2117,8 @@ describe("DealScreen — overlay mode write affordances", () => {
     expect(await screen.findByTestId("edit-record")).toBeTruthy();
     await openHeaderMenu();
     expect(screen.getByTestId("archive-record")).toBeTruthy();
+    // The mirror owns the deal's mail, so the header offers no Email verb.
+    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
   });
 
   it("Edit's real click path PATCHes and the 360 renders the updated value", async () => {
@@ -2378,5 +2380,16 @@ describe("the partner filter", () => {
     // A picker with nothing in it asks a question that has no answers.
     const menu = screen.getByRole("group", { name: "Filter" });
     expect(within(menu).queryByRole("button", { name: "Partner" })).toBeNull();
+  });
+});
+
+describe("DealScreen — the header's Email verb", () => {
+  it("carries the same Email verb every record header does", async () => {
+    const d = deal({ id: "x", version: 4 });
+    vi.stubGlobal("fetch", stubBackend([d], { single: d }));
+    render(<DealScreen id="x" />);
+    const verb = await screen.findByRole("button", { name: "Email" });
+    expect(verb.querySelector(".lucide-mail")).toBeTruthy();
+    expect(verb.hasAttribute("disabled")).toBe(false);
   });
 });

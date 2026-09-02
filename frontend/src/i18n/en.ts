@@ -1279,7 +1279,6 @@ export const en = {
   "co.growthFit.whitespace": "Room to sell",
   "co.growthFit.objections": "Likely pushback",
   "co.growthFit.angle": "Suggested approach",
-  "co.writeEmail": "Write email",
   "co.dossier.title": "What this company is",
   "co.dossier.unavailable":
     "This description could not be read. Nothing about the company has changed.",
@@ -5138,7 +5137,7 @@ export const en = {
   "dealmail.send": "Send an email",
   "recordmail.title": "Email",
   "recordmail.sub.reply": "An answer is owed.",
-  "recordmail.sub.fresh": "Write to this record's contacts.",
+  "recordmail.sub.fresh": "Write to them.",
   "recordmail.reply": "Draft the reply",
   "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
@@ -6835,7 +6834,6 @@ export const en = {
   "person.page.notOpened": "This contact could not be opened.",
   "person.page.buyingRole": "Buying role",
   "person.page.owner": "Owner",
-  "person.page.ownerAssigned": "Assigned",
   "person.page.ownerUnassigned": "Unassigned",
   "person.page.linkedin": "LinkedIn",
   // Beside the editable address, not instead of it: the row holds a value to

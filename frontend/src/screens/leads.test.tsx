@@ -1411,6 +1411,8 @@ describe("LeadScreen — overlay mode write affordances", () => {
 
     await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
     expect(screen.queryByTestId("lead-disqualify")).toBeNull();
+    // The mirror owns the lead's mail, so the header offers no Email verb.
+    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
   });
 
   it("Edit's real click path PATCHes and the 360 shows the saved name", async () => {
@@ -2316,5 +2318,15 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ owner_id: "u-42" });
+  });
+});
+
+describe("LeadScreen — the header's Email verb", () => {
+  it("carries the same Email verb every record header does", async () => {
+    stubFetchWithMe(async () => jsonResponse(lead));
+    render(<LeadScreen id="l-1" />);
+    const verb = await screen.findByRole("button", { name: "Email" });
+    expect(verb.querySelector(".lucide-mail")).toBeTruthy();
+    expect(verb.hasAttribute("disabled")).toBe(false);
   });
 });
