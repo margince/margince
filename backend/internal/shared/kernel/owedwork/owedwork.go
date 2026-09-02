@@ -57,6 +57,11 @@ type Item struct {
 	DueAt *time.Time
 	// FiledAt is when the promise was made. It breaks ties between two items
 	// sharing a due date, and orders the undated ones among themselves.
+	//
+	// The zero time means "not known", and it LOSES every tie rather than
+	// winning one. A caller whose row carries no moment must leave this zero:
+	// the zero time is before every real one, so ordering on it naively would
+	// make the promise nobody can date the oldest thing on the record.
 	FiledAt time.Time
 }
 
@@ -157,14 +162,35 @@ func Sorted(items []Item, now time.Time) []Item {
 func beforeInQueue(a, b Item) bool {
 	switch {
 	case a.DueAt == nil && b.DueAt == nil:
-		return a.FiledAt.Before(b.FiledAt)
+		return filedEarlier(a, b)
 	case a.DueAt == nil:
 		return false
 	case b.DueAt == nil:
 		return true
 	case a.DueAt.Equal(*b.DueAt):
-		return a.FiledAt.Before(b.FiledAt)
+		return filedEarlier(a, b)
 	default:
 		return a.DueAt.Before(*b.DueAt)
+	}
+}
+
+// filedEarlier reports whether a was promised before b, with an unknown moment
+// losing to a known one.
+//
+// The zero time is before every real time, so comparing it directly would rank
+// the promise nobody can date as the oldest on the record — first in a queue
+// ordered oldest-first, on the strength of a timestamp that is missing rather
+// than early. An unknown moment sorts last instead, and two unknowns are equal
+// so the caller's own order survives the stable sort.
+func filedEarlier(a, b Item) bool {
+	switch {
+	case a.FiledAt.IsZero() && b.FiledAt.IsZero():
+		return false
+	case a.FiledAt.IsZero():
+		return false
+	case b.FiledAt.IsZero():
+		return true
+	default:
+		return a.FiledAt.Before(b.FiledAt)
 	}
 }

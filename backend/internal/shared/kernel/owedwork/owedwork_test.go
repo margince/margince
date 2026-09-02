@@ -230,3 +230,35 @@ func TestNoPromisesIsNoAnswer(t *testing.T) {
 		t.Errorf("sorted an empty record into %d rows", len(got))
 	}
 }
+
+// A promise whose filing moment is unknown must not win the "oldest first"
+// tie-break on the strength of a missing timestamp. The zero time is before
+// every real one, so comparing it directly ranks the one promise nobody can
+// date as the longest-waiting thing on the record.
+func TestAnUnknownFilingMomentLosesTheTieBreak(t *testing.T) {
+	unknown := owedwork.Item{Ref: "undatedSource", Source: owedwork.FromClaim}
+	known := undated("waitingSinceTuesday", 3, owedwork.FromClaim)
+
+	for _, order := range [][]owedwork.Item{{unknown, known}, {known, unknown}} {
+		got, ok := owedwork.Soonest(order, now)
+		if !ok {
+			t.Fatal("two open promises and none was named")
+		}
+		if ref := refOf(t, got); ref != "waitingSinceTuesday" {
+			t.Errorf("named %q; a promise with no filing moment loses to one that has it", ref)
+		}
+	}
+}
+
+// Two promises whose filing moments are both unknown are equal, so the stable
+// sort keeps the order the caller read them in rather than shuffling them
+// between two renders of one page.
+func TestTwoUnknownFilingMomentsKeepTheirOrder(t *testing.T) {
+	first := owedwork.Item{Ref: "first", Source: owedwork.FromClaim}
+	second := owedwork.Item{Ref: "second", Source: owedwork.FromClaim}
+	sorted := owedwork.Sorted([]owedwork.Item{first, second}, now)
+	if refOf(t, sorted[0]) != "first" || refOf(t, sorted[1]) != "second" {
+		t.Errorf("order became %q, %q; two undatable promises must keep the caller's order",
+			refOf(t, sorted[0]), refOf(t, sorted[1]))
+	}
+}

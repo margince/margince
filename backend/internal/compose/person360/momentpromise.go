@@ -254,7 +254,7 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 		ObservedAt: claim.DueAt,
 	}}
 	return crmcontracts.PersonMoment{
-		ClaimKey:            "moment:overdue_promise",
+		ClaimKey:            claimMomentKey("moment:overdue_promise", claim),
 		Rule:                crmcontracts.PersonMomentRuleOverduePromise,
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
@@ -309,7 +309,7 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 		ObservedAt: claim.OccurredAt,
 	}}
 	return crmcontracts.PersonMoment{
-		ClaimKey:            "moment:open_promise_claim",
+		ClaimKey:            claimMomentKey("moment:open_promise_claim", claim),
 		Rule:                crmcontracts.PersonMomentRuleOpenPromise,
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
@@ -341,4 +341,29 @@ func openClaimWhyNow(now time.Time, claim crmcontracts.ConversationClaim) string
 		return fmt.Sprintf("Due in %d days.", days)
 	}
 	return "Due today."
+}
+
+// claimMomentKey names WHICH promise a card is about, not merely that it is a
+// promise card.
+//
+// A dismissal is one row per (reader, person, claim key), so a bare rung name
+// would give every promise on a record one shared dismissal: an email that
+// says "I'll send the NDA and the quote" produces two claims, and putting the
+// first away would silence the second the moment it came up. The claim id is
+// what tells them apart.
+//
+// The fingerprint cannot do this job. It hashes the evidence — type, source
+// row and moment — and deliberately ignores the words, so that rewording a
+// promise does not re-arm a dismissal a reader already made. Two claims read
+// out of ONE message share all three, which is exactly the case that needs
+// separating.
+//
+// THIS WIDENS A SHIPPED KEY, and the overdue rung's dismissals do not survive
+// it: a reader who had put an overdue commitment away sees it once more. That
+// is the cost, and it is the cheaper of the two. The collision it removes hides
+// a promise the reader never dismissed, permanently and invisibly — they are
+// never told the second promise exists. A card that comes back is visible and
+// one click to put away again.
+func claimMomentKey(rung string, claim crmcontracts.ConversationClaim) string {
+	return rung + ":" + claim.Id.String()
 }
