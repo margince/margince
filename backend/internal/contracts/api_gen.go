@@ -27744,7 +27744,9 @@ type SearchResponse struct {
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
-	Id openapi_types.UUID `json:"id"`
+	// CarriedBy For a `tag` hit only: how many records across every taggable type carry this word, as the caller's own row scope counts them. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when the caller may not read the vocabulary.
+	CarriedBy *int               `json:"carried_by,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
 
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`

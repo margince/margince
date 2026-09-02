@@ -145,6 +145,25 @@ func countVisibleTagged(ctx context.Context, tx pgx.Tx, id ids.TagID, entityType
 	return n, nil
 }
 
+// CountTagReach totals the records one tag is on, for THIS caller, inside a
+// transaction the caller already holds.
+//
+// The search module's `carried_by` is this number: search shows a word, and the
+// count is how a reader tells a word worth opening from one nobody used. It is
+// `tagUsage` totalled rather than a count of its own, so the figure beside a
+// search hit and the per-type figures on the tag page are the same read of the
+// same rule — including the rule that a caller counts only what they may see.
+func CountTagReach(ctx context.Context, tx pgx.Tx, tagID ids.TagID) (int, error) {
+	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
+		return 0, err
+	}
+	usage, err := tagUsage(ctx, tx, tagID)
+	if err != nil {
+		return 0, err
+	}
+	return usage.People + usage.Companies + usage.Deals, nil
+}
+
 // TagUpdate is the partial a rename carries. A nil field is left alone; a
 // non-nil one holding a nil pointer clears the column.
 type TagUpdate struct {

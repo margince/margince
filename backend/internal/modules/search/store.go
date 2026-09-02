@@ -24,12 +24,33 @@ import (
 type Store struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
+	// carriedBy counts the records one tag is on, for THIS caller. It is the
+	// collections store's own counter, injected by compose because a module
+	// never imports a sibling. Calling that counter rather than writing a
+	// second one here is what keeps the figure beside a search hit derived
+	// from the same rule as the figures on the tag page — including the rule
+	// that a caller counts only the records they may see.
+	//
+	// Nil where nothing supplied it (a worker's store, a test that does not
+	// ask): a tag hit then carries no count, which reads as "not known" and
+	// never as zero.
+	carriedBy TagReachCounter
 }
+
+// TagReachCounter counts, inside the caller's own transaction, how many records
+// carry one tag under that caller's row scope.
+type TagReachCounter func(ctx context.Context, tx pgx.Tx, tagID ids.TagID) (int, error)
 
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.
 func NewStore(db *database.DB) *Store {
 	return &Store{db: db}
+}
+
+// WithTagReach binds the counter behind a tag hit's `carried_by`.
+func (s *Store) WithTagReach(count TagReachCounter) *Store {
+	s.carriedBy = count
+	return s
 }
 
 // bounded is this store with a time ceiling on every statement it runs.
@@ -39,7 +60,9 @@ func NewStore(db *database.DB) *Store {
 // one, and a ceiling armed at a single call site would leave the other lane as
 // unbounded as it was before anybody thought about it.
 func (s *Store) bounded(budget time.Duration) *Store {
-	return &Store{db: s.db.Bounded(budget)}
+	// Every field travels, not just the handle: this rebuilds the store, so a
+	// field left out here is one the bounded lane silently does without.
+	return &Store{db: s.db.Bounded(budget), carriedBy: s.carriedBy}
 }
 
 // forWorkspace is this store re-bound to one tenant of the fleet enumeration.
@@ -58,6 +81,9 @@ type Hit struct {
 	Title   string
 	Snippet string
 	Score   float64
+	// CarriedBy is set on a `tag` hit alone: how many records the caller may
+	// see carry this word. Nil elsewhere, and nil when no counter is bound.
+	CarriedBy *int
 }
 
 type Page struct {
@@ -282,13 +308,42 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return fmt.Errorf("search: query: %w", err)
 		}
 		defer rows.Close()
-		page, err = scanRankedPage(rows, limit)
-		return err
+		if page, err = scanRankedPage(rows, limit); err != nil {
+			return err
+		}
+		return s.countTagReach(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err
 	}
 	return page, nil
+}
+
+// countTagReach fills CarriedBy on the tag hits of one page.
+//
+// It runs in the SAME transaction as the ranking query, so the number a hit
+// reports and the rows the search admitted are one consistent read: counting
+// afterwards could answer from a tree somebody changed in between.
+//
+// A counting failure fails the search rather than answering with a silent
+// gap. The counter runs the caller's own row scope, so an error here is that
+// scope refusing to render — and a page that quietly drops the number in that
+// case would show a searcher a smaller world without saying so.
+func (s *Store) countTagReach(ctx context.Context, tx pgx.Tx, hits []Hit) error {
+	if s.carriedBy == nil {
+		return nil
+	}
+	for i := range hits {
+		if hits[i].Type != "tag" {
+			continue
+		}
+		n, err := s.carriedBy(ctx, tx, ids.From[ids.TagKind](hits[i].ID))
+		if err != nil {
+			return fmt.Errorf("search: counting what tag %s is on: %w", hits[i].ID, err)
+		}
+		hits[i].CarriedBy = &n
+	}
+	return nil
 }
 
 // admittedBranchSQL builds one ranked SELECT per requested-and-admitted

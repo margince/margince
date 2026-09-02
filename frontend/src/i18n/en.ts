@@ -240,6 +240,7 @@ export const en = {
   "search.group.activity": "Activities",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.tag.carriedBy": "On {count} records",
   "search.tier.mirrored": "from a connected system",
   "search.tier.unverified": "unverified",
 

@@ -225,6 +225,7 @@ export const vi = {
   "search.group.activity": "Hoạt động",
   "search.group.lead": "Lead",
   "search.group.tag": "Tag",
+  "search.tag.carriedBy": "Trên {count} bản ghi",
   "search.tier.mirrored": "từ hệ thống đã kết nối",
   "search.tier.unverified": "chưa xác minh",
 
