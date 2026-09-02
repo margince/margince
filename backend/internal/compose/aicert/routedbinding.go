@@ -110,8 +110,11 @@ func warnUnboundDegradeTargets(cfg RunnerConfig, log *slog.Logger) {
 			continue
 		}
 		for _, tier := range ai.ServableTiers(task) {
-			binding, bound := cfg.Routing.Tiers[tier]
-			if !bound || binding.Provider == "" || binding.Model == "" {
+			// ai.IsBound rather than a hand-spelled pair: it accounts for the
+			// provider defaults SelectBrain supplies, so a rung written
+			// `{provider: ollama}` is bound. Comparing Model to "" here warned
+			// about rungs production serves every day.
+			if !ai.IsBound(cfg.Routing.Tiers[tier]) {
 				unreachable = append(unreachable, fmt.Sprintf("%s→%s", task, tier))
 			}
 		}

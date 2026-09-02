@@ -131,6 +131,11 @@ func validateBindings(cfg RunnerConfig, log *slog.Logger) error {
 	if cfg.Routing != nil {
 		return validateRoutedBindings(cfg, log)
 	}
+	// Both bindings below demand an EXPLICIT model, and deliberately do not use
+	// ai.IsBound: that admits the provider defaults, and a record filed against
+	// a model the operator never named is a measurement nobody can reproduce
+	// from the command they ran. A routed run is different — there the routing
+	// document is the thing under test, so the default IS the deployment.
 	if cfg.Binding.Provider == "" || cfg.Binding.Model == "" {
 		return errors.New("no candidate binding — set MARGINCE_AICERT_MODEL=provider:model " +
 			"(and MARGINCE_AICERT_BASE_URL for an openai_compatible host, which fails closed without one)")

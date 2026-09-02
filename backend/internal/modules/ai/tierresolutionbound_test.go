@@ -51,6 +51,24 @@ func TestFirstBoundTierServesTheLeadingBoundRung(t *testing.T) {
 			wantOK:   true,
 		},
 		{
+			// The case the provider defaults exist for: ollama serves without a
+			// model in the document, so a rung written this way IS bound and the
+			// binding must come back naming what would answer. Without this case
+			// EffectiveModel could be deleted and every other case still passed.
+			name:     "a rung with only a provider that has a default",
+			tiers:    map[Tier]ProviderConfig{TierCheapCloud: {Provider: providerOllama}},
+			wantTier: TierCheapCloud,
+			want:     ProviderConfig{Provider: providerOllama, Model: defaultOllamaModel},
+			wantOK:   true,
+		},
+		{
+			// And a provider with no default is genuinely unbound, so the two
+			// halves of IsBound are both load-bearing.
+			name:   "a rung with only a provider that has no default",
+			tiers:  map[Tier]ProviderConfig{TierCheapCloud: {Provider: providerAnthropic}},
+			wantOK: false,
+		},
+		{
 			name:   "nothing is bound",
 			tiers:  map[Tier]ProviderConfig{},
 			wantOK: false,

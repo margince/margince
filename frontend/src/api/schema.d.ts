@@ -7335,8 +7335,10 @@ export interface paths {
         };
         /**
          * How well the bound models perform each AI job (admin/ops).
-         * @description The certification lane's committed results, resolved against the binding this workspace
-         *     actually runs. Governed by the same `ai_routing` object the binding is: a seat that may
+         * @description The certification lane's committed results, resolved against the binding this
+         *     INSTALLATION actually runs. Installation and not workspace on purpose: the binding is a
+         *     non-tenant setting, exactly as `GET /ai/routing` reports it, and naming a workspace here
+         *     would invite a reader to assume a boundary this surface does not have. Governed by the same `ai_routing` object the binding is: a seat that may
          *     not see which models are bound has no use for how those models score.
          *
          *     Each job is reported on the model that would answer it today — the first rung of its
@@ -39117,6 +39119,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            /** @description This process role wired no routing store, so there is no binding to resolve against. Declared because the handler can answer it: a role that composes the read surface without the store answers rather than dereferencing nil, and a contract silent about that describes a status its own server emits. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listAiProviderKeys: {

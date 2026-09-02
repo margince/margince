@@ -44,6 +44,14 @@ const (
 	resultNoModel        crmcontracts.AiCertificationResult = "no_model"
 )
 
+// The two states the binding itself can be in, spelled once beside the result
+// words for the same reason: a typo is then a compile error rather than a test
+// diff nobody reads twice.
+const (
+	bindingBound   crmcontracts.AiCertificationBindingState = "bound"
+	bindingUnbound crmcontracts.AiCertificationBindingState = "unbound"
+)
+
 // severity orders the results from soundest to least sound, so folding a job's
 // sites is a max over this and not over the words' spelling. Explicit because
 // alphabetical order would put `not_checked` above `reliable` and quietly invert
@@ -79,10 +87,10 @@ func certificationView(routing ai.RoutingConfig, sites []aitasks.Site, snap snap
 func bindingState(routing ai.RoutingConfig) crmcontracts.AiCertificationBindingState {
 	for _, binding := range routing.Tiers {
 		if ai.IsBound(binding) {
-			return "bound"
+			return bindingBound
 		}
 	}
-	return "unbound"
+	return bindingUnbound
 }
 
 func shippedJobs(sites []aitasks.Site) []ai.Task {
@@ -148,7 +156,7 @@ func jobView(routing ai.RoutingConfig, task ai.Task, sites []aitasks.Site, snap 
 	if measuredElsewhere {
 		job.MeasuredUnderOtherProfile = certPtr(true)
 	}
-	if fallbacks := unmeasuredFallbacks(routing, task, tier, sites, snap); len(fallbacks) > 0 {
+	if fallbacks := unmeasuredFallbacks(routing, task, binding, tier, sites, snap); len(fallbacks) > 0 {
 		job.UnmeasuredFallbacks = &fallbacks
 	}
 	return job
@@ -261,21 +269,30 @@ func findingIfKnown(finding crmcontracts.AiCertificationResult) *crmcontracts.Ai
 // than by demoting the job: the model that answers today is what the reader
 // asked about, and calling a sound job unchecked over a rare fallback would
 // understate exactly as badly as ignoring the fallback overstates.
-func unmeasuredFallbacks(routing ai.RoutingConfig, task ai.Task, serving ai.Tier,
+func unmeasuredFallbacks(routing ai.RoutingConfig, task ai.Task,
+	servingBinding ai.ProviderConfig, serving ai.Tier,
 	sites []aitasks.Site, snap snapshot.Snapshot,
 ) []string {
 	env := string(routing.Profile)
 	seen := map[string]bool{}
 	var out []string
-	servingBinding := routing.Tiers[serving]
+	// servingBinding arrives already resolved from jobView rather than being
+	// re-read here: FirstBoundTier fills in the provider default, and a second
+	// read of the raw map would compare a resolved model against a document one
+	// — which is how a serving ollama rung came to list its own model as an
+	// unchecked fallback of itself.
 	for _, tier := range ai.ServableTiers(task) {
 		if tier == serving {
 			continue
 		}
-		if !ai.IsBound(routing.Tiers[tier]) {
+		binding := routing.Tiers[tier]
+		if !ai.IsBound(binding) {
 			continue // an unbound rung serves nothing; it is a routing gap, not a measurement gap
 		}
-		binding := routing.Tiers[tier]
+		// Resolved the same way the serving rung was. Without this an ollama
+		// degrade target with no model in the document passes IsBound and then
+		// names the empty string as an unmeasured fallback.
+		binding.Model = ai.EffectiveModel(binding)
 		// A lower rung bound to the SAME binding is not a fallback a reader can
 		// act on: the row already reports that model, and naming it again as
 		// "a fallback we have not checked" contradicts the line above it.

@@ -44,6 +44,15 @@ const certJudgeTask = ai.TaskCertJudge
 // card has none. Same reason frontendapprovalkinds_test.go strips them.
 var tsCommentInCatalogue = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
+// catalogueEntry reads one `"aiCert.job.x": "A name"` pair, VALUE included: a
+// translation added as "" — or as the identifier repeated — would satisfy a
+// presence check while shipping exactly the "no wording" this gate prevents.
+//
+// Package level so the comment-stripping test below drives THIS pattern rather
+// than a copy of it. A test with its own regex stays green when the real one is
+// narrowed, and the census then reads a smaller catalogue with nothing failing.
+var catalogueEntry = regexp.MustCompile(`"(aiCert\.(?:job|site)\.[a-z0-9_.]+)"\s*:\s*\n?\s*"([^"]*)"`)
+
 func catalogueKeys(t *testing.T) map[string]bool {
 	t.Helper()
 	raw, err := os.ReadFile(enCatalogue)
@@ -55,12 +64,8 @@ func catalogueKeys(t *testing.T) map[string]bool {
 	// next line is one statement, and a line-wise scan would miss its
 	// neighbours. Under-recognition is the one way this gate must not break —
 	// it would read a smaller catalogue and report PASS.
-	// The VALUE as well as the key: a translation added as "" — or as the
-	// identifier repeated — would satisfy a presence check while shipping exactly
-	// the "no wording" this gate exists to prevent.
-	keyed := regexp.MustCompile(`"(aiCert\.(?:job|site)\.[a-z0-9_.]+)"\s*:\s*\n?\s*"([^"]*)"`)
 	found := map[string]bool{}
-	for _, m := range keyed.FindAllStringSubmatch(source, -1) {
+	for _, m := range catalogueEntry.FindAllStringSubmatch(source, -1) {
 		key, name := m[1], strings.TrimSpace(m[2])
 		if name == "" {
 			continue // present but unnamed is the same as absent to a reader
@@ -169,10 +174,9 @@ func TestACommentedCatalogueEntryIsNotAName(t *testing.T) {
   "aiCert.job.real_one": "A real name",
 `
 	source := tsCommentInCatalogue.ReplaceAllString(disabled, "")
-	keyed := regexp.MustCompile(`"(aiCert\.(?:job|site)\.[a-z0-9_.]+)"\s*:\s*\n?\s*"([^"]*)"`)
 
 	var got []string
-	for _, m := range keyed.FindAllStringSubmatch(source, -1) {
+	for _, m := range catalogueEntry.FindAllStringSubmatch(source, -1) {
 		got = append(got, m[1])
 	}
 	if len(got) != 1 || got[0] != "aiCert.job.real_one" {

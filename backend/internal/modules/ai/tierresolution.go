@@ -30,8 +30,13 @@ func LeadingTier(task Task) Tier {
 // serves": SelectBrain defaults ollama to defaultOllamaModel and vLLM to
 // defaultVLLMModel, so a tier written `{provider: ollama}` is served — and a
 // caller that read Model directly would report a task the router runs every day
-// as having no model bound. The defaults are read from the same constants the
-// client builder uses, so the two cannot drift.
+// as having no model bound.
+//
+// This and the client builder are two writers of one rule. Held by:
+// TestEffectiveModelIsWhatTheClientBuilderWouldServe
+// (internal/modules/ai/effectivemodeldefaults_test.go), which drives the real
+// builder and reads the default off the client it produced rather than
+// comparing two constants that happen to agree today.
 func EffectiveModel(binding ProviderConfig) string {
 	switch binding.Provider {
 	case providerOllama:

@@ -151,16 +151,19 @@ func (s Snapshot) For(task, site, provider, model, envClass string) (Row, bool) 
 		return Row{}, false
 	}
 	// Rows is exported and the index is not, so a caller can decode JSON straight
-	// into a Snapshot and hold every row with no index at all. Left alone, that
-	// reads the nil map and answers "not measured" about a table that has the
-	// answer — the one failure mode of this type that looks like data rather
-	// than a bug. Indexing on demand makes the two paths agree.
+	// into a Snapshot and hold every row with no index at all. Left alone that
+	// reads the nil map and answers "not measured" about a table which has the
+	// answer — the one failure of this type that looks like data rather than a
+	// bug.
+	//
+	// A caller bug, then, not an input to report gracefully: aicert.Verdict
+	// panics on an even run count for the same reason, and the same reasoning
+	// applies here. Indexing lazily instead would have to swallow the duplicate
+	// refusal index performs, which is the one thing this type exists to enforce.
 	if s.byKey == nil && len(s.Rows) > 0 {
-		indexed, err := index(s)
-		if err != nil {
-			return Row{}, false
-		}
-		s = indexed
+		panic("aicert/snapshot: For on a Snapshot that was never indexed — build one with " +
+			"Load or FromRows rather than decoding JSON straight into the struct, or the " +
+			"duplicate-row refusal never runs")
 	}
 	row, found := s.byKey[key]
 	return row, found

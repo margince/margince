@@ -513,3 +513,89 @@ func TestAFallbackOnAnotherProviderIsNotTheServingBinding(t *testing.T) {
 		t.Errorf("unmeasured_fallbacks = %v, want the ungraded vllm binding", *job.UnmeasuredFallbacks)
 	}
 }
+
+// A record whose timestamp will not parse keeps its counts and loses only the
+// date. Dropping the measurement over a formatting fault would hide a real
+// result behind a field nobody reads.
+func TestAnUnparseableTimestampCostsTheDateAndNotTheResult(t *testing.T) {
+	t.Parallel()
+
+	snap, err := snapshot.FromRows([]snapshot.Row{{
+		Task: "draft_reply", Site: "reply", Provider: testProvider, Model: testModel,
+		EnvClass: testEnv, Status: snapshot.StatusCurrent, Band: "certified",
+		Runs: 9, Passed: 9, Measured: 3, RanAt: "not-a-timestamp",
+	}})
+	if err != nil {
+		t.Fatalf("building the snapshot: %v", err)
+	}
+	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+	job := jobNamed(t, certificationView(boundEverywhere(), sites, snap), ai.TaskDraftReply)
+
+	if job.Result != resultReliable {
+		t.Errorf("result = %q, want %q — the verdict does not depend on the timestamp",
+			job.Result, resultReliable)
+	}
+	if job.Passed == nil || *job.Passed != 9 {
+		t.Errorf("the counts were lost with the date: %v", job.Passed)
+	}
+	if job.MeasuredAt != nil {
+		t.Error("an unparseable stamp was reported as a date")
+	}
+}
+
+// A degrade target written `{provider: ollama}` is BOUND — SelectBrain supplies
+// the model — so the card must name what would answer rather than the empty
+// string the routing document holds. Reported by the craft review: the fallback
+// walk read the raw map and appended "", rendering an unnamed fallback.
+func TestAnUnmeasuredFallbackIsNamedByWhatWouldAnswer(t *testing.T) {
+	t.Parallel()
+
+	routing := ai.RoutingConfig{
+		Tiers: map[ai.Tier]ai.ProviderConfig{
+			ai.TierCheapCloud: {Provider: testProvider, Model: testModel},
+			// No model in the document; ollama serves with its own default.
+			ai.TierLocalSmall: {Provider: "ollama"},
+		},
+		Profile: ai.Profile(testEnv),
+	}
+	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+	snap := snapOf(t, rowOf("draft_reply", "reply", snapshot.StatusCurrent, "certified", 9, 9, 3, 0))
+	job := jobNamed(t, certificationView(routing, sites, snap), ai.TaskDraftReply)
+
+	if job.UnmeasuredFallbacks == nil {
+		t.Fatal("the ollama degrade target was dropped; it is bound and unmeasured")
+	}
+	for _, model := range *job.UnmeasuredFallbacks {
+		if model == "" {
+			t.Error("an unmeasured fallback was named by the empty string the document holds " +
+				"rather than by the model that would answer")
+		}
+	}
+}
+
+// And when the SERVING rung is the one with only a provider, the job must not
+// list its own model as a fallback of itself: the serving binding arrives
+// resolved, so comparing it against a raw document model is the bug.
+func TestAServingRungWithAProviderDefaultIsNotItsOwnFallback(t *testing.T) {
+	t.Parallel()
+
+	routing := ai.RoutingConfig{
+		Tiers: map[ai.Tier]ai.ProviderConfig{
+			// draft_reply leads at cheap_cloud; this rung serves, with a default.
+			ai.TierCheapCloud: {Provider: "ollama"},
+			// A lower rung naming that same default explicitly.
+			ai.TierLocalSmall: {Provider: "ollama", Model: "gemma3"},
+		},
+		Profile: ai.Profile(testEnv),
+	}
+	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+	job := jobNamed(t, certificationView(routing, sites, snapOf(t)), ai.TaskDraftReply)
+
+	if job.Model == nil || *job.Model != "gemma3" {
+		t.Fatalf("model = %v, want the provider default the router would serve", job.Model)
+	}
+	if job.UnmeasuredFallbacks != nil {
+		t.Errorf("unmeasured_fallbacks = %v; the row already names that model",
+			*job.UnmeasuredFallbacks)
+	}
+}

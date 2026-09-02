@@ -92,8 +92,9 @@ func lessRow(a, b snapshot.Row) bool {
 // Delegated to the snapshot's own index rather than rebuilt here. A key joined
 // with "/" would be WRONG: a model id contains slashes (openai/gpt-oss-120b), so
 // two distinct rows can produce one joined string and read as a duplicate that
-// the binary indexes separately. Asking the indexer is also the only way this
-// check and the load-time one cannot disagree.
+// the binary indexes separately. Delegating also means the generator refuses
+// exactly what the binary refuses, because it runs the same code — one
+// implementation rather than two that agree by inspection.
 func refuseDuplicates(rows []snapshot.Row) error {
 	_, err := snapshot.FromRows(rows)
 	return err

@@ -4,6 +4,7 @@
 package snapshot
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -153,4 +154,31 @@ func TestFromRowsIndexesAndRefusesLikeAFile(t *testing.T) {
 	if _, err := FromRows([]Row{row, row}); err == nil {
 		t.Error("two rows sharing a key were accepted, which a file would have refused")
 	}
+}
+
+// A Snapshot decoded straight into the struct has every row and no index, so it
+// would answer "not measured" about a table holding the answer. Indexing lazily
+// would have to swallow the duplicate refusal, so misuse is refused instead —
+// the same call the package's own Verdict makes about an even run count.
+func TestForRefusesASnapshotThatWasNeverIndexed(t *testing.T) {
+	t.Parallel()
+
+	var raw Snapshot
+	if err := json.Unmarshal([]byte(twoSites), &raw); err != nil {
+		t.Fatalf("decoding: %v", err)
+	}
+	if len(raw.Rows) == 0 {
+		t.Fatal("the fixture decoded to no rows, so this proves nothing about the index")
+	}
+
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("an unindexed Snapshot answered a lookup instead of refusing")
+		}
+		if msg, ok := recovered.(string); !ok || !strings.Contains(msg, "never indexed") {
+			t.Errorf("the panic must name the fault and the remedy, got: %v", recovered)
+		}
+	}()
+	raw.For("capture_classify", "classify", "openai_compatible", "openai/gpt-oss-120b", "eu_hosted")
 }

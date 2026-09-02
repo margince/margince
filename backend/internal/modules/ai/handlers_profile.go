@@ -65,17 +65,14 @@ func publicConfiguredModels(cfg RoutingConfig) []crmcontracts.AssistantConfigure
 		if !ok {
 			continue
 		}
-		modelID := binding.Model
-		switch binding.Provider {
-		case providerOllama:
-			modelID = defaulted(modelID, defaultOllamaModel)
-		case providerVLLM:
-			modelID = defaulted(modelID, defaultVLLMModel)
-		}
 		models = append(models, crmcontracts.AssistantConfiguredModel{
 			Tier:     crmcontracts.AssistantConfiguredModelTier(tier),
 			Provider: crmcontracts.AssistantConfiguredModelProvider(provider),
-			Model:    modelID,
+			// The model that would actually serve, defaults included. Shared with
+			// the certification card rather than spelled again: this endpoint and
+			// that card answer the same question, and two copies of the provider
+			// defaults would have them naming different models for one tier.
+			Model: EffectiveModel(binding),
 		})
 	}
 	return models

@@ -25,6 +25,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
@@ -103,10 +104,12 @@ func writeSnapshot(census shippedCensus, stamps map[string]string, perScenario m
 	records []aicert.Record, recordsDir, out string,
 ) {
 	rows, unclaimed := readinessRows(census, stamps, perScenario, records)
-	// Said out loud rather than dropped. The text report lists these; a
-	// generator that swallowed them would let a record for a retired site
-	// disappear from the snapshot with nothing in the `make gen` output to
-	// notice, which is how a census stops covering what it names.
+	// Said out loud rather than dropped, and warned rather than refused: a
+	// record for a site the product no longer ships is a cleanup task, not a
+	// reason `make gen` cannot produce a snapshot, and failing here would block
+	// every regeneration until somebody deleted a file. Silence is the option
+	// this rejects — that is how a record disappears from the snapshot with
+	// nothing in the output to notice.
 	for _, rec := range unclaimed {
 		fmt.Fprintf(os.Stderr, "reportcmd: record %s on %s:%s (%s) covers no shipped site and is not in the snapshot\n",
 			rec.Task, rec.Provider, rec.ServedModel, rec.EnvClass)
@@ -120,13 +123,38 @@ func writeSnapshot(census shippedCensus, stamps map[string]string, perScenario m
 	// first: a failure part-way leaves a half-written file that the next build
 	// cannot embed, and `make gen` would have to be diagnosed from a compile
 	// error in a generated artifact. The rename is atomic within the directory.
-	tmp := out + ".tmp"
-	if err := os.WriteFile(tmp, encoded, 0o600); err != nil {
-		fmt.Fprintf(os.Stderr, "reportcmd: writing %s: %v\n", tmp, err)
+	//
+	// CreateTemp rather than out+".tmp": the drift gate's untracked check matches
+	// the snapshot's exact path, so a fixed sibling name surviving a failed
+	// rename would sit in the tree as debris nothing reports. A temp file that
+	// failed to move is removed here instead.
+	tmp, err := os.CreateTemp(filepath.Dir(out), filepath.Base(out)+".*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "reportcmd: creating a temporary file beside %s: %v\n", out, err)
 		os.Exit(1)
 	}
-	if err := os.Rename(tmp, out); err != nil {
-		fmt.Fprintf(os.Stderr, "reportcmd: renaming %s to %s: %v\n", tmp, out, err)
+	if err := writeAndClose(tmp, encoded); err != nil {
+		os.Remove(tmp.Name())
+		fmt.Fprintf(os.Stderr, "reportcmd: writing %s: %v\n", tmp.Name(), err)
 		os.Exit(1)
 	}
+	if err := os.Rename(tmp.Name(), out); err != nil {
+		os.Remove(tmp.Name())
+		fmt.Fprintf(os.Stderr, "reportcmd: renaming %s to %s: %v\n", tmp.Name(), out, err)
+		os.Exit(1)
+	}
+}
+
+// writeAndClose writes the whole snapshot and closes the file, reporting
+// whichever half failed.
+//
+// Close is checked as well as Write, because a buffered write that failed only
+// reports at close — and a snapshot truncated at the last block is exactly the
+// artifact the rename above exists to keep out of the tree.
+func writeAndClose(f *os.File, encoded []byte) error {
+	if _, err := f.Write(encoded); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
 }

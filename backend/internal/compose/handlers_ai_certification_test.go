@@ -7,19 +7,19 @@ package compose
 // surface is human-only, and a role that wired no store must answer rather than
 // dereference nil.
 //
-// The SUCCESS path is proven in the integration lane
-// (aicertification_integration_test.go), against a real RoutingStore over a real
-// database — the only place the stored binding actually exists. A unit test
-// cannot reach it: a hand-built RoutingStore has no settings store behind it, so
-// it is usable here only for the refusals that return before the read.
+// The handler's success path — a stored binding read through a real
+// RoutingStore — is proven in the integration lane
+// (aicertification_integration_test.go), which is the only place that binding
+// exists: a hand-built RoutingStore has no settings store behind it, so it is
+// usable here only for the refusals that return before the read.
+// TestTheEmbeddedInputsLoad below still drives the JOIN over the real census
+// and snapshot, which needs no database.
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/aicert/snapshot"
-	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -89,34 +89,5 @@ func TestTheEmbeddedInputsLoad(t *testing.T) {
 	view := certificationView(boundEverywhere(), inputs.sites, inputs.snap)
 	if len(view.Jobs) == 0 {
 		t.Error("the real census produced no jobs")
-	}
-}
-
-// A record whose timestamp will not parse keeps its counts and loses only the
-// date. Dropping the measurement over a formatting fault would hide a real
-// result behind a field nobody reads.
-func TestAnUnparseableTimestampCostsTheDateAndNotTheResult(t *testing.T) {
-	t.Parallel()
-
-	snap, err := snapshot.FromRows([]snapshot.Row{{
-		Task: "draft_reply", Site: "reply", Provider: testProvider, Model: testModel,
-		EnvClass: testEnv, Status: snapshot.StatusCurrent, Band: "certified",
-		Runs: 9, Passed: 9, Measured: 3, RanAt: "not-a-timestamp",
-	}})
-	if err != nil {
-		t.Fatalf("building the snapshot: %v", err)
-	}
-	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
-	job := jobNamed(t, certificationView(boundEverywhere(), sites, snap), ai.TaskDraftReply)
-
-	if job.Result != resultReliable {
-		t.Errorf("result = %q, want %q — the verdict does not depend on the timestamp",
-			job.Result, resultReliable)
-	}
-	if job.Passed == nil || *job.Passed != 9 {
-		t.Errorf("the counts were lost with the date: %v", job.Passed)
-	}
-	if job.MeasuredAt != nil {
-		t.Error("an unparseable stamp was reported as a date")
 	}
 }
