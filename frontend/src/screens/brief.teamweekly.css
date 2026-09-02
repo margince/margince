@@ -1,0 +1,37 @@
+/* A team's frozen week. The headline states two readings against the bars they
+   were measured by; everything under it is the figures those readings came from. */
+.teamweekly-headline {
+  margin: 0 0 var(--space-2);
+  color: var(--textContent);
+}
+
+.teamweekly-subhead {
+  margin: 0 0 var(--space-2);
+  color: var(--textMeta);
+}
+
+.teamweekly-coverage {
+  margin: 0;
+  color: var(--textMeta);
+}
+
+.teamweekly-rep {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.teamweekly-rep-name {
+  font-weight: 500;
+  color: var(--textContent);
+}
+
+.teamweekly-rep-focus {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--textMeta);
+}

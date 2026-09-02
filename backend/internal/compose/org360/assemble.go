@@ -31,21 +31,20 @@ import (
 // sections_omitted vocabulary and the keys the assembly reasons about, so
 // a rename cannot leave the two halves disagreeing.
 const (
-	sectionPeople          = crmcontracts.Organization360SectionsOmitted("people")
-	sectionDeals           = crmcontracts.Organization360SectionsOmitted("deals")
-	sectionProjects        = crmcontracts.Organization360SectionsOmitted("projects")
-	sectionStrength        = crmcontracts.Organization360SectionsOmitted("strength")
-	sectionActivities      = crmcontracts.Organization360SectionsOmitted("activities")
-	sectionLastTouch       = crmcontracts.Organization360SectionsOmitted("last_touch")
-	sectionStateStrip      = crmcontracts.Organization360SectionsOmitted("state_strip")
-	sectionHealth          = crmcontracts.Organization360SectionsOmitted("health")
-	sectionTags            = crmcontracts.Organization360SectionsOmitted("tags")
-	sectionListMemberships = crmcontracts.Organization360SectionsOmitted("list_memberships")
-	sectionApprovals       = crmcontracts.Organization360SectionsOmitted("pending_approvals")
-	sectionNextSteps       = crmcontracts.Organization360SectionsOmitted("next_steps")
-	sectionSinceLastVisit  = crmcontracts.Organization360SectionsOmitted("since_last_visit")
-	sectionSuggestions     = crmcontracts.Organization360SectionsOmitted("suggestions")
-	sectionNextMeeting     = crmcontracts.Organization360SectionsOmitted("next_meeting")
+	sectionPeople         = crmcontracts.Organization360SectionsOmitted("people")
+	sectionDeals          = crmcontracts.Organization360SectionsOmitted("deals")
+	sectionProjects       = crmcontracts.Organization360SectionsOmitted("projects")
+	sectionStrength       = crmcontracts.Organization360SectionsOmitted("strength")
+	sectionActivities     = crmcontracts.Organization360SectionsOmitted("activities")
+	sectionLastTouch      = crmcontracts.Organization360SectionsOmitted("last_touch")
+	sectionStateStrip     = crmcontracts.Organization360SectionsOmitted("state_strip")
+	sectionHealth         = crmcontracts.Organization360SectionsOmitted("health")
+	sectionTags           = crmcontracts.Organization360SectionsOmitted("tags")
+	sectionApprovals      = crmcontracts.Organization360SectionsOmitted("pending_approvals")
+	sectionNextSteps      = crmcontracts.Organization360SectionsOmitted("next_steps")
+	sectionSinceLastVisit = crmcontracts.Organization360SectionsOmitted("since_last_visit")
+	sectionSuggestions    = crmcontracts.Organization360SectionsOmitted("suggestions")
+	sectionNextMeeting    = crmcontracts.Organization360SectionsOmitted("next_meeting")
 )
 
 // Service assembles the 360 and maintains the visit baseline.
@@ -146,7 +145,6 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, orgID ids.Organizatio
 		{sectionNextSteps, a.readNextSteps},
 		{sectionNextMeeting, a.readNextMeeting},
 		{sectionTags, a.readTags},
-		{sectionListMemberships, a.readListMemberships},
 		{sectionApprovals, a.readPendingApprovals},
 		{sectionSinceLastVisit, a.readSinceLastVisit},
 		// Last because it is derived, not because it reads the sections above —
@@ -399,18 +397,6 @@ func (a *assembly) readTags() error {
 		return err
 	}
 	a.out.Tags = &tags
-	return nil
-}
-
-func (a *assembly) readListMemberships() error {
-	if err := auth.Require(a.ctx, "list", principal.ActionRead); err != nil {
-		return err
-	}
-	lists, err := listMembershipsSection(a.ctx, a.tx, a.orgID)
-	if err != nil {
-		return err
-	}
-	a.out.ListMemberships = &lists
 	return nil
 }
 

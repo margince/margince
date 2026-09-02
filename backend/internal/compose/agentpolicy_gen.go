@@ -55,7 +55,6 @@ const (
 	recordTypePerson              agentRecordType = "person"
 	recordTypeProduct             agentRecordType = "product"
 	recordTypeProject             agentRecordType = "project"
-	recordTypeQuota               agentRecordType = "quota"
 	recordTypeRecordGrant         agentRecordType = "record_grant"
 	recordTypeRelationship        agentRecordType = "relationship"
 	recordTypeSavedView           agentRecordType = "saved_view"
@@ -126,7 +125,6 @@ var agentPolicies = map[string]agentPolicy{
 	"DELETE /v1/lead-sources/{id}":                                       {Op: "deleteLeadSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/leads/{id}":                                              {Op: "disqualifyLead", Access: "tool", Tool: "disqualify_lead", RecordType: "lead", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/leads/{id}/manual-signals/{factor}":                      {Op: "clearLeadManualSignal", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"DELETE /v1/lists/{id}":                                              {Op: "archiveList", Access: "tool", Tool: "archive_record", RecordType: "list", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/offer-templates/{id}":                                    {Op: "archiveOfferTemplate", Access: "tool", Tool: "archive_record", RecordType: "offer_template", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/offers/{id}":                                             {Op: "archiveOffer", Access: "tool", Tool: "archive_record", RecordType: "offer", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/offers/{id}/line-items/{lineItemId}":                     {Op: "removeOfferLineItem", Access: "tool", Tool: "update_record", RecordType: "offer", Tier: "auto_execute", Scope: "write"},
@@ -142,7 +140,6 @@ var agentPolicies = map[string]agentPolicy{
 	"DELETE /v1/projects/{id}/stakeholders/{person_id}":                  {Op: "removeProjectStakeholder", Access: "tool", Tool: "update_record", RecordType: "project", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/provider-connections/{provider}":                         {Op: "disconnectProvider", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/provider-connections/{provider}/data":                    {Op: "deleteProviderData", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"DELETE /v1/quotas/{id}":                                             {Op: "archiveQuota", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/record-grants/{id}":                                      {Op: "revokeRecordGrant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/relationships/{id}":                                      {Op: "archiveRelationship", Access: "tool", Tool: "archive_record", RecordType: "relationship", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/retention-policies/{id}":                                 {Op: "deleteRetentionPolicy", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -284,9 +281,6 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/projects/{id}":                                              {Op: "getProject", Access: "tool", Tool: "read_record", RecordType: "project", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/projects/{id}/360":                                          {Op: "getProject360", Access: "tool", Tool: "read_project_360", RecordType: "project", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/provider-connections":                                       {Op: "listProviderConnections", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/quotas":                                                     {Op: "listQuotas", Access: "tool", Tool: "search_records", RecordType: "quota", Tier: "auto_execute", Scope: "read"},
-	"GET /v1/quotas/{id}":                                                {Op: "getQuota", Access: "tool", Tool: "read_record", RecordType: "quota", Tier: "auto_execute", Scope: "read"},
-	"GET /v1/quotas/{id}/attainment":                                     {Op: "getQuotaAttainment", Access: "tool", Tool: "read_record", RecordType: "quota", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/record-grants":                                              {Op: "listRecordGrants", Access: "tool", Tool: "search_records", RecordType: "record_grant", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/records/{entity_type}/{id}/context":                         {Op: "getRecordContext", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/records/{entity_type}/{id}/history":                         {Op: "getRecordHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -349,7 +343,6 @@ var agentPolicies = map[string]agentPolicy{
 	"PATCH /v1/products/{id}":                                            {Op: "updateProduct", Access: "tool", Tool: "update_record", RecordType: "product", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/projects/{id}":                                            {Op: "updateProject", Access: "tool", Tool: "update_record", RecordType: "project", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/provider-connections/{provider}":                          {Op: "updateProviderConnection", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"PATCH /v1/quotas/{id}":                                              {Op: "updateQuota", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/relationships/{id}":                                       {Op: "updateRelationship", Access: "tool", Tool: "update_record", RecordType: "relationship", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/retention-policies/{id}":                                  {Op: "updateRetentionPolicy", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/retention/settings":                                       {Op: "updateRetentionSettings", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -398,6 +391,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/brief/items/{itemId}/snooze":                               {Op: "snoozeBriefItem", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/consumer-mail-domains":                             {Op: "addConsumerMailDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/counterparty-holds":                                {Op: "createCaptureCounterpartyHold", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/capture/counterparty-holds/share-history":                  {Op: "shareCaptureCounterpartyHoldHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/email-domains":                                     {Op: "createWorkspaceEmailDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/exclusions":                                        {Op: "createCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/exclusions/{id}/purge":                             {Op: "purgeCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -461,8 +455,6 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/leads":                                                     {Op: "createLead", Access: "tool", Tool: "create_record", RecordType: "lead", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/leads/{id}/demote":                                         {Op: "demoteLead", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/leads/{id}/promote":                                        {Op: "promoteLead", Access: "tool", Tool: "promote_lead", RecordType: "lead", Tier: "auto_execute", Scope: "write"},
-	"POST /v1/lists":                                                     {Op: "createList", Access: "tool", Tool: "create_record", RecordType: "list", Tier: "auto_execute", Scope: "write"},
-	"POST /v1/lists/{id}/members":                                        {Op: "addListMember", Access: "tool", Tool: "update_record", RecordType: "list", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/me/linkedin-connections":                                   {Op: "importLinkedInConnections", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/notices":                                                   {Op: "raiseNotice", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/notices/{id}/read":                                         {Op: "markNoticeRead", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -529,7 +521,6 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/public/rooms/sign-out":                                     {Op: "signOutBuyerRoom", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/rooms/threads":                                      {Op: "openBuyerRoomThread", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/rooms/threads/{threadId}/comments":                  {Op: "replyBuyerRoomThread", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/quotas":                                                    {Op: "createQuota", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/record-grants":                                             {Op: "createRecordGrant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/records/{entity_type}/{id}/history/{audit_id}/restore":     {Op: "restoreRecordChange", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/records/{record_type}/{id}/claim":                          {Op: "claimRecord", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

@@ -395,6 +395,10 @@ func (stubs) CreateCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.
 	httperr.NotImplemented(w, r, "CreateCaptureCounterpartyHold")
 }
 
+func (stubs) ShareCaptureCounterpartyHoldHistory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ShareCaptureCounterpartyHoldHistory")
+}
+
 func (stubs) DeleteCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteCaptureCounterpartyHold")
 }
@@ -1077,30 +1081,6 @@ func (stubs) PreviewLeadPromotion(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) ExplainLeadScore(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ExplainLeadScoreParams) {
 	httperr.NotImplemented(w, r, "ExplainLeadScore")
-}
-
-func (stubs) ListLists(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListListsParams) {
-	httperr.NotImplemented(w, r, "ListLists")
-}
-
-func (stubs) CreateList(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "CreateList")
-}
-
-func (stubs) ArchiveList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "ArchiveList")
-}
-
-func (stubs) GetList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetList")
-}
-
-func (stubs) ListListMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListListMembersParams) {
-	httperr.NotImplemented(w, r, "ListListMembers")
-}
-
-func (stubs) AddListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "AddListMember")
 }
 
 func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -1809,30 +1789,6 @@ func (stubs) OpenBuyerRoomThread(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) ReplyBuyerRoomThread(w nethttp.ResponseWriter, r *nethttp.Request, threadId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ReplyBuyerRoomThread")
-}
-
-func (stubs) ListQuotas(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListQuotasParams) {
-	httperr.NotImplemented(w, r, "ListQuotas")
-}
-
-func (stubs) CreateQuota(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateQuotaParams) {
-	httperr.NotImplemented(w, r, "CreateQuota")
-}
-
-func (stubs) ArchiveQuota(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "ArchiveQuota")
-}
-
-func (stubs) GetQuota(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetQuota")
-}
-
-func (stubs) UpdateQuota(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateQuotaParams) {
-	httperr.NotImplemented(w, r, "UpdateQuota")
-}
-
-func (stubs) GetQuotaAttainment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetQuotaAttainment")
 }
 
 func (stubs) ListRecordGrants(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListRecordGrantsParams) {

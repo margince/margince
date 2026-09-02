@@ -9,8 +9,8 @@ package collections
 // (segmentvocabulary_integration_test.go) proves the engine and the
 // merge; this one proves compose's OWN wiring — the exact regression a
 // review found: a cf_* filter that filtered export accepted was refused
-// 422 by POST /v1/lists, because collections' catalog was wired into
-// only one of its two handler stores. A reflection test
+// 422 by the stored-filter write path, because collections' catalog was
+// wired into only one of its two handler stores. A reflection test
 // (compose/collectionswiring_test.go) checks the one constructor both
 // surfaces are now built through, so neither can lose the seam alone;
 // this drives the endpoints over the real composed server and proves
@@ -27,12 +27,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// TestADynamicListOverHTTPAcceptsAndEvaluatesACustomFieldFilter is the
-// point of the task: the same two endpoints a review found disagreeing
-// (POST /v1/lists refusing 422 what GET-via-export accepted) must now
-// both accept a cf_* predicate AND evaluate it to the right membership,
-// through the server compose actually assembles — no hand-built store.
-func TestADynamicListOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
+// TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter is the point of
+// the task: the same two endpoints a review found disagreeing (the filter
+// write path refusing 422 what GET-via-export accepted) must now both accept
+// a cf_* predicate AND evaluate it to the right rows, through the server
+// compose actually assembles — no hand-built store.
+func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 
@@ -72,28 +72,23 @@ func TestADynamicListOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T)
 		t.Fatalf("set the custom field through the update path: status=%d body=%v", status, updated)
 	}
 
-	// The regression's own repro: this exact call used to answer 422 at
-	// the endpoint filtered export already accepted the same predicate on.
-	var list integration.AnyMap
-	if status := e.Call(t, "POST", "/v1/lists", integration.AnyMap{
-		"name": "Gold tier", "entity_type": "person", "list_type": "dynamic",
-		"definition": integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
-	}, nil, &list); status != http.StatusCreated {
-		t.Fatalf("a dynamic list on a custom field was refused over HTTP: status=%d body=%v", status, list)
+	// The regression's own repro: this exact predicate used to answer 422 at
+	// the endpoint filtered export already accepted the same tree on.
+	var preview struct {
+		MatchCount int                  `json:"match_count"`
+		Rows       []integration.AnyMap `json:"rows"`
 	}
-	listID, ok := list["id"].(string)
-	if !ok || listID == "" {
-		t.Fatalf("created list carries no id: %v", list)
+	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
+		"resource": "person",
+		"filter":   integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
+	}, nil, &preview); status != http.StatusOK {
+		t.Fatalf("a filter on a custom field was refused over HTTP: status=%d body=%v", status, preview)
 	}
 
-	var members struct {
-		Data []integration.AnyMap `json:"data"`
-	}
-	if status := e.Call(t, "GET", "/v1/lists/"+listID+"/members", nil, nil, &members); status != http.StatusOK {
-		t.Fatalf("list members: status=%d", status)
-	}
-	if len(members.Data) != 1 || members.Data[0]["entity_id"] != matchID {
-		t.Fatalf("members = %v, want exactly [%s]", members.Data, matchID)
+	// It EVALUATES, not merely parses: the person whose value was set through
+	// the update path is the one row it selects.
+	if preview.MatchCount != 1 || len(preview.Rows) != 1 || preview.Rows[0]["id"] != matchID {
+		t.Fatalf("preview = %d match(es) %v, want exactly [%s]", preview.MatchCount, preview.Rows, matchID)
 	}
 }
 
@@ -107,11 +102,11 @@ func TestADynamicListOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T)
 // operation compiles perfectly and answers 501 at runtime.
 //
 // Second, the equivalence the extension is defined by: a field this operation
-// lists must be one a filter may name. Asserting that against POST /v1/lists
-// rather than against the engine's map closes the loop the store-level suite
-// cannot — the two surfaces resolving the same vocabulary is exactly what the
-// regression above proved is not automatic.
-func TestTheFilterVocabularyOverHTTPOffersWhatADynamicListAccepts(t *testing.T) {
+// lists must be one a filter may name. Asserting that against the preview
+// endpoint rather than against the engine's map closes the loop the
+// store-level suite cannot — the two surfaces resolving the same vocabulary
+// is exactly what the regression above proved is not automatic.
+func TestTheFilterVocabularyOverHTTPOffersWhatAFilterAccepts(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 
@@ -214,13 +209,13 @@ func TestTheFilterVocabularyOverHTTPOffersWhatADynamicListAccepts(t *testing.T) 
 		t.Error("the vocabulary omits owner_id, a core field every person filter may name")
 	}
 
-	// The equivalence, forwards: a listed field is one a dynamic list accepts.
+	// The equivalence, forwards: a listed field is one a filter accepts.
 	var accepted integration.AnyMap
-	if status := e.Call(t, "POST", "/v1/lists", integration.AnyMap{
-		"name": "Reported field is accepted", "entity_type": "person", "list_type": "dynamic",
-		"definition": integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
-	}, nil, &accepted); status != http.StatusCreated {
-		t.Fatalf("the vocabulary listed %s but a dynamic list on it was refused: status=%d body=%v", column, status, accepted)
+	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
+		"resource": "person",
+		"filter":   integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
+	}, nil, &accepted); status != http.StatusOK {
+		t.Fatalf("the vocabulary listed %s but a filter on it was refused: status=%d body=%v", column, status, accepted)
 	}
 
 	// And backwards: a field it does not list is one the same endpoint refuses,
@@ -230,11 +225,11 @@ func TestTheFilterVocabularyOverHTTPOffersWhatADynamicListAccepts(t *testing.T) 
 	if reported[unlisted] {
 		t.Fatalf("%s was meant to be absent from the vocabulary", unlisted)
 	}
-	if status := e.Call(t, "POST", "/v1/lists", integration.AnyMap{
-		"name": "Unreported field is refused", "entity_type": "person", "list_type": "dynamic",
-		"definition": integration.AnyMap{"field": unlisted, "op": "eq", "value": "gold"},
+	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
+		"resource": "person",
+		"filter":   integration.AnyMap{"field": unlisted, "op": "eq", "value": "gold"},
 	}, nil, &refused); status != http.StatusUnprocessableEntity {
-		t.Fatalf("the vocabulary omits %s but a dynamic list on it was not refused 422: status=%d body=%v", unlisted, status, refused)
+		t.Fatalf("the vocabulary omits %s but a filter on it was not refused 422: status=%d body=%v", unlisted, status, refused)
 	}
 
 	// A resource the enum does not admit is a 422 naming the parameter, not a
@@ -273,15 +268,18 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 		t.Fatalf("created field carries no column_name/id: %v", field)
 	}
 
-	// A segment built while the field is live — the one that has to keep working.
-	var list integration.AnyMap
-	if status := e.Call(t, "POST", "/v1/lists", integration.AnyMap{
-		"name": "Built before retirement", "entity_type": "person", "list_type": "dynamic",
-		"definition": integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
-	}, nil, &list); status != http.StatusCreated {
-		t.Fatalf("create the list while the field is live: status=%d body=%v", status, list)
+	// A saved view built while the field is live — the one that has to keep
+	// working after the field leaves the vocabulary.
+	var view integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/views", integration.AnyMap{
+		"resource": "people", "name": "Built before retirement",
+		"query": integration.AnyMap{
+			"filter": integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
+		},
+	}, nil, &view); status != http.StatusCreated {
+		t.Fatalf("create the view while the field is live: status=%d body=%v", status, view)
 	}
-	listID, _ := list["id"].(string)
+	viewID, _ := view["id"].(string)
 
 	if offered := vocabularyOffers(t, e, column); !offered {
 		t.Fatalf("%s is active and the vocabulary does not offer it", column)
@@ -296,12 +294,26 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 		t.Errorf("%s was retired and the vocabulary still offers it for a new clause", column)
 	}
 
-	// And the segment written against it still evaluates rather than erroring.
-	var members struct {
-		Data []integration.AnyMap `json:"data"`
+	// And the stored filter written against it still evaluates rather than
+	// erroring: the export path resolves the view's predicate through the same
+	// engine a live clause runs on.
+	// json, not csv: this asserts the predicate still RESOLVES, and a decoder
+	// pointed at a CSV body fails on the header row for a reason that has
+	// nothing to do with the filter.
+	var exported struct {
+		Object   string `json:"object"`
+		RowCount int    `json:"row_count"`
 	}
-	if status := e.Call(t, "GET", "/v1/lists/"+listID+"/members", nil, nil, &members); status != http.StatusOK {
-		t.Errorf("the segment naming the retired %s no longer evaluates: status=%d", column, status)
+	if status := e.Call(t, "POST", "/v1/exports", integration.AnyMap{
+		"view_id": viewID, "format": "json",
+	}, nil, &exported); status != http.StatusOK {
+		t.Errorf("the stored filter naming the retired %s no longer evaluates: status=%d", column, status)
+	}
+	// It resolved rather than erroring, and it resolved to the RIGHT object:
+	// a filter that silently evaluated against the wrong resource would also
+	// answer 200.
+	if exported.Object != "person" {
+		t.Errorf("the stored filter exported %q, want person", exported.Object)
 	}
 }
 

@@ -172,52 +172,60 @@ func TestAPromoteReplayStillWorksThoughItArchivedItsOwnLead(t *testing.T) {
 	}
 }
 
-// TestIdempotencyKeyReplay_createQuota proves the promise for an
-// operation with no natural-key dedupe behind it: without transport
-// idempotency a retried createQuota lands a second, identical target.
-func TestIdempotencyKeyReplay_createQuota(t *testing.T) {
+// TestIdempotencyKeyReplay_createOfferTemplate proves the promise where the
+// store ALSO carries a natural key, which is the case the two arms below
+// separate.
+//
+// A retried create here is refused by offer_template_name_unique whether or
+// not transport idempotency exists, so the row count alone proves nothing.
+// What it proves is the SHAPE of the answer: a replay under the same key
+// returns the original 201 and the original body, not the 409 the name
+// constraint would raise on its own. A caller retrying a request it never
+// saw the answer to gets told the record it made, rather than told that
+// somebody else already made one.
+func TestIdempotencyKeyReplay_createOfferTemplate(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var me AnyMap
-	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
-		t.Fatalf("/me = %d", status)
-	}
-	adminID := me["user"].(AnyMap)["id"].(string)
-
-	keyed := map[string]string{"Idempotency-Key": "quota-retry-1"}
-	quotaReq := AnyMap{
-		"owner_id": adminID, "period_start": "2026-01-01", "period_end": "2026-03-31",
-		"target_minor": 1000000, "currency": "EUR",
+	keyed := map[string]string{"Idempotency-Key": "offer-template-retry-1"}
+	templateReq := AnyMap{
+		"name":   "Retried Standard DE",
+		"layout": AnyMap{"logo_url": "https://example.test/logo.png"},
 	}
 
 	var first AnyMap
-	if status := e.Call(t, "POST", "/v1/quotas", quotaReq, keyed, &first); status != http.StatusCreated {
-		t.Fatalf("keyed create quota = %d %v", status, first)
+	if status := e.Call(t, "POST", "/v1/offer-templates", templateReq, keyed, &first); status != http.StatusCreated {
+		t.Fatalf("keyed create offer template = %d %v", status, first)
 	}
 	var replay AnyMap
-	if status := e.Call(t, "POST", "/v1/quotas", quotaReq, keyed, &replay); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/offer-templates", templateReq, keyed, &replay); status != http.StatusCreated {
 		t.Fatalf("keyed replay = %d %v, want the original 201", status, replay)
 	}
 	if !reflect.DeepEqual(first, replay) {
 		t.Errorf("replayed response differs from the original:\n first: %v\nreplay: %v", first, replay)
 	}
 
-	var quotas struct {
+	var templates struct {
 		Data []AnyMap `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/quotas", nil, nil, &quotas); status != http.StatusOK {
-		t.Fatalf("list quotas = %d", status)
+	if status := e.Call(t, "GET", "/v1/offer-templates", nil, nil, &templates); status != http.StatusOK {
+		t.Fatalf("list offer templates = %d", status)
 	}
-	if len(quotas.Data) != 1 {
-		t.Fatalf("replayed create produced %d quotas, want exactly 1", len(quotas.Data))
+	if len(templates.Data) != 1 {
+		t.Fatalf("replayed create produced %d offer templates, want exactly 1", len(templates.Data))
+	}
+	// The replay is the RECORDED answer, not a second write refused by the
+	// name constraint: a 409 here would also have left exactly one row.
+	if replay["id"] != first["id"] {
+		t.Errorf("the replay answered about a different record: first %v, replay %v",
+			first["id"], replay["id"])
 	}
 
 	// The same key with a DIFFERENT body is a conflict, never a replay.
 	var problem AnyMap
-	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
-		"owner_id": adminID, "period_start": "2026-04-01", "period_end": "2026-06-30",
-		"target_minor": 2000000, "currency": "EUR",
+	status := e.Call(t, "POST", "/v1/offer-templates", AnyMap{
+		"name":   "A Different Template",
+		"layout": AnyMap{"logo_url": "https://example.test/other.png"},
 	}, keyed, &problem)
 	if status != http.StatusConflict || problem["code"] != "idempotency_key_conflict" {
 		t.Fatalf("mismatched body under a reused key = %d %v, want 409 idempotency_key_conflict", status, problem)

@@ -68,9 +68,9 @@ migrations_in_tree() {
     sed 's/^\([^_]*\)_\(.*\)$/\1 \2/' | sort
 }
 
-# migrations_at_base NAMESPACE — the same, read out of the base ref rather than
-# the worktree. `git ls-tree` and not `git diff`: what matters is every version
-# the base ALREADY carries, including the ones this branch never touched. A
+# migrations_at REF NAMESPACE — the same, read out of a ref rather than the
+# worktree. `git ls-tree` and not `git diff`: what matters is every version
+# the ref ALREADY carries, including the ones this branch never touched. A
 # namespace this branch introduces has none, so `grep` here legitimately
 # matches nothing — its exit 1 is not an error, and under set -eo pipefail an
 # unguarded grep would otherwise abort the whole gate with no FAIL printed the
@@ -81,9 +81,9 @@ migrations_in_tree() {
 # a Mac, where the default is the other way, and set -e turns that 123 into
 # the same silent whole-gate abort as the two hazards above. sed on empty
 # input just produces no output.
-migrations_at_base() {
-  local ns="$1"
-  git ls-tree --name-only "$BASE_REF" "$MIGRATIONS_DIR/$ns/" 2>/dev/null |
+migrations_at() {
+  local ref="$1" ns="$2"
+  git ls-tree --name-only "$ref" "$MIGRATIONS_DIR/$ns/" 2>/dev/null |
     { grep '\.up\.sql$' || true; } | sed 's#.*/##; s/\.up\.sql$//' |
     sed 's/^\([^_]*\)_\(.*\)$/\1 \2/' | sort
 }
@@ -98,6 +98,22 @@ if ! git rev-parse --verify -q "$BASE_REF" >/dev/null; then
   fi
   echo "skip check-migration-versions: base ref '$BASE_REF' not found (nothing to compare against)"
   exit 0
+fi
+
+# The FORK point scopes exactly one check below. Versions this branch ADDS are
+# judged against $BASE_REF's tip, because that is what a deployed database has
+# applied and what a colliding sibling PR has already merged into. But a version
+# on the tip that this branch's history NEVER contained is not one this branch
+# renamed or removed — it landed after the fork, the merge keeps it, and
+# reporting it as vanished forced every open branch through a rebase and a full
+# gate re-run each time any migration merged, however unrelated. So the
+# vanished-version check asks about versions present at BOTH the tip and the
+# fork point. With no merge base to be had (detached fixtures, odd checkouts)
+# the fork falls back to the tip, which is the stricter reading this gate
+# always applied.
+FORK_REF="$(git merge-base HEAD "$BASE_REF" 2>/dev/null || true)"
+if [ -z "$FORK_REF" ]; then
+  FORK_REF="$BASE_REF"
 fi
 
 failed=0
@@ -211,7 +227,8 @@ all_namespaces="$(printf '%s\n%s\n' "$tree_namespaces" "$base_namespaces" | sort
 
 for ns in $all_namespaces; do
   tree_rows="$(migrations_in_tree "$ns")"
-  base_rows="$(migrations_at_base "$ns")"
+  base_rows="$(migrations_at "$BASE_REF" "$ns")"
+  fork_rows="$(migrations_at "$FORK_REF" "$ns")"
 
   # A namespace is a directory holding migrations, not merely a directory:
   # `testdata/` sits beside core/ and custom/ and is neither, on either side.
@@ -264,7 +281,12 @@ for ns in $all_namespaces; do
   # second, so it reports the very migration the repair kept as vanished.
   # Sorting each side down to its distinct versions asks "does this version
   # still exist", which is the question, instead of "how many times".
-  vanished="$(comm -23 <(echo "$base_rows" | cut -d' ' -f1 | sort -u) <(echo "$tree_rows" | cut -d' ' -f1 | sort -u))"
+  #
+  # Intersected with the FORK point's versions first: a version on the tip
+  # that this branch's history never contained landed after the fork, so its
+  # absence from the tree is staleness, not a rename — see FORK_REF above.
+  vanished="$(comm -23 <(echo "$base_rows" | cut -d' ' -f1 | sort -u) <(echo "$tree_rows" | cut -d' ' -f1 | sort -u) |
+    comm -12 - <(echo "$fork_rows" | cut -d' ' -f1 | sort -u))"
   if [ -n "$vanished" ]; then
     for v in $vanished; do
       vname="$(echo "$base_rows" | awk -v v="$v" '$1==v {print $2}' | head -n1)"

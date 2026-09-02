@@ -37,16 +37,11 @@ func TestConfirmFirstArchivesAreDecidableForEveryTargetArm(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	bearer := agentBearer(t, e, "target-arm agent")
 
-	// These four archive on the agent's own passport now: a passport carries
+	// These three archive on the agent's own passport now: a passport carries
 	// the granting human's seat and row scope, and each is ordinary work its
 	// holder does unaided. What is still asserted is that the ROUTE is reachable
 	// for an agent and performs — the half that used to be hidden behind the
 	// approval.
-	t.Run("list", func(t *testing.T) {
-		id := createdID(t, e, "/v1/lists", AnyMap{"name": "Q3 Targets", "entity_type": "person"})
-		archivesOnItsOwnPassport(t, e, bearer, "/v1/lists/"+id)
-	})
-
 	t.Run("tag", func(t *testing.T) {
 		id := createdID(t, e, "/v1/tags", AnyMap{"name": "Champion"})
 		archivesOnItsOwnPassport(t, e, bearer, "/v1/tags/"+id)

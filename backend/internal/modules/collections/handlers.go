@@ -7,8 +7,6 @@ import (
 	"errors"
 	"net/http"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -21,16 +19,6 @@ import (
 // names the entity, so the assertion lives here, not in the store).
 func pathID[K ids.EntityKind](id crmcontracts.Id) ids.ID[K] {
 	return ids.From[K](ids.UUID(id))
-}
-
-// idArg asserts an optional wire UUID (a body field) as entity K's id;
-// nil stays nil.
-func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
-	if u == nil {
-		return nil
-	}
-	v := ids.From[K](ids.UUID(*u))
-	return &v
 }
 
 // Handlers is the module's transport slice; compose embeds it so the
@@ -47,109 +35,6 @@ type Handlers struct {
 // refuses it as unknown.
 func NewHandlers(store *Store) Handlers {
 	return Handlers{store: store}
-}
-
-func (h Handlers) ListLists(w http.ResponseWriter, r *http.Request, params crmcontracts.ListListsParams) {
-	var entityType *string
-	if params.EntityType != nil {
-		v := string(*params.EntityType)
-		entityType = &v
-	}
-	archived := storekit.LiveOnly
-	if params.IncludeArchived != nil && *params.IncludeArchived {
-		archived = storekit.IncludeArchived
-	}
-	lists, truncated, err := h.store.ListLists(r.Context(), entityType, archived)
-	if err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	data := make([]crmcontracts.List, 0, len(lists))
-	for _, l := range lists {
-		data = append(data, wireList(l))
-	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ListListResponse{Data: data, Page: crmcontracts.PageInfo{HasMore: truncated}})
-}
-
-func (h Handlers) CreateList(w http.ResponseWriter, r *http.Request) {
-	var req crmcontracts.CreateListRequest
-	if !httperr.Decode(w, r, &req) {
-		return
-	}
-	in := CreateListInput{Name: req.Name, EntityType: string(req.EntityType)}
-	if req.ListType != nil {
-		in.ListType = string(*req.ListType)
-	}
-	if req.Definition != nil {
-		in.Definition = *req.Definition
-	}
-	in.OwnerID = idArg[ids.UserKind](req.OwnerId)
-	in.TeamID = idArg[ids.TeamKind](req.TeamId)
-	list, err := h.store.CreateList(r.Context(), in)
-	if err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusCreated, wireList(list))
-}
-
-func (h Handlers) GetList(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	list, err := h.store.GetList(r.Context(), pathID[ids.ListKind](id))
-	if err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, wireList(list))
-}
-
-func (h Handlers) ArchiveList(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	list, err := h.store.ArchiveList(r.Context(), pathID[ids.ListKind](id))
-	if err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, wireList(list))
-}
-
-func (h Handlers) ListListMembers(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListListMembersParams) {
-	limit := 0
-	if params.Limit != nil {
-		limit = *params.Limit
-	}
-	cursor := ""
-	if params.Cursor != nil {
-		cursor = *params.Cursor
-	}
-	members, page, err := h.store.ListMembers(r.Context(), pathID[ids.ListKind](id), limit, cursor)
-	if err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	data := make([]crmcontracts.ListMember, 0, len(members))
-	for _, m := range members {
-		data = append(data, wireMember(m))
-	}
-	info := crmcontracts.PageInfo{HasMore: page.HasMore}
-	if page.NextCursor != "" {
-		info.NextCursor = &page.NextCursor
-	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ListMemberListResponse{Data: data, Page: info})
-}
-
-func (h Handlers) AddListMember(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	var req crmcontracts.AddListMemberRequest
-	if !httperr.Decode(w, r, &req) {
-		return
-	}
-	// req.EntityId is a polymorphic member target (any entity), so it stays
-	// an untyped ids.UUID; the store validates it against the list's own
-	// entity_type and the row-scope link gate.
-	member, err := h.store.AddMember(r.Context(), pathID[ids.ListKind](id), string(req.EntityType), ids.UUID(req.EntityId))
-	if err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusCreated, wireMember(member))
 }
 
 func (h Handlers) ListTags(w http.ResponseWriter, r *http.Request, params crmcontracts.ListTagsParams) {
@@ -174,7 +59,14 @@ func (h Handlers) CreateTag(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	tag, err := h.store.CreateTag(r.Context(), req.Name, req.Color)
+	// The generated palette type is a string underneath; the store speaks the
+	// column's own type, and the CHECK is what actually holds the value.
+	var color *string
+	if req.Color != nil {
+		c := string(*req.Color)
+		color = &c
+	}
+	tag, err := h.store.CreateTag(r.Context(), req.Name, color)
 	if err != nil {
 		writeErr(w, r, err)
 		return

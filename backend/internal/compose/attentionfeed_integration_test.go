@@ -326,3 +326,27 @@ func stageFor(t *testing.T, e *integration.Env, svc *approvals.Service,
 	}
 	return id
 }
+
+// THE DAY ENDS AT THE INSTALLATION'S MIDNIGHT, through the shipped wiring.
+//
+// The boundary used to be UTC's wherever the installation was: a seat seven
+// hours east saw work due through 07:00 tomorrow local, which is work they are
+// not owed yet, and a seat west lost the evening's. The unit tests pin the
+// arithmetic; this pins that the composition actually asks.
+func TestTheWorklistsDayEndsAtTheInstallationsMidnight(t *testing.T) {
+	e := integration.Setup(t)
+	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
+
+	// 15:00 UTC is 22:00 in Ho Chi Minh City, so the local day ends at 17:00
+	// UTC — two hours ahead — while UTC's own midnight is nine hours out.
+	now := time.Date(2026, 6, 15, 15, 0, 0, 0, time.UTC)
+	logTask(t, e, "Due late tonight, local", time.Date(2026, 6, 15, 16, 30, 0, 0, time.UTC), false)
+	logTask(t, e, "Due tomorrow morning, local", time.Date(2026, 6, 15, 18, 0, 0, 0, time.UTC), false)
+
+	day := assembleFeed(e.Admin(), t, e, now)
+	got := titlesOn(day.Planned)
+	if len(got) != 1 || got[0] != "Due late tonight, local" {
+		t.Fatalf("the planned lane = %v, want only tonight's work: 18:00 UTC is 01:00 tomorrow "+
+			"where this installation is, and UTC's midnight is not its day", got)
+	}
+}

@@ -1756,9 +1756,7 @@ export const en = {
     "{field} is recorded as \u201c{value}\u201d. Removing it says this is not a fact about the company. A later read of their website may state it again.",
   "co.facts.showAll": "Show all {count}",
   "co.facts.showLess": "Show fewer",
-  "co.tags.lists": "Lists",
   "co.tags.tags": "Tags",
-  "co.tags.noLists": "Not on any list.",
   "co.tags.noTags": "No tags applied.",
   "co.project.new": "New project",
   "co.deal.new": "New deal",
@@ -1769,11 +1767,6 @@ export const en = {
   "co.tags.pick": "Tag name",
   "co.tags.overCap":
     "There are more tags than this list can show, so a tag missing from it may still exist. Ask an admin to prune the tags before adding a new one.",
-  "co.lists.added": "Added to “{name}”",
-  "co.lists.add": "Add to list",
-  "co.lists.pick": "List name",
-  "co.lists.overCap":
-    "There are more lists than can be shown, so a list missing from them may still exist. Ask an admin to prune the lists before adding a new one.",
   "co.recent.title": "What happened lately",
   "co.recent.emptyDetail":
     "Once you send an email, log a call or hold a meeting, the exchange appears here, with who did what on each side.",
@@ -1792,7 +1785,7 @@ export const en = {
   "co.recent.dir.both": "both sides",
   "co.recent.minutes": "{count} min",
   "co.recent.re": "on a deal",
-  "co.tags.title": "Lists & tags",
+  "co.tags.title": "Tags",
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
@@ -2313,7 +2306,6 @@ export const en = {
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
   "home.asOf": "as of {at}",
-  "home.refresh": "Refresh brief",
   "home.refreshing": "Ranking…",
   "home.generate": "Get today's brief now",
   "home.noneBody":
@@ -2331,6 +2323,85 @@ export const en = {
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
   "home.weekly.weekOf": "Week of {day}",
+  // The week ahead. The frozen review says what happened; this is the only part
+  // of that page anybody can still change.
+  "plan.title": "Plan next week",
+  // A team's week, frozen when it closed. Two weeks compare because neither
+  // moves under the comparison.
+  "teamweekly.title": "The team's week",
+  "teamweekly.weekOf": "{team} · week of {day}",
+  "teamweekly.frozen": "Frozen",
+  "teamweekly.loading": "Reading the team's week",
+  "teamweekly.empty": "Nothing to show for this week.",
+  "teamweekly.forbidden":
+    "A team's week is a team question, and your access reaches your own rows only.",
+  "teamweekly.noSnapshot":
+    "No week has closed for this team yet. The first snapshot is written on the Monday after their first full week.",
+  "teamweekly.pickTeam": "Choose a team",
+  "teamweekly.repsUnread":
+    "{count} member(s) could not be read. Every figure here covers {counted}.",
+  "teamweekly.ofTotal": "{part} of {whole}",
+  "teamweekly.headline.plain":
+    "The week ran without a reading that stands out either way.",
+  "teamweekly.headline.healthy":
+    "{reading} is healthy at {pct}%, against a bar of {bar}%.",
+  "teamweekly.headline.weak":
+    "{reading} is not, at {pct}% against a bar of {bar}%.",
+  "teamweekly.reading.firstResponse": "First response",
+  "teamweekly.reading.nextStep": "Meetings with a next step",
+  "teamweekly.reading.commitments": "Promises kept",
+  "teamweekly.card.firstResponse": "Answered in time",
+  "teamweekly.card.firstResponseBasis": "{breached} breached",
+  "teamweekly.card.meetings": "Meetings with a next step",
+  "teamweekly.card.meetingsBasis": "of the meetings held",
+  "teamweekly.card.commitments": "Promises kept",
+  "teamweekly.card.commitmentsBasis": "of what was owed",
+  "teamweekly.card.won": "Won",
+  "teamweekly.card.wonBasis": "{lost} lost",
+  "teamweekly.card.reps": "Members counted",
+  "teamweekly.card.repsBasis": "whose week was read in full",
+  "teamweekly.movement.title": "What the week did",
+  "teamweekly.movement.won": "Won",
+  "teamweekly.movement.lost": "Lost",
+  "teamweekly.movement.meetings": "Meetings held",
+  "teamweekly.movement.leads": "Leads routed",
+  "teamweekly.coach.title": "Coach this week",
+  "teamweekly.coach.sub":
+    "One focus per member, including the member whose week went well.",
+  "teamweekly.coach.empty": "Nobody was on this team that week.",
+  "teamweekly.focus.help_requested": "Asked for help",
+  "teamweekly.focus.leads_breached": "Leads went unanswered",
+  "teamweekly.focus.commitments_missed": "Promises missed",
+  "teamweekly.focus.meetings_without_next_step":
+    "Meetings left without a next step",
+  "teamweekly.focus.strong_week": "Worth copying",
+  "teamweekly.focus.quiet_week": "A quiet week",
+
+  "plan.sub": "What you said you would do, and what you need to do it.",
+  "plan.loading": "Reading your plan",
+  "plan.empty": "Nothing on the plan yet.",
+  "plan.none": "You have not planned this week yet.",
+  "plan.start": "Plan my week",
+  "plan.add": "Add commitment",
+  "plan.save_one": "Save {count} change",
+  "plan.save_other": "Save {count} changes",
+  "plan.due": "due {day}",
+  "plan.state.open": "Open",
+  "plan.state.done": "Done",
+  "plan.state.missed": "Missed",
+  "plan.state.dropped": "Dropped",
+  "plan.help.label": "What do you need from your lead?",
+  "plan.help.ask": "Ask for help",
+  "plan.help.edit": "Edit request",
+  "plan.help.send": "Send",
+  "plan.help.cancel": "Cancel",
+  "plan.help.asked": "You asked: {text}",
+  "plan.help.waiting": "Waiting on your lead.",
+  "plan.new.label": "What will you do?",
+  "plan.new.due": "By when",
+  "plan.new.save": "Add",
+  "plan.new.cancel": "Cancel",
+
   "home.weekly.pickWeek": "Open another week",
   "home.weekly.none":
     "No weekly review yet — the first one is written on the Monday after your first full week.",
@@ -3015,6 +3086,8 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
+  "brief.coverage.summary": "Some sources have more than this page shows",
+  "brief.coverage.bounded": "{shown} shown of at least {considered} read",
   "delivery.morningLabel": "Your morning brief",
   "delivery.morningHelp":
     "Whether the day's brief also arrives by email. It is on your Brief page either way.",
@@ -6142,81 +6215,6 @@ export const en = {
   "countdown.minutesSeconds": "{minutes}m {seconds}s",
   "countdown.expired": "Expired",
 
-  // Quotas & attainment (RD-T06): human-set revenue targets with
-  // server-computed attainment, surfaced under the Reports "Quotas" segment.
-  "quotas.tab": "Quotas",
-  // The selector panel's own title. The Reports segment picker directly above
-  // it already reads "Quotas", so this names what the LIST holds — one row per
-  // owner or team carrying a target — rather than repeating the page.
-  "quotas.selector.title": "Who has a quota",
-  "quotas.sub": "revenue targets — human-set, attainment computed",
-  "quotas.role.owner": "Individual quota",
-  "quotas.role.team": "Team quota",
-  "quotas.periodRange": "{start} – {end}",
-  "quotas.empty.title": "No quota set",
-  "quotas.empty.body":
-    "A quota is a target a human sets — owner or team, period, amount. We don't guess one for you. Set a target to start tracking attainment from closed-won deals.",
-  "quotas.empty.cta": "Set a target",
-  "quotas.attained": "attained",
-  "quotas.closedWon": "Closed-won this period",
-  "quotas.target": "Target",
-  "quotas.gap": "Gap to target",
-  "quotas.baseCurrencyNote":
-    "Figures in the organization's base currency ({currency}).",
-  "quotas.pace.ahead":
-    "Ahead of pace — {pct}% attained vs {pace}% of period elapsed.",
-  "quotas.pace.behind":
-    "Behind pace — {pct}% attained vs {pace}% of period elapsed.",
-  "quotas.pace.met": "Target met — {pct}% attained.",
-  "quotas.computed": "computed server-side",
-  "quotas.contributing.title": "What counts toward attainment",
-  "quotas.contributing.subtitle": "closed-won deals · base value in the period",
-  "quotas.contributing.deal": "Deal",
-  "quotas.contributing.amount": "Counted amount",
-  "quotas.contributing.total": "Counted total",
-  "quotas.contributing.caption":
-    "Base currency · open / lost / omitted deals excluded",
-  "quotas.explain.formula":
-    "attainment = Σ(closed-won base value) ÷ target, to the cent",
-  "quotas.explain.closedWon":
-    "closed-won = {sum} ({count} deals in the period)",
-  "quotas.explain.target": "target = {target} (human-set)",
-  "quotas.explain.result": "attainment = {sum} ÷ {target} = {pct}%",
-  "quotas.explain.exclusions":
-    "open / lost / omitted deals are excluded; clean-core only",
-  "quotas.scopeNote.title": "What this quota deliberately is",
-  "quotas.scopeNote.flag": "flagged, not hidden",
-  "quotas.scopeNote.body":
-    "The target is human-set — the AI never invents a quota number. Attainment is computed from closed-won base value and is fully auditable. There is no AI-set goal, no forecast-to-quota auto-fill, and no comp/commission engine yet.",
-  "quotas.target.title": "Period target",
-  "quotas.target.new": "Set a target",
-  "quotas.target.edit": "Edit target",
-  "quotas.target.save": "Save target",
-  "quotas.target.note":
-    "Editing writes a human-typed value and logs the change. Attainment recomputes against it.",
-  "quotas.target.sideFixed":
-    "A quota's owner/team side is fixed — switch it by archiving and recreating.",
-  "quotas.side.label": "Assigned to",
-  "quotas.side.owner": "Owner",
-  "quotas.side.team": "Team",
-  "quotas.owner": "Owner",
-  "quotas.team": "Team",
-  "quotas.pickOwner": "Select an owner…",
-  "quotas.pickTeam": "Select a team…",
-  "quotas.amountHint": "Whole units of the currency below. No decimals.",
-  "quotas.periodStart": "Period start",
-  "quotas.periodEnd": "Period end",
-  "quotas.amount": "Target amount",
-  "quotas.currency": "Currency",
-  "quotas.err.targetZero": "This quota has no target yet",
-  "quotas.err.computeFailed": "Attainment couldn't be computed",
-  "quotas.err.ownerXorTeam": "Choose exactly one of owner or team.",
-  "quotas.saveDone": "Quota saved",
-  "quotas.archiveDone": "Quota archived",
-  "quotas.archive.title": "Archive quota",
-  "quotas.archive.confirm":
-    "Archiving drops this quota from the list and stops tracking its attainment. Archived quotas can't be edited.",
-
   "installationSettings.orgTitle": "Installation",
   "installationSettings.orgSub":
     "What this installation is called, and the zone every reporting period is computed in.",
@@ -7370,10 +7368,6 @@ export const en = {
   "filters.pickRecord": "Choose one",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Choose a value",
-  "filters.saveList": "Save as list",
-  "filters.saveListTitle": "Save this filter as a dynamic list",
-  "filters.listName": "List name",
-  "filters.saveListConfirm": "Create list",
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 
@@ -7657,6 +7651,18 @@ export const en = {
   "worklist.board.overdue": "Past due",
   "worklist.board.nobody": "Nobody yet",
   "worklist.board.truncated":
+    "There is more work than this could count. These are floors, not totals.",
+  "worklist.readings.label": "What today is worth",
+  "worklist.readings.revenue": "Revenue at risk",
+  "worklist.readings.revenue.detail": "Across the deals drifting today",
+  "worklist.readings.revenue.unpriced": "No deal at risk could be priced",
+  "worklist.readings.replies": "Buyer replies",
+  "worklist.readings.replies.detail": "Customers waiting on an answer",
+  "worklist.readings.prospecting": "Prospecting",
+  "worklist.readings.prospecting.detail": "New business owed a first reply",
+  "worklist.readings.review": "Review",
+  "worklist.readings.review.detail": "Routine work queued behind a decision",
+  "worklist.readings.truncated":
     "There is more work than this could count. These are floors, not totals.",
   "worklist.filter.label": "Kind of work",
   "worklist.filter.all": "All",

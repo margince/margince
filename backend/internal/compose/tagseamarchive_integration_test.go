@@ -5,10 +5,9 @@
 
 package compose
 
-// EnsureTag's own comment says an archived name is never silently reused —
-// that decision is deliberate and this test does not touch it. What it
-// guards is the error that decision produces: it must not direct the caller
-// to an action the contract cannot perform.
+// ResolveTag never creates and never resurrects. These tests drive the REAL
+// seam against a real database, because that is where the rule lives: a test
+// against a stub proves only what the stub was written to do.
 
 import (
 	"strings"
@@ -42,15 +41,37 @@ func TestEnsureTagOnAnArchivedNameDoesNotPromiseARestoreThatDoesNotExist(t *test
 		t.Fatalf("archiving the fixture tag: %v", err)
 	}
 
-	_, err = tagSeam(e.Pool).EnsureTag(ctx, "Repro Tag")
+	_, err = tagSeam(e.Pool).ResolveTag(ctx, "Repro Tag")
 	if err == nil {
-		t.Fatal("EnsureTag on an archived-only name succeeded; want a conflict — the vocabulary deliberately does not reuse an archived word")
+		t.Fatal("ResolveTag on an archived-only name succeeded; want a refusal — an archived word was retired on purpose")
 	}
-	if strings.Contains(err.Error(), "restore") {
-		t.Fatalf("EnsureTag's error directs the caller to %q, which the contract has no operation for: %v",
-			"restore", err)
+	// The refusal has to say the word EXISTS and is retired. "No such tag"
+	// would send a rep to ask for a tag the workspace already has, and an
+	// admin would then coin a duplicate of a word they deliberately retired.
+	if !strings.Contains(err.Error(), "archived") {
+		t.Fatalf("ResolveTag's refusal does not say the name is archived, so a caller cannot tell it from an unknown word: %v", err)
 	}
-	if !strings.Contains(err.Error(), "is not reused") {
-		t.Fatalf("EnsureTag's error does not explain why the name was refused: %v", err)
+}
+
+// The governance rule at the seam that enforces it: an unknown name is a
+// refusal, and nothing is written. This is the half a stub cannot prove — the
+// tag table has to still be empty afterwards.
+func TestResolveTagRefusesAnUnknownNameAndCoinsNothing(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.AdminUser, nil, tagAdminPerms)
+	store := collections.NewStore(InstallationDB(e.Pool))
+
+	_, err := tagSeam(e.Pool).ResolveTag(ctx, "Never Coined")
+	if err == nil {
+		t.Fatal("an unknown name resolved; want a refusal, because coining one here is the authority only admin and ops hold")
+	}
+
+	// The word must not exist now. A seam that created it and then returned
+	// the id would also have answered without error above, so the absence is
+	// the assertion that separates the two.
+	if _, found, findErr := store.FindTag(ctx, "Never Coined"); findErr != nil {
+		t.Fatalf("looking the name up afterwards: %v", findErr)
+	} else if found {
+		t.Error("the refused name exists as a tag; ResolveTag coined the word it was asked to refuse")
 	}
 }

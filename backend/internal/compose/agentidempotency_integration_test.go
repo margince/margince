@@ -167,7 +167,7 @@ func TestOneKeyIsThreeDifferentClaims(t *testing.T) {
 	// And the REST door. The endpoint spelling is what keeps a tool's key out of
 	// a request path's; this proves the two really do write different rows.
 	actor, _ := principal.Actor(agentA)
-	outcome, _, err := claimKey(agentA, e.Pool, actor.ID, key, "POST /v1/quotas", "digest-a")
+	outcome, _, err := claimKey(agentA, e.Pool, actor.ID, key, "POST /v1/offer-templates", "digest-a")
 	if err != nil {
 		t.Fatalf("the REST claim failed: %v", err)
 	}

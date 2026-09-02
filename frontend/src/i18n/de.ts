@@ -1719,9 +1719,7 @@ export const de = {
     "{field} ist als \u201e{value}\u201c erfasst. Ihn zu entfernen bedeutet: Das ist kein Fakt über die Firma. Ein späteres Lesen der Website kann ihn erneut erfassen.",
   "co.facts.showAll": "Alle {count} anzeigen",
   "co.facts.showLess": "Weniger anzeigen",
-  "co.tags.lists": "Listen",
   "co.tags.tags": "Tags",
-  "co.tags.noLists": "Auf keiner Liste.",
   "co.tags.noTags": "Keine Tags vergeben.",
   "co.project.new": "Neues Projekt",
   "co.deal.new": "Neuer Deal",
@@ -1732,11 +1730,6 @@ export const de = {
   "co.tags.pick": "Tag-Name",
   "co.tags.overCap":
     "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
-  "co.lists.added": "Zu „{name}“ hinzugefügt",
-  "co.lists.add": "Zu Liste hinzufügen",
-  "co.lists.pick": "Listenname",
-  "co.lists.overCap":
-    "Es gibt mehr Listen, als angezeigt werden können; eine Liste, die hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Listen aufzuräumen, bevor eine neue angelegt wird.",
   "co.recent.title": "Was zuletzt passiert ist",
   "co.recent.emptyDetail":
     "Sobald Sie eine E-Mail senden, einen Anruf festhalten oder sich treffen, steht der Austausch hier, mit dem, was jede Seite getan hat.",
@@ -1755,7 +1748,7 @@ export const de = {
   "co.recent.dir.both": "beide Seiten",
   "co.recent.minutes": "{count} Min.",
   "co.recent.re": "zu einem Deal",
-  "co.tags.title": "Listen & Tags",
+  "co.tags.title": "Tags",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
   "co.overlayFallback":
     "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",
@@ -2281,7 +2274,6 @@ export const de = {
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.asOf": "Stand {at}",
-  "home.refresh": "Briefing aktualisieren",
   "home.refreshing": "Sortiere neu…",
   "home.generate": "Briefing jetzt holen",
   "home.noneBody":
@@ -2294,6 +2286,85 @@ export const de = {
     "Heute keine Nacht-Zusammenfassung — Margince hat für diese Lage keinen Durchgang gemacht. Die Reihenfolge unten ist trotzdem die von heute.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
+  // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
+  // einzige Teil dieser Seite, den noch jemand ändern kann.
+  "plan.title": "Nächste Woche planen",
+  // Die Woche eines Teams, eingefroren beim Abschluss. Zwei Wochen sind
+  // vergleichbar, weil keine sich unter dem Vergleich bewegt.
+  "teamweekly.title": "Die Woche des Teams",
+  "teamweekly.weekOf": "{team} · Woche ab {day}",
+  "teamweekly.frozen": "Eingefroren",
+  "teamweekly.loading": "Teamwoche wird gelesen",
+  "teamweekly.empty": "Für diese Woche gibt es nichts zu zeigen.",
+  "teamweekly.forbidden":
+    "Die Woche eines Teams ist eine Teamfrage, und dein Zugriff reicht nur bis zu deinen eigenen Datensätzen.",
+  "teamweekly.noSnapshot":
+    "Für dieses Team wurde noch keine Woche abgeschlossen. Die erste Momentaufnahme entsteht am Montag nach der ersten vollen Woche.",
+  "teamweekly.pickTeam": "Team auswählen",
+  "teamweekly.repsUnread":
+    "{count} Mitglied(er) konnten nicht gelesen werden. Alle Zahlen hier decken {counted} ab.",
+  "teamweekly.ofTotal": "{part} von {whole}",
+  "teamweekly.headline.plain":
+    "Die Woche lief ohne einen Wert, der in eine Richtung heraussticht.",
+  "teamweekly.headline.healthy":
+    "{reading} ist gesund bei {pct}%, gemessen an einer Schwelle von {bar}%.",
+  "teamweekly.headline.weak":
+    "{reading} ist es nicht, bei {pct}% gegen eine Schwelle von {bar}%.",
+  "teamweekly.reading.firstResponse": "Erstreaktion",
+  "teamweekly.reading.nextStep": "Termine mit nächstem Schritt",
+  "teamweekly.reading.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.firstResponse": "Rechtzeitig beantwortet",
+  "teamweekly.card.firstResponseBasis": "{breached} überschritten",
+  "teamweekly.card.meetings": "Termine mit nächstem Schritt",
+  "teamweekly.card.meetingsBasis": "der gehaltenen Termine",
+  "teamweekly.card.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.commitmentsBasis": "des Zugesagten",
+  "teamweekly.card.won": "Gewonnen",
+  "teamweekly.card.wonBasis": "{lost} verloren",
+  "teamweekly.card.reps": "Gezählte Mitglieder",
+  "teamweekly.card.repsBasis": "deren Woche vollständig gelesen wurde",
+  "teamweekly.movement.title": "Was die Woche bewegt hat",
+  "teamweekly.movement.won": "Gewonnen",
+  "teamweekly.movement.lost": "Verloren",
+  "teamweekly.movement.meetings": "Gehaltene Termine",
+  "teamweekly.movement.leads": "Zugewiesene Leads",
+  "teamweekly.coach.title": "Diese Woche begleiten",
+  "teamweekly.coach.sub":
+    "Ein Schwerpunkt pro Mitglied — auch für das Mitglied, dessen Woche gut lief.",
+  "teamweekly.coach.empty": "In dieser Woche war niemand in diesem Team.",
+  "teamweekly.focus.help_requested": "Hat um Hilfe gebeten",
+  "teamweekly.focus.leads_breached": "Leads blieben unbeantwortet",
+  "teamweekly.focus.commitments_missed": "Zusagen verpasst",
+  "teamweekly.focus.meetings_without_next_step":
+    "Termine ohne nächsten Schritt",
+  "teamweekly.focus.strong_week": "Zum Nachmachen",
+  "teamweekly.focus.quiet_week": "Eine ruhige Woche",
+
+  "plan.sub": "Was du dir vorgenommen hast — und was du dafür brauchst.",
+  "plan.loading": "Plan wird gelesen",
+  "plan.empty": "Noch nichts auf dem Plan.",
+  "plan.none": "Du hast diese Woche noch nicht geplant.",
+  "plan.start": "Meine Woche planen",
+  "plan.add": "Vorhaben hinzufügen",
+  "plan.save_one": "{count} Änderung speichern",
+  "plan.save_other": "{count} Änderungen speichern",
+  "plan.due": "bis {day}",
+  "plan.state.open": "Offen",
+  "plan.state.done": "Erledigt",
+  "plan.state.missed": "Verpasst",
+  "plan.state.dropped": "Verworfen",
+  "plan.help.label": "Was brauchst du von deiner Führungskraft?",
+  "plan.help.ask": "Um Hilfe bitten",
+  "plan.help.edit": "Anfrage bearbeiten",
+  "plan.help.send": "Senden",
+  "plan.help.cancel": "Abbrechen",
+  "plan.help.asked": "Du hast gefragt: {text}",
+  "plan.help.waiting": "Wartet auf deine Führungskraft.",
+  "plan.new.label": "Was wirst du tun?",
+  "plan.new.due": "Bis wann",
+  "plan.new.save": "Hinzufügen",
+  "plan.new.cancel": "Abbrechen",
+
   "home.weekly.pickWeek": "Andere Woche öffnen",
   "home.weekly.none":
     "Noch kein Wochenrückblick — der erste wird am Montag nach deiner ersten vollen Woche geschrieben.",
@@ -2978,6 +3049,9 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
+  "brief.coverage.summary": "Einige Quellen haben mehr, als diese Seite zeigt",
+  "brief.coverage.bounded":
+    "{shown} von mindestens {considered} gelesenen angezeigt",
   "delivery.morningLabel": "Ihr Tagesbriefing",
   "delivery.morningHelp":
     "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf Ihrer Briefing-Seite steht es ohnehin.",
@@ -6099,81 +6173,6 @@ export const de = {
   "countdown.minutesSeconds": "{minutes}m {seconds}s",
   "countdown.expired": "Abgelaufen",
 
-  // Quotas & Zielerreichung (RD-T06): menschlich gesetzte Umsatzziele mit
-  // serverseitig berechneter Zielerreichung, im Reports-Segment „Quotas“.
-  "quotas.tab": "Quotas",
-  // Der Titel des Auswahl-Panels. Die Segmentleiste direkt darüber sagt schon
-  // „Quotas“, deshalb benennt dieser Titel, was die LISTE enthält — eine Zeile
-  // je Inhaber oder Team mit einem Ziel — statt die Seite zu wiederholen.
-  "quotas.selector.title": "Wer eine Quota hat",
-  "quotas.sub": "Umsatzziele — menschlich gesetzt, Zielerreichung berechnet",
-  "quotas.role.owner": "Individuelle Quota",
-  "quotas.role.team": "Team-Quota",
-  "quotas.periodRange": "{start} – {end}",
-  "quotas.empty.title": "Keine Quota gesetzt",
-  "quotas.empty.body":
-    "Eine Quota ist ein Ziel, das ein Mensch setzt — Inhaber oder Team, Zeitraum, Betrag. Wir raten es nicht. Setzen Sie ein Ziel, um die Zielerreichung aus gewonnenen Deals zu verfolgen.",
-  "quotas.empty.cta": "Ziel setzen",
-  "quotas.attained": "erreicht",
-  "quotas.closedWon": "Gewonnen in diesem Zeitraum",
-  "quotas.target": "Ziel",
-  "quotas.gap": "Abstand zum Ziel",
-  "quotas.baseCurrencyNote":
-    "Beträge in der Basiswährung der Organisation ({currency}).",
-  "quotas.pace.ahead":
-    "Vor dem Plan — {pct}% erreicht bei {pace}% des Zeitraums.",
-  "quotas.pace.behind":
-    "Hinter dem Plan — {pct}% erreicht bei {pace}% des Zeitraums.",
-  "quotas.pace.met": "Ziel erreicht — {pct}% erreicht.",
-  "quotas.computed": "serverseitig berechnet",
-  "quotas.contributing.title": "Was zur Zielerreichung zählt",
-  "quotas.contributing.subtitle": "gewonnene Deals · Basiswert im Zeitraum",
-  "quotas.contributing.deal": "Deal",
-  "quotas.contributing.amount": "Gezählter Betrag",
-  "quotas.contributing.total": "Gezählte Summe",
-  "quotas.contributing.caption":
-    "Basiswährung · offene / verlorene / ausgeschlossene Deals ausgenommen",
-  "quotas.explain.formula":
-    "Zielerreichung = Σ(Basiswert gewonnener Deals) ÷ Ziel, auf den Cent",
-  "quotas.explain.closedWon": "gewonnen = {sum} ({count} Deals im Zeitraum)",
-  "quotas.explain.target": "Ziel = {target} (menschlich gesetzt)",
-  "quotas.explain.result": "Zielerreichung = {sum} ÷ {target} = {pct}%",
-  "quotas.explain.exclusions":
-    "offene / verlorene / ausgeschlossene Deals ausgenommen; nur sauberer Kern",
-  "quotas.scopeNote.title": "Was diese Quota bewusst ist",
-  "quotas.scopeNote.flag": "gekennzeichnet, nicht verborgen",
-  "quotas.scopeNote.body":
-    "Das Ziel ist menschlich gesetzt — die KI erfindet keine Quota-Zahl. Die Zielerreichung wird aus dem Basiswert gewonnener Deals berechnet und ist vollständig auditierbar. Es gibt kein KI-gesetztes Ziel, kein Forecast-zu-Quota und keine Provisions-Engine.",
-  "quotas.target.title": "Ziel des Zeitraums",
-  "quotas.target.new": "Ziel setzen",
-  "quotas.target.edit": "Ziel bearbeiten",
-  "quotas.target.save": "Ziel speichern",
-  "quotas.target.note":
-    "Das Bearbeiten schreibt einen menschlich getippten Wert und protokolliert die Änderung. Die Zielerreichung wird neu berechnet.",
-  "quotas.target.sideFixed":
-    "Die Inhaber-/Team-Seite einer Quota ist fest — zum Wechseln archivieren und neu anlegen.",
-  "quotas.side.label": "Zugewiesen an",
-  "quotas.side.owner": "Inhaber",
-  "quotas.side.team": "Team",
-  "quotas.owner": "Inhaber",
-  "quotas.team": "Team",
-  "quotas.pickOwner": "Inhaber auswählen…",
-  "quotas.pickTeam": "Team auswählen…",
-  "quotas.amountHint":
-    "Ganze Einheiten der unten gewählten Währung. Keine Dezimalstellen.",
-  "quotas.periodStart": "Zeitraum-Beginn",
-  "quotas.periodEnd": "Zeitraum-Ende",
-  "quotas.amount": "Zielbetrag",
-  "quotas.currency": "Währung",
-  "quotas.err.targetZero": "Diese Quota hat noch kein Ziel",
-  "quotas.err.computeFailed": "Zielerreichung konnte nicht berechnet werden",
-  "quotas.err.ownerXorTeam": "Wählen Sie genau eines: Inhaber oder Team.",
-  "quotas.saveDone": "Quota gespeichert",
-  "quotas.archiveDone": "Quota archiviert",
-  "quotas.archive.title": "Quota archivieren",
-  "quotas.archive.confirm":
-    "Das Archivieren entfernt diese Quota aus der Liste und stoppt die Verfolgung der Zielerreichung. Archivierte Quotas können nicht bearbeitet werden.",
-
   "installationSettings.orgTitle": "Installation",
   "installationSettings.orgSub":
     "Wie diese Installation heißt und in welcher Zeitzone jede Auswertungsperiode berechnet wird.",
@@ -7313,10 +7312,6 @@ export const de = {
   "filters.pickRecord": "Eintrag wählen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert wählen",
-  "filters.saveList": "Als Liste speichern",
-  "filters.saveListTitle": "Diesen Filter als dynamische Liste speichern",
-  "filters.listName": "Listenname",
-  "filters.saveListConfirm": "Liste erstellen",
   "filters.exportCsv": "Als CSV exportieren",
   "filters.exportJson": "Als JSON exportieren",
 
@@ -7589,6 +7584,20 @@ export const de = {
   "worklist.board.overdue": "Überfällig",
   "worklist.board.nobody": "Noch niemand",
   "worklist.board.truncated":
+    "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
+  "worklist.readings.label": "Was heute auf dem Spiel steht",
+  "worklist.readings.revenue": "Umsatz in Gefahr",
+  "worklist.readings.revenue.detail": "Über die heute treibenden Deals",
+  "worklist.readings.revenue.unpriced": "Kein gefährdeter Deal war bewertbar",
+  "worklist.readings.replies": "Kundenantworten",
+  "worklist.readings.replies.detail": "Kunden warten auf eine Antwort",
+  "worklist.readings.prospecting": "Neugeschäft",
+  "worklist.readings.prospecting.detail":
+    "Neugeschäft, das eine erste Antwort schuldet",
+  "worklist.readings.review": "Prüfung",
+  "worklist.readings.review.detail":
+    "Routinearbeit, die hinter einer Entscheidung wartet",
+  "worklist.readings.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",

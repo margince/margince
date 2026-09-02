@@ -18,7 +18,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 )
 
 // seedSurfaces creates the collection and customisation records, and returns
@@ -30,7 +29,6 @@ func seedSurfaces(c *client, seats *sessions, cfg demoConfig, refs pipelineRefs,
 		run  func() (int, error)
 	}{
 		{"tags", func() (int, error) { return seedTags(c, refs, plan, mode) }},
-		{"lists", func() (int, error) { return seedLists(c, refs, mode) }},
 		// Projects themselves are NOT here — they are created earlier, before
 		// seedActivities, because an activity links to the project it was
 		// about and cannot link to a row that does not exist yet.
@@ -40,7 +38,6 @@ func seedSurfaces(c *client, seats *sessions, cfg demoConfig, refs pipelineRefs,
 		// pass that staffed only what it had just created would leave every
 		// earlier project empty forever.
 		{"project stakeholders", func() (int, error) { return seedProjectStakeholders(c, mode) }},
-		{"quotas", func() (int, error) { return seedQuotas(c, cfg, refs, mode) }},
 	} {
 		n, err := step.run()
 		if err != nil {
@@ -59,12 +56,12 @@ var demoTags = []struct {
 	// Applies decides which companies carry this tag, from their profile.
 	Applies func(profile) bool
 }{
-	{"Key Account", "#b45309", func(p profile) bool { return p.Lifecycle == "customer" }},
-	{"Churn Risk", "#b91c1c", func(p profile) bool { return p.Lifecycle == "former_customer" }},
-	{"Inbound", "#1d4ed8", func(p profile) bool { return p.LeadState != "" }},
+	{"Key Account", "amber", func(p profile) bool { return p.Lifecycle == "customer" }},
+	{"Churn Risk", "rose", func(p profile) bool { return p.Lifecycle == "former_customer" }},
+	{"Inbound", "teal", func(p profile) bool { return p.LeadState != "" }},
 	// `parked` is not a lifecycle the product carries, so the planner maps it
 	// to `target` and this tag is what preserves the distinction.
-	{"Parked", "#6b7280", func(p profile) bool { return p.Lifecycle == "target" && p.DealStage == "" }},
+	{"Parked", "slate", func(p profile) bool { return p.Lifecycle == "target" && p.DealStage == "" }},
 }
 
 func seedTags(c *client, refs pipelineRefs, plan map[string]profile, mode runMode) (int, error) {
@@ -138,70 +135,6 @@ func tagsByName(c *client, mode runMode) (map[string]string, error) {
 	return out, nil
 }
 
-// demoLists are the saved collections a team works from. One static and one
-// dynamic, because they are different features: a static list holds the rows
-// somebody put in it, and a dynamic one re-answers its own question.
-var demoLists = []struct {
-	Name       string
-	EntityType string
-	ListType   string
-	Definition jsonBody
-}{
-	{
-		Name: "Kunden", EntityType: "organization", ListType: "dynamic",
-		// A predicate over the allow-listed organization fields, so the list
-		// answers itself as the lifecycle changes.
-		Definition: jsonBody{"and": []jsonBody{{"field": "lifecycle", "op": "eq", "value": "customer"}}},
-	},
-	{
-		Name: "Abgesprungen", EntityType: "organization", ListType: "dynamic",
-		Definition: jsonBody{"and": []jsonBody{{"field": "lifecycle", "op": "eq", "value": "former_customer"}}},
-	},
-}
-
-func seedLists(c *client, refs pipelineRefs, mode runMode) (int, error) {
-	created := 0
-	existing := map[string]bool{}
-	if mode != modeDryRun {
-		err := c.getAll("/v1/lists", nil, func(raw json.RawMessage) error {
-			var rows []struct {
-				Name string `json:"name"`
-			}
-			if err := json.Unmarshal(raw, &rows); err != nil {
-				return err
-			}
-			for _, row := range rows {
-				existing[row.Name] = true
-			}
-			return nil
-		})
-		if err != nil {
-			return 0, fmt.Errorf("listing lists: %w", err)
-		}
-	}
-	for _, list := range demoLists {
-		if existing[list.Name] {
-			continue
-		}
-		if mode == modeDryRun {
-			created++
-			continue
-		}
-		body := jsonBody{
-			"name": list.Name, "entity_type": list.EntityType,
-			"list_type": list.ListType, "definition": list.Definition,
-		}
-		if err := c.post("/v1/lists", body, nil); err != nil {
-			if _, conflict := conflictingID(err); conflict {
-				continue
-			}
-			return created, fmt.Errorf("list %q: %w", list.Name, err)
-		}
-		created++
-	}
-	return created, nil
-}
-
 // Custom fields are NOT seeded, and cannot be.
 //
 // POST /v1/custom-fields answers 501:
@@ -214,70 +147,3 @@ func seedLists(c *client, refs pipelineRefs, mode runMode) (int, error) {
 // the product's own state rather than a hole in the seeder. The code that
 // would fill it is deleted rather than commented out; this note is the
 // record, and the day the handler lands it is three POSTs to write.
-
-// seedQuotas gives every seller a target for the current quarter, so the
-// attainment the product computes from closed-won deals has something to be a
-// percentage of.
-func seedQuotas(c *client, cfg demoConfig, refs pipelineRefs, mode runMode) (int, error) {
-	created := 0
-	start, end := currentQuarter(refs)
-	existing := map[string]bool{}
-	if mode != modeDryRun {
-		query := url.Values{"period_start": {start}}
-		err := c.getAll("/v1/quotas", query, func(raw json.RawMessage) error {
-			var rows []struct {
-				OwnerID string `json:"owner_id"`
-			}
-			if err := json.Unmarshal(raw, &rows); err != nil {
-				return err
-			}
-			for _, row := range rows {
-				existing[row.OwnerID] = true
-			}
-			return nil
-		})
-		if err != nil {
-			return 0, fmt.Errorf("listing quotas: %w", err)
-		}
-	}
-	for _, ref := range sellerIDs(cfg, refs) {
-		ownerID, ok := refs.usersByRef[ref]
-		if !ok || existing[ownerID] {
-			continue
-		}
-		if mode == modeDryRun {
-			created++
-			continue
-		}
-		body := jsonBody{
-			"owner_id":     ownerID,
-			"period_start": start,
-			"period_end":   end,
-			// A round quarterly target, varied per seat so the attainment bars
-			// are not all the same length.
-			// money-scale-exempt: this MINTS a euro figure rather than converting
-			// a stored one, and the currency it is minted for is the literal on
-			// the very next line. There is no amount here whose scale a table
-			// could be asked about.
-			"target_minor": int64(150000+hashIndex("quota:"+ref, 12)*25000) * 100, // money-scale-exempt: minted in EUR, see above
-			"currency":     "EUR",
-		}
-		if err := c.post("/v1/quotas", body, nil); err != nil {
-			if _, conflict := conflictingID(err); conflict {
-				continue
-			}
-			return created, fmt.Errorf("quota for %s: %w", ref, err)
-		}
-		created++
-	}
-	return created, nil
-}
-
-// currentQuarter is the quarter the run happens in, so a demo seeded today
-// shows a target somebody is currently working against.
-func currentQuarter(refs pipelineRefs) (start, end string) {
-	now := refs.now
-	quarter := (int(now.Month()) - 1) / 3
-	first := now.AddDate(0, -(int(now.Month()) - 1 - quarter*3), -(now.Day() - 1))
-	return first.Format("2006-01-02"), first.AddDate(0, 3, -1).Format("2006-01-02")
-}

@@ -1982,7 +1982,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       "Active deals",
       "Their key people",
       "Details",
-      "Lists & tags",
+      "Tags",
     ]) {
       expect(rail?.textContent).toContain(card);
     }

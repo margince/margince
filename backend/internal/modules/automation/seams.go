@@ -71,14 +71,6 @@ type StageRequest struct {
 	JoinPending bool
 }
 
-// Lists is the add_to_list seam onto collections' static-list
-// membership write (collections/members.go's Store.AddMember); compose's
-// adapter drops the returned member row — an automation only needs to
-// know whether the write succeeded, never the row it produced.
-type Lists interface {
-	AddMember(ctx context.Context, listID ids.ListID, entityType string, entityID ids.UUID) error
-}
-
 // Comms is the draft_email seam onto activities' deterministic draft
 // compute (compose's commsAdapter, the same path the MCP draft_email
 // tool proposes over — agents.Comms.DraftEmail structurally satisfies
@@ -162,7 +154,6 @@ var ErrNoEffectClaims = errors.New("automation: no effect claim store configured
 type Executors struct {
 	Provider  datasource.SystemOfRecordProvider
 	Approvals Approvals
-	Lists     Lists
 	Comms     Comms
 	Notifier  Notifier // the durable notice transport — see Notifier's doc
 	Claims    EffectClaims
