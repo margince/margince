@@ -37,12 +37,20 @@ const enCatalogue = "../frontend/src/i18n/en.ts"
 // the only exclusion.
 const certJudgeTask = ai.TaskCertJudge
 
+// tsCommentInCatalogue strips comments before the entries are read. The
+// catalogue is heavily commented and the comments beside this block NAME keys,
+// so without this a commented-out entry — or a key merely mentioned in the
+// prose above one — counts as shipped wording and the gate passes while the
+// card has none. Same reason frontendapprovalkinds_test.go strips them.
+var tsCommentInCatalogue = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
+
 func catalogueKeys(t *testing.T) map[string]bool {
 	t.Helper()
 	raw, err := os.ReadFile(enCatalogue)
 	if err != nil {
 		t.Fatalf("reading the locale catalogue: %v", err)
 	}
+	source := tsCommentInCatalogue.ReplaceAllString(string(raw), "")
 	// Match the STATEMENT, not the line: a key whose translation wraps onto the
 	// next line is one statement, and a line-wise scan would miss its
 	// neighbours. Under-recognition is the one way this gate must not break —
@@ -52,7 +60,7 @@ func catalogueKeys(t *testing.T) map[string]bool {
 	// the "no wording" this gate exists to prevent.
 	keyed := regexp.MustCompile(`"(aiCert\.(?:job|site)\.[a-z0-9_.]+)"\s*:\s*\n?\s*"([^"]*)"`)
 	found := map[string]bool{}
-	for _, m := range keyed.FindAllStringSubmatch(string(raw), -1) {
+	for _, m := range keyed.FindAllStringSubmatch(source, -1) {
 		key, name := m[1], strings.TrimSpace(m[2])
 		if name == "" {
 			continue // present but unnamed is the same as absent to a reader
@@ -144,4 +152,30 @@ func dedupe(in []string) []string {
 		}
 	}
 	return out
+}
+
+// A commented-out entry ships no wording, so it must not count as a name.
+//
+// The catalogue carries prose beside these keys, and the block above this one
+// in en.ts explains what they are for — so a scan of raw text can read an
+// entry somebody disabled, or a key merely mentioned in a sentence, as a
+// shipped name and pass while the card silently drops the job.
+func TestACommentedCatalogueEntryIsNotAName(t *testing.T) {
+	t.Parallel()
+
+	const disabled = `
+  // "aiCert.job.commented_out": "Should not count",
+  /* "aiCert.site.blocked.out": "Nor should this" */
+  "aiCert.job.real_one": "A real name",
+`
+	source := tsCommentInCatalogue.ReplaceAllString(disabled, "")
+	keyed := regexp.MustCompile(`"(aiCert\.(?:job|site)\.[a-z0-9_.]+)"\s*:\s*\n?\s*"([^"]*)"`)
+
+	var got []string
+	for _, m := range keyed.FindAllStringSubmatch(source, -1) {
+		got = append(got, m[1])
+	}
+	if len(got) != 1 || got[0] != "aiCert.job.real_one" {
+		t.Errorf("read %v from the catalogue; only the uncommented entry is a shipped name", got)
+	}
 }

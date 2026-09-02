@@ -267,7 +267,7 @@ func unmeasuredFallbacks(routing ai.RoutingConfig, task ai.Task, serving ai.Tier
 	env := string(routing.Profile)
 	seen := map[string]bool{}
 	var out []string
-	servingModel := routing.Tiers[serving].Model
+	servingBinding := routing.Tiers[serving]
 	for _, tier := range ai.ServableTiers(task) {
 		if tier == serving {
 			continue
@@ -276,16 +276,22 @@ func unmeasuredFallbacks(routing ai.RoutingConfig, task ai.Task, serving ai.Tier
 			continue // an unbound rung serves nothing; it is a routing gap, not a measurement gap
 		}
 		binding := routing.Tiers[tier]
-		// A lower rung bound to the SAME model is not a fallback a reader can
+		// A lower rung bound to the SAME binding is not a fallback a reader can
 		// act on: the row already reports that model, and naming it again as
 		// "a fallback we have not checked" contradicts the line above it.
-		if binding.Model == servingModel {
+		//
+		// Compared as (provider, model), which is how the snapshot identifies a
+		// measurement: one model id served through two providers is two bindings
+		// with two records, and matching on the id alone would suppress a genuine
+		// unmeasured fallback as though it were the serving one.
+		if binding.Provider == servingBinding.Provider && binding.Model == servingBinding.Model {
 			continue
 		}
-		if seen[binding.Model] || measuredAnywhere(sites, task, binding, env, snap) {
+		identity := binding.Provider + "/" + binding.Model
+		if seen[identity] || measuredAnywhere(sites, task, binding, env, snap) {
 			continue
 		}
-		seen[binding.Model] = true
+		seen[identity] = true
 		out = append(out, binding.Model)
 	}
 	return out

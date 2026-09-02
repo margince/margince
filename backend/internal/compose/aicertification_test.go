@@ -486,3 +486,30 @@ func TestSitesThatAgreeNameNoWorstSite(t *testing.T) {
 		t.Errorf("worst_site = %q where every site read the same", *job.WorstSite)
 	}
 }
+
+// A measurement is identified by (provider, model), so one model id served
+// through two providers is two bindings with two records. Matching on the id
+// alone would suppress a genuine unmeasured fallback as though it were the
+// serving one.
+func TestAFallbackOnAnotherProviderIsNotTheServingBinding(t *testing.T) {
+	t.Parallel()
+
+	routing := ai.RoutingConfig{
+		Tiers: map[ai.Tier]ai.ProviderConfig{
+			ai.TierCheapCloud: {Provider: testProvider, Model: testModel},
+			// The same model id, through a different vendor.
+			ai.TierLocalSmall: {Provider: "vllm", Model: testModel},
+		},
+		Profile: ai.Profile(testEnv),
+	}
+	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+	snap := snapOf(t, rowOf("draft_reply", "reply", snapshot.StatusCurrent, "certified", 9, 9, 3, 0))
+	job := jobNamed(t, certificationView(routing, sites, snap), ai.TaskDraftReply)
+
+	if job.UnmeasuredFallbacks == nil {
+		t.Fatal("the same model id on another provider was suppressed as the serving binding")
+	}
+	if len(*job.UnmeasuredFallbacks) != 1 || (*job.UnmeasuredFallbacks)[0] != testModel {
+		t.Errorf("unmeasured_fallbacks = %v, want the ungraded vllm binding", *job.UnmeasuredFallbacks)
+	}
+}
