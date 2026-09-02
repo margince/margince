@@ -23,13 +23,17 @@ package privacy
 
 import (
 	"context"
+	"encoding/json"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -428,8 +432,8 @@ func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
 			// The create row must be THERE and withheld, which is what
 			// namesTheSubject insists on: absence alone would pass on an empty
 			// page, or on one holding only the tombstone.
-			if namesTheSubject(t, page) {
-				t.Errorf("an erased %s still names the subject", entityType)
+			if survivors := contentSurvivingOnTheCreateRow(t, page); len(survivors) > 0 {
+				t.Errorf("an erased %s still carries %v", entityType, survivors)
 			}
 		})
 	}
@@ -457,9 +461,9 @@ func TestAnAttachmentWithNoRowLeftIsWithheldRatherThanReleased(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListAuditLog: %v", err)
 	}
-	if namesTheSubject(t, page) {
-		t.Error("an attachment whose row is gone still names the subject — a boundary that opens " +
-			"when it cannot tell is not a boundary")
+	if survivors := contentSurvivingOnTheCreateRow(t, page); len(survivors) > 0 {
+		t.Errorf("an attachment whose row is gone still carries %v — a boundary that opens when "+
+			"it cannot tell is not a boundary", survivors)
 	}
 }
 
@@ -477,17 +481,39 @@ func (e *auditBoundaryEnv) collateralImage(t *testing.T, entityType string, id i
 	}
 }
 
-// namesTheSubject reports whether the create row on the page still carries the
-// subject's name, failing the test if there is no create row to judge — absence
-// would otherwise pass on an empty page, or on one holding only a tombstone.
-func namesTheSubject(t *testing.T, page AuditPage) bool {
+// contentSurvivingOnTheCreateRow names what the create row's image still
+// carries beyond the withheld marker, so a failure says WHICH key leaked.
+//
+// The whole image, not one string in it. The fixture carries a filename as well
+// as a subject, and an image that dropped the subject while keeping
+// sara-subject-passport.pdf has disclosed the same person — a boundary asserted
+// one substring at a time is one that holds until somebody adds a second field.
+//
+// It fails the test when there is no create row to judge: absence would
+// otherwise pass on an empty page, or on one holding only the tombstone.
+func contentSurvivingOnTheCreateRow(t *testing.T, page AuditPage) []string {
 	t.Helper()
 	for _, entry := range page.Entries {
 		if entry.Action != "create" {
 			continue
 		}
-		return strings.Contains(string(entry.After), "Sara Subject")
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(entry.After, &fields); err != nil {
+			t.Fatalf("the create image is not an object: %s", entry.After)
+		}
+		state, marked := fields["content_state"]
+		if !marked || string(state) != strconv.Quote(string(crmcontracts.ActivityContentStateWithheld)) {
+			t.Errorf("the create image carries no withheld marker: %s", entry.After)
+		}
+		var survivors []string
+		for key := range fields {
+			if key != "content_state" {
+				survivors = append(survivors, key)
+			}
+		}
+		sort.Strings(survivors)
+		return survivors
 	}
 	t.Fatal("the create row is absent from the page, so this proved nothing")
-	return false
+	return nil
 }
