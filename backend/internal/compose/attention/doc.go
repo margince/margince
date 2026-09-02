@@ -40,9 +40,9 @@
 // claims lane, the task lane, and it.
 //
 // What would earn one is a different QUESTION rather than a second rendering of
-// this one — the unassigned open promises, say, which is the state that tool's
-// own result type calls out and which `planned` cannot show. That lane deserves
-// its own name rather than the plan's.
+// this one — the unassigned open promises, say, which is the state that the
+// tool's own result type calls out and which `planned` cannot show. That lane
+// deserves its own name rather than the plan's.
 //
 // The tool itself is untouched by any of this and still answers.
 //
