@@ -158,6 +158,15 @@ describe("PageTitle", () => {
     expect(container.querySelector(".pagesub")).toBeNull();
   });
 
+  // Home greets the reader by name in its own h1, so the shell adds none: two
+  // top-level headings is no document outline at all. Same yield-whole rule as
+  // a record route below, for the same reason.
+  it("renders nothing at all on a screen that heads itself", () => {
+    const { container } = render(<PageTitle route={{ screen: "home" }} />);
+    expect(container.querySelector(".pagetitle")).toBeNull();
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+  });
+
   // A record names itself: its surface prints the identity block, and that is
   // the page's one h1. This yields whole — no heading, no subtitle, no element
   // at all — or the document would offer two page titles for the same record.
