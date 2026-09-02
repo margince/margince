@@ -20,6 +20,36 @@ type NotDisplayed = Readonly<{ notDisplayed: string }>;
 /** The (state -> message key) table of a kind the rail narrates. */
 type LineSet = Readonly<Record<ActivityState, MessageKey>>;
 
+/**
+ * A stem the catalog spells out under `agent.activity.` for every state.
+ *
+ * Derived from the catalog rather than listed, so the compiler refuses a stem
+ * with no copy: `lineSet` builds all six keys from it, and each of the six has
+ * to be a MessageKey, which means a stem missing one state fails the build
+ * rather than rendering a raw key to a reader.
+ */
+type LineStem = {
+  [K in MessageKey]: K extends `agent.activity.${infer S}.queued` ? S : never;
+}[MessageKey];
+
+/**
+ * The six lines of one kind, from the one stem they share.
+ *
+ * One spelling of the state axis, rather than six literal keys per kind: the
+ * table is nineteen sets long, and a stem is the only thing that varies
+ * between them.
+ */
+function lineSet(stem: LineStem): LineSet {
+  return {
+    queued: `agent.activity.${stem}.queued`,
+    running: `agent.activity.${stem}.running`,
+    stalled: `agent.activity.${stem}.stalled`,
+    done: `agent.activity.${stem}.done`,
+    degraded: `agent.activity.${stem}.degraded`,
+    failed: `agent.activity.${stem}.failed`,
+  };
+}
+
 const notDisplayed = (reason: string): NotDisplayed => ({
   notDisplayed: reason,
 });
@@ -44,13 +74,15 @@ const SITE_READ_STEP = notDisplayed(
   "a step inside one website read that `site_extract` already narrates: a read files one occurrence per lane it runs under its own correlation id, so drawing this lane too would list the same read twice. site_fact_extract is the read's page-parallel fact pass; site_triage runs only for a domain-triage read no human requested, which is workspace-scoped and reaches nobody's feed anyway",
 );
 /**
- * The line for one (kind, state), by literal key — or the reason there is none.
+ * The line for one (kind, state), by key, or the reason there is none.
  *
- * LITERAL, not `t(`agent.activity.${kind}.${state}`)`. The orphan guard in
- * i18n.test.ts counts a key as rendered when it starts with a template STEM,
- * and its regex stops at the first `${` — so an interpolated key would vouch
- * for the whole `agent.activity.` namespace forever, and a retired kind's copy
- * would sit in three catalogs with nothing to flag it.
+ * Each set is BUILT from one stem by `lineSet`, so the orphan guard in
+ * i18n.test.ts cannot hold this namespace: it counts a key as rendered when
+ * the key starts with a template stem, and `lineSet`'s template vouches for
+ * all of `agent.activity.` at once. What holds it instead is the copy-set spec
+ * in ai-activity-lines.test.ts, which asserts the catalog's `agent.activity.`
+ * keys are EXACTLY the keys these maps name, in both directions, so a retired
+ * kind's copy fails there rather than sitting in three catalogs unflagged.
  *
  * TOTAL over the contract's kinds, and the compiler is what holds it there: a
  * new kind fails the build until somebody either writes its copy in every
@@ -72,118 +104,41 @@ export const ACTIVITY_LINE: Readonly<
     Readonly<Record<ActivityState, MessageKey>> | NotDisplayed
   >
 > = {
-  morning_brief: {
-    queued: "agent.activity.morningBrief.queued",
-    running: "agent.activity.morningBrief.running",
-    stalled: "agent.activity.morningBrief.stalled",
-    done: "agent.activity.morningBrief.done",
-    degraded: "agent.activity.morningBrief.degraded",
-    failed: "agent.activity.morningBrief.failed",
-  },
-  overnight_at_risk_sweep: {
-    queued: "agent.activity.riskSweep.queued",
-    running: "agent.activity.riskSweep.running",
-    stalled: "agent.activity.riskSweep.stalled",
-    done: "agent.activity.riskSweep.done",
-    degraded: "agent.activity.riskSweep.degraded",
-    failed: "agent.activity.riskSweep.failed",
-  },
-  document_extract: {
-    queued: "agent.activity.documentExtract.queued",
-    running: "agent.activity.documentExtract.running",
-    stalled: "agent.activity.documentExtract.stalled",
-    done: "agent.activity.documentExtract.done",
-    degraded: "agent.activity.documentExtract.degraded",
-    failed: "agent.activity.documentExtract.failed",
-  },
+  morning_brief: lineSet("morningBrief"),
+  overnight_at_risk_sweep: lineSet("riskSweep"),
+  document_extract: lineSet("documentExtract"),
 
   // `queued` is written for all three and reachable by none of them: the router
   // announces a call it is ABOUT to serve, never one waiting, and no carrier
   // owns these tasks. The LineSet type is total over the state axis, so the key
   // exists because the compiler requires it — not because a producer is
   // missing. Saying so here saves the next reader the hunt.
-  summarize: {
-    queued: "agent.activity.summarize.queued",
-    running: "agent.activity.summarize.running",
-    stalled: "agent.activity.summarize.stalled",
-    done: "agent.activity.summarize.done",
-    degraded: "agent.activity.summarize.degraded",
-    failed: "agent.activity.summarize.failed",
-  },
-  draft_reply: {
-    queued: "agent.activity.draftReply.queued",
-    running: "agent.activity.draftReply.running",
-    stalled: "agent.activity.draftReply.stalled",
-    done: "agent.activity.draftReply.done",
-    degraded: "agent.activity.draftReply.degraded",
-    failed: "agent.activity.draftReply.failed",
-  },
-  offer_draft: {
-    queued: "agent.activity.offerDraft.queued",
-    running: "agent.activity.offerDraft.running",
-    stalled: "agent.activity.offerDraft.stalled",
-    done: "agent.activity.offerDraft.done",
-    degraded: "agent.activity.offerDraft.degraded",
-    failed: "agent.activity.offerDraft.failed",
-  },
+  summarize: lineSet("summarize"),
+  draft_reply: lineSet("draftReply"),
+  offer_draft: lineSet("offerDraft"),
 
   // The AI reading up on a company for the person who asked. Each lands its
   // result on the surface that asked, and each is ALSO drawn here, because the
   // orb is the one place a reader looks to learn the AI is at work at all —
   // a card that fills in forty seconds later tells nobody what was happening
   // during the forty seconds.
-  growth_fit: {
-    queued: "agent.activity.growthFit.queued",
-    running: "agent.activity.growthFit.running",
-    stalled: "agent.activity.growthFit.stalled",
-    done: "agent.activity.growthFit.done",
-    degraded: "agent.activity.growthFit.degraded",
-    failed: "agent.activity.growthFit.failed",
-  },
-  corpus_ask: {
-    queued: "agent.activity.corpusAsk.queued",
-    running: "agent.activity.corpusAsk.running",
-    stalled: "agent.activity.corpusAsk.stalled",
-    done: "agent.activity.corpusAsk.done",
-    degraded: "agent.activity.corpusAsk.degraded",
-    failed: "agent.activity.corpusAsk.failed",
-  },
+  growth_fit: lineSet("growthFit"),
+  corpus_ask: lineSet("corpusAsk"),
   // The website read behind the organization page's Enrich card, and behind
   // onboarding — where the screen is railless (`onboarding` is in
   // RAIL_LESS_SCREENS, nav.ts), so this copy is only ever seen for the card.
-  cold_start: {
-    queued: "agent.activity.coldStart.queued",
-    running: "agent.activity.coldStart.running",
-    stalled: "agent.activity.coldStart.stalled",
-    done: "agent.activity.coldStart.done",
-    degraded: "agent.activity.coldStart.degraded",
-    failed: "agent.activity.coldStart.failed",
-  },
+  cold_start: lineSet("coldStart"),
   // The deep website read a person starts from the organization page. Its
   // attribution is a fact about the READ: compose binds the requester as
   // on_behalf_of (deepreadprincipal.go), so a human's read lands in their own
   // feed, while a domain-triage or auto-enrich read names nobody and reaches
   // nobody's rail.
-  site_extract: {
-    queued: "agent.activity.siteExtract.queued",
-    running: "agent.activity.siteExtract.running",
-    stalled: "agent.activity.siteExtract.stalled",
-    done: "agent.activity.siteExtract.done",
-    degraded: "agent.activity.siteExtract.degraded",
-    failed: "agent.activity.siteExtract.failed",
-  },
+  site_extract: lineSet("siteExtract"),
 
   // The weekly retrospective's sentence. A per-rep occurrence a rep can see —
   // it runs under their own principal over their own week — so it gets real
   // copy rather than the system-sweep line.
-  weekly_review: {
-    queued: "agent.activity.weeklyReview.queued",
-    running: "agent.activity.weeklyReview.running",
-    stalled: "agent.activity.weeklyReview.stalled",
-    done: "agent.activity.weeklyReview.done",
-    degraded: "agent.activity.weeklyReview.degraded",
-    failed: "agent.activity.weeklyReview.failed",
-  },
+  weekly_review: lineSet("weeklyReview"),
   brief_ranking: SYSTEM_SWEEP,
   capture_classify: SYSTEM_SWEEP,
   capture_confidentiality_verdict: SYSTEM_SWEEP,
@@ -248,70 +203,14 @@ export const PANEL_HEADING: Readonly<
  * true.
  */
 export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
-  document_extract: {
-    queued: "agent.activity.documentExtractNamed.queued",
-    running: "agent.activity.documentExtractNamed.running",
-    stalled: "agent.activity.documentExtractNamed.stalled",
-    done: "agent.activity.documentExtractNamed.done",
-    degraded: "agent.activity.documentExtractNamed.degraded",
-    failed: "agent.activity.documentExtractNamed.failed",
-  },
-  summarize: {
-    queued: "agent.activity.summarizeNamed.queued",
-    running: "agent.activity.summarizeNamed.running",
-    stalled: "agent.activity.summarizeNamed.stalled",
-    done: "agent.activity.summarizeNamed.done",
-    degraded: "agent.activity.summarizeNamed.degraded",
-    failed: "agent.activity.summarizeNamed.failed",
-  },
-  draft_reply: {
-    queued: "agent.activity.draftReplyNamed.queued",
-    running: "agent.activity.draftReplyNamed.running",
-    stalled: "agent.activity.draftReplyNamed.stalled",
-    done: "agent.activity.draftReplyNamed.done",
-    degraded: "agent.activity.draftReplyNamed.degraded",
-    failed: "agent.activity.draftReplyNamed.failed",
-  },
-  offer_draft: {
-    queued: "agent.activity.offerDraftNamed.queued",
-    running: "agent.activity.offerDraftNamed.running",
-    stalled: "agent.activity.offerDraftNamed.stalled",
-    done: "agent.activity.offerDraftNamed.done",
-    degraded: "agent.activity.offerDraftNamed.degraded",
-    failed: "agent.activity.offerDraftNamed.failed",
-  },
-  growth_fit: {
-    queued: "agent.activity.growthFitNamed.queued",
-    running: "agent.activity.growthFitNamed.running",
-    stalled: "agent.activity.growthFitNamed.stalled",
-    done: "agent.activity.growthFitNamed.done",
-    degraded: "agent.activity.growthFitNamed.degraded",
-    failed: "agent.activity.growthFitNamed.failed",
-  },
-  corpus_ask: {
-    queued: "agent.activity.corpusAskNamed.queued",
-    running: "agent.activity.corpusAskNamed.running",
-    stalled: "agent.activity.corpusAskNamed.stalled",
-    done: "agent.activity.corpusAskNamed.done",
-    degraded: "agent.activity.corpusAskNamed.degraded",
-    failed: "agent.activity.corpusAskNamed.failed",
-  },
-  cold_start: {
-    queued: "agent.activity.coldStartNamed.queued",
-    running: "agent.activity.coldStartNamed.running",
-    stalled: "agent.activity.coldStartNamed.stalled",
-    done: "agent.activity.coldStartNamed.done",
-    degraded: "agent.activity.coldStartNamed.degraded",
-    failed: "agent.activity.coldStartNamed.failed",
-  },
-  site_extract: {
-    queued: "agent.activity.siteExtractNamed.queued",
-    running: "agent.activity.siteExtractNamed.running",
-    stalled: "agent.activity.siteExtractNamed.stalled",
-    done: "agent.activity.siteExtractNamed.done",
-    degraded: "agent.activity.siteExtractNamed.degraded",
-    failed: "agent.activity.siteExtractNamed.failed",
-  },
+  document_extract: lineSet("documentExtractNamed"),
+  summarize: lineSet("summarizeNamed"),
+  draft_reply: lineSet("draftReplyNamed"),
+  offer_draft: lineSet("offerDraftNamed"),
+  growth_fit: lineSet("growthFitNamed"),
+  corpus_ask: lineSet("corpusAskNamed"),
+  cold_start: lineSet("coldStartNamed"),
+  site_extract: lineSet("siteExtractNamed"),
 };
 
 /**

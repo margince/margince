@@ -162,10 +162,13 @@ the build** until somebody either writes its copy in every locale or says, in
 code, why it is not shown. The reason lives in the source rather than in a review
 comment for the same reason: the next author reads the file, not the PR.
 
-Copy is by LITERAL key, never `t(\`agent.activity.${kind}.${state}\`)` — the
-orphan guard in `i18n.test.ts` counts a key as rendered when it starts with a
-template stem, so an interpolated key would vouch for the whole namespace forever
-and a retired kind's copy would sit in three catalogs with nothing to flag it.
+Each kind's six keys are built from one stem by `lineSet`, so the orphan guard in
+`i18n.test.ts` cannot hold this namespace: it counts a key as rendered when the key
+starts with a template stem, and `lineSet`'s template vouches for all of
+`agent.activity.` at once. What holds it instead is the copy-set spec in
+`ai-activity-lines.test.ts`, which asserts the catalog's `agent.activity.` keys are
+exactly the keys the maps name, in both directions, so a retired kind's copy fails
+there rather than sitting in three catalogs unflagged.
 
 **Eleven kinds are narrated**, in en/de/vi, total over all six states — and
 every kind a person asks for about ONE record also carries a **named** variant
@@ -198,7 +201,7 @@ router announces a call it is ABOUT to serve, never one waiting, and no carrier
 owns these tasks. The key exists because the state axis is total and the compiler
 requires it — not because a producer is missing.
 
-**Twelve are not narrated**, and each reason is a different kind of fact:
+**Sixteen are not narrated**, and each reason is a different kind of fact:
 
 | Reason | Kinds | Why |
 |---|---|---|

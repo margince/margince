@@ -104,6 +104,14 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// Rank: the sender of an inbound message is who we are answering, then
 		// a "to" recipient (our own outbound, where the addressee is the
 		// counterparty), then anyone else on it, then the bare link.
+		//
+		// WHOSE name, precisely: the counterparty's, never one of our own. A
+		// participant carrying user_id is one of this installation's own
+		// people, and on our outbound mail that is the `from` row, so a rank
+		// that admitted it would greet the rep in their own draft and tell the
+		// activity rail the reply is to them. ReplyAddressFor excludes the
+		// seat for the same reason, and the two must agree on who a reply is
+		// to or the greeting and the envelope name different people.
 		q := `
 			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, '')
 			  FROM person p
@@ -112,7 +120,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 			              CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
 			              created_at, id
 			         FROM activity_participant
-			        WHERE activity_id = $1 AND person_id IS NOT NULL
+			        WHERE activity_id = $1 AND person_id IS NOT NULL AND user_id IS NULL
 			       UNION ALL
 			       SELECT person_id, 4 AS rank, created_at, id
 			         FROM activity_link

@@ -166,11 +166,12 @@ func TestOurOwnSenderIsNeverTheAddressOnOurOutboundMail(t *testing.T) {
 	if got.Address != "dietmar@buyer.test" {
 		t.Errorf("address = %q, want the counterparty dietmar@buyer.test", got.Address)
 	}
-	// The GREETING still names the sender, and that is correct rather than a
-	// mismatch: the two fields answer different questions, and only the
-	// address is constrained to a counterparty.
-	if got.FullName != "Sofia Meier" {
-		t.Errorf("full name = %q, want the greeted sender Sofia Meier", got.FullName)
+	// The GREETING names the same counterparty the address does. A draft that
+	// opens "Hi Sofia" over an envelope to Dietmar greets the rep in their own
+	// mail, and the activity rail, which names the reply for the greeted
+	// person, would say the reply is to them.
+	if got.FullName != "Dietmar Rietsch" {
+		t.Errorf("full name = %q, want the counterparty Dietmar Rietsch, never our own sender", got.FullName)
 	}
 }
 

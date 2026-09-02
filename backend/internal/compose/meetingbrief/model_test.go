@@ -20,15 +20,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// laneReturning answers one canned reply, and records the request it was sent.
+// laneReturning answers one canned reply, and records the request it was sent
+// and the context it was called with.
 type laneReturning struct {
 	reply string
 	err   error
 	sent  *model.Request
+	ctx   context.Context
 }
 
-func (l *laneReturning) Complete(_ context.Context, req model.Request) (model.Response, error) {
+func (l *laneReturning) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	l.sent = &req
+	l.ctx = ctx
 	if l.err != nil {
 		return model.Response{}, l.err
 	}

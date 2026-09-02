@@ -151,8 +151,18 @@ func floorSection(floor []Section, kind crmcontracts.MeetingBriefSectionKind) (S
 	return Section{}, false
 }
 
+// workSubjectOf names what a brief or plan run is about for the AI-activity
+// rail: the company when the meeting has one, else the meeting's own subject,
+// so a meeting with no employer on record is still named rather than generic.
+func workSubjectOf(in Input) string {
+	if in.Company != "" {
+		return in.Company
+	}
+	return in.Subject
+}
+
 func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) ([]Section, error) {
-	resp, err := lane.Complete(principal.WithWorkSubject(ctx, in.Company), BriefRequest(in, lang))
+	resp, err := lane.Complete(principal.WithWorkSubject(ctx, workSubjectOf(in)), BriefRequest(in, lang))
 	if err != nil {
 		return nil, err
 	}

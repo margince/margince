@@ -41,7 +41,7 @@ func WritePlan(
 func writePlanWithModel(
 	ctx context.Context, lane Completer, in Input, floor Plan, lang string,
 ) (Plan, error) {
-	reply, err := lane.Complete(principal.WithWorkSubject(ctx, in.Company), PlanRequest(planPromptOf(in, floor), lang))
+	reply, err := lane.Complete(principal.WithWorkSubject(ctx, workSubjectOf(in)), PlanRequest(planPromptOf(in, floor), lang))
 	if err != nil {
 		return Plan{}, err
 	}

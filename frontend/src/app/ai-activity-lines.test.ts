@@ -135,7 +135,7 @@ describe("the activity copy set", () => {
   // Listed rather than derived, because which kinds are "about one record" is a
   // fact about the product that no type carries.
   it("names the subject for every kind a person asks for about one record", () => {
-    for (const kind of [
+    const aboutOneRecord = [
       "summarize",
       "draft_reply",
       "offer_draft",
@@ -144,9 +144,15 @@ describe("the activity copy set", () => {
       "cold_start",
       "site_extract",
       "document_extract",
-    ] as const) {
+    ] as const;
+    for (const kind of aboutOneRecord) {
       expect(NAMED_LINE[kind], kind).toBeDefined();
     }
+    // The list above is also the CEILING, not only the floor: a kind added to
+    // NAMED_LINE without a matching entry here would otherwise pass unnoticed,
+    // and this list is the product's own statement of which kinds are about
+    // one record.
+    expect(Object.keys(NAMED_LINE).sort()).toEqual([...aboutOneRecord].sort());
   });
 
   // A kind that is not narrated says why, in a sentence a reader of this file

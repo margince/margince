@@ -123,15 +123,13 @@ func (e *scrapeEngine) Propose(ctx context.Context, orgID ids.UUID, override str
 }
 
 // siteHostOf is the site a reader would recognise in a rail line: the host of
-// the URL being read, without scheme, path or a leading "www.". The empty
-// string for anything that does not parse as a URL, which the rail then names
-// nothing for rather than echoing a malformed address at a reader.
+// the URL being read, lowercased and without a leading "www.", so the rail
+// names a company the same way regardless of how an override capitalised its
+// address. The empty string for anything that does not parse as a URL, which
+// the rail then names nothing for rather than echoing a malformed address at
+// a reader.
 func siteHostOf(rawURL string) string {
-	parsed, err := url.Parse(rawURL)
-	if err != nil {
-		return ""
-	}
-	return strings.TrimPrefix(parsed.Hostname(), "www.")
+	return strings.TrimPrefix(strings.ToLower(hostOf(rawURL)), "www.")
 }
 
 type scrapeHandlers struct{ engine *scrapeEngine }
