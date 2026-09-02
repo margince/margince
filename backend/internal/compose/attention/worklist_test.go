@@ -42,6 +42,10 @@ func withDue(at time.Time) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.DueAt = &at }
 }
 
+func withOccurred(at time.Time) func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) { i.OccurredAt = &at }
+}
+
 func withDetail(detail string) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.Detail = &detail }
 }

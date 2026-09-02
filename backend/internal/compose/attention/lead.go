@@ -128,7 +128,7 @@ func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistRe
 	case string(crmcontracts.LeadSlaStateBreached):
 		because := []crmcontracts.WorklistReason{reason("response_overdue", nil)}
 		if !lead.DeadlineAt.IsZero() {
-			days := int(asOf.Sub(lead.DeadlineAt).Hours() / 24)
+			days := daysSince(lead.DeadlineAt, asOf)
 			if days > 0 {
 				because = append(because, reason("waiting_days", daysValue(days)))
 			}

@@ -275,7 +275,7 @@ func (s *Service) worklistFrom(
 	// the whole narrowed set — so page two weighs exactly what page one weighed
 	// and continues it rather than re-deciding it.
 	shown, more, reached := pageFrom(rows, limit, cursor)
-	ordered := rankAll(shown)
+	ordered := rankAll(stampAsOf(shown, day.AsOf))
 	bands := bandsOf(ordered)
 	// What never answered, assembled ONCE and used twice: the page names these
 	// lanes to the reader, and the readings below refuse to state exact figures

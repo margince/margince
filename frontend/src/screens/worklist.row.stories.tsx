@@ -66,7 +66,6 @@ type Story = StoryObj<typeof WorklistRow>;
 const baseArgs = {
   position: 1,
   owner: "",
-  asOf: "2026-08-31T09:00:00Z",
   selected: false,
   onSelect: () => undefined,
   onReview: () => undefined,

@@ -1,14 +1,13 @@
 import { ENTITY, isEntityKind } from "../app/entity";
-
 import { routeHash } from "../app/router";
 import {
-  calendarDaysBetween,
   formatDate,
   formatDateTime,
   formatMoney,
   formatNumber,
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
+import { translatePlural } from "../i18n";
 import { COMPOSE_PARAM } from "./personpage.address";
 import { settingsAddress } from "./settings";
 import type {
@@ -119,13 +118,13 @@ function valueText(
   }
 }
 
-// The reasons that read differently with a figure in them. Spelled as a set
-// rather than inferred from whether a value arrived: a value can travel for a
-// reason whose sentence has nowhere to put it, and a key composed from that
-// would not exist.
+// The reasons that read differently with a figure in them and whose figure is
+// a currency amount, not a count — a money figure never needs the reader's
+// plural rule, which is what sets these apart from DAYS_VALUED_REASONS below.
+// Spelled as a set rather than inferred from whether a value arrived: a value
+// can travel for a reason whose sentence has nowhere to put it, and a key
+// composed from that would not exist.
 const VALUED_REASONS = {
-  waiting_days: true,
-  quiet_days: true,
   expected_revenue: true,
   material: true,
   below_material: true,
@@ -135,6 +134,20 @@ type ValuedReason = keyof typeof VALUED_REASONS;
 
 function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
   return kind in VALUED_REASONS;
+}
+
+// The valued reasons whose figure is a DAY COUNT rather than a currency
+// amount. "1 days" is a different kind of wrong from "1 day" — a count needs
+// the reader's own plural rule, which a money figure never does.
+const DAYS_VALUED_REASONS = {
+  waiting_days: true,
+  quiet_days: true,
+} as const;
+
+function daysValued(
+  kind: WorklistReason["kind"],
+): kind is keyof typeof DAYS_VALUED_REASONS {
+  return kind in DAYS_VALUED_REASONS;
 }
 
 // Every reason this client has a sentence for.
@@ -204,6 +217,15 @@ export function reasonText(
     return null;
   }
   const value = valueText(reason.value, locale, zone);
+  if (
+    value !== null &&
+    daysValued(reason.kind) &&
+    reason.value?.kind === "days" &&
+    reason.value.days != null
+  ) {
+    const base = `worklist.because.${reason.kind}.value` as const;
+    return translatePlural(locale, base, reason.value.days, { value });
+  }
   if (value !== null && valued(reason.kind)) {
     return t(`worklist.because.${reason.kind}.value` as const, { value });
   }
@@ -226,33 +248,6 @@ function paired(
   return comparator in PAIRED_COMPARATORS;
 }
 
-// waitingDaysSideDays reads one side of a `waiting_days` tie-break as a raw
-// day count, or null when the value carries nothing to convert (it is the
-// ordinary bucketed `days` value, not the tie-break's exact-instant one).
-//
-// The bucketed comparator always sends a `days` value. When two items tie on
-// the bucket, the server's own tie-break falls back to the exact instant each
-// occurred (a `date` value) — the true signal that broke the tie — but the
-// heading above this line promises a day count either way. Converting that
-// instant to days-since-then here keeps the line honest with its own heading,
-// instead of printing two clock times under "how many days". Left as a raw
-// number rather than formatted text: the caller has to compare the two sides
-// before it can decide whether showing them is honest at all.
-// Floored at zero: `now` is the server's own snapshot instant (Worklist.as_of)
-// and every occurred_at it ranked against is one it already read as past, so a
-// negative count here means only that the two clocks disagree at the margin
-// (a leap second, a snapshot mid-write) — never a real reading of the future.
-// A negative count under "how many days" is the same dishonest line this
-// function exists to remove, just spelled with a minus sign.
-function waitingDaysSideDays(
-  value: WorklistValue | undefined,
-  now: Date,
-): number | null {
-  return value?.kind === "date" && value.date
-    ? Math.max(0, calendarDaysBetween(new Date(value.date), now))
-    : null;
-}
-
 // Why this row sits above the next one.
 //
 // The comparator that DECIDED, with both sides' values — so a reader can check
@@ -264,7 +259,6 @@ export function comparisonText(
   t: T,
   locale: Locale,
   zone: string,
-  now: Date = new Date(),
 ): string | null {
   if (
     !comparison ||
@@ -272,25 +266,6 @@ export function comparisonText(
     !knownComparator(comparison.comparator)
   ) {
     return null;
-  }
-  if (comparison.comparator === "waiting_days") {
-    const mineDays = waitingDaysSideDays(comparison.mine, now);
-    const theirsDays = waitingDaysSideDays(comparison.theirs, now);
-    if (mineDays !== null && theirsDays !== null) {
-      // Both sides are the tie-break's exact-instant fallback. If they round
-      // to the same day at this display granularity, the comparator decided
-      // on a difference this line cannot show — printing equal numbers would
-      // claim a tie that never happened, so it falls back to the bare
-      // sentence instead, the same call the backend's own same-minute guard
-      // already makes one level finer (rank.go's `sameMinute`).
-      if (mineDays === theirsDays) {
-        return t(`worklist.above.${comparison.comparator}` as const);
-      }
-      return t(`worklist.above.${comparison.comparator}.pair` as const, {
-        mine: formatNumber(mineDays, locale),
-        theirs: formatNumber(theirsDays, locale),
-      });
-    }
   }
   const mine = valueText(comparison.mine, locale, zone);
   const theirs = valueText(comparison.theirs, locale, zone);

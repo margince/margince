@@ -303,7 +303,6 @@ function WorklistBody({
                       item={item}
                       position={index + 1}
                       owner={owner}
-                      asOf={day.as_of}
                       selected={selectedId === item.id}
                       onSelect={() =>
                         onSelect(selectedId === item.id ? "" : item.id)
