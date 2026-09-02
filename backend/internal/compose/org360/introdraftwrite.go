@@ -68,7 +68,8 @@ const introSystem = `You write one short message asking a COLLEAGUE at your own 
 This is a favour asked of a teammate, not a message to a customer. Write the way somebody writes to a colleague they see every week: brief, direct, no pitch and no pleasantries stacked on the front.
 
 Rules you must not break:
-- Say who you want to meet and why, in one sentence each.
+- Address the colleague by name: open with their first name, then the ask.
+- Say who you want to meet and why, in one sentence each, and name the person you want to meet in full.
 - Do not invent anything about the relationship. You are told how warm it is and when they last spoke; say no more than that.
 - Do not write the introduction itself, and do not write to the contact. The message is TO the colleague.
 - No subject line inside the body.`
