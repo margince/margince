@@ -68,11 +68,11 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, resolveIncumben
 	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), resolveIncumbent, send, companyEnricher{}, nil, nil, nil, brief, slog.Default())
 }
 
-// registryWithGate composes the tool surface. The quota charger arrives as
+// registryWithGate composes the tool surface. The volume budget charger arrives as
 // an option rather than a parameter because only the API server — the one role
 // that serves agent principals through the MCP and REST doors — has a meter to
 // charge. The Surface-B runner and the workflow paths run as the human or the
-// system that started them, and the quota meter governs agents only, so a registry
+// system that started them, and the volume meter governs agents only, so a registry
 // built without one is not an unmetered agent surface; it is a surface no agent
 // reaches.
 //

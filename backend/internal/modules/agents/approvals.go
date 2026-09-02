@@ -36,7 +36,7 @@ type Approvals interface {
 	// already has asks the question again — which is how one act comes to hold
 	// several approvals, each answered separately and none of them spent.
 	StageCall(ctx context.Context, in StageRequest) (id ids.ApprovalID, alreadyApproved bool, err error)
-	// StageQuotaRelease puts a §2.4 step-up in front of the human who lent this
+	// StageVolumeRelease puts a §2.4 step-up in front of the human who lent this
 	// passport, and reports whether anything was staged: a question that human
 	// has already REJECTED is not re-asked, and the refusal then stands alone.
 	//
@@ -45,7 +45,7 @@ type Approvals interface {
 	// record; this carries no change and no target — it is a question about a
 	// credential — and one shared shape would leave every caller of the common
 	// method passing empty halves that have no meaning for it.
-	StageQuotaRelease(ctx context.Context, in QuotaReleaseRequest) (id ids.ApprovalID, staged bool, err error)
+	StageVolumeRelease(ctx context.Context, in VolumeReleaseRequest) (id ids.ApprovalID, staged bool, err error)
 	// Redeem answers the version the approval was pinned to, so a transport
 	// that forwards the authorized call can bind its own write to it. pinned
 	// is false when the approval carried none — a create, or a target type

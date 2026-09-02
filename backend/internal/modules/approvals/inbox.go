@@ -17,7 +17,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,9 +34,13 @@ type row struct {
 	// TargetType + TargetID are the polymorphic pointer to the entity the
 	// staging acts on (deal, org, person, lead, activity, …); the id stays
 	// untyped because the pair IS the discriminated reference.
-	TargetType     *string
-	TargetID       *ids.UUID
-	TargetVersion  *int64
+	TargetType    *string
+	TargetID      *ids.UUID
+	TargetVersion *int64
+	// TargetLabel is what the target was CALLED when the proposal was staged.
+	// Nil where the type has no name, or where the row had gone by then — the
+	// card says nothing rather than saying unknown.
+	TargetLabel    *string
 	Summary        *string
 	ProposedChange json.RawMessage
 	DiffHash       string
@@ -60,14 +63,14 @@ type row struct {
 }
 
 const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id,
-	target_entity_type, target_entity_id, target_version, summary,
+	target_entity_type, target_entity_id, target_version, target_label, summary,
 	proposed_change, diff_hash, expires_at, decided_by, decided_at, consumed_at, created_at,
 	bundle_id, evidence, effect_failed_at, effect_failure`
 
 func scan(r pgx.Row) (row, error) {
 	var a row
 	err := r.Scan(&a.ID, &a.Kind, &a.Status, &a.ProposedBy, &a.OnBehalfOf, &a.PassportID,
-		&a.TargetType, &a.TargetID, &a.TargetVersion, &a.Summary,
+		&a.TargetType, &a.TargetID, &a.TargetVersion, &a.TargetLabel, &a.Summary,
 		&a.ProposedChange, &a.DiffHash, &a.ExpiresAt, &a.DecidedBy, &a.DecidedAt, &a.ConsumedAt, &a.CreatedAt,
 		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure)
 	return a, err
@@ -389,72 +392,6 @@ func collect(ctx context.Context, tx pgx.Tx, q string, args []any) ([]row, error
 		out = append(out, a)
 	}
 	return out, rows.Err()
-}
-
-// PendingForTarget returns the pending approvals staged against ONE record,
-// filtered by the same decidability rule the inbox uses — a record page must
-// never become the side channel List refuses to be. It takes the caller's
-// transaction so a composite record read assembles every section at one
-// instant instead of opening a second connection for this one.
-//
-// It answers the wire shape rather than the store row: the caller is another
-// package, and re-deriving the effective status (lazy expiry) outside this
-// module is exactly the drift the type keeps unexported to prevent.
-//
-// Every row here shares ONE target, so the target-visibility half of
-// decidable is asked once for the record rather than once per row — the
-// inbox's per-row probe exists because its rows point at different records.
-// The per-kind grant check still varies by row and stays in the loop.
-//
-// The scan is bounded at PendingScanCap rows so one record page cannot pay
-// for an unbounded backlog. A caller counting rather than listing must treat
-// a full result as "this many or more"; limit bounds the RETURNED rows, so
-// pass PendingScanCap to mean "everything the scan found".
-func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType string, targetID ids.UUID, limit int) ([]crmcontracts.Approval, error) {
-	if err := actingForAHuman(ctx); err != nil {
-		return nil, err
-	}
-	p, _ := principal.Actor(ctx)
-	if limit <= 0 || limit > PendingScanCap {
-		limit = PendingScanCap
-	}
-	visible, err := targetVisible(ctx, tx, &targetType, &targetID)
-	if err != nil {
-		return nil, err
-	}
-	if !visible {
-		// The record itself is one this caller could not read — an ungranted
-		// type or an out-of-scope row — so nothing staged against it is
-		// decidable, and saying so is the same existence-hiding answer the
-		// record read gives.
-		return []crmcontracts.Approval{}, nil
-	}
-	now := s.now()
-	pending := statusPending
-	q, args := approvalPageQuery(ListInput{
-		Status: &pending, TargetType: &targetType, TargetID: &targetID,
-	}, nil)
-	batch, err := collect(ctx, tx, q, args)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]crmcontracts.Approval, 0, len(batch))
-	for i := range batch {
-		a := batch[i]
-		if a.effectiveStatus(now) != statusPending {
-			// Lazy expiry: a row past its expiry is not a decision anyone
-			// still owes, so it must not appear as one on the record page.
-			continue
-		}
-		if requireDecisionGrants(p, a) != nil {
-			continue
-		}
-		out = append(out, wire(a, now))
-		if len(out) >= limit {
-			break
-		}
-	}
-	return out, nil
 }
 
 func (s *Service) Get(ctx context.Context, id ids.ApprovalID) (row, error) {

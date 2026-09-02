@@ -415,12 +415,21 @@ export function sourceUnavailableText(
   missing: NonNullable<Worklist["sources_unavailable"]>[number],
   t: T,
 ): string {
-  const name = knownSource(missing.source as WorklistItem["source"])
-    ? t(`worklist.untitled.${missing.source as keyof typeof KNOWN_SOURCES}`)
-    : t("worklist.untitled.generic");
+  const name = sourceName(missing.source, t);
   return missing.reason === "withheld"
     ? t("worklist.source.withheld", { source: name })
     : t("worklist.source.failed", { source: name });
+}
+
+// One source, in the reader's words.
+//
+// Through the same known-source check the titles use, so a source this build
+// has never heard of is described generically rather than printed as its own
+// identifier — a reader must never be shown `ai_work_health` as a noun.
+export function sourceName(source: string, t: T): string {
+  return knownSource(source as WorklistItem["source"])
+    ? t(`worklist.untitled.${source as keyof typeof KNOWN_SOURCES}`)
+    : t("worklist.untitled.generic");
 }
 
 // The sources this build can name without its own sentence.

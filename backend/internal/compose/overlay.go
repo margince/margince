@@ -45,7 +45,7 @@ const incumbentHubSpot = "hubspot"
 
 // failClosedOverlayMeter is the OVB meter a surface with no Redis-backed
 // meter uses: nil client, so every band sheds and every reservation is
-// declined (a role never spends live quota it cannot account for). The
+// declined (a role never spends live volume budget it cannot account for). The
 // REST read surface (server.go) and the poller (jobs.go) receive their
 // live Redis-backed meter from cmd via WithOverlayMeter / JobRunnerConfig;
 // no tool or workflow path reaches Dispatcher.Freshness, the only route to a

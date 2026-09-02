@@ -193,6 +193,10 @@ type JobRunnerConfig struct {
 	// nothing, which is the posture of an installation with no operator relay
 	// configured — the review is on Home either way.
 	WeeklyMail WeeklyMailConfig
+	// BriefMail is the morning brief's outbound channel, on the SAME relay the
+	// weekly uses — an operator configures outbound mail once. A zero value
+	// mails nothing, and the brief is on Home either way.
+	BriefMail BriefMailConfig
 	// TranscriptProposeBrain is the lane a queued transcript reading runs on.
 	// Nil = no AI configured, and the kind registers anyway so the reading
 	// FAILS with a message the rep can see rather than sitting queued behind a
@@ -365,7 +369,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	// them. The schedules that drive them are the list below, because a
 	// cadence is the declaration's and not the group's.
 	addModelLaneJobs(reg, pool, cfg, log)
-	addDatabaseOnlySweepJobs(reg, pool, log)
+	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addGmailCaptureJobs(reg, pool, cfg, log)
 	addGraphWatchJobs(reg, cfg, log)

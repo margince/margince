@@ -64,7 +64,7 @@ func (h Handlers) ListTeams(w http.ResponseWriter, r *http.Request, params crmco
 
 // pageInfo renders the store's keyset page onto the contract's PageInfo
 // envelope — this module's own copy of the one-per-module spelling
-// (people/deals/activities/signals/quotas each carry their own).
+// (people/deals/activities/signals each carry their own).
 func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 	info := crmcontracts.PageInfo{HasMore: p.HasMore}
 	if p.NextCursor != "" {

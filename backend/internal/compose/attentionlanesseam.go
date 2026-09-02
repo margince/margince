@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -47,11 +46,6 @@ import (
 // the feed omits and NAMES the lane instead of reporting a clear day.
 type attentionCommitments struct{ store *people.Store }
 
-// The binding is deliberately not wired today (newAttentionService passes nil
-// — the lane's production writer is issue #849's), so this assertion is the
-// one thing keeping the seam compiled against the interface it will be
-// rebound as. The store read behind it keeps its own integration test; the
-// seam wiring itself is untested exactly because nothing wires it.
 var _ attention.Commitments = attentionCommitments{}
 
 func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int) ([]attention.Commitment, error) {
@@ -243,87 +237,6 @@ func quietRelationships(
 	return lapsed
 }
 
-// attentionWaiting binds the who-is-waiting lane to the activities module's
-// own gated read. The thread walk, the discover gate and the audience arm all
-// live there; nothing about who may see what is decided here.
-type attentionWaiting struct {
-	store *activities.Store
-	now   attention.Clock
-}
-
-// The instant comes from the caller so the whole read is one snapshot. Asking
-// the clock again here would let the anti-joins judge against a moment the rest
-// of the day was not read at.
-func (w attentionWaiting) Unanswered(
-	ctx context.Context, asOf time.Time,
-) ([]attention.WaitingCustomer, bool, error) {
-	rows, err := w.store.WaitingReplies(ctx, asOf)
-	if err != nil {
-		return nil, false, err
-	}
-	// Asked of what the STORE returned, before keepWaitingCustomers runs.
-	//
-	// That filter drops machine senders and folds duplicate threads, so what it
-	// returns is smaller than what was read — and a caller comparing the
-	// SURVIVORS against the scan bound would read a full scan whose survivors
-	// are few as a complete one. This is the only place both numbers exist.
-	cut := len(rows) >= activities.WaitingScanCap
-	out := make([]attention.WaitingCustomer, 0, len(rows))
-	for _, row := range keepWaitingCustomers(rows) {
-		out = append(out, attention.WaitingCustomer{
-			ActivityID:     row.ActivityID,
-			Subject:        row.Subject,
-			Since:          row.OccurredAt,
-			PersonID:       row.PersonID,
-			OrganizationID: row.OrganizationID,
-			DealID:         row.DealID,
-			HasOpenDeal:    row.HasOpenDeal,
-			OwnerID:        row.OwnerID,
-		})
-	}
-	return out, cut, nil
-}
-
-// keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
-//
-// Two rules, both learned from the live page.
-//
-// A machine is not a customer. Judged by capture's own address rule rather than
-// a second one spelled here: an e-signature notification, a shared-folder
-// notice and a booking confirmation opened a rep's day, and a queue that asks
-// somebody to answer a no-reply address teaches them to stop reading it.
-//
-// One subject FROM ONE SENDER is one row. A notification service sends the same
-// request on several threads, and two rows reading identically are two
-// obligations to somebody scanning the page.
-//
-// Keyed on sender AND subject, never subject alone: two customers both writing
-// "Re: proposal" are two people waiting, and folding them would drop the second
-// one silently — the worst failure this queue has, because nothing on the page
-// would say a customer had been hidden.
-//
-// An UNTITLED message is never folded, because several untitled waits are
-// several customers and collapsing them would hide all but one behind an empty
-// string.
-func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingReply {
-	kept := make([]activities.WaitingReply, 0, len(rows))
-	seen := make(map[string]bool, len(rows))
-	for _, row := range rows {
-		if capture.IsMachineAddress(row.Sender) {
-			continue
-		}
-		if row.Subject != "" {
-			key := row.Sender + "\x00" + row.Subject
-			if seen[key] {
-				continue
-			}
-			seen[key] = true
-		}
-		kept = append(kept, row)
-	}
-	return kept
-}
-
 // attentionDealFacts reads deal figures through the deals store, under the
 // reader's own grants: a deal they may not see is absent from the answer and
 // the row simply states less about it.
@@ -353,18 +266,20 @@ func (f attentionDealFacts) Figures(
 // activity of kind `task`, so this is the same read the task queue makes.
 type attentionTasks struct{ store *activities.Store }
 
-func (t attentionTasks) OpenForViewer(
-	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
-) ([]attention.Task, error) {
-	// The store answers "open and due by then" itself, so the limit bounds the
-	// rows that QUALIFY. This used to read ten times the lane and narrow
-	// afterwards, which put the bound on the wrong set: a pile of completed
-	// tasks filled the scan, the overdue promise underneath never reached the
-	// reader, and the day rendered clear while the work was still there.
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, Limit: &limit}
-	// Narrowed in the QUERY, so the store's own bound applies to the rows that
-	// qualify. Filtering the answer instead would let a colleague's twelve
-	// tasks fill the page and hide the reader's own overdue one behind them.
+// openTasksDueBy is the ONE narrowing the lane's page and its count share.
+//
+// Narrowed in the QUERY, so the store's own bound applies to the rows that
+// qualify. Filtering the answer instead would let a colleague's twelve tasks
+// fill the page and hide the reader's own overdue one behind them — and a count
+// built from a second copy of these arms would answer a different question from
+// the page it sits beside, one arm at a time.
+//
+// The false answer means "no reader to answer for", which is a page of nothing
+// rather than a refusal.
+func openTasksDueBy(
+	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
+) (activities.ListActivitiesInput, bool) {
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until}
 	switch scope {
 	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)
@@ -372,7 +287,7 @@ func (t attentionTasks) OpenForViewer(
 			// No human, no "own work" to answer for. Reading every task and
 			// calling the result theirs is the widening this narrowing exists
 			// to prevent.
-			return nil, nil
+			return activities.ListActivitiesInput{}, false
 		}
 		// Exactly theirs. A task they wrote themselves carries their name from
 		// the moment it is written, so this needs no unassigned arm — and the
@@ -392,6 +307,22 @@ func (t attentionTasks) OpenForViewer(
 		// Every open task the reader may see; the row-scope gate in the store
 		// is the only narrowing.
 	}
+	return in, true
+}
+
+func (t attentionTasks) OpenForViewer(
+	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+) ([]attention.Task, error) {
+	// The store answers "open and due by then" itself, so the limit bounds the
+	// rows that QUALIFY. This used to read ten times the lane and narrow
+	// afterwards, which put the bound on the wrong set: a pile of completed
+	// tasks filled the scan, the overdue promise underneath never reached the
+	// reader, and the day rendered clear while the work was still there.
+	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	if !ok {
+		return nil, nil
+	}
+	in.Limit = &limit
 	rows, _, err := t.store.ListActivities(ctx, in)
 	if err != nil {
 		return nil, err
@@ -439,4 +370,30 @@ func (o attentionOverdue) OverduePerAssignee(
 		per[row.OwnerID] = row.Overdue
 	}
 	return per, nil
+}
+
+// CountOpenForViewer answers how many tasks the lane's own narrowing matches,
+// with no cap on it — the badge beside a bounded page.
+//
+// The same openTasksDueBy the page is built from, so the number and the cards
+// cannot come to answer different questions. A second statement, which is what a
+// true total beside a bounded page costs and what needs_you has always paid.
+func (t attentionTasks) CountOpenForViewer(
+	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
+) (int, error) {
+	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	if !ok {
+		return 0, nil
+	}
+	return t.store.CountActivities(ctx, in)
+}
+
+// CountDueBy answers how many promises are due, for the reason the task lane's
+// count exists: the page is capped at a dozen and the badge is not the cap.
+func (c attentionCommitments) CountDueBy(ctx context.Context, by time.Time) (int, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return 0, apperrors.ErrPermissionDenied
+	}
+	return c.store.CountOpenCommitmentsDue(ctx, ids.From[ids.UserKind](actor.UserID), by)
 }

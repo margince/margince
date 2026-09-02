@@ -40,7 +40,7 @@ func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {
 		FailedAt:   readInstant,
 		TargetType: "person", TargetID: person,
 	}, {
-		ID: ids.NewV7(), Kind: "quota_release",
+		ID: ids.NewV7(), Kind: "volume_release",
 		Sentence: "the agent's window could not be widened, so the approval has not taken effect",
 		FailedAt: readInstant,
 	}}})

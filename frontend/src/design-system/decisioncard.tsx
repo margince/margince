@@ -698,14 +698,34 @@ function readPayload(
   };
 }
 
+// cardName is what this card is ABOUT, in the order a reader wants it: the
+// drafted subject where there is one, then the record's own name.
+//
+// Spelled once because two places ask it — the headline, and the article's
+// accessible name — and a card whose heading and whose aria-labelledby
+// disagreed would be a card screen readers announce as something else.
+function cardName(
+  approval: DecisionApproval,
+  draft: DecisionDraft,
+): string | null {
+  return draft.subject ?? approval.target_label ?? null;
+}
+
 // The chips line, then the headline and the sentence explaining it.
 //
 // The headline is the drafted SUBJECT where there is one, because that is the
 // line that differs: the server's summary names only the addressee, so a queue
 // of drafts to the same handful of people reads as one sentence over and over.
-// The summary then explains it underneath — and only underneath a subject, since
-// with no subject the summary IS the headline and printing it twice reads as two
-// facts.
+//
+// Failing that it is the RECORD'S NAME, where the server recorded one. Half the
+// stageable kinds carry no typed payload, and the summaries their paths compose
+// name the target by uuid — "automation wants to assign_owner on deal
+// 01a03781-9083-…". A reader asked to approve that decides on the verb alone.
+// The name answers "which record" in the one line they are certain to read.
+//
+// The summary then explains whichever of those two the headline was — and only
+// underneath one, since with neither the summary IS the headline and printing it
+// twice reads as two facts.
 function DecisionHead({
   approval,
   draft,
@@ -725,7 +745,8 @@ function DecisionHead({
   provenance?: Provenance;
   confidence?: ConfidenceLevel;
 }>) {
-  const headline = draft.subject ?? approval.summary ?? null;
+  const named = cardName(approval, draft);
+  const headline = named ?? approval.summary ?? null;
   return (
     <>
       <div className="dcard-meta">
@@ -748,7 +769,7 @@ function DecisionHead({
           {headline}
         </p>
       )}
-      {draft.subject && approval.summary && (
+      {named && approval.summary && (
         <p className="t-small approval-why">{approval.summary}</p>
       )}
     </>
@@ -799,7 +820,10 @@ export function DecisionCard({
   const headingId = useId();
   const payload = readPayload(approval, layout, display);
   const lapsed = !decided && decisionLapsed(approval, now);
-  const named = payload.draft.subject ?? approval.summary ?? null;
+  // The SAME question the headline asks, so the article's accessible name and
+  // the line a sighted reader sees cannot come apart: a card named only by its
+  // target_label rendered a headline and pointed aria-labelledby at nothing.
+  const named = cardName(approval, payload.draft) ?? approval.summary ?? null;
 
   return (
     <article

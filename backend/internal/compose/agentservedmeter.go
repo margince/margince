@@ -30,7 +30,7 @@ type servedMeter struct {
 	http.ResponseWriter
 	r   *http.Request
 	reg *agents.Registry
-	// mayRefuse is agents/quota.go's one rule applied on this door: refuse only
+	// mayRefuse is agents/volume.go's one rule applied on this door: refuse only
 	// while nothing has happened yet.
 	//
 	// A READ has committed nothing, so an uncountable one is withheld — a charge
@@ -52,7 +52,7 @@ const (
 
 // NoteServed charges n records and answers whether the response may proceed. A
 // refusal is written here rather than reported upward because this is the layer
-// holding the request; httperr has neither it nor any notion of a quota.
+// holding the request; httperr has neither it nor any notion of a volume budget.
 func (m *servedMeter) NoteServed(n int) bool {
 	err := m.reg.ChargeServedRecords(m.r.Context(), n)
 	if err == nil || !bool(m.mayRefuse) {

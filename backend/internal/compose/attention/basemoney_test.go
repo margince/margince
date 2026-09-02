@@ -83,7 +83,7 @@ func pricedWorklist(t *testing.T, fx BaseMoney, day crmcontracts.Attention) crmc
 		t.Fatalf("pricing the day: %v", err)
 	}
 	reader.money = money
-	return reader.worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{})
+	return reader.worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 }
 
 // The ordering compares what deals are WORTH, not what their integers say.
@@ -213,7 +213,7 @@ func TestAnUnboundSeamNamesNoBaseCurrency(t *testing.T) {
 		),
 	}
 
-	out := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{})
+	out := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	if out.Summary.MaterialThresholdMinor == nil {
 		t.Fatal("raw amounts still take a median; the bar should stand")

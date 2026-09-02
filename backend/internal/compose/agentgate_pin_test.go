@@ -24,8 +24,8 @@ import (
 // gate actually staged.
 type capturingApprovals struct{ last agents.StageRequest }
 
-// StageQuotaRelease satisfies the seam; a step-up never reaches these tests.
-func (c *capturingApprovals) StageQuotaRelease(_ context.Context, _ agents.QuotaReleaseRequest) (ids.ApprovalID, bool, error) {
+// StageVolumeRelease satisfies the seam; a step-up never reaches these tests.
+func (c *capturingApprovals) StageVolumeRelease(_ context.Context, _ agents.VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil
 }
 
@@ -156,8 +156,8 @@ func TestConfirmFirstTargetsArePinnable(t *testing.T) {
 // an approval whose target carried a version.
 type pinningApprovals struct{ version int64 }
 
-// StageQuotaRelease satisfies the seam; a step-up never reaches these tests.
-func (pinningApprovals) StageQuotaRelease(_ context.Context, _ agents.QuotaReleaseRequest) (ids.ApprovalID, bool, error) {
+// StageVolumeRelease satisfies the seam; a step-up never reaches these tests.
+func (pinningApprovals) StageVolumeRelease(_ context.Context, _ agents.VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil
 }
 

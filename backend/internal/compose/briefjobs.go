@@ -83,6 +83,9 @@ type briefGenerateWorkspaceWorker struct {
 	pool   *pgxpool.Pool
 	users  *identity.Service
 	log    *slog.Logger
+	// mail is the outbound channel, off by omission: a nil Mailer mails no
+	// briefs, which is what an installation with no operator relay wants.
+	mail BriefMailConfig
 	// now is the injected clock (nil = wall clock). The morning is read at
 	// execution time, not enqueue time: a job that waited in the queue past
 	// midnight must assemble the day it actually runs in, which is the day the
@@ -161,7 +164,8 @@ func (w *briefGenerateWorkspaceWorker) assembleFor(ctx context.Context, wsID, us
 		Permissions: rbac.Permissions,
 	})
 	repCtx = principal.WithCorrelationID(repCtx, ids.NewV7())
-	if _, err := w.engine.SnapshotRun(repCtx, now); err != nil {
+	run, err := w.engine.SnapshotRun(repCtx, now)
+	if err != nil {
 		// A seat whose role grants no deal read has no brief to assemble, and
 		// that is a configuration rather than a fault: refusing it as a job
 		// failure would make one such seat fail the whole workspace's morning,
@@ -176,6 +180,11 @@ func (w *briefGenerateWorkspaceWorker) assembleFor(ctx context.Context, wsID, us
 		}
 		return err
 	}
+	// The mail second, on whatever deadline is left, and under the rep's OWN
+	// principal — the claim is a write to her run and the preference read is
+	// hers. A relay that hangs must not cost the assembly, which is why the send
+	// is bounded inside and why nothing here returns its error.
+	w.mailMorning(repCtx, run, now)
 	return nil
 }
 

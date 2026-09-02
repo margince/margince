@@ -197,7 +197,7 @@ function useRosterWalk(kind: RosterKind, enabled: boolean) {
 /**
  * The roster's entries.
  *
- * Exported so the Share subject picker, the owner pickers and the quota target
+ * Exported so the Share subject picker and the owner pickers
  * picker all build off the exact same cache entry EntityRef's own user/team
  * resolution reads — one walk, one cache key, every consumer.
  *

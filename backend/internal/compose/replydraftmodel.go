@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -83,6 +84,18 @@ func replyDraftSystemFor(system draftSystem, fence promptfence.Fence) string {
 	return string(system) + "\n\n" + draftrules.Shared + "\n" + fence.Rule("activity")
 }
 
+// voicedSite is a site's prompt with the voice rule added — the system turn a
+// call carrying a profile block is made under.
+//
+// A function rather than a second constant per site, because the voiced turn is
+// DERIVED from the plain one. Two spelled-out variants drift the moment a site's
+// own rules change, and the first-message site's variant would then be a copy of
+// the reply's that nobody remembered to update — which is precisely the shape
+// this replaced.
+func voicedSite(site draftSystem) draftSystem {
+	return draftSystem(string(site) + "\n\n" + draftvoice.SystemRule)
+}
+
 // replyDraftRequest builds the one request a draft call sends, in whichever of
 // this site's two system variants the call is made under. The workspace's Voice
 // DNA state selects the variant per call — a loaded profile supplies a block and
@@ -103,7 +116,14 @@ func replyDraftRequest(site draftSystem, activity replyActivityData, voiceBlock 
 	system := site
 	content := fence.Wrap(string(payload))
 	if voiceBlock != nil {
-		system = replyDraftVoiceSystem
+		// The voice rule is ADDED to whichever site this call is made under,
+		// never substituted for it. A swap carried the reply site's evidence
+		// claim onto every voiced call, and on the first-message site that
+		// claim is false: telling a model "the activity is the authoritative
+		// reason for this reply" when there is no activity is an invitation to
+		// invent the thread, which is the one error a first message to a
+		// stranger cannot be edited back from.
+		system = voicedSite(site)
 		content = voiceBlock(fence) + "\n\n" + content
 	}
 	// The correction rides the USER turn and never the variant choice: it is

@@ -25,7 +25,7 @@ verifier library works unmodified.
 ## Prerequisites
 
 - **Admin or ops RBAC.** Managing subscriptions is organization-wide integration config (the same
-  posture as quotas), gated `admin`/`ops`-only; every role may *read* a subscription and its
+  posture as custom fields), gated `admin`/`ops`-only; every role may *read* a subscription and its
   deliveries.
 - **A deployment signing key must be configured** — `MARGINCE_WEBHOOK_KEY` (see step 1). Without it the
   read surface still lists, but create/rotate/replay answer `503 webhooks_not_configured` and no

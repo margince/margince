@@ -315,9 +315,10 @@ export function tabContent(id: SettingsTabId): ReactNode {
         <>
           <UsersAdminCard />
           {/* Teams are share targets and a way to address a group of users.
-              Membership grants no access on its own — no seeded role is
-              team-scoped — so this card sits below the roster rather than
-              claiming to answer who may edit whose records. */}
+              Membership alone still grants nothing to most roles, but Team
+              Lead is team-scoped (RowScopeTeam) — so this card is also where
+              an admin decides whose records a Team Lead's membership hands
+              over, not merely a way to address a group. */}
           <TeamsCard />
         </>
       );

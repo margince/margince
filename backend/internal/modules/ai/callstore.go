@@ -307,7 +307,7 @@ func classifyError(err error) string {
 	case errors.Is(err, errRequestFailed):
 		return "request_failed"
 	// A REFUSAL IS NOT A FAILURE TO ANSWER, and the three are ordered widest
-	// last because a quota and a throttle both wrap a refusal.
+	// last because a volume budget and a throttle both wrap a refusal.
 	//
 	// An operator reads this trace to decide what to do. "provider_error" says
 	// try again or rebind; an exhausted account says top up, and a burst limit

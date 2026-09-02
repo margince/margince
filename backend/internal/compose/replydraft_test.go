@@ -139,8 +139,16 @@ func TestVoicedDraftInjectsTheProfileAndStampsTheVersion(t *testing.T) {
 		t.Fatalf("draft = %+v", draft)
 	}
 	req := brain.requests[0]
-	if !strings.Contains(req.System, "user's own voice") {
-		t.Fatalf("voiced draft must use the voice system prompt, got %q", req.System)
+	// The voice RULE, which is what a voiced turn adds to its site's prompt.
+	// Asserting a phrase out of a whole-prompt variant went quiet the moment
+	// the variant became an addition rather than a replacement.
+	if !strings.Contains(req.System, draftvoice.SystemRule) {
+		t.Fatalf("voiced draft must carry the voice rule, got %q", req.System)
+	}
+	// And the site's own prompt survives beside it. Without this the check
+	// above passes for a voiced call that dropped the reply site's grounding.
+	if !strings.Contains(req.System, string(replyDraftSystem)) {
+		t.Fatalf("the voiced draft dropped the reply site's own prompt, got %q", req.System)
 	}
 	content := req.Messages[0].Content
 	for _, fragment := range []string{"Voice profile:", "Blunt, never hedges.", "How you think", "We ship Monday.", "limits, NOT targets"} {

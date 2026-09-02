@@ -45,7 +45,7 @@ func TestAWalkReachesEveryRowExactlyOnce(t *testing.T) {
 	pages := 0
 	for {
 		out := svc.worklistFrom(t.Context(), day, scopeAll, "", perPage,
-			waitingRead{}, leadRead{}, cursor)
+			waitingRead{}, leadRead{}, cursor, nil)
 		pages++
 		for _, row := range out.Queue {
 			seen[string(row.Source)+"|"+row.Id]++
@@ -85,7 +85,7 @@ func TestTheWalkReconcilesAgainstTheCountItReports(t *testing.T) {
 	day := tasksDay(rows)
 
 	first := svc.worklistFrom(t.Context(), day, scopeAll, "", perPage,
-		waitingRead{}, leadRead{}, worklistCursor{})
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
 	considered := 0
 	for _, count := range first.Counts {
 		considered += count.Considered
@@ -101,7 +101,7 @@ func TestTheWalkReconcilesAgainstTheCountItReports(t *testing.T) {
 			t.Fatalf("the walk did not terminate: %d pages over %d rows", page, rows)
 		}
 		out := svc.worklistFrom(t.Context(), day, scopeAll, "", perPage,
-			waitingRead{}, leadRead{}, cursor)
+			waitingRead{}, leadRead{}, cursor, nil)
 		walked += len(out.Queue)
 		if out.NextCursor == nil {
 			break
@@ -122,7 +122,7 @@ func TestTheWalkReconcilesAgainstTheCountItReports(t *testing.T) {
 func TestTheFinalPageOffersNoCursor(t *testing.T) {
 	svc := &Service{}
 	out := svc.worklistFrom(t.Context(), tasksDay(3), scopeAll, "", 25,
-		waitingRead{}, leadRead{}, worklistCursor{})
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
 	if out.NextCursor != nil {
 		t.Errorf("a page holding every row offered a cursor to nothing: %q", *out.NextCursor)
 	}
@@ -271,9 +271,9 @@ func TestFoldingIsDeterministicAcrossReads(t *testing.T) {
 
 	svc := &Service{}
 	first := svc.worklistFrom(t.Context(), day, scopeAll, "", 25,
-		waitingRead{}, leadRead{}, worklistCursor{})
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
 	second := svc.worklistFrom(t.Context(), day, scopeAll, "", 25,
-		waitingRead{}, leadRead{}, worklistCursor{})
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
 	batched := func(out crmcontracts.Worklist) []string {
 		ids := []string{}
@@ -516,7 +516,7 @@ func TestAWalkTerminatesHoweverTheDayMoves(t *testing.T) {
 	cursor := worklistCursor{}
 	for page := range 20 {
 		out := svc.worklistFrom(t.Context(), days[min(page, len(days)-1)], scopeAll, "", 1,
-			waitingRead{}, leadRead{}, cursor)
+			waitingRead{}, leadRead{}, cursor, nil)
 		if out.NextCursor == nil {
 			return
 		}
@@ -550,7 +550,7 @@ func TestARowCrossingThePageBoundaryWaitsForTheNextRead(t *testing.T) {
 		at("aa", time.Hour), at("bb", 2*time.Hour), at("cc", 3*time.Hour),
 	}}
 	first := svc.worklistFrom(t.Context(), before, scopeAll, "", 1,
-		waitingRead{}, leadRead{}, worklistCursor{})
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
 	if len(first.Queue) != 1 || first.Queue[0].Id != "aa" {
 		t.Fatalf("page one handed back %v, want aa", queueIDsOf(first))
 	}
@@ -575,7 +575,7 @@ func TestARowCrossingThePageBoundaryWaitsForTheNextRead(t *testing.T) {
 	}
 	for range 6 {
 		out := svc.worklistFrom(t.Context(), after, scopeAll, "", 1,
-			waitingRead{}, leadRead{}, cursor)
+			waitingRead{}, leadRead{}, cursor, nil)
 		for _, row := range out.Queue {
 			seen[row.Id]++
 		}
@@ -598,7 +598,7 @@ func TestARowCrossingThePageBoundaryWaitsForTheNextRead(t *testing.T) {
 
 	// And the delay is bounded rather than permanent: a fresh read leads with it.
 	fresh := svc.worklistFrom(t.Context(), after, scopeAll, "", 1,
-		waitingRead{}, leadRead{}, worklistCursor{})
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
 	if len(fresh.Queue) == 0 || fresh.Queue[0].Id != "cc" {
 		t.Errorf("a fresh read did not lead with the newly urgent row: %v", queueIDsOf(fresh))
 	}
@@ -712,7 +712,7 @@ func TestTheOffsetIsWhereTheCutLandedInThisRanking(t *testing.T) {
 	// End to end: a walk advances by exactly the page size, and the offset it
 	// publishes indexes the ranking rather than counting the caller's history.
 	first := svc.worklistFrom(t.Context(), tasksDay(5), scopeAll, "", 2,
-		waitingRead{}, leadRead{}, worklistCursor{})
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
 	cursor, err := decodeCursor(*first.NextCursor, scopeAll, "", ids.UUID{})
 	if err != nil {
 		t.Fatalf("decoding page one: %v", err)
@@ -721,7 +721,7 @@ func TestTheOffsetIsWhereTheCutLandedInThisRanking(t *testing.T) {
 		t.Errorf("a first page of two advanced the offset to %d, want 2", cursor.At)
 	}
 	second := svc.worklistFrom(t.Context(), tasksDay(5), scopeAll, "", 2,
-		waitingRead{}, leadRead{}, cursor)
+		waitingRead{}, leadRead{}, cursor, nil)
 	next, err := decodeCursor(*second.NextCursor, scopeAll, "", ids.UUID{})
 	if err != nil {
 		t.Fatalf("decoding page two: %v", err)

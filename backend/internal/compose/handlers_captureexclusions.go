@@ -68,13 +68,17 @@ func toContractExclusion(rule capture.Exclusion) crmcontracts.CaptureExclusion {
 	}
 }
 
-// PurgeCaptureExclusion destroys the mail one of the caller's own rules already
-// let in.
+// PurgeCaptureExclusion destroys the mail one exclusion rule already let in.
 //
 // The rule the exclusion states is about the FUTURE; this is the past it cannot
 // reach. Irreversible, which is why the preview answers the same question and
-// changes nothing: the counts an owner sees before they confirm are the counts
+// changes nothing: the counts a caller sees before they confirm are the counts
 // they get, because both arms run the same selection.
+//
+// The rule's own scope decides how far it reaches and who may ask — a seat's own
+// rule destroys what that seat imported, a workspace rule destroys what the
+// workspace captured and takes the admin role. Purge answers both, so this
+// handler passes the id through rather than deciding here.
 func (h captureExclusionHandlers) PurgeCaptureExclusion(
 	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.PurgeCaptureExclusionParams,
 ) {

@@ -115,8 +115,7 @@ func AssembleSAR(ctx context.Context, db *database.DB, personID ids.PersonID) (S
 	// acting under a passport carries the granting human's live grants, so an
 	// admin's read-scoped passport would otherwise assemble a subject's entire
 	// Art. 15 package — every activity, capture row, correction and outbound
-	// message. Nothing wires this to a route yet, and the arm goes in now
-	// rather than being discovered missing by whoever does.
+	// message.
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return SARPackage{}, fmt.Errorf("human-only subject-access assembly: %w", apperrors.ErrPermissionDenied)
@@ -126,6 +125,15 @@ func AssembleSAR(ctx context.Context, db *database.DB, personID ids.PersonID) (S
 	// caller cannot run it. Scope is the second condition, not a stand-in for
 	// authority: the person.delete grant above is what limits this to the roles
 	// trusted with erasure, and it is what keeps read_only out.
+	//
+	// Together those two admit MORE than admin: the seeded defaults give
+	// person.delete and row scope `all` to ops and management as well. That is
+	// this function's contract — the erasure trust level — and callers that owe
+	// a narrower one gate before they get here. The subject-request route does:
+	// it reads the request through the queue's own admin-only gate first, which
+	// TestTheQueueGateIsWhatKeepsTheExportAdminOnly pins from both sides. A
+	// future caller assembling from a person id alone would be reachable by two
+	// more roles, and would need its own gate.
 	if !auth.Unbounded(actor) {
 		return SARPackage{}, apperrors.ErrPermissionDenied
 	}

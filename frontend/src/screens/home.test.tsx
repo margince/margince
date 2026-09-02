@@ -321,6 +321,10 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
         <HomeGlance
           firstName={firstName}
           now={new Date(2026, 6, 5, hour, 30, 0)}
+          // These cases are about the GREETING's hour. An unread day is the
+          // right value for them: the sentence is then absent, and the greeting
+          // is what the assertion reads.
+          day={undefined}
           decisions={null}
           brief={null}
           overnight={null}
@@ -362,6 +366,7 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
         <HomeGlance
           firstName="Ada"
           now={new Date(2026, 6, 5, 9, 0, 0)}
+          day={undefined}
           decisions={null}
           brief={null}
           overnight={null}
@@ -765,5 +770,38 @@ describe("HomeScreen — the sentence about the night", () => {
     render(<HomeScreen />);
 
     await screen.findByText("He asked about the delivery date yesterday.");
+  });
+});
+
+// ── The one control that promised what the click could not do ──
+
+describe("HomeScreen — the brief is generated, never re-ranked", () => {
+  // POST /brief answers "today's run already existed; this is it, unchanged".
+  // It assembles a brief where none exists and re-ranks nothing — so a control
+  // labelled "Refresh brief" beside an existing run promised a re-rank the
+  // click could not perform, and a rep who pressed it and saw the same order
+  // concluded the ranking was stuck.
+  it("offers no refresh once today's run exists", async () => {
+    stubApi({
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("Fleet retrofit");
+    expect(screen.queryByTestId("brief-refresh")).toBeNull();
+  });
+
+  // And the affordance that DOES something stays: a rep whose overnight pass
+  // has not run has a real button to press, and it is the only one.
+  it("offers to generate one when there is none", async () => {
+    stubApi({
+      "GET /brief": () => new Response(null, { status: 404 }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    const generate = await screen.findByTestId("brief-refresh");
+    expect(generate.textContent).toContain(en["home.generate"]);
   });
 });

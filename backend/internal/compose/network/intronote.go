@@ -45,6 +45,14 @@ type Completer interface {
 }
 
 // WithIntroNoteLane binds the lane that phrases the forwardable note.
+//
+// It binds no Voice DNA, and that is a decision rather than the gap it looks
+// like. Every other outbound drafting surface writes as the person operating
+// it, so it loads that person's voice; this note is sent by the COLLEAGUE, and
+// the rep operating the page is the person being introduced. Loading the
+// caller's profile here would sign the colleague's message in somebody else's
+// style — and the colleague need not be a Margince user at all, so there is
+// frequently no profile to load even in principle.
 func (h Reads) WithIntroNoteLane(lane Completer) Reads {
 	h.introNoteLane = lane
 	return h

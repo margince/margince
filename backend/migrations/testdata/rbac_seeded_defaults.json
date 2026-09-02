@@ -205,12 +205,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
       "relationship": {
         "create": true,
         "delete": true,
@@ -468,12 +462,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": true,
         "delete": true,
@@ -499,10 +487,10 @@
         "update": true
       },
       "tag": {
-        "create": true,
-        "delete": true,
+        "create": false,
+        "delete": false,
         "read": true,
-        "update": true
+        "update": false
       },
       "voice_profile": {
         "create": true,
@@ -731,12 +719,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": true,
         "delete": true,
@@ -762,10 +744,10 @@
         "update": true
       },
       "tag": {
-        "create": true,
-        "delete": true,
+        "create": false,
+        "delete": false,
         "read": true,
-        "update": true
+        "update": false
       },
       "voice_profile": {
         "create": true,
@@ -989,12 +971,6 @@
         "update": true
       },
       "project": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "quota": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1257,12 +1233,6 @@
         "read": true,
         "update": false
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": false,
         "delete": false,
@@ -1520,12 +1490,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": true,
         "delete": false,
@@ -1551,10 +1515,10 @@
         "update": true
       },
       "tag": {
-        "create": true,
+        "create": false,
         "delete": false,
         "read": true,
-        "update": true
+        "update": false
       },
       "voice_profile": {
         "create": true,

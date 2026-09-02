@@ -1778,7 +1778,13 @@ function CompanyPage({
   const t = useT();
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
-  const archivedReasonId = useId();
+  const archivedParagraphId = useId();
+  // Only when the paragraph below is actually rendered — the raw `useId()`
+  // value is always truthy, so passing IT unconditionally told
+  // CompanyActionBadges a sentence was already drawn for every account,
+  // archived or not, and left its own fallback (the "not yours to change"
+  // case) pointing `aria-describedby` at an id nothing on the page carries.
+  const archivedReasonId = org.archived_at ? archivedParagraphId : undefined;
   // ONE composer, opened two ways. Anchored on a timeline message it answers
   // that message; anchored on a person it starts a new one and grounds on the
   // account instead of a thread (ADR-0087 §1). Two pieces of state would let
@@ -1882,7 +1888,7 @@ function CompanyPage({
               to whichever group is drawing — stated in each, an archived
               account said the same thing twice as soon as the menu opened. */}
           {org.archived_at && (
-            <p className="t-caption" id={archivedReasonId}>
+            <p className="t-caption" id={archivedParagraphId}>
               {t("record.archivedReadOnly")}
             </p>
           )}

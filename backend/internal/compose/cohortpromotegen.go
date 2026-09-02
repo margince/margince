@@ -81,6 +81,19 @@ func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope)
 	// record it already has; it creates nothing and admits nobody. The system
 	// principal is what the sweeps that reach the same store method use, and
 	// there is no human in an event consumer for object-RBAC to admit.
+	//
+	// The TRACE is bound from the envelope, not minted here. A subscriber
+	// carries no correlation id of its own, and this repair's last act is to
+	// publish an activity.updated for every message that moved — a publish the
+	// write shape refuses without one. Left unbound, a pass reaches that
+	// refusal AFTER writing its links, the transaction rolls back, and the
+	// event is redelivered forever: the group's messages pile up pending while
+	// every other consumer on the same stream drains, so the symptom is a
+	// contact whose captured mail and meetings never reach their record.
+	// Carrying the causing event's own id also puts the repair on the trace of
+	// the person write that caused it, which is what makes a link nobody
+	// clicked explainable afterwards.
+	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem,
 		ID:   cohortPromoteActor,

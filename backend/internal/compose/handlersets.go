@@ -42,7 +42,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
-	"github.com/margince/margince/backend/internal/modules/quotas"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
@@ -73,7 +72,6 @@ type (
 	automationHandlers     = automation.Handlers
 	voiceHandlers          = ai.Handlers
 	customfieldsHandlers   = customfields.Handlers
-	quotasHandlers         = quotas.Handlers
 	overlayHandlers        = overlay.Handlers
 	webhooksHandlers       = webhooks.Handlers
 	org360Handlers         = org360.Handlers

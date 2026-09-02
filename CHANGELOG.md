@@ -9,7 +9,31 @@ numbers appear here when releases start.
 
 ## [Unreleased]
 
+### Removed
+
+- **The human-set sales quota is gone.** A quota was a revenue target a manager
+  typed, and everything the product said downstream of it — attainment, the pace
+  band — was that one number's arithmetic, so a target nobody had entered read as
+  an absence rather than as a question with no denominator. The Reports screen now
+  holds the three deal reports and nothing else. The `quota` table is dropped and
+  the `quota` RBAC object is stripped from every role document in the same
+  migration. Operational agent budgets are untouched: the per-agent volume meter,
+  the AI provider spend budget and the incumbent rate allowance are safety limits,
+  not sales targets, and keep working exactly as before.
+
 ### Changed
+
+- **The operational agent budgets stop being called quotas.** One word named two
+  unrelated things until the sales quota was retired: the revenue target a
+  manager typed, and the volume ceiling that stops an agent reading, writing or
+  spending without bound. The second is a safety limit and is unchanged in
+  behaviour, threshold and refusal — only its name moves. The Go package,
+  types and files are renamed, and two stored values move with them:
+  the approval kind `quota_release` becomes `volume_release` and the AI failure
+  code `provider_quota` becomes `provider_budget`, both migrated in place. The
+  contract already tells a reader to treat an unrecognized failure code as
+  "some failure", so a client that has not been updated degrades to the honest
+  general answer rather than breaking.
 
 - **Home's test suite is under the 1000-line ceiling again.** It crossed while
   Home gained its weekly-review section, and the split had one honest shape: the

@@ -177,8 +177,8 @@ always reconciles exactly rather than being off by a rounding error.
 Every deal report has an **Explain this number** control that shows the rows the
 figure was built from. If a number looks wrong, open it rather than guessing.
 
-The reports available on deals are: Deals by stage, Forecast, Open deals per
-company, and Quotas.
+The reports available on deals are: Deals by stage, Forecast, and Open deals
+per company.
 
 ## Badges on a deal card
 

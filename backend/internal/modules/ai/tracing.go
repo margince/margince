@@ -139,7 +139,7 @@ func (r *Router) serveCacheHit(ctx context.Context, b *binding, trace *Call, tas
 // without a sentinel could only match the message text, which is a second copy
 // of it.
 //
-// A quota refusal never carries it: that walk STOPS at the refusing rung rather
+// A volume budget refusal never carries it: that walk STOPS at the refusing rung rather
 // than reaching the end, so reporting an exhausted ladder would name rungs
 // nobody called.
 var ErrAllTiersFailed = errors.New("ai: every bound tier failed")
@@ -212,6 +212,10 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 	if lastErr != nil {
 		// lastTier names the rung whose failure the caller sees, so the
 		// trace records where the walk died instead of an empty tier.
+		// The sentinel is what lets a HANDLER tell "no model answered" from
+		// "the request was wrong" without matching the message: the two are
+		// different HTTP answers, and a caller that cannot separate them has to
+		// report a dependency being down as an internal fault.
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
 	}
 	return model.Response{}, "", false, nil

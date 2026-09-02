@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -143,7 +144,7 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 	// see two instances minting one record.
 	effect.Handler = h.Spec().Name
 	effect.OccurrenceKey = h.IdempotencyKey(ev)
-	result, applyErr := h.Apply(ctx, ev, effect, nil)
+	result, applyErr := h.Apply(withSendingOwner(ctx, ev), ev, effect, nil)
 	// The outcome record commits in its OWN transaction before the apply
 	// error surfaces — returning applyErr from inside the tx closure would
 	// roll the very 'failed' row back and leave the claim lying 'applied'.
@@ -159,6 +160,26 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 		return applyErr
 	}
 	return nil
+}
+
+// withSendingOwner names the human an outbound message this firing composes
+// goes out AS.
+//
+// A message an automation drafts leaves under the OWNER's name, so the owner is
+// who it must sound like. The acting principal stays the system actor —
+// attribution, audit and row scope are all deliberately unmoved, and this value
+// authorizes nothing; the only question that reads it is whose voice to write
+// in (ai.ActiveVoiceForActor). Before it existed, every automated draft resolved
+// the system actor's zero UserID and was written in nobody's voice while a rep
+// with a built profile got their own voice everywhere else.
+//
+// A system-seeded firing has no owner and binds nothing, which drafts unvoiced —
+// the honest answer for a message no human authored.
+func withSendingOwner(ctx context.Context, ev workflow.Event) context.Context {
+	if ev.OwnerID == ids.Nil {
+		return ctx
+	}
+	return principal.WithSendingHuman(ctx, ev.OwnerID)
 }
 
 // recordApplyOutcome writes the terminal shape of one Apply call onto its

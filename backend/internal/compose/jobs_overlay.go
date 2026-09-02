@@ -270,7 +270,7 @@ func reconcileConnection(ctx context.Context, pool *pgxpool.Pool, vault keyvault
 		// connected_at is NOT NULL, so a zero means this struct was built without
 		// it — and sweeping would then floor at the zero time, i.e. the whole
 		// portal every tick (overlay.Reconcile's internal reconcileFloor).
-		// Refuse rather than burn the quota.
+		// Refuse rather than burn the volume budget.
 		return fmt.Errorf("overlay reconcile: connection for workspace %s carries no connected_at; refusing to sweep from the epoch", d.Workspace)
 	}
 	token, err := vault.Get(ctx, d.Workspace, d.CredentialRef)

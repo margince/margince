@@ -189,17 +189,22 @@ func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
 
 // TestCase2ATagIsAppliedByNameInOneStep pins criterion 6.
 //
-// Including a word the workspace has never used. "Add tag: K5 Conference 2026"
-// is one call — an assistant that had to create the tag first, look up its id
-// and then apply it would be three round trips deep in a conversation about a
-// business card.
+// By NAME, in one call: "Add tag: Champion" is one act to the person asking,
+// and an assistant that had to look the id up first would be two round trips
+// deep in a conversation about a business card.
+//
+// The word has to exist. The vocabulary is Admin and Ops's to extend, so the
+// name is a reference to a word somebody already chose — this test creates it
+// as an admin first, which is the same order a real workspace works in.
 func TestCase2ATagIsAppliedByNameInOneStep(t *testing.T) {
 	s := boot(t, scopesReadWrite)
 	person := s.createFromCard(t, cardFields(cardEmail))
 
-	const newWord = "Tech Sauce Bangkok 2026"
+	const word = "Tech Sauce Bangkok 2026"
+	s.seedTag(t, word)
+
 	got := s.MCP.CallOK(t, "apply_tag", map[string]any{
-		"tag_name": newWord, "record_type": "person", "record_id": person.ID.String(),
+		"tag_name": word, "record_type": "person", "record_id": person.ID.String(),
 	})
 	var applied agents.TagAppliedResult
 	got.JSON(t, &applied)
@@ -211,13 +216,32 @@ func TestCase2ATagIsAppliedByNameInOneStep(t *testing.T) {
 		t.Fatalf("case 2 criterion 6: the tag was applied without naming the word's id, so a " +
 			"caller cannot refer to it again")
 	}
-	// The word was COINED, not silently dropped: a workspace that had never
-	// used it now holds it, attached to this person.
 	if n := s.countRows(t, `SELECT count(*) FROM taggable WHERE tag_id = $1 AND entity_type = 'person' AND entity_id = $2`,
 		applied.TagID, person.ID); n != 1 {
 		t.Fatalf("case 2 criterion 6: the tag reports applied and %d rows attach it to the person", n)
 	}
-	if name := s.readString(t, "tag", "name", applied.TagID); name != newWord {
-		t.Fatalf("case 2 criterion 6: the coined tag reads %q, want %q", name, newWord)
+	if name := s.readString(t, "tag", "name", applied.TagID); name != word {
+		t.Fatalf("case 2 criterion 6: the applied tag reads %q, want %q", name, word)
+	}
+}
+
+// The other half of criterion 6, and the reason the vocabulary is governed: a
+// word the workspace has never chosen is REFUSED, not coined. An assistant
+// that could mint one would put a misspelling of somebody's tag into the
+// shared vocabulary permanently, which is the drift a shared vocabulary is for
+// preventing.
+func TestCase2AnUnknownTagNameIsRefusedRatherThanCoined(t *testing.T) {
+	s := boot(t, scopesReadWrite)
+	person := s.createFromCard(t, cardFields(cardEmail))
+
+	const unknown = "Tech Sauce Bangkok 2027"
+	s.MCP.CallRefused(t, "apply_tag", map[string]any{
+		"tag_name": unknown, "record_type": "person", "record_id": person.ID.String(),
+	})
+
+	// Refused AND nothing written: a call that coined the word and then failed
+	// for some other reason would leave the same permanent row behind.
+	if n := s.countRows(t, `SELECT count(*) FROM tag WHERE name = $1`, unknown); n != 0 {
+		t.Fatalf("the refused name exists as a tag (%d row(s)); apply_tag coined a word only an admin may add", n)
 	}
 }

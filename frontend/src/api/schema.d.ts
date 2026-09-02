@@ -5100,8 +5100,9 @@ export interface paths {
         /**
          * List tags.
          * @description The workspace's tag vocabulary. Read it before applying one: apply_tag takes a tag_name and
-         *     creates the word when there is none, so a caller who cannot see the existing words invents a
-         *     near-duplicate — "K5 Conference" beside "K5 Conference 2026" — and the vocabulary stops being one.
+         *     REFUSES a word the workspace does not hold, so a caller who cannot see the existing words
+         *     asks for a near-duplicate — "K5 Conference" beside "K5 Conference 2026" — and an admin
+         *     coins it, and the vocabulary stops being one.
          */
         get: operations["listTags"];
         put?: never;
@@ -5123,11 +5124,119 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Read one tag, with how much of the workspace carries it.
+         * @description The word and its weight. `usage` counts the records this caller may see — an admin
+         *     deciding whether to retire a tag needs to know what retiring it costs, and a count
+         *     that included rows they cannot read would be a number they cannot act on.
+         *
+         *     Counts cover the three advertised record types. Lead and project taggings exist in
+         *     storage and are not advertised, so they are not counted here either.
+         */
+        get: operations["getTag"];
         put?: never;
         post?: never;
-        /** Archive a tag. */
+        /**
+         * Archive a tag.
+         * @description Retiring a word leaves every record that carries it alone: the taggings stay, so a
+         *     history that says "this was a Key Account in March" is still true. What changes is
+         *     that nobody can apply it again.
+         */
         delete: operations["archiveTag"];
+        options?: never;
+        head?: never;
+        /** Rename, recolour or describe a tag. */
+        patch: operations["updateTag"];
+        trace?: never;
+    };
+    "/tags/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring an archived tag back into the vocabulary.
+         * @description The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
+         *     name in the meantime: two words a reader cannot tell apart is the exact state the
+         *     vocabulary exists to prevent, and the caller has to rename one of them first.
+         */
+        post: operations["restoreTag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fold this tag into another, moving every record that carries it.
+         * @description The fix for a vocabulary that grew two words for one idea. Every record carrying the
+         *     source ends up carrying the target, the source is archived, and its NAME IS RELEASED
+         *     — a later create may reuse it, and links to the old tag stop working.
+         *
+         *     The answer separates `moved` from `collapsed` because they are different facts: a
+         *     record that carried only the source is moved, and one that already carried both
+         *     collapses into a single tagging. An admin reading "12 moved, 3 collapsed" knows the
+         *     target grew by 12, which a single total would not tell them.
+         */
+        post: operations["mergeTags"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{entity_type}/{entity_id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "person" | "organization" | "deal";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The tags on one record, and who put them there.
+         * @description ONE read for all three record types, because the panel that draws them is one
+         *     component: a per-type block on each record response would be three copies of one
+         *     shape, and they would drift.
+         *
+         *     Each assignment carries who applied it and when, which the record page shows beside
+         *     the tag. `assigned_by` is absent for assignments made before the product recorded
+         *     it — absent means unknown, never "the system".
+         *
+         *     The three advertised types only. `taggable` admits lead and project, and this route
+         *     refuses them: a read that answered for a type no screen offers would be a surface
+         *     nobody meant to ship.
+         *
+         *     Withheld is not empty. A caller who may read the record but not the tag vocabulary
+         *     gets `withheld: true` and no assignments — distinguishable from a record that simply
+         *     carries none, because "no tags" is a claim about the record and this caller cannot
+         *     make it.
+         */
+        get: operations["getRecordTags"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -5822,30 +5931,50 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Destroy the mail one of your own rules matched.
+         * Destroy the mail one exclusion rule matched.
          * @description An exclusion stops FUTURE mail. This destroys what already arrived: the message text, the
          *     provider original, the attachments and their blobs, the embeddings, the delivery copies and
          *     everything derived from them. It is not reversible and there is no undo — the preview exists
          *     so the counts are seen before that is true.
          *
-         *     Only mail your own connection brought in. A message a colleague also imported keeps their
-         *     copy: your import of it is released, theirs stands, and the message stays on their timeline.
-         *     A message the law still requires keeping survives both and is reported as skipped — a
-         *     statutory hold, or commercial correspondence inside its retention window. An owner told
-         *     their mail is gone must not find it still there.
+         *     How far it reaches follows the rule's own scope. For YOUR OWN rule: only mail your own
+         *     connection brought in. A message a colleague also imported keeps their copy — your import
+         *     of it is released, theirs stands, and the message stays on their timeline.
+         *
+         *     For a WORKSPACE rule: every captured message the rule matches, across every seat. The
+         *     message is destroyed for everybody, so every seat's claim on it goes with it — nobody is
+         *     left holding a stub on their timeline for mail they were told is gone.
+         *
+         *     A workspace purge needs the ADMIN role. Being able to WRITE a workspace rule is not
+         *     enough: that grant is held by ops seats too, and destroying every colleague's matching
+         *     mail is the workspace's own act.
+         *
+         *     It also matches the way ingress matches — a message the rule caught through a To or Cc
+         *     line is destroyed, not only one whose sender matched. A COLLEAGUE on that line does not
+         *     count: they are not the counterparty a rule is about, and admitting them would let a rule
+         *     naming your own mail domain match nearly everything.
+         *
+         *     Either arm needs a seat that may change things. A read seat is licensed to look, not to
+         *     destroy.
+         *
+         *     Either way, a message the law still requires keeping survives and is reported as skipped —
+         *     a statutory hold, or commercial correspondence inside its retention window. Somebody told
+         *     their mail is gone must not find it still there. And either way, only mail a connection
+         *     actually captured: an activity somebody logged by hand was never governed by a capture
+         *     rule and is left alone.
          *
          *     An erasure request that has been EXECUTED leaves such a hold and is therefore covered. One
          *     still open is not: nothing marks the messages it will be about until somebody acts on it,
          *     so a purge can destroy correspondence a pending request was going to assemble.
          *
-         *     Contacts go too, but only the ones your mail is the sole reason this CRM knows them: a
-         *     person with an address outside the rule, a deal against their name, or mail another
-         *     colleague also imported is somebody the workspace knows independently, and destroying that
-         *     record would take away work somebody did. Those that do go are anonymised rather than
-         *     deleted, so a colleague's records that reference them do not break.
-         *
-         *     Your own rules only. A workspace rule belongs to the workspace, and destroying every
-         *     colleague's matching mail is not one person's act.
+         *     Contacts go too on your own rule, but only the ones your mail is the sole reason this CRM
+         *     knows them. A person with an address outside the rule, a deal against their name, or mail
+         *     another colleague also imported is somebody the workspace knows independently, and
+         *     destroying that record would take away work somebody did. Those that do go are anonymised
+         *     rather than deleted, so a colleague's records that reference them do not break. A workspace purge
+         *     anonymises nobody: a contact every seat can see is by definition known for more reasons
+         *     than the mail one rule matched, and erasing people workspace-wide is what a data-subject
+         *     request is for.
          */
         post: operations["purgeCaptureExclusion"];
         delete?: never;
@@ -6557,6 +6686,44 @@ export interface paths {
          *     board would read as an outage.
          */
         get: operations["getTeamBoard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklist/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the queue is not showing, and which rule is holding it back.
+         * @description The Worklist is designed to look finite: a rep works it to the bottom and the day
+         *     is done. Five rules make a waiting customer disappear from it, and nothing on the
+         *     page can say whether any of them is hiding real work — a rep who marks every hard
+         *     reply `not_sales` produces a page identical to a rep with a clean queue. The
+         *     failure is invisible by construction, which is the one shape of defect a finite
+         *     queue cannot report on itself.
+         *
+         *     This is the counter-reading. Each figure is the SAME eligibility query the queue
+         *     runs, with ONE hiding rule relaxed, so a difference is attributable rather than a
+         *     single number nobody can act on: a reader is told which rule to look at.
+         *
+         *     THE TARGET IS ZERO, and every figure is a defect rather than a statistic. Two of
+         *     the rules are somebody's choice and two are nobody's — see each field.
+         *
+         *     Counted under the CALLER's own visibility, like `/worklist/team`'s counts are: a
+         *     figure summing rows the reader may not open would publish work they have no
+         *     access to. So this answers "how much is hidden from YOU", which is the only
+         *     honest reading available without giving one person a licence to read another's
+         *     records.
+         */
+        get: operations["getHiddenBacklog"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7768,6 +7935,57 @@ export interface paths {
         head?: never;
         /** Update a data-subject request's status / assignee / resolution. */
         patch: operations["updateDataSubjectRequest"];
+        trace?: never;
+    };
+    "/data-subject-requests/{id}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download the Art. 15 package an access request asks for.
+         * @description Assembles everything this installation holds about the subject and hands it back as a file
+         *     to forward to them: their record and its identifiers, the conversations they were party to
+         *     and what was said in them, the attachments, consent and its history, what they themselves
+         *     submitted through a confirm link, what was read about them from public sources, and the
+         *     provider originals behind the captured mail.
+         *
+         *     A privileged read that deliberately crosses the caller's own row scope, because Art. 15
+         *     owes the subject everything held rather than the slice one colleague may see. So it takes
+         *     the same trust erasure does: an ADMIN, human, holding `person.delete`, with unbounded row
+         *     scope. An agent is refused whatever its passport carries — an admin's read-scoped passport
+         *     would otherwise assemble a subject's entire record.
+         *
+         *     Only an `access` request has a package. An erasure or a rectification is answered by its
+         *     own path, and handing back a subject's whole record to close a request that asked for
+         *     something else would be the export nobody asked for.
+         *
+         *     The request's `subject_ref` must name a person id. It is free text until somebody resolves
+         *     it, and a request naming nobody has nothing to assemble — the same refusal fulfilling an
+         *     erasure gives, for the same reason. A `subject_ref` that is not a person id at all answers
+         *     422; one that is a well-formed id naming no person answers 404. The two look identical on a
+         *     stale request row and are worth telling apart.
+         *
+         *     **The download is recorded.** Assembling a package writes an audit entry against the person
+         *     — action `export`, naming the officer who asked and how much it carried. That record is what
+         *     makes a read this privileged acceptable, and it is written whether or not the package
+         *     reaches anybody.
+         *
+         *     This does NOT change the request's status. Producing the export and deciding the request is
+         *     answered are two acts by the same person: mark it fulfilled through the PATCH once you have
+         *     sent it, so a download that never reached anybody does not close the row.
+         */
+        get: operations["downloadDataSubjectPackage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/audit-log": {
@@ -10637,102 +10855,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/quotas": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List quotas (cursor-paginated). */
-        get: operations["listQuotas"];
-        put?: never;
-        /**
-         * Create a quota (owner XOR team revenue target for one period).
-         * @description RD-WIRE-2. Exactly one of owner_id/team_id must be non-null (RD-DDL-2 CHECK) —
-         *     supplying both or neither is refused with a 422 validation_error carrying a distinct
-         *     details.errors[].code (owner_xor_team_required), not the generic per-field
-         *     validation code, so a caller can branch on this specific violation. target_minor is
-         *     always human-set (RD-PARAM-3) — no default, no AI-guessed or server-computed
-         *     fallback. Quota targets follow the pipeline/stage-config posture (createPipeline,
-         *     updateStage): human session only (x-agent-access: human-only), never an MCP tool
-         *     tier — an agent never sets or changes a sales target.
-         */
-        post: operations["createQuota"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/quotas/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /** Get a quota by id. */
-        get: operations["getQuota"];
-        put?: never;
-        post?: never;
-        /**
-         * Archive (soft-delete) a quota.
-         * @description Archive semantics (API-CONV-2): sets archived_at, drops from default lists, stays
-         *     fetchable by id, and returns 200 + the full archived entity — never 204. This
-         *     deliberately does not follow /automations/{id}'s deleteAutomation 204-on-archive
-         *     shape, which predates/diverges from the standard convention every other archive
-         *     operation in this contract (archivePerson, archiveOrganization, archiveDeal)
-         *     correctly follows. Human session only, like createQuota/updateQuota.
-         */
-        delete: operations["archiveQuota"];
-        options?: never;
-        head?: never;
-        /**
-         * Update a quota (partial).
-         * @description Merge-PATCH (API-CONV-1); If-Match required for concurrency-safe writes (API-CC-2).
-         *     Re-validates the owner-XOR-team contract after the merge — patching into a both-set
-         *     or neither-set state returns the same 422 owner_xor_team_required shape as
-         *     createQuota. Human session only, like createQuota/archiveQuota (see createQuota's
-         *     description) — an agent never sets or changes a sales target.
-         */
-        patch: operations["updateQuota"];
-        trace?: never;
-    };
-    "/quotas/{id}/attainment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /**
-         * Server-computed attainment for this quota (RD-WIRE-3), decomposed per closed-won deal.
-         * @description RD-FORM-2: attainment = Σ(closed-won base_value_minor in the quota's period) ÷
-         *     target_minor, base-currency converted. Never client-summed — contributing_deals
-         *     always sums to closed_won_minor. A zero or otherwise unusable target refuses the
-         *     computation honestly (422 attainment_target_zero, RD-AC-4/AC-quota-6) rather than
-         *     dividing by zero; a failed clean-core query (e.g. a missing FX rate, mirroring
-         *     getOrganizationHierarchyRollup's fx_rate_unavailable) is an honest error, never a
-         *     stale or invented figure. Requires read on quotas AND deals (the aggregate is
-         *     built from deal sums); per-deal row visibility is deliberately not consulted —
-         *     attainment is a workspace-level figure, the hierarchy-rollup posture.
-         */
-        get: operations["getQuotaAttainment"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/attachments": {
         parameters: {
             query?: never;
@@ -13381,6 +13503,14 @@ export interface components {
             overruled: boolean;
             /** @description Whether a contact actually exists for this address. */
             record_exists: boolean;
+            /**
+             * Format: date-time
+             * @description When this sender's oldest message is destroyed. Present only for a `personal` verdict
+             *     you have not overruled — every other kind is withheld rather than destroyed, and
+             *     deciding this sender is business cancels the deletion. Later mail from the same sender
+             *     runs its own window, so this date names the next message to go rather than all of them.
+             */
+            deletes_at?: string;
         };
         /** @description What an owner's decision about a thread reached. */
         ThreadAudienceOutcome: {
@@ -21284,7 +21414,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            color?: string | null;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+            description?: string | null;
+            /** Format: int64 */
+            version?: number;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -21294,7 +21428,103 @@ export interface components {
         };
         CreateTagRequest: {
             name: string;
-            color?: string | null;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+            description?: string | null;
+        };
+        /**
+         * @description What one record carries. `withheld` says the caller could not read the vocabulary,
+         *     which is why `data` is empty — a reader has to be able to tell that from a record
+         *     with no tags on it.
+         */
+        RecordTagsResponse: {
+            data: components["schemas"]["RecordTag"][];
+            withheld: boolean;
+        };
+        /** @description One tag on one record, with the assignment that put it there. */
+        RecordTag: {
+            /** Format: uuid */
+            tag_id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+            description?: string | null;
+            archived: boolean;
+            /** Format: date-time */
+            assigned_at: string;
+            assigned_by?: components["schemas"]["RecordTagAssigner"];
+        };
+        /** @description Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's. */
+        RecordTagAssigner: {
+            /** Format: uuid */
+            user_id?: string | null;
+            display_name?: string | null;
+            /** @enum {string} */
+            kind: "human" | "agent" | "import";
+        };
+        /** @description One tag with how much of the workspace carries it. */
+        TagDetail: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+            description?: string | null;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: date-time */
+            archived_at?: string | null;
+            usage: components["schemas"]["TagUsage"];
+        };
+        /**
+         * @description How many records of each advertised type carry this tag, counted within what the
+         *     reader may see. Lead and project taggings are storage the product does not advertise
+         *     and are not counted.
+         */
+        TagUsage: {
+            people: number;
+            companies: number;
+            deals: number;
+        };
+        /**
+         * @description A partial update: an omitted field is left alone.
+         *
+         *     Clearing is spelled as a VALUE, not as null. `color: "none"` removes the colour and
+         *     `description: ""` removes the text, because a decoded absent field and a decoded null
+         *     are the same thing in the generated request type — a contract that promised the two
+         *     meant different things would be promising something no server can honour.
+         *
+         *     The name cannot be cleared. A tag without one cannot be applied or read.
+         */
+        UpdateTagRequest: {
+            name?: string;
+            /** @enum {string} */
+            color?: "teal" | "amber" | "rose" | "slate" | "none";
+            description?: string;
+        };
+        MergeTagsRequest: {
+            /**
+             * Format: uuid
+             * @description The tag that survives. Must be live, and must not be this tag.
+             */
+            into_tag_id: string;
+        };
+        /** @description What the merge did, in the two numbers that differ. */
+        MergeTagsResult: {
+            /** Format: uuid */
+            into_tag_id: string;
+            /** @description Records that carried only the source and now carry the target. */
+            moved: number;
+            /**
+             * @description Records that already carried both. Their duplicate tagging is dropped rather than
+             *     moved, so the target gains nothing from them — which is why this is not folded
+             *     into `moved`.
+             */
+            collapsed: number;
         };
         Taggable: {
             /** Format: uuid */
@@ -21720,7 +21950,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan";
+        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -22479,7 +22709,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -23479,6 +23709,8 @@ export interface components {
             target_entity_type?: string | null;
             /** Format: uuid */
             target_entity_id?: string | null;
+            /** @description What the target record was CALLED when this proposal was staged, where its type has a name at all. Resolved at staging time and frozen: the record may be renamed, archived or merged before anyone opens the inbox, and a caption re-resolved then would name something the approver was never shown. Absent means the type carries no name, or the row had already gone — a card then says nothing rather than "unknown". */
+            target_label?: string | null;
             /** @description The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036). */
             target_version?: number | null;
             /** @description Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect. */
@@ -25084,7 +25316,7 @@ export interface components {
             /** @description Omitted while access is `paused` or `expired`, and when nothing has been published yet. */
             room?: components["schemas"]["BuyerRoomContent"];
         };
-        /** @description A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like Quota/CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema. */
+        /** @description A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema. */
         OfferTemplate: {
             /** Format: uuid */
             id: string;
@@ -26171,11 +26403,17 @@ export interface components {
          * @description How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
          *     queue's own count under its both-sides-visible rule, kept separate because the
          *     lane shows a bounded slice of it.
+         *
+         *     A lane whose count is its bounded page says so in its own description. `needs_you`,
+         *     `planned` and `commitments` report the TOTAL beside a bounded page, because a badge
+         *     that stops at the cap tells a reader with thirteen that they have twelve — and these
+         *     lanes offer no second page to find the thirteenth by.
          */
         AttentionCounts: {
             /** @description Briefing items still unanswered in the rep's run for today. */
             this_morning: number;
             needs_you: number;
+            /** @description How many pieces of agreed work are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it. The lane shows the soonest-due dozen; the number says how many there are, which is the reading `needs_you` has always had. */
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
             duplicates_open?: number;
@@ -26183,7 +26421,7 @@ export interface components {
             meetings?: number;
             /** @description How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under. */
             at_risk?: number;
-            /** @description How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
+            /** @description How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
             commitments?: number;
             /** @description How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in. */
             relationship_decay?: number;
@@ -26437,6 +26675,7 @@ export interface components {
              *     not drawing.
              */
             counts: components["schemas"]["WorklistCount"][];
+            readings: components["schemas"]["WorklistReadings"];
             /**
              * @description The outcome headings, in the order a page draws them, each with how many of this
              *     page's rows sit under it.
@@ -26616,6 +26855,149 @@ export interface components {
             material_threshold_minor?: number | null;
             /** @description The currency every expected-revenue figure here is converted to. */
             base_currency?: string | null;
+        };
+        /**
+         * @description The day's four OUTCOME figures, for the strip above the queue: what money is
+         *     drifting, who is waiting on an answer, how much new business is in hand, and how
+         *     much routine work is queued behind a decision.
+         *
+         *     These are not the filter pills. `counts` says how many items of a kind the queue
+         *     holds; these say what those items MEAN for the day, which is why one of them is a
+         *     sum of money rather than a tally. Both are on the page because a rep asks two
+         *     different questions — "what is there" and "what is at stake".
+         *
+         *     Every figure describes the same set `counts.considered` describes: what this read
+         *     weighed AFTER the scope narrowing and BEFORE the category filter, the fold and the
+         *     page cut. That is the only set for which the numbers are stable — computed over
+         *     the page, the strip would shrink as a reader walked the queue and read as work
+         *     disappearing; computed after the filter, opening a pill would empty the other
+         *     three.
+         *
+         *     `more_available` carries the same honesty `WorklistCount` carries, for the same
+         *     reason: a source read to its work bound makes every figure here a FLOOR rather
+         *     than a total, and a strip stating "3 buyers waiting" over a scan that stopped
+         *     early tells a rep the opposite of the truth.
+         */
+        WorklistReadings: {
+            /**
+             * Format: int64
+             * @description What the drifting deals are worth, summed over the deals this read PRICED, in
+             *     the currency `revenue_currency` names.
+             *
+             *     Null when no deal at risk could be priced — no amount recorded, or no stored
+             *     rate for its currency. Null is not zero: zero says the pipeline is safe, and
+             *     absence says nobody can tell. A deal the estate cannot price is left OUT of
+             *     the sum rather than counted as nothing, so a partly priced day reports what it
+             *     could price and says so through `revenue_currency`.
+             *
+             *     It is a FLOOR on what is drifting, never a total, and two things put work
+             *     outside it. A deal nobody could price is one. The other is that only the
+             *     at-risk lane goes through the currency conversion, so a deal reaching the page
+             *     from the overnight brief draws an amount on its own card and adds nothing
+             *     here. Both are why `more_available` matters: read this figure as "at least
+             *     this much", and read the `deals_at_risk` entry in `counts` for how many deals
+             *     stand behind it.
+             */
+            revenue_at_risk_minor: number | null;
+            /**
+             * @description The currency `revenue_at_risk_minor` is stated in — the installation's base
+             *     currency, once the amounts went through the conversion seam.
+             *
+             *     Null when they did not, which makes the sum a total of raw minor units in no
+             *     one currency. A client must not format a figure whose units it cannot name:
+             *     with this absent the amount is not money yet, and drawing it as money is the
+             *     error the conversion seam exists to prevent.
+             */
+            revenue_currency?: string | null;
+            /** @description How many customers have written and are waiting on an answer. */
+            buyer_replies: number;
+            /** @description How much new business is in hand and owed a first response. */
+            prospecting: number;
+            /**
+             * @description How much routine work is queued behind a decision. Counted before the fold, so
+             *     a hundred alike approvals read as a hundred here even where the queue draws
+             *     them as one row — the strip says how much work there is, and the queue says
+             *     how much reading it costs.
+             */
+            review: number;
+            /**
+             * @description True when any source behind any figure here was read to its work bound, so
+             *     every number above is a floor. Set once for the strip rather than per reading:
+             *     the four are read as one row, and a reader who cannot trust one of them cannot
+             *     trust the row.
+             */
+            more_available: boolean;
+        };
+        /**
+         * @description How much waiting work each hiding rule is keeping off one reader's queue, at one
+         *     instant. Every count is of THREADS, matching what the queue counts: a customer who
+         *     wrote three times is waiting once.
+         */
+        HiddenBacklog: {
+            /**
+             * Format: date-time
+             * @description The instant every figure below was read at.
+             */
+            as_of: string;
+            /**
+             * @description What the queue itself would carry. Here so the others read as a proportion
+             *     rather than as bare volumes — three hidden against four shown is a broken
+             *     queue, and three against three hundred is a rep tidying up.
+             */
+            shown: number;
+            /**
+             * @description Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
+             *     least alarming of the four: a snooze lifts on its own moment, so this includes
+             *     work that will come back without anybody remembering it. `not_mine` does not
+             *     lift at all.
+             */
+            set_aside: number;
+            /**
+             * @description Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
+             *     the judgement worth watching: it hides the thread from the WHOLE workspace and
+             *     never lifts, so one rep's mistake removes a customer from everybody's day
+             *     permanently.
+             */
+            not_sales: number;
+            /**
+             * @description Work older than the queue's horizon with no open deal behind it. NOBODY CHOSE
+             *     THIS. A customer who wrote four months ago and was never answered is exactly
+             *     the failure a sales queue exists to prevent, and the horizon removes them on a
+             *     date with no rep having judged anything.
+             *
+             *     Bounded at a year: past that a message is history by any reading, and an
+             *     unbounded scan would answer a different question at the cost of a full table
+             *     read.
+             */
+            past_horizon: number;
+            /**
+             * @description Inbound mail that qualifies in every other way and is attached to no record the
+             *     workspace sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+             *     is right — a rep's dentist is not a customer — and it is also where a real
+             *     customer lands when capture failed to link their thread. Its own figure for
+             *     that reason rather than folded into a total.
+             */
+            unlinked: number;
+            /**
+             * @description True when a read stopped at its own scan bound, which makes every figure above
+             *     it a FLOOR rather than a count.
+             *
+             *     The bound is on the shared statement, so the strict read and every relaxed read
+             *     clip at the same number. On a queue already at the cap all five return it, every
+             *     difference is zero, and a guardrail without this flag would report a clear
+             *     backlog over the installation most likely to be hiding work.
+             *
+             *     `clear` is false whenever this is true. That is not a claim that work IS hidden;
+             *     it is a refusal to claim the opposite over a question the scan stopped before
+             *     settling.
+             */
+            truncated: boolean;
+            /**
+             * @description True when nothing is being held back AND the reads were complete. The
+             *     guardrail's target, sent as its own field because a number only ever read beside
+             *     other numbers becomes decoration — this is what a check asserts on.
+             */
+            clear: boolean;
         };
         /**
          * @description One thing to do, with the reason it sits where it sits.
@@ -26890,146 +27272,6 @@ export interface components {
             source: string;
             /** @enum {string} */
             reason: "withheld" | "failed";
-        };
-        /**
-         * @description A per-owner or per-team revenue target for one period (RD-DDL-2). Exactly one of
-         *     owner_id/team_id is non-null (CHECK constraint) — never both, never neither;
-         *     createQuota/updateQuota document and enforce this (422 owner_xor_team_required).
-         *     target_minor is always human-set: no AI-guessed quota, no default, no
-         *     server-computed fallback (RD-PARAM-3). Deliberately carries no
-         *     source/captured_by/created_by provenance columns — unlike custom_field's
-         *     created_by (CF-T01), RD-DDL-2's column list has none. Attainment is a separate
-         *     read (getQuotaAttainment, RD-WIRE-3) — this schema never carries attainment
-         *     fields itself.
-         */
-        Quota: {
-            /** Format: uuid */
-            id: string;
-            /**
-             * Format: uuid
-             * @description Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-             */
-            owner_id?: string | null;
-            /**
-             * Format: uuid
-             * @description Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-             */
-            team_id?: string | null;
-            /** Format: date */
-            period_start: string;
-            /** Format: date */
-            period_end: string;
-            /**
-             * Format: int64
-             * @description Human-set revenue target, integer minor units (RD-PARAM-3) — never an AI-guessed or server-computed field.
-             */
-            target_minor: number;
-            currency: string;
-            version?: components["schemas"]["RowVersion"];
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-            /** Format: date-time */
-            archived_at?: string | null;
-        };
-        QuotaListResponse: {
-            data: components["schemas"]["Quota"][];
-            page: components["schemas"]["PageInfo"];
-        };
-        /**
-         * @description Exactly one of owner_id/team_id must be non-null — supplying both or neither is a 422
-         *     validation_error carrying a distinct, machine-branchable details.errors[].code
-         *     (owner_xor_team_required), not the generic per-field validation code (see
-         *     createQuota's 422 examples). Not expressed as an OpenAPI 3.1 oneOf here — a prose
-         *     note plus a 422 on mismatch, matching how CreateCustomFieldRequest documents its
-         *     conditional currency/options requirement (CF-T01).
-         */
-        CreateQuotaRequest: {
-            /** Format: uuid */
-            owner_id?: string | null;
-            /** Format: uuid */
-            team_id?: string | null;
-            /** Format: date */
-            period_start: string;
-            /** Format: date */
-            period_end: string;
-            /** Format: int64 */
-            target_minor: number;
-            currency: string;
-        };
-        /** @description Merge-PATCH (API-CONV-1). Re-validates owner-XOR-team after the merge is applied — patching the row into a both-set or neither-set state is refused with the same 422 owner_xor_team_required shape as createQuota, not silently accepted. Switching a quota between owner- and team-scoped is archive-and-recreate: merge-PATCH cannot express the null clear (omitted and null are the same wire shape), so a PATCH can only reassign within the side the row already carries. */
-        UpdateQuotaRequest: {
-            /** Format: uuid */
-            owner_id?: string | null;
-            /** Format: uuid */
-            team_id?: string | null;
-            /** Format: date */
-            period_start?: string;
-            /** Format: date */
-            period_end?: string;
-            /** Format: int64 */
-            target_minor?: number;
-            currency?: string;
-        };
-        /**
-         * @description RD-WIRE-3 / RD-FORM-2 — server-computed attainment for one quota, decomposed for
-         *     "explain this number": attainment = Σ(closed-won base_value_minor in the quota's
-         *     period) ÷ target_minor, base-currency converted, in integer minor units. Never
-         *     client-summed — contributing_deals always sums to closed_won_minor. Rides as a
-         *     sub-resource of the quota (mirrors /organizations/{id}/hierarchy-rollup's
-         *     "computed read with decomposition" shape) rather than an inline field on Quota or
-         *     a GET ?include= expansion — chosen once, applied consistently; the plain Quota
-         *     response (list or single-get) never carries attainment fields. A failed or absent
-         *     computation is an honest error (getQuotaAttainment's 422 responses), never a
-         *     cached or invented figure (RD-AC-4).
-         */
-        QuotaAttainment: {
-            /** Format: uuid */
-            quota_id: string;
-            /**
-             * Format: int64
-             * @description Σ base_value_minor over closed-won deals in the quota's period (RD-FORM-2).
-             */
-            closed_won_minor: number;
-            /**
-             * Format: int64
-             * @description The BASE-CONVERTED target this attainment is measured against — Quota.target_minor converted into the workspace base currency at the as_of_date FX rate. It equals Quota.target_minor only when the quota is set in the base currency; a cross-currency quota's echo differs, so gap arithmetic never mixes currencies.
-             */
-            target_minor: number;
-            /** @description The workspace base currency — every money figure here (closed_won_minor, target_minor, gap_minor) is denominated in it, NOT in Quota.currency. */
-            currency: string;
-            /** @description closed_won_minor ÷ target_minor × 100 (RD-FORM-2). Uncapped raw value — e.g. 113 for the worked example — display capping (the ring visual stops at a full circle) is a RD-PARAM-4 UI concern, not this field's. */
-            attainment_pct: number;
-            /**
-             * Format: int64
-             * @description Signed gap to target — closed_won_minor minus target_minor (RD-FORM-2's worked example: +33.872,00 EUR once closed-won exceeds target); positive once attainment exceeds 100%, negative while short of target.
-             */
-            gap_minor: number;
-            /** @description Percent of the quota period elapsed at as_of_date (RD-PARAM-4 pace indicator): 0 before period_start, 100 at/after period_end, linear between. Carries period progress ONLY — comparing it against attainment_pct (ahead/behind pace) is the consumer's step, not encoded in this field. */
-            pace_pct: number;
-            /**
-             * @description Server-computed display band (RD-PARAM-4): met >= 100%, accent 60-99%, behind < 60%. The client never recomputes this from raw attainment_pct.
-             * @enum {string}
-             */
-            band: "met" | "accent" | "behind";
-            /**
-             * Format: date
-             * @description The date this attainment was computed.
-             */
-            as_of_date: string;
-            /** @description Per-deal decomposition for "Explain This Number"; sums to closed_won_minor. */
-            contributing_deals: components["schemas"]["QuotaAttainmentDeal"][];
-        };
-        /** @description One row of RD-FORM-2's per-deal breakdown — a closed-won deal counted toward this quota's attainment. */
-        QuotaAttainmentDeal: {
-            /** Format: uuid */
-            deal_id: string;
-            /**
-             * Format: int64
-             * @description This deal's counted amount toward closed_won_minor (base currency, minor units).
-             */
-            base_value_minor: number;
         };
         KnowledgeCorpus: {
             /** Format: uuid */
@@ -36206,6 +36448,31 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tag. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     archiveTag: {
         parameters: {
             query?: never;
@@ -36228,6 +36495,133 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    updateTag: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTagRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated tag. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tag"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored tag. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tag"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    mergeTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeTagsRequest"];
+            };
+        };
+        responses: {
+            /** @description What the merge moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeTagsResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getRecordTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "person" | "organization" | "deal";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record's tags. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordTagsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     applyTag: {
@@ -38083,6 +38477,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    getHiddenBacklog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What is being held back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HiddenBacklog"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getMorningDigest: {
         parameters: {
             query?: {
@@ -39494,6 +39910,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DataSubjectRequest"];
+                };
+            };
+        };
+    };
+    downloadDataSubjectPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The package, as a JSON file named after the request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -44770,264 +45210,6 @@ export interface operations {
                 };
             };
             /** @description `snoozed_until` is missing or not in the future. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    listQuotas: {
-        parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-                /**
-                 * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
-                 *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
-                 *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
-                 *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
-                 */
-                sort?: components["parameters"]["Sort"];
-                /** @description Include soft-deleted (archived) rows. Default false. */
-                include_archived?: components["parameters"]["IncludeArchived"];
-                owner_id?: string;
-                team_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A page of quotas. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuotaListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    createQuota: {
-        parameters: {
-            query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateQuotaRequest"];
-            };
-        };
-        responses: {
-            /** @description Created quota. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quota"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            /** @description Validation failed, including the owner-XOR-team contract. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getQuota: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The quota. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quota"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    archiveQuota: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Archived quota (now carries a non-null archived_at). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quota"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    updateQuota: {
-        parameters: {
-            query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
-                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
-                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
-                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
-                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
-                 */
-                "If-Match"?: components["parameters"]["IfMatch"];
-            };
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateQuotaRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated quota. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quota"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            /** @description Validation failed, including the owner-XOR-team contract. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getQuotaAttainment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description This quota's server-computed attainment. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuotaAttainment"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Attainment cannot be honestly computed — target is zero, or the clean-core query failed. */
             422: {
                 headers: {
                     [name: string]: unknown;

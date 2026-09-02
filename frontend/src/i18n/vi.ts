@@ -162,7 +162,7 @@ export const vi = {
   "autonomy.auto": "tự động thực thi",
   "autonomy.confirm": "xác nhận trước",
 
-  "nav.home": "Trang chủ",
+  "nav.home": "Bản tóm tắt",
   "nav.contacts": "Contact",
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
@@ -274,6 +274,8 @@ export const vi = {
     "Công ty này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào.",
   "record.notYoursToChange":
     "Công ty này thuộc về người khác. Hãy đề nghị chủ sở hữu chia sẻ nếu bạn cần thay đổi.",
+  "record.logActivityRefused":
+    "Bạn không có quyền ghi nhận hoạt động cho hồ sơ này.",
   "record.share": "Chia sẻ",
   "record.moreActions": "Thêm thao tác",
   "record.fullHistory": "Lịch sử đầy đủ",
@@ -479,6 +481,8 @@ export const vi = {
   "common.error": "Không tải được màn hình này.",
   "common.errorNoCause":
     "Yêu cầu thất bại. Không có nguyên nhân nào được báo về.",
+  "common.assistantUnavailable":
+    "Trợ lý chưa phản hồi nên không thể soạn giúp bạn phần này. Quản trị viên có thể kiểm tra liên kết mô hình trong Cài đặt → AI. Không bắt buộc phải có trợ lý — bạn có thể tự nhập các thông tin này.",
   "common.gatewayUnavailable":
     "Máy chủ chưa hoàn tất yêu cầu này kịp thời. Có thể nó vẫn đang chạy — hãy đợi một lát trước khi thử lại, nếu không cùng một công việc sẽ chạy hai lần.",
   "common.permissionDenied":
@@ -1288,7 +1292,7 @@ export const vi = {
   "approval.kind.send_email": "Gửi một email",
   "approval.kind.held_draft": "Xem lại email đã soạn",
   "approval.kind.book_meeting": "Đặt một lịch họp",
-  "approval.kind.quota_release": "Cho tác nhân tiếp tục",
+  "approval.kind.volume_release": "Cho tác nhân tiếp tục",
   "approval.kind.coldstart": "Điền thông tin công ty mới",
   "approval.kind.enrich": "Bổ sung thông tin từ web",
   "approval.kind.deepread": "Đọc website công ty",
@@ -2256,7 +2260,6 @@ export const vi = {
     "{count} deal không nằm trong các số này — quyền của bạn không bao gồm chúng.",
   "home.pipelineUnavailable": "Không tải được số liệu này.",
   "home.asOf": "tính đến {at}",
-  "home.refresh": "Làm mới tóm tắt",
   "home.refreshing": "Đang xếp hạng…",
   "home.generate": "Lấy tóm tắt hôm nay",
   "home.noneBody":
@@ -2269,6 +2272,103 @@ export const vi = {
     "Hôm nay không có tóm tắt ban đêm — Margince chưa chạy lượt nào cho bản tin này. Thứ tự bên dưới vẫn là của hôm nay.",
   "home.panel.weekly": "Tuần trước",
   "home.weekly.weekOf": "Tuần từ {day}",
+  // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
+  // của trang đó mà vẫn còn ai đó thay đổi được.
+  "plan.title": "Lập kế hoạch tuần tới",
+  // Phần đầu của danh sách đã xếp hạng, trên trang mở đầu tiên — cùng những
+  // dòng mà Danh sách công việc hiển thị, theo thứ tự máy chủ đã quyết định.
+  "brief.donext.title": "Làm tiếp theo",
+  // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
+  // không do mô hình viết.
+  "brief.eyebrow": "Buổi sáng của bạn",
+  "brief.sentence.clear": "Sáng nay không có gì đang chờ bạn.",
+  "brief.sentence.one": "Trước tiên: {lead}",
+  "brief.sentence.oneWithCost": "Trước tiên: {lead} — {consequence}",
+  "brief.sentence.many": "Trước tiên: {lead} Rồi {rest} mục nữa.",
+  "brief.sentence.manyWithCost":
+    "Trước tiên: {lead} — {consequence} Rồi {rest} mục nữa.",
+
+  "brief.donext.sub": "Một thứ tự, từ danh sách công việc của bạn.",
+  "brief.donext.loading": "Đang đọc những gì đang chờ bạn",
+  "brief.donext.clear": "Hiện không có gì đang chờ bạn.",
+  "brief.donext.rest": "{count} mục khác trong danh sách công việc",
+
+  // Tuần của một nhóm, đóng băng khi tuần khép lại. Hai tuần so sánh được vì
+  // không tuần nào dịch chuyển dưới phép so sánh.
+  "teamweekly.title": "Tuần của nhóm",
+  "teamweekly.weekOf": "{team} · tuần từ {day}",
+  "teamweekly.frozen": "Đã đóng băng",
+  "teamweekly.loading": "Đang đọc tuần của nhóm",
+  "teamweekly.empty": "Không có gì để hiển thị cho tuần này.",
+  "teamweekly.forbidden":
+    "Tuần của nhóm là câu hỏi cấp nhóm, còn quyền của bạn chỉ tới các bản ghi của chính bạn.",
+  "teamweekly.noSnapshot":
+    "Chưa có tuần nào khép lại cho nhóm này. Ảnh chụp đầu tiên được ghi vào thứ Hai sau tuần đầy đủ đầu tiên.",
+  "teamweekly.pickTeam": "Chọn một nhóm",
+  "teamweekly.repsUnread":
+    "Không đọc được {count} thành viên. Mọi con số ở đây bao phủ {counted}.",
+  "teamweekly.ofTotal": "{part} trên {whole}",
+  "teamweekly.headline.plain":
+    "Tuần trôi qua mà không có chỉ số nào nổi bật theo hướng nào.",
+  "teamweekly.headline.healthy":
+    "{reading} ở mức tốt là {pct}%, so với ngưỡng {bar}%.",
+  "teamweekly.headline.weak":
+    "{reading} thì không, ở {pct}% so với ngưỡng {bar}%.",
+  "teamweekly.reading.firstResponse": "Phản hồi đầu tiên",
+  "teamweekly.reading.nextStep": "Cuộc họp có bước tiếp theo",
+  "teamweekly.reading.commitments": "Cam kết đã giữ",
+  "teamweekly.card.firstResponse": "Trả lời đúng hạn",
+  "teamweekly.card.firstResponseBasis": "{breached} quá hạn",
+  "teamweekly.card.meetings": "Cuộc họp có bước tiếp theo",
+  "teamweekly.card.meetingsBasis": "trên số cuộc họp đã diễn ra",
+  "teamweekly.card.commitments": "Cam kết đã giữ",
+  "teamweekly.card.commitmentsBasis": "trên số đã cam kết",
+  "teamweekly.card.won": "Thắng",
+  "teamweekly.card.wonBasis": "{lost} thua",
+  "teamweekly.card.reps": "Thành viên được tính",
+  "teamweekly.card.repsBasis": "có tuần được đọc đầy đủ",
+  "teamweekly.movement.title": "Tuần đã làm được gì",
+  "teamweekly.movement.won": "Thắng",
+  "teamweekly.movement.lost": "Thua",
+  "teamweekly.movement.meetings": "Cuộc họp đã diễn ra",
+  "teamweekly.movement.leads": "Lead được phân",
+  "teamweekly.coach.title": "Đồng hành tuần này",
+  "teamweekly.coach.sub":
+    "Một trọng tâm cho mỗi thành viên, kể cả người có tuần tốt.",
+  "teamweekly.coach.empty": "Tuần đó không có ai trong nhóm này.",
+  "teamweekly.focus.help_requested": "Đã nhờ giúp đỡ",
+  "teamweekly.focus.leads_breached": "Lead không được trả lời",
+  "teamweekly.focus.commitments_missed": "Cam kết bị bỏ lỡ",
+  "teamweekly.focus.meetings_without_next_step":
+    "Cuộc họp không có bước tiếp theo",
+  "teamweekly.focus.strong_week": "Đáng để học theo",
+  "teamweekly.focus.quiet_week": "Một tuần yên ắng",
+
+  "plan.sub": "Điều bạn đã cam kết, và điều bạn cần để làm được.",
+  "plan.loading": "Đang đọc kế hoạch của bạn",
+  "plan.empty": "Chưa có gì trong kế hoạch.",
+  "plan.none": "Bạn chưa lập kế hoạch cho tuần này.",
+  "plan.start": "Lập kế hoạch tuần của tôi",
+  "plan.add": "Thêm cam kết",
+  "plan.save_one": "Lưu {count} thay đổi",
+  "plan.save_other": "Lưu {count} thay đổi",
+  "plan.due": "hạn {day}",
+  "plan.state.open": "Đang mở",
+  "plan.state.done": "Đã xong",
+  "plan.state.missed": "Bỏ lỡ",
+  "plan.state.dropped": "Đã bỏ",
+  "plan.help.label": "Bạn cần gì từ quản lý của mình?",
+  "plan.help.ask": "Nhờ giúp đỡ",
+  "plan.help.edit": "Sửa yêu cầu",
+  "plan.help.send": "Gửi",
+  "plan.help.cancel": "Huỷ",
+  "plan.help.asked": "Bạn đã hỏi: {text}",
+  "plan.help.waiting": "Đang chờ quản lý của bạn.",
+  "plan.new.label": "Bạn sẽ làm gì?",
+  "plan.new.due": "Trước khi nào",
+  "plan.new.save": "Thêm",
+  "plan.new.cancel": "Huỷ",
+
   "home.weekly.pickWeek": "Mở tuần khác",
   "home.weekly.none":
     "Chưa có bản đánh giá tuần — bản đầu tiên được viết vào thứ Hai sau tuần đầy đủ đầu tiên của bạn.",
@@ -2943,6 +3043,9 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
   "settings.signatureCancel": "Hủy",
+  "brief.coverage.summary":
+    "Một số nguồn có nhiều hơn những gì trang này hiển thị",
+  "brief.coverage.bounded": "Hiển thị {shown} trên ít nhất {considered} đã đọc",
   "delivery.morningLabel": "Bản tóm tắt buổi sáng",
   "delivery.morningHelp":
     "Bản tóm tắt trong ngày có được gửi qua email hay không. Dù sao nó cũng có trên trang Tóm tắt.",
@@ -3994,6 +4097,7 @@ export const vi = {
   "senders.recordYes": "Có",
   "senders.recordNo": "Không",
   "senders.byYou": "— bạn đã quyết định",
+  "senders.deletesOn": "Thư cũ nhất sẽ bị xoá vào {date}",
   "senders.markBusiness": "Công việc",
   "senders.keepOut": "Chặn",
   "senders.withdraw": "Hoàn tác",
@@ -4139,6 +4243,8 @@ export const vi = {
     "Nhà cung cấp từ chối kết nối. Hãy chấp nhận mọi quyền mà nhà cung cấp yêu cầu, rồi thử kết nối lại.",
   "connectors.oauthMisconfigured":
     "Bản triển khai này chưa hoàn tất được kết nối đó — API của nhà cung cấp chưa được bật cho bản này. Cần quản trị viên bật lên; nhật ký máy chủ nêu rõ API nào.",
+  "connectors.oauthBadClient":
+    "Nhà cung cấp đã từ chối thông tin xác thực ứng dụng của bản triển khai này. Quản trị viên cần kiểm tra Client ID và secret trong Cài đặt → Chung; kết nối lại sẽ không tự khắc phục.",
   "connectors.dismissOutcome": "Bỏ qua",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
@@ -5893,7 +5999,7 @@ export const vi = {
   "users.teamMembersAdminOnly": "Chỉ quản trị viên mới xem được thành viên.",
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
-    "Nhóm có tên để bạn chia sẻ bản ghi. Chỉ thuộc một nhóm thì chưa có quyền gì thêm — khách hàng, liên hệ, lead và deal ở đây ai cũng đọc được.",
+    "Nhóm có tên để bạn chia sẻ bản ghi. Chỉ thuộc một nhóm thì hầu hết vai trò vẫn chưa có quyền gì thêm — ngoại lệ là Trưởng nhóm: thêm họ vào một nhóm sẽ cho họ đọc và xử lý bản ghi của nhóm đó mà không cần thiết lập chia sẻ.",
   "users.teamsAdminOnly": "Chỉ quản trị viên mới có thể quản lý nhóm.",
   "users.deactivated": "Đã vô hiệu hóa {name}",
   "users.reactivated": "Đã kích hoạt lại {name}",
@@ -6171,82 +6277,6 @@ export const vi = {
   "countdown.hoursMinutes": "{hours} giờ {minutes} phút",
   "countdown.minutesSeconds": "{minutes} phút {seconds} giây",
   "countdown.expired": "Đã hết hạn",
-
-  // Quotas & attainment (RD-T06): human-set revenue targets with
-  // server-computed attainment, surfaced under the Reports "Quotas" segment.
-  "quotas.tab": "Chỉ tiêu",
-  // The selector panel's own title. The Reports segment picker directly above
-  // it already reads "Quotas", so this names what the LIST holds — one row per
-  // owner or team carrying a target — rather than repeating the page.
-  "quotas.selector.title": "Ai đang có chỉ tiêu",
-  "quotas.sub": "mục tiêu doanh thu — do người đặt, mức đạt do hệ thống tính",
-  "quotas.role.owner": "Chỉ tiêu cá nhân",
-  "quotas.role.team": "Chỉ tiêu nhóm",
-  "quotas.periodRange": "{start} – {end}",
-  "quotas.empty.title": "Chưa đặt chỉ tiêu",
-  "quotas.empty.body":
-    "Chỉ tiêu là mục tiêu do con người đặt — người phụ trách hay nhóm, kỳ, số tiền. Hệ thống không đoán thay bạn. Hãy đặt một mục tiêu để bắt đầu theo dõi mức đạt từ các deal đã thắng.",
-  "quotas.empty.cta": "Đặt mục tiêu",
-  "quotas.attained": "đã đạt",
-  "quotas.closedWon": "Đã thắng trong kỳ này",
-  "quotas.target": "Mục tiêu",
-  "quotas.gap": "Khoảng cách tới mục tiêu",
-  "quotas.baseCurrencyNote":
-    "Số liệu tính theo tiền tệ gốc của tổ chức ({currency}).",
-  "quotas.pace.ahead":
-    "Vượt tiến độ — đã đạt {pct}% trong khi kỳ đã trôi {pace}%.",
-  "quotas.pace.behind":
-    "Chậm tiến độ — đã đạt {pct}% trong khi kỳ đã trôi {pace}%.",
-  "quotas.pace.met": "Đã đạt mục tiêu — {pct}%.",
-  "quotas.computed": "tính ở phía máy chủ",
-  "quotas.contributing.title": "Những gì được tính vào mức đạt",
-  "quotas.contributing.subtitle":
-    "deal đã thắng · giá trị quy về tiền tệ gốc trong kỳ",
-  "quotas.contributing.deal": "Deal",
-  "quotas.contributing.amount": "Số tiền được tính",
-  "quotas.contributing.total": "Tổng được tính",
-  "quotas.contributing.caption":
-    "Tiền tệ gốc · không tính deal đang mở / đã thua / bị loại trừ",
-  "quotas.explain.formula":
-    "mức đạt = Σ(giá trị gốc của deal đã thắng) ÷ mục tiêu, chính xác đến từng xu",
-  "quotas.explain.closedWon": "đã thắng = {sum} ({count} deal trong kỳ)",
-  "quotas.explain.target": "mục tiêu = {target} (do người đặt)",
-  "quotas.explain.result": "mức đạt = {sum} ÷ {target} = {pct}%",
-  "quotas.explain.exclusions":
-    "không tính deal đang mở / đã thua / bị loại trừ; chỉ dùng phần lõi sạch",
-  "quotas.scopeNote.title": "Chỉ tiêu này cố ý là gì",
-  "quotas.scopeNote.flag": "nêu rõ, không giấu",
-  "quotas.scopeNote.body":
-    "Mục tiêu do con người đặt — AI không bao giờ tự nghĩ ra con số chỉ tiêu. Mức đạt được tính từ giá trị gốc của các deal đã thắng và kiểm toán được đầy đủ. Chưa có mục tiêu do AI đặt, chưa có việc tự điền dự báo vào chỉ tiêu, và cũng chưa có bộ máy tính lương thưởng hay hoa hồng.",
-  "quotas.target.title": "Mục tiêu của kỳ",
-  "quotas.target.new": "Đặt mục tiêu",
-  "quotas.target.edit": "Sửa mục tiêu",
-  "quotas.target.save": "Lưu mục tiêu",
-  "quotas.target.note":
-    "Việc sửa ghi lại một giá trị do người nhập và ghi nhận thay đổi. Mức đạt sẽ được tính lại theo giá trị mới.",
-  "quotas.target.sideFixed":
-    "Chỉ tiêu đã gắn cho cá nhân hay nhóm thì không đổi được — muốn đổi thì lưu trữ rồi tạo lại.",
-  "quotas.side.label": "Giao cho",
-  "quotas.side.owner": "Người phụ trách",
-  "quotas.side.team": "Nhóm",
-  "quotas.owner": "Người phụ trách",
-  "quotas.team": "Nhóm",
-  "quotas.pickOwner": "Chọn người phụ trách…",
-  "quotas.pickTeam": "Chọn nhóm…",
-  "quotas.amountHint":
-    "Số nguyên theo đơn vị tiền tệ bên dưới. Không có phần thập phân.",
-  "quotas.periodStart": "Bắt đầu kỳ",
-  "quotas.periodEnd": "Kết thúc kỳ",
-  "quotas.amount": "Số tiền mục tiêu",
-  "quotas.currency": "Tiền tệ",
-  "quotas.err.targetZero": "Chỉ tiêu này chưa có mục tiêu",
-  "quotas.err.computeFailed": "Không tính được mức đạt",
-  "quotas.err.ownerXorTeam": "Hãy chọn đúng một: người phụ trách hoặc nhóm.",
-  "quotas.saveDone": "Đã lưu chỉ tiêu",
-  "quotas.archiveDone": "Đã lưu trữ chỉ tiêu",
-  "quotas.archive.title": "Lưu trữ chỉ tiêu",
-  "quotas.archive.confirm":
-    "Lưu trữ sẽ đưa chỉ tiêu này ra khỏi danh sách và ngừng theo dõi mức đạt. Chỉ tiêu đã lưu trữ thì không sửa được.",
 
   "installationSettings.orgTitle": "Bản cài đặt",
   "installationSettings.orgSub":
@@ -6916,8 +6946,6 @@ export const vi = {
   "person.action.meetings": "Xem lịch hẹn",
   "person.action.addTask": "Thêm việc",
   "person.action.research": "Nghiên cứu",
-  "person.action.logRefused":
-    "Bạn không có quyền ghi nhận hoạt động cho hồ sơ này.",
 
   "person.strip.lastInbound": "Nhận gần nhất",
   "person.strip.lastOutbound": "Gửi gần nhất",
@@ -7583,6 +7611,7 @@ export const vi = {
   "worklist.pane.lastOutbound": "Chúng ta viết lần cuối",
   "worklist.pane.never": "Chưa bao giờ",
   "worklist.focus.title": "Làm việc này tiếp theo",
+  "worklist.nextup.title": "Và sau đó",
   "worklist.focus.verb.decide": "Quyết định",
   "worklist.focus.verb.merge": "Xem cặp trùng",
   "worklist.focus.verb.complete": "Hoàn thành",
@@ -7641,6 +7670,40 @@ export const vi = {
   "worklist.board.nobody": "Chưa có ai",
   "worklist.board.truncated":
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+  "worklist.readings.label": "Hôm nay có gì đang bị đe dọa",
+  "worklist.readings.revenue": "Doanh thu bị đe dọa",
+  "worklist.readings.revenue.detail": "Trên các thương vụ đang trôi hôm nay",
+  "worklist.readings.revenue.unpriced":
+    "Không thương vụ rủi ro nào định giá được",
+  "worklist.readings.replies": "Khách phản hồi",
+  "worklist.readings.replies.detail": "Khách đang chờ một câu trả lời",
+  "worklist.readings.prospecting": "Tìm kiếm khách hàng",
+  "worklist.readings.prospecting.detail":
+    "Cơ hội mới đang chờ phản hồi đầu tiên",
+  "worklist.readings.review": "Xem xét",
+  "worklist.readings.review.detail":
+    "Việc thường lệ đang chờ sau một quyết định",
+  "worklist.readings.truncated":
+    "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+  "worklist.hidden.title": "Những gì danh sách không hiển thị",
+  "worklist.hidden.loading": "Đang kiểm tra những gì bị giữ lại…",
+  "worklist.hidden.clear":
+    "Không có gì bị giữ lại. Mọi khách đang chờ đều đến được một danh sách.",
+  "worklist.hidden.truncated":
+    "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+  "worklist.hidden.count": "{count} đang chờ",
+  "worklist.hidden.pastHorizon": "Quá cũ đối với danh sách",
+  "worklist.hidden.pastHorizon.detail":
+    "Không ai quyết định điều này. Họ viết từ nhiều tháng trước và chưa bao giờ được trả lời.",
+  "worklist.hidden.unlinked": "Không gắn với hồ sơ nào",
+  "worklist.hidden.unlinked.detail":
+    "Thường không phải bán hàng. Đôi khi là khách hàng không ai kịp lưu hồ sơ.",
+  "worklist.hidden.notSales": "Được đánh giá không phải việc bán hàng",
+  "worklist.hidden.notSales.detail": "Ẩn với toàn bộ tổ chức, và không tự bỏ.",
+  "worklist.hidden.setAside": "Bạn đã gác lại",
+  "worklist.hidden.setAside.detail":
+    "Đã hoãn hoặc đánh dấu không phải của bạn. Một lần hoãn sẽ tự quay lại.",
+  "worklist.hidden.shown": "Bản thân danh sách mang {count}.",
   "worklist.filter.label": "Loại công việc",
   "worklist.filter.all": "Tất cả",
   "worklist.filter.customer_waiting": "Khách đang chờ",

@@ -4,10 +4,10 @@
   "per_agent_listing_budget": 17000,
   "whole_catalog_floor": 21000,
   "catalog": {
-    "tools": 59,
-    "tokens": 18954,
-    "median_tool_tokens": 275,
-    "mean_tool_tokens": 320
+    "tools": 61,
+    "tokens": 19253,
+    "median_tool_tokens": 274,
+    "mean_tool_tokens": 315
   },
   "agents": [
     {
@@ -214,6 +214,10 @@
       "tokens": 260
     },
     {
+      "name": "apply_tag",
+      "tokens": 258
+    },
+    {
       "name": "account_coverage",
       "tokens": 252
     },
@@ -246,10 +250,6 @@
       "tokens": 213
     },
     {
-      "name": "apply_tag",
-      "tokens": 211
-    },
-    {
       "name": "who_knows",
       "tokens": 201
     },
@@ -258,12 +258,12 @@
       "tokens": 198
     },
     {
-      "name": "intro_path_to",
-      "tokens": 197
+      "name": "remove_tag",
+      "tokens": 198
     },
     {
-      "name": "remove_tag",
-      "tokens": 190
+      "name": "intro_path_to",
+      "tokens": 197
     },
     {
       "name": "list_channel_providers",
@@ -286,6 +286,10 @@
       "tokens": 149
     },
     {
+      "name": "get_record_tags",
+      "tokens": 149
+    },
+    {
       "name": "list_colleagues",
       "tokens": 148
     },
@@ -296,6 +300,10 @@
     {
       "name": "list_tags",
       "tokens": 102
+    },
+    {
+      "name": "get_tag",
+      "tokens": 94
     },
     {
       "name": "read_import_report",

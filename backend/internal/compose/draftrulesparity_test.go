@@ -60,10 +60,17 @@ import (
 // description of this table.
 func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 	return map[string][]string{
+		// Two sites in two registers, which is four assemblies rather than
+		// three: a voiced turn is its own site's prompt plus the voice rule, so
+		// the first message has a voiced variant of its own. It used to send the
+		// REPLY's prompt whenever a profile was loaded, telling the model an
+		// activity was the authoritative reason for a message that answers
+		// nothing.
 		"replydraftmodel.go": {
 			replyDraftSystemFor(replyDraftSystem, fence),
-			replyDraftSystemFor(replyDraftVoiceSystem, fence),
+			replyDraftSystemFor(voicedSite(replyDraftSystem), fence),
 			replyDraftSystemFor(firstDraftSystem, fence),
+			replyDraftSystemFor(voicedSite(firstDraftSystem), fence),
 		},
 		"persondraft/write.go": {
 			persondraft.SystemPromptFor(fence),

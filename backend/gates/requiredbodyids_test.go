@@ -53,6 +53,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"AdvanceDealRequest":              true,
 	"CreateStageRequest":              true,
 	"ApplyTagRequest":                 true,
+	"MergeTagsRequest":                true,
 	"RecordConsentRequest":            true,
 	"IssueDoubleOptInJSONBody":        true,
 	"SetProjectStakeholderRequest":    true,

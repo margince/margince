@@ -13,7 +13,7 @@ import "reflect"
 // the count is taken at the ONE place a record becomes a REST response instead
 // of in the ~290 handlers that would each have to remember.
 //
-// This package holds no request and knows nothing about quotas, so a meter that
+// This package holds no request and knows nothing about counters, so a meter that
 // cannot record its charge answers the request ITSELF and reports proceed=false;
 // WriteJSON then writes nothing more. That keeps the decision about what an
 // uncountable answer costs with the door that has the context to make it.

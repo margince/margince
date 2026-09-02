@@ -441,7 +441,7 @@ export const DeliveriesReplayConfirm: Story = {
 };
 
 // The pure delivery-status → badge mapping the deliveries panel reuses — no
-// fetch, no providers beyond the locale (mirrors quotas.stories.tsx's Ring).
+// fetch, no providers beyond the locale.
 export const DeliveryStatusBadges: StoryObj = {
   render: () => (
     <LocaleProvider initial="en">

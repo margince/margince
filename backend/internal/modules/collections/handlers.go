@@ -59,7 +59,14 @@ func (h Handlers) CreateTag(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	tag, err := h.store.CreateTag(r.Context(), req.Name, req.Color)
+	// The generated palette type is a string underneath; the store speaks the
+	// column's own type, and the CHECK is what actually holds the value.
+	var color *string
+	if req.Color != nil {
+		c := string(*req.Color)
+		color = &c
+	}
+	tag, err := h.store.CreateTag(r.Context(), req.Name, color)
 	if err != nil {
 		writeErr(w, r, err)
 		return

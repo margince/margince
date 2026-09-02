@@ -231,7 +231,7 @@ func (s *Service) WithLogger(log *slog.Logger) *Service {
 // statement). Gated by auth.Require("overlay_connection", ActionCreate):
 // connecting is destructive workspace-wide config (it will later purge
 // the mirror on Disconnect and flips sor_mode for every seat), so it is
-// admin/ops-only (identity/internal/policy), the same posture as quota.
+// admin/ops-only (identity/internal/policy), the same posture as custom_field.
 //
 // The singleton index means a second Connect on an already-active
 // connection answers apperrors.ErrIncumbentAlreadyConnected; a revoked one
@@ -460,7 +460,7 @@ func (s *Service) deleteUnreferencedRef(ctx context.Context, ws ids.UUID, ref ke
 // Get reads the workspace's current incumbent connection. Gated by
 // auth.Require("overlay_connection", ActionRead) — every role holds this
 // grant (identity/internal/policy), so any authenticated seat may check
-// whether overlay mode is live, the same posture as a quota's attainment
+// whether overlay mode is live, the same posture as the custom_field catalog
 // read. No EnsureVisible probe runs: like quota, incumbent_connection is
 // a workspace-shared singleton governed by the object grant alone, never
 // row-scoped: incumbent_connection carries no workspace column and the

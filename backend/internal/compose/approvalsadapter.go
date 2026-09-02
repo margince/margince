@@ -36,7 +36,7 @@ func (a approvalsAdapter) StageCall(ctx context.Context, in agents.StageRequest)
 	})
 }
 
-// StageQuotaRelease puts a §2.4 step-up in front of the human who lent the
+// StageVolumeRelease puts a §2.4 step-up in front of the human who lent the
 // calling passport.
 //
 // It stages through the DECLINED-AWARE path, unlike Stage above, and both
@@ -52,7 +52,7 @@ func (a approvalsAdapter) StageCall(ctx context.Context, in agents.StageRequest)
 // (approvals' selfOnlyKinds over a target-less staging), and it is why the
 // identity carries the discrimination a diff hash carries for every other kind:
 // there is no diff.
-func (a approvalsAdapter) StageQuotaRelease(ctx context.Context, in agents.QuotaReleaseRequest) (ids.ApprovalID, bool, error) {
+func (a approvalsAdapter) StageVolumeRelease(ctx context.Context, in agents.VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	payload, err := json.Marshal(in.Proposal)
 	if err != nil {
 		return ids.ApprovalID{}, false, fmt.Errorf("compose: encoding a step-up proposal: %w", err)
@@ -61,12 +61,12 @@ func (a approvalsAdapter) StageQuotaRelease(ctx context.Context, in agents.Quota
 	if err != nil {
 		return ids.ApprovalID{}, false, err
 	}
-	_, diffHash, err := diffhash.Object(map[string]any{"quota_release": string(identity)})
+	_, diffHash, err := diffhash.Object(map[string]any{"volume_release": string(identity)})
 	if err != nil {
 		return ids.ApprovalID{}, false, fmt.Errorf("compose: hashing a step-up proposal: %w", err)
 	}
 	return a.svc.StageUnlessDeclined(ctx, approvals.StageInput{
-		Kind:           approvals.KindQuotaRelease,
+		Kind:           approvals.KindVolumeRelease,
 		ProposedChange: payload,
 		DiffHash:       diffHash,
 		Summary:        in.Summary,

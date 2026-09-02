@@ -230,10 +230,19 @@ export function RestrictedRecordsCard() {
     {
       key: "deals",
       header: t("restricted.deals"),
-      render: (row: RestrictedRecord) =>
-        row.deals.length === 0
+      // A project qualifies its correspondence on its own — no deal required
+      // — so a row held by a project alone has an empty `deals` and a name in
+      // `projects`; neither list is a summary of the other (crm.yaml). Both
+      // name the qualifying transaction, so both belong under one heading.
+      render: (row: RestrictedRecord) => {
+        const qualifying = [
+          ...row.deals.map((deal) => deal.name),
+          ...(row.projects ?? []).map((project) => project.name),
+        ];
+        return qualifying.length === 0
           ? t("restricted.noDeal")
-          : row.deals.map((deal) => deal.name).join(", "),
+          : qualifying.join(", ");
+      },
     },
     {
       key: "reason",

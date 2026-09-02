@@ -341,3 +341,47 @@ func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
 	}
 	return s.record(), nil
 }
+
+// CountActivities answers how many rows the SAME narrowing matches, with no
+// bound on it.
+//
+// The count and the page share listActivitiesFilter, which is the point: a
+// count assembled from its own copy of the WHERE clause would answer a question
+// the list does not ask, and the two would drift apart one filter at a time.
+// What differs is the projection and the absence of a LIMIT — a caller wanting
+// both spends two statements, which is what a bounded page beside a true total
+// costs.
+//
+// Gated exactly as the list is, in the same order: the object grant, then the
+// narrowing target's own visibility, then the project scope. A count is a read
+// of the rows it counts, and a number that moved when a colleague captured a
+// contact the reader may not see would disclose that contact.
+func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (int, error) {
+	var total int
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+			return err
+		}
+		if err := ensureNarrowingTargetVisible(ctx, tx, in.EntityType, in.EntityID); err != nil {
+			return err
+		}
+		if in.WithinProjectID != nil {
+			if err := RequireProjectScope(ctx, tx, *in.WithinProjectID); err != nil {
+				return err
+			}
+		}
+		join, where, content, args, err := listActivitiesFilter(ctx, in)
+		if err != nil {
+			return err
+		}
+		// The list's own projection, counted. Not `count(*)` over the join
+		// directly: the content clauses put placeholders in the SELECT list, and
+		// a statement that binds an argument it never mentions is one Postgres
+		// refuses outright ("could not determine data type of parameter"). The
+		// planner reads the wrapper for what it is.
+		return tx.QueryRow(ctx,
+			`SELECT count(*) FROM (SELECT `+activityColumns(content)+` FROM activity a`+join+
+				` WHERE `+strings.Join(where, " AND ")+`) counted`, args...).Scan(&total)
+	})
+	return total, err
+}
