@@ -22,13 +22,15 @@ describe("the tag filter's address", () => {
     expect(parseTagIDs("")).toEqual([]);
   });
 
-  // The widest of the three: a typo shows MORE rows rather than hiding some
-  // behind a filter the reader never set.
-  it("falls back to the widest mode on anything but the three", () => {
+  // An unknown mode is DROPPED, not defaulted. The server refuses one for the
+  // same reason: `any` is not a superset of `none`, so a typo answered as
+  // `any` returns a different slice rather than a wider one, and a filter that
+  // quietly changes what it selects is worse than one that fails.
+  it("drops a mode it does not recognise rather than choosing one", () => {
     expect(parseTagMode("all")).toBe("all");
     expect(parseTagMode("none")).toBe("none");
-    expect(parseTagMode("banana")).toBe("any");
-    expect(parseTagMode(undefined)).toBe("any");
+    expect(parseTagMode("banana")).toBeUndefined();
+    expect(parseTagMode(undefined)).toBeUndefined();
   });
 });
 
@@ -38,6 +40,13 @@ describe("what the tag filter sends", () => {
       tag_id: ["a", "b"],
       tag_mode: "all",
     });
+  });
+
+  // No mode at all rather than one this tier invented: the endpoint's own
+  // default is `any`, so omitting it says the same thing without deciding what
+  // an unrecognised mode meant.
+  it("sends the ids alone when the address named no mode it knows", () => {
+    expect(tagQueryParams(["a"], undefined)).toEqual({ tag_id: ["a"] });
   });
 
   // A mode with nothing to combine is not a filter, so sending it would put a

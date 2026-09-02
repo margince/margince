@@ -11,7 +11,19 @@
   flex-wrap: nowrap;
 }
 
+/* A button because the words behind the count must be reachable on focus, not
+   a button because it looks like one: no chrome, no fill, no border. */
 .rowtags-rest {
   color: var(--textMeta);
   white-space: nowrap;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: default;
+}
+
+.rowtags-rest:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }

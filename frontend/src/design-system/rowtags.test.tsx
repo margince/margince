@@ -6,8 +6,8 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { RowTags } from "./rowtags";
 
 const tag = (id: string, name: string) => ({
@@ -48,15 +48,28 @@ describe("a row's tag strip", () => {
   });
 
   // A count with no words is a puzzle: the reader has to open the record to
-  // learn what it hides.
-  it("names the counted words rather than only counting them", () => {
+  // learn what it hides. On hover AND on focus, because an answer reachable
+  // only by pointer is one half the readers cannot get to.
+  it("names the counted words rather than only counting them", async () => {
+    draw([tag("t-1", "One"), tag("t-2", "Two"), tag("t-3", "Three")]);
+    const rest = screen.getByText(/\+1/);
+    rest.focus();
+    expect(await screen.findByText("Three")).toBeInTheDocument();
+  });
+
+  // AT the wire cap the array stopped early, so the strip does not know how
+  // many are left. It says "more" rather than a number it cannot stand behind
+  // — a record with forty tags drawn as "+3" tells the reader something false.
+  it("counts no number when the wire's answer stopped at the cap", () => {
     draw([
       tag("t-1", "One"),
       tag("t-2", "Two"),
       tag("t-3", "Three"),
       tag("t-4", "Four"),
+      tag("t-5", "Five"),
     ]);
-    expect(screen.getByText(/\+2/).getAttribute("title")).toBe("Three, Four");
+    expect(screen.queryByText(/\+3/)).toBeNull();
+    expect(screen.getByText(en["tags.moreUncounted"])).toBeInTheDocument();
   });
 
   // A per-row empty state would repeat one sentence fifty times down a page.

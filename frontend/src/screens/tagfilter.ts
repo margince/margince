@@ -18,20 +18,26 @@
 /** How several tag ids combine. Mirrors the contract's `tag_mode` enum. */
 export type TagMode = "any" | "all" | "none";
 
-const MODES: readonly string[] = ["any", "all", "none"];
-
 /**
  * parseTagMode narrows a mode off the address.
  *
  * An address is text a person can edit, so anything at all can arrive here.
- * Anything but the three is `any` — the contract's own default, and the
- * widest of the three, so a typo shows MORE rows rather than silently hiding
- * some behind a filter the reader never set.
+ * An unknown mode is DROPPED rather than defaulted, and the caller then sends
+ * no mode at all — which is what the endpoint reads as `any`. Mapping a typo
+ * onto `any` here would be this tier quietly widening a filter the reader
+ * wrote, and the server refuses an unknown mode for exactly that reason:
+ * `any` is not a superset of `none`, so a garbage mode silently answered as
+ * `any` returns a different slice, not a bigger one.
  */
-export function parseTagMode(value: string | undefined): TagMode {
-  return value !== undefined && MODES.includes(value)
-    ? (value as TagMode)
-    : "any";
+export function parseTagMode(value: string | undefined): TagMode | undefined {
+  switch (value) {
+    case "any":
+    case "all":
+    case "none":
+      return value;
+    default:
+      return undefined;
+  }
 }
 
 /** The tag ids an address carries, in order, with blanks dropped. */
@@ -54,12 +60,17 @@ export function parseTagIDs(value: string | undefined): string[] {
  */
 export function tagQueryParams(
   ids: readonly string[],
-  mode: TagMode,
+  mode: TagMode | undefined,
 ): { tag_id?: string[]; tag_mode?: TagMode } {
   if (ids.length === 0) {
     return {};
   }
-  return { tag_id: [...ids], tag_mode: mode };
+  // No mode when the address named none, or named one this tier does not
+  // recognise: the endpoint's own default is `any`, so omitting it says the
+  // same thing without this tier deciding what a typo meant.
+  return mode === undefined
+    ? { tag_id: [...ids] }
+    : { tag_id: [...ids], tag_mode: mode };
 }
 
 /**
@@ -79,4 +90,22 @@ export function listQueryParams(
     ...rest,
     ...tagQueryParams(parseTagIDs(joined), parseTagMode(mode)),
   };
+}
+
+/**
+ * The filter map with a mode that has nothing left to combine removed.
+ *
+ * Clearing the tag dial drops `tag_id` and would leave `tag_mode` sitting in
+ * the address, where nothing draws it and nothing sends it: an invisible dial
+ * the reader cannot see to clear, which then narrows the list the moment they
+ * pick a word again in a way they never asked for.
+ */
+export function withoutStrandedTagMode(
+  filters: Readonly<Record<string, string>>,
+): Record<string, string> {
+  if (parseTagIDs(filters.tag_id).length > 0) {
+    return { ...filters };
+  }
+  const { tag_mode: _strandedMode, ...rest } = filters;
+  return { ...rest };
 }

@@ -132,6 +132,7 @@ import {
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import type { Project } from "./projects.form";
+import { tagsColumn } from "./recordlist";
 import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
@@ -352,7 +353,13 @@ function useStageTotals(f: DealFilters) {
     // single-currency stage left the old sum standing, which is the mixed-
     // currency refusal not happening.
     queryKey: ["deals", "by-stage-totals", f],
-    enabled: !f.overlay,
+    // Not while a tag narrows the board. The report's filter vocabulary has no
+    // tag field — sending one is a 422 — so the totals would count deals the
+    // board is not showing, and a column header reporting more than the cards
+    // under it is a number the reader has no way to reconcile. Withheld is the
+    // honest answer, and buildStageTotals already draws the no-sum column for
+    // the mixed-currency case.
+    enabled: !f.overlay && parseTagIDs(f.filters.tag_id).length === 0,
     queryFn: async () => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },
@@ -1341,6 +1348,7 @@ function dealColumns(
       cell: (deal) => deal.name,
       fixed: true,
     },
+    tagsColumn<Deal>(t),
     {
       // The company the deal is with. Withheld is not empty: the wire sends a
       // null `organization_id` and names the field in `masked_fields` when the
