@@ -433,33 +433,6 @@ func (e AddConsumerMailDomainRequestKind) Valid() bool {
 	}
 }
 
-// Defines values for AddListMemberRequestEntityType.
-const (
-	AddListMemberRequestEntityTypeDeal         AddListMemberRequestEntityType = "deal"
-	AddListMemberRequestEntityTypeLead         AddListMemberRequestEntityType = "lead"
-	AddListMemberRequestEntityTypeOrganization AddListMemberRequestEntityType = "organization"
-	AddListMemberRequestEntityTypePerson       AddListMemberRequestEntityType = "person"
-	AddListMemberRequestEntityTypeProject      AddListMemberRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the AddListMemberRequestEntityType enum.
-func (e AddListMemberRequestEntityType) Valid() bool {
-	switch e {
-	case AddListMemberRequestEntityTypeDeal:
-		return true
-	case AddListMemberRequestEntityTypeLead:
-		return true
-	case AddListMemberRequestEntityTypeOrganization:
-		return true
-	case AddListMemberRequestEntityTypePerson:
-		return true
-	case AddListMemberRequestEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for AdvanceDealRequestStatus.
 const (
 	AdvanceDealRequestStatusLost AdvanceDealRequestStatus = "lost"
@@ -4078,51 +4051,6 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	}
 }
 
-// Defines values for CreateListRequestEntityType.
-const (
-	CreateListRequestEntityTypeDeal         CreateListRequestEntityType = "deal"
-	CreateListRequestEntityTypeLead         CreateListRequestEntityType = "lead"
-	CreateListRequestEntityTypeOrganization CreateListRequestEntityType = "organization"
-	CreateListRequestEntityTypePerson       CreateListRequestEntityType = "person"
-	CreateListRequestEntityTypeProject      CreateListRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the CreateListRequestEntityType enum.
-func (e CreateListRequestEntityType) Valid() bool {
-	switch e {
-	case CreateListRequestEntityTypeDeal:
-		return true
-	case CreateListRequestEntityTypeLead:
-		return true
-	case CreateListRequestEntityTypeOrganization:
-		return true
-	case CreateListRequestEntityTypePerson:
-		return true
-	case CreateListRequestEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreateListRequestListType.
-const (
-	CreateListRequestListTypeDynamic CreateListRequestListType = "dynamic"
-	CreateListRequestListTypeStatic  CreateListRequestListType = "static"
-)
-
-// Valid indicates whether the value is a known member of the CreateListRequestListType enum.
-func (e CreateListRequestListType) Valid() bool {
-	switch e {
-	case CreateListRequestListTypeDynamic:
-		return true
-	case CreateListRequestListTypeStatic:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CreateOrganizationFactRequestCategory.
 const (
 	CreateOrganizationFactRequestCategoryCompany  CreateOrganizationFactRequestCategory = "company"
@@ -6100,78 +6028,6 @@ func (e LicenseEntitlementState) Valid() bool {
 	}
 }
 
-// Defines values for ListEntityType.
-const (
-	ListEntityTypeDeal         ListEntityType = "deal"
-	ListEntityTypeLead         ListEntityType = "lead"
-	ListEntityTypeOrganization ListEntityType = "organization"
-	ListEntityTypePerson       ListEntityType = "person"
-	ListEntityTypeProject      ListEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListEntityType enum.
-func (e ListEntityType) Valid() bool {
-	switch e {
-	case ListEntityTypeDeal:
-		return true
-	case ListEntityTypeLead:
-		return true
-	case ListEntityTypeOrganization:
-		return true
-	case ListEntityTypePerson:
-		return true
-	case ListEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListListType.
-const (
-	ListListTypeDynamic ListListType = "dynamic"
-	ListListTypeStatic  ListListType = "static"
-)
-
-// Valid indicates whether the value is a known member of the ListListType enum.
-func (e ListListType) Valid() bool {
-	switch e {
-	case ListListTypeDynamic:
-		return true
-	case ListListTypeStatic:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListMemberEntityType.
-const (
-	ListMemberEntityTypeDeal         ListMemberEntityType = "deal"
-	ListMemberEntityTypeLead         ListMemberEntityType = "lead"
-	ListMemberEntityTypeOrganization ListMemberEntityType = "organization"
-	ListMemberEntityTypePerson       ListMemberEntityType = "person"
-	ListMemberEntityTypeProject      ListMemberEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListMemberEntityType enum.
-func (e ListMemberEntityType) Valid() bool {
-	switch e {
-	case ListMemberEntityTypeDeal:
-		return true
-	case ListMemberEntityTypeLead:
-		return true
-	case ListMemberEntityTypeOrganization:
-		return true
-	case ListMemberEntityTypePerson:
-		return true
-	case ListMemberEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for MeResponsePassportScopes.
 const (
 	MeResponsePassportScopesActWithApproval    MeResponsePassportScopes = "act_with_approval"
@@ -6856,7 +6712,6 @@ const (
 	Organization360SectionsOmittedDeals            Organization360SectionsOmitted = "deals"
 	Organization360SectionsOmittedHealth           Organization360SectionsOmitted = "health"
 	Organization360SectionsOmittedLastTouch        Organization360SectionsOmitted = "last_touch"
-	Organization360SectionsOmittedListMemberships  Organization360SectionsOmitted = "list_memberships"
 	Organization360SectionsOmittedMoments          Organization360SectionsOmitted = "moments"
 	Organization360SectionsOmittedNextMeeting      Organization360SectionsOmitted = "next_meeting"
 	Organization360SectionsOmittedNextSteps        Organization360SectionsOmitted = "next_steps"
@@ -6880,8 +6735,6 @@ func (e Organization360SectionsOmitted) Valid() bool {
 	case Organization360SectionsOmittedHealth:
 		return true
 	case Organization360SectionsOmittedLastTouch:
-		return true
-	case Organization360SectionsOmittedListMemberships:
 		return true
 	case Organization360SectionsOmittedMoments:
 		return true
@@ -7272,19 +7125,19 @@ func (e OrganizationBriefSectionKind) Valid() bool {
 
 // Defines values for OrganizationBriefSentenceNature.
 const (
-	Assessment     OrganizationBriefSentenceNature = "assessment"
-	Fact           OrganizationBriefSentenceNature = "fact"
-	Recommendation OrganizationBriefSentenceNature = "recommendation"
+	OrganizationBriefSentenceNatureAssessment     OrganizationBriefSentenceNature = "assessment"
+	OrganizationBriefSentenceNatureFact           OrganizationBriefSentenceNature = "fact"
+	OrganizationBriefSentenceNatureRecommendation OrganizationBriefSentenceNature = "recommendation"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationBriefSentenceNature enum.
 func (e OrganizationBriefSentenceNature) Valid() bool {
 	switch e {
-	case Assessment:
+	case OrganizationBriefSentenceNatureAssessment:
 		return true
-	case Fact:
+	case OrganizationBriefSentenceNatureFact:
 		return true
-	case Recommendation:
+	case OrganizationBriefSentenceNatureRecommendation:
 		return true
 	default:
 		return false
@@ -13525,33 +13378,6 @@ func (e ListLeadsParamsSlaState) Valid() bool {
 	}
 }
 
-// Defines values for ListListsParamsEntityType.
-const (
-	ListListsParamsEntityTypeDeal         ListListsParamsEntityType = "deal"
-	ListListsParamsEntityTypeLead         ListListsParamsEntityType = "lead"
-	ListListsParamsEntityTypeOrganization ListListsParamsEntityType = "organization"
-	ListListsParamsEntityTypePerson       ListListsParamsEntityType = "person"
-	ListListsParamsEntityTypeProject      ListListsParamsEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListListsParamsEntityType enum.
-func (e ListListsParamsEntityType) Valid() bool {
-	switch e {
-	case ListListsParamsEntityTypeDeal:
-		return true
-	case ListListsParamsEntityTypeLead:
-		return true
-	case ListListsParamsEntityTypeOrganization:
-		return true
-	case ListListsParamsEntityTypePerson:
-		return true
-	case ListListsParamsEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GetOnboardingCompanyProposalParamsLocale.
 const (
 	OnboardingProposalLocaleDE GetOnboardingCompanyProposalParamsLocale = "de"
@@ -14676,15 +14502,6 @@ type AddDealRoomDocumentRequest struct {
 	Title                *string                `json:"title,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
-
-// AddListMemberRequest defines model for AddListMemberRequest.
-type AddListMemberRequest struct {
-	EntityId   openapi_types.UUID             `json:"entity_id"`
-	EntityType AddListMemberRequestEntityType `json:"entity_type"`
-}
-
-// AddListMemberRequestEntityType defines model for AddListMemberRequest.EntityType.
-type AddListMemberRequestEntityType string
 
 // Address Structured postal address.
 type Address struct {
@@ -18692,22 +18509,6 @@ type CreateLeadSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// CreateListRequest defines model for CreateListRequest.
-type CreateListRequest struct {
-	Definition *map[string]interface{}     `json:"definition,omitempty"`
-	EntityType CreateListRequestEntityType `json:"entity_type"`
-	ListType   *CreateListRequestListType  `json:"list_type,omitempty"`
-	Name       string                      `json:"name"`
-	OwnerId    *openapi_types.UUID         `json:"owner_id,omitempty"`
-	TeamId     *openapi_types.UUID         `json:"team_id,omitempty"`
-}
-
-// CreateListRequestEntityType defines model for CreateListRequest.EntityType.
-type CreateListRequestEntityType string
-
-// CreateListRequestListType defines model for CreateListRequest.ListType.
-type CreateListRequestListType string
-
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// BuyerOrgId Defaults to the deal's organization.
@@ -20245,26 +20046,23 @@ type FilterVocabularyFieldReferences string
 // record. The type decides the operators, which is why it is here.
 type FilterVocabularyFieldType string
 
-// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported), or a `list_id` (a dynamic list whose definition is exported). The slice is always row-scoped to the caller through the one filter engine.
+// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`) or a `view_id` (a saved view whose filter state is exported). The slice is always row-scoped to the caller through the one filter engine.
 type FilteredExportRequest struct {
 	// Filter The canonical §13.5 predicate tree (nested and/or groups over typed leaves). Required with `object`.
 	Filter *map[string]interface{}     `json:"filter,omitempty"`
 	Format FilteredExportRequestFormat `json:"format"`
 
-	// ListId Export the definition of a dynamic list. Mutually exclusive with object/view_id.
-	ListId *openapi_types.UUID `json:"list_id,omitempty"`
-
-	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
+	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
 	Object *FilteredExportRequestObject `json:"object,omitempty"`
 
-	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
+	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object.
 	ViewId *openapi_types.UUID `json:"view_id,omitempty"`
 }
 
 // FilteredExportRequestFormat defines model for FilteredExportRequest.Format.
 type FilteredExportRequestFormat string
 
-// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
+// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
 type FilteredExportRequestObject string
 
 // FinanceInvoice One mirrored invoice, in the currency it was issued in.
@@ -21889,53 +21687,6 @@ type LinkedInReachResponse struct {
 	UnresolvedConnections int `json:"unresolved_connections"`
 }
 
-// List A static membership set or a dynamic segment. Mirrors the `list` table.
-type List struct {
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
-	CreatedAt  *time.Time `json:"created_at,omitempty"`
-
-	// Definition Dynamic — validated query plan; static — null.
-	Definition *map[string]interface{} `json:"definition,omitempty"`
-	EntityType ListEntityType          `json:"entity_type"`
-	Id         openapi_types.UUID      `json:"id"`
-	ListType   ListListType            `json:"list_type"`
-	Name       string                  `json:"name"`
-	OwnerId    *openapi_types.UUID     `json:"owner_id,omitempty"`
-	TeamId     *openapi_types.UUID     `json:"team_id,omitempty"`
-	UpdatedAt  *time.Time              `json:"updated_at,omitempty"`
-}
-
-// ListEntityType defines model for List.EntityType.
-type ListEntityType string
-
-// ListListType defines model for List.ListType.
-type ListListType string
-
-// ListListResponse defines model for ListListResponse.
-type ListListResponse struct {
-	Data []List   `json:"data"`
-	Page PageInfo `json:"page"`
-}
-
-// ListMember defines model for ListMember.
-type ListMember struct {
-	AddedBy    *string              `json:"added_by,omitempty"`
-	CreatedAt  *time.Time           `json:"created_at,omitempty"`
-	EntityId   openapi_types.UUID   `json:"entity_id"`
-	EntityType ListMemberEntityType `json:"entity_type"`
-	Id         openapi_types.UUID   `json:"id"`
-	ListId     openapi_types.UUID   `json:"list_id"`
-}
-
-// ListMemberEntityType defines model for ListMember.EntityType.
-type ListMemberEntityType string
-
-// ListMemberListResponse defines model for ListMemberListResponse.
-type ListMemberListResponse struct {
-	Data []ListMember `json:"data"`
-	Page PageInfo     `json:"page"`
-}
-
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	Email    openapi_types.Email `json:"email"`
@@ -23124,8 +22875,7 @@ type Organization360 struct {
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
 	// LastOutboundAt When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
-	LastOutboundAt  *time.Time `json:"last_outbound_at,omitempty"`
-	ListMemberships *[]List    `json:"list_memberships,omitempty"`
+	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
 
 	// Moment The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's people — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
 	// The schema is `PersonMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
@@ -32407,33 +32157,6 @@ type ExplainLeadScoreParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
-// ListListsParams defines parameters for ListLists.
-type ListListsParams struct {
-	EntityType *ListListsParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
-
-	// IncludeArchived Include soft-deleted (archived) rows. Default false.
-	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
-}
-
-// ListListsParamsEntityType defines parameters for ListLists.
-type ListListsParamsEntityType string
-
-// ListListMembersParams defines parameters for ListListMembers.
-type ListListMembersParams struct {
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
 type GetMyAiActivityParams struct {
 	// Kinds Restrict both arrays to these kinds of AI work, applied BEFORE the bounds.
@@ -35488,12 +35211,6 @@ type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
 
 // PromoteLeadJSONRequestBody defines body for PromoteLead for application/json ContentType.
 type PromoteLeadJSONRequestBody = PromoteLeadRequest
-
-// CreateListJSONRequestBody defines body for CreateList for application/json ContentType.
-type CreateListJSONRequestBody = CreateListRequest
-
-// AddListMemberJSONRequestBody defines body for AddListMember for application/json ContentType.
-type AddListMemberJSONRequestBody = AddListMemberRequest
 
 // SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
 type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
@@ -44290,24 +44007,6 @@ type ServerInterface interface {
 	// Explain This Score — the weighted-factor decomposition behind a lead's score.
 	// (GET /leads/{id}/score)
 	ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams)
-	// List lists (static + dynamic segments).
-	// (GET /lists)
-	ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams)
-	// Create a list (static set or dynamic segment).
-	// (POST /lists)
-	CreateList(w http.ResponseWriter, r *http.Request)
-	// Archive a list.
-	// (DELETE /lists/{id})
-	ArchiveList(w http.ResponseWriter, r *http.Request, id Id)
-	// Get a list by id.
-	// (GET /lists/{id})
-	GetList(w http.ResponseWriter, r *http.Request, id Id)
-	// List a list's members — explicit rows for a static list, or the live filter evaluation for a dynamic segment.
-	// (GET /lists/{id}/members)
-	ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams)
-	// Add a member to a static list.
-	// (POST /lists/{id}/members)
-	AddListMember(w http.ResponseWriter, r *http.Request, id Id)
 	// Get the current authenticated principal (user or agent).
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
@@ -46768,42 +46467,6 @@ func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Reque
 // Explain This Score — the weighted-factor decomposition behind a lead's score.
 // (GET /leads/{id}/score)
 func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List lists (static + dynamic segments).
-// (GET /lists)
-func (_ Unimplemented) ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Create a list (static set or dynamic segment).
-// (POST /lists)
-func (_ Unimplemented) CreateList(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Archive a list.
-// (DELETE /lists/{id})
-func (_ Unimplemented) ArchiveList(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Get a list by id.
-// (GET /lists/{id})
-func (_ Unimplemented) GetList(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List a list's members — explicit rows for a static list, or the live filter evaluation for a dynamic segment.
-// (GET /lists/{id}/members)
-func (_ Unimplemented) ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Add a member to a static list.
-// (POST /lists/{id}/members)
-func (_ Unimplemented) AddListMember(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59300,247 +58963,6 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExplainLeadScore(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListLists operation middleware
-func (siw *ServerInterfaceWrapper) ListLists(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListListsParams
-
-	// ------------- Optional query parameter "entity_type" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "include_archived" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListLists(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateList operation middleware
-func (siw *ServerInterfaceWrapper) CreateList(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateList(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ArchiveList operation middleware
-func (siw *ServerInterfaceWrapper) ArchiveList(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ArchiveList(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetList operation middleware
-func (siw *ServerInterfaceWrapper) GetList(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetList(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListListMembers operation middleware
-func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListListMembersParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListListMembers(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// AddListMember operation middleware
-func (siw *ServerInterfaceWrapper) AddListMember(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.AddListMember(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -73749,24 +73171,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/score", wrapper.ExplainLeadScore)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lists", wrapper.ListLists)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/lists", wrapper.CreateList)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/lists/{id}", wrapper.ArchiveList)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lists/{id}", wrapper.GetList)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lists/{id}/members", wrapper.ListListMembers)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/lists/{id}/members", wrapper.AddListMember)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetCurrentPrincipal)

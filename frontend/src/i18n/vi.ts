@@ -1708,9 +1708,7 @@ export const vi = {
     "{field} được ghi là \u201c{value}\u201d. Xóa nó nghĩa là đây không phải thông tin về công ty. Một lần đọc trang web sau này có thể ghi lại nó.",
   "co.facts.showAll": "Hiện tất cả {count}",
   "co.facts.showLess": "Hiện bớt",
-  "co.tags.lists": "Danh sách",
   "co.tags.tags": "Tag",
-  "co.tags.noLists": "Không thuộc danh sách nào.",
   "co.tags.noTags": "Chưa gắn tag nào.",
   "co.project.new": "Dự án mới",
   "co.deal.new": "Deal mới",
@@ -1721,11 +1719,6 @@ export const vi = {
   "co.tags.pick": "Tên tag",
   "co.tags.overCap":
     "Số tag nhiều hơn mức danh sách này hiển thị được, nên một tag không xuất hiện ở đây vẫn có thể đã tồn tại. Hãy nhờ quản trị viên dọn bớt tag trước khi tạo tag mới.",
-  "co.lists.added": "Đã thêm vào “{name}”",
-  "co.lists.add": "Thêm vào danh sách",
-  "co.lists.pick": "Tên danh sách",
-  "co.lists.overCap":
-    "Số danh sách nhiều hơn mức hiển thị được, nên một danh sách không xuất hiện ở đây vẫn có thể đã tồn tại. Hãy nhờ quản trị viên dọn bớt danh sách trước khi tạo danh sách mới.",
   "co.recent.title": "Chuyện gần đây",
   "co.recent.emptyDetail":
     "Khi bạn gửi email, ghi lại cuộc gọi hoặc họp, trao đổi đó sẽ xuất hiện ở đây, kèm việc mỗi bên đã làm gì.",
@@ -1744,7 +1737,7 @@ export const vi = {
   "co.recent.dir.both": "cả hai bên",
   "co.recent.minutes": "{count} phút",
   "co.recent.re": "về một deal",
-  "co.tags.title": "Danh sách & tag",
+  "co.tags.title": "Tag",
   "co.timeline.empty": "Chưa ghi nhận gì trên tài khoản này.",
   "co.overlayFallback":
     "Tài khoản này được phục vụ từ hệ thống ghi nhận đã kết nối, nên màn hình công ty không được dựng ở đây. Hãy mở bên hệ thống đó để xem toàn cảnh.",
@@ -7233,11 +7226,6 @@ export const vi = {
   "filters.pickRecord": "Ch\u1ecdn m\u1ed9t",
   "filters.loadingRecords": "\u0110ang t\u1ea3i l\u1ef1a ch\u1ecdn\u2026",
   "filters.pickValue": "Ch\u1ecdn gi\u00e1 tr\u1ecb",
-  "filters.saveList": "L\u01b0u th\u00e0nh danh s\u00e1ch",
-  "filters.saveListTitle":
-    "L\u01b0u b\u1ed9 l\u1ecdc n\u00e0y th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
-  "filters.listName": "T\u00ean danh s\u00e1ch",
-  "filters.saveListConfirm": "T\u1ea1o danh s\u00e1ch",
   "filters.exportCsv": "Xu\u1ea5t CSV",
   "filters.exportJson": "Xu\u1ea5t JSON",
 

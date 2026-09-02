@@ -83,7 +83,6 @@ function view(overrides: Partial<Organization360> = {}): Organization360 {
     next_steps: { data: [], page: emptyPage },
     pending_approvals: { data: [], page: emptyPage },
     tags: [],
-    list_memberships: [],
     since_last_visit: {
       baseline_at: "2026-05-30T09:00:00Z",
       new_activities: 0,
@@ -565,25 +564,6 @@ describe("company view — the verbs that change a section", () => {
   });
 });
 
-it("offers the tag verb but not the list verb when only lists are withheld", async () => {
-  // The two halves of the card are governed separately, so one withheld
-  // grant must not take the other's verb with it — and must not offer a
-  // write whose refusal would be the first the reader hears of the limit.
-  stub(
-    view({
-      list_memberships: undefined,
-      sections_omitted: ["list_memberships"],
-    }),
-  );
-  renderCompany();
-
-  // The verbs sit in the overview stack now — the rail (companyrail.tsx)
-  // shows the tags and lists themselves, and carries no write affordance of
-  // its own, so the action strip that changes them is unscoped here.
-  expect(await screen.findByRole("button", { name: "Add tag" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Add to list" })).toBeNull();
-});
-
 describe("company view — the context column belongs to the account, not to a tab", () => {
   it("keeps the relationship rail mounted when the reader switches tab", async () => {
     stub(view(), 200, partnerOrg);
@@ -842,54 +822,6 @@ describe("company view — a failed read is not an empty account", () => {
     expect(
       within(deals).queryByText("Hidden — your role cannot read this"),
     ).toBeNull();
-  });
-});
-
-describe("company view — one section never answers for another", () => {
-  it("does not let readable tags claim there are no lists", async () => {
-    // Tags came back empty; lists were withheld. "Not on any list, and no
-    // tags applied" would be a claim about a half nobody answered for.
-    stub(
-      view({
-        tags: [],
-        list_memberships: undefined,
-        sections_omitted: ["list_memberships"],
-      }),
-    );
-    renderCompany();
-
-    const rail = await screen.findByRole("complementary", { name: "Context" });
-    // The refusal has to name WHICH half it is about: under a heading
-    // covering both, an unattached "hidden from you" leaves the reader
-    // unable to tell whether the lists or the tags were withheld.
-    const listsPart = within(rail).getByRole("region", { name: "Lists" });
-    expect(
-      within(listsPart).getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
-
-    const tagsPart = within(rail).getByRole("region", { name: "Tags" });
-    expect(within(tagsPart).getByText("No tags applied.")).toBeTruthy();
-    expect(
-      within(tagsPart).queryByText("Hidden — your role cannot read this"),
-    ).toBeNull();
-    expect(within(rail).queryByText("Not on any list.")).toBeNull();
-  });
-
-  it("still shows the tags a caller can read when lists are withheld", async () => {
-    stub(
-      view({
-        tags: [{ id: "t-1", name: "Key account" }],
-        list_memberships: undefined,
-        sections_omitted: ["list_memberships"],
-      }),
-    );
-    renderCompany();
-
-    const rail = await screen.findByRole("complementary", { name: "Context" });
-    // Losing one grant narrows the card; it does not blank it.
-    await waitFor(() =>
-      expect(within(rail).getByText("Key account")).toBeTruthy(),
-    );
   });
 });
 

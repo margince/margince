@@ -90,15 +90,6 @@ const populated = {
     open_commitments: 2,
   },
   tags: [{ id: "t-1", workspace_id: "w-1", name: "Key account" }],
-  list_memberships: [
-    {
-      id: "l-1",
-      workspace_id: "w-1",
-      name: "Q3 renewals",
-      entity_type: "organization",
-      list_type: "static",
-    },
-  ],
 } as unknown as View;
 
 // Health and People withheld, exactly the shape a role scoped away from

@@ -80,7 +80,6 @@ export const org360 = {
   next_steps: emptySection,
   pending_approvals: emptySection,
   tags: [],
-  list_memberships: [],
   since_last_visit: {
     baseline_at: null,
     new_activities: 0,

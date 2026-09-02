@@ -157,7 +157,6 @@ const ORG_360_VIEW = {
   next_steps: { data: [], page: emptyPage },
   pending_approvals: { data: [], page: emptyPage },
   tags: [],
-  list_memberships: [],
   since_last_visit: {
     baseline_at: "2026-05-30T09:00:00Z",
     new_activities: 0,

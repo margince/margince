@@ -18,7 +18,6 @@ const (
 	ActionTypeCreateTask      ActionType = "create_task"
 	ActionTypeNotify          ActionType = "notify"
 	ActionTypeAssignOwner     ActionType = "assign_owner"
-	ActionTypeAddToList       ActionType = "add_to_list"
 	ActionTypeSetField        ActionType = "set_field"
 	ActionTypeDraftEmail      ActionType = "draft_email"
 	ActionTypeRequestApproval ActionType = "request_approval"
@@ -54,7 +53,7 @@ type PermissionShape string
 const (
 	// PermissionPinned marks an action that always acts on the same entity
 	// type regardless of what the trigger fired on, so Object below IS that
-	// fixed value (e.g. add_to_list always mutates list membership).
+	// fixed value (e.g. draft_email always creates an activity).
 	PermissionPinned PermissionShape = "pinned"
 	// PermissionTargetScoped marks an action whose real object is whatever
 	// entity type the automation's trigger fired on — engine.go's
@@ -126,16 +125,15 @@ type ActionDef struct {
 // either to a single object would gate the wrong entity whenever the
 // trigger fires on something else.
 //
-// The other four — notify, add_to_list, draft_email, request_approval —
+// The other three — notify, draft_email, request_approval —
 // now have real executor cases (handlers_actions.go's applyNotify/
-// applyAddToList/applyDraftEmail; request_approval's ActionEmitFlowEvent
+// applyDraftEmail; request_approval's ActionEmitFlowEvent
 // still stages like every other 🟡 kind), but none names a FIXED entity
-// type there the way create_task does: applyAddToList and applyDraftEmail
+// type there the way create_task does: applyDraftEmail
 // act on whatever action.Target names (a list membership target, an
 // anchor thread), and applyNotify touches no entity at all. Their
 // PermissionPinned classification is reasoned rather than proven by the
 // switch — draft_email gates the same `activity` object create_task does
-// (migrations/core/0008_activity.up.sql); add_to_list always mutates list
 // membership; notify and request_approval land as the same "create
 // something for a human to act on" shape modules/approvals/authority.go
 // already grants on send_email/book_meeting/deal_follow_up — and gate.go's
@@ -156,10 +154,6 @@ var actionDefs = map[ActionType]ActionDef{
 		Type: ActionTypeAssignOwner, Tier: tierDynamic, Executor: workflow.ActionAssignOwner,
 		RequiredPermission: Permission{Shape: PermissionTargetScoped, Action: rbacVerbUpdate},
 	},
-	ActionTypeAddToList: {
-		Type: ActionTypeAddToList, Tier: tierAutoExecute, Executor: workflow.ActionAddToList,
-		RequiredPermission: Permission{Shape: PermissionPinned, Object: rbacObjList, Action: rbacVerbUpdate},
-	},
 	ActionTypeSetField: {
 		Type: ActionTypeSetField, Tier: tierAutoExecute, Executor: workflow.ActionUpdateRecord,
 		RequiredPermission: Permission{Shape: PermissionTargetScoped, Action: rbacVerbUpdate},
@@ -179,7 +173,7 @@ var actionDefs = map[ActionType]ActionDef{
 // directions.
 func AllActionTypes() []ActionType {
 	return []ActionType{
-		ActionTypeCreateTask, ActionTypeNotify, ActionTypeAssignOwner, ActionTypeAddToList,
+		ActionTypeCreateTask, ActionTypeNotify, ActionTypeAssignOwner,
 		ActionTypeSetField, ActionTypeDraftEmail, ActionTypeRequestApproval,
 	}
 }

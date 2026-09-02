@@ -38,7 +38,6 @@ func TestANestedCommandMalformedRouteIDAnswersNotFound(t *testing.T) {
 		decode func(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error)
 		req    *http.Request
 	}{
-		{"addListMember", addListMemberCommand, operandRequest(http.MethodPost, "/v1/lists", "not-a-uuid", "", "", nil)},
 		{"applyTag", applyTagCommand, operandRequest(http.MethodPost, "/v1/tags", "not-a-uuid", "", "", nil)},
 		{
 			"addOfferLineItem", addOfferLineItemCommand,
@@ -117,7 +116,7 @@ func TestAMalformedLineItemIDAnswers422(t *testing.T) {
 // createOffer is the one exception: it stages the record TYPE with no id
 // (margince/margince#1046), asserted separately below.
 func TestEachNestedCommandStagesTheRoutedRecord(t *testing.T) {
-	listID, tagID, offerID := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	tagID, offerID := ids.NewV7(), ids.NewV7()
 	lineItemID := ids.NewV7()
 	cases := []struct {
 		name           string
@@ -127,12 +126,6 @@ func TestEachNestedCommandStagesTheRoutedRecord(t *testing.T) {
 		wantTargetType string
 		wantTargetID   ids.UUID
 	}{
-		{
-			"addListMember",
-			agentPolicy{Op: "addListMember", Access: accessTool, Tool: "update_record", RecordType: recordTypeList},
-			operandRequest(http.MethodPost, "/v1/lists", listID.String(), "", "", []byte(`{}`)), []byte(`{}`),
-			"list", listID,
-		},
 		{
 			"applyTag",
 			agentPolicy{Op: "applyTag", Access: accessTool, Tool: "update_record", RecordType: recordTypeTag},

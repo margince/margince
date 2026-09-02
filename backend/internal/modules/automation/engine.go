@@ -344,8 +344,6 @@ func applyOne(ctx context.Context, ex Executors, eff workflow.Effect, action wor
 		return workflow.Action{}, &workflow.StagedApprovalError{ApprovalID: id}, nil
 	case workflow.ActionNotify:
 		return action, nil, applyNotify(ctx, ex.Notifier, action)
-	case workflow.ActionAddToList:
-		return action, nil, applyAddToList(ctx, ex.Lists, action)
 	case workflow.ActionDraftEmail:
 		// Drafting is 🟢 and has just run; the SEND it proposes is the 🟡 that
 		// waits (AUTO-PARAM-4, AUTO-AC-1). The action returned is the enriched
