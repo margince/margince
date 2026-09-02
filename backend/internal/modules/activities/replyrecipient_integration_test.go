@@ -175,6 +175,25 @@ func TestOurOwnSenderIsNeverTheAddressOnOurOutboundMail(t *testing.T) {
 	}
 }
 
+// With nobody else on the message, the link fallback must not hand the
+// greeting to our own sender either: the rep is linked to their own mail like
+// any participant, and a reply with no counterparty greets nobody rather than
+// them.
+func TestOurOwnSenderIsNotGreetedThroughTheLinkFallback(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+
+	us := e.linkPerson(t, anchor, "Sofia Meier")
+	e.seedPersonEmail(t, us, "sofia.private@gmail.test")
+	e.participate(t, anchor, us, "from", &e.rep)
+
+	got := recipientOf(e.as(principal.RowScopeAll), t,
+		e.handlers(ourDomain{suffix: "@demo.test"}), anchor)
+	if got.FullName != "" {
+		t.Errorf("full name = %q, want nobody: the only person on this mail is our own sender", got.FullName)
+	}
+}
+
 func TestAColleagueWithoutASeatIsNotAddressable(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")

@@ -111,7 +111,11 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// that admitted it would greet the rep in their own draft and tell the
 		// activity rail the reply is to them. ReplyAddressFor excludes the
 		// seat for the same reason, and the two must agree on who a reply is
-		// to or the greeting and the envelope name different people.
+		// to or the greeting and the envelope name different people. The link
+		// fallback keeps the same rule: a person row carries no seat of its
+		// own, so the seat is read off this activity's participants, and a
+		// person that row names is not the counterparty however they were
+		// linked.
 		q := `
 			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, '')
 			  FROM person p
@@ -125,6 +129,9 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 			       SELECT person_id, 4 AS rank, created_at, id
 			         FROM activity_link
 			        WHERE activity_id = $1 AND person_id IS NOT NULL
+			          AND person_id NOT IN (
+			              SELECT person_id FROM activity_participant
+			               WHERE activity_id = $1 AND person_id IS NOT NULL AND user_id IS NOT NULL)
 			  ) c ON c.person_id = p.id
 			 WHERE p.archived_at IS NULL`
 		if scope != "" {
