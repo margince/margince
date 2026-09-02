@@ -28,15 +28,22 @@ import (
 // for the weekly learning delta, far short of forever.
 const voiceLearningSignalRetention = 180 * 24 * time.Hour
 
-// ActiveVoiceForActor returns the acting user's ready profile and its
-// active version. ok=false — no profile, none ready, or no activated
-// artifact — is the drafter's clean-fallback signal, never an error.
+// ActiveVoiceForActor returns the ready profile and active version of the
+// person the message goes out AS. ok=false — no profile, none ready, or no
+// activated artifact — is the drafter's clean-fallback signal, never an error.
+//
+// The sender is usually the actor, and on an automation's firing it is not: the
+// engine composes under PrincipalSystem so its writes stay attributed to the
+// system actor, while the mail still leaves under the automation owner's name.
+// principal.WithSendingHuman names that owner, and until this read consulted it
+// every automated draft resolved a zero UserID, failed the check below, and was
+// written in nobody's voice.
 func (s *VoiceStore) ActiveVoiceForActor(ctx context.Context) (VoiceProfile, VoiceProfileVersion, bool, error) {
 	if err := auth.Require(ctx, "voice_profile", principal.ActionRead); err != nil {
 		return VoiceProfile{}, VoiceProfileVersion{}, false, err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
+	sender, ok := voiceSender(ctx)
+	if !ok {
 		return VoiceProfile{}, VoiceProfileVersion{}, false, apperrors.ErrPermissionDenied
 	}
 	var (
@@ -48,7 +55,7 @@ func (s *VoiceStore) ActiveVoiceForActor(ctx context.Context) (VoiceProfile, Voi
 		p, err := scanVoiceProfile(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM voice_profile
 			WHERE archived_at IS NULL AND scope = 'user' AND owner_id = $1 AND status = 'ready'
-			ORDER BY created_at DESC LIMIT 1`, voiceProfileColumns), actor.UserID))
+			ORDER BY created_at DESC LIMIT 1`, voiceProfileColumns), sender))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -69,6 +76,28 @@ func (s *VoiceStore) ActiveVoiceForActor(ctx context.Context) (VoiceProfile, Voi
 		return nil
 	})
 	return profile, version, found, err
+}
+
+// voiceSender answers whose voice a draft on this call is written in.
+//
+// The explicit sender wins over the actor, and the ORDER is the whole of it: on
+// an automation's firing the actor is the system principal, which names no
+// person, so reading the actor first would resolve nothing and the bound owner
+// would never be reached. Everywhere else no sender is bound and the actor is
+// the sender, which is why this is a fallback rather than a second parameter on
+// every drafting call.
+//
+// A false answer is a caller with nobody to write as — a system job with no
+// owner behind it — and the read above refuses rather than guessing.
+func voiceSender(ctx context.Context) (ids.UUID, bool) {
+	if sender, ok := principal.SendingHuman(ctx); ok {
+		return sender, true
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return ids.Nil, false
+	}
+	return actor.UserID, true
 }
 
 // RecordDraftedSignal remembers that a voice draft was served, keyed by the

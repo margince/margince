@@ -221,6 +221,7 @@ const (
 	correlationKey
 	causationKey
 	agentRunKey
+	sendingHumanKey
 )
 
 // WithWorkspaceID binds the workspace a request resolved. No statement
@@ -292,6 +293,34 @@ func WithAgentRunID(ctx context.Context, id ids.UUID) context.Context {
 func AgentRunID(ctx context.Context) (ids.UUID, bool) {
 	id, ok := ctx.Value(agentRunKey).(ids.UUID)
 	return id, ok
+}
+
+// WithSendingHuman names the person an outbound message goes out AS, when that
+// is somebody other than the acting principal.
+//
+// It exists for one question — whose voice is this written in — and answers
+// nothing else. An automation composes under PrincipalSystem so its writes stay
+// attributed to the system actor, and a system principal carries no UserID, so
+// a drafter asking "whose voice?" of the actor gets no answer and writes in
+// nobody's. The message still leaves under a human's name, and that human is
+// the automation's owner.
+//
+// It is deliberately NOT a principal: binding the owner as the actor would move
+// the audit trail, the row scope and the permission checks along with it, which
+// is a far larger claim than "sign this in their voice". Nothing may authorize
+// a read or a write from this value.
+func WithSendingHuman(ctx context.Context, id ids.UUID) context.Context {
+	return context.WithValue(ctx, sendingHumanKey, id)
+}
+
+// SendingHuman returns the person an outbound message goes out as; ok is false
+// on every path where the actor IS the sender, which is most of them.
+func SendingHuman(ctx context.Context) (ids.UUID, bool) {
+	id, ok := ctx.Value(sendingHumanKey).(ids.UUID)
+	if !ok || id.IsZero() {
+		return ids.Nil, false
+	}
+	return id, true
 }
 
 // HumanIDPrefix is how a Principal.ID names a person. It is the ONE spelling
