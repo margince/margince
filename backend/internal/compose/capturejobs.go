@@ -442,15 +442,20 @@ func (w *counterpartyVerdictWorkspaceWorker) Work(ctx context.Context, job *rive
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	// Judging is the only stage that needs a model, and it is skipped when none
-	// is configured. Every other stage still runs: rows already on the ledger must
-	// still reach a human, declines must still close, and mail already hidden
-	// must still be redacted on schedule — turning AI off is not consent to
+	// The judging pass runs whether or not a model is composed, because not all
+	// of it needs one: an owner's own decision and a role mailbox are answered
+	// from the ledger and the address, and skipping the whole stage left those
+	// rows unanswerable. Every row that DOES need a model is retired to `unsure`
+	// inside the pass, which is what puts it in front of a human — a pending row
+	// nobody will ever judge is invisible, because it looks exactly like one
+	// whose turn has not come.
+	//
+	// Every other stage runs for the same reason it always did: rows already on
+	// the ledger must reach a human, declines must close, and mail already
+	// hidden must be redacted on schedule — turning AI off is not consent to
 	// retain the content of messages the workspace already decided were noise.
-	if w.engine.CanJudge() {
-		if err := w.engine.RunWorkspace(wsCtx, 0); err != nil {
-			return jobs.FaultContext(ctx, err)
-		}
+	if err := w.engine.RunWorkspace(wsCtx, 0); err != nil {
+		return jobs.FaultContext(ctx, err)
 	}
 	if err := w.engine.ReconcileLedgerWorkspace(wsCtx); err != nil {
 		return jobs.FaultContext(ctx, err)

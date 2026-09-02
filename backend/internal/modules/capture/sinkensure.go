@@ -218,7 +218,15 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// itinerary service and an expense tool as contacts. recordWorthy asks the
 	// second question T1 always assumed: is this an address a person could be
 	// reached at?
-	decision.create = corresponded && s.recordWorthy(cp)
+	//
+	// And ONE send is not yet a correspondence — see exchangedWith. A single
+	// send defers to the verdict rather than being refused, so a real prospect
+	// written to once still becomes a contact, a moment later and for a reason.
+	exchanged, err := s.exchangedWith(ctx, tx, cp.Email, correspondedRepeatedly)
+	if err != nil {
+		return counterpartyDecision{}, err
+	}
+	decision.create = corresponded && exchanged && s.recordWorthy(cp)
 	roleMailbox := refusesToNameAPerson(cp.Email, correspondedRepeatedly)
 	if roleMailbox {
 		decision.create = false

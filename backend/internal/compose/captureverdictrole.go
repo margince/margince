@@ -3,7 +3,12 @@
 
 package compose
 
-import "github.com/margince/margince/backend/internal/platform/mailrole"
+import (
+	"context"
+
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/mailrole"
+)
 
 // addressIsARoleMailbox settles a sender by its address, after the mailbox
 // owner's own decision and before any model call.
@@ -30,4 +35,24 @@ import "github.com/margince/margince/backend/internal/platform/mailrole"
 func addressIsARoleMailbox(email string) bool {
 	_, role := mailrole.Match(email)
 	return role
+}
+
+// askAHumanInstead retires a sender no model can judge, so a person decides.
+//
+// An installation with AI turned off must not simply leave the row where it is.
+// Nothing else advances a pending disposition: `unsure` is what the review queue
+// reads, only the judging pass writes it, and a row nobody will ever judge looks
+// exactly like one whose turn has not come. So the question would stay open
+// forever, invisible, and the contacts those senders should have become would
+// silently never be created.
+//
+// Retiring it is the honest answer rather than a fallback: the product cannot
+// answer this one, and it says so to the only party who can.
+func (e *CounterpartyVerdictEngine) askAHumanInstead(
+	ctx context.Context, row capture.PendingCounterparty,
+) (int, error) {
+	if err := e.pending.Retire(ctx, row, "no model is configured to judge this sender"); err != nil {
+		return 0, err
+	}
+	return 1, nil
 }

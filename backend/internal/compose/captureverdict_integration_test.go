@@ -637,3 +637,44 @@ func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
 		})
 	}
 }
+
+// An installation with AI turned off must still answer its senders.
+//
+// Judging used to be skipped wholesale when no model was composed, and nothing
+// else advanced a pending row: `unsure` is what the review queue reads, only the
+// judging pass writes it, and a row nobody will ever judge looks exactly like
+// one whose turn has not come. So every first-time sender in such an
+// installation sat invisible forever, and the contacts they should have become
+// were silently never created.
+//
+// Two things must happen without a model. The answers that come from the
+// address and the ledger alone still land — a role mailbox is one of them — and
+// every row that genuinely needs a model reaches a human instead of nobody.
+func TestAnInstallationWithNoModelStillAnswersItsSenders(t *testing.T) {
+	e := integration.Setup(t)
+	// No brain at all: this is an installation that never configured AI.
+	engine := NewCounterpartyVerdictEngine(e.Pool, nil, slog.Default())
+	if engine.CanJudge() {
+		t.Fatal("the fixture composed a model — the case under test needs none")
+	}
+
+	person := seedCapturedMail(t, e, "anna@realco.example", "hello")
+	personRow := seedPendingDisposition(t, e, "anna@realco.example", "realco.example", person)
+	role := seedCapturedMail(t, e, "billing@realco.example", "your invoice")
+	roleRow := seedPendingDisposition(t, e, "billing@realco.example", "realco.example", role)
+
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass with no model: %v", err)
+	}
+
+	// The deterministic answer lands, and costs nothing.
+	if got := dispositionStatus(t, e, roleRow); got != capture.PendingStatusReal {
+		t.Errorf("role mailbox disposition = %q, want %q — the address answers this without a model",
+			got, capture.PendingStatusReal)
+	}
+	// The one that needs a model reaches a human rather than nobody.
+	if got := dispositionStatus(t, e, personRow); got != capture.PendingStatusUnsure {
+		t.Errorf("disposition = %q, want %q — a sender no model can judge is a question for a person",
+			got, capture.PendingStatusUnsure)
+	}
+}

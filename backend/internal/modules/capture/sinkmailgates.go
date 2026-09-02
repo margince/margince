@@ -309,3 +309,52 @@ func transactionalInput(cp connector.Counterparty) TransactionalInput {
 func (s *PendingStore) CorrespondsWith(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	return correspondencePositiveTx(ctx, tx, email)
 }
+
+// wroteBackTx reports whether this address has written to the workspace on a
+// thread the workspace itself started.
+//
+// It is the other half of "a correspondence", and the stronger half. One
+// outbound message is intent, and intent is often unreturned: a founder mails
+// forty people about a conference and hears from six. Recording all forty as
+// contacts on the strength of the send alone is what filled a CRM with people
+// who never answered — and among them the test addresses, the one-off errands
+// and the introductions that went nowhere.
+//
+// A REPLY is different in kind. Somebody read the message and chose to answer,
+// which is the thing a contact record is actually about.
+//
+// Bulk mail does not count. An address the workspace wrote to once and which
+// then sent a newsletter has not written back; it has added the workspace to a
+// list, and reading that as a reply would admit exactly the senders the
+// transactional gates exist to refuse.
+//
+// The thread has to be one the workspace WROTE ON. An inbound message on a
+// thread nobody here started is a stranger's first approach, which is the
+// ambiguous class the verdict engine owns — counting it here would restore
+// create-on-sight for every cold email.
+func wroteBackTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	normalized := normalizeEmail(email)
+	if normalized == "" {
+		return false, nil
+	}
+	var replied bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1
+		    FROM activity inbound
+		   WHERE inbound.counterparty_email = $1
+		     AND inbound.direction = 'inbound'
+		     AND NOT inbound.bulk_mail_attested
+		     AND inbound.thread_key <> ''
+		     AND `+auth.ActivityAvailableClause("inbound")+`
+		     AND EXISTS (
+		           SELECT 1
+		             FROM activity ours
+		            WHERE ours.thread_key = inbound.thread_key
+		              AND ours.counterparty_outbound_attested
+		              AND `+auth.ActivityAvailableClause("ours")+`))`,
+		normalized).Scan(&replied); err != nil {
+		return false, fmt.Errorf("capture: reading whether the address wrote back: %w", err)
+	}
+	return replied, nil
+}

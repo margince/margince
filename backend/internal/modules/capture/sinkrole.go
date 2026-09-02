@@ -3,7 +3,13 @@
 
 package capture
 
-import "github.com/margince/margince/backend/internal/platform/mailrole"
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/mailrole"
+)
 
 // refusesToNameAPerson answers the question T1's evidence cannot: this address
 // is one the workspace demonstrably writes to, but is there a PERSON to record?
@@ -35,4 +41,28 @@ func refusesToNameAPerson(email string, correspondedRepeatedly bool) bool {
 	}
 	_, role := mailrole.Match(email)
 	return role
+}
+
+// exchangedWith reports whether this workspace and that address have actually
+// exchanged mail, rather than the workspace merely having sent one message.
+//
+// Intent is often unreturned: a founder mails forty people about a conference
+// and hears from six. Creating on the send alone recorded the other
+// thirty-four, along with the test addresses and the one-off errands.
+//
+// Two shapes count, and the cheaper one is asked first: the workspace wrote on
+// two separate threads, which the correspondence read already established, or
+// the address wrote back on a thread the workspace started.
+//
+// Both are facts about what happened, not judgements about the sender. That is
+// what makes this safe to put in front of a create: an address it refuses is
+// deferred to the verdict rather than dismissed, and the verdict reads the
+// message.
+func (s *Sink) exchangedWith(
+	ctx context.Context, tx pgx.Tx, email string, correspondedRepeatedly bool,
+) (bool, error) {
+	if correspondedRepeatedly {
+		return true, nil
+	}
+	return wroteBackTx(ctx, tx, email)
 }
