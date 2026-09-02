@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
+	"github.com/margince/margince/backend/internal/compose/draftreply"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -179,7 +180,13 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvo
 		// nothing about the request's shape.
 		req.Messages[len(req.Messages)-1].Content += correction
 	}
-	res, err := lane.Complete(ctx, req)
+	// draftreply.Ask re-asks through the SAME parse the answer path runs, so a
+	// reply this site would refuse goes back to the model with the reason
+	// rather than degrading silently to the floor.
+	res, err := draftreply.Ask(ctx, lane, req, func(text string) error {
+		_, parseErr := ParseDraft(text, in)
+		return parseErr
+	})
 	if err != nil {
 		return Draft{}, err
 	}
