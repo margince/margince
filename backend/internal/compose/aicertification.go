@@ -32,13 +32,6 @@ import (
 // things.
 const certJudge = ai.TaskCertJudge
 
-// runsPerExample is the default the certification lane runs each example at.
-// It qualifies every count the card shows: `certified` demands that EVERY run
-// pass, so on a small sample a model that is usually right reads worse than one
-// that is always right. A reader shown 20 of 21 without the sample size cannot
-// tell which they are looking at.
-const runsPerExample = 3
-
 // The seven words a job or a site can read as. They are the contract's
 // vocabulary, spelled here so the fold below can order them by severity.
 const (
@@ -68,9 +61,8 @@ var severity = map[crmcontracts.AiCertificationResult]int{
 // certificationView joins the committed results to the stored binding.
 func certificationView(routing ai.RoutingConfig, sites []aitasks.Site, snap snapshot.Snapshot) crmcontracts.AiCertification {
 	view := crmcontracts.AiCertification{
-		BindingState:   bindingState(routing),
-		RunsPerExample: runsPerExample,
-		Jobs:           []crmcontracts.AiCertificationJob{},
+		BindingState: bindingState(routing),
+		Jobs:         []crmcontracts.AiCertificationJob{},
 	}
 	for _, task := range shippedJobs(sites) {
 		view.Jobs = append(view.Jobs, jobView(routing, task, sitesOfTask(sites, task), snap))
@@ -86,7 +78,7 @@ func certificationView(routing ai.RoutingConfig, sites []aitasks.Site, snap snap
 // looking for a run that would not help them.
 func bindingState(routing ai.RoutingConfig) crmcontracts.AiCertificationBindingState {
 	for _, binding := range routing.Tiers {
-		if binding.Provider != "" && binding.Model != "" {
+		if ai.IsBound(binding) {
 			return "bound"
 		}
 	}
@@ -137,7 +129,7 @@ func jobView(routing ai.RoutingConfig, task ai.Task, sites []aitasks.Site, snap 
 
 	env := string(routing.Profile)
 	worst := crmcontracts.AiCertificationSite{Result: resultReliable}
-	measuredElsewhere := false
+	measuredElsewhere, disagreed := false, false
 	for _, site := range sites {
 		row, found := snap.For(string(task), site.Variant, binding.Provider, binding.Model, env)
 		if !found && snap.MeasuredElsewhere(string(task), site.Variant, binding.Provider, binding.Model, env) {
@@ -145,11 +137,14 @@ func jobView(routing ai.RoutingConfig, task ai.Task, sites []aitasks.Site, snap 
 		}
 		view := siteView(site.Variant, row, found)
 		job.Sites = append(job.Sites, view)
+		if len(job.Sites) > 1 && view.Result != job.Sites[0].Result {
+			disagreed = true
+		}
 		if severity[view.Result] >= severity[worst.Result] {
 			worst = view
 		}
 	}
-	adoptWorstSite(&job, worst, len(sites))
+	adoptWorstSite(&job, worst, len(sites), disagreed)
 	if measuredElsewhere {
 		job.MeasuredUnderOtherProfile = certPtr(true)
 	}
@@ -165,16 +160,17 @@ func jobView(routing ai.RoutingConfig, task ai.Task, sites []aitasks.Site, snap 
 // part, and averaging four sites would let three sound ones carry one that fails
 // every time. worst_site names which one, so the fold stays traceable instead of
 // asking a reader to take the verdict on faith.
-func adoptWorstSite(job *crmcontracts.AiCertificationJob, worst crmcontracts.AiCertificationSite, siteCount int) {
-	job.Result = worst.Result
+func adoptWorstSite(job *crmcontracts.AiCertificationJob, worst crmcontracts.AiCertificationSite, siteCount int, disagreed bool) {
+	job.Result, job.MeasuredResult = worst.Result, worst.MeasuredResult
 	job.Runs, job.Passed = worst.Runs, worst.Passed
+	job.RunsPerExample = worst.RunsPerExample
 	job.MeasuredExamples, job.PendingExamples = worst.MeasuredExamples, worst.PendingExamples
 	job.Scope, job.MeasuredAt = worst.Scope, worst.MeasuredAt
-	// Only where the fold actually chose between measurements. On a job nothing
-	// measured, every site reads the same and naming one implies it was the
-	// reason — a reader would go looking for a finding that is not there.
-	measured := worst.Result != resultNotChecked && worst.Result != resultNoModel
-	if siteCount > 1 && worst.Site != "" && measured {
+	// Only where the fold actually had to choose. On a job whose sites all read
+	// the same — every one reliable, or every one unmeasured — naming one implies
+	// it was the reason, and a reader goes looking for a finding that is not
+	// there. Ties pick the last site in census order, which is arbitrary.
+	if siteCount > 1 && worst.Site != "" && disagreed {
 		job.WorstSite = &worst.Site
 	}
 }
@@ -194,24 +190,46 @@ func siteView(variant string, row snapshot.Row, found bool) crmcontracts.AiCerti
 	if at, ok := parseStamp(row.RanAt); ok {
 		view.MeasuredAt = &at
 	}
-	view.Result = resultOf(row)
+	// Derived from this row's own counts rather than quoted from the lane's
+	// default: the repeat count is configurable per run, so a figure copied from
+	// the runner would be a claim about runs this record never saw.
+	if row.Measured > 0 && row.Runs > 0 {
+		view.RunsPerExample = certPtr(row.Runs / row.Measured)
+	}
+	view.Result, view.MeasuredResult = resultOf(row)
 	return view
 }
 
-// resultOf turns a row's status and band into the word a reader gets.
+// resultOf turns a row's status and band into the word a reader gets, plus —
+// where the two differ — what the measurement actually FOUND.
 //
-// Status decides first: a stale row describes prompts this build no longer
-// sends, and a partial one has never seen cases the corpus has since grown —
-// neither is a claim about how good the model is, so neither may be reported as
-// a band. Only a current row's band becomes a reliability word.
-func resultOf(row snapshot.Row) crmcontracts.AiCertificationResult {
+// A stale row describes prompts this build no longer sends, and a partial one
+// has never seen cases the corpus has since grown. Those are facts about the
+// measurement's standing, not about how good the model is, so they become the
+// result. But the finding must travel with them: two committed rows are stale
+// `not_supported` at 12 of 12 runs passed, and reporting only "Out of date, 12
+// of 12" keeps the reassuring half of a measurement whose verdict was that the
+// model could not be trusted with the job.
+//
+// An unrecognized status fails CLOSED. A row spelling a status this build does
+// not know is a row this build cannot read, and falling through to the band
+// would render it as a reliability finding nobody produced.
+func resultOf(row snapshot.Row) (result crmcontracts.AiCertificationResult, measured *crmcontracts.AiCertificationResult) {
+	finding := bandResult(row.Band)
 	switch row.Status {
 	case snapshot.StatusStale:
-		return resultOutOfDate
+		return resultOutOfDate, findingIfKnown(finding)
 	case snapshot.StatusPartial:
-		return resultPartlyChecked
+		return resultPartlyChecked, findingIfKnown(finding)
+	case snapshot.StatusCurrent:
+		return finding, nil
+	default:
+		return resultNotChecked, nil
 	}
-	switch row.Band {
+}
+
+func bandResult(band string) crmcontracts.AiCertificationResult {
+	switch band {
 	case "certified":
 		return resultReliable
 	case "supported_degraded":
@@ -219,9 +237,19 @@ func resultOf(row snapshot.Row) crmcontracts.AiCertificationResult {
 	case "not_supported":
 		return resultNotReliable
 	default:
-		// A current row with no band measured nothing this site can claim.
+		// A row with no band measured nothing this site can claim.
 		return resultNotChecked
 	}
+}
+
+// findingIfKnown drops a finding that says nothing. A stale row carrying no
+// band has no verdict to report beside its age, and "out of date — it was not
+// checked" is noise.
+func findingIfKnown(finding crmcontracts.AiCertificationResult) *crmcontracts.AiCertificationResult {
+	if finding == resultNotChecked {
+		return nil
+	}
+	return &finding
 }
 
 // unmeasuredFallbacks names the models a job can fall back to that nothing has
@@ -244,17 +272,17 @@ func unmeasuredFallbacks(routing ai.RoutingConfig, task ai.Task, serving ai.Tier
 		if tier == serving {
 			continue
 		}
-		binding, bound := routing.Tiers[tier]
-		if !bound || binding.Provider == "" || binding.Model == "" {
+		if !ai.IsBound(routing.Tiers[tier]) {
 			continue // an unbound rung serves nothing; it is a routing gap, not a measurement gap
 		}
+		binding := routing.Tiers[tier]
 		// A lower rung bound to the SAME model is not a fallback a reader can
 		// act on: the row already reports that model, and naming it again as
 		// "a fallback we have not checked" contradicts the line above it.
 		if binding.Model == servingModel {
 			continue
 		}
-		if seen[binding.Model] || currentEverywhere(sites, task, binding, env, snap) {
+		if seen[binding.Model] || measuredAnywhere(sites, task, binding, env, snap) {
 			continue
 		}
 		seen[binding.Model] = true
@@ -263,14 +291,20 @@ func unmeasuredFallbacks(routing ai.RoutingConfig, task ai.Task, serving ai.Tier
 	return out
 }
 
-func currentEverywhere(sites []aitasks.Site, task ai.Task, binding ai.ProviderConfig, env string, snap snapshot.Snapshot) bool {
+// measuredAnywhere says whether this binding has ANY measurement for the job.
+//
+// Any, not "current everywhere": a fallback measured six weeks ago has been
+// graded, and the list this feeds says "which we have not checked". Reporting a
+// stale measurement as no measurement is the same defect the row-level
+// vocabulary exists to avoid, one level down.
+func measuredAnywhere(sites []aitasks.Site, task ai.Task, binding ai.ProviderConfig, env string, snap snapshot.Snapshot) bool {
 	for _, site := range sites {
 		row, found := snap.For(string(task), site.Variant, binding.Provider, binding.Model, env)
-		if !found || row.Status != snapshot.StatusCurrent {
-			return false
+		if found && row.Status != snapshot.StatusAbsent {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 // certPtr takes the address of a value for the contract's optional fields.

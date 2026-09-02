@@ -20500,7 +20500,7 @@ components:
         actually runs. A job is reported on the model that would answer it today — the first
         rung of its ladder the installation BINDS, which is what the router serves — so an
         operator reads about their own deployment and not about a candidate.
-      required: [binding_state, runs_per_example, jobs]
+      required: [binding_state, jobs]
       properties:
         binding_state:
           type: string
@@ -20510,13 +20510,6 @@ components:
             Reported as its own word because it is a choice nobody has made yet, not a
             measurement anybody is missing, and calling it "unchecked" would blame the
             certification lane for an empty settings page.
-        runs_per_example:
-          type: integer
-          description: |
-            How many times each example was run. It qualifies every count below: a job counts as
-            reliable only when EVERY run of every example answered correctly, so on a small
-            sample a model that is right most of the time reads worse than one that is right
-            always — which is the intended reading, not an artefact.
         jobs:
           type: array
           items: { $ref: '#/components/schemas/AiCertificationJob' }
@@ -20581,6 +20574,22 @@ components:
             How much of the job the runs actually covered. A case that grades one reply of a
             multi-turn path certifies less than the path, so a screen must qualify its claim
             rather than say a narrowed measurement makes the whole job safe to leave alone.
+        measured_result:
+          allOf:
+            - $ref: '#/components/schemas/AiCertificationResult'
+          description: |
+            What the measurement SAID, for a job whose result is `out_of_date` or
+            `partly_checked`. Those two words describe the measurement's standing, not its
+            finding — so without this a stale failure and a stale success render identically,
+            keeping the reassuring counts and dropping the unflattering verdict. Absent when
+            `result` already IS the finding.
+        runs_per_example:
+          type: integer
+          description: |
+            How many times each example was run for THIS job's measurement, derived from its
+            own counts. Per job rather than global because the lane's repeat count is
+            configurable per run, so one figure quoted for the whole page would be a claim
+            about runs it never saw.
         measured_at:
           type: string
           format: date-time
@@ -20616,8 +20625,13 @@ components:
           type: string
           description: The site's variant name within the job.
         result: { $ref: '#/components/schemas/AiCertificationResult' }
+        measured_result:
+          allOf:
+            - $ref: '#/components/schemas/AiCertificationResult'
+          description: What the measurement said, when `result` describes its standing rather than its finding.
         runs: { type: integer }
         passed: { type: integer }
+        runs_per_example: { type: integer }
         measured_examples: { type: integer }
         pending_examples: { type: integer }
         scope: { type: string }

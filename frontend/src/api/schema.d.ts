@@ -13957,13 +13957,6 @@ export interface components {
              * @enum {string}
              */
             binding_state: "bound" | "unbound";
-            /**
-             * @description How many times each example was run. It qualifies every count below: a job counts as
-             *     reliable only when EVERY run of every example answered correctly, so on a small
-             *     sample a model that is right most of the time reads worse than one that is right
-             *     always — which is the intended reading, not an artefact.
-             */
-            runs_per_example: number;
             jobs: components["schemas"]["AiCertificationJob"][];
         };
         /**
@@ -14017,6 +14010,21 @@ export interface components {
              */
             scope?: string;
             /**
+             * @description What the measurement SAID, for a job whose result is `out_of_date` or
+             *     `partly_checked`. Those two words describe the measurement's standing, not its
+             *     finding — so without this a stale failure and a stale success render identically,
+             *     keeping the reassuring counts and dropping the unflattering verdict. Absent when
+             *     `result` already IS the finding.
+             */
+            measured_result?: components["schemas"]["AiCertificationResult"];
+            /**
+             * @description How many times each example was run for THIS job's measurement, derived from its
+             *     own counts. Per job rather than global because the lane's repeat count is
+             *     configurable per run, so one figure quoted for the whole page would be a claim
+             *     about runs it never saw.
+             */
+            runs_per_example?: number;
+            /**
              * Format: date-time
              * @description When the runs happened. Absent when nothing measured this job.
              */
@@ -14044,8 +14052,11 @@ export interface components {
             /** @description The site's variant name within the job. */
             site: string;
             result: components["schemas"]["AiCertificationResult"];
+            /** @description What the measurement said, when `result` describes its standing rather than its finding. */
+            measured_result?: components["schemas"]["AiCertificationResult"];
             runs?: number;
             passed?: number;
+            runs_per_example?: number;
             measured_examples?: number;
             pending_examples?: number;
             scope?: string;

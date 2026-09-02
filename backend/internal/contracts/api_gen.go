@@ -14935,12 +14935,6 @@ type AiCertification struct {
 	// certification lane for an empty settings page.
 	BindingState AiCertificationBindingState `json:"binding_state"`
 	Jobs         []AiCertificationJob        `json:"jobs"`
-
-	// RunsPerExample How many times each example was run. It qualifies every count below: a job counts as
-	// reliable only when EVERY run of every example answered correctly, so on a small
-	// sample a model that is right most of the time reads worse than one that is right
-	// always — which is the intended reading, not an artefact.
-	RunsPerExample int `json:"runs_per_example"`
 }
 
 // AiCertificationBindingState `unbound` means no tier has a model — the state every installation starts in.
@@ -14960,6 +14954,13 @@ type AiCertificationJob struct {
 
 	// MeasuredExamples How many of the worst site's current examples the measurement covers.
 	MeasuredExamples *int `json:"measured_examples,omitempty"`
+
+	// MeasuredResult What the measurement SAID, for a job whose result is `out_of_date` or
+	// `partly_checked`. Those two words describe the measurement's standing, not its
+	// finding — so without this a stale failure and a stale success render identically,
+	// keeping the reassuring counts and dropping the unflattering verdict. Absent when
+	// `result` already IS the finding.
+	MeasuredResult *AiCertificationResult `json:"measured_result,omitempty"`
 
 	// MeasuredUnderOtherProfile A measurement exists for this same model under a DIFFERENT environment class. It does
 	// not carry over — a cloud-frontier number says nothing about an EU-hosted binding — but
@@ -14999,6 +15000,12 @@ type AiCertificationJob struct {
 	// Runs Runs attempted on the worst site. Reported as a count, never only as a rate — see `passed`.
 	Runs *int `json:"runs,omitempty"`
 
+	// RunsPerExample How many times each example was run for THIS job's measurement, derived from its
+	// own counts. Per job rather than global because the lane's repeat count is
+	// configurable per run, so one figure quoted for the whole page would be a claim
+	// about runs it never saw.
+	RunsPerExample *int `json:"runs_per_example,omitempty"`
+
 	// Scope How much of the job the runs actually covered. A case that grades one reply of a
 	// multi-turn path certifies less than the path, so a screen must qualify its claim
 	// rather than say a narrowed measurement makes the whole job safe to leave alone.
@@ -15029,14 +15036,18 @@ type AiCertificationResult string
 type AiCertificationSite struct {
 	MeasuredAt       *time.Time `json:"measured_at,omitempty"`
 	MeasuredExamples *int       `json:"measured_examples,omitempty"`
-	Passed           *int       `json:"passed,omitempty"`
-	PendingExamples  *int       `json:"pending_examples,omitempty"`
+
+	// MeasuredResult What the measurement said, when `result` describes its standing rather than its finding.
+	MeasuredResult  *AiCertificationResult `json:"measured_result,omitempty"`
+	Passed          *int                   `json:"passed,omitempty"`
+	PendingExamples *int                   `json:"pending_examples,omitempty"`
 
 	// Result How a job or one of its sites reads. Declared once and referenced by both, so the two can
 	// never grow apart into a job that reports a word its own sites cannot.
-	Result AiCertificationResult `json:"result"`
-	Runs   *int                  `json:"runs,omitempty"`
-	Scope  *string               `json:"scope,omitempty"`
+	Result         AiCertificationResult `json:"result"`
+	Runs           *int                  `json:"runs,omitempty"`
+	RunsPerExample *int                  `json:"runs_per_example,omitempty"`
+	Scope          *string               `json:"scope,omitempty"`
 
 	// Site The site's variant name within the job.
 	Site string `json:"site"`

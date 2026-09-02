@@ -30,7 +30,6 @@ function job(over: Partial<Job>): Job {
 // words read as seven different claims rather than as a gradient.
 const EVERY_RESULT: Certification = {
   binding_state: "bound",
-  runs_per_example: 3,
   jobs: [
     job({ task: "capture_classify", runs: 21, passed: 21 }),
     job({
@@ -81,13 +80,11 @@ const EVERY_RESULT: Certification = {
 
 const NOTHING_BOUND: Certification = {
   binding_state: "unbound",
-  runs_per_example: 3,
   jobs: [job({ task: "draft_reply", result: "no_model", model: undefined })],
 };
 
 const CAVEATS: Certification = {
   binding_state: "bound",
-  runs_per_example: 3,
   jobs: [
     // Reliable, but only one turn of a multi-turn path was graded.
     job({ task: "agent_loop", scope: "single_turn" }),

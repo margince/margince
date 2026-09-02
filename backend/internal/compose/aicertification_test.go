@@ -350,3 +350,135 @@ func TestNothingMeasuredNamesNoWorstSite(t *testing.T) {
 		t.Errorf("worst_site = %q on a job nothing measured", *job.WorstSite)
 	}
 }
+
+// "Out of date" and "partly checked" describe a measurement's STANDING, not its
+// finding. Two committed rows are stale not_supported at 12 of 12 runs passed —
+// so a card that dropped the verdict and kept the counts would report a
+// measurement whose conclusion was "do not trust this" as an old perfect score.
+func TestAStaleFailureKeepsItsVerdictAndNotJustItsCounts(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name   string
+		status string
+		want   crmcontracts.AiCertificationResult
+	}{
+		{"out of date", snapshot.StatusStale, resultOutOfDate},
+		{"partly checked", snapshot.StatusPartial, resultPartlyChecked},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+			snap := snapOf(t, rowOf("draft_reply", "reply", tc.status, "not_supported", 12, 12, 4, 1))
+			job := jobNamed(t, certificationView(boundEverywhere(), sites, snap), ai.TaskDraftReply)
+
+			if job.Result != tc.want {
+				t.Errorf("result = %q, want %q", job.Result, tc.want)
+			}
+			if job.MeasuredResult == nil {
+				t.Fatal("the measurement's own finding was dropped, leaving only its counts")
+			}
+			if *job.MeasuredResult != resultNotReliable {
+				t.Errorf("measured_result = %q, want %q", *job.MeasuredResult, resultNotReliable)
+			}
+		})
+	}
+}
+
+// A stale row carrying no band has no verdict to report beside its age, and
+// "out of date — it was not checked" is noise rather than evidence.
+func TestAStaleRowWithNoVerdictReportsNoFinding(t *testing.T) {
+	t.Parallel()
+
+	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+	snap := snapOf(t, rowOf("draft_reply", "reply", snapshot.StatusStale, "", 0, 0, 0, 0))
+	job := jobNamed(t, certificationView(boundEverywhere(), sites, snap), ai.TaskDraftReply)
+
+	if job.MeasuredResult != nil {
+		t.Errorf("measured_result = %q on a row that measured nothing", *job.MeasuredResult)
+	}
+}
+
+// A status this build does not know is a row it cannot read. Falling through to
+// the band would render it as a reliability finding nobody produced.
+func TestAnUnknownStatusFailsClosed(t *testing.T) {
+	t.Parallel()
+
+	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+	snap := snapOf(t, rowOf("draft_reply", "reply", "retracted", "certified", 9, 9, 3, 0))
+	job := jobNamed(t, certificationView(boundEverywhere(), sites, snap), ai.TaskDraftReply)
+
+	if job.Result != resultNotChecked {
+		t.Errorf("result = %q on an unreadable status, want %q", job.Result, resultNotChecked)
+	}
+}
+
+// A fallback measured six weeks ago HAS been checked. The list says "which we
+// have not checked", so announcing a stale measurement there is false.
+func TestAStaleFallbackIsNotCalledUnchecked(t *testing.T) {
+	t.Parallel()
+
+	routing := ai.RoutingConfig{
+		Tiers: map[ai.Tier]ai.ProviderConfig{
+			ai.TierCheapCloud: {Provider: testProvider, Model: testModel},
+			ai.TierLocalSmall: {Provider: testProvider, Model: "some/older-model"},
+		},
+		Profile: ai.Profile(testEnv),
+	}
+	stale := rowOf("draft_reply", "reply", snapshot.StatusStale, "certified", 9, 9, 3, 0)
+	stale.Model = "some/older-model"
+	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+	snap := snapOf(
+		t,
+		rowOf("draft_reply", "reply", snapshot.StatusCurrent, "certified", 9, 9, 3, 0),
+		stale,
+	)
+	job := jobNamed(t, certificationView(routing, sites, snap), ai.TaskDraftReply)
+
+	if job.UnmeasuredFallbacks != nil {
+		t.Errorf("unmeasured_fallbacks = %v; that model was measured, only not recently",
+			*job.UnmeasuredFallbacks)
+	}
+}
+
+// The sample size comes from the row's own counts. The lane's repeat count is
+// configurable per run, so a figure copied from the runner would be a claim
+// about runs the record never saw.
+func TestTheSampleSizeIsDerivedFromTheRowsOwnCounts(t *testing.T) {
+	t.Parallel()
+
+	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+	// 25 runs over 5 examples is five runs each — not the lane's default of 3.
+	snap := snapOf(t, rowOf("draft_reply", "reply", snapshot.StatusCurrent, "certified", 25, 25, 5, 0))
+	job := jobNamed(t, certificationView(boundEverywhere(), sites, snap), ai.TaskDraftReply)
+
+	if job.RunsPerExample == nil || *job.RunsPerExample != 5 {
+		t.Errorf("runs_per_example = %v, want 5 from 25 runs over 5 examples", job.RunsPerExample)
+	}
+}
+
+// worst_site is evidence only where the fold had to choose. On a job whose sites
+// all read the same, naming one implies it was the reason and a reader goes
+// looking for a finding that is not there. Ties pick the last site in census
+// order, which is arbitrary.
+func TestSitesThatAgreeNameNoWorstSite(t *testing.T) {
+	t.Parallel()
+
+	sites := []aitasks.Site{
+		siteOf(ai.TaskColdStart, "acts"),
+		siteOf(ai.TaskColdStart, "company_message"),
+	}
+	snap := snapOf(
+		t,
+		rowOf("cold_start", "acts", snapshot.StatusCurrent, "certified", 9, 9, 3, 0),
+		rowOf("cold_start", "company_message", snapshot.StatusCurrent, "certified", 9, 9, 3, 0),
+	)
+	job := jobNamed(t, certificationView(boundEverywhere(), sites, snap), ai.TaskColdStart)
+
+	if job.Result != resultReliable {
+		t.Fatalf("result = %q, want %q", job.Result, resultReliable)
+	}
+	if job.WorstSite != nil {
+		t.Errorf("worst_site = %q where every site read the same", *job.WorstSite)
+	}
+}

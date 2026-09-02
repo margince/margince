@@ -67,6 +67,9 @@ func TestEveryShippedJobIsNamedForAReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the invocation-site census: %v", err)
 	}
+	if len(census.All()) == 0 {
+		t.Fatal("the site census is empty, so every assertion below would pass vacuously")
+	}
 	keys := catalogueKeys(t)
 
 	var missing []string

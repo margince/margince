@@ -23,6 +23,16 @@ func LeadingTier(task Task) Tier {
 	return ladder[0]
 }
 
+// IsBound says whether a tier binding has a model behind it.
+//
+// A tier present in a routing map with no provider or no model is NOT bound: the
+// router builds no client from it. Spelled once because three callers reasoning
+// about what answers had each written the same two comparisons, and a fourth
+// would have written it again.
+func IsBound(binding ProviderConfig) bool {
+	return binding.Provider != "" && binding.Model != ""
+}
+
 // FirstBoundTier is the rung a deployment actually serves a task on: the first
 // rung of its ladder that the deployment BINDS, with the binding found there.
 //
@@ -38,8 +48,7 @@ func LeadingTier(task Task) Tier {
 // answers.
 func FirstBoundTier(routing RoutingConfig, task Task) (ProviderConfig, Tier, bool) {
 	for _, tier := range taskLadders[task] {
-		binding, bound := routing.Tiers[tier]
-		if bound && binding.Provider != "" && binding.Model != "" {
+		if binding, bound := routing.Tiers[tier]; bound && IsBound(binding) {
 			return binding, tier, true
 		}
 	}

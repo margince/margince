@@ -11,6 +11,7 @@ import {
   Modal,
 } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
+import { forReader } from "../format/collate";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -81,13 +82,12 @@ export function AiCertificationCard() {
               >
                 <h2 id={titleId}>{t("aiCert.explainTitle")}</h2>
                 <p>{t("aiCert.explainWhat")}</p>
-                <p>
-                  {t("aiCert.explainHow", {
-                    runs: formatNumber(cert.runs_per_example, locale),
-                  })}
-                </p>
+                <p>{t("aiCert.explainHow")}</p>
                 <p>{t("aiCert.explainMeaning")}</p>
                 <p>{t("aiCert.explainStale")}</p>
+                <h3>{t("aiCert.breakdownTitle")}</h3>
+                <p className="t-meta">{t("aiCert.breakdownSub")}</p>
+                <SiteBreakdown cert={cert} />
                 <Button onClick={() => setExplaining(false)}>
                   {t("aiCert.explainClose")}
                 </Button>
@@ -97,6 +97,43 @@ export function AiCertificationCard() {
         </QueryGate>
       </PanelBody>
     </Panel>
+  );
+}
+
+// Each job broken into the invocation sites it ships, which is where the fold
+// on the card came from. A job reads as its worst site, and this is the only
+// place a reader can see WHICH part that was and how the others did.
+function SiteBreakdown({ cert }: Readonly<{ cert: Certification }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const multi = cert.jobs.filter(
+    (job) => job.sites.length > 1 && JOB_NAME[job.task] !== undefined,
+  );
+  if (multi.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      {multi.map((job) => (
+        <div key={job.task} className="cell-stack">
+          <p className="t-small">{jobName(t, job.task)}</p>
+          <ul>
+            {job.sites.map((site) => (
+              <li key={site.site} className="t-meta">
+                {siteName(t, job.task, site.site)} —{" "}
+                {t(RESULT_KEY[site.result])}
+                {site.runs !== undefined && site.passed !== undefined
+                  ? ` (${t("aiCert.runCounts", {
+                      passed: formatNumber(site.passed, locale),
+                      runs: formatNumber(site.runs, locale),
+                    })})`
+                  : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -115,7 +152,12 @@ function JobTable({ cert }: Readonly<{ cert: Certification }>) {
     );
   }
 
-  const named = cert.jobs.filter((job) => JOB_NAME[job.task] !== undefined);
+  // Ordered by the name the reader sees, not by the contract identifier
+  // underneath it — which is effectively random to somebody who never learns
+  // the identifiers, and the whole point of the card is that they do not.
+  const named = cert.jobs
+    .filter((job) => JOB_NAME[job.task] !== undefined)
+    .sort((a, b) => forReader(jobName(t, a.task), jobName(t, b.task), locale));
   const unnamedCount = cert.jobs.length - named.length;
 
   return (
@@ -128,7 +170,7 @@ function JobTable({ cert }: Readonly<{ cert: Certification }>) {
           {
             key: "job",
             header: t("aiCert.colJob"),
-            render: (job) => <JobName task={job.task} />,
+            render: (job) => jobName(t, job.task),
           },
           {
             key: "model",
@@ -164,13 +206,12 @@ function JobTable({ cert }: Readonly<{ cert: Certification }>) {
 
 // A job's name in the reader's language.
 //
-// Its own component because the lookup cannot fail here: JobTable has already
-// dropped the jobs this build has no wording for, so the key is present by
-// construction and the row never falls back to an identifier.
-function JobName({ task }: Readonly<{ task: string }>) {
-  const t = useT();
+// The empty string rather than the identifier for a job this build has no
+// wording for: JobTable has already dropped those rows, and falling back to
+// `site_fact_extract` would defeat what the card is for if one ever got here.
+function jobName(t: ReturnType<typeof useT>, task: string): string {
   const key = JOB_NAME[task];
-  return <>{key ? t(key) : null}</>;
+  return key ? t(key) : "";
 }
 
 // The name of the site that set a job's result, or its raw variant when this
@@ -240,6 +281,18 @@ function ResultCell({ job }: Readonly<{ job: Job }>) {
           })}
         </span>
       ) : null}
+      {/* What the measurement FOUND. "Out of date" and "partly checked"
+          describe a measurement's standing, not its finding, so without this a
+          stale failure and a stale success render identically — keeping the
+          reassuring counts and dropping the unflattering verdict. Two committed
+          rows are stale not_supported at 12 of 12 runs passed. */}
+      {job.measured_result ? (
+        <span className="t-meta">
+          {t("aiCert.whenMeasuredItRead", {
+            finding: t(RESULT_KEY[job.measured_result]),
+          })}
+        </span>
+      ) : null}
       {/* A measurement exists under a different hosting posture. It does not
           carry over, and saying nothing would throw away evidence the reader
           could go and look at. */}
@@ -288,11 +341,17 @@ function passedEveryRun(job: Job): boolean {
   );
 }
 
-// A run that graded less than the site's whole path. Named here rather than
-// inferred from a substring so a new scope word cannot silently start reading
-// as full coverage.
+// A run that graded less than the site's whole path.
+//
+// Inverted deliberately: the ONE word meaning full coverage is allowlisted and
+// everything else is narrow. Allowlisting the narrow words instead — as this
+// first did — fails OPEN, so a fourth scope word added to the task contract
+// would render with no caveat and read as full coverage, which is exactly what
+// the allowlist was supposed to prevent.
+const FULL_SCOPE = "full_invocation";
+
 function isNarrow(scope: string | undefined): boolean {
-  return scope === "single_turn" || scope === "single_call";
+  return scope !== undefined && scope !== FULL_SCOPE;
 }
 
 function toneOf(result: Result): "success" | "warn" | "danger" | undefined {

@@ -74,7 +74,7 @@ function renderCard(cert: Certification) {
 }
 
 function cert(jobs: Job[], over: Partial<Certification> = {}): Certification {
-  return { binding_state: "bound", runs_per_example: 3, jobs, ...over };
+  return { binding_state: "bound", jobs, ...over };
 }
 
 afterEach(() => {
@@ -160,6 +160,76 @@ describe("how well the AI performs", () => {
       screen.getByText(/one kind of example fails every time/),
     ).toBeInTheDocument();
     expect(screen.queryByText(/96\s*%/)).not.toBeInTheDocument();
+  });
+
+  it("says what an out-of-date measurement FOUND, not just that it is old", async () => {
+    // "Out of date" describes the measurement's standing, not its finding. Two
+    // committed rows are stale not_supported at 12 of 12 runs passed, so a card
+    // that kept only the counts would report "do not trust this" as an old
+    // perfect score.
+    renderCard(
+      cert([
+        job({
+          task: "draft_reply",
+          result: "out_of_date",
+          measured_result: "not_reliable",
+          runs: 12,
+          passed: 12,
+          measured_at: "2026-08-12T00:00:00Z",
+        }),
+      ]),
+    );
+
+    expect(await screen.findByText("Out of date")).toBeInTheDocument();
+    expect(
+      screen.getByText(/when it was measured it read: Not reliable enough/),
+    ).toBeInTheDocument();
+  });
+
+  it("qualifies any scope that is not full coverage", async () => {
+    // The allowlist is the ONE word meaning full coverage. Allowlisting the
+    // narrow words instead fails open: a scope word added to the task contract
+    // would render with no caveat and read as fully checked.
+    renderCard(
+      cert([
+        job({
+          task: "agent_loop",
+          result: "reliable",
+          scope: "some_new_scope",
+        }),
+      ]),
+    );
+
+    expect(await screen.findByText("Reliable")).toBeInTheDocument();
+    expect(
+      screen.getByText(/only part of the job was checked/),
+    ).toBeInTheDocument();
+  });
+
+  it("breaks a multi-part job into its parts in the modal", async () => {
+    renderCard(
+      cert([
+        job({
+          task: "cold_start",
+          result: "not_reliable",
+          worst_site: "acts",
+          sites: [
+            { site: "acts", result: "not_reliable", runs: 9, passed: 6 },
+            { site: "company_message", result: "reliable", runs: 9, passed: 9 },
+          ],
+        }),
+      ]),
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /what do these mean/i }),
+    );
+    expect(
+      screen.getByText(/the setup conversation — Not reliable enough/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/asking about your company — Reliable/),
+    ).toBeInTheDocument();
   });
 
   it("keeps an out-of-date measurement visible, with its age beside it", async () => {
@@ -305,7 +375,7 @@ describe("how well the AI performs", () => {
     // The sample size is stated, because "20 of 21" means different things at
     // three runs per example and at thirty.
     expect(
-      screen.getByText(/run 3 times through the model/),
+      screen.getByText(/run several times through the model/),
     ).toBeInTheDocument();
     expect(screen.getByText(/safe to leave unattended/)).toBeInTheDocument();
   });

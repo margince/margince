@@ -3988,12 +3988,14 @@ export const en = {
   "aiCert.unnamedJobs":
     "{count} newer job(s) this version of the app cannot name yet — update it to see them.",
   "aiCert.explainClose": "Close",
+  "aiCert.whenMeasuredItRead": "when it was measured it read: {finding}",
+  "aiCert.breakdownTitle": "Jobs with more than one part",
+  "aiCert.breakdownSub": "A job is reported as its weakest part. These are the parts behind each one.",
   "aiCert.explainOpen": "What do these mean?",
   "aiCert.explainTitle": "How the AI is checked",
   "aiCert.explainWhat":
     "Every AI job in Margince has a fixed set of realistic examples kept alongside the code — emails, pages and transcripts of the kind the job meets in real use, each with a written note saying what a correct answer looks like.",
-  "aiCert.explainHow":
-    "Each example is run {runs} times through the model your organization has bound to that job, and a separate model grades every answer against that written note. A job counts as reliable only when every run of every example is correct — so a model that is usually right, but not always, is reported as mostly reliable rather than reliable.",
+  "aiCert.explainHow": "Each example is run several times through the model your organization has bound to that job, and a separate model grades every answer against that written note. A job counts as reliable only when every run of every example is correct AND the grader scores the answers above a quality bar — so a model that is usually right, but not always, is reported as mostly reliable rather than reliable. Each row shows how many runs it took.",
   "aiCert.explainMeaning":
     "Reliable means the job is safe to leave unattended. Mostly reliable means it works, but check the ones that matter. Not reliable enough means a person should review every answer. Not checked yet means we have no measurement for the model you have chosen — it is not a claim that the model is bad.",
   "aiCert.explainStale":

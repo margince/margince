@@ -63,15 +63,20 @@ func (h aiRoutingHandlers) GetAiCertification(w http.ResponseWriter, r *http.Req
 		httperr.Write(w, r, err)
 		return
 	}
-	inputs, err := certificationInputs()
+	// The STORED binding, never a seed file: seeds.ai_routing bootstraps a fresh
+	// install once, and a running workspace's real binding lives in the database
+	// and moves through this same settings page.
+	//
+	// Read BEFORE the build artifacts, because the store owns the RBAC gate: a
+	// caller without ai_routing:read must meet a 403 whatever state the embedded
+	// snapshot is in, and loading first would let a corrupt artifact answer an
+	// unauthorized caller with a 500 instead.
+	routing, err := h.store.Get(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	// The STORED binding, never a seed file: seeds.ai_routing bootstraps a fresh
-	// install once, and a running workspace's real binding lives in the database
-	// and moves through this same settings page.
-	routing, err := h.store.Get(r.Context())
+	inputs, err := certificationInputs()
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

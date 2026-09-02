@@ -98,7 +98,15 @@ const (
 func writeSnapshot(census shippedCensus, stamps map[string]string, perScenario map[string]map[string]string,
 	records []aicert.Record, recordsDir, out string,
 ) {
-	rows, _ := readinessRows(census, stamps, perScenario, records)
+	rows, unclaimed := readinessRows(census, stamps, perScenario, records)
+	// Said out loud rather than dropped. The text report lists these; a
+	// generator that swallowed them would let a record for a retired site
+	// disappear from the snapshot with nothing in the `make gen` output to
+	// notice, which is how a census stops covering what it names.
+	for _, rec := range unclaimed {
+		fmt.Fprintf(os.Stderr, "reportcmd: record %s on %s:%s (%s) covers no shipped site and is not in the snapshot\n",
+			rec.Task, rec.Provider, rec.ServedModel, rec.EnvClass)
+	}
 	encoded, err := renderJSON(recordsDir, rows)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)

@@ -3954,12 +3954,17 @@ export const de = {
   "aiCert.unnamedJobs":
     "{count} neuere Aufgabe(n), für die diese App-Version noch keinen Namen hat — aktualisiere sie, um sie zu sehen.",
   "aiCert.explainClose": "Schließen",
+  "aiCert.whenMeasuredItRead":
+    "zum Zeitpunkt der Messung stand dort: {finding}",
+  "aiCert.breakdownTitle": "Aufgaben mit mehreren Teilen",
+  "aiCert.breakdownSub":
+    "Eine Aufgabe wird nach ihrem schwächsten Teil bewertet. Das sind die Teile dahinter.",
   "aiCert.explainOpen": "Was bedeutet das?",
   "aiCert.explainTitle": "Wie die KI geprüft wird",
   "aiCert.explainWhat":
     "Zu jeder KI-Aufgabe in Margince gehört eine feste Sammlung realistischer Beispiele, die neben dem Code liegt — E-Mails, Seiten und Transkripte der Art, die die Aufgabe im echten Betrieb trifft, jedes mit einer schriftlichen Notiz, was eine richtige Antwort ausmacht.",
   "aiCert.explainHow":
-    "Jedes Beispiel läuft {runs}-mal durch das Modell, das deine Organisation für die Aufgabe gebunden hat, und ein separates Modell bewertet jede Antwort gegen diese Notiz. Verlässlich heißt eine Aufgabe nur, wenn jeder Lauf jedes Beispiels richtig war — ein Modell, das meistens, aber nicht immer richtig liegt, gilt daher als meistens verlässlich.",
+    "Jedes Beispiel läuft mehrfach durch das Modell, das deine Organisation für die Aufgabe gebunden hat, und ein separates Modell bewertet jede Antwort gegen diese Notiz. Verlässlich heißt eine Aufgabe nur, wenn jeder Lauf jedes Beispiels richtig war UND die Bewertung über einer Qualitätsschwelle liegt — ein Modell, das meistens, aber nicht immer richtig liegt, gilt daher als meistens verlässlich. Jede Zeile zeigt, wie viele Läufe es waren.",
   "aiCert.explainMeaning":
     "Verlässlich heißt: die Aufgabe kann unbeaufsichtigt laufen. Meistens verlässlich heißt: sie funktioniert, aber schau bei den wichtigen Fällen hin. Nicht verlässlich genug heißt: ein Mensch sollte jede Antwort prüfen. Noch nicht geprüft heißt: für das gewählte Modell liegt uns keine Messung vor — es ist keine Aussage darüber, dass das Modell schlecht wäre.",
   "aiCert.explainStale":

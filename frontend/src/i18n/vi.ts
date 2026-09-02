@@ -3917,12 +3917,16 @@ export const vi = {
   "aiCert.unnamedJobs":
     "{count} việc mới hơn mà bản ứng dụng này chưa có tên — hãy cập nhật để xem.",
   "aiCert.explainClose": "Đóng",
+  "aiCert.whenMeasuredItRead": "khi đo, kết quả là: {finding}",
+  "aiCert.breakdownTitle": "Những việc có nhiều phần",
+  "aiCert.breakdownSub":
+    "Một việc được báo theo phần yếu nhất của nó. Đây là các phần bên dưới.",
   "aiCert.explainOpen": "Những mục này nghĩa là gì?",
   "aiCert.explainTitle": "AI được kiểm tra thế nào",
   "aiCert.explainWhat":
     "Mỗi việc AI trong Margince đều có một bộ ví dụ thực tế cố định lưu cùng mã nguồn — email, trang web và bản ghi thuộc đúng loại mà việc đó gặp khi dùng thật, mỗi ví dụ kèm một ghi chú nói rõ thế nào là trả lời đúng.",
   "aiCert.explainHow":
-    "Mỗi ví dụ được chạy {runs} lần qua mô hình mà tổ chức của bạn đã gán cho việc đó, và một mô hình riêng biệt sẽ chấm từng câu trả lời theo ghi chú ấy. Một việc chỉ được coi là đáng tin cậy khi mọi lần chạy của mọi ví dụ đều đúng — nên mô hình thường đúng nhưng không phải luôn đúng sẽ được báo là phần lớn đáng tin.",
+    "Mỗi ví dụ được chạy nhiều lần qua mô hình mà tổ chức của bạn đã gán cho việc đó, và một mô hình riêng biệt chấm từng câu trả lời theo ghi chú ấy. Một việc chỉ được coi là đáng tin cậy khi mọi lần chạy của mọi ví dụ đều đúng VÀ điểm chấm vượt ngưỡng chất lượng — nên mô hình thường đúng nhưng không phải luôn đúng sẽ được báo là phần lớn đáng tin. Mỗi dòng cho biết đã chạy bao nhiêu lần.",
   "aiCert.explainMeaning":
     "Đáng tin cậy nghĩa là có thể để việc đó tự chạy. Phần lớn đáng tin nghĩa là nó dùng được, nhưng hãy xem lại những trường hợp quan trọng. Chưa đủ tin cậy nghĩa là cần người xem lại từng câu trả lời. Chưa kiểm tra nghĩa là chúng tôi không có số đo cho mô hình bạn chọn — đó không phải lời nói rằng mô hình đó tệ.",
   "aiCert.explainStale":
