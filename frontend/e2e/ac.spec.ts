@@ -1101,7 +1101,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     // what it actually promises today: the page renders, and no panel degrades
     // into an error box. That it cannot yet say "HubSpot does not carry this" —
     // a different fact from "you may not see this" — is issue #882.
-    await expect(page.getByTestId("person-strip")).toBeVisible();
+    await expect(page.getByTestId("person-readings")).toBeVisible();
     await expect(page.getByText(errorBox)).toHaveCount(0);
 
     // Deal 360: timeline, coverage, offers, the context panel, and the buying
