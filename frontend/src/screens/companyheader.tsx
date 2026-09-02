@@ -120,7 +120,8 @@ export function CompanyPrimaryActions({
   // `/me` has not decided is worse than a control that is briefly quiet — the
   // same rule personpage.tsx's writeRefusal states for the identical shape.
   const logGrantKnown = me.data !== undefined;
-  const logRefused = archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
+  const logRefused =
+    archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
   const logPending = !archived && !logGrantKnown;
   // LogActivityAction's own trigger renders nothing in overlay, so the two
   // buttons below are already absent there — but this caption is drawn by

@@ -880,7 +880,11 @@ function PersonActions({
               Files the task against THIS record — the same form Log activity
               opens, started on its task kind, rather than a navigation to the
               Worklist, which has no way to add one. */}
-          <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
+          <Button
+            disabled={logPending}
+            reasonId={logRefused}
+            onClick={onAddTask}
+          >
             <CheckSquare size={15} aria-hidden="true" />{" "}
             {t("person.action.addTask")}
           </Button>

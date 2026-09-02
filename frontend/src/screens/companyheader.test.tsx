@@ -106,7 +106,10 @@ function stubMeInFlight(): Array<(response: Response) => void> {
       }
       return Promise.resolve(
         new Response(
-          JSON.stringify({ data: [], page: { has_more: false, next_cursor: null } }),
+          JSON.stringify({
+            data: [],
+            page: { has_more: false, next_cursor: null },
+          }),
           { status: 200, headers: { "content-type": "application/json" } },
         ),
       );
