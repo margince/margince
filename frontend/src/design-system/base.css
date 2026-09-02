@@ -498,6 +498,23 @@ a:not([class]):focus-visible {
   color: var(--textMeta);
 }
 
+/* One table cell holding several lines. The same undeclared-class failure as
+   `.t-quiet` below: three screens write it — the model-lane card's last-answer
+   column, the held-threads list, and the AI certification card — and no sheet
+   answered, so every one of them ran its lines together as inline text. A
+   timestamp above an error sentinel rendered as "09:12provider_unavailable".
+
+   A column rather than a row, because what these cells stack is a reading and
+   then the qualifications on it, which are read downward. The gap is the
+   smallest one: they belong to each other, and a larger interval would read as
+   separate rows inside the row. */
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+
 /* The failure said in the surrounding type's size. Eleven sites across both
    sides of the Deal Room write `t-small t-danger` for a refusal or a request
    that failed, and no sheet declared it — so every one of them rendered in
