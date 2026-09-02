@@ -51,11 +51,18 @@ func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, c
 		if err := degradeGate(task, sc, run, outcome); err != nil {
 			return "", err
 		}
-		if !replayed {
-			journal.append(ctx, sc, stamp, run, outcome, nowFunc(), log)
-		}
+		// Journaled only once the accumulation ACCEPTS it, never before. addRun
+		// enforces served-identity uniformity across the whole set, which is a
+		// property of the set and not of this run: journaling first would store a
+		// run that was then rejected, and every restart inside the window would
+		// replay it and fail the task again — a transient provider drift made
+		// sticky for six hours, escapable only by throwing away the whole
+		// journal with RESUME=.
 		if err := acc.addRun(task, sc, i, outcome); err != nil {
 			return "", err
+		}
+		if !replayed {
+			journal.append(ctx, sc, stamp, run, outcome, nowFunc(), log)
 		}
 		scenarioResults = append(scenarioResults, outcome.RunResult)
 	}
@@ -153,15 +160,17 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 	)
 }
 
-// worthRedriving reports whether err is the router having exhausted its ladder
-// on something a later attempt could get past.
+// worthRedriving reports whether err is the router having exhausted its ladder,
+// which is the one failure a later attempt could get past.
 //
-// An exhausted account is the one exclusion: ai.attemptLadder stops the walk on
-// it and reports it through the same aggregate error, and retrying a spending
-// cap changes nothing until a human raises it. A throttle is left retryable,
-// because backoff is exactly what it asks for.
+// An exhausted ACCOUNT is excluded by the sentinel itself rather than by a
+// second test here: ai.attemptLadder stops that walk at the refusing rung and
+// returns the refusal alone, never ErrAllTiersFailed, so a spending cap can
+// never be retried into — and one place decides what "the ladder ran out" means.
+// A throttle keeps the sentinel and stays retryable, because backoff is exactly
+// what it asks for.
 func worthRedriving(err error) bool {
-	return errors.Is(err, ai.ErrAllTiersFailed) && !errors.Is(err, ai.ErrProviderQuota)
+	return errors.Is(err, ai.ErrAllTiersFailed)
 }
 
 // scenarioRow is what this scenario's own runs did, for the record to carry

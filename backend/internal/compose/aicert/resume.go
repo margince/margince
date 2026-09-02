@@ -131,8 +131,13 @@ func binaryIdentity() (string, error) {
 // bindingKey renders a binding as the string two runs are compared on. Input is
 // folded in with the rest because it changes what the model may be GIVEN, which
 // is part of what a run measured and not a label on it.
+//
+// Each component is QUOTED rather than joined on a separator, so no value
+// containing the separator can spell another binding's key: two bindings that
+// collided here would replay one model's runs under the other's name, which is
+// the one mistake this whole file exists to make impossible.
 func bindingKey(c ai.ProviderConfig) string {
-	return strings.Join(append([]string{c.Provider, c.Model, c.BaseURL}, c.Input...), "|")
+	return fmt.Sprintf("%q|%q|%q|%q", c.Provider, c.Model, c.BaseURL, strings.Join(c.Input, ","))
 }
 
 // runJournal is the whole run's journal file: the live runs it loaded, and the

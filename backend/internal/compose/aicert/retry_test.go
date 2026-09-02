@@ -157,7 +157,10 @@ func TestWorthRedrivingOnlyAnExhaustedLadderThatCouldClear(t *testing.T) {
 	}{
 		{"a dropped connection under an exhausted ladder", fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, errDroppedConnection), true},
 		{"a throttle under an exhausted ladder", fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, ai.ErrProviderThrottled), true},
-		{"an exhausted account", fmt.Errorf("%w: %w", ai.ErrAllTiersFailed, ai.ErrProviderQuota), false},
+		// The router stops that walk at the refusing rung, so the refusal comes
+		// back WITHOUT the sentinel — which is what makes it unretryable, rather
+		// than a second exclusion here.
+		{"an exhausted account, as the router reports it", fmt.Errorf("provider said no: %w", ai.ErrProviderQuota), false},
 		{"a validator failure the ladder never saw", errors.New("preparing the case: bad fixture"), false},
 		{"a mixed-model refusal", errors.New("refusing to certify one run answered by two models"), false},
 	} {

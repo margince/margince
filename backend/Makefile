@@ -339,7 +339,7 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 	  MARGINCE_AICERT_JUDGE_MODEL=$(if $(JUDGE),$(JUDGE),$(MARGINCE_AICERT_JUDGE_MODEL)) \
 	  MARGINCE_AICERT_JUDGE_BASE_URL=$(if $(JUDGE_BASE_URL),$(JUDGE_BASE_URL),$(MARGINCE_AICERT_JUDGE_BASE_URL)) \
 	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
-	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE=$(TRACE) MARGINCE_AICERT_RESUME=$(RESUME) \
+	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" \
 	  $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/aicert/ -run TestE2ECertify -v -count=1 -timeout $(AICERT_TIMEOUT)
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.
