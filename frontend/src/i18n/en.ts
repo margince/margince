@@ -2653,6 +2653,7 @@ export const en = {
   "task.untitled": "Untitled task",
   "today.withheld":
     "Hidden from you: {sections}. This list is assembled without them.",
+  "today.source.moments": "what Margince found",
   "today.source.nextSteps": "open tasks",
   "today.source.nextMeeting": "the calendar",
   "today.source.deals": "deals",

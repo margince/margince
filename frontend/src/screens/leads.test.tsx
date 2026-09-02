@@ -2211,6 +2211,12 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       ).toBeTruthy(),
     );
     expect(screen.queryByText("What this score has to work with:")).toBeNull();
+    // Nor does the readings row beside it: the score card has said the
+    // breakdown is not stored, and a second card claiming nothing counted
+    // toward 72 would contradict it.
+    expect(
+      screen.queryByText("Nothing counted toward this score yet."),
+    ).toBeNull();
   });
 
   it("says why a lead scores nothing rather than explaining our storage history", async () => {

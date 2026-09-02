@@ -2597,6 +2597,7 @@ export const vi = {
   "task.untitled": "Công việc chưa có tiêu đề",
   "today.withheld":
     "Ẩn với bạn: {sections}. Danh sách này được tổng hợp mà không có chúng.",
+  "today.source.moments": "những gì Margince đã tìm thấy",
   "today.source.nextSteps": "công việc đang mở",
   "today.source.nextMeeting": "lịch",
   "today.source.deals": "deal",

@@ -131,16 +131,17 @@ export function PersonToday({
   const t = useT();
   const { locale } = useLocale();
   const taskRows = useOpenTaskRows(view);
-  // The open tasks are the one source the day's work reads besides the moment,
-  // and a grant can withhold them: the panel then says so rather than reading
-  // an unread list as a quiet day.
+  // The day's work is read from two sources — the moment and the open tasks —
+  // and a grant can withhold either. The panel then names what it could not
+  // read rather than reading an unread source as a quiet day: "nothing needs
+  // you" is only true of the sources that were actually read.
+  const omitted = new Set(view.sections_omitted ?? []);
   const withheld = (
     <WithheldNotice
-      sections={
-        (view.sections_omitted ?? []).includes("next_steps")
-          ? [t("today.source.nextSteps")]
-          : []
-      }
+      sections={[
+        ...(omitted.has("moments") ? [t("today.source.moments")] : []),
+        ...(omitted.has("next_steps") ? [t("today.source.nextSteps")] : []),
+      ]}
     />
   );
   if (!moment) {

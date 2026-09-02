@@ -188,6 +188,21 @@ afterEach(() => {
   cleanup();
 });
 
+describe("what the day's work says it could not read", () => {
+  it("names the withheld moment, so a quiet day is not claimed off a source nobody read", async () => {
+    // The moment is one of the two sources the panel is assembled from. With
+    // it withheld and no open task, the rows are empty — and "nothing needs
+    // you today" would be read off the one source that WAS read, as if it
+    // were both.
+    mount("overview", { ...view, sections_omitted: ["moments"] });
+    expect(
+      await screen.findByText(
+        "Hidden from you: what Margince found. This list is assembled without them.",
+      ),
+    ).toBeTruthy();
+  });
+});
+
 describe("the contact record's tabs", () => {
   it.each(PERSON_TABS.filter((tab) => tab !== "overview"))(
     "draws real content on the %s tab rather than an empty column",

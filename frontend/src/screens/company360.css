@@ -1338,6 +1338,16 @@
   letter-spacing: normal;
   color: var(--textMeta);
 }
+/* What the day's work could NOT be read from, under whatever rows there are.
+   Inset to the panel's own padding and set at meta size: it qualifies the
+   answer above it rather than being one more row of it. */
+.today-withheld {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  color: var(--textMeta);
+}
 /* A move is the row's own paragraph: the ask, its reason under it, and the
    verbs at the row's end. Ask and reason ran inline as one wrapping line,
    which held four moves in less height and cost the reader the thing that

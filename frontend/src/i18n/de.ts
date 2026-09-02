@@ -2615,6 +2615,7 @@ export const de = {
   "task.untitled": "Aufgabe ohne Titel",
   "today.withheld":
     "Für Sie ausgeblendet: {sections}. Diese Liste ist ohne sie zusammengestellt.",
+  "today.source.moments": "was Margince gefunden hat",
   "today.source.nextSteps": "offene Aufgaben",
   "today.source.nextMeeting": "der Kalender",
   "today.source.deals": "Deals",
