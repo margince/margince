@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/vatcheck"
 )
 
 // resolveModelPath is the ONE place the api process decides what serves
@@ -205,7 +206,7 @@ func offerDraftOptions(pool *pgxpool.Pool, modelPath *compose.ModelPath) []compo
 // (jobs.NewInserter documents that Start is never called on it). The deep
 // read additionally carries the cold-start completer when this role has a
 // model path (the workbench read-back); nil keeps it enqueue-only.
-func jobEnqueueOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compose.ModelPath) ([]compose.Option, error) {
+func jobEnqueueOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compose.ModelPath, vatCheckBaseURL string) ([]compose.Option, error) {
 	inserter, err := jobs.NewInserter(pool, logger)
 	if err != nil {
 		return nil, err
@@ -214,7 +215,7 @@ func jobEnqueueOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compo
 	if modelPath != nil {
 		deepRead = compose.WithDeepRead(inserter, modelPath.ColdStart)
 	}
-	return []compose.Option{
+	opts := []compose.Option{
 		deepRead, compose.WithVoiceBuildEnqueue(inserter), compose.WithRateRefresh(inserter),
 		compose.WithTechnicalEnrich(inserter),
 		compose.WithTranscriptRead(inserter),
@@ -226,8 +227,29 @@ func jobEnqueueOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compo
 		// — and that split is what keeps the single-requester rule enforceable:
 		// several api replicas may queue, exactly one worker asks.
 		compose.WithGeocoding(inserter),
-		compose.WithVatChecking(inserter),
-	}, nil
+	}
+	// Loud rather than silent, the same reason modelPathFor logs an unbound
+	// ladder rung: an installation that split MARGINCE_VAT_CHECK_BASE_URL
+	// across roles (set on the worker only, following what the docs said
+	// before this change) needs to see its VAT checking went quiet, not
+	// discover it from a rep asking why a number never gets verified.
+	if !vatcheck.Configured(vatCheckBaseURL) {
+		logger.Warn("api: MARGINCE_VAT_CHECK_BASE_URL is unset — this role queues no VAT consultation, whatever the worker carries")
+	}
+	return append(opts, vatCheckEnqueueOptions(inserter, vatCheckBaseURL)...), nil
+}
+
+// vatCheckEnqueueOptions wires the VAT-check enqueue only when
+// vatcheck.Configured says this installation consults a register — the same
+// predicate cmd/worker's vatCheckerFor gates its own client on. Unset, this
+// is answered by the existing people.ErrNoVatRegisterConfigured refusal
+// (organization_vat_check.go) instead of a queued consultation no worker
+// will ever service.
+func vatCheckEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Option {
+	if !vatcheck.Configured(baseURL) {
+		return nil
+	}
+	return []compose.Option{compose.WithVatChecking(inserter)}
 }
 
 // embedReindexOption wires the /embeddings/reindex* ops over the resolved
