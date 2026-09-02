@@ -405,7 +405,6 @@ internal/modules/comms/seams.go#func rfc8058Post
 internal/modules/comms/seams.go#type deliveryStore
 internal/modules/comms/store_channel_integration_test.go#func TestStagingAChannelDeliveryWithNoBodyIsRefused
 internal/modules/consent/doi.go#const purposeIDField
-internal/modules/consent/dsr.go#const block at const fieldStatus
 internal/modules/consent/dsr.go#const dsrSelectByID
 internal/modules/consent/dsr.go#func validateDSRUpdate
 internal/modules/consent/gate.go#func grantedForRecipient

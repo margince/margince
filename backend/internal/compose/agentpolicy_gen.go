@@ -207,6 +207,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/contracts/{id}":                                             {Op: "getContract", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/custom-fields":                                              {Op: "listCustomFields", Access: "tool", Tool: "search_records", RecordType: "custom_field", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/data-subject-requests":                                      {Op: "listDataSubjectRequests", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/data-subject-requests/{id}/package":                         {Op: "downloadDataSubjectPackage", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/deal-rooms":                                                 {Op: "listDealRooms", Access: "tool", Tool: "search_records", RecordType: "deal_room", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deal-rooms/{id}":                                            {Op: "getDealRoom", Access: "tool", Tool: "read_record", RecordType: "deal_room", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deal-rooms/{id}/documents":                                  {Op: "listDealRoomDocuments", Access: "tool", Tool: "search_records", RecordType: "deal_room_document", Tier: "auto_execute", Scope: "read"},

@@ -7937,6 +7937,57 @@ export interface paths {
         patch: operations["updateDataSubjectRequest"];
         trace?: never;
     };
+    "/data-subject-requests/{id}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download the Art. 15 package an access request asks for.
+         * @description Assembles everything this installation holds about the subject and hands it back as a file
+         *     to forward to them: their record and its identifiers, the conversations they were party to
+         *     and what was said in them, the attachments, consent and its history, what they themselves
+         *     submitted through a confirm link, what was read about them from public sources, and the
+         *     provider originals behind the captured mail.
+         *
+         *     A privileged read that deliberately crosses the caller's own row scope, because Art. 15
+         *     owes the subject everything held rather than the slice one colleague may see. So it takes
+         *     the same trust erasure does: an ADMIN, human, holding `person.delete`, with unbounded row
+         *     scope. An agent is refused whatever its passport carries — an admin's read-scoped passport
+         *     would otherwise assemble a subject's entire record.
+         *
+         *     Only an `access` request has a package. An erasure or a rectification is answered by its
+         *     own path, and handing back a subject's whole record to close a request that asked for
+         *     something else would be the export nobody asked for.
+         *
+         *     The request's `subject_ref` must name a person id. It is free text until somebody resolves
+         *     it, and a request naming nobody has nothing to assemble — the same refusal fulfilling an
+         *     erasure gives, for the same reason. A `subject_ref` that is not a person id at all answers
+         *     422; one that is a well-formed id naming no person answers 404. The two look identical on a
+         *     stale request row and are worth telling apart.
+         *
+         *     **The download is recorded.** Assembling a package writes an audit entry against the person
+         *     — action `export`, naming the officer who asked and how much it carried. That record is what
+         *     makes a read this privileged acceptable, and it is written whether or not the package
+         *     reaches anybody.
+         *
+         *     This does NOT change the request's status. Producing the export and deciding the request is
+         *     answered are two acts by the same person: mark it fulfilled through the PATCH once you have
+         *     sent it, so a download that never reached anybody does not close the row.
+         */
+        get: operations["downloadDataSubjectPackage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-log": {
         parameters: {
             query?: never;
@@ -39857,6 +39908,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DataSubjectRequest"];
+                };
+            };
+        };
+    };
+    downloadDataSubjectPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The package, as a JSON file named after the request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

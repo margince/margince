@@ -23,6 +23,10 @@ import (
 type Handlers struct {
 	store  *Store
 	eraser Eraser
+	// The Art. 15 assembler, injected the same way and for the same reason as
+	// the eraser: answering an access request means producing the package, not
+	// marking a row done.
+	assembler SubjectAccessAssembler
 	// The confirm link's two halves, both injected by compose. Either one
 	// missing means the installation cannot deliver, which the send path
 	// reports rather than fails on.
@@ -35,6 +39,20 @@ type Handlers struct {
 // marks a row done.
 type Eraser interface {
 	ErasePerson(ctx context.Context, personID ids.UUID, reason string) error
+}
+
+// SubjectAccessAssembler is the Art. 15 read seam (compose injects the real
+// one). It is a privileged read that deliberately crosses the caller's row
+// scope, because Art. 15 owes the subject everything held rather than the slice
+// one rep may see — privacy.AssembleSAR carries the checks that make that safe,
+// and this interface exists so consent can reach it without importing a sibling.
+//
+// It answers the serialized package rather than a struct, because the shape is
+// privacy's to own: the package gains a section every time a new table starts
+// holding subject data, and a type mirrored here would be a second declaration
+// of what Art. 15 owes, drifting one release behind the one the gate checks.
+type SubjectAccessAssembler interface {
+	AssemblePackage(ctx context.Context, personID ids.UUID) ([]byte, error)
 }
 
 // NewHandlers wires the transport over the installation-bound pool.
@@ -53,6 +71,12 @@ func (h Handlers) WithInstallationName(r InstallationNameReader) Handlers {
 // WithEraser returns a copy wired to the erase path.
 func (h Handlers) WithEraser(e Eraser) Handlers {
 	h.eraser = e
+	return h
+}
+
+// WithSubjectAccessAssembler returns a copy wired to the Art. 15 export.
+func (h Handlers) WithSubjectAccessAssembler(a SubjectAccessAssembler) Handlers {
+	h.assembler = a
 	return h
 }
 

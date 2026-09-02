@@ -663,6 +663,10 @@ func (stubs) UpdateDataSubjectRequest(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "UpdateDataSubjectRequest")
 }
 
+func (stubs) DownloadDataSubjectPackage(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "DownloadDataSubjectPackage")
+}
+
 func (stubs) ListDealRooms(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDealRoomsParams) {
 	httperr.NotImplemented(w, r, "ListDealRooms")
 }
