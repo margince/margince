@@ -9709,9 +9709,9 @@ paths:
             token carries a sort key and the next page is a WHERE clause. This queue has no
             such column: it assembles from a dozen lanes and ranks them by a comparator
             reading facts no table holds — whether a wait is crowded, what a deal is worth in
-            base currency, which band a row landed in. So this token names the last row it
-            handed you, and the next page re-assembles the day, re-ranks it, and continues
-            after that row.
+            base currency, which band a row landed in. So the token carries a POSITION in that
+            ranking, and the next page re-assembles the day, ranks it the same way, and starts
+            there.
 
             It encodes the `scope`, `filter` and `owner` it was minted under, NORMALISED, so
             that two spellings of one question share a cursor: an omitted `filter` and
@@ -9733,23 +9733,28 @@ paths:
             WHAT A WALK GUARANTEES, and what it does not. This is live work, so the day moves
             between pages: a rep answers a message, a deal closes, a colleague takes a task.
 
-            Guaranteed: the walk TERMINATES, and no row is lost from a part of the day that
-            did not change. A row whose anchor is answered or reprioritised between pages does
-            not end the walk early — the token carries a position as well as an identity, and
-            the position continues it.
+            Guaranteed: the walk TERMINATES, and over a day that does not move it reaches
+            every row exactly once. The offset advances on every page and the candidate set is
+            bounded, so no arrangement of arrivals, answers and reprioritisations makes a
+            client paging to exhaustion loop.
 
             Not guaranteed: a stable snapshot, which a set re-assembled and re-ranked on every
-            read cannot offer. Two consequences, both deliberate:
+            read cannot offer. One consequence, and it is the whole cost of this design: A ROW
+            THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO READS IS SERVED TWICE OR NOT AT ALL ON
+            THIS WALK. A deal that turns urgent moves up past where you have got to; one that
+            is answered lets everything below it move up by one.
 
-            A row may REPEAT. Where the token's position and identity disagree — because the
-            day moved under them — the earlier of the two wins. Repeating a row the caller has
-            already seen is recoverable; skipping one means work shown to nobody, so this errs
-            toward the first every time.
+            Such a row is not lost from the product — the next read of the queue ranks it
+            afresh and shows it — so treat a walk as a way to reach a backlog you already know
+            is there, not as a transaction over it. If you need the whole day at one instant,
+            ask for it in one page: `limit` reaches 100.
 
-            A row that overtakes rows you have ALREADY been handed waits for your next read.
-            It now sorts behind them, and returning it would mean re-serving that whole prefix
-            — the walk that never ends. Opening the queue again leads with it, so the delay is
-            bounded and corrects itself.
+            The alternative was a token naming the last row it handed you, which is the
+            obvious design and is worse here. When that row is answered between pages, or
+            sinks to the end of the ranking, "everything after it" is empty and the walk
+            reports itself finished while work is still owed. A queue whose purpose is that
+            work is not forgotten cannot fail that way, so it accepts the boundary case above
+            instead.
         - name: owner
           in: query
           schema: { type: string, format: uuid }

@@ -267,7 +267,7 @@ func (s *Service) worklistFrom(
 	// candidate order does not depend on `limit` — crowding is marked above, over
 	// the whole narrowed set — so page two weighs exactly what page one weighed
 	// and continues it rather than re-deciding it.
-	shown, more := pageFrom(rows, limit, cursor)
+	shown, more, reached := pageFrom(rows, limit, cursor)
 	ordered := rankAll(shown)
 	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{
@@ -303,12 +303,12 @@ func (s *Service) worklistFrom(
 	// narrowing passes above read. Taking it from the request instead would let
 	// the token and the rows it continues disagree about whose queue this is.
 	//
-	// The served count runs from the START of the walk, not of this page: it is
-	// what the incoming token already accounted for plus what this page adds,
-	// so it stays a position in the ranking rather than a page size.
+	// The position is how far into THIS read's ranking the page got — where the
+	// cut landed, not a running total of rows handed out. The two differ the
+	// moment the day moves between pages, and a running total would push the
+	// offset past the work still owed.
 	if more && len(shown) > 0 {
-		token := encodeCursor(
-			shown[len(shown)-1], cursor.Served+len(shown), scope, filter, s.taskOwner)
+		token := encodeCursor(reached, scope, filter, s.taskOwner)
 		out.NextCursor = &token
 	}
 	return out

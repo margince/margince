@@ -21,49 +21,33 @@ import (
 // fields no table holds — whether a wait is crowded, what a deal is worth in
 // base currency, which band a row landed in.
 //
-// So the resume is: assemble the same day again, rank it the same way, and skip
-// what the caller already has. That is only correct because two properties
-// hold, and both are load-bearing:
+// So the resume is: assemble the day again, rank it the same way, and start at
+// the offset the token names. That works because the ordering is DETERMINISTIC
+// — less() ends at `a.item.Id < b.item.Id`, so one read's sequence is the next
+// read's sequence rather than whatever the lanes happened to return — and
+// because the candidate set does not depend on `limit`: crowding is marked over
+// the whole narrowed set before the cut, so rows 26-50 weigh exactly what rows
+// 1-25 weighed.
 //
-//   - The order is DETERMINISTIC. less() ends at `a.item.Id < b.item.Id`, so
-//     one read's sequence is the next read's sequence rather than whatever the
-//     lanes happened to return. Two rows sharing an id do tie there, and the
-//     sort is stable, so their relative order is the producers' — which is
-//     itself deterministic for one assembled day. Their (source, id) anchors
-//     would be indistinguishable, and resume() would take the first; the
-//     position half of the token is what keeps that from stalling a walk.
-//   - The candidate set does not depend on `limit`. Crowding is marked over the
-//     whole narrowed set (worklist.go), and the page is cut afterwards, so
-//     asking for rows 26-50 weighs exactly the candidates that asking for 1-25
-//     weighed.
+// WHY AN OFFSET AND NOT THE LAST ROW'S IDENTITY, which is the obvious choice
+// and was the first thing tried here. The day is live: between two pages a deal
+// closes, a task is reprioritised, a message arrives. An identity anchor breaks
+// on that in a way an offset does not — when the anchor is answered or sinks to
+// the end of the ranking, "everything after this row" is empty, and the walk
+// reports itself finished with work still owed. A queue whose whole purpose is
+// that work is not forgotten cannot have that failure.
 //
-// WHY THE TOKEN CARRIES BOTH A POSITION AND AN IDENTITY. The day is live: a
-// deal closes, a task is reprioritised, a message arrives. Between two pages a
-// row can move ACROSS the anchor in either direction, and each direction breaks
-// one of the two obvious cursors on its own.
-//
-// An identity alone ("resume after this row") fails when the anchor moves down
-// the ranking: a row the caller already received now sorts after it and is
-// handed out twice, and if the anchor slides to the very end the remainder is
-// empty while real work is still owed. A position alone ("resume at offset N")
-// fails when a row moves up past the anchor: everything shifts by one and the
-// row at the old offset is skipped, never shown to anybody.
-//
-// So the resume takes whichever of the two is FURTHER along. Skipping forward
-// can only repeat work at worst; falling back would drop it, and a row nobody
-// ever sees is the failure this queue must not have. The result is not a
-// snapshot and does not pretend to be — see resume() for what each half costs.
+// Both were tried together, and the pair is worse than either alone rather than
+// better. What a caller has seen is the top K of the PREVIOUS ranking, and after
+// a re-rank that set can be scattered anywhere in the new order; a position plus
+// one anchor cannot encode an arbitrary subset, so every rule for combining them
+// trades one skipped row for a different skipped row. The offset has ONE
+// failure, stated below and in the contract, and that is what makes it the
+// honest choice.
 type worklistCursor struct {
-	// Source and Row name the last row of the previous page. Together they are
-	// the row's identity: Id alone is the owning RECORD's id, which two sources
-	// can both point at — a deal that is both quiet and has a customer waiting.
-	Source string `json:"s"`
-	Row    string `json:"r"`
-	// Served is how many rows the caller has already been handed, which is the
-	// anchor's own position plus one. It is the floor the resume cannot fall
-	// below, so a row that moves up past the anchor cannot push an unserved row
-	// into an already-served slot.
-	Served int `json:"n"`
+	// At is where in the ranking the next page starts: the number of rows this
+	// walk has already covered.
+	At int `json:"n"`
 	// Params fingerprints the request this token was minted under. A cursor
 	// carried onto a different scope, filter or owner would silently answer a
 	// question the caller did not ask: page two of "my tasks" continuing into
@@ -114,7 +98,7 @@ func normalizedFilter(filter string) string {
 	return filter
 }
 
-// encodeCursor mints the token for the row a page stopped on.
+// encodeCursor mints the token for the position a page stopped at.
 //
 // It goes through storekit's codec rather than spelling base64-of-JSON again:
 // one wire format with two encoders drifts the first time either changes, and a
@@ -122,9 +106,9 @@ func normalizedFilter(filter string) string {
 //
 // It answers a bare string, and the reason is worth stating because the codec
 // beside it does not. storekit.EncodeOpaque can fail, but only where
-// json.Marshal can, and its own note says what that means in practice: a
-// keyset carrying a time.Time outside year 0..9999. worklistCursor carries
-// three strings and no instant, so the failure has no reachable cause here.
+// json.Marshal can, and its own note says what that means in practice: a keyset
+// carrying a time.Time outside year 0..9999. worklistCursor carries an int and
+// a string, so the failure has no reachable cause here.
 //
 // The alternative was threading an error nothing can raise up through
 // worklistFrom and its thirty-odd callers, where every one of them would need a
@@ -132,17 +116,14 @@ func normalizedFilter(filter string) string {
 // known to be right, and the only honest thing to write in it (a page claiming
 // the backlog ended early) is worse than the case it guards against.
 //
-// Held by: TestACursorRoundTripsEveryRowShapeTheQueueCanCarry, which mints one
-// from every source the queue can raise and reads each back.
-func encodeCursor(row ranked, served int, scope, filter string, owner ids.UUID) string {
+// Held by: TestACursorRoundTripsThePositionItWasMintedAt.
+func encodeCursor(at int, scope, filter string, owner ids.UUID) string {
 	token, err := storekit.EncodeOpaque(worklistCursor{
-		Source: string(row.item.Source),
-		Row:    row.item.Id,
-		Served: served,
+		At:     at,
 		Params: fingerprint(scope, filter, owner),
 	})
 	if err != nil {
-		// Unreachable for three strings. An empty token is refused by
+		// Unreachable for an int and a string. An empty token is refused by
 		// decodeCursor on the way back in, so the walk ends with a 422 the
 		// caller can see rather than a page silently claiming to be the last.
 		return ""
@@ -163,10 +144,13 @@ func decodeCursor(token, scope, filter string, owner ids.UUID) (worklistCursor, 
 	if err != nil {
 		return worklistCursor{}, err
 	}
-	// Well-formed JSON is not yet a position: `{}` decodes cleanly and would
-	// name no row, which the resume below reads as "drop nothing" — a token
-	// nobody minted silently restarting the walk.
-	if cursor.Source == "" || cursor.Row == "" {
+	// Well-formed JSON is not yet a position. `{}` and `null` both decode
+	// cleanly and leave a zero offset with no fingerprint, which would restart a
+	// walk nobody minted a token for; and a NEGATIVE offset — reachable by hand,
+	// because the token is client-supplied and unsigned — reaches `rows[n:]` and
+	// panics. A crafted token must be a 422, never a crash on an authenticated
+	// endpoint.
+	if cursor.At < 0 || cursor.Params == "" {
 		return worklistCursor{}, &storekit.MalformedCursorError{}
 	}
 	if cursor.Params != fingerprint(scope, filter, owner) {
@@ -175,47 +159,28 @@ func decodeCursor(token, scope, filter string, owner ids.UUID) (worklistCursor, 
 	return cursor, nil
 }
 
-// resume drops the rows the caller has already been given.
+// resumeAt answers where in the current ranking this page starts.
 //
-// It reads the token's two halves as two claims about one boundary and takes
-// the EARLIER of them. Each half is wrong on its own, and in opposite
-// directions, so neither can be trusted alone:
+// A clamp, and deliberately nothing more: a token naming more rows than the day
+// still holds is a walk whose tail has been dealt with, not a fault, so it ends
+// quietly instead of reaching past the slice.
 //
-//   - The IDENTITY ("resume after this row") is right while the anchor keeps
-//     its place. If the anchor moves DOWN the ranking it re-serves everything
-//     between its old and new place, and an anchor that slides to the end — or
-//     is answered between pages — leaves nothing behind it at all, which reads
-//     as a finished walk while real work is still owed.
-//   - The POSITION ("resume at offset N") is right while the set keeps its
-//     shape, and it survives an anchor that moved or vanished. But a row that
-//     moves UP past the anchor shifts everything below it by one, and the row
-//     that lands on the old offset is stepped over.
+// WHAT AN OFFSET COSTS, stated here because it is the one thing this cursor
+// gets wrong and the contract repeats it to callers. The ranking is rebuilt on
+// every read. If a row crosses the page boundary between two reads — rising
+// above it, or sinking below it — that row is served twice or not at all on
+// this walk. It is not lost from the product: the next read of the queue ranks
+// it afresh and shows it.
 //
-// Taking the earlier of the two makes the unacceptable failure unreachable. The
-// two errors are not equal and must not be traded off as though they were: a
-// repeated row is one the caller has already seen and can dismiss, while a
-// skipped row is work shown to nobody, with no failing signal anywhere. This
-// queue exists to make sure work is not forgotten, so it errs toward showing a
-// row twice and never toward showing it never.
-//
-// The cost is real and worth stating: a day that churns heavily between pages
-// can hand back rows the caller already has. That is why the contract promises
-// termination and no LOSS rather than a stable snapshot — a snapshot is not
-// available over a set that is re-assembled and re-ranked on every read.
-func resume(rows []ranked, cursor worklistCursor) []ranked {
-	if cursor.Row == "" && cursor.Served == 0 {
-		return rows
-	}
-	// The position, clamped: a token naming more rows than the day still holds
-	// is a walk whose tail has been dealt with, not a fault.
-	from := min(cursor.Served, len(rows))
-	// The identity, when the anchor is still here. `i+1` because the anchor is
-	// the last row already served, not the first one owed.
-	for i, row := range rows {
-		if string(row.item.Source) == cursor.Source && row.item.Id == cursor.Row {
-			from = min(from, i+1)
-			break
-		}
-	}
-	return rows[from:]
+// The alternative was anchoring on the last row's identity, and it is worse
+// here. When that anchor is answered between pages, or sinks to the end of the
+// ranking, "everything after this row" is empty and the walk reports itself
+// finished with work still owed — a queue whose purpose is that work is not
+// forgotten cannot fail that way. Carrying both an offset and an anchor was
+// tried and is worse than either: what a caller has seen is the top K of the
+// PREVIOUS ranking, which after a re-rank can be scattered anywhere, and no
+// pair of small values encodes an arbitrary subset. Every rule for combining
+// them traded one skipped row for a different one.
+func resumeAt(rows []ranked, cursor worklistCursor) int {
+	return min(cursor.At, len(rows))
 }

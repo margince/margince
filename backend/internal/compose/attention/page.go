@@ -9,7 +9,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// pageFrom cuts the candidates to what one read carries, starting after the row
+// pageFrom cuts the candidates to what one read carries, starting at the offset
 // a cursor names, and says whether anything is left behind it.
 //
 // It runs BEFORE the ranking is drawn, so the comparison each row publishes is
@@ -19,14 +19,23 @@ import (
 //
 // The sort happens before the resume, not after, and the order matters: the
 // cursor names a position in the RANKING, so the set has to be in ranked order
-// before the anchor means anything.
-func pageFrom(rows []ranked, limit int, cursor worklistCursor) (shown []ranked, more bool) {
+// before that offset means anything.
+//
+// It also reports `reached`: where in the ranked set the cut landed, which is
+// the offset the next cursor is minted at. That is a position in THIS read's
+// ranking, not a running total of rows handed out. The two differ as soon as the
+// day moves between pages, and a running total would push the offset past the
+// work still owed.
+func pageFrom(
+	rows []ranked, limit int, cursor worklistCursor,
+) (shown []ranked, more bool, reached int) {
 	sort.SliceStable(rows, func(i, j int) bool { return less(rows[i], rows[j]) })
-	rows = resume(rows, cursor)
+	from := resumeAt(rows, cursor)
+	rows = rows[from:]
 	if len(rows) > limit {
-		return rows[:limit], true
+		return rows[:limit], true, from + limit
 	}
-	return rows, false
+	return rows, false, from + len(rows)
 }
 
 func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranked {
