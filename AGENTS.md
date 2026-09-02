@@ -73,7 +73,7 @@ exploitable weakness to a private advisory. The test: if you can write the
 reproduction, it belongs in an advisory, not here.
 
 Every issue you do open carries exactly one `priority:` and exactly one `area:`,
-plus `status:` when it is not yet workable. Unlabelled means nobody has looked at
+plus `status:` when it is not now's work. Unlabelled means nobody has looked at
 it yet, so filing without labels tells the next reader something false. The full
 taxonomy: [docs/reference/issue-labels.md](docs/reference/issue-labels.md).
 
