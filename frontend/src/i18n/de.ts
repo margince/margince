@@ -7621,6 +7621,8 @@ export const de = {
   "ob.deck.leaveOut": "Weglassen",
   "ob.deck.readWhole": "Das ganze Profil lesen",
   "ob.deck.backToOpen": "Zurück zu den offenen Punkten",
+  "ob.deck.editRecord": "Eintrag bearbeiten",
+  "ob.deck.backToRecord": "Zurück zum Eintrag",
   "ob.deck.confirm": "Profil bestätigen",
   "ob.deck.clear": "Nichts mehr zu klären. {count} Fakten stehen im Profil.",
   "ob.deck.eyebrow": "Alles andere kam belegt herein",

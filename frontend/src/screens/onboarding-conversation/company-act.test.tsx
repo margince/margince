@@ -412,12 +412,16 @@ describe("arriving at the review scene", () => {
       tree({ ...REVIEW_STATE, thread: [findingEntry] }),
     );
     // The finding-highlight effect targets `[data-finding-id]`, which only
-    // the whole-profile card carries — the deck's own digest states the
-    // record as prose, with no per-field DOM hook to pulse. The deck is the
-    // review's default face, so this test reaches the card the same way a
-    // reader would: through its own escape hatch.
+    // the editing wall carries: the deck's own digest, and the article the
+    // whole record is read as, both state the record as prose with no
+    // per-field DOM hook to pulse. The deck is the review's default face and
+    // reading is not editing, so the wall is two doors away, and this test
+    // walks the same two a reader would.
     fireEvent.click(
       await screen.findByRole("button", { name: "Read the whole profile" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Edit the record" }),
     );
     await screen.findByRole("heading", { level: 2, name: /Correct me/ });
 

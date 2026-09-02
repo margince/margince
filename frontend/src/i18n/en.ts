@@ -7687,6 +7687,8 @@ export const en = {
   "ob.deck.leaveOut": "Leave it out",
   "ob.deck.readWhole": "Read the whole profile",
   "ob.deck.backToOpen": "Back to the open ones",
+  "ob.deck.editRecord": "Edit the record",
+  "ob.deck.backToRecord": "Back to the record",
   "ob.deck.confirm": "Confirm the profile",
   "ob.deck.clear": "Nothing left to settle. {count} facts are on the record.",
   "ob.deck.eyebrow": "Everything else went in on evidence",

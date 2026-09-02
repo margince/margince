@@ -262,8 +262,16 @@ function DeckCardFace({
         <span className="rdeck-source">{card.source}</span>
       )}
       <div className="rdeck-acts">
+        {/* Leaving something out is what an EMPTY optional card offers. Once
+            an answer is typed the same control is simply the way onward, and
+            a card that still said "leave it out" over a filled field would be
+            offering to discard the sentence the reader just wrote. */}
         <Button variant="ghost" onClick={onNext}>
-          {t(card.required ? "ob.deck.next" : "ob.deck.leaveOut")}
+          {t(
+            card.required || card.value.trim() !== ""
+              ? "ob.deck.next"
+              : "ob.deck.leaveOut",
+          )}
         </Button>
       </div>
     </div>

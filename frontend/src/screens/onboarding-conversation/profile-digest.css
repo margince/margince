@@ -124,3 +124,13 @@
   font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
+
+/* Read on its own rather than beside the deck, the article takes a measure:
+   prose set to the whole board's width is a line nobody finishes. */
+.pdigest-page {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-4);
+  max-width: 46rem;
+}

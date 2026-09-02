@@ -30,7 +30,7 @@ type LegalEntity = components["schemas"]["CompanySiteReadLegalEntity"];
  * whole-record view was unreachable, and the control that claimed to open it
  * was telling the reader something untrue.
  */
-export type ArtifactMode = "dossier" | "profile" | "edit";
+export type ArtifactMode = "dossier" | "profile" | "record" | "edit";
 
 export type FindingHighlight = Readonly<{
   /** The narration entry id that caused the pulse; a new entry re-pulses. */

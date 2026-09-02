@@ -6,7 +6,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import type { CompanyFieldName } from "../onboarding";
 import { installFetchStub, jsonResponse, type RouteMap } from "../story-utils";
 import { CompanyAct } from "./company-act";
 import type { ConversationState } from "./conversation-machine";
@@ -52,7 +51,7 @@ function grounded(field: ColdField["field"], value: string): ColdField {
 // fixes a field's place in the queue the first time it appears, so a fixture
 // that only reaches its final blank set AFTER a render would fix the queue on
 // a different field than the one this test means to type into.
-const FIELDS: readonly CompanyFieldName[] = [
+const FIELDS: readonly ColdField["field"][] = [
   "legal_name",
   "registered_address",
   "register_vat",
@@ -72,7 +71,7 @@ const FIELDS: readonly CompanyFieldName[] = [
   "sales_motion",
 ];
 
-const PROFILE_FIELDS: readonly ColdField[] = FIELDS.map((field) =>
+const PROFILE_FIELDS: ColdField[] = FIELDS.map((field) =>
   grounded(field, `${field} on record`),
 );
 

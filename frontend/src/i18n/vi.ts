@@ -7530,6 +7530,8 @@ export const vi = {
   "ob.deck.leaveOut": "Bỏ qua",
   "ob.deck.readWhole": "Đọc toàn bộ hồ sơ",
   "ob.deck.backToOpen": "Quay lại các mục còn mở",
+  "ob.deck.editRecord": "Chỉnh sửa hồ sơ",
+  "ob.deck.backToRecord": "Quay lại hồ sơ",
   "ob.deck.confirm": "Xác nhận hồ sơ",
   "ob.deck.clear": "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
   "ob.deck.eyebrow": "Mọi thứ còn lại đã vào kèm nguồn",

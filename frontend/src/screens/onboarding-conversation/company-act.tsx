@@ -920,14 +920,31 @@ export function CompanyAct({
           pending={confirm.isPending}
           disabled={confirmRefused}
         />
-      ) : (
-        <div className="ob-scene">
+      ) : artifactMode === "profile" ? (
+        // The whole record, read as the article it is. A reader who asks to see
+        // everything is READING, and the editing wall answered that ask with a
+        // hundred controls: the two are different acts and now have different
+        // doors.
+        <div className="ob-scene pdigest-page">
           {/* The way back to the deck. The whole record is somewhere a reader
               ASKED to go, so it needs a door out that is not the browser's back
               button: without one the deck's tray, and the count of what is
               still open, are unreachable from here. */}
           <Button variant="ghost" onClick={() => setArtifactMode("dossier")}>
             {t("ob.deck.backToOpen")}
+          </Button>
+          <ProfileDigest rows={allRows} />
+          {/* Editing is its own act, and the wall is where it happens: a field
+              changed freely and a fact unticked are both things the server
+              wants, and neither is something the article does. */}
+          <Button variant="ghost" onClick={() => setArtifactMode("record")}>
+            {t("ob.deck.editRecord")}
+          </Button>
+        </div>
+      ) : (
+        <div className="ob-scene">
+          <Button variant="ghost" onClick={() => setArtifactMode("profile")}>
+            {t("ob.deck.backToRecord")}
           </Button>
           <CompanyConfirmCard
             proposal={reviewProposal}

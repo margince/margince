@@ -482,12 +482,10 @@ describe("the conversational company act", () => {
     expect(accept.disabled).toBe(true);
 
     // The deck's own control carries the question as its accessible name.
-    // Filling a card retires it from the blocking list right away (its
-    // field is no longer empty), which reshuffles the deck under the
-    // reader mid-fill — so each fill reads whichever card is CURRENTLY
-    // first, rather than assuming a fixed position for each field, and sets
-    // its value in one atomic change rather than a keystroke at a time
-    // (which would type into a card the reshuffle had already retired).
+    // Answering a card does not move the deck: the reader does, with the
+    // card's own Next. A field stops being outstanding on its first
+    // character, so a deck that advanced on that would take the question
+    // away mid-word, which is why the card stays put until it is dismissed.
     const values: Readonly<Record<string, string>> = {
       "Company name": "Gradion",
       "What do you sell?": "Revenue software for manufacturers",
@@ -501,6 +499,7 @@ describe("the conversational company act", () => {
       fireEvent.change(screen.getByRole("textbox", { name: label ?? "" }), {
         target: { value: value ?? "" },
       });
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
     }
 
     await waitFor(() => {
