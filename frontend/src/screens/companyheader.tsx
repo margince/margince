@@ -102,11 +102,29 @@ export function CompanyPrimaryActions({
   // that LOOKS writable, which is worse than saying it twice.
   const reasonId = archivedReasonId ?? ownReasonId;
   const archived = org.archived_at ? reasonId : undefined;
+  // useCanWrite, not useCan: the two log verbs below issue a POST, and a read
+  // seat is refused before RBAC is consulted — the same rule personpage.tsx
+  // states for the identical verb. Independent of `archived`: a live record a
+  // seat may not write to is refused for this reason, not that one, and the
+  // two must not be merged into one sentence that names the wrong cause.
+  const canLog = useCanWrite("activity", "create");
+  const logRefusedId = useId();
+  const logRefused = archived ?? (canLog ? undefined : logRefusedId);
+  // LogActivityAction's own trigger renders nothing in overlay, so the two
+  // buttons below are already absent there — but this caption is drawn by
+  // the caller, not by them, and would otherwise be left explaining buttons
+  // the page never draws.
+  const overlay = useSorMode() === "overlay";
   return (
     <>
       {archived && !archivedReasonId && (
         <p className="t-caption" id={ownReasonId}>
           {t("record.archivedReadOnly")}
+        </p>
+      )}
+      {!archived && !canLog && !overlay && (
+        <p className="t-caption" id={logRefusedId}>
+          {t("record.logActivityRefused")}
         </p>
       )}
       <WriteEmailAction
@@ -118,14 +136,14 @@ export function CompanyPrimaryActions({
       <LogActivityAction
         entityType="organization"
         entityId={org.id}
-        disabledReasonId={archived}
+        disabledReasonId={logRefused}
       />
       <LogActivityAction
         entityType="organization"
         entityId={org.id}
         initialKind="task"
         triggerLabel="log.addTask"
-        disabledReasonId={archived}
+        disabledReasonId={logRefused}
       />
     </>
   );

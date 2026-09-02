@@ -269,6 +269,8 @@ export const de = {
     "Diese Firma ist archiviert. Stellen Sie sie wieder her, um etwas zu ändern.",
   "record.notYoursToChange":
     "Diese Firma gehört jemand anderem. Bitten Sie den Inhaber um Freigabe, wenn Sie etwas ändern möchten.",
+  "record.logActivityRefused":
+    "Sie haben keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
   "record.moreActions": "Weitere Aktionen",
   "record.fullHistory": "Vollständiger Verlauf",
@@ -5890,7 +5892,7 @@ export const de = {
   "users.teamNobodyToAdd": "Noch keine Benutzer zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
-    "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt keinen Zugriff — Kunden, Kontakte, Leads und Deals dürfen hier ohnehin alle lesen.",
+    "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt den meisten Rollen weiterhin keinen Zugriff — Ausnahme ist die Teamleitung: wird sie einem Team hinzugefügt, kann sie dessen Datensätze lesen und bearbeiten, ohne dass eine Freigabe eingerichtet wird.",
   "users.teamsAdminOnly": "Teams verwalten können nur Admins.",
   "users.deactivated": "{name} deaktiviert",
   "users.reactivated": "{name} reaktiviert",
@@ -6858,8 +6860,6 @@ export const de = {
   "person.action.meetings": "Termine ansehen",
   "person.action.addTask": "Aufgabe",
   "person.action.research": "Recherche",
-  "person.action.logRefused":
-    "Sie haben keine Berechtigung, Aktivitäten zu diesem Kontakt zu erfassen.",
 
   "person.strip.lastInbound": "Zuletzt eingehend",
   "person.strip.lastOutbound": "Zuletzt ausgehend",
