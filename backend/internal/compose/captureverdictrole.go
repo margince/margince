@@ -51,8 +51,47 @@ func addressIsARoleMailbox(email string) bool {
 func (e *CounterpartyVerdictEngine) askAHumanInstead(
 	ctx context.Context, row capture.PendingCounterparty,
 ) (int, error) {
-	if err := e.pending.Retire(ctx, row, "no model is configured to judge this sender"); err != nil {
+	// No measurement: there was no model to ask.
+	if err := e.pending.Retire(ctx, row, "no model is configured to judge this sender",
+		capture.VerdictMeasurement{}); err != nil {
 		return 0, err
 	}
 	return 1, nil
+}
+
+// clearsItsFloor answers whether one model answer is confident enough to stand,
+// at the floor its OWN kind has to clear.
+//
+// A creating answer needs more, because the two mistakes are not the same size.
+// Refusing a contact leaves the mail visible and the question answerable by a
+// person; creating one puts a record in a shared CRM, and that is the failure
+// this lane exists over — a founder found departments, a language teacher and
+// his own address filed as business contacts, and a barely-above-floor `person`
+// was indistinguishable from a confident one. So `person` and `advisor` need
+// verdictCreateFloor and everything else needs verdictConfidenceFloor.
+//
+// The sibling confidentiality lane is asymmetric for the mirror reason: an
+// OPENING answer needs more there, because publishing is the irreversible
+// direction. Here creating is.
+//
+// Below its floor the answer is not refused, it is re-asked once and then made a
+// question for a person — an `unsure` sender is escalated rather than dismissed.
+func clearsItsFloor(answer verdictResult) bool {
+	floor := verdictConfidenceFloor
+	if createsARecord(answer.Verdict) {
+		floor = verdictCreateFloor
+	}
+	return float64(answer.Confidence) >= floor
+}
+
+// createsARecord reports whether this kind puts a person in the CRM.
+//
+// It is a second statement of what apply's effect switch does, because that
+// switch is control flow and cannot be read as data. A kind added there that
+// creates, and not added here, would silently keep the LOWER floor — so a test
+// holds the two together rather than a comment claiming they agree.
+//
+// Held by: TestEveryCreatingKindNeedsTheHigherFloor (backend/internal/compose/captureverdictkinds_test.go)
+func createsARecord(kind string) bool {
+	return kind == capture.KindPerson || kind == capture.KindAdvisor
 }

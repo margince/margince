@@ -1071,6 +1071,7 @@ public.capture_pending_counterparty acl=margince_owner=arwdDxt/margince_owner,ma
 public.capture_pending_counterparty.activity_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.attempts integer NOT NULL gen=- def=0
 public.capture_pending_counterparty.capture_pending_counterparty_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_pending_counterparty.capture_pending_counterparty_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
 public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['person'::text, 'role_mailbox'::text, 'organization_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text]))))
 public.capture_pending_counterparty.capture_pending_counterparty_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_pkey PRIMARY KEY (id)
@@ -1078,6 +1079,7 @@ public.capture_pending_counterparty.capture_pending_counterparty_proposal_id_fke
 public.capture_pending_counterparty.capture_pending_counterparty_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'unsure'::text, 'real'::text, 'noise'::text, 'suppressed'::text, 'rejected'::text])))
 public.capture_pending_counterparty.claimed_by uuid gen=- def=-
 public.capture_pending_counterparty.claimed_until timestamp with time zone gen=- def=-
+public.capture_pending_counterparty.confidence numeric gen=- def=-
 public.capture_pending_counterparty.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty.display_name text gen=- def=-
 public.capture_pending_counterparty.disposition_reason text gen=- def=-
@@ -1090,6 +1092,7 @@ public.capture_pending_counterparty.owner_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.proposal_id uuid gen=- def=-
 public.capture_pending_counterparty.resolved_at timestamp with time zone gen=- def=-
 public.capture_pending_counterparty.resolved_by_owner boolean NOT NULL gen=- def=false
+public.capture_pending_counterparty.served_model text gen=- def=-
 public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::text
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)

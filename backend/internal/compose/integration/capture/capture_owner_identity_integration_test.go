@@ -424,3 +424,30 @@ func TestTheSeatsLoginAddressIsNeverACounterparty(t *testing.T) {
 			"a seat is not a first-time sender to themselves", n)
 	}
 }
+
+// The verdict is never asked about the owner's own address.
+//
+// The prompt carries no owner context — it is one sender, its subject and its
+// body — so a model asked "what kind of sender is this" about the person asking
+// has no way to answer "that is you". The defence is that the question is never
+// put: ladderSubjectTx replaces a counterparty the seat covers before any ledger
+// row is written, so the address the verdict engine reads is somebody else by
+// construction.
+//
+// Asserted here rather than left to the reader, because it is what makes the
+// prompt's silence safe. If the ladder ever stopped correcting, this fails and
+// the prompt would need the owner's identities in it.
+func TestTheVerdictIsNeverAskedAboutTheOwnersOwnAddress(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
+
+	// Mail from the owner's own alias into their connected mailbox.
+	env.sync(t, email(ownerAlias, "Lars Private", captureOwner, "askme1@private.example", ""))
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty WHERE email = '`+ownerAlias+`'`); n != 0 {
+		t.Errorf("%d ledger questions about the seat's own alias, want 0 — "+
+			"the verdict must never be asked what kind of sender the owner is", n)
+	}
+}

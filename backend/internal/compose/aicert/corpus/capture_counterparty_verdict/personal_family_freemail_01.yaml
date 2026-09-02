@@ -1,0 +1,46 @@
+name: family_writing_from_a_consumer_mailbox_is_not_a_business_contact
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5.1
+fixture:
+  display_name: Anne Brandt
+  email: annebrandt@consumermail.example
+  subject: "Oma's Geschichte Teil 1"
+  body: |
+    Lieber Lars,
+
+    ich habe endlich angefangen, Omas Geschichte aufzuschreiben, so wie wir es
+    im Sommer besprochen haben. Die ersten Seiten hänge ich an. Erik und
+    Kristina haben schon gelesen und ein paar Namen korrigiert.
+
+    Ruf doch am Wochenende mal an.
+
+    Alles Liebe,
+    Anne
+expect:
+  outcome: accepted
+  answer: personal
+  rubric: >
+    A relative writing about a family memoir. The hardest true positive in this
+    corpus, because every surface signal says "real correspondence with a named
+    human": a person signs it, the mail is plainly genuine, it names other
+    people, and it asks for a phone call.
+    What makes it personal is the SUBJECT MATTER and nothing else — a
+    grandmother's life story, relatives by first name, a weekend call. No
+    address rule can see that, which is why this is the model's question. A
+    consumer mailbox is corroboration and never the reason on its own: customers
+    write from private addresses every day.
+    "personal" scores highest: no record at all, which is the only answer that
+    keeps a founder's aunt out of a shared CRM.
+    "person" is the failure this exists to catch and scores zero above the
+    floor. It is the exact record that was found — a family member filed as a
+    business contact, visible to colleagues, because she was named and wrote
+    real mail.
+    "spam" and "newsletter" also score zero, in the other direction: they hide a
+    family letter, which is a worse thing to do to somebody's mail than to file
+    it wrongly.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
