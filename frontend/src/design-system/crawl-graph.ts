@@ -164,35 +164,51 @@ export function drawCrawl(
     ctx.fill();
   }
 
-  drawEvidence(ctx, nodes, ages, arrived, width, height, ink);
   ctx.globalAlpha = 1;
 }
 
+/** A point in the room's own coordinates, which every surface shares. */
+export type Point = Readonly<{ x: number; y: number }>;
+
 /**
- * What each page gave up, travelling back to where the read is assembled.
+ * What each page gave up, travelling back into the Core.
  *
- * This is the claim the whole screen rests on, in motion: a page was read, and
- * something came off it that is going somewhere. It arcs rather than sliding,
- * because a straight line between two dots reads as a wire and this is meant to
- * read as something carried.
+ * This is the claim the whole screen rests on, in motion: a page was read,
+ * something came off it, and that something goes into the thing doing the
+ * reading. It arcs rather than sliding, because a straight line between two
+ * dots reads as a wire and this is meant to read as something carried.
+ *
+ * IT ENDS IN THE ORB, not at the graph's own root. The root is a page like any
+ * other; the Core is what the evidence is FOR, and a mote that stopped at the
+ * left edge of the picture was a delivery to nobody. The orb lives outside this
+ * canvas — several elements away, in the room rather than in the picture — so
+ * both ends arrive here already measured, in one shared space (see
+ * `MoteScene.nodes`). That is also why the two cannot drift apart when the Core
+ * changes size: the caller measures the real element every frame.
  *
  * DERIVED FROM THE CLOCK, not accumulated in a list. Each page emits its motes
  * at a known time and they live a known span, so the whole population is a pure
- * function of `elapsed`. Keeping a growing array here would make the picture
+ * function of the ages. Keeping a growing array here would make the picture
  * depend on how many frames had been drawn, and a tab left in the background
  * would come back with a different scene than one that stayed open.
  */
-function drawEvidence(
+export function drawMotes(
   ctx: CanvasRenderingContext2D,
-  nodes: readonly CrawlNode[],
-  ages: readonly number[],
-  arrived: number,
-  width: number,
-  height: number,
-  ink: string,
+  scene: Readonly<{
+    /** Where each page sits, in the shared space. Index 0 is the root. */
+    nodes: readonly Point[];
+    /** Seconds since each page arrived, in the same order as `nodes`. */
+    ages: readonly number[];
+    /** The Core's centre, in the same space. */
+    home: Point;
+    width: number;
+    height: number;
+    ink: string;
+  }>,
 ): void {
-  const homeX = width * ROOT_X;
-  const homeY = height / 2;
+  const { nodes, ages, home, width, height, ink } = scene;
+  const arrived = Math.min(nodes.length, ages.length);
+  ctx.clearRect(0, 0, width, height);
   for (let i = 1; i < arrived; i++) {
     for (let k = 0; k < MOTES_PER_PAGE; k++) {
       const span = MOTE_LIFE_S + k * 0.16;
@@ -207,8 +223,8 @@ function drawEvidence(
       ctx.fillStyle = ink;
       ctx.beginPath();
       ctx.arc(
-        node.x + (homeX - node.x) * k2,
-        node.y + (homeY + offset - node.y) * k2 - Math.sin(k2 * Math.PI) * 16,
+        node.x + (home.x - node.x) * k2,
+        node.y + (home.y + offset - node.y) * k2 - Math.sin(k2 * Math.PI) * 16,
         2.4,
         0,
         Math.PI * 2,
@@ -216,6 +232,19 @@ function drawEvidence(
       ctx.fill();
     }
   }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The graph's nodes, moved from the picture's own box into the room's space.
+ *
+ * The two canvases do not share an origin: the picture sits in the board and the
+ * motes cross the whole room. `offset` is the picture's own position in the
+ * shared space, so a node's place is the same fact expressed twice rather than
+ * two facts that can disagree.
+ */
+export function motePath(nodes: readonly CrawlNode[], offset: Point): Point[] {
+  return nodes.map((node) => ({ x: node.x + offset.x, y: node.y + offset.y }));
 }
 
 /** How far through its own entrance a node of this age is, 0..1. */

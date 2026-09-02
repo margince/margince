@@ -1,8 +1,8 @@
 import { Check } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "../../design-system/atoms";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { STAGE_TITLE_ID } from "../../design-system/onboarding-stage";
+import { useT } from "../../i18n";
 import type { ConversationQuestion } from "./conversation-machine";
 
 // A decision as the whole work surface: the question is the headline, the
@@ -40,27 +40,17 @@ export function DecisionScene({
   factsOf?: (value: string) => CandidateFacts | null;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   const group = useId();
-  const headline = useId();
   const [picked, setPicked] = useState("");
   return (
     <div className="ob-scene ob-decision">
-      <div className="ob-decision-head">
-        <div>
-          <p className="ob-scene-eyebrow">{t("ob.conv.scene.detour")}</p>
-          <h2 id={headline}>{t(question.i18nKey, question.params)}</h2>
-          <p className="ob-scene-sub">{t("ob.conv.scene.decisionSub")}</p>
-        </div>
-        <span className="ob-decision-count">
-          {t("ob.conv.scene.candidates", {
-            count: formatNumber(question.options.length, locale),
-          })}
-        </span>
-      </div>
+      {/* No heading of its own: the room's title IS this question, and the
+          count of candidates is the first thing that title says. A scene that
+          repeated both put the same sentence on screen twice and pushed the
+          cards a screenful further down. */}
       <div
         role="radiogroup"
-        aria-labelledby={headline}
+        aria-labelledby={STAGE_TITLE_ID}
         className="ob-decision-options"
       >
         {/* What each answer puts on the record, stated BEFORE it is given.

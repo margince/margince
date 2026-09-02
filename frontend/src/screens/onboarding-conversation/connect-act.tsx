@@ -26,10 +26,8 @@ import type {
   ConversationEvent,
   ConversationState,
 } from "./conversation-machine";
-import { NarrationBubble } from "./entries";
 import { presenceFor } from "./presence";
 import { railStops } from "./rail";
-import { ConversationThread } from "./thread";
 import { useSaveLinkedInAccount } from "./use-linkedin-account";
 import type { WizardPersistInput } from "./use-wizard-state";
 import { ConversationWorkbench } from "./workbench";
@@ -260,9 +258,12 @@ export function ConnectAct({
       core={presenceFor(state).core}
       railState={state}
       status={t("ob.ai.ready")}
-      artifact={
+      eyebrow={eyebrow}
+      title={t("ob.conv.connect.sceneTitle")}
+      sub={t("ob.conv.connect.sceneSub")}
+    >
+      {
         <ConnectScene
-          eyebrow={eyebrow}
           provider={provider}
           onPick={openAsk}
           onDialogClose={closeDialog}
@@ -352,57 +353,15 @@ export function ConnectAct({
           }
         />
       }
-    >
-      <div className="mw-thread">
-        <ConversationThread
-          entries={state.thread}
-          pendingQuestionId={state.pendingQuestion?.id ?? null}
-          onAnswer={(questionId, value) =>
-            dispatch({ type: "QUESTION_ANSWERED", questionId, value })
-          }
-        >
-          {state.phase === "cn.consent" && (
-            <>
-              <NarrationBubble
-                entry={{
-                  kind: "narration",
-                  id: "connect:consent",
-                  i18nKey: "ob.conv.consent",
-                }}
-              />
-              {/* The substance of what connecting means lives on the
-                  artifact surface now (the guarantees grid, each provider's
-                  own disclosure inside its dialog) — the rail keeps only
-                  this one honest sentence about the whole step. */}
-              <NarrationBubble
-                entry={{
-                  kind: "narration",
-                  id: "connect:promise",
-                  i18nKey: "ob.conv.connect.railPromise",
-                }}
-              />
-              <NarrationBubble
-                entry={{
-                  kind: "narration",
-                  id: "connect:pick",
-                  i18nKey: "ob.conv.connect.pick",
-                }}
-              />
-              {finishFailed && (
-                <div role="alert">
-                  <NarrationBubble
-                    entry={{
-                      kind: "narration",
-                      id: "connect:persist-failed",
-                      i18nKey: "ob.conv.connect.persistFailed",
-                    }}
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </ConversationThread>
-      </div>
+      {/* The consent narration and the picker prompt are said once, on the
+          scene itself now (the guarantees grid, each provider's own
+          disclosure). What survives from the thread is the one thing a
+          reader still has to act on: a finish that could not be recorded. */}
+      {finishFailed && (
+        <p className="ob-conv-notice" role="alert">
+          {t("ob.conv.connect.persistFailed")}
+        </p>
+      )}
     </ConversationWorkbench>
   );
 }

@@ -38,6 +38,7 @@ function Scene() {
   return (
     <LocaleProvider initial="en">
       <OnboardingStage
+        flow="Setup"
         lit={ignited}
         coreState={ignited ? core.state : "idle"}
         coreProgress={core.progress}

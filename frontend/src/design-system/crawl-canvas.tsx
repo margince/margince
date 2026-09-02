@@ -7,7 +7,9 @@ import {
   type CrawlNode,
   crawlAges,
   drawCrawl,
+  drawMotes,
   layOutCrawl,
+  motePath,
 } from "./crawl-graph";
 import { usePrefersReducedMotion } from "./motion";
 import "./crawl-canvas.css";
@@ -31,8 +33,8 @@ export type CrawlPage = Readonly<{
  *
  * WHY IT IS THE AGENT'S COLOUR. Indigo throughout, because every mark here is
  * something a machine did (see the README's provenance rule). The evidence
- * arcing back towards the root is the same claim in motion: what the crawl
- * found is going somewhere, and nothing has been written to a record yet.
+ * flying into the Core is the same claim in motion: what the crawl found is
+ * going somewhere, and that somewhere is the thing doing the reading.
  *
  * IT DRAWS ONLY WHAT THE SERVER SENT. Nodes arrive as pages do; there is no
  * invented total and nothing is drawn ahead of the read. A canvas that filled
@@ -43,16 +45,32 @@ export type CrawlPage = Readonly<{
  * puts the same walk in words beside it: this replaced a strip that named every
  * page one by one, and a canvas carrying a summary alone would have quietly
  * taken that away.
+ *
+ * TWO LAYERS, because the evidence leaves the picture. The graph is a box on
+ * the board; the Core is somewhere else in the room entirely, and a canvas
+ * clips at its own edges, so motes drawn in the graph's layer could only ever
+ * stop at its border. The second layer is the whole viewport, which is the one
+ * space both ends of the journey can be measured in.
  */
 export function CrawlCanvas({
   pages,
   label,
+  flowToId,
 }: Readonly<{
   pages: readonly CrawlPage[];
   /** What this picture is, for a reader who cannot see it. */
   label: string;
+  /**
+   * The element the evidence flies into, by id: the Core.
+   *
+   * Absent where the surface has no Core to deliver to, and then the motes are
+   * not drawn at all rather than aimed at a guess. A screen that showed evidence
+   * streaming towards nothing in particular would be animation for its own sake.
+   */
+  flowToId?: string;
 }>) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const motes = useRef<HTMLCanvasElement>(null);
   const reduced = usePrefersReducedMotion();
   // The frame loop reads the latest pages without being torn down and rebuilt
   // every poll: re-running the effect on each arrival would restart the
@@ -66,16 +84,33 @@ export function CrawlCanvas({
     if (!el || !ctx) {
       return;
     }
-    return runCrawl(el, ctx, latest, reduced);
-  }, [reduced]);
+    return runCrawl(el, ctx, latest, reduced, motes, flowToId);
+  }, [reduced, flowToId]);
 
   return (
-    <canvas
-      className="crawl-canvas"
-      ref={canvas}
-      role="img"
-      aria-label={label}
-    />
+    <>
+      <canvas
+        className="crawl-canvas"
+        ref={canvas}
+        role="img"
+        aria-label={label}
+      />
+      {/* Decoration on top of the room, and nothing else: the picture it
+          belongs to is already the labelled one, so a second `role="img"` here
+          would announce the same thing twice. */}
+      {flowToId === undefined ? null : (
+        // `tabIndex` -1 alongside `aria-hidden`: a canvas counts as focusable,
+        // and hiding a focusable element from the accessibility tree while
+        // leaving it in the tab order strands a keyboard on something a screen
+        // reader cannot name.
+        <canvas
+          className="crawl-motes"
+          ref={motes}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+      )}
+    </>
   );
 }
 
@@ -92,6 +127,8 @@ function runCrawl(
   ctx: CanvasRenderingContext2D,
   pages: { current: readonly CrawlPage[] },
   reduced: boolean,
+  motes: { current: HTMLCanvasElement | null },
+  flowToId?: string,
 ): () => void {
   let frame = 0;
   let nodes: CrawlNode[] = [];
@@ -141,10 +178,7 @@ function runCrawl(
     if (box.width === 0 || box.height === 0) {
       return null;
     }
-    const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
-    el.width = box.width * dpr;
-    el.height = box.height * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fitBackingStore(el, ctx, box);
     nodes = layOutCrawl(pages.current.length, box.width, box.height);
     return { width: box.width, height: box.height };
   };
@@ -152,8 +186,12 @@ function runCrawl(
   const paint = (now: number) => {
     stamp(now, reduced);
     const scene = sceneOf(el, measure);
+    const ages = crawlAges(stamps, now);
     if (scene !== null) {
-      drawCrawl(ctx, { nodes, ages: crawlAges(stamps, now), ...scene });
+      drawCrawl(ctx, { nodes, ages, ...scene });
+      if (flowToId !== undefined) {
+        paintMotes(motes.current, nodes, ages, el, flowToId, scene.ink);
+      }
     }
     if (reduced) {
       return;
@@ -163,6 +201,66 @@ function runCrawl(
 
   frame = requestAnimationFrame(paint);
   return () => cancelAnimationFrame(frame);
+}
+
+/**
+ * The evidence crossing the room, drawn in the viewport's own coordinates.
+ *
+ * VIEWPORT SPACE, not some parent's, because the two things this connects live
+ * in different corners of the layout: the graph is a box inside the board, the
+ * Core is positioned against the stage. `getBoundingClientRect` gives both in
+ * one frame of reference and the layer is fixed to that same frame, so a scroll
+ * or a resize needs no correction at all.
+ */
+function paintMotes(
+  layer: HTMLCanvasElement | null,
+  nodes: readonly CrawlNode[],
+  ages: readonly number[],
+  graph: HTMLCanvasElement,
+  flowToId: string,
+  ink: string,
+): void {
+  const ctx = layer?.getContext("2d");
+  const core = document.getElementById(flowToId);
+  if (!layer || !ctx || core === null) {
+    return;
+  }
+  const box = layer.getBoundingClientRect();
+  if (box.width === 0 || box.height === 0) {
+    return;
+  }
+  fitBackingStore(layer, ctx, box);
+  const from = graph.getBoundingClientRect();
+  const to = core.getBoundingClientRect();
+  drawMotes(ctx, {
+    nodes: motePath(nodes, { x: from.left - box.left, y: from.top - box.top }),
+    ages,
+    home: {
+      x: to.left + to.width / 2 - box.left,
+      y: to.top + to.height / 2 - box.top,
+    },
+    width: box.width,
+    height: box.height,
+    ink,
+  });
+}
+
+/**
+ * Match a canvas's pixel buffer to the box it occupies.
+ *
+ * Every frame, and deliberately: the backing store and the CSS box have to
+ * agree or the drawing stretches the first time either changes, and the cheapest
+ * way to guarantee that is to never let them be set apart.
+ */
+function fitBackingStore(
+  el: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  box: DOMRect,
+): void {
+  const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+  el.width = box.width * dpr;
+  el.height = box.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 /** Everything one frame needs, or null when this frame cannot honestly draw. */

@@ -13,7 +13,10 @@ import { Disclosure } from "../design-system/atoms";
 import { CountUp } from "../design-system/countup";
 import { CrawlCanvas } from "../design-system/crawl-canvas";
 import type { MarginceCoreState } from "../design-system/margince-core";
-import { OnboardingStage } from "../design-system/onboarding-stage";
+import {
+  OnboardingStage,
+  STAGE_CORE_ID,
+} from "../design-system/onboarding-stage";
 import { formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -324,6 +327,7 @@ function GateColumn({
   const settled = scan !== undefined && SETTLED.has(scan.read.status);
   return (
     <OnboardingStage
+      flow={t("ob.stage.flow")}
       // Nothing reaches this screen until first run is done, so a model is
       // always bound by the time anyone is here. The room says so, and it says
       // only that: a second trigger per screen is how one colour acquires two
@@ -555,6 +559,9 @@ function TheatreTail({
             note: pageStatusWord(t, page),
           }))}
           label={t("ob.scan.pageStripLabel")}
+          // The evidence goes INTO the Core, which is the whole claim of the
+          // screen: the read is feeding the thing that will answer with it.
+          flowToId={STAGE_CORE_ID}
         />
         {/* The same pages in words, for a reader the picture cannot reach. The
             tiles it replaced named every page and its status one by one, and a

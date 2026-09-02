@@ -134,7 +134,6 @@ function useConnectedMailProviders(): ConnectedMailRoster {
 }
 
 export function ConnectScene({
-  eyebrow,
   provider,
   onPick,
   onDialogClose,
@@ -154,7 +153,6 @@ export function ConnectScene({
   linkedinError,
   onEnter,
 }: Readonly<{
-  eyebrow: string;
   /** The provider whose dialog is open; null while none is chosen. */
   provider: MailProvider | null;
   onPick: (provider: MailProvider) => void;
@@ -212,12 +210,6 @@ export function ConnectScene({
 
   return (
     <div className="ob-scene ob-connect">
-      <div>
-        <p className="ob-scene-eyebrow">{eyebrow}</p>
-        <h2>{t("ob.conv.connect.sceneTitle")}</h2>
-        <p className="ob-scene-sub">{t("ob.conv.connect.sceneSub")}</p>
-      </div>
-
       <ConnectGuarantees />
 
       <div className="ob-connect-section-head">

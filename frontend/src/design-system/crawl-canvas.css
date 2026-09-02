@@ -19,3 +19,23 @@
   max-width: 44rem;
   height: 180px;
 }
+
+/*
+ * The evidence crossing the room, on its own layer over everything.
+ *
+ * FIXED TO THE VIEWPORT, which is the only frame both ends of the journey can
+ * be measured in: the graph is a box on the board and the Core is placed
+ * against the stage, and a canvas clips at its own edges, so motes drawn in the
+ * graph's own layer stopped dead at its border instead of arriving anywhere.
+ * Being fixed also means a scroll needs no correction: both rects it reads are
+ * viewport-relative too.
+ *
+ * It never takes a click and never takes a colour of its own. `z-index` sits
+ * under the app's own layered surfaces so this can never cover a dialog.
+ */
+.crawl-motes {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}

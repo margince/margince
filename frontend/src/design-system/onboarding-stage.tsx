@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { ThemeToggle } from "../app/theme-toggle";
 import { Eyebrow } from "./eyebrow";
+import { Logomark } from "./logomark";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
 import "./onboarding-stage.css";
 
@@ -40,6 +42,26 @@ import "./onboarding-stage.css";
 export type StageProgress = Readonly<{ steps: readonly string[]; at: number }>;
 
 /**
+ * The stage headline's id, for a board that is an answer to it.
+ *
+ * Exported rather than spelled twice: a screen whose title IS the question
+ * labels its control group by pointing here, and a hand-typed copy on either
+ * side is an `aria-labelledby` that resolves to nothing the day one of them is
+ * renamed.
+ */
+export const STAGE_TITLE_ID = "ob-stage-title";
+
+/**
+ * The Core's element id, for a surface that has to send something TO it.
+ *
+ * The crawl's evidence flies into the orb, and the orb is not inside the canvas
+ * that draws the evidence: it belongs to the room, several elements away. So the
+ * picture measures the real element rather than being told a coordinate, which
+ * is also what keeps the two agreeing while the Core changes size.
+ */
+export const STAGE_CORE_ID = "ob-stage-core";
+
+/**
  * The band across the top of the stage: where you are, and what the Core is
  * doing said in words.
  *
@@ -49,29 +71,41 @@ export type StageProgress = Readonly<{ steps: readonly string[]; at: number }>;
  * statement, and a row of decorative marks announced one by one is noise.
  */
 function StageBand({
+  flow,
   progress,
   step,
   where,
   coreStateLabel,
+  aside,
   lit,
 }: Readonly<{
+  flow: string;
   progress?: StageProgress;
   step?: string;
   where?: string;
   coreStateLabel?: string;
+  aside?: ReactNode;
   lit: boolean;
 }>) {
   return (
     <div className="ob-stage-band">
       <p className="ob-stage-who">
         {/* Setup carries no other chrome, so the mark is the one place the
-            reader is told whose software they are inside. */}
+            reader is told whose software they are inside. The real logomark,
+            not a letter in a box: the shell's workspace chip and this are the
+            same product saying its own name, and the stand-in that used to sit
+            here was a second mark that could drift from the brand's. */}
         <span className="ob-stage-mark" aria-hidden="true">
-          M
+          <Logomark size={15} />
         </span>
+        {/* What the reader is doing here at all, beside whose software it is.
+            The stop and the sub-step trail it muted: a masthead names the place
+            first and the position second, and the position is also what the
+            dashes are for. */}
+        <span className="ob-stage-flow">{flow}</span>
         {progress === undefined && step === undefined ? null : (
           <span className="ob-stage-step">
-            {step ?? progress?.steps[progress.at]}
+            · {step ?? progress?.steps[progress.at]}
           </span>
         )}
         {where === undefined ? null : (
@@ -90,28 +124,40 @@ function StageBand({
           ))}
         </span>
       )}
-      {coreStateLabel === undefined ? null : (
-        // Readable, and deliberately NOT a live region. The orb is aria-hidden
-        // and WDS-CORE-4 requires its state to be stated in words: stated, not
-        // announced. A second `role="status"` on the stage competes with the
-        // one the screen under it already owns: it mounts first, so a query for
-        // the status resolves on this frame label instead of on the sentence a
-        // reader has to act on, and on the gate it is the read's own phase line
-        // said a second time.
-        <p className="ob-stage-corestate" data-unlit={!lit}>
-          {coreStateLabel}
-        </p>
-      )}
+      <div className="ob-stage-end">
+        {coreStateLabel === undefined ? null : (
+          // Readable, and deliberately NOT a live region. The orb is aria-hidden
+          // and WDS-CORE-4 requires its state to be stated in words: stated, not
+          // announced. A second `role="status"` on the stage competes with the
+          // one the screen under it already owns: it mounts first, so a query for
+          // the status resolves on this frame label instead of on the sentence a
+          // reader has to act on, and on the gate it is the read's own phase line
+          // said a second time.
+          <p className="ob-stage-corestate" data-unlit={!lit}>
+            {coreStateLabel}
+          </p>
+        )}
+        {aside}
+        {/* Setup is railless: no top bar, so without this the reader meets nine
+            screens in a row with no way to change a theme they can already see.
+            The STAGE owns it rather than each screen passing one, because it is
+            true of every onboarding screen and a per-caller prop is a rule that
+            holds until the screen that forgets it. */}
+        <span className="ob-stage-rule" aria-hidden="true" />
+        <ThemeToggle />
+      </div>
     </div>
   );
 }
 
 export function OnboardingStage({
+  flow,
   lit,
   coreState = "idle",
   coreProgress,
   coreFeed,
   coreStateLabel,
+  aside,
   coreFlash,
   coreScale = "hero",
   anchor = "center",
@@ -119,11 +165,22 @@ export function OnboardingStage({
   step,
   where,
   hint,
+  actions,
   eyebrow,
   title,
   sub,
   children,
 }: Readonly<{
+  /**
+   * What the reader is doing here: the flow's own name, beside the mark.
+   *
+   * REQUIRED, and a prop rather than a constant in here, for the two reasons
+   * that pull opposite ways. No copy lives in a primitive, so the stage cannot
+   * spell "Setup" itself and cannot translate it. But a screen that forgot it
+   * would leave the masthead saying only where in a flow it does not name, so
+   * the type asks for it and no caller can quietly drop it.
+   */
+  flow: string;
   /**
    * Whether this installation has a model bound, which is the ONLY thing the
    * room's indigo means. It is read from the server rather than set per screen:
@@ -167,6 +224,15 @@ export function OnboardingStage({
    */
   coreStateLabel?: string;
   /**
+   * The band's right slot: what the installation is running on, and what this
+   * setup has spent.
+   *
+   * A NODE rather than words, because it is the one thing in the band a reader
+   * can open, and the runtime disclosure that does the opening already exists.
+   * The stage keeps the place and stays out of the claim.
+   */
+  aside?: ReactNode;
+  /**
    * `center` for a question of a fixed size; `start` for a surface that GROWS
    * while somebody reads it. A centred column re-centres on every arriving
    * block, so the line being read travels upward while it is being read.
@@ -201,10 +267,27 @@ export function OnboardingStage({
    * not arrive with the board.
    */
   hint?: string;
+  /**
+   * The way onward, on the card's bottom rail beside the hint.
+   *
+   * On the RAIL rather than under the board, because a board can be long or run
+   * in two columns, and a Next placed at the end of one column is a Next the
+   * reader has to hunt for. Absent for a screen whose only action is part of the
+   * question itself, which is most of first run.
+   */
+  actions?: ReactNode;
   /** The step's place in the flow. Absent where the flow does not number itself. */
   eyebrow?: string;
   title: string;
-  sub: string;
+  /**
+   * The sentence under the title, where the title alone would leave a reader
+   * guessing what the answer decides.
+   *
+   * Optional because some screens are their own explanation: a board that shows
+   * eight cards under "Eight it will not guess at." has already said it, and a
+   * line of prose between the two only pushes the work further down.
+   */
+  sub?: string;
   children: ReactNode;
 }>) {
   return (
@@ -217,10 +300,12 @@ export function OnboardingStage({
       >
         <div className="ob-stage-light" />
         <StageBand
+          flow={flow}
           progress={progress}
           step={step}
           where={where}
           coreStateLabel={coreStateLabel}
+          aside={aside}
           lit={lit}
         />
         <div className="ob-stage-scene">
@@ -228,7 +313,7 @@ export function OnboardingStage({
               light: anchored to the orb itself rather than to a remembered
               offset into the window, which is nowhere near the ball at most
               widths and nowhere near it at all once the scene stacks. */}
-          <div className="ob-stage-core" data-unlit={!lit}>
+          <div className="ob-stage-core" id={STAGE_CORE_ID} data-unlit={!lit}>
             {coreFlash ? (
               <span className="ob-stage-flash" aria-hidden="true" />
             ) : null}
@@ -242,14 +327,26 @@ export function OnboardingStage({
             {eyebrow === undefined ? null : (
               <Eyebrow as="h2">{eyebrow}</Eyebrow>
             )}
-            <h1 className="ob-stage-title">{title}</h1>
-            <p className="ob-stage-sub">{sub}</p>
+            {/* A STABLE id, because on a screen whose title is the question
+                itself the board below is answering this heading, and a control
+                group there labels itself by pointing at it. One stage is
+                mounted at a time (see the mounting note), so the id is unique
+                by construction. */}
+            <h1 className="ob-stage-title" id={STAGE_TITLE_ID}>
+              {title}
+            </h1>
+            {sub === undefined ? null : <p className="ob-stage-sub">{sub}</p>}
             {children}
           </div>
         </div>
-        {hint === undefined ? null : (
+        {hint === undefined && actions === undefined ? null : (
           <div className="ob-stage-foot">
-            <p className="ob-stage-hint">{hint}</p>
+            {hint === undefined ? null : (
+              <p className="ob-stage-hint">{hint}</p>
+            )}
+            {actions === undefined ? null : (
+              <div className="ob-stage-acts">{actions}</div>
+            )}
           </div>
         )}
       </div>

@@ -82,30 +82,17 @@ function useCrawlingProgress(ceiling: number): number {
   return reduced ? ceiling : displayed;
 }
 
-/** The scene frame: eyebrow, headline, lead paragraph, then the body. */
+/** The scene frame: the body, plus a slot beside the (now hoisted) headline. */
 export function VoiceScene({
-  eyebrow,
-  title,
-  sub,
   aside,
   children,
 }: Readonly<{
-  eyebrow: string;
-  title: string;
-  sub?: string;
   aside?: ReactNode;
   children: ReactNode;
 }>) {
   return (
     <div className="ob-scene ob-voice-scene">
-      <div className="ob-decision-head">
-        <div>
-          <p className="ob-scene-eyebrow">{eyebrow}</p>
-          <h2>{title}</h2>
-          {sub !== undefined && <p className="ob-scene-sub">{sub}</p>}
-        </div>
-        {aside}
-      </div>
+      {aside !== undefined && <div className="ob-decision-head">{aside}</div>}
       {children}
     </div>
   );
@@ -206,7 +193,6 @@ function VoiceCorpusFloorMeter({
  * pasted text both land here, so no other surface offers to add a source.
  */
 export function VoiceCollectScene({
-  eyebrow,
   summary,
   manifest,
   fileRef,
@@ -218,7 +204,6 @@ export function VoiceCollectScene({
   startPending,
   startError,
 }: Readonly<{
-  eyebrow: string;
   summary: CorpusSummary | null;
   manifest: readonly CorpusManifestEntry[];
   fileRef: RefObject<HTMLInputElement | null>;
@@ -240,11 +225,7 @@ export function VoiceCollectScene({
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   return (
-    <VoiceScene
-      eyebrow={eyebrow}
-      title={t("ob.conv.voice.sceneTitle")}
-      sub={t("ob.conv.voice.sceneSub")}
-    >
+    <VoiceScene>
       <VoiceHeroBand />
       <div className="ob-voice-drop">
         <input
@@ -377,11 +358,9 @@ export function VoiceCollectScene({
  * scene's sources list uses elsewhere.
  */
 export function VoiceSpeakerScene({
-  eyebrow,
   question,
   onAnswer,
 }: Readonly<{
-  eyebrow: string;
   question: ConversationQuestion;
   onAnswer: (questionId: string, value: string) => void;
 }>) {
@@ -389,7 +368,7 @@ export function VoiceSpeakerScene({
   const group = useId();
   const [picked, setPicked] = useState("");
   return (
-    <VoiceScene eyebrow={eyebrow} title={t(question.i18nKey, question.params)}>
+    <VoiceScene>
       <div role="radiogroup" aria-label={t(question.i18nKey, question.params)}>
         <div className="ob-voice-speakers">
           {question.options.map((option) => {
@@ -490,7 +469,6 @@ export function VoiceBuildScene({
           <small>%</small>
         </span>
       </div>
-      <h2>{t("ob.conv.voice.buildingTitle")}</h2>
       <p className="ob-voice-building-meta">
         {t("ob.conv.voice.buildingMeta", {
           words: formatNumber(summary?.total_words ?? 0, locale),
@@ -526,12 +504,10 @@ export function VoiceBuildScene({
  * row under the sample would otherwise say the same thing twice.
  */
 export function VoiceResultScene({
-  eyebrow,
   loading,
   version,
   onContinue,
 }: Readonly<{
-  eyebrow: string;
   loading: boolean;
   version: VoiceProfileVersion | null;
   onContinue: () => void;
@@ -539,20 +515,8 @@ export function VoiceResultScene({
   const t = useT();
   const candidate = version !== null && version.status === "candidate";
   const data = version !== null ? parseVoiceInsights(version) : null;
-  // A version with no reserved held-out samples (the starter-corpus case:
-  // too few sources to spare any) never carries a sample draft — the reader
-  // must not be told to read one that was never generated.
-  const hasSample = data !== null && data.sampleDrafts.length > 0;
   return (
-    <VoiceScene
-      eyebrow={eyebrow}
-      title={t("ob.conv.voice.resultTitle")}
-      sub={t(
-        data !== null && !hasSample
-          ? "ob.conv.voice.resultSubNoSample"
-          : "ob.conv.voice.resultSub",
-      )}
-    >
+    <VoiceScene>
       {loading && (
         <p className="ob-conv-artifact-empty">
           {t("ob.conv.voice.resultLoading")}

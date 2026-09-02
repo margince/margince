@@ -1,0 +1,126 @@
+/* The profile as an article, beside the deck still writing it. Reading matter,
+   so it is set as prose rather than as a table of rows: a record somebody is
+   about to stand behind should read like something a person wrote. */
+.pdigest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+
+.pdigest-eyebrow {
+  margin: 0;
+  color: var(--textMeta);
+  font-family: var(--f-body);
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.pdigest-count {
+  margin: 0;
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+}
+
+.pdigest-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.pdigest-line {
+  margin: 0;
+  color: var(--textContent);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+
+/* The line the deck is deciding right now, marked in the agent's colour
+   because it is a value being PROPOSED rather than one already recorded. This
+   is what makes the panel worth having beside the deck: answer a card and you
+   watch the line it belongs to land. */
+.pdigest-line[data-active="true"] {
+  padding: var(--space-2) var(--space-3);
+  margin-inline: calc(var(--space-3) * -1);
+  border-radius: var(--r-sm);
+  background: var(--aiLight);
+  color: var(--aiText);
+}
+
+.pdigest-label {
+  color: var(--textMeta);
+}
+.pdigest-line[data-active="true"] .pdigest-label {
+  color: var(--aiText);
+}
+
+.pdigest-value {
+  color: var(--textPrimary);
+  font-weight: var(--fw-medium);
+}
+.pdigest-line[data-active="true"] .pdigest-value {
+  color: var(--aiText);
+}
+
+/* A field with nothing in it yet says nothing rather than showing an empty
+   slot: the deck is what fills these, and a row of blanks beside it would be
+   the outstanding work listed a second time. */
+.pdigest-blank {
+  color: var(--textTertiary);
+  font-style: italic;
+}
+
+/* The footnote, set the way an encyclopedia sets one. */
+.pdigest-ref {
+  margin-inline-start: 2px;
+  color: var(--aiText);
+  font-size: var(--fs-eyebrow);
+}
+
+/* No page behind it: typed by a person, or carried in from a profile that was
+   already there. Named rather than left blank, because "everything here is
+   sourced" is only true if the exceptions say so. */
+.pdigest-yours {
+  margin-inline-start: var(--space-2);
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+}
+
+.pdigest-sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+.pdigest-sources ol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pdigest-sources li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.pdigest-source-n {
+  flex: none;
+  color: var(--aiText);
+  font-size: var(--fs-eyebrow);
+}
+.pdigest-source-path {
+  overflow-wrap: anywhere;
+  color: var(--textMeta);
+  font-family: var(--f-mono);
+  font-size: var(--fs-meta);
+}

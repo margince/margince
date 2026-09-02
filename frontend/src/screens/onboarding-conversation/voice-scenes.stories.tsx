@@ -33,8 +33,6 @@ import {
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
 
-const EYEBROW = "Step 4 of 5";
-
 // `maturity` and `quality_band` are the server's own readings of the corpus, so
 // they are derived from the count rather than picked per story: a fixture that
 // set them independently would describe a summary no server sends.
@@ -88,7 +86,6 @@ function Collect({
   return (
     <StoryProviders locale={locale}>
       <VoiceCollectScene
-        eyebrow={EYEBROW}
         summary={corpus}
         manifest={manifest}
         fileRef={fileRef}
@@ -216,11 +213,7 @@ const SPEAKER_QUESTION: ConversationQuestion = {
 export const SpeakerAsk: Story = {
   render: () => (
     <StoryProviders>
-      <VoiceSpeakerScene
-        eyebrow={EYEBROW}
-        question={SPEAKER_QUESTION}
-        onAnswer={() => {}}
-      />
+      <VoiceSpeakerScene question={SPEAKER_QUESTION} onAnswer={() => {}} />
     </StoryProviders>
   ),
 };
@@ -230,11 +223,7 @@ export const SpeakerAsk: Story = {
 export const SpeakerAskGerman: Story = {
   render: () => (
     <StoryProviders locale="de">
-      <VoiceSpeakerScene
-        eyebrow={EYEBROW}
-        question={SPEAKER_QUESTION}
-        onAnswer={() => {}}
-      />
+      <VoiceSpeakerScene question={SPEAKER_QUESTION} onAnswer={() => {}} />
     </StoryProviders>
   ),
 };
@@ -388,7 +377,6 @@ function result(
   return () => (
     <StoryProviders locale={locale}>
       <VoiceResultScene
-        eyebrow={EYEBROW}
         loading={loading}
         version={built}
         onContinue={() => {}}

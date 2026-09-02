@@ -713,6 +713,19 @@
   color: var(--textPrimary);
 }
 
+/*
+ * Something that went wrong, on the board under the surface that produced it.
+ *
+ * The transcript used to carry these as narration in the chat rail. The rail is
+ * gone with the workbench and the narration went with it, but a failure the
+ * reader has to act on is not narration: it stays, beside the thing it is about.
+ */
+.ob-conv-notice {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--fs-meta);
+}
+
 .ob-decision-head {
   display: flex;
   align-items: flex-start;

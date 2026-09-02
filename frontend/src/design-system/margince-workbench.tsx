@@ -278,7 +278,15 @@ function StepProgress({
 // per-model breakdown opens on demand. Hover reveals, click pins — so a
 // pointer user reads it in passing and a keyboard user can keep it open while
 // they read it.
-function AiRuntimeChip({
+/**
+ * What the installation is running on, and what this setup has spent on it.
+ *
+ * Exported because the onboarding stage carries it too, in the band's right
+ * slot. It is the same claim in both rooms — which model answered, how many
+ * calls, how much it cost — and a second spelling of it would be a second
+ * answer to what a reader is being charged.
+ */
+export function AiRuntimeChip({
   runtime,
   configured,
   labels,

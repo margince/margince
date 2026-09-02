@@ -3,11 +3,9 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { formatNumber, ordinalNumber } from "../../format/format";
-import { useLocale, usePluralKey, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
-  coldFieldLabel,
   problemCodeOf,
   problemMessageOf,
   throwProblem,
@@ -56,11 +54,10 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { DecisionScene } from "./decision-scene";
-import { jumpToFindings, NarrationBubble } from "./entries";
 import { gateNoticeFor } from "./gate-notice";
 import { presenceFor } from "./presence";
-import { railStops } from "./rail";
-import { ConversationThread, selectionFor } from "./thread";
+import { ProfileDigest } from "./profile-digest";
+import { deckCards, ReviewDeck } from "./review-deck";
 import { useClarifyAnswers } from "./use-clarify-answers";
 import { safeStartError, useCompanyRead } from "./use-company-read";
 import type { WizardPersistInput } from "./use-wizard-state";
@@ -153,7 +150,6 @@ export function CompanyAct({
   adoptedRead = null,
 }: CompanyActProps) {
   const t = useT();
-  const keyFor = usePluralKey();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   // The gate greets by name, and uses the whole display_name rather than a
@@ -618,7 +614,12 @@ export function CompanyAct({
   // nav counts with — never a second idea of "still needs you" computed from
   // `missing` alone. `byName` mirrors confirm-card's own construction so a
   // field's state can never differ between the two surfaces.
-  const attentionRows = useMemo<readonly ReviewRow[]>(() => {
+  //
+  // EVERY row is built once and the outstanding ones are a filter of that list,
+  // rather than two walks of `reviewFields()`. The deck asks about the work and
+  // the article states the whole record, and the two describing the same field
+  // differently is exactly the drift this pair exists to prevent.
+  const allRows = useMemo<readonly ReviewRow[]>(() => {
     if (reviewProposal === null) {
       return [];
     }
@@ -627,10 +628,12 @@ export function CompanyAct({
         .filter((field) => isCompanyField(field.field, draft.values))
         .map((field) => [field.field, field]),
     );
-    return reviewFields()
-      .map((field) => rowFor(field, draft, byName, t))
-      .filter((row) => isWork(row.state));
+    return reviewFields().map((field) => rowFor(field, draft, byName, t));
   }, [reviewProposal, draft, t]);
+  const attentionRows = useMemo<readonly ReviewRow[]>(
+    () => allRows.filter((row) => isWork(row.state)),
+    [allRows],
+  );
   // The ONLY rows that stop the human continuing: `confirmCompanySiteRead`
   // 422s exactly when one of REQUIRED_FIELDS is still empty — checked here
   // against `isRequired` itself, the same source the server enforces
@@ -692,18 +695,6 @@ export function CompanyAct({
   // The rail's own two counts: `blockingCount` is what the narration leads
   // with — the still-open decisions count here too, because the live
   // DecisionScene replaces the review outright while one is pending, the
-  // same gate the required trio sits behind. `advisoryCount` never gets
-  // billed as an obstacle: the guide says so explicitly rather than folding
-  // it into one undifferentiated total (the old bug: a flat count that
-  // could not tell the human which items actually stopped them).
-  const blockingCount = blocking.length + openReviewQuestions.length;
-  const advisoryCount = advisory.length;
-  const blockingFindingIds = [
-    ...blocking.map((row) => row.field),
-    ...openReviewQuestions.map((question) => question.field),
-  ];
-  const advisoryFindingIds = advisory.map((row) => row.field);
-
   const presence = presenceFor(state, { read, readBroken });
 
   // The gate and the read theatre are the company act's first face. It is
@@ -762,15 +753,6 @@ export function CompanyAct({
       />
     );
   }
-
-  // The scene eyebrow: where the journey stands, in the rail's own counting.
-  // Both the decision and the review live on the CONFIRM stop.
-  const stops = railStops(state.memberPath);
-  const stepEyebrow = t("ob.conv.scene.step", {
-    n: ordinalNumber(stops.findIndex((stop) => stop.key === "confirm") + 1),
-    m: ordinalNumber(stops.length),
-    label: t("ob.rail.confirm"),
-  });
 
   // ONE scene on the surface at a time — the prototype's rule. A pending
   // decision owns the whole surface; the review owns it after; the thread
@@ -864,33 +846,57 @@ export function CompanyAct({
           message: t(confirmNoticeKey(confirmNotice, skewStuck)),
           retry: noticeRetries[confirmNotice],
         };
+  // The confirm stop, as a deck by default and as the whole profile on ask.
+  //
+  // The deck is the front door because the read already knows which fields it
+  // could not settle, and putting the other hundred on screen beside them asked
+  // a reader to find six answers inside a wall. The wall is still HERE, one
+  // press away: it is where a field is edited freely and a fact is unticked,
+  // and the server wants both of those from somewhere.
+  const cards = deckCards(blocking, advisory);
   const reviewScene =
     state.phase === "co.review" && reviewProposal ? (
-      <div className="ob-scene">
-        <p className="ob-scene-eyebrow">{stepEyebrow}</p>
-        <CompanyConfirmCard
-          proposal={reviewProposal}
-          draft={draft}
-          answers={clarify.answers}
-          read={read}
-          selectedFactKeys={selectedFactKeys}
-          setSelectedFactKeys={setSelectedFactKeys}
-          missingRequired={missing}
-          setField={(field, value) =>
+      artifactMode === "dossier" ? (
+        <ReviewDeck
+          cards={cards}
+          settled={selectedFactKeys.length}
+          onField={(field, value) =>
             setDraft((current) => changeDraftField(current, field, value))
           }
-          onAcceptAll={() => confirm.mutate()}
+          onDone={() => confirm.mutate()}
+          onReadWhole={() => setArtifactMode("edit")}
+          // EVERY row, not just the outstanding ones: the article is what the
+          // record says, and a version of it that showed only the unanswered
+          // half would be the deck's own list again in prose.
+          digest={(active) => <ProfileDigest rows={allRows} active={active} />}
           pending={confirm.isPending}
-          authorizing={clarify.authorizing || confirmBlocked}
-          error={confirmBannerMessage}
+          // The SAME predicates the confirm gate reads, never a second count of
+          // its own: a tray saying "nothing left" beside a button that refuses
+          // is the failure this shares its source with `confirmDisabled` to
+          // avoid.
+          disabled={missing.length > 0 || openReviewQuestions.length > 0}
         />
-      </div>
+      ) : (
+        <div className="ob-scene">
+          <CompanyConfirmCard
+            proposal={reviewProposal}
+            draft={draft}
+            answers={clarify.answers}
+            read={read}
+            selectedFactKeys={selectedFactKeys}
+            setSelectedFactKeys={setSelectedFactKeys}
+            missingRequired={missing}
+            setField={(field, value) =>
+              setDraft((current) => changeDraftField(current, field, value))
+            }
+            onAcceptAll={() => confirm.mutate()}
+            pending={confirm.isPending}
+            authorizing={clarify.authorizing || confirmBlocked}
+            error={confirmBannerMessage}
+          />
+        </div>
+      )
     ) : null;
-  const threadEntries = state.thread.filter(
-    (entry, index) =>
-      entry.kind !== "question" || selectionFor(state.thread, index) !== null,
-  );
-
   return (
     <ConversationWorkbench
       core={presence.core}
@@ -904,7 +910,9 @@ export function CompanyAct({
             : t("ob.ai.ready")
       }
       runtime={runtime}
-      artifact={
+      {...boardHeading(state, t)}
+    >
+      {
         <CompanyActArtifact
           mode={artifactMode}
           manual={state.phase === "co.manual"}
@@ -944,146 +952,59 @@ export function CompanyAct({
           refusal={refusal}
         />
       }
-    >
-      <div className="mw-thread">
-        <ConversationThread
-          entries={threadEntries}
-          pendingQuestionId={state.pendingQuestion?.id ?? null}
-          onAnswer={handleAnswer}
-          onDismiss={handleDismiss}
-          lead={
-            // The act's greeting. It belongs to the transcript, so it scrolls
-            // with it — the machine simply does not own it, because it is the
-            // same line whatever state the reader resumes into. The URL ask
-            // that used to sit beside it now lives on the gate, which is the
-            // only place it can still be answered.
-            <NarrationBubble
-              entry={{
-                kind: "narration",
-                id: "greeting",
-                i18nKey: state.memberPath
-                  ? "ob.conv.welcomeMember"
-                  : "ob.conv.welcome",
-              }}
-            />
-          }
-        >
-          {/* What I need from you next, said in the chat and linked to the
-              surface: the machine only speaks when something is ready or
-              needs the human, and then it points. */}
-          {decision !== null && state.pendingQuestion !== null && (
-            <NarrationBubble
-              entry={{
-                kind: "narration",
-                id: "guide:decision",
-                i18nKey: "ob.conv.guide.decision",
-                // The guide names WHAT is being decided, not just that a
-                // decision exists: the question rides along verbatim.
-                params: {
-                  question: t(
-                    state.pendingQuestion.i18nKey,
-                    state.pendingQuestion.params,
-                  ),
-                },
-              }}
-            />
-          )}
-          {/* One line, said only once something is done, ready, or needs the
-              human — never the running commentary a free-text chat would
-              have produced. `blockingCount` leads because it is the number
-              that actually stops confirm; `advisoryCount` is named only when
-              nothing blocks, and always as a look, never as an obstacle — a
-              clean review says so once BOTH are zero, never a bare empty
-              list. */}
-          {reviewScene !== null && (
-            <NarrationBubble
-              entry={
-                blockingCount > 0
-                  ? {
-                      kind: "narration",
-                      id: "guide:review-blocked",
-                      // The count picks a whole key rather than a suffix glued
-                      // onto one string, and WHICH key comes from the reader's
-                      // own plural rule: German does not pluralise the way
-                      // English does, and neither does the next language.
-                      i18nKey: keyFor(
-                        "ob.conv.guide.reviewBlocked",
-                        blockingCount,
-                      ),
-                      params: { count: formatNumber(blockingCount, locale) },
-                      findingIds: blockingFindingIds,
-                    }
-                  : advisoryCount > 0
-                    ? {
-                        kind: "narration",
-                        id: "guide:review-advisory",
-                        i18nKey: keyFor(
-                          "ob.conv.guide.reviewAdvisory",
-                          advisoryCount,
-                        ),
-                        params: { count: formatNumber(advisoryCount, locale) },
-                        findingIds: advisoryFindingIds,
-                      }
-                    : {
-                        kind: "narration",
-                        id: "guide:review-clean",
-                        i18nKey: "ob.conv.guide.reviewClean",
-                      }
-              }
-            />
-          )}
-          {reviewScene !== null && (
-            <ReviewAttention
-              blocking={blocking}
-              decisions={openReviewQuestions}
-              advisory={advisory}
-              t={t}
-            />
-          )}
-          {/* The clarify authorization is a real model round trip; this is
-              its "thinking" beat now that no free-text send can produce one. */}
-          {clarify.authorizing && (
-            <NarrationBubble
-              entry={{
-                kind: "narration",
-                id: "thinking",
-                i18nKey: "ob.ai.thinking",
-              }}
-            />
-          )}
-          {startRead.isError && (
-            <p className="mw-send-error" role="alert">
-              {t("ob.gate.startFailed", {
-                detail: safeStartError(startRead.error, t),
-              })}
-            </p>
-          )}
-          {clarify.failure && (
-            <div role="alert">
-              <NarrationBubble
-                entry={
-                  clarify.failure.kind === "request"
-                    ? {
-                        kind: "narration",
-                        id: "clarify:apply-failed",
-                        i18nKey: "ob.conv.clarify.applyFailed",
-                        params: { detail: clarify.failure.detail },
-                      }
-                    : {
-                        kind: "narration",
-                        id: "clarify:apply-missing",
-                        i18nKey: "ob.conv.clarify.applyMissing",
-                      }
-                }
-              />
-            </div>
-          )}
-          {/* A refused confirm says so on the work surface, beside the
-              control that earned it — see `refusal` above. */}
-        </ConversationThread>
-      </div>
+      {/* The list of what still wants an answer is NOT here: the deck IS that
+          list, met one card at a time and counted in its own tray. Printing it
+          again underneath was the same outstanding work said twice, in a flat
+          order the reader was not being walked through. A failure that needs a
+          retry has no such home, so those stay. */}
+      {startRead.isError && (
+        <p className="ob-conv-notice" role="alert">
+          {t("ob.gate.startFailed", {
+            detail: safeStartError(startRead.error, t),
+          })}
+        </p>
+      )}
+      {clarify.failure && (
+        <p className="ob-conv-notice" role="alert">
+          {clarify.failure.kind === "request"
+            ? t("ob.conv.clarify.applyFailed", {
+                detail: clarify.failure.detail,
+              })
+            : t("ob.conv.clarify.applyMissing")}
+        </p>
+      )}
     </ConversationWorkbench>
   );
+}
+
+/**
+ * What the room says this screen is, per phase.
+ *
+ * THE QUESTION IS THE TITLE while one is pending. A clarify is the whole reason
+ * the screen exists, and the alternative — a standing heading with the question
+ * repeated inside a card below it — is the same sentence twice with the cards
+ * pushed off the fold. `DecisionScene` renders no heading of its own and labels
+ * its options by pointing at this one.
+ */
+function boardHeading(
+  state: ConversationState,
+  t: ReturnType<typeof useT>,
+): Readonly<{ eyebrow?: string; title: string; sub?: string }> {
+  if (state.phase === "co.clarify" && state.pendingQuestion !== null) {
+    return {
+      eyebrow: t("ob.conv.scene.settleEyebrow"),
+      title: t(state.pendingQuestion.i18nKey, state.pendingQuestion.params),
+      sub: t("ob.conv.scene.decisionSub"),
+    };
+  }
+  if (state.phase === "co.manual") {
+    return { title: t("ob.conv.manual.boardTitle") };
+  }
+  return {
+    eyebrow: t("ob.deck.eyebrow"),
+    title: t("ob.deck.title"),
+    sub: t("ob.conv.review.boardSub"),
+  };
 }
 
 // The one predicate for "does this row stop the human continuing" — the
@@ -1095,178 +1016,4 @@ export function CompanyAct({
 // server actually enforces.
 function blocksConfirm(row: ReviewRow): boolean {
   return isRequired(row.field) && row.value.trim() === "";
-}
-
-type AttentionKind = "blocks" | "decision" | "empty" | "check";
-
-type AttentionItem = Readonly<{
-  key: string;
-  field: string;
-  kind: AttentionKind;
-  statusKey: MessageKey;
-}>;
-
-function blockingItems(rows: readonly ReviewRow[]): readonly AttentionItem[] {
-  return rows.map((row) => ({
-    key: `field:${row.field}`,
-    field: row.field,
-    kind: "blocks",
-    statusKey: "ob.conv.guide.attentionStatus.blocks",
-  }));
-}
-
-function decisionItems(
-  decisions: readonly { id: string; field: string }[],
-): readonly AttentionItem[] {
-  return decisions.map((question) => ({
-    key: question.id,
-    field: question.field,
-    kind: "decision",
-    statusKey: "ob.conv.guide.attentionStatus.decision",
-  }));
-}
-
-// Optional-empty and weak-confidence both recede next to the blocking tier,
-// so they share one visible group — but a screen reader still gets the
-// finer distinction through each button's own (visually hidden) status word.
-function advisoryItems(rows: readonly ReviewRow[]): readonly AttentionItem[] {
-  return rows.map((row) => ({
-    key: `field:${row.field}`,
-    field: row.field,
-    kind: row.state === "empty" ? "empty" : "check",
-    statusKey:
-      row.state === "empty"
-        ? "ob.conv.guide.attentionStatus.empty"
-        : "ob.conv.guide.attentionStatus.check",
-  }));
-}
-
-// The review's own outstanding points, as a to-do panel, not a flat list of
-// identical rows: a heading announces it as work to do, then one labelled
-// group per tier that genuinely differs — what stops confirm, what stops it
-// because a decision is pending, and what merely wants a look. `blocking`
-// and `advisory` are the SAME two arrays the driver already used to derive
-// the narration's counts, so the rail can never claim a field is
-// outstanding once the surface has settled it, or call something an
-// obstacle it is not. The blocking group is the only one that ever renders
-// red, and it simply does not render at all once nothing blocks. Each entry
-// reuses the one jump the thread already offers narration — no second
-// highlight mechanism.
-function ReviewAttention({
-  blocking,
-  decisions,
-  advisory,
-  t,
-}: Readonly<{
-  blocking: readonly ReviewRow[];
-  decisions: readonly { id: string; field: string }[];
-  advisory: readonly ReviewRow[];
-  t: ReturnType<typeof useT>;
-}>) {
-  if (
-    blocking.length === 0 &&
-    decisions.length === 0 &&
-    advisory.length === 0
-  ) {
-    return null;
-  }
-  return (
-    <div className="ob-conv-attention">
-      <h3 className="ob-conv-attention-heading">
-        {t("ob.conv.guide.attentionHeading")}
-      </h3>
-      {blocking.length > 0 && (
-        <AttentionGroup
-          groupKey="blocking"
-          label={t("ob.conv.guide.attentionGroup.blocking")}
-          items={blockingItems(blocking)}
-          t={t}
-        />
-      )}
-      {decisions.length > 0 && (
-        <AttentionGroup
-          groupKey="decisions"
-          label={t("ob.conv.guide.attentionGroup.decisions")}
-          items={decisionItems(decisions)}
-          t={t}
-        />
-      )}
-      {advisory.length > 0 && (
-        <AttentionGroup
-          groupKey="advisory"
-          label={t("ob.conv.guide.attentionGroup.advisory")}
-          items={advisoryItems(advisory)}
-          t={t}
-        />
-      )}
-    </div>
-  );
-}
-
-// One tier: a short label naming what the rows below it have in common —
-// legible before any single row is read — then the rows themselves, each
-// just the field name. The label carries the state, so a row never repeats
-// it: the old flat list said "still empty" once per row; this says it once
-// per group.
-function AttentionGroup({
-  groupKey,
-  label,
-  items,
-  t,
-}: Readonly<{
-  groupKey: string;
-  label: string;
-  items: readonly AttentionItem[];
-  t: ReturnType<typeof useT>;
-}>) {
-  const labelId = `ob-conv-attention-${groupKey}`;
-  return (
-    <div className="ob-conv-attention-group">
-      <p className="ob-conv-attention-group-label" id={labelId}>
-        {label}
-      </p>
-      <ul className="ob-conv-attention-list" aria-labelledby={labelId}>
-        {items.map((item) => (
-          <li key={item.key}>
-            <AttentionButton
-              kind={item.kind}
-              field={item.field}
-              statusKey={item.statusKey}
-              t={t}
-            />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// One to-do row: the field's own label is the only VISIBLE text — the
-// group's own heading already said what tier it is in, so repeating that
-// once per row would be the same noise the flat list used to read as. The
-// status word still rides along for a screen reader jumping straight to a
-// button without passing the group heading first.
-function AttentionButton({
-  kind,
-  field,
-  statusKey,
-  t,
-}: Readonly<{
-  kind: AttentionKind;
-  field: string;
-  statusKey: MessageKey;
-  t: ReturnType<typeof useT>;
-}>) {
-  return (
-    <button
-      type="button"
-      data-kind={kind}
-      onClick={() => jumpToFindings([field])}
-    >
-      <span className="ob-conv-attention-field">
-        {coldFieldLabel(field, t)}
-      </span>
-      <span className="sr-only">{t(statusKey)}</span>
-    </button>
-  );
 }

@@ -742,6 +742,7 @@ export function InstallationSetup() {
     ignited !== null ? igniting.state : busy ? "working" : ("idle" as const);
   return (
     <OnboardingStage
+      flow={t("ob.stage.flow")}
       // The room lights the moment the binding lands, a beat before the server
       // is asked again. That is not a second meaning for the indigo — it is the
       // same claim, made by the client that just watched the write succeed
