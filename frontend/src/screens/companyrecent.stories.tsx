@@ -126,3 +126,11 @@ export const MixedKinds: Story = {
     />
   ),
 };
+
+// The same four kinds in dark: each chip is neutral by rule, never the
+// AI-provenance indigo, so this is the story that shows whether that
+// neutrality still holds once the panel itself is dark.
+export const MixedKindsDark: Story = {
+  ...MixedKinds,
+  globals: { theme: "dark" },
+};

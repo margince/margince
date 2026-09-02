@@ -79,6 +79,14 @@ export const Entries: Story = {
   },
 };
 
+// The same change list in dark: the agent-actor line reads "on behalf of"
+// through the same indigo provenance token as light, so this is the story
+// that shows whether that tint still passes against the dark panel.
+export const EntriesDark: Story = {
+  ...Entries,
+  globals: { theme: "dark" },
+};
+
 // Nothing recorded for this record yet: the honest empty state, not a list
 // with no rows in it.
 export const Empty: Story = {

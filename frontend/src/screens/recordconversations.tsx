@@ -13,19 +13,22 @@
 
 import { EmptyState } from "../design-system/atoms";
 import type { TimelineGroup } from "../design-system/composed";
-import { GroupedTimelineList } from "../design-system/composed";
+import {
+  GroupedTimelineList,
+  isConversationKind,
+} from "../design-system/composed";
 import { useT } from "../i18n";
 
-// A conversation is an exchange somebody can answer: mail, or a message on a
-// connected transport. A call or a meeting is an event, and a note is the
-// rep's own aside — all three stay in the chronicle cuts.
-const CONVERSATION_KINDS: ReadonlySet<string> = new Set(["email", "message"]);
-
+// What counts as a conversation is the timeline's own vocabulary
+// (isConversationKind), asked of the group's newest entry — optional-chained
+// because the type admits an empty group even though groupChronology never
+// builds one, and a crash over an impossible shape would take the cut down
+// with it.
 export function conversationGroups(
   groups: readonly TimelineGroup[],
 ): readonly TimelineGroup[] {
   return groups.filter((group) =>
-    CONVERSATION_KINDS.has(group.entries[0].kind),
+    isConversationKind(group.entries[0]?.kind ?? ""),
   );
 }
 

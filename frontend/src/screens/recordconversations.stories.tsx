@@ -104,6 +104,14 @@ export const Populated: Story = {
   ),
 };
 
+// The same two threads in dark: "Your move" and the counterpart's name carry
+// no colour of their own, but the row's inbound/outbound marks do, so this is
+// the story that shows whether either mark still reads against the dark card.
+export const PopulatedDark: Story = {
+  ...Populated,
+  globals: { theme: "dark" },
+};
+
 // No conversation-kind groups at all — a fact about the account, drawn as the
 // honest EmptyState rather than a list with nothing in it.
 export const Empty: Story = { render: () => <List groups={[]} /> };

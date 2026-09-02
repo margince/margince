@@ -90,6 +90,14 @@ type Story = StoryObj<typeof Row>;
 // audit row shown yet.
 export const Collapsed: Story = { render: () => <Row row={pair} /> };
 
+// The same closed row in dark: the net caption and the settled value sit on
+// the panel's own tint, so this is the story that shows whether either
+// flattens against the dark ground.
+export const CollapsedDark: Story = {
+  ...Collapsed,
+  globals: { theme: "dark" },
+};
+
 // Opened: the two member rows it collapsed, each the ordinary
 // `timeline-plain` shape: its own actor, time and verb, not a second,
 // thinner spelling of one.

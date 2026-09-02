@@ -158,6 +158,46 @@ describe("expanding a conversation", () => {
   });
 });
 
+describe("a withheld newest message", () => {
+  it("keeps the collapsed preview off the newest message's body", async () => {
+    const user = userEvent.setup();
+    draw([
+      group("thread-1", [
+        entry("email", {
+          id: "newest",
+          title: "Re: Renewal terms",
+          atIso: "2026-07-03T10:00:00Z",
+          direction: "inbound",
+          withheld: true,
+          body: "only participants may read this line",
+        }),
+        entry("email", {
+          id: "older",
+          title: "Renewal terms",
+          atIso: "2026-07-01T10:00:00Z",
+          direction: "outbound",
+          body: "the opening message",
+        }),
+      ]),
+    ]);
+
+    // Withheld or not, the group's own title still names the thread — the
+    // fix is scoped to the body preview, not to whether the row is there.
+    expect(screen.getByText("Re: Renewal terms")).toBeTruthy();
+    expect(
+      screen.queryByText("only participants may read this line"),
+    ).toBeNull();
+
+    // Opened, the newest member draws through the ordinary TimelineRow,
+    // which is where the withheld sentence actually lives.
+    await user.click(screen.getByRole("button", { name: "Open" }));
+
+    expect(
+      await screen.findByText("Content for participants only"),
+    ).toBeTruthy();
+  });
+});
+
 describe("a record with no conversations", () => {
   it("says so honestly rather than drawing an empty list", () => {
     draw([group("call-1", [entry("call", { id: "call-1" })])]);

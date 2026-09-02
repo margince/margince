@@ -1042,7 +1042,7 @@ export const vi = {
   "finance.titleHistorical": "Tài chính · lịch sử",
   "finance.none": "Chưa ghi nhận gì.",
   "finance.syncing":
-    "Đang đồng bộ với nguồn kế toán — số liệu sẽ hiện sau lần quét đầu tiên.",
+    "Đang đồng bộ với nguồn kế toán. Số liệu sẽ hiện sau lần quét đầu tiên.",
   "finance.noConnection":
     "Chưa kết nối nguồn tài chính — hãy kết nối để thấy khách hàng này đã được xuất hóa đơn bao nhiêu và có trả đúng hạn không",
   "finance.unmapped":

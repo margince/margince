@@ -284,14 +284,19 @@ function DealsCreateVerb({
 }
 
 // The rail's own ranking: a deal that needs a move outranks one that does
-// not, and past that the money decides. Stable for equal weights, so the
-// server's own order — the one every other deal surface shows — is what
-// breaks ties rather than an accident of the sort.
+// not, and past that the money decides — but only between amounts in ONE
+// currency, because minor units of different currencies are not comparable
+// and a raw compare would rank ¥ over € on digit count. Across currencies
+// the sort is stable, so the server's own order — the one every other deal
+// surface shows — is what stands rather than an accident of the compare.
 function byDealWeight(a: Deal, b: Deal): number {
   const needsMove = (deal: Deal) => (deal.attention || deal.stalled ? 1 : 0);
   const moved = needsMove(b) - needsMove(a);
   if (moved !== 0) {
     return moved;
+  }
+  if (a.amount?.currency !== b.amount?.currency) {
+    return 0;
   }
   return (b.amount?.amount_minor ?? 0) - (a.amount?.amount_minor ?? 0);
 }
@@ -475,7 +480,9 @@ function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
             <p className="t-caption">{t("co.rail.people.inTouch")}</p>
             <ul className="co-person-routes-list">
               {colleagues.map((route) => (
-                <li key={route.display_name}>{route.display_name}</li>
+                // Keyed on the id, not the name: two colleagues can share a
+                // display name, and a name key would fold their rows.
+                <li key={route.user_id}>{route.display_name}</li>
               ))}
             </ul>
           </Popover>

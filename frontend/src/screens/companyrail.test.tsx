@@ -653,8 +653,22 @@ describe("CompanyRail", () => {
     if (!dealsPanel) {
       throw new Error("the deals panel has no wrapper");
     }
+    // The attention-carrying deal first, then the two largest amounts of the
+    // remaining four, all in one currency so the tiebreak is deterministic —
+    // a regression in byDealWeight's amount compare must fail this, not just
+    // the count.
     expect(within(dealsPanel).getAllByRole("link").length).toBe(3);
     expect(within(dealsPanel).getByText("Support renewal")).toBeInTheDocument();
+    expect(within(dealsPanel).getByText("Fleet renewal")).toBeInTheDocument();
+    expect(
+      within(dealsPanel).getByText("Spare parts contract"),
+    ).toBeInTheDocument();
+    expect(
+      within(dealsPanel).queryByText("Service contract"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dealsPanel).queryByText("Onboarding add-on"),
+    ).not.toBeInTheDocument();
     expect(
       within(dealsPanel).getByRole("button", { name: "All 5" }),
     ).toBeInTheDocument();

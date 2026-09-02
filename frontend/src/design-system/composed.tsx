@@ -1040,8 +1040,14 @@ function noteClass(entry: TimelineEntry): string {
 }
 
 // A conversation is an exchange somebody can answer: mail, or a message on a
-// connected transport. Calls, meetings and notes are events and asides.
+// connected transport. Calls, meetings and notes are events and asides. ONE
+// spelling — the Conversations cut and the whose-move flag both ask it, and
+// two copies would let a new transport join one answer and not the other.
 const CONVERSATION_KINDS: ReadonlySet<string> = new Set(["email", "message"]);
+
+export function isConversationKind(kind: string): boolean {
+  return CONVERSATION_KINDS.has(kind);
+}
 
 /**
  * MoveFlag is whose move a conversation is waiting on, read off its newest
@@ -1193,8 +1199,9 @@ function TimelineGroupRow({
         {/* The newest message's own words, while the thread is closed: what
             the conversation is ABOUT, without opening it. Expanded, the
             members carry their bodies themselves and a preview above them
-            would say the newest one twice. */}
-        {!open && newest.body && (
+            would say the newest one twice. Never for a withheld entry — a
+            summary row must not show a reader words the row itself refuses. */}
+        {!open && newest.body && !newest.withheld && (
           <TimelineText text={newest.body} email={newest.kind === "email"} />
         )}
         <span className="tl-meta">

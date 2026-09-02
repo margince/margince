@@ -47,3 +47,11 @@ export const WithoutConversations: Story = {
 export const WithConversationsSelected: Story = {
   render: () => <Live initial="conversations" conversations />,
 };
+
+// The four-pill row in dark: the pressed pill carries its state by the same
+// tint as light, so this is the story that shows whether the pressed cut
+// still reads against the dark bar.
+export const WithConversationsSelectedDark: Story = {
+  ...WithConversationsSelected,
+  globals: { theme: "dark" },
+};

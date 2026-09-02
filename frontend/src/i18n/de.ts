@@ -1057,7 +1057,7 @@ export const de = {
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",
   "finance.syncing":
-    "Abgleich mit der Buchhaltungsquelle läuft — Zahlen erscheinen nach dem ersten Durchlauf.",
+    "Abgleich mit der Buchhaltungsquelle läuft. Zahlen erscheinen nach dem ersten Durchlauf.",
   "finance.noConnection":
     "Keine Finanzquelle verbunden — verbinde eine, um zu sehen, was diesem Kunden berechnet wurde und ob er pünktlich zahlt",
   "finance.unmapped":

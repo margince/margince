@@ -1111,7 +1111,7 @@ export const en = {
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",
   "finance.syncing":
-    "Syncing with your accounting source — figures appear once the first sweep lands.",
+    "Syncing with your accounting source. Figures appear once the first sweep lands.",
   "finance.noConnection":
     "No financial source connected — connect one to see what this customer has been invoiced and whether they pay on time",
   "finance.unmapped":
