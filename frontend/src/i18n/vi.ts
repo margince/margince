@@ -3175,149 +3175,7 @@ export const vi = {
   "agent.activity.offerDraft.failed": "Tôi không soạn được báo giá của bạn.",
   "agent.activity.offerDraft.stalled":
     "Việc soạn báo giá của bạn kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.growthFit.queued":
-    "Việc đánh giá mức độ phù hợp của công ty này đang chờ xử lý.",
-  "agent.activity.growthFit.running":
-    "Tôi đang đánh giá công ty này phù hợp đến đâu với những gì chúng ta bán.",
-  "agent.activity.growthFit.stalled":
-    "Việc đánh giá công ty này kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.growthFit.done":
-    "Đánh giá mức độ phù hợp của công ty này đã có.",
-  "agent.activity.growthFit.degraded":
-    "Tôi mới đánh giá công ty này dựa trên một phần bằng chứng rồi dừng.",
-  "agent.activity.growthFit.failed":
-    "Tôi không đánh giá được công ty này phù hợp đến đâu.",
-  "agent.activity.growthFitNamed.queued":
-    "Việc đánh giá mức độ phù hợp của {name} đang chờ xử lý.",
-  "agent.activity.growthFitNamed.running":
-    "Tôi đang đánh giá {name} phù hợp đến đâu với những gì chúng ta bán.",
-  "agent.activity.growthFitNamed.stalled":
-    "Việc đánh giá {name} kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.growthFitNamed.done":
-    "Đánh giá mức độ phù hợp của {name} đã có.",
-  "agent.activity.growthFitNamed.degraded":
-    "Tôi mới đánh giá {name} dựa trên một phần bằng chứng rồi dừng.",
-  "agent.activity.growthFitNamed.failed":
-    "Tôi không đánh giá được {name} phù hợp đến đâu.",
-  "agent.activity.corpusAsk.queued":
-    "Câu hỏi của bạn với các tài liệu đang chờ xử lý.",
-  "agent.activity.corpusAsk.running":
-    "Tôi đang trả lời câu hỏi của bạn từ các tài liệu.",
-  "agent.activity.corpusAsk.stalled":
-    "Việc trả lời từ các tài liệu kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.corpusAsk.done":
-    "Câu trả lời của bạn từ các tài liệu đã sẵn sàng.",
-  "agent.activity.corpusAsk.degraded":
-    "Tôi mới trả lời từ một phần tài liệu rồi dừng.",
-  "agent.activity.corpusAsk.failed": "Tôi không trả lời được từ các tài liệu.",
-  "agent.activity.corpusAskNamed.queued":
-    "Câu hỏi của bạn với {name} đang chờ xử lý.",
-  "agent.activity.corpusAskNamed.running":
-    "Tôi đang trả lời câu hỏi của bạn từ {name}.",
-  "agent.activity.corpusAskNamed.stalled":
-    "Việc trả lời từ {name} kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.corpusAskNamed.done":
-    "Câu trả lời của bạn từ {name} đã sẵn sàng.",
-  "agent.activity.corpusAskNamed.degraded":
-    "Tôi mới trả lời từ một phần {name} rồi dừng.",
-  "agent.activity.corpusAskNamed.failed": "Tôi không trả lời được từ {name}.",
-  "agent.activity.coldStart.queued":
-    "Việc đọc trang web của công ty này đang chờ xử lý.",
-  "agent.activity.coldStart.running": "Tôi đang đọc trang web của công ty này.",
-  "agent.activity.coldStart.stalled":
-    "Việc đọc trang web của công ty này kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.coldStart.done": "Tôi đã đọc xong trang web của công ty này.",
-  "agent.activity.coldStart.degraded":
-    "Tôi mới đọc được một phần trang web của công ty này rồi dừng.",
-  "agent.activity.coldStart.failed":
-    "Tôi không đọc được trang web của công ty này.",
-  "agent.activity.coldStartNamed.queued": "{name} đang chờ được đọc.",
-  "agent.activity.coldStartNamed.running": "Tôi đang đọc {name}.",
-  "agent.activity.coldStartNamed.stalled":
-    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.coldStartNamed.done": "Tôi đã đọc xong {name}.",
-  "agent.activity.coldStartNamed.degraded":
-    "Tôi mới đọc được một phần {name} rồi dừng.",
-  "agent.activity.coldStartNamed.failed": "Tôi không đọc được {name}.",
-  "agent.activity.siteExtract.queued":
-    "Việc đọc kỹ trang web của công ty này đang chờ xử lý.",
-  "agent.activity.siteExtract.running":
-    "Tôi đang đọc kỹ trang web của công ty này.",
-  "agent.activity.siteExtract.stalled":
-    "Việc đọc kỹ trang web của công ty này kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.siteExtract.done":
-    "Tôi đã đọc kỹ xong trang web của công ty này.",
-  "agent.activity.siteExtract.degraded":
-    "Tôi mới đọc kỹ được một phần trang web của công ty này rồi dừng.",
-  "agent.activity.siteExtract.failed":
-    "Tôi không đọc kỹ được trang web của công ty này.",
-  "agent.activity.siteExtractNamed.queued":
-    "Việc đọc kỹ {name} đang chờ xử lý.",
-  "agent.activity.siteExtractNamed.running": "Tôi đang đọc kỹ {name}.",
-  "agent.activity.siteExtractNamed.stalled":
-    "Việc đọc kỹ {name} kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.siteExtractNamed.done": "Tôi đã đọc kỹ xong {name}.",
-  "agent.activity.siteExtractNamed.degraded":
-    "Tôi mới đọc kỹ được một phần {name} rồi dừng.",
-  "agent.activity.siteExtractNamed.failed": "Tôi không đọc kỹ được {name}.",
-  "agent.activity.summarizeNamed.queued":
-    "Việc tổng hợp thông tin về {name} đang chờ xử lý.",
-  "agent.activity.summarizeNamed.running":
-    "Tôi đang tổng hợp những gì tôi biết về {name}.",
-  "agent.activity.summarizeNamed.stalled":
-    "Việc tổng hợp về {name} kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.summarizeNamed.done":
-    "Những gì tôi biết về {name} đã sẵn sàng.",
-  "agent.activity.summarizeNamed.degraded":
-    "Tôi mới tổng hợp được một phần thông tin về {name} rồi dừng.",
-  "agent.activity.summarizeNamed.failed":
-    "Tôi không hoàn thành được việc tổng hợp về {name}.",
-  "agent.activity.draftReplyNamed.queued":
-    "Thư trả lời của bạn gửi {name} đang chờ được soạn.",
-  "agent.activity.draftReplyNamed.running":
-    "Tôi đang soạn thư trả lời của bạn gửi {name}.",
-  "agent.activity.draftReplyNamed.stalled":
-    "Việc soạn thư trả lời của bạn gửi {name} kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.draftReplyNamed.done":
-    "Bản nháp thư trả lời của bạn gửi {name} đã sẵn sàng.",
-  "agent.activity.draftReplyNamed.degraded":
-    "Tôi mới soạn được một phần thư trả lời của bạn gửi {name} rồi dừng.",
-  "agent.activity.draftReplyNamed.failed":
-    "Tôi không soạn được thư trả lời của bạn gửi {name}.",
-  "agent.activity.offerDraftNamed.queued":
-    "Báo giá của bạn cho {name} đang chờ được soạn.",
-  "agent.activity.offerDraftNamed.running":
-    "Tôi đang soạn báo giá của bạn cho {name}.",
-  "agent.activity.offerDraftNamed.stalled":
-    "Việc soạn báo giá của bạn cho {name} kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.offerDraftNamed.done":
-    "Bản nháp báo giá của bạn cho {name} đã sẵn sàng.",
-  "agent.activity.offerDraftNamed.degraded":
-    "Tôi mới soạn được một phần báo giá của bạn cho {name} rồi dừng.",
-  "agent.activity.offerDraftNamed.failed":
-    "Tôi không soạn được báo giá của bạn cho {name}.",
-  "agent.activity.reason.budgetDeferred":
-    "Ngân sách AI tháng này đã dùng hết, nên công việc đang chờ sang tháng sau. Quản trị viên có thể nâng ngân sách trong Cài đặt → AI để chạy ngay.",
-  "agent.activity.reason.budgetDegrade":
-    "Ngân sách AI tháng này gần hết, nên tôi đã chạy trên một mô hình nhỏ hơn. Quản trị viên có thể nâng ngân sách trong Cài đặt → AI.",
-  "agent.activity.reason.budgetUnavailable":
-    "Tôi không đọc được ngân sách AI, nên chưa chạy gì. Hãy thử lại sau ít phút; nếu vẫn xảy ra, hãy báo quản trị viên.",
-  "agent.activity.reason.meteringFailed":
-    "Câu trả lời đã về nhưng không ghi được vào ngân sách, nên đã bị bỏ. Hãy thử lại sau ít phút.",
-  "agent.activity.reason.requestFailed":
-    "Không tạo được yêu cầu từ hồ sơ này. Hãy thử lại; nếu vẫn xảy ra, hãy báo quản trị viên.",
-  "agent.activity.reason.schemaInvalid":
-    "Câu trả lời của mô hình không về đúng dạng tôi dùng được. Hãy thử lại.",
-  "agent.activity.reason.providerQuota":
-    "Hạn mức của nhà cung cấp AI đã dùng hết. Quản trị viên có thể nạp thêm hoặc gắn mô hình khác trong Cài đặt → AI.",
-  "agent.activity.reason.providerThrottled":
-    "Nhà cung cấp AI đang giới hạn số yêu cầu. Hãy chờ một lát rồi thử lại.",
-  "agent.activity.reason.providerRefused":
-    "Nhà cung cấp AI đã từ chối yêu cầu. Hãy thử lại; nếu vẫn xảy ra, quản trị viên có thể kiểm tra nhà cung cấp trong Cài đặt → AI.",
-  "agent.activity.reason.providerError":
-    "Nhà cung cấp AI không trả lời. Hãy thử lại sau ít phút; nếu vẫn xảy ra, quản trị viên có thể kiểm tra nhà cung cấp trong Cài đặt → AI.",
   "agent.panel.runningNow": "Đang chạy",
-  "agent.panel.wentWrong": "Hôm nay có gì trục trặc",
 
   "agents.connected": "Agent đã kết nối",
   "agents.connectedSub":
@@ -7849,6 +7707,8 @@ export const vi = {
   "worklist.untitled.batch": "Một nhóm quyết định thường lệ",
   "worklist.verb.review_batch": "Xem lại",
   "worklist.verb.draft_reply": "Mở để trả lời",
+  // Nơi trình soạn thảo thực sự mở ra, động từ là HÀNH ĐỘNG.
+  "worklist.verb.draft_reply_now": "Soạn câu trả lời",
   "worklist.deal.closes": "chốt {date}",
   "worklist.batch.system_incident": "{cause} đã lỗi {count} lần",
   "worklist.batch.unnamedCause": "Một tác vụ",

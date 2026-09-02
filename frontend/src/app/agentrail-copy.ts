@@ -250,11 +250,7 @@ export const WROTE: Readonly<Record<string, [named: string, plain: string]>> = {
   enrich: ["Enriching %s", "Enriching a contact"],
   ingest: ["Ingesting %s", "Ingesting"],
   "lead-edit": ["Editing %s", "Editing a lead"],
-  // No `site-read` entry. The deep read is narrated by the rail from the
-  // server's feed (`site_extract`, ai-activity-lines.ts), which names the site
-  // being read for as long as the AI is reading it; the mutation that starts
-  // the read is one click, and a line for the click beside a line for the work
-  // would be two vocabularies for one action.
+  "site-read": ["Reading the %s website", "Reading a website"],
   "task-new": ["Adding a task on %s", "Adding a task"],
 };
 

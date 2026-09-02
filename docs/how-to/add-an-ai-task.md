@@ -267,16 +267,6 @@ and it caps how much of the site one certification run can cover:
    carrier can say `queued`/`running` and declare the lease that makes `stalled`
    derivable.
 
-   If the task is about ONE record a person asked about — a company, a contact,
-   a deal, a website — bind its display name in the compose service that loaded
-   it, right where the lane is called:
-   `lane.Complete(principal.WithWorkSubject(ctx, in.Name), req)`. The router
-   stamps it on the occurrence as `subject_label`, and the rail then says
-   "I'm drafting your reply to Anna Berg" rather than that a reply is being
-   drafted. Add the kind to `NAMED_LINE` with copy in en/de/vi; the test
-   `names the subject for every kind a person asks for about one record` lists
-   the kinds that owe one.
-
 ## Notes
 
 - **A record is a claim about one (provider, model, env) binding**, not about the

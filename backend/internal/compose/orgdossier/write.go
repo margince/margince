@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -96,7 +95,7 @@ func WriteDossier(ctx context.Context, lane Completer, in Input, lang string) ([
 }
 
 func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) ([]Section, error) {
-	resp, err := lane.Complete(principal.WithWorkSubject(ctx, in.Name), DossierRequest(in, lang))
+	resp, err := lane.Complete(ctx, DossierRequest(in, lang))
 	if err != nil {
 		return nil, err
 	}

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { components } from "../api/schema";
 
 type AiActivityItem = components["schemas"]["AiActivityItem"];
-type ActivityKind = AiActivityItem["kind"];
 
 /**
  * The run that broke, held on the orb until somebody has actually looked at it.
@@ -38,47 +37,6 @@ const SEEN_KEY = "margince.agent.faults-seen";
  * that the feed no longer carries.
  */
 const SEEN_CAP = 20;
-
-/**
- * The kinds a person asks for and then waits on, where the surface that asked
- * reports the outcome itself: the composer shows the draft that came back or
- * the floor it fell to, the company page shows the brief, the fit, the answer,
- * the read.
- *
- * A fault in one of these is DELIVERED the moment it happens, on the screen the
- * reader is looking at, so the orb has nothing left to hold it for. It still
- * colours — a reader glancing at the corner should see that the ask broke — but
- * for FLASH_MS and no longer, after which it counts as seen and stays in the
- * panel's list of what went wrong today. Holding it until the panel was opened
- * kept the orb red through the whole afternoon over a draft the reader had
- * already retried and sent.
- *
- * Everything not named here is the scheduled and background work — the brief,
- * the sweep, the review, the document reading — that fails while nobody is
- * looking and has no other screen to land on. Those hold until acknowledged,
- * which is the rule this module was built for.
- *
- * Typed against the contract's own kinds, so a renamed task fails the build
- * here rather than quietly falling into the held-until-seen half.
- */
-const ATTENDED: ReadonlySet<ActivityKind> = new Set<ActivityKind>([
-  "summarize",
-  "draft_reply",
-  "offer_draft",
-  "growth_fit",
-  "corpus_ask",
-  "cold_start",
-  "site_extract",
-]);
-
-/**
- * How long an attended fault colours the orb before it counts as seen.
- *
- * Long enough to be noticed by a reader who looked away from the screen that
- * reported it, short enough that it is over before they have finished reading
- * the reason that screen gave them.
- */
-const FLASH_MS = 8_000;
 
 /** `failed` is red; a run that kept partial state is amber and not a break. */
 export type FaultSeverity = "error" | "warning";
@@ -174,68 +132,21 @@ export function useAgentFault(
     [recent, seen],
   );
 
-  const markSeen = useCallback((ids: readonly string[]) => {
-    if (ids.length === 0) {
+  const acknowledge = useCallback(() => {
+    if (unacknowledged.length === 0) {
       return;
     }
     setSeen((current) => {
-      const next = [...ids, ...current].slice(0, SEEN_CAP);
+      const next = [
+        ...unacknowledged.map((entry) => entry.item.id),
+        ...current,
+      ].slice(0, SEEN_CAP);
       writeSeen(next);
       return next;
     });
-  }, []);
-
-  const acknowledge = useCallback(() => {
-    markSeen(unacknowledged.map((entry) => entry.item.id));
-  }, [markSeen, unacknowledged]);
+  }, [unacknowledged]);
 
   // The orb carries one state, so it carries the FIRST fault: `recent` is
   // newest-first, and the newest break is the one worth colouring for.
-  const fault = unacknowledged[0] ?? null;
-
-  // EVERY attended fault times out on its own, not only the one the orb happens
-  // to show. A scheduled fault that arrived later stands in front of an older
-  // attended one, and a timer armed for the front of the list alone would leave
-  // that attended fault waiting behind it — to flash, hours late, the moment
-  // the scheduled one was acknowledged. Each attended fault gets its own clock
-  // from the moment it is first seen, kept in a ref rather than re-armed on
-  // every render, so a neighbour arriving does not restart a flash that was
-  // already mostly over.
-  const attended = unacknowledged
-    .filter((entry) => ATTENDED.has(entry.item.kind))
-    .map((entry) => entry.item.id);
-  const flashes = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-  useEffect(() => {
-    const live = new Set(attended);
-    for (const [id, timer] of flashes.current) {
-      if (!live.has(id)) {
-        clearTimeout(timer);
-        flashes.current.delete(id);
-      }
-    }
-    for (const id of attended) {
-      if (!flashes.current.has(id)) {
-        flashes.current.set(
-          id,
-          setTimeout(() => {
-            flashes.current.delete(id);
-            markSeen([id]);
-          }, FLASH_MS),
-        );
-      }
-    }
-  }, [attended, markSeen]);
-  // The last word belongs to the unmount: a timer left behind would mark a
-  // fault seen on a rail that no longer exists.
-  useEffect(() => {
-    const armed = flashes.current;
-    return () => {
-      for (const timer of armed.values()) {
-        clearTimeout(timer);
-      }
-      armed.clear();
-    };
-  }, []);
-
-  return { fault, acknowledge };
+  return { fault: unacknowledged[0] ?? null, acknowledge };
 }

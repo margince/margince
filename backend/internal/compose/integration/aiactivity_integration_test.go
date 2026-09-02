@@ -56,7 +56,6 @@ type change struct {
 	attempt       int
 	state         string
 	degradeReason string
-	subjectLabel  string
 }
 
 func (a *aiActivityEnv) build(c change) aiactivity.Change {
@@ -71,7 +70,6 @@ func (a *aiActivityEnv) build(c change) aiactivity.Change {
 		State:         c.state,
 		QueuedAt:      a.queuedAt,
 		DegradeReason: c.degradeReason,
-		SubjectLabel:  c.subjectLabel,
 		EventID:       ids.NewV7(),
 	}
 	started := a.queuedAt.Add(time.Second)
@@ -111,7 +109,6 @@ type projected struct {
 	StartedAt     *time.Time
 	FinishedAt    *time.Time
 	DegradeReason *string
-	SubjectLabel  *string
 	Seq           int64
 }
 
@@ -119,31 +116,14 @@ func (a *aiActivityEnv) read(t *testing.T) projected {
 	t.Helper()
 	var row projected
 	err := a.env.Pool.QueryRow(context.Background(),
-		`SELECT state, attempt, started_at, finished_at, degrade_reason, subject_label, seq
+		`SELECT state, attempt, started_at, finished_at, degrade_reason, seq
 		   FROM ai_task_run WHERE source = $1 AND occurrence_key = $2`,
 		"attachment_extraction", a.occurrenceKey).
-		Scan(&row.State, &row.Attempt, &row.StartedAt, &row.FinishedAt, &row.DegradeReason, &row.SubjectLabel, &row.Seq)
+		Scan(&row.State, &row.Attempt, &row.StartedAt, &row.FinishedAt, &row.DegradeReason, &row.Seq)
 	if err != nil {
 		t.Fatalf("reading the projected occurrence: %v", err)
 	}
 	return row
-}
-
-// What the work is about is named on whichever event carries the name and
-// survives the events that do not: a settle without a label must not blank
-// the name the rail already showed while the run was live.
-func TestAIActivityASettleWithoutALabelKeepsTheNameTheRunWasAnnouncedWith(t *testing.T) {
-	env := newAIActivityEnv(t)
-	env.apply(t, change{attempt: 1, state: "running", subjectLabel: "Q3-offer.pdf"})
-	env.apply(t, change{attempt: 1, state: "done"})
-
-	row := env.read(t)
-	if row.State != "done" {
-		t.Fatalf("state = %s, want done", row.State)
-	}
-	if row.SubjectLabel == nil || *row.SubjectLabel != "Q3-offer.pdf" {
-		t.Fatalf("subject_label = %v, want the name the running event carried", row.SubjectLabel)
-	}
 }
 
 // A released reading goes BACKWARDS — running to queued — and the projection

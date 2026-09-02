@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -193,7 +192,7 @@ func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 func assessWithModel(ctx context.Context, lane Completer, in Input,
 	selfConfirmed bool, now nowFunc, lang string,
 ) (Assessment, error) {
-	resp, err := lane.Complete(principal.WithWorkSubject(ctx, in.Name), GrowthFitRequest(in, lang))
+	resp, err := lane.Complete(ctx, GrowthFitRequest(in, lang))
 	if err != nil {
 		return Assessment{}, err
 	}

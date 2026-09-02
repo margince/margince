@@ -181,13 +181,9 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 		return DraftResult{}, err
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(before.DealId))
-	deal, err := d.deals.GetDeal(ctx, dealID, storekit.LiveOnly)
-	if err != nil {
+	if _, err := d.deals.GetDeal(ctx, dealID, storekit.LiveOnly); err != nil {
 		return DraftResult{}, err
 	}
-	// The rail names the deal the offer is drafted for; an offer has no title
-	// of its own that a reader would recognise.
-	ctx = principal.WithWorkSubject(ctx, deal.Name)
 
 	dealContext, err := d.gatherDealContext(ctx, dealID)
 	if err != nil {

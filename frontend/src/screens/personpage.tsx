@@ -46,6 +46,7 @@ import { PersonComposer, PersonResearchDrawer } from "./persondrawers";
 import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";
+import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
 import { PersonRail } from "./personrail";
 import { PersonResearchTab } from "./personresearch";
 import { PersonStrip } from "./personstrip";
@@ -301,6 +302,13 @@ export function PersonPageV2({
   // on the floor and opened the same empty composer as the generic button, so
   // "Draft a follow-up" and "Write an email" did exactly the same thing.
   const [composerIntent, setComposerIntent] = useState("");
+  // BOTH doors to the composer, answered in one place: the address opens it on
+  // arrival, pressing "Write an email" opens it after. The page is at its
+  // complexity ceiling — the lint says so — so the question is settled in the
+  // hook rather than in two conditionals in the markup.
+  const composer = useComposer(t, drawer === "composer", composerIntent, () =>
+    setDrawer(null),
+  );
 
   // Every path to the composer goes through here, and the intent it opens with
   // is decided ONCE, on the way in. Two rules the two callers each get wrong on
@@ -485,9 +493,9 @@ export function PersonPageV2({
           personId={id}
           view={view.data}
           guard={guard.data}
-          open={drawer === "composer"}
-          intent={composerIntent}
-          onClose={() => setDrawer(null)}
+          open={composer.open}
+          intent={composer.intent}
+          onClose={composer.close}
         />
         <PersonMailDrawer
           personId={id}
@@ -533,11 +541,6 @@ type Drawer =
   | "activity_task"
   | null;
 
-// The query key naming which meeting is being briefed. One spelling, because
-// another screen composes this address and this one reads it; two would be a
-// link that opens nothing.
-export const BRIEF_PARAM = "prep";
-
 /**
  * Which meeting the address says to brief, and how to change it.
  *
@@ -555,6 +558,49 @@ export const BRIEF_PARAM = "prep";
  * complexity ceiling — the lint says so — and this is one idea a reader should
  * be able to take in on its own.
  */
+/**
+ * Whether the composer is open, what it is about, and how to close it.
+ *
+ * TWO DOORS, one answer. A reader presses "Write an email" on this page, or
+ * arrives on `?compose=reply` from another screen — the worklist's
+ * `draft_reply` move. Both end here, so neither caller has to know about the
+ * other.
+ *
+ * The address half is DERIVED, not seeded, the same reason the brief drawer is:
+ * a drawer held in state stays open when the reader navigates back out of it,
+ * and deriving makes Back close it, which is what pressing Back means.
+ *
+ * An intent this client does not know opens NOTHING rather than an empty
+ * composer: an address is something a person can type, and a stray
+ * `?compose=x` silently starting an email is worse than a link that does not
+ * work.
+ */
+function useComposer(
+  t: ReturnType<typeof useT>,
+  pressedOpen: boolean,
+  pressedIntent: string,
+  onPressedClose: () => void,
+): Readonly<{ open: boolean; intent: string; close: () => void }> {
+  const [params, setParams] = useUrlParams();
+  const asked = params.get(COMPOSE_PARAM);
+  const key = asked ? COMPOSER_INTENT_KEYS[asked] : undefined;
+  const close = () => {
+    onPressedClose();
+    // The address goes with it, or Back would re-open what the reader just
+    // closed and the link could never be dismissed.
+    if (asked) {
+      const out = new Map(params);
+      out.delete(COMPOSE_PARAM);
+      setParams(out);
+    }
+  };
+  return {
+    open: pressedOpen || key !== undefined,
+    intent: key ? t(key) : pressedIntent,
+    close,
+  };
+}
+
 function useBriefedMeeting(): [
   string | null,
   (activityId: string | null) => void,

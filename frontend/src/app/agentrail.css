@@ -992,11 +992,3 @@
   font-size: 13px;
   line-height: 1.35;
 }
-/* Why a run stopped and what to do about it, under the run's own line. Quieter
-   than the line, because the line is the news and this is the footnote a reader
-   turns to once they have it. */
-.arrunwhy {
-  color: var(--textMeta);
-  font-size: 12px;
-  line-height: 1.35;
-}

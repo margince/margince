@@ -81,9 +81,6 @@ func (r *Router) newAttemptTrace(ctx context.Context, task Task, key, reason str
 	if rid, ok := principal.AgentRunID(ctx); ok {
 		trace.AgentRunID = &rid
 	}
-	if subject, ok := principal.WorkSubject(ctx); ok {
-		trace.SubjectLabel = subject
-	}
 	return trace
 }
 

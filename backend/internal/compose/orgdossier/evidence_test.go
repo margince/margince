@@ -17,7 +17,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -248,12 +247,6 @@ func TestAKindWithNoReceiptAnswersNotFound(t *testing.T) {
 // stubFacts serves one prepared input, so the dispatch can be proven without a
 // database — the row-scoped reads it wraps are proven in the integration lane.
 type stubFacts struct{ in Input }
-
-func (s stubFacts) GetOrganization(
-	context.Context, ids.OrganizationID, storekit.ArchivedFilter,
-) (crmcontracts.Organization, error) {
-	return crmcontracts.Organization{DisplayName: s.in.Name}, nil
-}
 
 func (s stubFacts) ListOrganizationProfileFields(
 	context.Context, ids.OrganizationID,

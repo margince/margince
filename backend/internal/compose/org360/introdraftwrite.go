@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -57,7 +56,7 @@ func writeIntroRequest(
 func introFromModel(
 	ctx context.Context, lane Completer, facts introFacts,
 ) (introDraft, error) {
-	res, err := lane.Complete(principal.WithWorkSubject(ctx, facts.contact), introRequest(facts))
+	res, err := lane.Complete(ctx, introRequest(facts))
 	if err != nil {
 		return introDraft{}, fmt.Errorf("org360: drafting the introduction request: %w", err)
 	}
