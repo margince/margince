@@ -409,6 +409,8 @@ var tableOwners = map[string]string{
 	// that decides the next morning's overnight window, and weekly content on
 	// brief_item would be cascaded away by deleting a deal.
 	"weekly_review":          "internal/compose/weekly",
+	"team_weekly_review":     "internal/compose/weekly",
+	"team_weekly_review_rep": "internal/compose/weekly",
 	"weekly_plan":            "internal/modules/weeklyplan",
 	"weekly_plan_commitment": "internal/modules/weeklyplan",
 	"weekly_review_deal":     "internal/compose/weekly",

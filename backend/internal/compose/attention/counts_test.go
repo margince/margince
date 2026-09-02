@@ -168,7 +168,7 @@ func TestCountsAreOrderedTheSameWayTwice(t *testing.T) {
 // lane fails here rather than reporting its truncation against the wrong cut.
 func TestTheSourceMapAgreesWithTheClassifiers(t *testing.T) {
 	for _, l := range everyLane() {
-		rows := classifyDay(l.day, rankInstant)
+		rows := classifyDay(l.day, rankInstant, dayMoney{})
 		if len(rows) != 1 {
 			t.Fatalf("%s: the lane classified %d rows, and the fixture holds one", l.source, len(rows))
 		}
@@ -257,7 +257,7 @@ func everyWorklistSource() []crmcontracts.WorklistItemSource {
 // tomorrow is covered by being added THERE — one fixture list, two obligations.
 func TestNoCategoryHoldsWorkWhileReportingNone(t *testing.T) {
 	for _, l := range everyLane() {
-		rows := classifyDay(l.day, rankInstant)
+		rows := classifyDay(l.day, rankInstant, dayMoney{})
 		counts := countsOf(rows, rows, map[crmcontracts.WorklistItemSource]bool{})
 
 		category := rows[0].item.Category
@@ -285,7 +285,7 @@ func TestNoCategoryHoldsWorkWhileReportingNone(t *testing.T) {
 // another route: not a wrong number, an absent one.
 func TestACategoryCutFromThePageStillReportsWhatItHeld(t *testing.T) {
 	for _, l := range everyLane() {
-		rows := classifyDay(l.day, rankInstant)
+		rows := classifyDay(l.day, rankInstant, dayMoney{})
 		// Considered everything, shown nothing.
 		counts := countsOf(rows, nil, map[crmcontracts.WorklistItemSource]bool{})
 

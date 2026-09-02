@@ -70,8 +70,14 @@ var (
 // once stated as an invariant — "no migration seeds reference data a test
 // depends on" — and migration 0240 was the first to break that assumption
 // (activity_kind, channel_provider: DESIGN-SP4 §4; the lead_source and
-// lead_disqualify_reason vocabularies and the field_mask seed since). A reset
-// that DELETEd them
+// lead_disqualify_reason vocabularies and the field_mask seed since).
+//
+// currency_minor_digits is the same shape and the newest member: a migration
+// seeds the codes whose minor unit is not two, and SQL money conversions read
+// it. Emptied, every foreign amount silently converts at two digits, which is
+// right for most currencies and a hundredfold wrong for a yen one — a reset
+// that un-seeded it would make the money tests pass or fail by which test ran
+// first. A reset that DELETEd them
 // would silently un-seed every test's fixed activity kinds and telegram's
 // channel-provider row, and the failure would surface somewhere else entirely
 // — a foreign-key violation on an activity insert with no visible connection
@@ -104,7 +110,22 @@ const resetTables = `
 	  AND c.relkind = 'r'
 	  AND c.relname NOT LIKE 'schema_migrations_%'
 	  AND c.relname <> 'river_migration'
-	  AND c.relname NOT IN ('activity_kind', 'channel_provider', 'lead_source', 'lead_disqualify_reason', 'field_mask', 'overlay_mode')`
+	  AND c.relname NOT IN ` + PreservedReferenceTables
+
+// PreservedReferenceTables is the SQL list of boot-seeded reference tables a
+// reset must leave alone, as one spelling.
+//
+// Exported because reset_integration_test.go asks the SAME question from the
+// other side — which relations the reset must COVER — and it was answering with
+// a hand-copied duplicate of this list. Two copies of one exclusion is how a
+// table added to the reset passes one test and fails the other, which is
+// exactly what a new reference table did: the sweep kept it and the coverage
+// gate reported it as leaking.
+//
+// A gate derives its corpus from the owner it protects rather than restating
+// it, so the corpus lives here beside the reset that owns it.
+const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
+	`'lead_disqualify_reason', 'field_mask', 'overlay_mode', 'currency_minor_digits')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the

@@ -201,11 +201,31 @@ func (s *Store) targetInBase(ctx context.Context, tx pgx.Tx, q crmcontracts.Quot
 		return q.TargetMinor, base, nil
 	}
 	asOfDay := asOf.Format(time.DateOnly)
+	// Both currencies' minor-unit scales, from the same currency_minor_digits
+	// table organization_open_pipeline_rollup reads — the SQL mirror of
+	// values.currencyMinorDigits, held by backend/gates/sqlminorunits_test.go.
+	//
+	// A bare `round(target * rate)` is the multiply that ignores them: a stored
+	// rate says what one MAJOR unit is worth while both amounts count MINOR
+	// units, so a ¥5,000,000 quota against a EUR base came back as €300. The
+	// engine in deals spells the same rule for Go callers; this module cannot
+	// import that one (a module never imports a sibling), which is exactly why
+	// the digit table is in the database where both can reach it.
+	//
+	// One round() at the end, over exact numeric, so the intermediate carries
+	// no error to accumulate.
 	var converted int64
 	err = tx.QueryRow(ctx,
-		`SELECT round($1::numeric * rate)::bigint FROM fx_rate
-		 WHERE from_currency = $2 AND to_currency = $3 AND rate_date <= $4::date
-		 ORDER BY rate_date DESC LIMIT 1`,
+		`SELECT round(
+		            $1::numeric * rate
+		              * power(10::numeric, coalesce(base_digits.digits, 2))
+		              / power(10::numeric, coalesce(from_digits.digits, 2))
+		        )::bigint
+		   FROM fx_rate
+		   LEFT JOIN currency_minor_digits from_digits ON from_digits.currency = $2
+		   LEFT JOIN currency_minor_digits base_digits ON base_digits.currency = $3
+		  WHERE from_currency = $2 AND to_currency = $3 AND rate_date <= $4::date
+		  ORDER BY rate_date DESC LIMIT 1`,
 		q.TargetMinor, q.Currency, base, asOfDay).Scan(&converted)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, "", fmt.Errorf("no fx_rate from %s to %s on or before %s: %w",

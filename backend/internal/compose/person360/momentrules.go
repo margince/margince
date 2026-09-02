@@ -12,16 +12,13 @@ package person360
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -281,28 +278,20 @@ func findActivityAt(page *crmcontracts.Person360, at time.Time) (crmcontracts.Ac
 // fingerprintOf digests what a moment fired on, so a dismissal can be held
 // against the evidence rather than against the moment's name.
 //
-// It hashes the identity and timing of each piece — not the label, which is
-// prose this build may reword without the underlying fact having moved. A
-// reworded headline must not silently un-dismiss a moment the reader put away.
+// The digest itself is kernel/owedwork's, shared with the company page's card:
+// two spellings of one hash do not fail loudly when they drift, they silently
+// stop matching, and every dismissal a reader ever made stops working at once.
+// This maps the contract's evidence into the marks that hash reads.
 func fingerprintOf(evidence []crmcontracts.PersonMomentEvidence) string {
-	// Built as one string and hashed once. sha256's Write never returns an
-	// error, but writing through it would still spread unchecked returns
-	// across four calls to say something a single Sum says here.
-	var b strings.Builder
+	marks := make([]owedwork.Mark, 0, len(evidence))
 	for _, e := range evidence {
-		b.WriteString(string(e.Type))
-		b.WriteByte(0)
+		mark := owedwork.Mark{Kind: string(e.Type), At: e.ObservedAt}
 		if e.Id != nil {
-			b.WriteString(e.Id.String())
+			mark.ID = e.Id.String()
 		}
-		b.WriteByte(0)
-		if e.ObservedAt != nil {
-			b.WriteString(strconv.FormatInt(e.ObservedAt.UTC().UnixNano(), 10))
-		}
-		b.WriteByte(0)
+		marks = append(marks, mark)
 	}
-	sum := sha256.Sum256([]byte(b.String()))
-	return hex.EncodeToString(sum[:])
+	return owedwork.Fingerprint(marks)
 }
 
 // entityType lifts a destination's entity type, which the contract models as a
