@@ -44,7 +44,7 @@ make check                                 # free: every gate names what is miss
 make e2e-ai-report                         # free: your site now shows as `absent`
 
 # 4. carry the new site into the committed certification page
-go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
+cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
 ```
 
 **Run `make check` early and often — it is the whole feedback loop.** The gates
@@ -226,7 +226,7 @@ and it caps how much of the site one certification run can cover:
      MODEL=gemini:gemini-3.1-flash-lite \
      JUDGE=anthropic:claude-sonnet-4-6
    make e2e-ai-report                # free: band, scope, binding, counts, scenario coverage
-   go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
+   cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
    ```
 
    That last line rewrites

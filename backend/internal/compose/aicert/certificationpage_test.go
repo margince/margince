@@ -49,7 +49,7 @@ var updateAICert = flag.Bool("update-ai-cert", false,
 // aiCertRegenerate is the command a reader is sent to run — read by the drift
 // failure and printed into the page's own opening line, so both quote whatever
 // this constant says.
-const aiCertRegenerate = "go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert"
+const aiCertRegenerate = "cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert"
 
 // corpusLinkPrefix turns a scenario's loader path into a link a reader of
 // docs/reference/ can follow. The corpus is read at a path relative to this
