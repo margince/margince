@@ -7832,6 +7832,8 @@ export const de = {
     "Über dem Nächsten: {mine} gegen {theirs}.",
   "worklist.above.relationship":
     "Über dem Nächsten wegen der engeren Beziehung.",
+  "worklist.above.crowded":
+    "Über dem Nächsten, weil davon viele gleichzeitig anstehen.",
   "worklist.consequence.buyer_waits": "Wenn du nichts tust, warten sie weiter.",
   "worklist.consequence.promise_breaks":
     "Wenn du nichts tust, brichst du eine Zusage.",

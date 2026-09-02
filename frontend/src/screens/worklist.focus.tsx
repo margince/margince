@@ -17,15 +17,17 @@ import { Badge } from "../design-system/atoms";
 import { Panel } from "../design-system/panel";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 import {
   consequenceText,
   dealFactsText,
   itemTitle,
   moveHref,
+  moveOpensComposer,
   reasonText,
   rowHref,
 } from "./worklist.copy";
-import type { WorklistItem } from "./worklist.queries";
+import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 // The focus card, or nothing.
 //
@@ -72,20 +74,64 @@ export function FocusCard({ item }: Readonly<{ item: WorklistItem }>) {
             the list again in a bigger box. Everything else this row supports
             stays available on its own row below. */}
         <div className="worklist-focus-verb">
-          {move ? (
-            <a className="button button-primary" href={move}>
-              {t("worklist.verb.draft_reply")}
-            </a>
-          ) : (
-            href && (
-              <a className="button button-primary" href={href}>
-                {t(`worklist.focus.verb.${item.primary_action ?? "open"}`)}
-              </a>
-            )
-          )}
+          <FocusVerb item={item} href={href} move={move} />
         </div>
       </div>
     </Panel>
+  );
+}
+
+// The card's single verb.
+//
+// Three shapes, and which one is drawn is decided by what the verb can actually
+// DO — not by what reads best. A card whose strongest control promises more
+// than it performs is worse than one that promises less: the reader believes
+// the work is done and moves on.
+//
+// `complete` on a task is the case that made this a component. The label said
+// "Complete it" over a link to the task's record, so pressing it navigated and
+// completed nothing. The mutation exists and every other surface already uses
+// it, so the card completes the task rather than renaming the promise down.
+function FocusVerb({
+  item,
+  href,
+  move,
+}: Readonly<{
+  item: WorklistItem;
+  href: string | undefined;
+  move: string | undefined;
+}>) {
+  const t = useT();
+  const update = useTaskUpdate([worklistKey]);
+  if (item.source === "task" && item.primary_action === "complete") {
+    return (
+      <TaskQuickActions
+        activityId={item.id}
+        dueAt={item.due_at}
+        update={update}
+      />
+    );
+  }
+  if (move) {
+    return (
+      <a className="btn btn-primary" href={move}>
+        {/* The row makes this distinction and the card used to drop it, so the
+            same address was described two ways on one screen. */}
+        {t(
+          moveOpensComposer(item)
+            ? "worklist.verb.draft_reply_now"
+            : "worklist.verb.draft_reply",
+        )}
+      </a>
+    );
+  }
+  if (!href) {
+    return null;
+  }
+  return (
+    <a className="btn btn-primary" href={href}>
+      {t(`worklist.focus.verb.${item.primary_action ?? "open"}`)}
+    </a>
   );
 }
 

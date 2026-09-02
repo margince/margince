@@ -65,6 +65,18 @@ function reviewFilter(item: WorklistItem): WorklistFilter {
   return item.category === "system" ? "system" : "decisions";
 }
 
+// What identifies one row on this page.
+//
+// The SOURCE and the id together, because `id` alone is not unique across the
+// queue: a task and a waiting message may carry the same underlying record's
+// id, and the lanes mint ids independently. The React key has always spelled
+// it this way; the selected-row state used the bare id, so two rows sharing one
+// could both light up pressed while the pane resolved to whichever came first.
+// One function now, read by both, so they cannot drift apart again.
+function rowIdentity(item: WorklistItem): string {
+  return `${item.source}-${item.id}`;
+}
+
 // Whether this row opens its band — the first banded row, or the first after a
 // row of a DIFFERENT band.
 //
@@ -201,10 +213,10 @@ function WorklistBody({
   // one kind of work — worklist.nextup.tsx says why that is the ranking's to
   // fix rather than this page's.
   const next = nextUpOf(day.queue, focus);
-  // The row the pane is about. Resolved from the id rather than held as the
-  // item itself: a refetch replaces every row object, and a held one would go
-  // on describing a version of the day that is no longer on screen.
-  const selected = day.queue.find((item) => item.id === selectedId);
+  // The row the pane is about. Resolved from the identity rather than held as
+  // the item itself: a refetch replaces every row object, and a held one would
+  // go on describing a version of the day that is no longer on screen.
+  const selected = day.queue.find((item) => rowIdentity(item) === selectedId);
   return (
     <>
       <WorklistHeader
@@ -286,7 +298,7 @@ function WorklistBody({
             <Panel title={t("worklist.queue")}>
               <ol className="worklist-list">
                 {day.queue.map((item, index) => (
-                  <li key={`${item.source}-${item.id}`}>
+                  <li key={rowIdentity(item)}>
                     {/* The heading, drawn where the band CHANGES. The server sends
                     the queue already sorted so each band is one contiguous run,
                     so a change is a boundary and never a second visit — which
@@ -303,9 +315,21 @@ function WorklistBody({
                       item={item}
                       position={index + 1}
                       owner={owner}
-                      selected={selectedId === item.id}
-                      onSelect={() =>
-                        onSelect(selectedId === item.id ? "" : item.id)
+                      selected={selectedId === rowIdentity(item)}
+                      // Only where pressing it OPENS something. WorklistRow
+                      // draws a plain number without this, which is what the
+                      // Brief already relies on: a rank that toggles a pressed
+                      // state and opens nothing teaches the reader that the
+                      // page lies about what is pressable.
+                      onSelect={
+                        hasPane(item)
+                          ? () =>
+                              onSelect(
+                                selectedId === rowIdentity(item)
+                                  ? ""
+                                  : rowIdentity(item),
+                              )
+                          : undefined
                       }
                       onReview={() => onFilter(reviewFilter(item))}
                     />
