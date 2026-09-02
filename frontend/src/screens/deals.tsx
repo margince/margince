@@ -3693,11 +3693,6 @@ function DealOverviewPane({
       {/* A won deal with no project, on a company with exactly one open
           project, is offered that project once. Nothing else here asks. */}
       {!overlay && <StartDeliveryPrompt deal={deal} />}
-      {/* How this deal is filed. It rides in the overview rather than in a
-          rail, because this record page has no rail column: RecordView
-          collapses to one column when it is handed neither, and giving the
-          deal a rail for one card would move every block on the page. */}
-      <DealTagsSection deal={deal} />
       {/* A group, not a nav: these buttons move the deal, they do not take the
           reader anywhere, and a landmark in the navigation list that writes
           when you press it misdescribes what it does. */}
@@ -4025,6 +4020,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   pending={coverageRead.pending}
                   overlay={overlay}
                 />
+                {/* How this deal is filed, in the rail with the rest of its
+                    context — the same card a person and a company draw, in the
+                    same column of their pages. It sat full-width in the
+                    overview before, between the readings and the stage
+                    stepper, where a reader looking for the record's context
+                    was not looking. */}
+                <DealTagsSection deal={deal} />
                 {!overlay && (
                   <>
                     <DealRoomAside dealId={id} dealName={deal.name} />
