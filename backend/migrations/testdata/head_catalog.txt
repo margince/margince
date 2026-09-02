@@ -1084,6 +1084,7 @@ public.capture_pending_counterparty.next_attempt_at timestamp with time zone gen
 public.capture_pending_counterparty.owner_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.proposal_id uuid gen=- def=-
 public.capture_pending_counterparty.resolved_at timestamp with time zone gen=- def=-
+public.capture_pending_counterparty.resolved_by_owner boolean NOT NULL gen=- def=false
 public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::text
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)

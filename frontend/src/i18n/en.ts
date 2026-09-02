@@ -4004,6 +4004,7 @@ export const en = {
   "senders.recordYes": "Yes",
   "senders.recordNo": "No",
   "senders.byYou": "— you decided",
+  "senders.deletesOn": "Oldest message deleted on {date}",
   "senders.markBusiness": "Business",
   "senders.keepOut": "Keep out",
   "senders.withdraw": "Undo",

@@ -16724,6 +16724,12 @@ type CaptureSenderDecision struct {
 	// Decision What YOU decided instead, absent when you have not.
 	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
 
+	// DeletesAt When this sender's oldest message is destroyed. Present only for a `personal` verdict
+	// you have not overruled — every other kind is withheld rather than destroyed, and
+	// deciding this sender is business cancels the deletion. Later mail from the same sender
+	// runs its own window, so this date names the next message to go rather than all of them.
+	DeletesAt *time.Time `json:"deletes_at,omitempty"`
+
 	// Kind What the classifier concluded — person, role_mailbox, organization_sender, newsletter,
 	// transactional, spam, personal, advisor — or absent when it has not answered yet.
 	Kind *string `json:"kind,omitempty"`
