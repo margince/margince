@@ -16611,6 +16611,60 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /me/brief-delivery:
+    get:
+      tags: [Identity]
+      operationId: getMyBriefDelivery
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: What the product may send you about your day and your week.
+      description: |
+        Always the CALLER's own. An admin does not read a colleague's inbox preferences
+        through this API any more than they read their display language.
+
+        A field is ABSENT where the member has never chosen, which is not the same as
+        choosing `none`: the first follows the installation's default and moves if that
+        default moves, the second is a decision that stays.
+      responses:
+        '200':
+          description: The caller's delivery settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BriefDelivery' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Identity]
+      operationId: saveMyBriefDelivery
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Choose what the product may send you.
+      description: |
+        Always the caller's own — there is no id by which one member sets another's, and
+        an agent carrying its grantor's authority does not change what lands in its
+        grantor's inbox.
+
+        A PATCH in shape: an omitted field is left as it was, never cleared. A client that
+        renders three controls and sends two must not silently reset the third, and the
+        settings page is exactly where that mistake costs somebody their mail without
+        anybody choosing it.
+
+        A save that moves nothing writes nothing and publishes nothing, so a page that
+        saves on every render does not fill the ledger with changes nobody made.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BriefDelivery' }
+      responses:
+        '200':
+          description: The settings as they now stand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BriefDelivery' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /me/locale:
     put:
       tags: [Identity]
@@ -29791,6 +29845,38 @@ components:
               items: { type: string, enum: [read_only, draft_only, act_with_approval, auto_execute_low_risk] }
 
     # ---- Authorization (the /me capability snapshot) ----
+
+    BriefDelivery:
+      type: object
+      additionalProperties: false
+      description: |
+        What one member wants delivered. Every field is optional in BOTH directions: absent
+        on a read means they have never chosen, absent on a write means leave it alone.
+      properties:
+        morning_brief_delivery:
+          type: string
+          enum: [none, email]
+          description: |
+            Whether the morning brief arrives by mail. `none` is a CHOICE to receive
+            nothing; absent is not.
+        weekly_delivery:
+          type: string
+          enum: [none, email]
+          description: The same, for the weekly review.
+        quiet_day_notice:
+          type: boolean
+          description: |
+            Whether a day with nothing to act on still gets a message. Its own setting
+            rather than an implication of the two above: "tell me when there is something"
+            and "tell me every morning either way" are different asks.
+        delivery_hour_local:
+          type: integer
+          minimum: 0
+          maximum: 23
+          description: |
+            The local hour a delivery should not arrive before, in the installation's
+            reporting timezone. Absent means the job's own hour, which is what every seat
+            gets today.
 
     WeeklyPlan:
       type: object

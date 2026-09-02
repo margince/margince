@@ -51,6 +51,18 @@ func (w *weeklyGenerateWorkspaceWorker) mailWeekly(
 		// No relay configured. Not an error and not worth a line every Monday.
 		return
 	}
+	// THE OPT-OUT BEFORE THE CLAIM, and the order is the whole point.
+	//
+	// The claim spends a rep's ONE attempt for the week, ever. Checking after it
+	// would burn that attempt on a rep who asked for no mail — so if they later
+	// turned it back on, the week they changed their mind in could never be
+	// sent, and nothing would say why.
+	//
+	// A member who has never chosen is not opted out: they have no value, which
+	// follows the installation's default, and today that default is to send.
+	if w.optedOutOfWeekly(ctx) {
+		return
+	}
 	// THE CLAIM FIRST, always. Everything after this point is allowed to fail
 	// and lose the message; nothing after this point is allowed to produce a
 	// second one. See Engine.ClaimMailAttempt for why the trade goes this way,
@@ -116,3 +128,19 @@ func (w *weeklyGenerateWorkspaceWorker) recordMailFailure(ctx context.Context, r
 // job's ceiling on the same exchange, stated where the job's deadline is being
 // spent.
 const mailBudget = 45 * time.Second
+
+// optedOutOfWeekly reports whether the rep in ctx asked for no weekly mail.
+//
+// Fails OPEN: a settings read that errors leaves the mail going out, because a
+// rep who wanted their weekly and did not get it is worse served than one who
+// gets a message they meant to switch off. The second is an annoyance they can
+// fix from the same page; the first is silence they have no way to notice.
+func (w *weeklyGenerateWorkspaceWorker) optedOutOfWeekly(ctx context.Context) bool {
+	settings, err := w.users.MyDelivery(ctx)
+	if err != nil {
+		w.log.WarnContext(ctx, "the weekly delivery preference could not be read; sending anyway",
+			"cause", err)
+		return false
+	}
+	return settings.Weekly != nil && *settings.Weekly == identity.DeliveryNone
+}

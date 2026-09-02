@@ -1119,6 +1119,14 @@ func (stubs) GetMyAiActivity(w nethttp.ResponseWriter, r *nethttp.Request, param
 	httperr.NotImplemented(w, r, "GetMyAiActivity")
 }
 
+func (stubs) GetMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetMyBriefDelivery")
+}
+
+func (stubs) SaveMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveMyBriefDelivery")
+}
+
 func (stubs) GetMyEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyEmailSignature")
 }

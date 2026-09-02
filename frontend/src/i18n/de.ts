@@ -2976,6 +2976,14 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
+  "delivery.morningLabel": "Ihr Tagesbriefing",
+  "delivery.morningHelp":
+    "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf Ihrer Briefing-Seite steht es ohnehin.",
+  "delivery.weeklyLabel": "Ihr Wochenrückblick",
+  "delivery.weeklyHelp":
+    "Ob der Rückblick am Montag zusätzlich per E-Mail kommt.",
+  "delivery.byEmail": "Per E-Mail",
+  "delivery.none": "Nicht per E-Mail",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",

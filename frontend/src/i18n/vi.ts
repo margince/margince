@@ -2950,6 +2950,13 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
   "settings.signatureCancel": "Hủy",
+  "delivery.morningLabel": "Bản tóm tắt buổi sáng",
+  "delivery.morningHelp":
+    "Bản tóm tắt trong ngày có được gửi qua email hay không. Dù sao nó cũng có trên trang Tóm tắt.",
+  "delivery.weeklyLabel": "Đánh giá hằng tuần",
+  "delivery.weeklyHelp": "Đánh giá thứ Hai có được gửi qua email hay không.",
+  "delivery.byEmail": "Qua email",
+  "delivery.none": "Không qua email",
   "settings.languageHelp": "Chỉ giữ trong phiên làm việc.",
   "role.admin": "Quản trị",
   "role.management": "Ban lãnh đạo",
