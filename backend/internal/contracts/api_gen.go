@@ -30076,7 +30076,7 @@ type WorklistReadings struct {
 	// Prospecting How much new business is in hand and owed a first response.
 	Prospecting int `json:"prospecting"`
 
-	// RevenueAtRiskMinor What the drifting deals are worth, summed over the deals this read weighed, in
+	// RevenueAtRiskMinor What the drifting deals are worth, summed over the deals this read PRICED, in
 	// the currency `revenue_currency` names.
 	//
 	// Null when no deal at risk could be priced — no amount recorded, or no stored
@@ -30084,6 +30084,14 @@ type WorklistReadings struct {
 	// absence says nobody can tell. A deal the estate cannot price is left OUT of
 	// the sum rather than counted as nothing, so a partly priced day reports what it
 	// could price and says so through `revenue_currency`.
+	//
+	// It is a FLOOR on what is drifting, never a total, and two things put work
+	// outside it. A deal nobody could price is one. The other is that only the
+	// at-risk lane goes through the currency conversion, so a deal reaching the page
+	// from the overnight brief draws an amount on its own card and adds nothing
+	// here. Both are why `more_available` matters: read this figure as "at least
+	// this much", and read the `deals_at_risk` entry in `counts` for how many deals
+	// stand behind it.
 	RevenueAtRiskMinor *int64 `json:"revenue_at_risk_minor"`
 
 	// RevenueCurrency The currency `revenue_at_risk_minor` is stated in — the installation's base

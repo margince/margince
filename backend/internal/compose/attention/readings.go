@@ -34,8 +34,17 @@ import (
 // here. `expectedBase` is the deal's amount in the base currency, decided once by
 // the conversion seam, and a second sum over raw amounts would be a second answer
 // to what a deal is worth — in the units where a yen outranks a euro.
+//
+// `unread` is the day's own list of lanes that never answered — refused to this
+// reader, or failed. It is SEPARATE from `bounds` because the two are different
+// facts and only one of them is in that map: `bounds` records lanes that ran, so
+// a lane which never ran is simply absent from it. Reading the floor flag from
+// `bounds` alone therefore states exact figures over work nobody looked at, which
+// is the one direction these numbers must never fail in.
 func readingsOf(
-	considered []ranked, bounds map[crmcontracts.WorklistItemSource]bool,
+	considered []ranked,
+	bounds map[crmcontracts.WorklistItemSource]bool,
+	unread []crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.WorklistReadings {
 	out := crmcontracts.WorklistReadings{}
 	// A priced deal is one the estate could state a comparable figure for. An
@@ -62,12 +71,22 @@ func readingsOf(
 				continue
 			}
 			revenue += row.expectedBase
+			// Taking the units from the ROW keeps the currency travelling with
+			// the figure it names, which is the pairing the money values already
+			// hold. One conversion prices a whole read, so today every priced row
+			// carries the same answer — but that is a fact about the current
+			// classifier rather than a guarantee, and a later one setting the
+			// field from somewhere else would silently label the sum with
+			// whichever row happened to come last. Disagreement therefore refuses
+			// to name a currency at all, and the client draws no money figure it
+			// cannot state the units of.
+			switch {
+			case !priced:
+				currency = row.expectedCurrency
+			case currency != row.expectedCurrency:
+				currency = ""
+			}
 			priced = true
-			// Every priced row on one read shares one answer, because one
-			// conversion priced them all. Taking it from the row rather than
-			// from the service keeps the currency travelling with the figure it
-			// names, which is the pairing the money values already hold.
-			currency = row.expectedCurrency
 		}
 	}
 	if priced {
@@ -75,6 +94,15 @@ func readingsOf(
 		if currency != "" {
 			out.RevenueCurrency = &currency
 		}
+	}
+	// A lane that never answered makes every figure a floor just as surely as one
+	// that answered to its cap — more so, since nobody knows what it held. This
+	// arm is FIRST because it is the one a reader loses silently: a refused lane
+	// leaves no rows to notice missing, so the strip reads as a clear day rather
+	// than as a day nobody could see.
+	if len(unread) > 0 {
+		out.MoreAvailable = true
+		return out
 	}
 	// One flag for the row rather than one per figure. The four are read across
 	// as a single statement about the day, so a reader who cannot trust one of
