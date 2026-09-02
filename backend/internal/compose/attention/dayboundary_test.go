@@ -148,47 +148,58 @@ func TestAZoneSeamAnsweringNoLocationIsAnErrorNotAPanic(t *testing.T) {
 // normalisation then answers a neighbouring instant, and which way it leans is
 // not the same everywhere: Havana and Santiago normalise BACKWARD, to 23:00 on
 // the previous date — an hour before the day being bounded has ended, so the
-// last hour's work falls off the lane. Beirut normalises forward, to 01:00,
-// which happens to be right.
+// last hour's work falls off the lane. Beirut leans forward, to 01:00, and is
+// right by luck rather than by rule.
 //
-// The boundary must be the first instant of the next date in every case.
+// The dates are FOUND rather than written down. A midnight transition moves when
+// a country changes its mind, and tzdata follows; a test naming 2026-03-08 would
+// go red on the machine whose tzdata moved it, over a property the code still
+// holds. So this scans for the days that have no local midnight and asserts the
+// rule on each — and fails only if NO zone has one anywhere in the window, which
+// is the state in which it would be proving nothing.
 func TestADayWhoseMidnightDoesNotExistEndsAtItsFirstInstant(t *testing.T) {
-	for _, tc := range []struct {
-		zone string
-		// day is the local date whose midnight does not exist.
-		day time.Time
-	}{
-		{"America/Havana", time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC)},
-		{"America/Santiago", time.Date(2026, 9, 6, 0, 0, 0, 0, time.UTC)},
-		{"Asia/Beirut", time.Date(2026, 3, 29, 0, 0, 0, 0, time.UTC)},
-	} {
-		t.Run(tc.zone, func(t *testing.T) {
-			loc, err := time.LoadLocation(tc.zone)
-			if err != nil {
-				t.Fatalf("loading %s: %v", tc.zone, err)
-			}
-			// Precondition: the day really has no local midnight, or this
-			// asserts nothing about the case it is named for.
-			naive := time.Date(tc.day.Year(), tc.day.Month(), tc.day.Day(), 0, 0, 0, 0, loc)
-			if naive.Hour() == 0 && naive.Day() == tc.day.Day() {
-				t.Fatalf("%s has a local midnight on %s, so this proves nothing", tc.zone, tc.day.Format(time.DateOnly))
-			}
-
-			// Asked from mid-afternoon the day BEFORE, so the boundary under
-			// test is that day's own end.
-			asOf := time.Date(tc.day.Year(), tc.day.Month(), tc.day.Day(), 15, 0, 0, 0, loc).AddDate(0, 0, -1)
-			got := startOfNextDay(asOf.In(loc), loc)
-
-			local := got.In(loc)
-			if local.Year() != tc.day.Year() || local.Month() != tc.day.Month() || local.Day() != tc.day.Day() {
-				t.Fatalf("the day ends at %s, which is not the start of %s", local, tc.day.Format(time.DateOnly))
-			}
-			// The first instant of that date: a minute earlier is still the
-			// day before, which is what "first" means.
-			if before := local.Add(-time.Minute); before.Day() == local.Day() {
-				t.Errorf("%s is not the FIRST instant of %s — a minute earlier is still the same date, "+
-					"so the boundary cuts the previous day short", local, tc.day.Format(time.DateOnly))
-			}
-		})
+	zones := []string{"America/Havana", "America/Santiago", "Asia/Beirut"}
+	var found int
+	for _, name := range zones {
+		loc, err := time.LoadLocation(name)
+		if err != nil {
+			// A zone this tzdata does not carry is not a failure of the rule.
+			t.Logf("%s is not in this tzdata; skipping it", name)
+			continue
+		}
+		for _, day := range daysWithNoLocalMidnight(loc) {
+			found++
+			t.Run(name+"/"+day.Format(time.DateOnly), func(t *testing.T) {
+				// Asked from mid-afternoon the day BEFORE, so the boundary
+				// under test is that day's own end.
+				asOf := day.AddDate(0, 0, -1).Add(15 * time.Hour)
+				local := startOfNextDay(asOf.In(loc), loc).In(loc)
+				if !sameDate(local, day) {
+					t.Fatalf("the day ends at %s, which is not the start of %s", local, day.Format(time.DateOnly))
+				}
+				if before := local.Add(-time.Minute); sameDate(before, local) {
+					t.Errorf("%s is not the FIRST instant of %s — a minute earlier is still the same "+
+						"date, so the boundary cuts the previous day short", local, day.Format(time.DateOnly))
+				}
+			})
+		}
 	}
+	if found == 0 {
+		t.Fatalf("no day without a local midnight in %v under this tzdata, so this test proves nothing "+
+			"— find a zone that still springs forward at midnight and name it here", zones)
+	}
+}
+
+// daysWithNoLocalMidnight returns the local dates in a two-year window whose
+// 00:00 does not exist in loc, each as midday of that date so the value itself
+// is never the ambiguous instant.
+func daysWithNoLocalMidnight(loc *time.Location) []time.Time {
+	var out []time.Time
+	for cursor := time.Date(2026, 1, 1, 12, 0, 0, 0, loc); cursor.Year() < 2028; cursor = cursor.AddDate(0, 0, 1) {
+		year, month, day := cursor.Date()
+		if midnight := time.Date(year, month, day, 0, 0, 0, 0, loc); !sameDate(midnight, cursor) || midnight.Hour() != 0 {
+			out = append(out, time.Date(year, month, day, 0, 0, 0, 0, time.UTC))
+		}
+	}
+	return out
 }
