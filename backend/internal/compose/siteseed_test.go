@@ -4,6 +4,8 @@
 package compose
 
 import (
+	"context"
+	"errors"
 	"slices"
 	"testing"
 )
@@ -69,5 +71,172 @@ func TestSeedFallbacksRefusesWhatItCannotParseOrShouldNotFetch(t *testing.T) {
 		if got := seedFallbacks(seed); len(got) != 0 {
 			t.Errorf("seedFallbacks(%q) = %v, want none", seed, got)
 		}
+	}
+}
+
+// The defect this fixes: a landing page that only forwards to the real site
+// read as a page with nothing on it, so the domain triage called the site
+// parked and the company was never created.
+func TestASeedThatOnlyForwardsIsFollowedToTheRealLandingPage(t *testing.T) {
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		"https://anwr-group.com":    {refresh: "https://anwr-group.com/de"},
+		"https://anwr-group.com/de": {text: "ANWR Group is a retail cooperative."},
+	}}
+	page, err := newSiteCrawler(site, CrawlCaps{}).ReadSeed(context.Background(), "https://anwr-group.com")
+	if err != nil {
+		t.Fatalf("reading the seed: %v", err)
+	}
+	if want := "https://anwr-group.com/de"; page.URL != want {
+		t.Errorf("landing page URL = %q, want %q", page.URL, want)
+	}
+	if page.Text == "" {
+		t.Error("the landing page carries no text — the triage will call this site parked")
+	}
+}
+
+// One hop, never a chain. A site can write as many trampolines as it likes,
+// and each one the crawler follows is a fetch it was told to make by the page
+// it just read.
+func TestAChainOfForwardingPagesIsFollowedOnlyOnce(t *testing.T) {
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		"https://acme.example":     {refresh: "https://acme.example/one"},
+		"https://acme.example/one": {refresh: "https://acme.example/two"},
+		"https://acme.example/two": {text: "the real site"},
+	}}
+	page, err := newSiteCrawler(site, CrawlCaps{}).ReadSeed(context.Background(), "https://acme.example")
+	if err != nil {
+		t.Fatalf("reading the seed: %v", err)
+	}
+	if want := "https://acme.example/one"; page.URL != want {
+		t.Errorf("landing page URL = %q, want %q — exactly one hop", page.URL, want)
+	}
+	if slices.Contains(site.fetched, "https://acme.example/two") {
+		t.Errorf("the crawler followed a second hop: %v", site.fetched)
+	}
+}
+
+// Two pages forwarding to each other would loop forever if the follow were
+// not capped at one, and a site can publish that by accident.
+func TestTwoPagesForwardingToEachOtherTerminate(t *testing.T) {
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		"https://acme.example":    {refresh: "https://acme.example/de"},
+		"https://acme.example/de": {refresh: "https://acme.example"},
+	}}
+	if _, err := newSiteCrawler(site, CrawlCaps{}).ReadSeed(context.Background(), "https://acme.example"); err != nil {
+		t.Fatalf("reading the seed: %v", err)
+	}
+	if len(site.fetched) > 2 {
+		t.Errorf("fetched %v — a forwarding cycle must cost at most one extra fetch", site.fetched)
+	}
+}
+
+// When the forwarding target does not answer, the triage must be left with the
+// evidence it actually had rather than an error: the empty shell is a real
+// read, and the site may still be judged from what else the crawl finds.
+func TestAForwardingTargetThatFailsLeavesTheOriginalPage(t *testing.T) {
+	site := &fakeSite{
+		pages: map[string]fakeSitePage{
+			"https://acme.example": {refresh: "https://acme.example/de"},
+		},
+		pageErrors: map[string][]error{
+			"https://acme.example/de": {errors.New("the forwarding target answered 500")},
+		},
+	}
+	page, err := newSiteCrawler(site, CrawlCaps{}).ReadSeed(context.Background(), "https://acme.example")
+	if err != nil {
+		t.Fatalf("a failed follow must not fail the seed read: %v", err)
+	}
+	if want := "https://acme.example"; page.URL != want {
+		t.Errorf("landing page URL = %q, want the page that did answer, %q", page.URL, want)
+	}
+	// Without this the empty shell reads exactly like a parked domain, which
+	// is the defect the follow exists to fix, re-created on the failure path.
+	if !page.UnresolvedForward {
+		t.Error("the page named an address the crawl could not reach and must say so")
+	}
+}
+
+// A page that says GO HERE and one that says nothing are different claims, and
+// only the second is evidence that a domain is parked.
+func TestAnUnresolvedForwardIsNotSettledAsParked(t *testing.T) {
+	unreadable := crawlPage{Text: "", UnresolvedForward: true}
+	if verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), unreadable); err != nil {
+		t.Fatalf("classifying: %v", err)
+	} else if verdict.Aborts() {
+		t.Errorf("verdict %+v settles the domain — an unread forward must leave the question open", verdict)
+	}
+
+	// The shortcut still holds for a page that genuinely carries nothing.
+	empty := crawlPage{Text: ""}
+	if verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), empty); err != nil {
+		t.Fatalf("classifying: %v", err)
+	} else if !verdict.Aborts() {
+		t.Errorf("verdict %+v does not settle a genuinely empty landing page", verdict)
+	}
+}
+
+// The one-hop cap and the unresolved mark have to agree: a second shell is
+// correctly not followed, and must therefore be reported as unread rather than
+// handed to the classifier as an empty page.
+func TestASecondForwardingShellIsReportedUnresolved(t *testing.T) {
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		"https://acme.example":     {refresh: "https://acme.example/one"},
+		"https://acme.example/one": {refresh: "https://acme.example/two"},
+		"https://acme.example/two": {text: "the real site"},
+	}}
+	page, err := newSiteCrawler(site, CrawlCaps{}).ReadSeed(context.Background(), "https://acme.example")
+	if err != nil {
+		t.Fatalf("reading the seed: %v", err)
+	}
+	if !page.UnresolvedForward {
+		t.Error("the hop landed on another forwarding shell, which is not a read of the site")
+	}
+}
+
+// The parse-time check judges where the refresh POINTS. A target on the site's
+// own domain can still redirect onto somebody else's — an open redirect is an
+// ordinary thing to find on a corporate site — and letting that through would
+// hand the crawl a boundary, and a company identity, chosen by whoever wrote
+// the markup.
+func TestAForwardingHopThatRedirectsOffTheSiteIsNotAccepted(t *testing.T) {
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		"https://acme.example": {refresh: "https://acme.example/out?to=evil"},
+		"https://acme.example/out?to=evil": {
+			text:     "a different company's site",
+			finalURL: "https://evil.test/landing",
+		},
+	}}
+	page, err := newSiteCrawler(site, CrawlCaps{}).ReadSeed(context.Background(), "https://acme.example")
+	if err != nil {
+		t.Fatalf("reading the seed: %v", err)
+	}
+	if want := "https://acme.example"; page.URL != want {
+		t.Errorf("landing page URL = %q, want %q — the hop left the site and must not become the seed", page.URL, want)
+	}
+	if page.Text != "" {
+		t.Errorf("landing page text = %q, want nothing — it came from another company's site", page.Text)
+	}
+	if !page.UnresolvedForward {
+		t.Error("the site's real address was never reached, so the read is unresolved, not parked")
+	}
+}
+
+// A site reached through the www/scheme ladder gets the same follow: the two
+// shapes co-occur constantly, because the host that forwards by markup is
+// usually also the one that only answers on www.
+func TestASeedReachedThroughTheFallbackLadderIsAlsoFollowed(t *testing.T) {
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		"https://www.acme.example":    {refresh: "https://www.acme.example/de"},
+		"https://www.acme.example/de": {text: "the real site"},
+	}}
+	page, err := newSiteCrawler(site, CrawlCaps{}).ReadSeed(context.Background(), "https://acme.example")
+	if err != nil {
+		t.Fatalf("reading the seed: %v", err)
+	}
+	if want := "https://www.acme.example/de"; page.URL != want {
+		t.Errorf("landing page URL = %q, want %q", page.URL, want)
+	}
+	if page.Text == "" {
+		t.Error("the landing page carries no text after the ladder plus the follow")
 	}
 }

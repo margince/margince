@@ -62,6 +62,9 @@ type fakeSitePage struct {
 	// input the logo resolve ranks over.
 	ogImage string
 	icons   []webread.IconRef
+	// refresh is the meta-refresh target this page declares, which the real
+	// parser only reports for a same-site target it could resolve.
+	refresh string
 }
 
 func (s *fakeSite) FetchPage(_ context.Context, rawURL string) (webread.Page, error) {
@@ -97,7 +100,7 @@ func (s *fakeSite) FetchPage(_ context.Context, rawURL string) (webread.Page, er
 	}
 	return webread.Page{
 		URL: rawURL, FinalURL: finalURL, Text: page.text, Links: page.links, Bytes: len(page.text),
-		OGImage: page.ogImage, Icons: page.icons,
+		OGImage: page.ogImage, Icons: page.icons, Refresh: page.refresh,
 	}, nil
 }
 

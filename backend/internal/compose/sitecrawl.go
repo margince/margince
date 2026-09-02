@@ -50,6 +50,12 @@ type crawlPage struct {
 	// portal or a careers platform commonly announces itself on the one page
 	// that runs it, and a homepage-only read cannot see any of them.
 	Fingerprint webread.Fingerprint
+	// UnresolvedForward marks a landing page that named somewhere else as the
+	// site's real address, which the crawl could not reach. It is the
+	// difference between a page that says NOTHING and one that says GO HERE
+	// and could not be followed, and only the first is evidence of a parked
+	// domain.
+	UnresolvedForward bool
 }
 
 type crawlSkip struct {
@@ -237,10 +243,11 @@ func (c *siteCrawler) CrawlStream(ctx context.Context, seedURL string, onPage fu
 	pacer := c.newPacer()
 
 	requestedSeed := seedURL
-	seedURL, seedPage, err := c.fetchSeed(ctx, pacer, seedURL)
+	seed, err := c.fetchSeed(ctx, pacer, seedURL)
 	if err != nil {
 		return siteCrawl{}, err
 	}
+	seedURL, seedPage := seed.URL, seed.Page
 	seedParsed, err := url.Parse(seedURL)
 	if err != nil {
 		return siteCrawl{}, fmt.Errorf("site read: %q is not a crawlable URL: %w", seedURL, err)
