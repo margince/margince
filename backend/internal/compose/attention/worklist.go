@@ -144,8 +144,6 @@ func (s *Service) Worklist(
 	return out, nil
 }
 
-// worklistFrom projects an already-assembled day, so a test can drive the
-// ranking, the paging and the summary without standing up every lane's reader.
 // waitingCustomers reads who is waiting, or names why it could not.
 //
 // A refusal is reported as a withheld source; any other failure as a failed
@@ -192,6 +190,8 @@ type waitingRead struct {
 	cut  bool
 }
 
+// worklistFrom projects an already-assembled day, so a test can drive the
+// ranking, the paging and the summary without standing up every lane's reader.
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
 	waiting waitingRead, leads leadRead, cursor worklistCursor,
@@ -421,36 +421,6 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
 	bounded["dedupe_candidate"] = bounded["approval"]
 	return bounded
-}
-
-// pageFrom cuts the candidates to what one read carries, starting after the row
-// a cursor names, and says whether anything is left behind it.
-//
-// It runs BEFORE the ranking is drawn, so the comparison each row publishes is
-// against a row the caller actually received. The cut itself is by score, so
-// this sorts first and then slices — taking the best `limit`, never the first
-// `limit` the producers happened to return.
-//
-// The sort happens before the resume, not after, and the order matters: the
-// cursor names a position in the RANKING, so the set has to be in ranked order
-// before the anchor means anything.
-func pageFrom(rows []ranked, limit int, cursor worklistCursor) (shown []ranked, more bool) {
-	sort.SliceStable(rows, func(i, j int) bool { return less(rows[i], rows[j]) })
-	rows = resume(rows, cursor)
-	if len(rows) > limit {
-		return rows[:limit], true
-	}
-	return rows, false
-}
-
-func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranked {
-	kept := make([]ranked, 0, len(rows))
-	for _, row := range rows {
-		if row.item.Category == want {
-			kept = append(kept, row)
-		}
-	}
-	return kept
 }
 
 // summarize counts the day in the three figures the header states.
