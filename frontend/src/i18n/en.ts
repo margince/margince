@@ -3970,6 +3970,8 @@ export const en = {
   "aiCert.result.not_checked": "Not checked yet",
   "aiCert.result.no_model": "No model selected",
   "aiCert.runCounts": "{passed} of {runs} test runs passed",
+  "aiCert.gradedBelowBar":
+    "every run answered correctly, but the grader scored the answers below the bar this job has to clear",
   "aiCert.oneKindFails":
     "one kind of example fails every time, which is why a high score still reads as unreliable",
   "aiCert.pendingExamples":

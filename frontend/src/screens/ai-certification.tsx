@@ -207,14 +207,20 @@ function ResultCell({ job }: Readonly<{ job: Job }>) {
           })}
         </span>
       ) : null}
-      {/* A high pass rate under a failing verdict is the case that reads as a
-          contradiction, so it is explained on the row rather than left to the
-          modal a reader may never open. */}
-      {job.result === "not_reliable" &&
-      job.passed !== undefined &&
-      job.runs !== undefined &&
-      job.passed > 0 ? (
+      {/* A failing verdict beside a high count reads as a contradiction, so the
+          row says which of the two reasons produced it rather than leaving a
+          reader to guess — or, worse, being told something untrue.
+
+          A verdict is not decided by the pass rate alone: certification also
+          requires the grader's median quality score to clear a bar, so a job
+          can pass every run and still fail. Saying "one kind of example fails
+          every time" about THAT job would be false, and it is a real case —
+          draft_reply passes 12 of 12 and is not_supported. */}
+      {job.result === "not_reliable" && failedSomeRuns(job) ? (
         <span className="t-meta">{t("aiCert.oneKindFails")}</span>
+      ) : null}
+      {job.result === "not_reliable" && passedEveryRun(job) ? (
+        <span className="t-meta">{t("aiCert.gradedBelowBar")}</span>
       ) : null}
       {job.result === "partly_checked" && job.pending_examples ? (
         <span className="t-meta">
@@ -261,6 +267,24 @@ function ResultCell({ job }: Readonly<{ job: Job }>) {
         </span>
       ) : null}
     </span>
+  );
+}
+
+// Which of the two ways a job can be unreliable this one is. Both need the
+// counts, and neither may be assumed from the verdict: a job with no counts at
+// all gets no explanation rather than the wrong one.
+function failedSomeRuns(job: Job): boolean {
+  return (
+    job.passed !== undefined && job.runs !== undefined && job.passed < job.runs
+  );
+}
+
+function passedEveryRun(job: Job): boolean {
+  return (
+    job.passed !== undefined &&
+    job.runs !== undefined &&
+    job.runs > 0 &&
+    job.passed === job.runs
   );
 }
 

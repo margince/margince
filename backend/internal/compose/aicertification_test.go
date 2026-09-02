@@ -304,3 +304,49 @@ func TestTheOnlyExcludedJobIsTheGrader(t *testing.T) {
 		}
 	}
 }
+
+// A lower rung bound to the SAME model is not a fallback a reader can act on.
+// The row already reports that model, and naming it again as "a fallback we
+// have not checked" contradicts the line directly above it — which is what the
+// first run of this card against a real deployment showed.
+func TestTheServingModelIsNotItsOwnUnmeasuredFallback(t *testing.T) {
+	t.Parallel()
+
+	// draft_reply's ladder is [cheap_cloud, premium] and cheap_cloud degrades to
+	// local_small, so the closure reaches three rungs — here all one model.
+	routing := ai.RoutingConfig{
+		Tiers: map[ai.Tier]ai.ProviderConfig{
+			ai.TierCheapCloud: {Provider: testProvider, Model: testModel},
+			ai.TierPremium:    {Provider: testProvider, Model: testModel},
+			ai.TierLocalSmall: {Provider: testProvider, Model: testModel},
+		},
+		Profile: ai.Profile(testEnv),
+	}
+	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
+	job := jobNamed(t, certificationView(routing, sites, snapOf(t)), ai.TaskDraftReply)
+
+	if job.UnmeasuredFallbacks != nil {
+		t.Errorf("unmeasured_fallbacks = %v; every rung binds the model the row already names",
+			*job.UnmeasuredFallbacks)
+	}
+}
+
+// worst_site is evidence for a measurement. On a job nothing measured, every
+// site reads the same, and naming one implies it was the reason — sending a
+// reader to look for a finding that is not there.
+func TestNothingMeasuredNamesNoWorstSite(t *testing.T) {
+	t.Parallel()
+
+	sites := []aitasks.Site{
+		siteOf(ai.TaskColdStart, "acts"),
+		siteOf(ai.TaskColdStart, "company_message"),
+	}
+	job := jobNamed(t, certificationView(boundEverywhere(), sites, snapOf(t)), ai.TaskColdStart)
+
+	if job.Result != resultNotChecked {
+		t.Fatalf("result = %q, want %q", job.Result, resultNotChecked)
+	}
+	if job.WorstSite != nil {
+		t.Errorf("worst_site = %q on a job nothing measured", *job.WorstSite)
+	}
+}

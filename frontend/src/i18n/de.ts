@@ -3936,6 +3936,8 @@ export const de = {
   "aiCert.result.not_checked": "Noch nicht geprüft",
   "aiCert.result.no_model": "Kein Modell ausgewählt",
   "aiCert.runCounts": "{passed} von {runs} Testläufen bestanden",
+  "aiCert.gradedBelowBar":
+    "jeder Lauf hat richtig geantwortet, aber die Bewertung liegt unter der Schwelle, die diese Aufgabe erreichen muss",
   "aiCert.oneKindFails":
     "eine Art von Beispiel scheitert jedes Mal — deshalb liest sich auch ein hoher Wert als nicht verlässlich",
   "aiCert.pendingExamples":

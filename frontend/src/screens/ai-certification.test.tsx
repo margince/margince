@@ -112,6 +112,32 @@ describe("how well the AI performs", () => {
     expect(screen.queryByText(/capture_classify/)).not.toBeInTheDocument();
   });
 
+  it("does not claim an example failed when every run passed", async () => {
+    // A verdict is not the pass rate alone: certification also requires the
+    // grader's median score to clear a bar, so a job can pass every run and
+    // still fail. draft_reply does exactly that — 12 of 12, not_supported —
+    // and telling a reader "one kind of example fails every time" about it
+    // would be false.
+    renderCard(
+      cert([
+        job({
+          task: "draft_reply",
+          result: "not_reliable",
+          runs: 12,
+          passed: 12,
+        }),
+      ]),
+    );
+
+    expect(await screen.findByText("Not reliable enough")).toBeInTheDocument();
+    expect(
+      screen.getByText(/scored the answers below the bar/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/one kind of example fails every time/),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows counts rather than a rate, and says why a high score can still fail", async () => {
     // The verdict folds to the worst example, so 23 of 24 runs can pass and the
     // job still be unreliable. "96%" beside "not reliable enough" reads to a

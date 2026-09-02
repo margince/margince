@@ -170,7 +170,11 @@ func adoptWorstSite(job *crmcontracts.AiCertificationJob, worst crmcontracts.AiC
 	job.Runs, job.Passed = worst.Runs, worst.Passed
 	job.MeasuredExamples, job.PendingExamples = worst.MeasuredExamples, worst.PendingExamples
 	job.Scope, job.MeasuredAt = worst.Scope, worst.MeasuredAt
-	if siteCount > 1 && worst.Site != "" {
+	// Only where the fold actually chose between measurements. On a job nothing
+	// measured, every site reads the same and naming one implies it was the
+	// reason — a reader would go looking for a finding that is not there.
+	measured := worst.Result != resultNotChecked && worst.Result != resultNoModel
+	if siteCount > 1 && worst.Site != "" && measured {
 		job.WorstSite = &worst.Site
 	}
 }
@@ -235,6 +239,7 @@ func unmeasuredFallbacks(routing ai.RoutingConfig, task ai.Task, serving ai.Tier
 	env := string(routing.Profile)
 	seen := map[string]bool{}
 	var out []string
+	servingModel := routing.Tiers[serving].Model
 	for _, tier := range ai.ServableTiers(task) {
 		if tier == serving {
 			continue
@@ -242,6 +247,12 @@ func unmeasuredFallbacks(routing ai.RoutingConfig, task ai.Task, serving ai.Tier
 		binding, bound := routing.Tiers[tier]
 		if !bound || binding.Provider == "" || binding.Model == "" {
 			continue // an unbound rung serves nothing; it is a routing gap, not a measurement gap
+		}
+		// A lower rung bound to the SAME model is not a fallback a reader can
+		// act on: the row already reports that model, and naming it again as
+		// "a fallback we have not checked" contradicts the line above it.
+		if binding.Model == servingModel {
+			continue
 		}
 		if seen[binding.Model] || currentEverywhere(sites, task, binding, env, snap) {
 			continue

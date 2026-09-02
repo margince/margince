@@ -3899,6 +3899,8 @@ export const vi = {
   "aiCert.result.not_checked": "Chưa kiểm tra",
   "aiCert.result.no_model": "Chưa chọn mô hình",
   "aiCert.runCounts": "{passed} trong {runs} lần chạy thử đã đạt",
+  "aiCert.gradedBelowBar":
+    "mọi lần chạy đều trả lời đúng, nhưng điểm chấm thấp hơn ngưỡng mà việc này phải đạt",
   "aiCert.oneKindFails":
     "có một loại ví dụ luôn sai, nên điểm cao vẫn bị coi là chưa đủ tin cậy",
   "aiCert.pendingExamples":
