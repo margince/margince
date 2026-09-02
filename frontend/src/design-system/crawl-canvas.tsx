@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from "react";
 import {
-  CRAWL_BEAT_S,
+  arrivalStamps,
   type CrawlNode,
   crawlAges,
   drawCrawl,
@@ -135,38 +135,10 @@ function runCrawl(
   // When each page was first seen. The read runs for minutes and pages land as
   // the crawl reaches them, so this is the only honest clock: a page's entrance
   // belongs to the moment IT arrived, not to the moment the canvas mounted.
-  const stamps: number[] = [];
+  let stamps: number[] = [];
 
-  let dealtFirstHand = false;
-
-  /**
-   * Give every page not yet stamped the moment it arrived.
-   *
-   * The FIRST hand is dealt a beat apart, so a read already in progress when
-   * this mounts still gets an entrance instead of the whole graph appearing at
-   * once. Everything after it is stamped NOW, because it really did just
-   * arrive: staggering those too would put a page's entrance further into the
-   * future the longer the read ran.
-   */
   const stamp = (now: number, reduced: boolean) => {
-    const wanted = pages.current.length;
-    // A poll that returns fewer pages (a retry, a different read) must not
-    // leave stamps pointing at nodes that are gone.
-    if (stamps.length > wanted) {
-      stamps.length = wanted;
-    }
-    while (stamps.length < wanted) {
-      if (reduced) {
-        // Far enough back to be settled: the end state, not an entrance nobody
-        // asked for.
-        stamps.push(now - SETTLED_MS);
-      } else if (dealtFirstHand) {
-        stamps.push(now);
-      } else {
-        stamps.push(now + stamps.length * CRAWL_BEAT_S * 1000);
-      }
-    }
-    dealtFirstHand = true;
+    stamps = arrivalStamps(stamps, pages.current.length, now, reduced);
   };
 
   // The box in CSS pixels, or null when the canvas has no size to draw in (a
@@ -305,6 +277,3 @@ function paletteOf(
   }
   return { ink, faint, dim };
 }
-
-/** Far enough into the past that every entrance has finished playing. */
-const SETTLED_MS = 10_000;

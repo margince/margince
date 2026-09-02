@@ -91,6 +91,46 @@ export function layOutCrawl(
  * the first frame are dealt in one beat apart, so a resumed read still gets an
  * entrance rather than appearing all at once.
  */
+/** Far enough into the past that every entrance has finished playing. */
+const SETTLED_MS = 10_000;
+
+/**
+ * When each page should enter, given the ones already stamped.
+ *
+ * A POLL DELIVERS A BATCH, not a page. The crawl walked those pages one at a
+ * time over the seconds between two polls, so stamping a batch with one `now`
+ * makes the whole lot pop together and the picture jumps between polls instead
+ * of walking. Each new page enters a beat after the one before it and never
+ * before the present, so a batch spreads and a lone arrival is immediate.
+ *
+ * This is an entrance's timing, never a claim about progress: a page is
+ * stamped only once the server has actually sent it.
+ *
+ * A read that returns FEWER pages than are stamped (a retry, a different read)
+ * drops the extra stamps rather than leaving them pointing at nodes that are
+ * gone.
+ */
+export function arrivalStamps(
+  stamps: readonly number[],
+  wanted: number,
+  now: number,
+  reduced: boolean,
+): number[] {
+  const out = stamps.slice(0, wanted);
+  while (out.length < wanted) {
+    if (reduced) {
+      // Settled, not an entrance nobody asked for.
+      out.push(now - SETTLED_MS);
+      continue;
+    }
+    const last = out[out.length - 1];
+    out.push(
+      last === undefined ? now : Math.max(now, last + CRAWL_BEAT_S * 1000),
+    );
+  }
+  return out;
+}
+
 export function crawlAges(stamps: readonly number[], now: number): number[] {
   return stamps.map((at) => (now - at) / 1000);
 }
