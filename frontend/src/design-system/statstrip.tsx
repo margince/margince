@@ -23,7 +23,17 @@ export function StatStrip({
   children,
   className,
   testId,
-}: Readonly<{ children: ReactNode; className?: string; testId?: string }>) {
+  floor,
+}: Readonly<{
+  children: ReactNode;
+  className?: string;
+  testId?: string;
+  // What qualifies the WHOLE row — a source read to its limit, making every
+  // figure above a floor. It belongs to the plate rather than to a slot: the
+  // row is read across as one statement, and a caveat attached to one figure
+  // invites the reading where the others are exact.
+  floor?: ReactNode;
+}>) {
   // The column count follows the slots the caller actually drew. A fixed
   // template reserves cells nobody fills, and an empty cell on a plate reads
   // as a reading that failed to load rather than as one this record does not
@@ -42,7 +52,7 @@ export function StatStrip({
     "--stat-strip-tail-3": tailSpan(slots, 3),
     "--stat-strip-tail-2": tailSpan(slots, 2),
   };
-  return (
+  const plate = (
     <section
       className={["stat-strip", className ?? ""].filter(Boolean).join(" ")}
       style={vars}
@@ -50,6 +60,15 @@ export function StatStrip({
     >
       {children}
     </section>
+  );
+  if (!floor) {
+    return plate;
+  }
+  return (
+    <div className="stat-strip-wrap">
+      {plate}
+      <p className="t-meta stat-strip-floor">{floor}</p>
+    </div>
   );
 }
 
