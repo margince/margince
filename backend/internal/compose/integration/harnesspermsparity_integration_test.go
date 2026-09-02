@@ -136,13 +136,54 @@ func declaredSeatFixtures(t *testing.T) []string {
 			if !ok {
 				continue
 			}
+			if !mayBeASeatFixture(value) {
+				continue
+			}
 			for _, name := range value.Names {
+				// The blank identifier names nothing a suite can act
+				// through, so it is not a fixture whatever it is assigned.
+				if name.Name == "_" {
+					continue
+				}
 				names = append(names, name.Name)
 			}
 		}
 	}
 	sort.Strings(names)
 	return names
+}
+
+// mayBeASeatFixture reports whether a var declaration in harnessperms.go could
+// be a seat fixture, which is not the same question as whether it IS one.
+//
+// It answers by EXCLUSION — a composite literal of some other type is not a
+// fixture, so a shared ObjectGrant parked in this file does not have to be
+// registered — and everything else has to be. That asymmetry is the point.
+// AdminWithSignals is `withFullSignalGrant(AdminPerms)`, a call and not a
+// literal, and admitting only literals would have exempted the one fixture in
+// the file that is assembled rather than written out. Deciding this properly
+// needs the type checker, and the package does not depend on one; excluding
+// what is provably not a fixture is what can be done without it, and it errs
+// toward demanding registration rather than toward granting exemption.
+func mayBeASeatFixture(spec *ast.ValueSpec) bool {
+	if spec.Type != nil {
+		return isPermissionsType(spec.Type)
+	}
+	for _, value := range spec.Values {
+		if literal, ok := value.(*ast.CompositeLit); ok && !isPermissionsType(literal.Type) {
+			return false
+		}
+	}
+	return true
+}
+
+func isPermissionsType(expr ast.Expr) bool {
+	selector, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	pkg, ok := selector.X.(*ast.Ident)
+	return ok && pkg.Name == "principal" && selector.Sel.Name == "Permissions"
 }
 
 // seatRole is the seeded role a fixture stands in for. A fixture naming none
