@@ -810,19 +810,6 @@ export const ReadingsWithheld: Story = {
   ),
 };
 
-// The danger tone: a consent verdict that refuses rather than merely being
-// unrecorded. Every other fixture in this file reads "allowed" or "unknown":
-// this is the only place the strip's red slot renders at all.
-export const ReadingsBlocked: Story = {
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 900 }}>
-        <PersonReadings view={populated} />
-      </div>
-    </StoryProviders>
-  ),
-};
-
 // --- Lead moment: PersonToday in both tints ---------------------------------
 
 export const LeadMoment: Story = {
@@ -994,8 +981,8 @@ export const RailEmployments: Story = {
 
 // The rail's consent slot when a purpose is refused rather than merely
 // unrecorded: verdictClass (personrail.tsx) reads this as the refused/warn
-// treatment, the same red-toned reason the strip's own consentTone renders
-// as its danger tone (see ReadingsBlocked above for that surface).
+// treatment. The readings above carry no consent slot — the header's Write
+// verb states the refusal — so this is the one surface that draws it.
 export const RailConsentBlocked: Story = {
   render: () => {
     installFetchStub({

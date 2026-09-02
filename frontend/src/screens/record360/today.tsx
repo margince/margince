@@ -114,6 +114,27 @@ export function TodayPanel({
 }
 
 /**
+ * WithheldNotice names the sources the day's work could NOT be assembled from
+ * — sections a grant withheld — under whatever rows there are. "Hidden from
+ * you", never "none": a brief assembled from some of its sources is not the
+ * same brief, and the reader is the only one who can judge whether the missing
+ * one mattered. Nothing when nothing was withheld.
+ */
+export function WithheldNotice({
+  sections,
+}: Readonly<{ sections: readonly string[] }>) {
+  const t = useT();
+  if (sections.length === 0) {
+    return null;
+  }
+  return (
+    <p className="today-withheld">
+      {t("today.withheld", { sections: sections.join(", ") })}
+    </p>
+  );
+}
+
+/**
  * FoundMove is the move the agent found: who found it and when, the ask at
  * the row's loudest weight, the reason under it — which is the part a rep
  * judges — and, opposite all of it, what a reader can do about it.

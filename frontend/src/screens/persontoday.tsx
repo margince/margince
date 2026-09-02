@@ -25,6 +25,7 @@ import {
   type StandingTone,
   TodayPanel,
   TodoRow,
+  WithheldNotice,
 } from "./record360";
 
 // "Today with {first name}" (concept §5.5, ADR-0096 D2), in the two cards
@@ -130,6 +131,18 @@ export function PersonToday({
   const t = useT();
   const { locale } = useLocale();
   const taskRows = useOpenTaskRows(view);
+  // The open tasks are the one source the day's work reads besides the moment,
+  // and a grant can withhold them: the panel then says so rather than reading
+  // an unread list as a quiet day.
+  const withheld = (
+    <WithheldNotice
+      sections={
+        (view.sections_omitted ?? []).includes("next_steps")
+          ? [t("today.source.nextSteps")]
+          : []
+      }
+    />
+  );
   if (!moment) {
     return (
       <>
@@ -142,7 +155,9 @@ export function PersonToday({
             commercial={{ next_close_on: view.commercial?.deal?.close_date }}
           />
         </CallCard>
-        <TodayPanel onOpenTasks={onOpenTasks}>{taskRows}</TodayPanel>
+        <TodayPanel onOpenTasks={onOpenTasks} notice={withheld}>
+          {taskRows}
+        </TodayPanel>
       </>
     );
   }
@@ -193,7 +208,7 @@ export function PersonToday({
           commercial={{ next_close_on: view.commercial?.deal?.close_date }}
         />
       </CallCard>
-      <TodayPanel onOpenTasks={onOpenTasks}>
+      <TodayPanel onOpenTasks={onOpenTasks} notice={withheld}>
         {/* Rung 10 is a moment like any other: "nothing needs you today" is
             the answer a reader came for, and the verb the ladder still names
             on it — log what happened — rides the row like every other. */}
@@ -286,7 +301,7 @@ function useOpenTaskRows(view: Person360): ReactNode[] {
       <TodoRow
         key={task.id}
         who={nameOf(task.assignee_id)}
-        title={task.subject ?? t("person.moment.evidence.task")}
+        title={task.subject ?? t("task.untitled")}
         due={taskDue(task, asOf, t, locale, zone)}
       />
     ));

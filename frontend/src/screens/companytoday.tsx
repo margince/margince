@@ -24,7 +24,7 @@ import {
   MOMENT_RULE_LABEL,
   standingTone,
 } from "./persontoday";
-import { CallCard, TodayPanel, TodoRow } from "./record360";
+import { CallCard, TodayPanel, TodoRow, WithheldNotice } from "./record360";
 
 // "Today on this account" — the record's daily brief, and the only part of
 // the page that answers *what do I do now*. It replaces two earlier cards
@@ -339,19 +339,7 @@ function TodayWithheld({ view }: Readonly<{ view: Organization360 }>) {
   const hidden = TODAY_SOURCES.filter((source) =>
     omitted(view, source.section),
   );
-  if (hidden.length === 0) {
-    return null;
-  }
-  // "Hidden from you", never "None". A brief assembled from some of its
-  // sources is not the same brief, and the reader is the only one who can
-  // judge whether the missing one mattered.
-  return (
-    <p className="today-withheld">
-      {t("today.withheld", {
-        sections: hidden.map((source) => t(source.label)).join(", "),
-      })}
-    </p>
-  );
+  return <WithheldNotice sections={hidden.map((source) => t(source.label))} />;
 }
 
 // Whose move it is, and how long it has been. Lifted from the state strip's

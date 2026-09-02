@@ -48,6 +48,7 @@ import { problemMessageOf, throwProblem, useSorMode } from "./common";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { stillHeld, today } from "./employmentcurrency";
 import { interactionIcon } from "./interactionchrome";
+import { daysSinceInbound, isQuiet } from "./personquiet";
 import { consentWord } from "./personreadings";
 import { personTabRoute } from "./persontab";
 
@@ -1111,11 +1112,11 @@ function trendWord(view: Person360, t: ReturnType<typeof useT>): string {
 }
 
 function overallWord(view: Person360, t: ReturnType<typeof useT>): string {
-  const days = daysSince(view.last_inbound_at);
+  const days = daysSinceInbound(view);
   if (days == null) {
     return t("person.rail.thin");
   }
-  if (days > 14) {
+  if (isQuiet(days)) {
     return t("person.rail.atRisk");
   }
   return t("person.rail.strong");
@@ -1220,8 +1221,8 @@ function derivedSignals(
 ): Readonly<{ signals: ReadonlyArray<Signal>; skipped: boolean }> {
   const out: Signal[] = [];
   let skipped = hidden.lastTouch;
-  const quiet = hidden.lastTouch ? null : daysSince(view.last_inbound_at);
-  if (quiet != null && quiet > 14) {
+  const quiet = hidden.lastTouch ? null : daysSinceInbound(view);
+  if (quiet != null && isQuiet(quiet)) {
     out.push({
       text: t("person.rail.noReplyDays", {
         count: formatNumber(quiet, locale),
@@ -1409,7 +1410,7 @@ function RecentActivity({ view }: Readonly<{ view: Person360 }>) {
           {rows.map((row) => (
             <div className="pe-rail-row" key={row.id}>
               <span className="pe-rail-label">{row.subject ?? row.kind}</span>
-              <span className="pe-rail-value-muted">
+              <span className="pe-rail-value pe-rail-value-muted">
                 {sinceWords(row.occurred_at, t, locale)}
               </span>
             </div>
@@ -1430,18 +1431,15 @@ function Row({
   return (
     <div className="pe-rail-row">
       <span className="pe-rail-label">{label}</span>
-      <span className={strong ? "pe-rail-value-good" : "pe-rail-value"}>
+      <span
+        className={
+          strong ? "pe-rail-value pe-rail-value-good" : "pe-rail-value"
+        }
+      >
         {value}
       </span>
     </div>
   );
-}
-
-function daysSince(at: string | null | undefined): number | null {
-  if (!at) {
-    return null;
-  }
-  return Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000);
 }
 
 // sinceWords is the shared spelling, kept as a local name because two dozen

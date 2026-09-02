@@ -134,6 +134,7 @@ import {
   RecordReading,
   RecordReadingPair,
   RecordSpine,
+  ThreadFailed,
   timelineSpineSource,
 } from "./record360";
 import { invalidateRecord } from "./recordwritekeys";
@@ -4010,17 +4011,24 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     overlay,
                   })}
                   spine={
-                    <RecordSpine
-                      source={timelineSpineSource(
-                        threadQuery.activities,
-                        // The page has no server `as_of` for a deal, so the
-                        // thread is read at the moment it is drawn — the same
-                        // clock the readings band measures the close against.
-                        new Date().toISOString(),
-                        threadQuery.hasNextPage,
-                      )}
-                      commercial={{ next_close_on: deal.expected_close_date }}
-                    />
+                    threadQuery.isError ? (
+                      <ThreadFailed onRetry={threadQuery.refetch} />
+                    ) : (
+                      <RecordSpine
+                        source={timelineSpineSource(
+                          threadQuery.activities,
+                          // The page has no server `as_of` for a deal, so the
+                          // thread is read at the moment it is drawn — the
+                          // same clock the readings band measures the close
+                          // against.
+                          new Date().toISOString(),
+                          threadQuery.hasNextPage,
+                        )}
+                        commercial={{
+                          next_close_on: deal.expected_close_date,
+                        }}
+                      />
+                    )
                   }
                   coverage={coverageRead}
                   // An archived deal is not moved through the pipeline, and

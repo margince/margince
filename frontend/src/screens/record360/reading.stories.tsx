@@ -82,6 +82,14 @@ export const WithAMove: Story = {
   ),
 };
 
+// The same reading on the dark ground: the indigo band, the dashed spine and
+// the move row are all color-mix() of tokens that lift with the dark accent,
+// and a surface can be right in light and wrong here.
+export const WithAMoveDark: Story = {
+  ...WithAMove,
+  globals: { theme: "dark" },
+};
+
 export const NothingWaiting: Story = {
   // The quiet answer: the call says their move, and the day's work says so in
   // one sentence rather than drawing an empty list.

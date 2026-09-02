@@ -46,3 +46,15 @@ export const RefusedValue: Story = {
   // link. The reader still sees what was recorded.
   args: { kind: "email", value: "dana@brandt.example?subject=hi" },
 };
+
+// The link's accent and the refused text on the dark ground, where the accent
+// lifts and the two must still tell apart.
+export const EmailDark: Story = {
+  ...Email,
+  globals: { theme: "dark" },
+};
+
+export const RefusedValueDark: Story = {
+  ...RefusedValue,
+  globals: { theme: "dark" },
+};

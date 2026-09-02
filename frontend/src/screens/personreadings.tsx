@@ -13,6 +13,7 @@ import {
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
 import { buyingRoleLabel } from "./companypeople/summary";
+import { daysSinceInbound, isQuiet } from "./personquiet";
 import type { PersonTab } from "./persontab";
 
 // The contact's four readings, in the cards every record page draws them in
@@ -36,7 +37,6 @@ type Person360 = components["schemas"]["Person360"];
 // How many days without a reply before the relationship reads as quiet. The
 // same span the rail's own overall reading turns on (personrail.tsx), so the
 // card and the rail cannot disagree about when silence became a problem.
-const QUIET_AFTER_DAYS = 14;
 
 export function PersonReadings({
   view,
@@ -123,9 +123,6 @@ function MoveCard({
   // is left open.
   const asOf = new Date(view.as_of);
   const theirs = inbound && (!outbound || inbound > outbound);
-  const quietDays = inbound
-    ? calendarDaysBetween(new Date(inbound), new Date(view.as_of))
-    : null;
   const basis = (
     <FactList
       facts={[
@@ -171,9 +168,14 @@ function MoveCard({
       />
     );
   }
-  // We wrote last. Quiet once their silence has outlasted the span the rail
-  // calls at risk; otherwise simply their move.
-  const quiet = quietDays === null || quietDays > QUIET_AFTER_DAYS;
+  // We wrote last. Quiet once the silence has outlasted the span the rail
+  // calls at risk — counted from their last word by the rail's own rule, or
+  // from ours when they have never written: a contact first written to
+  // yesterday is awaited, not going cold. Otherwise simply their move.
+  const silence =
+    daysSinceInbound(view) ??
+    (outbound ? calendarDaysBetween(new Date(outbound), asOf) : null);
+  const quiet = silence !== null && isQuiet(silence);
   return (
     <StatCard
       label={label}

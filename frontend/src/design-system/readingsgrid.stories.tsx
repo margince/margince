@@ -67,9 +67,9 @@ export const FourReadings: Story = {
 };
 
 export const InANarrowColumn: Story = {
-  // The width the record column is read at with the context panel open: four
-  // cards still fit across, and below that the row folds to two by two rather
-  // than leaving one card alone on a row.
+  // Narrower than the record column: here four cards no longer fit across,
+  // and the row folds to two by two rather than to three and a card alone on
+  // a row.
   render: () => (
     <div style={{ maxWidth: 480 }}>
       <ReadingsGrid label="Where this contact stands">

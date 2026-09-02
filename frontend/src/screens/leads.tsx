@@ -24,6 +24,7 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
+  type RecordTimeline,
   useRecordTimeline,
   useTimelineFilters,
 } from "../design-system/recordtimeline";
@@ -80,6 +81,7 @@ import {
   RecordReading,
   RecordReadingPair,
   RecordSpine,
+  ThreadFailed,
   TodayPanel,
   TodoRow,
   timelineSpineSource,
@@ -993,12 +995,10 @@ function LeadScoreCard({
  */
 function LeadCall({
   lead,
-  activities,
-  hasMore,
+  thread,
 }: Readonly<{
   lead: Lead;
-  activities: readonly components["schemas"]["Activity"][];
-  hasMore: boolean;
+  thread: RecordTimeline;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -1010,15 +1010,22 @@ function LeadCall({
       because={standing.because}
       restsOn={standing.restsOn}
     >
-      <RecordSpine
-        source={timelineSpineSource(
-          activities,
-          // The page has no server `as_of` for a lead, so the thread is read
-          // at the moment it is drawn, in the reader's own clock.
-          new Date().toISOString(),
-          hasMore,
-        )}
-      />
+      {thread.isError ? (
+        // A failed read is not an empty thread: the call stands, and the
+        // reader is told the thread is missing rather than shown a lead nobody
+        // has written to.
+        <ThreadFailed onRetry={thread.refetch} />
+      ) : (
+        <RecordSpine
+          source={timelineSpineSource(
+            thread.activities,
+            // The page has no server `as_of` for a lead, so the thread is read
+            // at the moment it is drawn, in the reader's own clock.
+            new Date().toISOString(),
+            thread.hasNextPage,
+          )}
+        />
+      )}
     </CallCard>
   );
 }
@@ -1392,8 +1399,7 @@ function LeadOverviewPane({
   promotion,
   overlay,
   terminalReasonId,
-  activities,
-  activitiesHaveMore,
+  thread,
   onQualify,
   onDisqualify,
   onTouchLogged,
@@ -1404,10 +1410,9 @@ function LeadOverviewPane({
   promotion: PromotionRecord;
   overlay: boolean;
   terminalReasonId: string;
-  // The lead's unfiltered timeline page, which the thread under the call is
-  // drawn from.
-  activities: readonly components["schemas"]["Activity"][];
-  activitiesHaveMore: boolean;
+  // The lead's unfiltered timeline read, which the thread under the call is
+  // drawn from — the whole read, so its failure reaches the call too.
+  thread: RecordTimeline;
   onQualify: () => void;
   onDisqualify: () => void;
   // Owned by LeadScreen, ABOVE the tab switch: the refresh timers this
@@ -1436,11 +1441,7 @@ function LeadOverviewPane({
           under them the two sections a reader consults rather than reads —
           why it scores what it scores, and what the rep knows about it. */}
       <RecordReading>
-        <LeadCall
-          lead={lead}
-          activities={activities}
-          hasMore={activitiesHaveMore}
-        />
+        <LeadCall lead={lead} thread={thread} />
         <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
           {leadTodoRows(lead, t, locale)}
         </TodayPanel>
@@ -1734,6 +1735,7 @@ function LeadRecord({
             kind="email"
             value={lead.email}
             className="link-button t-mono lead-email"
+            textClassName="t-mono lead-email"
           />
         ) : null
       }
@@ -1840,8 +1842,7 @@ function LeadRecord({
           promotion={promotion}
           overlay={overlay}
           terminalReasonId={terminalReasonId}
-          activities={threadQuery.activities}
-          activitiesHaveMore={threadQuery.hasNextPage}
+          thread={threadQuery}
           onQualify={() => setDialog("qualify")}
           onDisqualify={() => setDialog("disqualify")}
           onTouchLogged={refreshAfterTouch}

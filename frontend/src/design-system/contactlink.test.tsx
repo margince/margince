@@ -31,7 +31,24 @@ describe("ContactLink", () => {
   it("keeps a refused value as text rather than hiding it", () => {
     render(<ContactLink kind="email" value="dana@brandt.example?bcc=x" />);
     expect(screen.queryByRole("link")).toBeNull();
-    expect(screen.getByText("dana@brandt.example?bcc=x")).toBeTruthy();
+    const text = screen.getByText("dana@brandt.example?bcc=x");
+    // Text, and dressed as text: the link's affordance would promise a click
+    // that does nothing.
+    expect(text.className).toBe("");
+  });
+
+  it("dresses a refused value only in the class the caller gives the text", () => {
+    render(
+      <ContactLink
+        kind="email"
+        value="dana@brandt.example?bcc=x"
+        className="link-button t-mono"
+        textClassName="t-mono"
+      />,
+    );
+    expect(screen.getByText("dana@brandt.example?bcc=x").className).toBe(
+      "t-mono",
+    );
   });
 
   it("lets the caller lead the value with a glyph", () => {

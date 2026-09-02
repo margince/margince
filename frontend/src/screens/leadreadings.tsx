@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { StatCard } from "../design-system/atoms";
+import { Button, StatCard } from "../design-system/atoms";
 import { FactList } from "../design-system/factlist";
 import { ReadingsGrid } from "../design-system/readingsgrid";
 import { formatDateTime, formatDecimal, formatNumber } from "../format/format";
@@ -74,17 +74,31 @@ function ScoreCard({
     },
   });
   const factors = explain.data?.current?.factors ?? [];
-  const basis =
-    factors.length > 0 ? (
-      <FactList
-        numeric
-        facts={factors.map((factor) => ({
-          key: factor.factor,
-          term: scoreFactorLabel(factor.factor, t),
-          value: formatDecimal(factor.points, locale, 1),
-        }))}
-      />
-    ) : undefined;
+  // The receipt behind the figure follows the read: still working, could not
+  // be read (with the one thing to do about it), nothing counted, or the
+  // factors. A basis that vanished on a failed read left the score looking
+  // complete, which is the one thing a receipt must not do.
+  const basis = explain.isPending ? (
+    <p className="t-small">{t("lead.scoreLoading")}</p>
+  ) : explain.isError ? (
+    <>
+      <p className="t-small">{t("lead.scoreFactorsFailed")}</p>
+      <Button small variant="ghost" onClick={() => explain.refetch()}>
+        {t("common.retry")}
+      </Button>
+    </>
+  ) : factors.length > 0 ? (
+    <FactList
+      numeric
+      facts={factors.map((factor) => ({
+        key: factor.factor,
+        term: scoreFactorLabel(factor.factor, t),
+        value: formatDecimal(factor.points, locale, 1),
+      }))}
+    />
+  ) : (
+    <p className="t-small">{t("lead.scoreNoFactors")}</p>
+  );
   return (
     <StatCard
       label={t("lead.score")}
@@ -98,7 +112,7 @@ function ScoreCard({
             : t("lead.scoreNoSignals")
       }
       meter={{ filled: lead.score, total: 100 }}
-      basisLabel={basis ? t("co.strip.basis.reading") : undefined}
+      basisLabel={t("co.strip.basis.reading")}
       basis={basis}
     />
   );

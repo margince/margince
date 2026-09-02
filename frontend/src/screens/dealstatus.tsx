@@ -341,6 +341,22 @@ function activityIdOf(move: DealStatusCardMove): string | null {
   return typeof raw === "string" && raw !== "" ? raw : null;
 }
 
+// Whether the verb has what it needs to be drawn, decided BEFORE the slot is:
+// a slot handed a control that renders nothing still draws the slot, and an
+// empty action region reads as a verb that failed to load. MoveButton keeps
+// its own null returns for the narrowing the cases need; this is what decides
+// whether the row has a verb at all.
+function hasMoveControl(move: DealStatusCardMove): boolean {
+  switch (move.action) {
+    case "create_task":
+      return Boolean(move.arguments);
+    case "open_meeting_brief":
+      return activityIdOf(move) !== null;
+    default:
+      return false;
+  }
+}
+
 // The move the briefing names, as the one row the agent is asking for: the
 // reason is the ask, the evidence under it is what it rests on, and the verb
 // at the row's end performs it.
@@ -360,7 +376,11 @@ function Move({
           </ul>
         ) : undefined
       }
-      action={<MoveButton dealId={dealId} move={move} />}
+      action={
+        hasMoveControl(move) ? (
+          <MoveButton dealId={dealId} move={move} />
+        ) : undefined
+      }
     />
   );
 }

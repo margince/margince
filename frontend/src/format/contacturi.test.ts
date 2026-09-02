@@ -23,6 +23,9 @@ describe("mailtoUri", () => {
     for (const bad of [
       "dana@brandt.example?subject=hi",
       "dana@brandt.example&cc=x@y.example",
+      "dana@brandt.example,x@y.example",
+      "dana;x@brandt.example",
+      "mailto:dana@brandt.example",
       "dana%0abcc:x@y.example@brandt.example",
       "dana brandt@example.com",
       "dana@brandt",

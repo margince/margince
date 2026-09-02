@@ -80,6 +80,22 @@ describe("whose move it is", () => {
     ).toBeTruthy();
   });
 
+  it("awaits a reply to a first word rather than calling it quiet", () => {
+    // We wrote yesterday and they have never written: theirs to answer, with
+    // no alarm yet — the same fourteen days a contact who HAS written gets.
+    const grid = show(view({ last_outbound_at: "2026-08-23T10:00:00Z" }));
+    const move = card(grid, "Whose move");
+    expect(within(move).getByText("Theirs")).toBeTruthy();
+    expect(within(move).getByText("nothing from them yet")).toBeTruthy();
+  });
+
+  it("reads a first word left unanswered past the span as gone quiet", () => {
+    const grid = show(view({ last_outbound_at: "2026-08-01T10:00:00Z" }));
+    expect(
+      within(card(grid, "Whose move")).getByText("Gone quiet"),
+    ).toBeTruthy();
+  });
+
   it("says nothing was ever exchanged rather than inventing a side", () => {
     const grid = show(view());
     expect(

@@ -601,13 +601,23 @@ function PersonIdentityLine({
             their own client; the Write verb above stays the way to write on
             the product's behalf, behind its consent gate. */}
         {email && (
-          <ContactLink kind="email" value={email} className="pe-meta-link">
+          <ContactLink
+            kind="email"
+            value={email}
+            className="pe-meta-link"
+            textClassName="pe-meta-fact"
+          >
             <Mail size={13} aria-hidden="true" />
             {email}
           </ContactLink>
         )}
         {phone && (
-          <ContactLink kind="phone" value={phone} className="pe-meta-link">
+          <ContactLink
+            kind="phone"
+            value={phone}
+            className="pe-meta-link"
+            textClassName="pe-meta-fact"
+          >
             <Phone size={13} aria-hidden="true" />
             {phone}
           </ContactLink>

@@ -3,19 +3,31 @@
    and the `min(100%, …)` floor is what stops a single card overflowing a
    column narrower than the floor itself.
 
-   The floor is 9.5rem because four readings have to fit ACROSS the record
+   The floor is 9.6rem because four readings have to fit ACROSS the record
    column with the context panel open, which is the width the page is read at:
    a 1280px window leaves that column about 41rem, and four cards at 10.5rem
    plus their gaps did not fit, so the fourth wrapped to a row of its own and
    the rest of that row was empty — which reads as a reading that failed to
-   load rather than as a row that ended. */
+   load rather than as a row that ended. Not 9.5rem either: at 480px three of
+   those fit exactly, and four readings laid out three and one is the same
+   lone card. The extra tenth makes 480px fold to two by two. */
 .readings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.6rem), 1fr));
   gap: var(--space-3);
   /* Every card in a row is the height of the tallest. They differ in what they
      carry — one states a basis, one a source, one only a number — and sized to
      their own contents they came out ragged, which reads as four cards of
      different importance rather than four readings of one record. */
   align-items: stretch;
+}
+
+/* Room around a reading's four short lines — what it is, the figure, what the
+   figure is drawn from, and a bar. The figure is what a reader compares across
+   the row, and set flush to the card's edge with the label pressed onto it the
+   four cards read as one dense strip rather than four readings. Scoped to the
+   grid: the same StatCard inside a StatStrip IS the dense strip, on purpose. */
+.readings-grid > .stat-card {
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
 }

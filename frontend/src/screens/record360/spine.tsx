@@ -461,9 +461,14 @@ type Exchange = {
 // and losing it would leave the gap below measuring from nothing.
 function pastStops(view: SpineSource, ctx: Ctx): Stop[] {
   const conversations = exchanges(view, ctx);
+  // A cut page has history the thread never saw, whatever it holds: a page of
+  // tasks and notes can name two conversations and hide twenty older ones,
+  // and a thread that then drew "the whole history" would be wrong in a way a
+  // reader cannot check.
+  const cut = view.activities?.page?.has_more === true;
   if (conversations.length === 0) {
     const at = silenceSince(view);
-    return at
+    const stops: Stop[] = at
       ? [
           {
             key: "spoke",
@@ -473,6 +478,7 @@ function pastStops(view: SpineSource, ctx: Ctx): Stop[] {
           },
         ]
       : [];
+    return cut ? [earlierStop(conversations, 0, view, ctx), ...stops] : stops;
   }
   // Newest conversations, then re-read oldest-first: the thread runs across
   // the card in time order, and it is the OLDEST that gets dropped when a
@@ -491,7 +497,7 @@ function pastStops(view: SpineSource, ctx: Ctx): Stop[] {
   if (unnamed) {
     stops.push(unnamed);
   }
-  if (earlier > 0) {
+  if (earlier > 0 || cut) {
     stops.unshift(earlierStop(conversations, earlier, view, ctx));
   }
   return stops;

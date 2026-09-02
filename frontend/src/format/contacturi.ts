@@ -14,10 +14,12 @@
 // the link); the shapes are not.
 
 // A mailbox with one `@` between two non-empty halves, and none of the
-// characters that would let the address carry a second header or escape the
-// scheme. Deliberately stricter than the addressing RFCs: a quoted local part
-// is legal mail and a wrong thing to hand a link to.
-const MAILBOX = /^[^\s@?#&%<>"'/\\]+@[^\s@?#&%<>"'/\\]+\.[^\s@?#&%<>"'/\\.]+$/;
+// characters that would let the address carry a second header, a second
+// recipient (`,` and `;` separate mailboxes in a `mailto:`) or another scheme.
+// Deliberately stricter than the addressing RFCs: a quoted local part is legal
+// mail and a wrong thing to hand a link to.
+const MAILBOX =
+  /^[^\s@?#&%<>"'/\\,;:]+@[^\s@?#&%<>"'/\\,;:]+\.[^\s@?#&%<>"'/\\,;:.]+$/;
 
 // The characters people put between digits when they write a number down.
 const NUMBER_PUNCTUATION = /[\s().\-/]/g;

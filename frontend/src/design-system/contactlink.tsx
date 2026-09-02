@@ -24,6 +24,7 @@ export function ContactLink({
   value,
   children,
   className = "link-button",
+  textClassName,
 }: Readonly<{
   kind: "email" | "phone";
   value: string;
@@ -33,11 +34,16 @@ export function ContactLink({
   // The affordance this link wears. The product's secondary text affordance by
   // default; a surface that styles its own anchors passes its class instead.
   className?: string;
+  // What a REFUSED value wears instead. Never the link's class: a pointer and
+  // an underline on text that opens nothing promise an action the reader
+  // cannot take. A caller whose layout the text must keep (a mono face, a
+  // wrapping width) names that here; by default the text is plain.
+  textClassName?: string;
 }>) {
   const href = kind === "email" ? mailtoUri(value) : telUri(value);
   const body = children ?? value;
   if (!href) {
-    return <span className={className}>{body}</span>;
+    return <span className={textClassName}>{body}</span>;
   }
   // No `target="_blank"`: a `mailto:` or `tel:` is handled by the operating
   // system, not by a new tab, and a blank target on one leaves an empty tab

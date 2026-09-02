@@ -1933,6 +1933,7 @@ export const vi = {
     "Phần giải thích cho điểm này chưa được lưu — lần cập nhật tới sẽ hiển thị.",
   "lead.scoreLoading": "Đang tải lý do…",
   "lead.scoreNoFactors": "Chưa có gì cộng vào điểm này.",
+  "lead.scoreFactorsFailed": "Không đọc được những gì cộng vào điểm này.",
   "lead.scoreFactorsExplainMachine":
     "Bạn đã tự đặt điểm này. Các yếu tố bên dưới giải thích giá trị của mô hình: {score}.",
   "lead.scoreDecayed": "{base}, giảm một nửa sau mỗi 14 ngày",
@@ -2559,6 +2560,7 @@ export const vi = {
 
   "co.spine.earlierMore":
     "C\u00f2n nhi\u1ec1u cu\u1ed9c trao \u0111\u1ed5i tr\u01b0\u1edbc \u0111\u00f3",
+  "co.spine.failed": "Không đọc được luồng trao đổi.",
   "co.spine.exchangeCount": "{count} tin nh\u1eafn",
   "co.spine.kind.email": "Email",
   "co.spine.kind.call": "Cuộc gọi",
@@ -2592,6 +2594,7 @@ export const vi = {
   "today.failed":
     "Không thể tổng hợp phần này. Phần còn lại của trang vẫn hiển thị những gì đọc được.",
   "today.quiet": "Hôm nay ở đây không có việc gì cần bạn.",
+  "task.untitled": "Công việc chưa có tiêu đề",
   "today.withheld":
     "Ẩn với bạn: {sections}. Danh sách này được tổng hợp mà không có chúng.",
   "today.source.nextSteps": "công việc đang mở",

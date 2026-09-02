@@ -1988,6 +1988,9 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // The day's work opens the task LIST: a door to another screen, which
       // writes nothing on this record.
       "View tasks",
+      // A reading's receipt: it opens what the figure was computed from and
+      // writes nothing.
+      "How it stands",
     ]);
     // The column's OWN fold is skipped structurally rather than by its label:
     // it belongs to the shell's chrome, not to this record, and "Hide" is too

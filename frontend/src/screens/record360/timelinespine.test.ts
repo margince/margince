@@ -93,4 +93,32 @@ describe("timelineSpineSource", () => {
     expect(source.activities?.page?.has_more).toBe(true);
     expect(source.as_of).toBe(AS_OF);
   });
+
+  it("lists open tasks soonest due first, with undated ones last", () => {
+    const source = timelineSpineSource(
+      [
+        row({ id: "undated", kind: "task", subject: "Someday" }),
+        row({
+          id: "later",
+          kind: "task",
+          subject: "Later",
+          due_at: "2026-09-10T09:00:00Z",
+        }),
+        row({
+          id: "soon",
+          kind: "task",
+          subject: "Soon",
+          due_at: "2026-08-22T09:00:00Z",
+        }),
+        row({ id: "done", kind: "task", subject: "Done", is_done: true }),
+      ],
+      AS_OF,
+      false,
+    );
+    expect(source.next_steps?.data.map((task) => task.activity_id)).toEqual([
+      "soon",
+      "later",
+      "undated",
+    ]);
+  });
 });

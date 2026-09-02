@@ -1941,6 +1941,8 @@ export const de = {
     "Die Aufschlüsselung zu diesem Score ist noch nicht gespeichert — die nächste Aktualisierung zeigt sie.",
   "lead.scoreLoading": "Begründung wird geladen…",
   "lead.scoreNoFactors": "Bisher zahlt nichts auf diesen Score ein.",
+  "lead.scoreFactorsFailed":
+    "Was auf diesen Score einzahlt, konnte nicht gelesen werden.",
   "lead.scoreFactorsExplainMachine":
     "Sie haben diesen Score selbst gesetzt. Die Faktoren unten erklären den Wert des Modells: {score}.",
   "lead.scoreDecayed": "{base}, halbiert sich alle 14 Tage",
@@ -2579,6 +2581,7 @@ export const de = {
   "dedupe.viewExisting": "Vorhandenen Eintrag anzeigen",
 
   "co.spine.earlierMore": "Weitere Gespräche davor",
+  "co.spine.failed": "Der Verlauf konnte nicht gelesen werden.",
   "co.spine.exchangeCount": "{count} Nachrichten",
   "co.spine.kind.email": "E-Mail",
   "co.spine.kind.call": "Anruf",
@@ -2609,6 +2612,7 @@ export const de = {
   "today.failed":
     "Das ließ sich nicht zusammenstellen. Der Rest der Seite zeigt weiterhin, was gelesen werden konnte.",
   "today.quiet": "Hier braucht Sie heute nichts.",
+  "task.untitled": "Aufgabe ohne Titel",
   "today.withheld":
     "Für Sie ausgeblendet: {sections}. Diese Liste ist ohne sie zusammengestellt.",
   "today.source.nextSteps": "offene Aufgaben",

@@ -41,8 +41,12 @@ export function timelineSpineSource(
     last_outbound_at: newest(activities, "outbound"),
     activities: { data: activities, page: { has_more: hasMore } },
     next_steps: {
+      // In due order, undated last: the spine draws the first two, and a page
+      // in activity order would put the task logged most recently ahead of
+      // the one due soonest.
       data: activities
         .filter((row) => row.kind === "task" && !row.is_done)
+        .sort((a, b) => dueOrder(a.due_at) - dueOrder(b.due_at))
         .map((task) => ({
           activity_id: task.id,
           subject: task.subject ?? "",
@@ -51,6 +55,10 @@ export function timelineSpineSource(
         })),
     },
   };
+}
+
+function dueOrder(dueAt: string | null | undefined): number {
+  return dueAt ? Date.parse(dueAt) : Number.POSITIVE_INFINITY;
 }
 
 // The newest row that went the given way, or nothing. Compared as instants

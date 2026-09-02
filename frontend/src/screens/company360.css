@@ -343,10 +343,9 @@
      everything Margince produced rather than learning two. */
   border-top-color: var(--aiMed);
   /* .panel-row already sets the padding and the hairline border (none on
-     the first row); this only lays the row's own content out. */
-}
-.co-move:hover {
-  background: var(--aiLight);
+     the first row); this only lays the row's own content out. No hover fill:
+     the row is not one press target, its verbs are, and a fill behind them
+     would claim a hit area the row does not have. */
 }
 
 /* Who wrote the row, over what it says. An eyebrow rather than a badge beside

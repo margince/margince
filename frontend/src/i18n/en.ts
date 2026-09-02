@@ -1972,6 +1972,7 @@ export const en = {
     "The breakdown for this score isn’t stored yet — the next update will show it.",
   "lead.scoreLoading": "Working out why…",
   "lead.scoreNoFactors": "Nothing counted toward this score yet.",
+  "lead.scoreFactorsFailed": "What counts toward this score could not be read.",
   "lead.scoreFactorsExplainMachine":
     "You set this score by hand. The factors below explain what the model says: {score}.",
   "lead.scoreDecayed": "{base} halving every 14 days",
@@ -2618,6 +2619,7 @@ export const en = {
   "dedupe.viewExisting": "View existing record",
 
   "co.spine.earlierMore": "More conversations before this",
+  "co.spine.failed": "The thread could not be read.",
   "co.spine.exchangeCount": "{count} messages",
   "co.spine.kind.email": "Email",
   "co.spine.kind.call": "Call",
@@ -2648,6 +2650,7 @@ export const en = {
   "today.failed":
     "This could not be assembled. The rest of the page still shows what it could read.",
   "today.quiet": "Nothing here needs you today.",
+  "task.untitled": "Untitled task",
   "today.withheld":
     "Hidden from you: {sections}. This list is assembled without them.",
   "today.source.nextSteps": "open tasks",

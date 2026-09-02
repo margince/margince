@@ -35,8 +35,9 @@ export {
   type SpineCommercial,
   type SpineSource,
 } from "./spine";
+export { ThreadFailed } from "./threadfailed";
 export { timelineSpineSource } from "./timelinespine";
-export { FoundMove, TodayPanel, TodoRow } from "./today";
+export { FoundMove, TodayPanel, TodoRow, WithheldNotice } from "./today";
 export {
   type Grounding,
   Proof,
