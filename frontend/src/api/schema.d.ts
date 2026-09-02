@@ -26926,9 +26926,23 @@ export interface components {
              */
             unlinked: number;
             /**
-             * @description True when nothing is being held back. The guardrail's target, sent as its own
-             *     field because a number only ever read beside other numbers becomes decoration —
-             *     this is what a check asserts on.
+             * @description True when a read stopped at its own scan bound, which makes every figure above
+             *     it a FLOOR rather than a count.
+             *
+             *     The bound is on the shared statement, so the strict read and every relaxed read
+             *     clip at the same number. On a queue already at the cap all five return it, every
+             *     difference is zero, and a guardrail without this flag would report a clear
+             *     backlog over the installation most likely to be hiding work.
+             *
+             *     `clear` is false whenever this is true. That is not a claim that work IS hidden;
+             *     it is a refusal to claim the opposite over a question the scan stopped before
+             *     settling.
+             */
+            truncated: boolean;
+            /**
+             * @description True when nothing is being held back AND the reads were complete. The
+             *     guardrail's target, sent as its own field because a number only ever read beside
+             *     other numbers becomes decoration — this is what a check asserts on.
              */
             clear: boolean;
         };

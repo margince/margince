@@ -61,11 +61,16 @@ type HiddenWork struct {
 	NotSales    int
 	PastHorizon int
 	Unlinked    int
+	// Truncated says a read stopped at its own scan bound, which makes every
+	// figure a floor. The module states why it is fatal to Clear rather than
+	// merely noted beside it.
+	Truncated bool
 }
 
 // Clear reports that nothing is being held back — the guardrail's target.
 func (h HiddenWork) Clear() bool {
-	return h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0
+	return !h.Truncated &&
+		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0
 }
 
 // WaitingCustomer is one message nobody has answered.
@@ -163,6 +168,7 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 		NotSales:    work.NotSales,
 		PastHorizon: work.PastHorizon,
 		Unlinked:    work.Unlinked,
+		Truncated:   work.Truncated,
 		// Derived from the same struct the figures came from, so the flag and
 		// the numbers cannot disagree — a client reading `clear` over four
 		// non-zero counts is the one lie this endpoint must not tell.

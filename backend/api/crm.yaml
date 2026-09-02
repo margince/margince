@@ -35608,7 +35608,7 @@ components:
         How much waiting work each hiding rule is keeping off one reader's queue, at one
         instant. Every count is of THREADS, matching what the queue counts: a customer who
         wrote three times is waiting once.
-      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, clear]
+      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, truncated, clear]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every figure below was read at.' }
         shown:
@@ -35655,12 +35655,26 @@ components:
             is right — a rep's dentist is not a customer — and it is also where a real
             customer lands when capture failed to link their thread. Its own figure for
             that reason rather than folded into a total.
+        truncated:
+          type: boolean
+          description: |
+            True when a read stopped at its own scan bound, which makes every figure above
+            it a FLOOR rather than a count.
+
+            The bound is on the shared statement, so the strict read and every relaxed read
+            clip at the same number. On a queue already at the cap all five return it, every
+            difference is zero, and a guardrail without this flag would report a clear
+            backlog over the installation most likely to be hiding work.
+
+            `clear` is false whenever this is true. That is not a claim that work IS hidden;
+            it is a refusal to claim the opposite over a question the scan stopped before
+            settling.
         clear:
           type: boolean
           description: |
-            True when nothing is being held back. The guardrail's target, sent as its own
-            field because a number only ever read beside other numbers becomes decoration —
-            this is what a check asserts on.
+            True when nothing is being held back AND the reads were complete. The
+            guardrail's target, sent as its own field because a number only ever read beside
+            other numbers becomes decoration — this is what a check asserts on.
 
     WorklistItem:
       type: object

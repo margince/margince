@@ -75,6 +75,33 @@ func TestClearNeverDisagreesWithTheFiguresBesideIt(t *testing.T) {
 	}
 }
 
+// A read that stopped at its own bound is never reported as clear.
+//
+// This is the guardrail's own worst failure: on a queue at the scan cap the
+// strict read and every relaxed read return the same number, all four
+// differences are zero, and every figure honestly reads as "nothing hidden" —
+// over the one installation most likely to be hiding work. Saying so is not a
+// claim that work IS hidden; it is a refusal to claim the opposite.
+func TestATruncatedReadIsNeverReportedAsClear(t *testing.T) {
+	t.Parallel()
+
+	svc := unboundService()
+	// Every figure zero, which on its own is the healthiest answer available.
+	svc.waiting = hidingWork{Shown: 200, Truncated: true}
+
+	got, err := svc.HiddenBacklog(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !got.Truncated {
+		t.Fatal("a read cut short by its own bound reached the wire as a complete one")
+	}
+	if got.Clear {
+		t.Fatal("called the backlog clear over a scan that stopped before the question was settled")
+	}
+}
+
 // Every figure crosses the seam. A projection that dropped one would publish a
 // zero — the under-reporting direction, where a broken read is indistinguishable
 // from a healthy queue.

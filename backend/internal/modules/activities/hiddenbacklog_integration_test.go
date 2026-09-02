@@ -273,3 +273,40 @@ func TestEveryRelaxationAdmitsAtLeastWhatTheQueueShows(t *testing.T) {
 		t.Fatalf("no hidden figure moved over three hidden messages: %+v", got)
 	}
 }
+
+// A queue at the scan cap cannot have its hidden work measured, and says so.
+//
+// The cap is on the shared statement, so the strict read and every relaxed read
+// clip at the same number: all five return WaitingScanCap, all four differences
+// are zero, and every figure reads as "nothing hidden" over the installation
+// most likely to be hiding work. Without the flag this is the guardrail
+// reporting success at exactly the moment it has stopped working — and no
+// assertion anywhere would fail.
+//
+// Seeded past the cap rather than mocked, because the clipping is the LIMIT's
+// and a fake would prove only that the flag can be set.
+func TestAQueueAtTheScanCapRefusesToCallItselfClear(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	// One past the cap, so the read is genuinely cut rather than exactly filled.
+	for i := 0; i <= WaitingScanCap; i++ {
+		e.seedWait(t, "Waiting", "person_id", person)
+	}
+
+	got := hiddenNow(t, e)
+
+	if got.Shown != WaitingScanCap {
+		t.Fatalf("the read returned %d rows against a cap of %d — this fixture no longer "+
+			"reaches the bound, so it proves nothing about a truncated read",
+			got.Shown, WaitingScanCap)
+	}
+	if !got.Truncated {
+		t.Fatal("a read that filled its own scan bound reported itself complete")
+	}
+	if got.Clear() {
+		t.Fatal("a queue at the cap called its backlog clear — the one answer this " +
+			"guardrail must never give, because nothing else would report the failure")
+	}
+}

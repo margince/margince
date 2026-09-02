@@ -51,6 +51,17 @@ const hiddenHorizonDays = 365
 // only honest answer available without handing one person a licence to read
 // another's records.
 type HiddenBacklog struct {
+	// Truncated says a read hit WaitingScanCap, which makes every figure below
+	// it a floor and `Clear` unsafe to believe.
+	//
+	// The cap is on the shared statement, so all five reads clip at the same
+	// 200. On a queue at the cap the strict read and every relaxed read return
+	// 200, all four differences are zero, and a guardrail with no flag would
+	// report a clear backlog over the one installation most likely to be hiding
+	// work — the exact under-reporting this reading exists to prevent, in the
+	// one shape that produces no failing assertion anywhere.
+	Truncated bool
+
 	// Shown is what the queue would carry — the same rows, counted. It is here
 	// so the others are readable as a proportion rather than as bare volumes:
 	// three hidden against four shown is a broken queue, and three against three
@@ -84,8 +95,12 @@ type HiddenBacklog struct {
 // The guardrail's target is zero, and the target is the point: a number that
 // only ever gets read next to other numbers becomes decoration. This is what a
 // check asserts on.
+// A truncated read is never clear. It is not a claim that work IS hidden — it
+// is a refusal to claim the opposite, which is the only honest answer available
+// when the scan stopped before the question was settled.
 func (h HiddenBacklog) Clear() bool {
-	return h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0
+	return !h.Truncated &&
+		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0
 }
 
 // HiddenWaiting counts what each hiding rule is keeping off this reader's queue.
@@ -112,6 +127,10 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 			return err
 		}
 		out.Shown = shown
+		// Asked of the STRICT read as well as the relaxed ones below: a queue
+		// already at the cap cannot have its hidden work measured at all, since
+		// every relaxation clips at the same bound.
+		out.Truncated = shown >= WaitingScanCap
 		// Each rule relaxed ALONE, so a difference names one cause. Relaxing
 		// them together would answer "how much is hidden" and leave a reader
 		// unable to act on it — the whole point of this reading is which rule to
@@ -132,6 +151,11 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 			widened, err := s.countWaiting(ctx, tx, asOf, relaxed.with)
 			if err != nil {
 				return err
+			}
+			// A relaxed read at the cap has been cut short too, so the
+			// difference it yields is a floor rather than a count.
+			if widened >= WaitingScanCap {
+				out.Truncated = true
 			}
 			// The DIFFERENCE, floored at zero. A relaxed read can only be a
 			// superset of the strict one, so a negative is impossible — and
