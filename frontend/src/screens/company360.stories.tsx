@@ -7,7 +7,6 @@ import {
   CommercialPanel,
   DealsCard,
   NextSteps,
-  PeopleCard,
   RecentActivityPanel,
   StateStrip,
 } from "./company360";
@@ -212,14 +211,6 @@ const populated = {
   },
   pending_approvals: { data: [], page },
   tags: [{ id: "t-1", workspace_id: "w-1", name: "Key account" }],
-  list_memberships: [
-    {
-      id: "l-1",
-      name: "Q3 renewals",
-      entity_type: "organization",
-      list_type: "static",
-    },
-  ],
   since_last_visit: {
     baseline_at: "2026-07-10T09:00:00Z",
     new_activities: 2,
@@ -317,7 +308,6 @@ const empty = {
   // which is the state this story exists to show.
   suggestions: [],
   tags: [],
-  list_memberships: [],
   since_last_visit: {
     baseline_at: null,
     new_activities: 0,
@@ -368,7 +358,6 @@ function Cards({ view }: Readonly<{ view: View }>) {
           extra={<CompanyContractState view={view} />}
         />
         <RecentActivityPanel view={view} />
-        <PeopleCard view={view} writable orgId="o-1" />
         <DealsCard view={view} />
         <NextSteps view={view} />
       </div>

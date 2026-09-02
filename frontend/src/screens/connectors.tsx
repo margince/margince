@@ -4,10 +4,17 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRoute } from "../app/router";
-import { Badge, Button, EmptyState, Modal } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  EmptyState,
+  Modal,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
+import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatDateTime } from "../format/format";
@@ -49,23 +56,38 @@ import "./connectors.css";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Provider = CaptureConnection["provider"];
+type MailPosture = NonNullable<CaptureConnection["mail_posture"]>;
 
 const providerLabel: Record<Provider, MessageKey> = {
   gmail: "connectors.provGmail",
   gcal: "connectors.provGcal",
   graph: "connectors.provGraph",
+  graphcal: "connectors.provGraphCal",
   imap: "connectors.provImap",
 };
 
 // The OAuth providers whose reconnect re-mints a consent URL; imap reconnects
 // (and first-connects) through the inline ImapConnectForm below instead, since
 // a credential provider never redirects.
-const OAUTH_PROVIDERS = new Set<Provider>(["gmail", "gcal", "graph"]);
+const OAUTH_PROVIDERS = new Set<Provider>([
+  "gmail",
+  "gcal",
+  "graph",
+  "graphcal",
+]);
 
 // The full connector roster the "Add a connection" affordance offers from —
-// the empty state shows all four, the row shows whichever aren't already
-// present in GET /connectors.
-const ALL_PROVIDERS: Provider[] = ["gmail", "gcal", "graph", "imap"];
+// the empty state shows every one, the row shows whichever aren't already
+// present in GET /connectors. Mail and calendar are separate entries on both
+// vendors because they are separate CONNECTIONS: one consent each, so a person
+// can bring one without the other and disconnect either.
+const ALL_PROVIDERS: Provider[] = [
+  "gmail",
+  "gcal",
+  "graph",
+  "graphcal",
+  "imap",
+];
 
 // Disconnecting an OAuth connection deletes OUR stored credential; it does
 // not reach out to the vendor to revoke the grant on their side (there is no
@@ -76,6 +98,7 @@ const OAUTH_DISCONNECT_NOTE: Partial<Record<Provider, MessageKey>> = {
   gmail: "connectors.disconnectBodyGoogleNote",
   gcal: "connectors.disconnectBodyGoogleNote",
   graph: "connectors.disconnectBodyMicrosoftNote",
+  graphcal: "connectors.disconnectBodyMicrosoftNote",
 };
 
 // The OAuth callback lands back on #/settings/connections/{outcome} — the
@@ -103,7 +126,14 @@ export type ConnectorsResult = {
   // webhooks_not_configured treatment).
   notConfigured: boolean;
   data: CaptureConnection[];
+  // The address this installation puts in outgoing links, and whether it
+  // answered when last asked. Absent when none is configured — which is
+  // itself the answer, not a failure.
+  publicOrigin?: PublicOriginStatus;
 };
+
+type PublicOriginStatus =
+  components["schemas"]["CaptureConnectionListResponse"]["public_origin"];
 
 // The OAuth return outcome (Task 2): the callback lands back on
 // #/settings/connections/{outcome} — id2 on that route only, never parsed
@@ -182,14 +212,15 @@ function ConnectionIdentity({
 }
 
 // What each provider actually brings, one sentence each. They exist because
-// the choice cannot be made from four names: "Gmail" and "Google Calendar"
-// are two halves of one account, only Gmail can ever send, and IMAP is the
-// answer for every host with no OAuth at all. A strip of four buttons had
-// nowhere to say any of that.
+// the choice cannot be made from the names alone: on both vendors the mail and
+// the calendar are two halves of one account and two separate connections, only
+// the OAuth mailboxes can send, and IMAP is the answer for every host with no
+// OAuth at all. A strip of buttons had nowhere to say any of that.
 const PROVIDER_BLURB: Record<Provider, MessageKey> = {
   gmail: "connectors.addGmailBrings",
   gcal: "connectors.addGcalBrings",
   graph: "connectors.addGraphBrings",
+  graphcal: "connectors.addGraphCalBrings",
   imap: "connectors.addImapBrings",
 };
 
@@ -664,6 +695,7 @@ function ConnectorRow({
           </div>
         }
       />
+      {conn.status === "connected" && <MailPostureRow conn={conn} />}
       {conn.status === "connected" && <SignatureEnrichmentRow conn={conn} />}
       {conn.status === "connected" && (
         <div className="connector-backfill">
@@ -672,6 +704,152 @@ function ConnectorRow({
       )}
     </>
   );
+}
+
+// What this mailbox asks of the mail it brings in. A row of its own beside the
+// signature answer, because it is the OTHER standing decision about a mailbox —
+// and the more consequential one: it decides who may read a message, not what a
+// nightly pass may mine out of it.
+//
+// A Select rather than a Switch, because the three answers are not one thing
+// turned on and off. `held` and `classified` both hold a message to the people
+// on it; what separates them is whether a classifier is ever allowed to open it
+// later. A two-position control would have to drop one of the three, and the one
+// it would drop is the default.
+//
+// `shared` is present and REFUSED rather than absent when the workspace has not
+// allowed it. A missing option tells a reader their product has two postures; a
+// refused one with the reason beside it tells them there is a third and who can
+// turn it on. The server refuses it too (422 `shared_posture_not_allowed`) — this
+// is the same rule said early, never the only place it is held.
+// How strict each posture is, so the row can tell a NARROWING from a widening.
+// Only a narrowing has anything to offer history: opening what was captured
+// under a stricter answer is a separate decision the server refuses to make as
+// a side effect, and `apply_to_history` only ever narrows.
+const postureRank: Record<MailPosture, number> = {
+  shared: 0,
+  classified: 1,
+  held: 2,
+};
+
+function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
+  const t = useT();
+  const settings = useCaptureSettings();
+  const save = useSetMailPosture(conn.provider);
+  const [pendingPosture, setPendingPosture] = useState<MailPosture | null>(
+    null,
+  );
+  const [applyToHistory, setApplyToHistory] = useState(false);
+  const sharedAllowed = settings.data?.shared_posture_allowed ?? false;
+  const posture = conn.mail_posture ?? "classified";
+
+  // A narrowing asks about history; anything else is saved on the spot. The
+  // question is worth a dialog only when there is a real second answer to give.
+  const choose = (next: MailPosture) => {
+    if (postureRank[next] > postureRank[posture]) {
+      setPendingPosture(next);
+      return;
+    }
+    save.mutate({ posture: next, applyToHistory: false });
+  };
+
+  return (
+    <>
+      <SettingRow
+        testId={`connector-${conn.provider}-mail-posture`}
+        label={t("connectors.mailPosture.label")}
+        description={
+          // Two sentences when one of the three answers is refused: what the
+          // current posture does, and who can unlock the one that is greyed.
+          // The reason cannot ride on the OPTION's label — a listbox row
+          // ellipsises, and the half that gets cut is the half a reader needs.
+          sharedAllowed
+            ? t(`connectors.mailPosture.help.${posture}` as MessageKey)
+            : `${t(`connectors.mailPosture.help.${posture}` as MessageKey)} ${t("connectors.mailPosture.sharedNeedsAdmin")}`
+        }
+        control={(controlProps) => (
+          <Select
+            {...controlProps}
+            value={posture}
+            disabled={save.isPending}
+            onChange={(next) => choose(next as MailPosture)}
+            options={[
+              {
+                value: "classified",
+                label: t("connectors.mailPosture.classified"),
+              },
+              { value: "held", label: t("connectors.mailPosture.held") },
+              {
+                value: "shared",
+                label: t("connectors.mailPosture.shared"),
+                disabled: !sharedAllowed,
+              },
+            ]}
+          />
+        )}
+      />
+      <ConfirmModal
+        open={pendingPosture !== null}
+        onClose={() => {
+          setPendingPosture(null);
+          setApplyToHistory(false);
+        }}
+        title={t("connectors.mailPosture.historyTitle")}
+        confirmLabel={t("connectors.mailPosture.historyConfirm")}
+        pending={save.isPending}
+        error={save.error ? problemMessageOf(save.error, t) : undefined}
+        onConfirm={() => {
+          if (pendingPosture) {
+            save.mutate(
+              { posture: pendingPosture, applyToHistory },
+              {
+                onSuccess: () => {
+                  setPendingPosture(null);
+                  setApplyToHistory(false);
+                },
+              },
+            );
+          }
+        }}
+      >
+        <p>{t("connectors.mailPosture.historyBody")}</p>
+        {/* The reach of the change is a CHECKBOX rather than a second button.
+            Two verbs of similar weight side by side read as rival answers to
+            "are you sure", and in German neither label fits the compact confirm
+            width — both were clipped on the running stack. One question, one
+            modifier, and the button says what it does. */}
+        <Checkbox
+          checked={applyToHistory}
+          onChange={(e) => setApplyToHistory(e.target.checked)}
+          label={t("connectors.mailPosture.historyApply")}
+        />
+      </ConfirmModal>
+    </>
+  );
+}
+
+function useSetMailPosture(provider: CaptureConnection["provider"]) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // Both halves of the decision arrive as variables, like every mutation on
+    // this screen: a mutationFn closing over rendered state answers with the
+    // previous render's (frontend/AGENTS.md, mutation-variable-coverage).
+    mutationFn: async (vars: {
+      posture: MailPosture;
+      applyToHistory: boolean;
+    }) => {
+      const { error } = await api.PUT("/connectors/{provider}/mail-posture", {
+        params: { path: { provider } },
+        body: { posture: vars.posture, apply_to_history: vars.applyToHistory },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["connectors"] });
+    },
+  });
 }
 
 // This mailbox's own answer to the nightly signature pass — a row of its own
@@ -757,9 +935,59 @@ export function useConnectors() {
       if (error) {
         throwProblem(error);
       }
-      return { notConfigured: false, data: data.data };
+      return {
+        notConfigured: false,
+        data: data.data,
+        publicOrigin: data.public_origin,
+      };
     },
   });
+}
+
+/**
+ * The address this installation puts in the links it emails, and whether it
+ * answered when last asked.
+ *
+ * It sits on this card because it is the same question the card already
+ * asks — can this installation reach the outside world — and because the
+ * value is otherwise invisible: a deployment configured with a localhost
+ * origin sends mail whose unsubscribe links open nothing, and until now
+ * the only way to find out was for a recipient to click one.
+ *
+ * Reported, never enforced. The boot and send guards are what refuse an
+ * unusable origin; this is so somebody can SEE it. And a probe from inside
+ * the deployment says this process can reach the origin — it cannot say a
+ * recipient's mail client can.
+ */
+function PublicOriginRow({
+  status,
+}: Readonly<{ status?: ConnectorsResult["publicOrigin"] }>) {
+  const t = useT();
+  if (!status) {
+    return null;
+  }
+  const tone =
+    status.reachable === null || status.reachable === undefined
+      ? undefined
+      : status.reachable
+        ? "success"
+        : "warn";
+  const stateLabel =
+    status.reachable === null || status.reachable === undefined
+      ? t("connectors.originUnchecked")
+      : status.reachable
+        ? t("connectors.originReachable")
+        : t("connectors.originUnreachable");
+  return (
+    <SettingList>
+      <SettingRow
+        testId="public-origin"
+        label={t("connectors.originLabel")}
+        description={status.origin}
+        control={<Badge tone={tone}>{stateLabel}</Badge>}
+      />
+    </SettingList>
+  );
 }
 
 // The roster as this card's list of decisions: one row per mailbox, or — when
@@ -949,6 +1177,7 @@ function MailConnectorsPanel() {
             onDisconnect={setPendingDisconnect}
           />
         )}
+        <PublicOriginRow status={connectors.data?.publicOrigin} />
       </PanelBody>
       <AddConnectionDialog
         open={addOpen && offerAdd}

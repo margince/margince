@@ -42,6 +42,14 @@ func NewHandlers(db *database.DB) Handlers {
 	return Handlers{store: NewStore(db)}
 }
 
+// WithInstallationName injects the label the public preference page shows
+// as the sender of the mail it is answering. Compose supplies identity's
+// reader; a module never imports a sibling.
+func (h Handlers) WithInstallationName(r InstallationNameReader) Handlers {
+	h.store = h.store.WithInstallationName(r)
+	return h
+}
+
 // WithEraser returns a copy wired to the erase path.
 func (h Handlers) WithEraser(e Eraser) Handlers {
 	h.eraser = e

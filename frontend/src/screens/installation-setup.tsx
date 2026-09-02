@@ -3,14 +3,11 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
+import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { ChoiceList } from "../design-system/choicelist";
 import { ComboBox } from "../design-system/combobox";
-import { OffsiteLink } from "../design-system/offsitelink";
 import { OnboardingStage } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
-import { ProviderMark } from "../design-system/provider-mark";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -24,7 +21,6 @@ import {
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
 import { problemMessageOf, throwProblem } from "./common";
-import { useSetGoogleApp } from "./google-app";
 import { CORE_LABELS } from "./onboarding-core-label";
 import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // The stylesheet carries the `onboarding-` prefix rather than this file's name
@@ -39,8 +35,11 @@ import {
 } from "./setup-providers";
 
 /**
- * What a fresh installation must be told before it can be used, asked in the
- * order the server lists it: the model binding, then the Google app.
+ * What a fresh installation must be told before it can be used: the model
+ * binding, which is the one step the server calls blocking. Everything else the
+ * report names — the Google app today — is configured from settings, because an
+ * installation with no Google app is fully usable and demanding one here locked
+ * its operator out of every route.
  *
  * WHY THIS IS NOT THE SETTINGS CARDS. `AiRoutingCard` re-points lanes an
  * installation ALREADY binds — it says so and refuses an empty one, which is
@@ -74,16 +73,34 @@ export function useInstallationSetup() {
 }
 
 /**
- * The first step that is not done yet, in the server's order.
+ * The steps this screen has a panel for. Today the model binding is the whole
+ * list, and the server agrees — it reports every other step non-blocking, held
+ * by TestOnlyTheModelBindingBlocksFirstRun.
+ *
+ * It is read by `outstandingStep` rather than only by the render, and that is
+ * the point. A frontend older than its server would otherwise meet a blocking
+ * step it has no panel for, and the caller — which gates on this same
+ * function — would keep drawing a component that renders nothing: a reader held
+ * behind an empty screen, with nothing on it to say what it wants.
+ */
+const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models"];
+
+/**
+ * The first step that is not done yet AND that this screen can ask for, in the
+ * server's order.
  *
  * `steps` is optional-chained as well as `setup`: an answer that arrives
  * without it is not an answer, and the alternative is this throwing inside a
  * render — which takes down the screen it was meant to stand in front of.
  * Undefined here reads as "nothing outstanding", which lets the reader past
- * rather than trapping them behind a gate that cannot say what it wants.
+ * rather than trapping them behind a gate that cannot say what it wants. A
+ * blocking step with no panel takes the same exit, for the same reason: past a
+ * gate is somewhere, and a settings screen can still be reached from there.
  */
 export function outstandingStep(setup: Setup | undefined): Step | undefined {
-  return setup?.steps?.find((s) => s.blocking && !s.configured);
+  return setup?.steps?.find(
+    (s) => s.blocking && !s.configured && ASKABLE_STEPS.includes(s.step),
+  );
 }
 
 function useBindModels() {
@@ -409,285 +426,16 @@ function AiStep({
   );
 }
 
-/**
- * The redirect URIs a Google app has to authorize, and why they are written as
- * a PATTERN rather than a finished address.
- *
- * The host is `MARGINCE_API_BASE_URL` (falling back to
- * `MARGINCE_PUBLIC_BASE_URL`) — the api's externally-reachable base, which is
- * server configuration the browser cannot see. On a split deployment the SPA's
- * own origin is a different host, so deriving the URI from `location.origin`
- * would print a confident, wrong address — and a redirect URI that does not
- * match is the one Google failure that says nothing useful:
- * `redirect_uri_mismatch` at the consent screen, after the operator has already
- * finished here.
- *
- * So the screen shows the paths, names the host, and lets the operator supply
- * the one value only their deployment knows.
- */
-const REDIRECT_PATHS: ReadonlyArray<{ label: MessageKey; path: string }> = [
-  {
-    label: "firstRun.google.helpRedirectMail",
-    path: "/v1/connectors/gmail/callback",
-  },
-  {
-    label: "firstRun.google.helpRedirectCalendar",
-    path: "/v1/connectors/gcal/callback",
-  },
-  {
-    label: "firstRun.google.helpRedirectSignIn",
-    path: "/v1/auth/oidc/google/callback",
-  },
-];
-
-/**
- * What the organization runs on — ONE answer covering mail and sign-in.
- *
- * They are separate mechanisms in the server and the same fact about a company:
- * an organization on Workspace reads mail through a Google app and signs its
- * people in with Google accounts, through that same app and the same console
- * entry. Two questions would ask somebody to state one fact twice and then keep
- * the two answers agreeing.
- */
-const PLATFORMS = ["google", "microsoft", "other"] as const;
-type Platform = (typeof PLATFORMS)[number];
-
-// Typed by `Platform` in both directions: an answer with no copy fails, and
-// copy for an answer that does not exist fails too. `operator` is absent on the
-// Google path, and its absence is the statement — that path has nothing for
-// somebody else to do, because the form below it is the whole of the work.
-const PLATFORM_COPY: Readonly<
-  Record<
-    Platform,
-    { label: MessageKey; what: MessageKey; operator?: MessageKey }
-  >
-> = {
-  google: {
-    label: "firstRun.platform.google",
-    what: "firstRun.platform.googleWhat",
-  },
-  microsoft: {
-    label: "firstRun.platform.microsoft",
-    what: "firstRun.platform.microsoftWhat",
-    operator: "firstRun.platform.microsoftOperator",
-  },
-  other: {
-    label: "firstRun.platform.other",
-    what: "firstRun.platform.otherWhat",
-    operator: "firstRun.platform.otherOperator",
-  },
-};
-
-/** Google's own console, where the app is created and the two values are read. */
-const GOOGLE_CREDENTIALS_CONSOLE =
-  "https://console.cloud.google.com/apis/credentials";
-
-/**
- * Where the client id and secret come from, folded away.
- *
- * A fold rather than four paragraphs above the fields: an operator who has done
- * this before wants the two boxes, and one who has not needs every step. Open
- * by default would push the actual form below the fold for everybody.
- */
-function GoogleAppHelp() {
-  const t = useT();
-  return (
-    <Disclosure summary={t("firstRun.google.helpToggle")}>
-      <ol className="ob-fr-help">
-        <li>{t("firstRun.google.helpStep1")}</li>
-        <li>{t("firstRun.google.helpStep2")}</li>
-        <li>
-          {t("firstRun.google.helpStep3")}
-          <dl className="ob-fr-uris">
-            {REDIRECT_PATHS.map((uri) => (
-              <div key={uri.path}>
-                <dt>{t(uri.label)}</dt>
-                <dd className="t-mono">{`{host}${uri.path}`}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="ob-fr-help-note">
-            {t("firstRun.google.helpRedirectHost", { host: "{host}" })}
-          </p>
-        </li>
-        <li>{t("firstRun.google.helpStep4")}</li>
-      </ol>
-      <p className="ob-fr-help-note">
-        <OffsiteLink href={GOOGLE_CREDENTIALS_CONSOLE}>
-          {t("firstRun.google.helpConsole")}
-        </OffsiteLink>
-      </p>
-      <p className="ob-fr-help-note">{t("firstRun.google.helpDocs")}</p>
-      {/* The sign-in step, here rather than on the screen itself. It is work for
-          whoever runs the server, not for the admin filling this form, and as a
-          permanent notice above the fields it put two environment variable names
-          between the question and the first thing anybody types. */}
-      <p className="ob-fr-help-note">{t("firstRun.google.helpSignIn")}</p>
-    </Disclosure>
-  );
-}
-
-/** The Google step: the OAuth app a mailbox connection is made through. */
-function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
-  const t = useT();
-  const [platform, setPlatform] = useState<Platform>("google");
-  const [clientId, setClientId] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
-  const save = useSetGoogleApp();
-  // The app is what this step WRITES, whatever the platform answer is — so a
-  // reader on the Microsoft or IMAP path can still finish by pasting one, which
-  // is the only way past the gate today. The fields are theirs to use rather
-  // than hidden: hiding the one control that can complete the step would leave
-  // them with a refusal and no way to answer it.
-  const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
-  // What this answer leaves for whoever runs the server. Absent on the Google
-  // path, which is also what says whether the gap notice below belongs here.
-  const operatorWork = PLATFORM_COPY[platform].operator;
-
-  return (
-    <StepForm busy={save.isPending} onBusy={onBusy}>
-      <Panel
-        footer={
-          <Button
-            variant="primary"
-            pending={save.isPending}
-            disabled={!ready}
-            onClick={() => {
-              save.reset();
-              save.mutate(
-                {
-                  clientId: clientId.trim(),
-                  clientSecret: clientSecret.trim(),
-                },
-                {
-                  onSuccess: () => {
-                    // Cleared on the way out rather than left in state: the
-                    // field is the only copy this app holds, and it has done
-                    // its job.
-                    setClientSecret("");
-                    save.reset();
-                  },
-                },
-              );
-            }}
-          >
-            {t("firstRun.continue")}
-          </Button>
-        }
-      >
-        <PanelBody>
-          {/* Plates rather than a radio column: the answers here are two
-              vendors and a protocol, and an admin picks the platform their
-              company already runs by recognising it. The mark is the fast half
-              of that recognition and never the only half, so the label still
-              says which is which. `other` gets the component's own fallback,
-              which is a key rather than an invented logo: IMAP is not a brand,
-              and a plate with no mark at all started its label higher than the
-              two beside it. */}
-          <ChoiceList<Platform>
-            legend={t("firstRun.platform.legend")}
-            hideLegend
-            layout="cards"
-            value={platform}
-            disabled={save.isPending}
-            onChange={setPlatform}
-            choices={PLATFORMS.map((id) => ({
-              value: id,
-              label: t(PLATFORM_COPY[id].label),
-              description: t(PLATFORM_COPY[id].what),
-              mark: <ProviderMark providerKey={id} />,
-            }))}
-          />
-          {/* What the two answers that need no app HERE still need, and where.
-              It is not this screen's work to do, so the reader is told whose it
-              is rather than left with an empty form. */}
-          {/* Every answer carries what it still leaves undone, the Google one
-              included — its option promises sign-in, and saving the app below
-              does not turn the login door on. A screen that states two paths'
-              gaps and hides the third's is worse than one that states none: it
-              reads as a guarantee for the path it says nothing about. */}
-          {/* Only the two answers that leave work for somebody else say so
-              here. Google's own caveat moved to the stage foot, which is where
-              a one-line qualification about the screen belongs: as a permanent
-              notice it sat between the question and the fields, and it was the
-              longest thing on the screen. */}
-          {operatorWork === undefined ? null : (
-            <Callout tone="info" live="status">
-              {t(operatorWork)}
-            </Callout>
-          )}
-          {/* And what the two answers that need no app here run into anyway.
-              Silent rather than a second live region: both change on the same
-              press, and two regions announcing together read the news twice. */}
-          {/* The gap, stated. `google_app` is blocking on the server whatever
-              the answer above, so these two paths cannot finish first run — and
-              saying so beside the fields that CAN finish it is the only honest
-              shape while that is true. */}
-          {operatorWork === undefined ? null : (
-            <Callout tone="warn">
-              {t("firstRun.platform.stillNeedsGoogle")}
-            </Callout>
-          )}
-          <GoogleAppHelp />
-          {save.error && (
-            <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
-          )}
-          <Field label={t("firstRun.google.clientId")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={clientId}
-                disabled={save.isPending}
-                autoComplete="off"
-                placeholder={t("firstRun.google.clientIdPlaceholder")}
-                onChange={(e) => setClientId(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("firstRun.google.clientSecret")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                type="password"
-                autoComplete="off"
-                value={clientSecret}
-                disabled={save.isPending}
-                onChange={(e) => setClientSecret(e.target.value)}
-              />
-            )}
-          </Field>
-        </PanelBody>
-      </Panel>
-    </StepForm>
-  );
-}
-
-/**
- * Whether this installation has a model bound, from the server's own step list
- * rather than from which step is on screen.
- *
- * The distinction is what makes the light honest for a reader who arrives
- * mid-way: `ai_models` can be configured while `google_app` is not, and a
- * `lit` derived from "this is the second step" would say the same thing by
- * accident rather than by reading it.
- */
-/**
- * The stage's headline and its sentence under it.
- *
- * The ignition takes them over rather than standing under the question it just
- * answered: leaving "Choose a model provider" over a sequence about a model
- * already chosen is the screen contradicting itself while somebody reads it.
- */
+// What the room says while the one step is answered, and for the four seconds
+// after it lands. Two states rather than one per step: first run asks a single
+// question now, and the ignition is not a step but the moment the answer takes
+// effect.
 function head(
   ignited: boolean,
-  ai: boolean,
 ): Readonly<{ title: MessageKey; sub: MessageKey }> {
-  if (ignited) {
-    return { title: "firstRun.ignite.title", sub: "firstRun.ignite.sub" };
-  }
-  return ai
-    ? { title: "firstRun.ai.title", sub: "firstRun.ai.sub" }
-    : { title: "firstRun.platform.title", sub: "firstRun.platform.sub" };
+  return ignited
+    ? { title: "firstRun.ignite.title", sub: "firstRun.ignite.sub" }
+    : { title: "firstRun.ai.title", sub: "firstRun.ai.sub" };
 }
 
 function modelBound(setup: Setup | undefined): boolean {
@@ -737,7 +485,6 @@ export function InstallationSetup() {
   if (setup.isPending || !step) {
     return null;
   }
-  const ai = step.step === "ai_models";
   const core =
     ignited !== null ? igniting.state : busy ? "working" : ("idle" as const);
   return (
@@ -756,29 +503,30 @@ export function InstallationSetup() {
       // orb showing the same state on two screens must not read as two
       // different things.
       coreStateLabel={t(CORE_LABELS[core])}
-      // The server's step list, in the server's order — the same array the gate
-      // walks, so the band cannot claim a different flow than the one being
-      // walked.
-      progress={{
-        steps: (setup.data?.steps ?? []).map((s) =>
-          t(
-            s.step === "ai_models"
-              ? "firstRun.step.model"
-              : "firstRun.step.platform",
-          ),
-        ),
-        at: (setup.data?.steps ?? []).findIndex((s) => s.step === step.step),
-      }}
-      eyebrow={t(ai ? "firstRun.ai.eyebrow" : "firstRun.google.eyebrow")}
-      // The one qualification each step carries, on the card's bottom edge.
-      // Both are true of the whole screen rather than of any field on it, which
-      // is what makes them chrome: as callouts in the board they were read as
-      // instructions and pushed the actual form below the fold.
-      hint={t(ai ? "firstRun.ai.foot" : "firstRun.google.foot")}
-      title={t(head(ignited !== null, ai).title)}
-      sub={t(head(ignited !== null, ai).sub)}
+      // ONE step, so the band names it rather than counting it. The model
+      // binding is the whole of first run — the Google app is configured from
+      // settings, where the card can also show the redirect URIs Google's
+      // console asks for — and a progress counter over a flow of one would be
+      // ceremony inventing a journey.
+      step={t("firstRun.step.model")}
+      eyebrow={t("firstRun.ai.eyebrow")}
+      // The one qualification the step carries, on the card's bottom edge. It
+      // is true of the whole screen rather than of any field on it, which is
+      // what makes it chrome: as a callout in the board it read as an
+      // instruction and pushed the actual form below the fold.
+      hint={t("firstRun.ai.foot")}
+      title={t(head(ignited !== null).title)}
+      sub={t(head(ignited !== null).sub)}
     >
-      {ignited !== null ? (
+      {ignited === null ? (
+        <AiStep
+          onBusy={setBusy}
+          onIgnite={(vendor) => {
+            setBusy(false);
+            setIgnited(vendor);
+          }}
+        />
+      ) : (
         <Ignition
           vendor={ignited}
           onDone={() => {
@@ -789,16 +537,6 @@ export function InstallationSetup() {
             queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
           }}
         />
-      ) : ai ? (
-        <AiStep
-          onBusy={setBusy}
-          onIgnite={(vendor) => {
-            setBusy(false);
-            setIgnited(vendor);
-          }}
-        />
-      ) : (
-        <GoogleStep onBusy={setBusy} />
       )}
     </OnboardingStage>
   );

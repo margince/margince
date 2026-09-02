@@ -207,7 +207,7 @@ export function OvernightPanel() {
             <DigestCount
               label={t("home.digestDedupe")}
               value={review.dedupe_open ?? 0}
-              onOpen={() => navigate({ screen: "today" })}
+              onOpen={() => navigate({ screen: "worklist" })}
             />
             <PanelBody>
               <p className="t-caption">

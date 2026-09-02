@@ -192,7 +192,7 @@ export function NewProjectAction({
  * The one entry of a bounded catalog that carries a typed name, or nothing —
  * and a refusal where the catalog could not answer the question at all.
  *
- * `/tags` and `/lists` are bounded VOCABULARIES rather than paged lists: the
+ * `/tags` is a bounded VOCABULARY rather than a paged list: the
  * server answers up to a governed cap and offers no cursor, so `page.has_more`
  * is an overflow signal a person has to act on and not a page to walk. A caller
  * matching a name against what it was handed therefore cannot read a miss as
@@ -202,9 +202,9 @@ export function NewProjectAction({
  * is unique per installation (`uq_tag_name`) a collision with a row nobody can
  * see, which reaches the rep as a 409 about a tag the same cap hides from them.
  *
- * Both catalog readers on this page share it. A caller that reads a bounded
- * catalog and ignores the overflow is a shape rather than a one-off, and two
- * copies of the decision are two answers to one question.
+ * A caller that reads a bounded catalog and ignores the overflow is a shape
+ * rather than a one-off, so the decision is spelled once here rather than
+ * re-derived at each call site.
  */
 function matchInCatalog<Entry>(
   catalog: Readonly<{
@@ -364,89 +364,6 @@ export function TagAction({ orgId }: Readonly<{ orgId: string }>) {
       stay
       create={addTag}
       fields={[{ key: "name", label: "co.tags.pick", required: true }]}
-    />
-  );
-}
-
-/**
- * ListAction adds this company to a static list, creating the list when the
- * name is new — the same one-field shape as TagAction, for the same reason.
- *
- * Only STATIC lists are matched or made. A dynamic segment is a stored filter
- * with no membership to add to: a row belongs to one exactly when it matches,
- * so offering one here would present a write the server must refuse.
- */
-export function ListAction({ orgId }: Readonly<{ orgId: string }>) {
-  const t = useT();
-  const toast = useToast();
-
-  const addToList = async (values: Record<string, string>) => {
-    const name = values.name.trim();
-    // Read at submit, for the reason spelled out in TagAction: a retry after a
-    // half-completed attempt must find what that attempt created.
-    //
-    // This narrows the race; it does not close it. `list` carries no
-    // uniqueness on its name (unlike `tag`, which has uq_tag_name), so two
-    // people typing the same new list name at the same moment get two lists
-    // and no server error to resolve them. Closing it needs a constraint or a
-    // find-or-create endpoint, neither of which a client can supply. The
-    // damage is a duplicate list a human can merge, not a lost membership.
-    const { data: known, error: readError } = await api.GET("/lists", {
-      params: { query: { entity_type: "organization" } },
-    });
-    if (readError) {
-      throwProblem(readError, t);
-    }
-    // `/lists` is the same bounded catalog `/tags` is — a cap and no cursor —
-    // so a name missing from it is only "new" while the read fits under that
-    // cap. Over it, the create would add a second list carrying a name the
-    // page could not show, and `list` has no uniqueness for the server to
-    // refuse it with.
-    const existing = matchInCatalog(
-      known,
-      (list) =>
-        list.list_type === "static" &&
-        list.name.trim().toLowerCase() === name.toLowerCase(),
-      "co.lists.overCap",
-      t,
-    );
-    let listId = existing?.id;
-    if (!listId) {
-      const { data, error } = await api.POST("/lists", {
-        body: { name, entity_type: "organization", list_type: "static" },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      listId = data.id;
-    }
-    const { data, error, response } = await api.POST("/lists/{id}/members", {
-      params: { path: { id: listId } },
-      body: { entity_type: "organization", entity_id: orgId },
-    });
-    // Already a member is the asked-for state, not a failure. See TagAction.
-    if (response.status === 409) {
-      toast.show(t("co.lists.added", { name }), { mark: false });
-      return { id: orgId };
-    }
-    if (error) {
-      throwProblem(error, t);
-    }
-    // No Undo, unlike the tag beside it: list membership has no removal in the
-    // contract, and an Undo with nothing behind it teaches a reader to stop
-    // looking for the real way back.
-    toast.show(t("co.lists.added", { name }));
-    return { id: data.id };
-  };
-
-  return (
-    <CreateAction
-      label={t("co.lists.add")}
-      invalidate="organization360"
-      screen="companies"
-      stay
-      create={addToList}
-      fields={[{ key: "name", label: "co.lists.pick", required: true }]}
     />
   );
 }

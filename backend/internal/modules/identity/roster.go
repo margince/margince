@@ -327,5 +327,9 @@ func listRosterPage[T userRow | teamRow](
 	}
 	pageRows = pageRows[:limit]
 	createdAt, id := spec.cursorKey(pageRows[len(pageRows)-1])
-	return pageRows, storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(createdAt, id)}, nil
+	next, err := storekit.EncodeCursor(createdAt, id)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	return pageRows, storekit.Page{HasMore: true, NextCursor: next}, nil
 }

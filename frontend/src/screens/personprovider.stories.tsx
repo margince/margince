@@ -185,6 +185,42 @@ export const InProgress: Story = {
 };
 
 /**
+ * A lookup running under a connection whose LAST call failed — the state a
+ * reader is most likely to be pressing from, because the failure message tells
+ * them to press it.
+ *
+ * The section reports the connection's condition ahead of the run, which is
+ * right for a page at rest and wrong here: it named a failure from hours ago
+ * over a lookup that was working. The header now says what is happening and the
+ * line above the values says who is being asked.
+ */
+export const RunningOnAnImpairedConnection: Story = {
+  render: section(
+    profile({
+      state: "provider_error",
+      latest_run: {
+        ...completedProviderRun,
+        state: "in_progress",
+        applied: false,
+      },
+    }),
+  ),
+};
+
+/**
+ * Bought, and the values have not reached the record yet. The apply commits
+ * AFTER the run completes, so a page that stopped watching at `completed`
+ * refreshed one step before the thing being waited for existed.
+ */
+export const CompletedButNotYetApplied: Story = {
+  render: section(
+    profile({
+      latest_run: { ...completedProviderRun, applied: false },
+    }),
+  ),
+};
+
+/**
  * The credential the provider was bought through has expired. An operator
  * fault rather than a data one, so it says which — a generic failure here would
  * send somebody looking at the person instead of at the connection.
@@ -303,6 +339,66 @@ export const TwoProviders: Story = {
             ]}
           />
         </div>
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * The mobile number offered for a contact whose work email is already on
+ * record — the common case once a lookup has run, and the one that spends more
+ * than a reader would guess.
+ *
+ * Surfe will not look for a number without the email flag set, and it charges
+ * for whatever it sends back regardless of what we already hold. So this press
+ * costs two credits and buys the address a second time. The button names only
+ * what is being SOUGHT; the line under it names what is paid for again.
+ */
+export const BuyMobileWithEmailHeld: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /provider-connections": () =>
+        jsonResponse({
+          data: [
+            {
+              provider: "surfe",
+              status: "connected",
+              credential_present: true,
+              catalog: [
+                { category: "linkedin_profile", free: true, cost: {} },
+                {
+                  category: "professional_email",
+                  free: false,
+                  cost: { email: 1 },
+                },
+                {
+                  category: "mobile",
+                  free: false,
+                  cost: { email: 1, mobile: 1 },
+                  requires: "professional_email",
+                },
+              ],
+              configuration: {
+                categories: {
+                  linkedin_profile: true,
+                  professional_email: true,
+                  mobile: true,
+                },
+              },
+              credits: { pools: {} },
+              version: 1,
+              created_at: "2026-08-20T09:00:00Z",
+              updated_at: "2026-08-20T09:00:00Z",
+            },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[profile({ state: "completed", mobile_phones: [] })]}
+        />
       </StoryProviders>
     );
   },

@@ -27,6 +27,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The hard priority bands. A level is a claim about WHAT KIND of work an item
@@ -60,6 +61,11 @@ const (
 // here, where a bare "none" in three places reads as a coincidence.
 const valueNone = "none"
 
+// valueMoney is the comparator value kind for an amount, named for the reason
+// valueNone is: three sites spell it, and a typo in one would hand the client
+// a value it draws as nothing.
+const valueMoney = "money"
+
 // meetingHorizon is how soon a meeting must start to become the reader's most
 // urgent item. Two hours is the window in which preparing is still possible and
 // no longer optional.
@@ -74,14 +80,58 @@ type ranked struct {
 	// none. Overdue items carry a past instant and sort first by that fact.
 	deadlineAt time.Time
 	overdue    bool
-	// expectedBase is expected revenue in the installation's base currency,
-	// which is the ONLY figure by which two deals may be compared. Raw minor
-	// units compare a yen to a euro and get it wrong.
+	// expectedBase is expected revenue in the currency expectedCurrency names:
+	// the installation's base currency once the FX seam priced the day, which
+	// is the ONLY figure by which two deals may be compared — raw minor units
+	// compare a yen to a euro and get it wrong. In an assembly without the
+	// seam it is the deal's own raw amount and expectedCurrency stays empty.
 	expectedBase int64
 	hasExpected  bool
-	waitingDays  int
-	strength     int
-	occurredAt   time.Time
+	// expectedCurrency names expectedBase's units, empty when the figure is a
+	// raw amount not genuinely in any one currency — the comparison's money
+	// values claim a currency only when one is true.
+	expectedCurrency string
+	// waitingDays is the TRUE age of a wait, in days, and it is what a reader is
+	// ever shown — both in the row's own reasons and in the comparison naming
+	// why it sits above the next one.
+	//
+	// waitingRank is the same age bounded by the ordering ceiling, and it is
+	// what decides the order. The two are separate fields because they are read
+	// by different callers for different purposes, and a single field serving
+	// both published the bounded number as though it were the real one: a row
+	// saying "waiting 180 days" while its own explanation compared 30 against
+	// 20, which is a reason nobody can check.
+	waitingDays int
+	waitingRank int
+	strength    int
+	occurredAt  time.Time
+	// owner is who this row answers to, for the sources that carry an owner but
+	// no deal on the wire.
+	//
+	// The scope filters judge a deal-bearing row by its deal's owner, which a
+	// waiting message does not have: the message names a person, not a deal, and
+	// its ownership is the ownership of the record it is filed under. The lane
+	// resolves that walk, and this is where the answer rides so the SAME filters
+	// can judge it. Zero means the row names nobody, which for a wait is an
+	// unowned customer rather than a missing answer.
+	owner ids.UUID
+	// foldedFrom names the sources of the rows this one stands for, once per
+	// member. A folded group is shown INSTEAD of its members, so a count of
+	// what the reader can see has to attribute it back to them — otherwise
+	// every folded source reports zero shown, which reads as "nothing from
+	// this source" rather than "folded into one row".
+	foldedFrom []crmcontracts.WorklistItemSource
+	// What a routine contact decision is ABOUT, for the group it joins. Read
+	// from the staged payload rather than re-derived here: the verdict engine
+	// already decided who the address belongs to, and a second opinion would
+	// put the same decision in two groups on two reads.
+	machineSender bool
+	knownCompany  bool
+	// crowded marks a row that is one of many of its kind. It sorts below its
+	// unmarked siblings so one kind of work cannot fill the page, and it
+	// changes nothing else: the row is still what it is, and every count that
+	// reads its level still reads the truth.
+	crowded bool
 }
 
 // rankAll orders the day and explains itself.
@@ -103,32 +153,36 @@ func rankAll(rows []ranked) []crmcontracts.WorklistItem {
 			comparison := compare(row, rows[i+1])
 			item.AboveNext = &comparison
 		}
+		// What this row offers a reader who is NOT going to answer it now, and
+		// which of its verbs is the step. Stamped here rather than by each
+		// classifier, so a source added later carries a primary action by
+		// arriving in this loop instead of by its author remembering to.
+		if item.Source == sourceWaiting {
+			offered := waitingDispositions()
+			item.Dispositions = &offered
+		}
+		item.PrimaryAction = primaryActionFor(item)
+		// The heading this row sits under. Stamped after the sort, so it
+		// describes a row's place on the page it is actually on.
+		band := crmcontracts.WorklistItemBand(bandOfRow(row))
+		item.Band = &band
 		out = append(out, item)
 	}
 	return out
 }
 
-// less is the whole ordering, in one place so the comparator and the
-// explanation cannot come to disagree — compare() below walks the same steps in
-// the same order and names the first one that decided.
+// less orders one pair by walking rankSteps until one of them decides.
+//
+// The steps live in ranksteps.go beside their own explanations, so the order a
+// reader is shown and the reason they are given come from one list rather than
+// from two functions kept in step by hand. They had already come apart there:
+// crowding was the first thing this compared and the one thing the explanation
+// never mentioned.
 func less(a, b ranked) bool {
-	if a.item.Level != b.item.Level {
-		return a.item.Level < b.item.Level
-	}
-	if decided, order := byDeadline(a, b); decided {
-		return order
-	}
-	if decided, order := byExpected(a, b); decided {
-		return order
-	}
-	if a.waitingDays != b.waitingDays {
-		return a.waitingDays > b.waitingDays
-	}
-	if a.strength != b.strength {
-		return a.strength > b.strength
-	}
-	if !a.occurredAt.Equal(b.occurredAt) {
-		return a.occurredAt.Before(b.occurredAt)
+	for _, step := range rankSteps {
+		if decided, aFirst := step.decides(a, b); decided {
+			return aFirst
+		}
 	}
 	// The ids break a complete tie, so one read's order is the next read's
 	// order. An unstable queue teaches a reader that the ranking means nothing.
@@ -171,64 +225,29 @@ func nearDeadline(r ranked) bool {
 	return !r.deadlineAt.IsZero()
 }
 
-// compare names the FIRST tie-break that decided a pair, with both sides'
-// values. It walks the same steps as less(), in the same order, so a row can
-// never claim a reason that did not decide it.
+// compare names the FIRST step that decided a pair, with both sides' values.
+//
+// Walks the SAME slice less() walks, in the same order, and asks the step that
+// decided to describe its own decision — so a row cannot claim a reason that
+// did not decide it, and a step cannot join the ordering without being given
+// words to explain itself.
 func compare(a, b ranked) crmcontracts.WorklistComparison {
-	// A pin is a level difference, and less() treats it as one — but naming it
-	// "level" would hide the only override a reader has. Same decision, the
-	// word that means something to them.
-	if a.item.Level == levelPinned && b.item.Level != levelPinned {
-		return crmcontracts.WorklistComparison{Comparator: crmcontracts.WorklistComparisonComparatorPin}
-	}
-	if a.item.Level != b.item.Level {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorLevel,
-			Mine:       levelValue(a.item.Level),
-			Theirs:     levelValue(b.item.Level),
-		}
-	}
-	if decided, _ := byDeadline(a, b); decided {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorDeadline,
-			Mine:       dateValue(a),
-			Theirs:     dateValue(b),
-		}
-	}
-	if decided, _ := byExpected(a, b); decided {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorExpectedRevenue,
-			Mine:       moneyValue(a),
-			Theirs:     moneyValue(b),
-		}
-	}
-	if a.waitingDays != b.waitingDays {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
-			Mine:       daysValue(a.waitingDays),
-			Theirs:     daysValue(b.waitingDays),
-		}
-	}
-	if a.strength != b.strength {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorRelationship,
-		}
-	}
-	// Occurrence decides before the ids do, and less() orders on it — so it has
-	// to be named here too. The contract's `order` means every comparator tied,
-	// and a row that reported it while occurrence had actually decided would be
-	// telling the reader something false about its own position.
-	if !a.occurredAt.Equal(b.occurredAt) {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
-			Mine:       occurredValue(a),
-			Theirs:     occurredValue(b),
+	for _, step := range rankSteps {
+		if decided, _ := step.decides(a, b); decided {
+			return step.explain(a, b)
 		}
 	}
 	// Everything tied and the ids broke it. Saying so honestly is better than
 	// naming a comparator that decided nothing; the client draws no reason line
 	// for this case.
 	return crmcontracts.WorklistComparison{Comparator: crmcontracts.WorklistComparisonComparatorOrder}
+}
+
+// sameMinute reports whether two instants read alike on screen. The card shows
+// a date and a time to the minute, so anything finer is a difference the reader
+// cannot see and must not be offered as an explanation.
+func sameMinute(a, b time.Time) bool {
+	return a.Truncate(time.Minute).Equal(b.Truncate(time.Minute))
 }
 
 func levelValue(level int) *crmcontracts.WorklistValue {
@@ -249,7 +268,12 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 		return &crmcontracts.WorklistValue{Kind: valueNone}
 	}
 	minor := r.expectedBase
-	return &crmcontracts.WorklistValue{Kind: "money", Minor: &minor}
+	value := &crmcontracts.WorklistValue{Kind: valueMoney, Minor: &minor}
+	if r.expectedCurrency != "" {
+		currency := r.expectedCurrency
+		value.Currency = &currency
+	}
+	return value
 }
 
 func occurredValue(r ranked) *crmcontracts.WorklistValue {

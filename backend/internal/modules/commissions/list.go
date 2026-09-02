@@ -79,7 +79,10 @@ func listTx(ctx context.Context, tx pgx.Tx, in ListInput) (crmcontracts.Commissi
 	if len(entries) > limit {
 		entries = entries[:limit]
 		last := entries[len(entries)-1]
-		next := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+		next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+		if err != nil {
+			return crmcontracts.CommissionEntryListResponse{}, err
+		}
 		page.NextCursor = &next
 		page.HasMore = true
 	}

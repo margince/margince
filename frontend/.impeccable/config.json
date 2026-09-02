@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/screens/onboarding-conversation/review-deck.css"
+        ],
+        "createdAt": "2026-09-01T15:31:33.597Z",
+        "reason": "Josh's published First Run prototype draws this rail on the deck card, and he asked for this screen to match it; the rail also carries meaning here, indigo for agent-proposed and danger for a card that blocks the confirm."
+      }
+    ]
+  }
+}

@@ -30,12 +30,10 @@ var (
 
 // defaults are the seeded system-role policies (they encode
 // the choices: reps work team-scoped without delete; managers are
-// team-scoped with delete; pipeline, automation, custom-field config AND
-// quota targets are admin/ops-owned — each reshapes what the system does
+// team-scoped with delete; pipeline, automation and custom-field config
+// are admin/ops-owned — each reshapes what the system does
 // (or stores) on everyone's records, so they follow the pipeline-config
-// posture: everyone reads the catalog, only admin/ops change it (quota's
-// createQuota/updateQuota/archiveQuota carry the matching x-agent-access:
-// human-only gate in the contract — a target is never agent-set).
+// posture: everyone reads the catalog, only admin/ops change it.
 // computed_field is read-only for every role, admin/ops included —
 // RD-AC-7: no runtime formula-authoring surface exists, so there is no
 // write to grant). offer_template follows the SAME posture as product/
@@ -44,12 +42,12 @@ var (
 // templates like any other offer-adjacent record; delete stays manager/
 // admin/ops (archiveOfferTemplate carries no x-agent-access gate — any
 // role holding delete may call it directly). overlay_connection follows
-// the SAME posture as quota, and for the same reason:
+// the SAME posture as custom_field, and for the same reason:
 // connecting/disconnecting the workspace's incumbent binding is
 // destructive workspace-wide config (it purges the mirror and flips
 // sor_mode for everyone), so create/update/delete are admin/ops-only;
 // every role may read the connection status (a rep needs to see whether
-// overlay mode is live, the same as a quota's attainment read).
+// overlay mode is live, the same as a custom_field catalog read).
 // embedding_reindex has no create/delete surface at all — it is a single
 // deployment-level trigger, not a record kind — so only read and update
 // are ever granted, and both are admin/ops-only: admin/ops may update
@@ -58,7 +56,7 @@ var (
 // human session, never an agent), and admin/ops alone may read it — the
 // banner/card that consumes the read is itself ops-gated in the SPA, so
 // manager/rep/read_only have no legitimate consumer of this object and
-// get the zero grant, unlike quota's attainment or
+// get the zero grant, unlike the custom_field catalog or
 // overlay_connection's status which every role legitimately reads.
 // webhook_subscription follows the SAME admin/ops-owned posture: a
 // subscription registers outbound egress of governed events, so managing
@@ -74,16 +72,16 @@ var (
 // expecting a reply to arrive there).
 // import_run is admin/ops-only on EVERY verb, read included: a
 // migration run is a workspace-wide bulk mutation of the estate (the
-// overlay→native flip executes through it), and unlike quota or
+// overlay→native flip executes through it), and unlike custom_field or
 // overlay_connection there is no per-rep read surface — the mode-flip
 // and migrate-in screens are admin surfaces.
 // managerObjects is the grid a team lead (`manager`) and the whole-organization
 // `management` seat share; only their row scope differs.
-var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud, crud, readOnly, readOnly)
+var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud, crud, readOnly, readOnly, writeNoDelete, crud)
 
 var defaults = map[string]Document{
 	"admin": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, writeNoDelete, crud),
 		RowScope: principal.RowScopeAll,
 	},
 	// management is the sales leader's seat (ADR-0110): the manager grid over
@@ -98,16 +96,17 @@ var defaults = map[string]Document{
 	},
 	"manager": {
 		Objects: managerObjects,
-		// Own scope, not team: membership of a team is not by itself permission
-		// to rewrite a teammate's records. Writing somebody else's customer
-		// record takes an explicit share — a record_grant naming the user or
-		// one of their teams — or an unbounded seat.
+		// Team scope: a Team Lead manages their team, so they read and work the
+		// records of everyone sharing a live team with them without a share
+		// being arranged first. This is the manager grid above, bounded to the
+		// team rather than the organization — `management` is the same grid
+		// unbounded.
 		//
-		// The team ARM survives in the write predicate and is not dead: a
-		// record_grant may name a team, and an operator may still author a
-		// custom role at team scope. What changed is only what the seeded
-		// roles claim by default.
-		RowScope: principal.RowScopeOwn,
+		// Membership resolves through team_membership and live teams only, so a
+		// Team Lead who belongs to no team reaches exactly their own rows. A
+		// record_grant naming a user or a team stays the mechanism for sharing
+		// ACROSS teams, and for every seat that is not this one.
+		RowScope: principal.RowScopeTeam,
 	},
 	"rep": {
 		// Reps create and work records but never delete them — except
@@ -121,9 +120,9 @@ var defaults = map[string]Document{
 		// follows the same posture (see the comment above defaults). A
 		// saved view is the rep's own per-user view state (owner-scoped
 		// in the store) — full self-service, including deleting one's own
-		// view. A quota is read-only even for its own owner: the target
-		// itself is admin/ops-set config, not the rep's working material —
-		// only the attainment READ is the rep's to consult.
+		// view. A custom field is read-only even for the rep who fills it
+		// in: the field itself is admin/ops-set config, not the rep's
+		// working material — only the VALUE on a record is theirs.
 		Objects: objects(
 			grant{Create: true, Read: true, Update: true},
 			grant{Create: true, Read: true, Update: true},
@@ -141,7 +140,6 @@ var defaults = map[string]Document{
 			grant{Create: true, Read: true, Update: true},
 			grant{Create: true, Read: true, Update: true},
 			crud,
-			readOnly,
 			readOnly,
 			readOnly,
 			grant{Create: true, Read: true, Update: true},
@@ -200,7 +198,26 @@ var defaults = map[string]Document{
 			// what it cited; an answer whose source is unreadable is not a
 			// citation. Uploading third-party prose every seat then asks, and
 			// deleting it for good, stay with admin/ops.
-			readOnly),
+			readOnly,
+			// introduction — asking a colleague to open a door, and answering
+			// an ask made of you, are both the job. The grant admits a rep to
+			// the surface; WHICH of the two parties they are on a given row is
+			// the row's own check, and no grant stands in for it. No delete: an
+			// ask that was made is a thing that happened, so it is withdrawn
+			// rather than erased — a property of the object, so EVERY seat
+			// carries it, admin and ops included. The backfill migration grants
+			// the same, so a database that upgraded into this object and one
+			// created after it answer alike.
+			writeNoDelete,
+			// weekly_plan — a rep plans their own week and settles it. Their
+			// own only: the store resolves the plan from the caller and takes
+			// no owner argument, so this grant admits them to their week and to
+			// nobody else's. The lead's read of a rep's plan is a separate path
+			// gated on the shared-team question, not on a wider grant here.
+			// No delete: a week that was planned is a thing that happened, and
+			// a commitment is dropped rather than erased — the same ruling
+			// introduction carries directly above.
+			writeNoDelete),
 		// Own scope, not team: membership of a team is not by itself permission
 		// to rewrite a teammate's records. Writing somebody else's customer
 		// record takes an explicit share — a record_grant naming the user or
@@ -216,11 +233,11 @@ var defaults = map[string]Document{
 		// A read-only role still owns its personal view state: saved views
 		// are P1-exempt per-user prefs (runtime-config-surface.md §3), not
 		// shared records, so full self-service is correct even here.
-		Objects:  objects(readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, crud, readOnly, readOnly, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, grant{}, grant{}, readOnly, grant{}, readOnly, readOnly, readOnly, readOnly),
+		Objects:  objects(readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly, crud, readOnly, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, grant{}, grant{}, readOnly, grant{}, readOnly, readOnly, readOnly, readOnly, readOnly, readOnly),
 		RowScope: principal.RowScopeAll,
 	},
 	"ops": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, writeNoDelete, crud),
 		RowScope: principal.RowScopeAll,
 	},
 }
@@ -233,7 +250,7 @@ var defaults = map[string]Document{
 // and rbacfixture_test.go holds the result to the matrix the server seeds. Five
 // map literals of every key is what this replaced. Shortening it is a refactor of
 // the seed rather than of this call.
-func objects(person, organization, deal, lead, activity, pipeline, list, tag, relationship, partner, automation, voiceProfile, product, offer, signal, savedView, customField, computedField, quota, offerTemplate, overlayConnection, embeddingReindex, webhookSubscription, fxRate, aiModelRate, captureSettings, project, channelConnection, importRun, installationSettings, finance, integrations, retentionPolicy, captureTrace, license, contract, aiRouting, commission, dealRoom, knowledgeCorpus, knowledgeDocument grant) map[string]grant { // NOSONAR(go:S107) -- the parameter list is the mechanism; see above
+func objects(person, organization, deal, lead, activity, pipeline, list, tag, relationship, partner, automation, voiceProfile, product, offer, signal, savedView, customField, computedField, offerTemplate, overlayConnection, embeddingReindex, webhookSubscription, fxRate, aiModelRate, captureSettings, project, channelConnection, importRun, installationSettings, finance, integrations, retentionPolicy, captureTrace, license, contract, aiRouting, commission, dealRoom, knowledgeCorpus, knowledgeDocument, introduction, weeklyPlan grant) map[string]grant { // NOSONAR(go:S107) -- the parameter list is the mechanism; see above
 	return map[string]grant{
 		"person": person, "organization": organization, "deal": deal,
 		"lead": lead, "activity": activity, "pipeline": pipeline,
@@ -241,7 +258,7 @@ func objects(person, organization, deal, lead, activity, pipeline, list, tag, re
 		"automation": automation, "voice_profile": voiceProfile,
 		"product": product, "offer": offer, "signal": signal,
 		"saved_view": savedView, "custom_field": customField,
-		"computed_field": computedField, "quota": quota,
+		"computed_field": computedField,
 		"offer_template": offerTemplate, "overlay_connection": overlayConnection,
 		"embedding_reindex":    embeddingReindex,
 		"webhook_subscription": webhookSubscription,
@@ -313,7 +330,7 @@ func objects(person, organization, deal, lead, activity, pipeline, list, tag, re
 		"integrations": integrations,
 		// The installation's entitlement: what the license grants, and how much of
 		// it is used. Admin/ops-only on read — import_run's and retention_policy's
-		// posture rather than quota's, because a seat meter is commercial standing
+		// posture rather than custom_field's, because a seat meter is commercial standing
 		// and UC-ADMIN-03 F1 gives a rep their own seat and not the workspace's
 		// entitlement.
 		//
@@ -323,9 +340,9 @@ func objects(person, organization, deal, lead, activity, pipeline, list, tag, re
 		// got.
 		"license": license,
 		// The storage-limitation ladder (UC-GDPR-09, GCS-WIRE-1..5). Admin/ops-only
-		// on EVERY verb, READ INCLUDED — the import_run precedent, not quota's. A
+		// on EVERY verb, READ INCLUDED — the import_run precedent, not custom_field's. A
 		// retention policy decides what the installation destroys and when, and the
-		// screen showing it is an admin surface: unlike a quota's attainment or an
+		// screen showing it is an admin surface: unlike the custom_field catalog or an
 		// overlay connection's status, no rep has a legitimate consumer for the read.
 		// The retain-only posture setting is gated by this same object, so whoever may
 		// author a policy may also suspend every destructive one.
@@ -345,6 +362,12 @@ func objects(person, organization, deal, lead, activity, pipeline, list, tag, re
 		// party prose into the corpus every seat then asks, and the delete is a
 		// hard one that takes the chunks, the vectors and the stored file.
 		"knowledge_document": knowledgeDocument,
+		// One rep asking a colleague to open a door to a contact. Create and
+		// update are a rep's: asking is the job, and answering an ask made OF
+		// you is answering for yourself — the row's own party check decides
+		// which of the two you are, and a grant cannot substitute for it.
+		"introduction": introduction,
+		"weekly_plan":  weeklyPlan,
 	}
 }
 

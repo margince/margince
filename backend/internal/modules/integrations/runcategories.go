@@ -14,6 +14,7 @@ package integrations
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -46,7 +47,31 @@ func runCategories(desc provider.Descriptor, conn admittedConnection, in provide
 	}
 	requested := in.Categories
 	if len(requested) == 0 {
-		return permitted, nil
+		// The caller named nothing, so the connection's own selection is the
+		// request — and it has to survive the same two rules, because an admin
+		// choosing categories on a settings card is not asked to know which of
+		// them the provider only issues alongside another.
+		//
+		// DROPPED rather than refused, unlike the named path below. Nobody made
+		// a mistake here: the caller asked for "whatever this connection buys",
+		// and answering that with a 422 about a category they never typed would
+		// make the plain lookup button unusable on a connection an admin is
+		// perfectly entitled to configure. What is dropped could not have been
+		// answered anyway — a mobile lookup with no email to anchor it comes
+		// back empty and is charged for.
+		issuable := askable(desc, permitted)
+		if len(issuable) == 0 {
+			// Everything the connection selects depends on something it does
+			// not. Dispatching the empty remainder would send a request naming
+			// no categories, which the provider answers with a refusal — and a
+			// refusal flips the connection's status, breaking every later
+			// lookup over one configuration choice. The same reason the
+			// automatic path above refuses rather than sending nothing.
+			return nil, fmt.Errorf(
+				"%w: every category this connection selects is one the provider only issues alongside another it does not select",
+				ErrCategoryNotPermitted)
+		}
+		return issuable, nil
 	}
 	allowed := make(map[provider.Category]bool, len(permitted))
 	for _, c := range permitted {
@@ -64,7 +89,80 @@ func runCategories(desc provider.Descriptor, conn admittedConnection, in provide
 	if err := requireCascadeTriggers(desc, asked); err != nil {
 		return nil, err
 	}
+	if err := requirePrerequisites(desc, asked); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// askable drops from a set the categories the provider would not issue for it:
+// a fallback whose trigger is absent, and one whose prerequisite is absent.
+//
+// The set is otherwise kept in order and whole. Dropping is right only where
+// nobody chose the combination — see the caller — and it is the same question
+// requireCascadeTriggers and requirePrerequisites ask, answered by removal
+// instead of refusal.
+func askable(desc provider.Descriptor, categories []provider.Category) []provider.Category {
+	present := make(map[provider.Category]bool, len(categories))
+	for _, c := range categories {
+		present[c] = true
+	}
+	drop := map[provider.Category]bool{}
+	for _, cascade := range desc.Cascades {
+		if present[cascade.Category] && !present[cascade.After] {
+			drop[cascade.Category] = true
+		}
+	}
+	for category, prerequisite := range desc.RequiresAnswerTo {
+		if present[category] && !present[prerequisite] {
+			drop[category] = true
+		}
+	}
+	if len(drop) == 0 {
+		return categories
+	}
+	out := make([]provider.Category, 0, len(categories))
+	for _, c := range categories {
+		if !drop[c] {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// requirePrerequisites refuses a category asked for without the one that has
+// to come back with something first.
+//
+// Surfe's mobile lookup is the worked case, and it is the one that shipped
+// broken. The adapter always sends skipMobileEnrichmentIfNoEmailFound, so a
+// request naming mobile and nothing else makes the vendor hunt for an email it
+// was never asked to buy, fail to find one, and skip the number entirely. The
+// run comes back COMPLETED and empty. Nothing along the way looks wrong — no
+// refusal, no error, a successful run — and the page reports that the contact
+// was found while the field stays blank.
+//
+// Refused rather than silently widened, for the reason requireCascadeTriggers
+// gives above: adding professional_email would buy a category the caller did
+// not ask for and charge them for it. They name both, or neither.
+//
+// The map is walked in sorted order so a request breaking two of these rules
+// names the same one every time. An error that varies between identical calls
+// reads as intermittent to whoever is looking at it.
+func requirePrerequisites(desc provider.Descriptor, asked map[provider.Category]bool) error {
+	categories := make([]string, 0, len(desc.RequiresAnswerTo))
+	for category := range desc.RequiresAnswerTo {
+		categories = append(categories, string(category))
+	}
+	sort.Strings(categories)
+	for _, name := range categories {
+		category := provider.Category(name)
+		prerequisite := desc.RequiresAnswerTo[category]
+		if asked[category] && !asked[prerequisite] {
+			return fmt.Errorf("%w: %q is only looked up when %q comes back with something, so it cannot be bought without it",
+				ErrCategoryNotPermitted, category, prerequisite)
+		}
+	}
+	return nil
 }
 
 // requireCascadeTriggers refuses a fallback asked for without the category it
@@ -110,7 +208,13 @@ func intersect(permitted, allowed []provider.Category) []provider.Category {
 // swallows it exactly as it swallows a trigger the policy does not admit.
 var ErrNothingFreeToBuy = errors.New("integrations: this connection buys nothing an automatic run may take")
 
-// ErrCategoryNotPermitted reports that a run asked for a category the
-// connection does not carry. A caller's mistake, not a provider condition: the
-// HTTP surface answers 422, because retrying it unchanged buys nothing.
-var ErrCategoryNotPermitted = errors.New("integrations: this connection does not buy that category")
+// ErrCategoryNotPermitted reports that a run asked for a combination it may
+// not buy: a category the connection does not carry, a fallback without its
+// trigger, or one that needs an answer from another first. A caller's mistake,
+// not a provider condition, so the HTTP surface answers 422 — retrying it
+// unchanged buys nothing.
+//
+// The sentinel says only that the purchase is refused; each wrapping message
+// says WHICH of the three it was, and the handler passes that through. Stating
+// one of the three here would contradict the other two in the same sentence.
+var ErrCategoryNotPermitted = errors.New("integrations: that is not a purchase this run can make")

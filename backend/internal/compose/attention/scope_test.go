@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -45,10 +46,13 @@ func TestEveryReaderDefaultsToTheirOwnWork(t *testing.T) {
 // A reader is offered exactly the scopes their row scope reaches, so a client
 // never draws a control that would 403 when pressed.
 func TestTheOfferedScopesMatchTheReadersOwnReach(t *testing.T) {
+	// Unassigned is offered at EVERY tier: nothing in it belongs to a
+	// colleague, and it is where ownerless work lives now that "mine" no longer
+	// folds it into each reader's own queue.
 	cases := map[principal.RowScope][]string{
-		principal.RowScopeOwn:  {scopeMine},
-		principal.RowScopeTeam: {scopeMine, scopeTeam},
-		principal.RowScopeAll:  {scopeMine, scopeTeam, scopeAll},
+		principal.RowScopeOwn:  {scopeMine, scopeUnassigned},
+		principal.RowScopeTeam: {scopeMine, scopeUnassigned, scopeTeam},
+		principal.RowScopeAll:  {scopeMine, scopeUnassigned, scopeTeam, scopeAll},
 	}
 	for tier, want := range cases {
 		got := scopeOptionsFor(readerAt(tier))
@@ -137,7 +141,7 @@ func TestAPageOfTheReadersOwnIsNotShortenedByColleaguesRows(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
 
-	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3)
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3, waitingRead{}, leadRead{}, worklistCursor{})
 
 	if len(out.Queue) != 3 {
 		t.Fatalf("a reader with three of their own rows got a page of %d", len(out.Queue))
@@ -201,7 +205,7 @@ func TestTheReadersOwnScopeReachesTheTaskQuery(t *testing.T) {
 		t.Fatalf("assembling the day: %v", err)
 	}
 
-	if !tasks.mineOnly {
+	if !tasks.mineOnly() {
 		t.Fatal("the task lane was asked for every visible task on a read scoped to the reader")
 	}
 }
@@ -219,7 +223,187 @@ func TestTheLaneFeedStillReadsEveryVisibleTask(t *testing.T) {
 		t.Fatalf("assembling the day: %v", err)
 	}
 
-	if tasks.mineOnly {
+	if tasks.mineOnly() {
 		t.Fatal("the lane feed narrowed to the reader, changing a surface this did not set out to change")
 	}
+}
+
+// Opening somebody else's queue is a team-or-wider question.
+//
+// Both halves, because either alone proves nothing: a resolver that refused
+// everybody would pass the refusal test while making the feature dead, and one
+// that admitted everybody would pass the admission test while handing a rep
+// their colleague's day.
+func TestOpeningAnothersQueueNeedsATierThatReachesThem(t *testing.T) {
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000bb")
+	svc := &Service{teammates: teammatesSaying(true)}
+
+	for _, tier := range []principal.RowScope{principal.RowScopeTeam, principal.RowScopeAll} {
+		got, err := svc.resolveOwner(readerAt(tier), colleague)
+		if err != nil {
+			t.Fatalf("row scope %q was refused a colleague's queue: %v", tier, err)
+		}
+		if got != colleague {
+			t.Fatalf("row scope %q was given %v, wanted the named colleague", tier, got)
+		}
+	}
+
+	if _, err := svc.resolveOwner(readerAt(principal.RowScopeOwn), colleague); err == nil {
+		t.Fatal("a reader whose scope reaches only themselves opened a colleague's queue")
+	}
+}
+
+// A team-scoped reader reaches their own team, and stops there.
+//
+// The tier alone is not the test for this reader class. Row scope narrows the
+// deal-bearing rows, but a task carrying no record link is discoverable by
+// anyone (auth.ActivityDiscoverClause coalesces the empty link set to TRUE), so
+// naming an out-of-team colleague would answer with exactly those rows under
+// that colleague's name.
+func TestATeamScopedReaderReachesOnlyTheirOwnTeam(t *testing.T) {
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000bb")
+
+	shared := &Service{teammates: teammatesSaying(true)}
+	got, err := shared.resolveOwner(readerAt(principal.RowScopeTeam), colleague)
+	if err != nil {
+		t.Fatalf("a team-scoped reader was refused a teammate's queue: %v", err)
+	}
+	if got != colleague {
+		t.Fatalf("a teammate's queue answered %v, wanted the named colleague", got)
+	}
+
+	stranger := &Service{teammates: teammatesSaying(false)}
+	if _, err := stranger.resolveOwner(readerAt(principal.RowScopeTeam), colleague); err == nil {
+		t.Fatal("a team-scoped reader opened the queue of somebody on no team of theirs")
+	}
+}
+
+// An unanswerable may-I is a no.
+//
+// Every other optional lane renders absent when unbound, which is why this one
+// needs saying: a membership lane that degraded the same way would widen the
+// scope it exists to bound, and would look like a missing feature while doing
+// it.
+func TestAnUnboundMembershipLaneRefusesRatherThanAdmits(t *testing.T) {
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000bb")
+
+	unbound := &Service{}
+	if _, err := unbound.resolveOwner(readerAt(principal.RowScopeTeam), colleague); err == nil {
+		t.Fatal("a team-scoped reader opened a colleague's queue with no membership lane to ask")
+	}
+
+	// The unbounded reader is unaffected: they reach every row, so the lane was
+	// never part of their answer.
+	if _, err := unbound.resolveOwner(readerAt(principal.RowScopeAll), colleague); err != nil {
+		t.Fatalf("an unbounded reader was refused for want of a lane they do not need: %v", err)
+	}
+}
+
+// A membership read that fails is not a membership read that said no.
+func TestAFailedMembershipReadRefusesAndReportsTheFailure(t *testing.T) {
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000bb")
+	svc := &Service{teammates: teammatesFailing{}}
+
+	if _, err := svc.resolveOwner(readerAt(principal.RowScopeTeam), colleague); err == nil {
+		t.Fatal("a failed membership read admitted the reader")
+	}
+}
+
+// Naming yourself is the question the default already answers, so every tier
+// may ask it. A rep following a link that spells out their own id must not be
+// refused their own day.
+//
+// It resolves to the SAME answer as the default — the zero owner — rather than
+// to their id, because "the same question" has to mean one resolved question
+// downstream and not two. The two spellings already read identically (TasksMine
+// files the query under actor.UserID, TasksOwnedBy under owner, one value
+// here); resolving them apart made every later reader of the resolved owner see
+// two different questions, and a continuation token minted under one spelling
+// was refused under the other.
+func TestNamingYourselfResolvesToTheDefaultQuestion(t *testing.T) {
+	me := ids.MustParse("01a05500-0000-7000-8000-000000000001")
+
+	got, err := (&Service{}).resolveOwner(readerAt(principal.RowScopeOwn), me)
+	if err != nil {
+		t.Fatalf("a reader was refused their OWN queue: %v", err)
+	}
+	if !got.IsZero() {
+		t.Fatalf("naming yourself resolved to %v; it is the question the default answers, "+
+			"and resolving it apart makes one question look like two", got)
+	}
+}
+
+// No ask is no narrowing. The parameter is optional, and its absence must not
+// read as "nobody's queue" and empty the page.
+func TestNoOwnerAskNarrowsNothing(t *testing.T) {
+	got, err := (&Service{}).resolveOwner(readerAt(principal.RowScopeAll), ids.UUID{})
+	if err != nil {
+		t.Fatalf("omitting the owner was refused: %v", err)
+	}
+	if !got.IsZero() {
+		t.Fatalf("omitting the owner narrowed to %v", got)
+	}
+}
+
+// A named rep's queue carries THEIR work, not the reader's.
+//
+// The per-user lanes — notices, meetings, a mailbox, a promise — stay bound to
+// the ACTING reader whatever owner is asked for, because that is where the
+// modules that own them bind. So a filter that kept every row it could not
+// judge handed a manager their own day with somebody else's name at the top of
+// it. Nothing crossed a scope boundary; the page simply was not true.
+func TestOpeningAnothersQueueCarriesTheirWorkAndNotTheReadersOwn(t *testing.T) {
+	lena := ids.MustParse("01a05500-0000-7000-8000-0000000000bb")
+	lenasDeal := item("lenas-deal", "deal_at_risk", withDeal(90_000_00))
+	lenasDeal.Deal.OwnerId = uuidPtr(lena)
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		// The reader's own: a notice addressed to them, and a meeting they can
+		// see. Neither carries a deal, so neither can be judged by ownership.
+		Notices:  lane(item("my-notice", "notice")),
+		Meetings: lane(item("my-meeting", "meeting", withDue(rankInstant.Add(time.Hour)))),
+		AtRisk:   lane(lenasDeal),
+	}
+	reader := &Service{taskOwner: lena, taskScope: TasksOwnedBy}
+
+	out := reader.worklistFrom(context.Background(), day, scopeMine, "", 25, waitingRead{}, leadRead{}, worklistCursor{})
+
+	var ids []string
+	for _, row := range out.Queue {
+		ids = append(ids, row.Id)
+	}
+	if len(out.Queue) != 1 || out.Queue[0].Id != "lenas-deal" {
+		t.Fatalf("Lena's queue came back as %v, wanted only the deal she owns", ids)
+	}
+}
+
+func uuidPtr(id ids.UUID) *openapi_types.UUID {
+	out := openapi_types.UUID(id)
+	return &out
+}
+
+// teammatesSaying answers every membership question the same way, which is what
+// the resolver's own branches need: whether it ASKS, and what it does with each
+// answer.
+type teammatesSaying bool
+
+func (t teammatesSaying) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bool, error) {
+	return bool(t), nil
+}
+
+// The roster half answers the reader alone, which is what a caller on no team
+// gets from the real reader. These tests are about the yes/no half.
+func (t teammatesSaying) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return []TeamMember{{UserID: ids.UUID{1}, DisplayName: "the reader"}}, false, nil
+}
+
+// teammatesFailing is the membership read that could not answer.
+type teammatesFailing struct{}
+
+func (teammatesFailing) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bool, error) {
+	return false, errors.New("reading team membership")
+}
+
+func (teammatesFailing) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return nil, false, errors.New("reading team membership")
 }

@@ -42,13 +42,15 @@ func TestSendEmailDerivesUnsubscribeHeadersForAMarketingPurpose(t *testing.T) {
 	if staged.ListUnsubscribe != "<"+wantURL+">" {
 		t.Fatalf("staged List-Unsubscribe = %q, want the bracketed one-click URL <%s>", staged.ListUnsubscribe, wantURL)
 	}
-	// Header and footer derive from the SAME token and URL, so a recipient's
-	// visible link can never point somewhere the machine header does not.
-	if !strings.Contains(staged.Body, wantURL) {
-		t.Fatalf("staged body carries no visible unsubscribe link:\n%s", staged.Body)
+	// The VISIBLE links are pages, and deliberately not the URL above: the
+	// machine endpoint is POST-only, so a recipient clicking it in a mail
+	// client gets 405. Same token, same purpose, different shape per caller.
+	wantVisible := testBaseURL + "/#/unsubscribe/" + testUnsubscribeTok + "/marketing_email?lang=en"
+	if !strings.Contains(staged.Body, wantVisible) {
+		t.Fatalf("staged body carries no human unsubscribe page link:\n%s", staged.Body)
 	}
-	if !strings.Contains(staged.Body, testBaseURL+"/v1/public/preferences/"+testUnsubscribeTok+"\n") &&
-		!strings.HasSuffix(staged.Body, testBaseURL+"/v1/public/preferences/"+testUnsubscribeTok) {
+	wantManage := testBaseURL + "/#/preferences/" + testUnsubscribeTok + "?lang=en"
+	if !strings.Contains(staged.Body, wantManage) {
 		t.Fatalf("staged body carries no manage-preferences link:\n%s", staged.Body)
 	}
 	// The timeline records that the send carried a one-click link, and which
@@ -56,7 +58,7 @@ func TestSendEmailDerivesUnsubscribeHeadersForAMarketingPurpose(t *testing.T) {
 	// bearer credential over the recipient's consent record and the activity
 	// row is served back to any seat holding activity:read, so the record and
 	// the transmission deliberately differ by exactly that one segment.
-	recordedURL := testBaseURL + "/v1/public/preferences/" + redactedToken + "/unsubscribe?purpose=marketing_email"
+	recordedURL := testBaseURL + "/#/unsubscribe/" + redactedToken + "/marketing_email?lang=en"
 	if sent.Body == nil || !strings.Contains(*sent.Body, recordedURL) {
 		t.Fatalf("logged activity body lost the unsubscribe footer: %v", sent.Body)
 	}

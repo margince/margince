@@ -9,6 +9,18 @@ numbers appear here when releases start.
 
 ## [Unreleased]
 
+### Removed
+
+- **The human-set sales quota is gone.** A quota was a revenue target a manager
+  typed, and everything the product said downstream of it — attainment, the pace
+  band — was that one number's arithmetic, so a target nobody had entered read as
+  an absence rather than as a question with no denominator. The Reports screen now
+  holds the three deal reports and nothing else. The `quota` table is dropped and
+  the `quota` RBAC object is stripped from every role document in the same
+  migration. Operational agent budgets are untouched: the per-agent volume meter,
+  the AI provider spend budget and the incumbent rate allowance are safety limits,
+  not sales targets, and keep working exactly as before.
+
 ### Changed
 
 - **Home's test suite is under the 1000-line ceiling again.** It crossed while
@@ -248,6 +260,24 @@ numbers appear here when releases start.
 
 ### Added
 
+- **An introduction is something the product records, not something a rep
+  remembers.** The Network tab already answered "who here can reach this
+  contact"; asking them was a conversation that happened elsewhere and came
+  back as a memory. `intro_request` records the ask, the colleague's bounded
+  answer and what came of it — five endpoints, a requester's composer, and a
+  decision surface of the colleague's own.
+
+  The lifecycle is built so it cannot overstate an outcome. Approving a
+  name-drop permits a mention and nothing more, and no path turns it into a
+  handshake: the ask completes as `name_dropped`, and WHICH outcome that is
+  gets read from the state the ask was in rather than from anything the caller
+  sends. The domain row, the event and the audit after-image all say the same
+  word, because a dispute about whether an introduction happened is settled
+  from the trail.
+
+  `replied` is unreachable by any person. The contact answering is observed
+  from captured activity, so no button produces it.
+
 - **A standing overnight grant says when the agent has outgrown it.** A grant
   mints the scopes the agent needed at the moment the rep answered; when the
   agent later gains a tool needing a wider scope, every already-minted passport
@@ -482,6 +512,16 @@ numbers appear here when releases start.
   screen, which does not exist yet.
 
 ### Fixed
+
+- **A replayed body re-checks every record it names, not only the one it
+  replays by.** `POST /people/quick-capture` answers the person created plus the
+  `organization_id` they were attached to; the replay gate probed the person and
+  handed the rest back, including an employer id the caller may since have lost
+  sight of. `POST /leads/{id}/promote` and `POST /leads/{id}/demote` have the
+  same shape — the third was found by widening the gate rather than by reading
+  the code. Every record reference a wrapper body carries is probed now, and a
+  gate derived from the contract fails when a response schema grows a reference
+  that nothing re-checks.
 
 - **A refused API key is no longer reported as six broken use cases.** The
   `e2e-llm` lane guarded against an empty transcript but not against one the API

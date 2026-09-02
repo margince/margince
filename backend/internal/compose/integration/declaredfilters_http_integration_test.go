@@ -27,16 +27,18 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// disownOverDB nulls a record's owner at the database. A create over the wire
-// stamps the calling seat as owner when the body names none, so the unowned
-// state these queue tests are about has to be produced after the fact.
-func disownOverDB(t *testing.T, e *apptest.AppEnv, table, id string) {
+// nullOverDB clears one of a record's holder columns at the database. A create
+// over the wire stamps the calling seat into them when the body names nobody —
+// owner_id on every record, assignee_id on a task the seat writes for itself —
+// so the unheld state these queue tests are about has to be produced after the
+// fact.
+func nullOverDB(t *testing.T, e *apptest.AppEnv, table, column, id string) {
 	t.Helper()
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
-		_, err := tx.Exec(t.Context(), `UPDATE `+table+` SET owner_id = NULL WHERE id = $1`, id)
+		_, err := tx.Exec(t.Context(), `UPDATE `+table+` SET `+column+` = NULL WHERE id = $1`, id)
 		return err
 	}); err != nil {
-		t.Fatalf("disown %s %s: %v", table, id, err)
+		t.Fatalf("null %s.%s on %s: %v", table, column, id, err)
 	}
 }
 
@@ -123,7 +125,11 @@ func TestTheActivityListNarrowsByAssigneeOnTheWire(t *testing.T) {
 		"kind": "task", "subject": "Call the buyer", "due_at": "2026-09-01T09:00:00Z", "assignee_id": me.User.ID,
 	})
 	// An unassigned task is the row a dropped filter hands back alongside it.
-	createdRecord(t, e, "/v1/activities", AnyMap{"kind": "task", "subject": "Nobody's"})
+	// It has to be unassigned after the fact: a task written over the wire
+	// without an assignee belongs to its author, so creating one here would
+	// hand the filter a second row it rightly matches.
+	nobodys := createdRecord(t, e, "/v1/activities", AnyMap{"kind": "task", "subject": "Nobody's"})
+	nullOverDB(t, e, "activity", "assignee_id", nobodys)
 
 	onlyRecord(t, e, "/v1/activities?assignee_id="+me.User.ID, mine, "the open task that person holds")
 }
@@ -189,7 +195,7 @@ func TestThePersonListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
 
 	createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Owned Person", "owner_id": owner})
 	unowned := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Unowned Person"})
-	disownOverDB(t, e, "person", unowned)
+	nullOverDB(t, e, "person", "owner_id", unowned)
 
 	// Unassigned is a fact with its own queue, not an absence: a list that
 	// answered every row here would send somebody to claim records that are
@@ -204,7 +210,7 @@ func TestTheLeadListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
 
 	createdRecord(t, e, "/v1/leads", AnyMap{"full_name": "Owned Lead", "email": "owned@lead.test", "owner_id": owner})
 	unowned := createdRecord(t, e, "/v1/leads", AnyMap{"full_name": "Unowned Lead", "email": "unowned@lead.test"})
-	disownOverDB(t, e, "lead", unowned)
+	nullOverDB(t, e, "lead", "owner_id", unowned)
 
 	// The same dial the person and company lists answer (DM-VOCAB-OWN-1): a
 	// lead queue nobody has claimed is the first thing a rep asks a lead list.

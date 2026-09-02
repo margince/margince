@@ -18,26 +18,50 @@ package attention
 import (
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
+
+// sourceWaiting names the who-is-waiting producer. A named constant rather
+// than the literal at each site: the classifier, the dedupe and the
+// source-unavailable report all reach for it, and a typo in any of them would
+// produce a lane nothing joins up — silently, because each half would still
+// compile.
+const sourceWaiting = "customer_waiting"
+
+// sourceTask names the open-task producer. Named for the reason sourceWaiting
+// is: the owner filter asks whether a row came from the lane that narrowed to
+// one person in its own query, and a typo there would silently drop every task
+// out of the queue it was asked for.
+const sourceTask = "task"
+
+// sourceAtRisk names the quiet-deal producer. Three readers spell it — the
+// bounds table, the category map and the classifier — which is two more than a
+// literal survives.
+const sourceAtRisk = "deal_at_risk"
+
+// subjectDeal is the subject type a deal-shaped row names.
+const subjectDeal = "deal"
 
 // classifyDay turns the assembled lanes into ranked candidates.
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes
 // are walked in whatever order reads clearest here.
-func classifyDay(day crmcontracts.Attention, asOf time.Time) []ranked {
+func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []ranked {
 	rows := make([]ranked, 0, 64)
-	bar := materialBarOf(day)
+	bar := materialBarOf(day, money)
 	rows = appendLane(rows, day.Meetings, asOf, classifyMeeting)
 	rows = appendLane(rows, &day.ThisMorning, asOf, classifyBriefItem)
 	rows = appendLane(rows, day.Commitments, asOf, classifyCommitment)
 	rows = appendLane(rows, day.DidNotRun, asOf, classifyFailedApproval)
 	rows = appendLane(rows, day.Dsr, asOf, classifyDSR)
 	rows = appendLane(rows, day.AtRisk, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
-		return classifyRisk(item, at, bar)
+		return classifyRisk(item, at, bar, money)
 	})
 	rows = appendLane(rows, &day.Planned, asOf, classifyTask)
 	rows = appendLane(rows, day.Bounces, asOf, classifyBounce)
+	rows = appendLane(rows, day.Undelivered, asOf, classifyUndelivered)
 	rows = appendLane(rows, &day.NeedsYou, asOf, classifyDecision)
 	rows = appendLane(rows, day.RelationshipDecay, asOf, classifyDecay)
 	rows = appendLane(rows, day.CaptureHealth, asOf, classifySystem)
@@ -45,6 +69,7 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time) []ranked {
 	rows = appendLane(rows, day.AutomationHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.SyncHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.Notices, asOf, classifySystem)
+	rows = appendLane(rows, day.Introductions, asOf, classifyIntroduction)
 	return rows
 }
 
@@ -82,6 +107,7 @@ func base(
 		Kind:        item.Kind,
 		Title:       item.Title,
 		Detail:      item.Detail,
+		CauseRef:    item.CauseRef,
 		Subject:     item.Subject,
 		Deal:        dealFactsOf(item),
 		DueAt:       item.DueAt,
@@ -100,23 +126,6 @@ func carriedActions(actions []crmcontracts.AttentionItemActions) []crmcontracts.
 		out = append(out, crmcontracts.WorklistItemActions(action))
 	}
 	return out
-}
-
-// classifyMeeting: a meeting starting within the horizon is the most urgent
-// thing on the page, because it happens whether or not the reader acts.
-func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	level := levelAgreed
-	reasons := []crmcontracts.WorklistReason{}
-	if item.DueAt != nil && item.DueAt.Sub(asOf) <= meetingHorizon {
-		level = levelWaiting
-		reasons = append(reasons, reason("meeting_soon", nil))
-	}
-	row := base(item, level, "meetings", "meeting_unprepared")
-	// A meeting's start time IS a deadline the reader is racing, so it counts
-	// as work due — unlike a proposal's expiry, which merely lapses.
-	stampDeadline(&row, item.DueAt, asOf)
-	row.Because = reasons
-	return ranked{item: row, deadlineAt: deadlineOf(item.DueAt), occurredAt: occurredOf(item, asOf)}
 }
 
 // classifyCommitment: a promise the rep made. Level 2 whether or not it is
@@ -145,6 +154,29 @@ func classifyFailedApproval(item crmcontracts.AttentionItem, asOf time.Time) ran
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
 }
 
+// classifyIntroduction: a colleague is waiting on this reader to answer.
+//
+// levelBlocking, which is "a decision that holds up customer work", because
+// that is precisely what it is: a rep's deal is stopped until this colleague
+// says yes, no, or ask somebody else. It is a DECISION rather than system news
+// — a person must choose, and only this person can.
+//
+// The deadline is stamped like the DSR's, because both are somebody else's
+// clock running and the queue orders by it. An ask that lapses reads to the
+// requester exactly like a refusal, and the difference is whether anybody
+// looked in time.
+func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+	row := base(item, levelBlocking, "decisions", "work_blocked")
+	stampDeadline(&row, item.DueAt, asOf)
+	row.Because = []crmcontracts.WorklistReason{reason("blocks_customer_work", nil)}
+	return ranked{
+		item:       row,
+		deadlineAt: deadlineOf(item.DueAt),
+		overdue:    overdueAt(item.DueAt, asOf),
+		occurredAt: occurredOf(item, asOf),
+	}
+}
+
 // classifyDSR: a clock the law started. It reaches only privacy admins — the
 // lane is absent for everyone else — so it never needs explaining to a rep.
 func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
@@ -159,82 +191,168 @@ func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 }
 
-// classifyRisk: a deal drifting. Whether it is worth interrupting the day for
-// is decided against the pipeline's own median rather than a number somebody
-// typed once, so "material" tracks the business as it changes.
-func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialBar) ranked {
-	consequence := crmcontracts.WorklistItemConsequence("deal_drifts")
-	if item.Kind != nil && *item.Kind == "close_overdue" {
-		consequence = "deal_slips_past_close"
+// waitingStaleDays is when an unanswered message stops being today's work.
+//
+// Past it the wait is still real, but acting on it is no longer urgent in the
+// way the top band means: two weeks of silence has already cost whatever it was
+// going to cost, and a fortnight-old row sitting above a meeting in an hour is
+// the page lying about what matters now. Such a row moves to the review band —
+// still visible, still answerable, no longer claiming the day.
+//
+// Unless money is still on it. An open deal keeps a long wait in execution,
+// because there the silence is the problem rather than a closed chapter.
+const waitingStaleDays = 14
+
+// waitingDaysCeiling bounds what age contributes to the ORDER.
+//
+// Age breaks ties between rows the bands could not separate; it does not earn
+// precedence on its own. Uncapped it does exactly that — every additional day
+// of silence outranks every newer wait forever, so the oldest thread in the
+// workspace leads the page permanently and the queue becomes an archive sorted
+// by how long it has been ignored. That is the live page's own defect: eight
+// half-year-old threads holding the top of a working rep's day.
+//
+// Past the ceiling all waits tie on age and the next tie-break decides, which
+// is the honest answer — at six months versus seven, age has stopped saying
+// anything about what to do first.
+const waitingDaysCeiling = 30
+
+// classifyWaiting: somebody wrote and nobody answered.
+//
+// Level 1, the top band below a pin, and the reason is the concept's own: a
+// customer waiting on a reply is the one thing on this page where the cost of
+// doing nothing falls on somebody else. It outranks a promise, a drifting deal
+// and every decision.
+//
+// That top band is for a LIVE wait. A stale one keeps its row and loses the
+// band, because a queue where nothing ever ages out is one a rep stops reading.
+//
+// The draft verb is offered only when the message can be READ. There is no
+// drafting a reply to words this reader may not see, and a button that opened
+// an empty composer would be worse than no button.
+func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
+	subject := waiting.Subject
+	days := int(asOf.Sub(waiting.Since).Hours() / 24)
+	if days < 0 {
+		days = 0
 	}
-	expected, known := expectedRevenue(item)
-	// Material revenue interrupts the day; a smaller deal drifting is agreed
-	// work like any other. The bar is the pipeline's own median rather than a
-	// number somebody typed once, so "material" tracks the business as it
-	// moves — and a deal whose value nobody recorded is not assumed large.
-	level := levelAgreed
-	if known && bar.material(expected) {
-		level = levelMaterialRisk
+	// Stale and unfunded: the row belongs to review, not to today.
+	level := levelWaiting
+	stale := days > waitingStaleDays && !waiting.HasOpenDeal
+	if stale {
+		level = levelRoutine
 	}
-	row := base(item, level, "deals_at_risk", consequence)
-	if level == levelMaterialRisk {
-		row.Because = append(row.Because, reason("material", moneyOf(expected)))
-	} else if known {
-		row.Because = append(row.Because, reason("below_material", moneyOf(expected)))
+	because := []crmcontracts.WorklistReason{
+		reason("buyer_wrote_last", nil),
+		reason("waiting_days", daysValue(days)),
 	}
-	quiet := quietDaysOf(item)
-	if quiet > 0 {
-		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
+	if stale {
+		because = append(because, reason("stale", nil))
 	}
-	// The close date is a deadline the customer agreed to, so it ranks like
-	// one. Without this the risk lane compared on idle days alone, and a deal
-	// already past its date lost to one merely quiet for longer.
-	if item.DueAt != nil {
-		row.Because = append(row.Because, reason("closing_soon", nil))
+	row := crmcontracts.WorklistItem{
+		Id:          waiting.ActivityID.String(),
+		Source:      sourceWaiting,
+		Category:    sourceWaiting,
+		Level:       level,
+		Consequence: "buyer_waits",
+		Because:     because,
+		Actions:     []crmcontracts.WorklistItemActions{},
+	}
+	// The subject travels because the row exists at all only for a reader the
+	// content gate admitted: a message this reader may not read produces no
+	// row, rather than a row with its words removed.
+	if subject != "" {
+		row.Title = &subject
+	}
+	// The record the reply would be about, most specific first: the deal a
+	// thread belongs to says more than the company it is filed under.
+	switch {
+	case !waiting.DealID.IsZero():
+		row.Subject = subjectOf(subjectDeal, waiting.DealID)
+	case !waiting.PersonID.IsZero():
+		row.Subject = subjectOf("person", waiting.PersonID)
+	case !waiting.OrganizationID.IsZero():
+		row.Subject = subjectOf("organization", waiting.OrganizationID)
+	}
+	if openableSubject(row.Subject) {
+		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))
+	}
+	occurred := waiting.Since
+	row.OccurredAt = &occurred
+	// The message IS the row's id, so the move needs nothing this row does not
+	// already carry. The product knew the buyer had written and knew nobody had
+	// answered; naming the step is the difference between a page that reports
+	// and a page a rep can work from.
+	row.Move = &crmcontracts.WorklistMove{
+		Action:     "draft_reply",
+		ActivityId: openapi_types.UUID(waiting.ActivityID),
+	}
+	// Both ages travel: the true one for everything a reader is shown, the
+	// bounded one for the order. A rep reading "waiting 180 days" is being told
+	// something true; the queue placing that row above everything for the rest
+	// of its life is not.
+	ordering := days
+	if ordering > waitingDaysCeiling {
+		ordering = waitingDaysCeiling
 	}
 	return ranked{
-		item:         row,
-		deadlineAt:   deadlineOf(item.DueAt),
-		overdue:      item.Overdue != nil && *item.Overdue,
-		expectedBase: expected,
-		hasExpected:  known,
-		waitingDays:  quiet,
-		occurredAt:   occurredOf(item, asOf),
+		item:        row,
+		waitingDays: days,
+		waitingRank: ordering,
+		occurredAt:  waiting.Since,
+		// Who owes the reply, so the scope filters can judge this row the way
+		// they judge a deal-bearing one. A wait carries no deal on the wire, and
+		// without this it is a row the filters cannot place: a named owner's
+		// queue dropped every one of them.
+		owner: waiting.OwnerID,
 	}
 }
 
-// dealFactsOf carries the deal's own figures onto the queue row. The lane feed
-// already resolved them; dropping them here would make the client read a second
-// endpoint per row to draw a card this one could have completed.
-func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFacts {
-	if item.Deal == nil {
-		return nil
-	}
-	return &crmcontracts.WorklistDealFacts{
-		StageId:     item.Deal.StageId,
-		OwnerId:     item.Deal.OwnerId,
-		AmountMinor: item.Deal.AmountMinor,
-		Currency:    item.Deal.Currency,
-	}
-}
-
-// expectedRevenue is what the deal is worth times how likely it is to land.
+// dropDealsAlreadyWaiting removes the at-risk row for a deal somebody is
+// already waiting on.
 //
-// The win probability lives on the stage rather than the deal, and this feed
-// does not read stages — so until that read exists the amount stands in for the
-// expectation. Naming that here rather than silently multiplying by one: the
-// figure is comparable between deals in one currency, which is what the
-// ordering needs, and it will get more accurate rather than change meaning.
-func expectedRevenue(item crmcontracts.AttentionItem) (int64, bool) {
-	if item.Deal == nil || item.Deal.AmountMinor == nil {
-		return 0, false
+// One unanswered message must not become two rows. The waiting row is strictly
+// the more urgent and the more actionable of the two — it names the message to
+// reply to — so it wins, and the drifting row's ground rides along as a reason
+// rather than as a second obligation.
+func dropDealsAlreadyWaiting(rows []ranked) []ranked {
+	waitingDeals := map[string]bool{}
+	for _, row := range rows {
+		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
+			row.item.Subject.Type == subjectDeal {
+			waitingDeals[row.item.Subject.Id.String()] = true
+		}
 	}
-	return *item.Deal.AmountMinor, true
-}
-
-func moneyOf(minor int64) *crmcontracts.WorklistValue {
-	value := minor
-	return &crmcontracts.WorklistValue{Kind: "money", Minor: &value}
+	if len(waitingDeals) == 0 {
+		return rows
+	}
+	// The deal's own facts ride onto the waiting row that absorbed it: a reader
+	// told a customer is waiting still wants to know the deal is worth €160k.
+	// Everything the drifting row was going to say, kept: a reader told a
+	// customer is waiting still needs to know the deal is material, has been
+	// quiet a month, and is past the date it was meant to close.
+	facts := map[string]*crmcontracts.WorklistDealFacts{}
+	grounds := map[string][]crmcontracts.WorklistReason{}
+	for _, row := range rows {
+		if row.item.Source == "deal_at_risk" && waitingDeals[row.item.Id] {
+			facts[row.item.Id] = row.item.Deal
+			grounds[row.item.Id] = row.item.Because
+		}
+	}
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		if row.item.Source == "deal_at_risk" && waitingDeals[row.item.Id] {
+			continue
+		}
+		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
+			row.item.Subject.Type == subjectDeal && row.item.Deal == nil {
+			deal := row.item.Subject.Id.String()
+			row.item.Deal = facts[deal]
+			row.item.Because = append(row.item.Because, grounds[deal]...)
+		}
+		kept = append(kept, row)
+	}
+	return kept
 }
 
 // classifyBriefItem: what the overnight run put at the top of the day. It is a
@@ -274,43 +392,18 @@ func classifyBounce(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
 }
 
-// classifyDecision: a staged proposal or a duplicate pair.
+// classifyUndelivered: a message the rep believes they sent and which never
+// left. The belief is the damage — they are waiting on a reply to something
+// nobody has — so it sits with the broken promises rather than with the system
+// news, exactly where a bounce sits.
 //
-// The split is what keeps the queue honest. A decision about a SEND blocks
-// customer work and sits at level 5; contact hygiene — capturing a counterparty,
-// merging two records — is level 6 and never outranks a customer, however many
-// of them are waiting. That is the whole answer to a queue of 188 identical
-// contact questions burying an unanswered buyer.
-func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	level, consequence, why := levelRoutine, crmcontracts.WorklistItemConsequence("data_drifts"), "routine"
-	if blocksCustomerWork(item) {
-		level, consequence, why = levelBlocking, "work_blocked", "blocks_customer_work"
-	}
-	row := base(item, level, "decisions", consequence)
-	row.Because = []crmcontracts.WorklistReason{reason(crmcontracts.WorklistReasonKind(why), nil)}
+// It is a separate consequence from the bounce beside it: nobody received this
+// one because nobody was ever sent it, and the reader's move is to send it
+// rather than to fix an address.
+func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+	row := base(item, levelPromise, "system", "you_believe_it_happened")
+	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
-}
-
-// blocksCustomerWork reports whether a staged decision is holding up something
-// a customer is waiting on, as opposed to tidying the database.
-//
-// The list is the approval kinds whose SUBJECT is an outbound act. A kind absent
-// here is treated as hygiene, which is the safe direction: mislabelling a merge
-// as urgent costs a reader their attention, while the reverse costs them only a
-// place in a queue they are working through anyway.
-func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
-	if item.Kind == nil {
-		return false
-	}
-	switch *item.Kind {
-	case "send_email", "send_account_email", "send_message",
-		"scheduled_send_held", "held_draft",
-		"book_meeting",
-		"deal_follow_up", "transcript_proposal", "site_lead":
-		return true
-	default:
-		return false
-	}
 }
 
 // classifyDecay: a relationship going quiet. Nobody is waiting on the reader

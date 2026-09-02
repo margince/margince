@@ -191,6 +191,8 @@ var tableOwners = map[string]string{
 	// floor (A165/ADR-0114). It hangs off `activity` and is written by the
 	// stamp, so it belongs to the module that owns the row it substantiates.
 	"activity_retention_evidence": "internal/modules/activities",
+	"activity_sales_state":        "internal/modules/activities",
+	"activity_reader_state":       "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -252,8 +254,12 @@ var tableOwners = map[string]string{
 	"capture_backfill":             "internal/modules/capture",
 	"capture_backfill_creation":    "internal/modules/capture",
 	"workspace_email_domain":       "internal/modules/capture",
+	"capture_sender_override":      "internal/modules/capture",
 	"capture_exclusion":            "internal/modules/capture",
 	"capture_owner_identity":       "internal/modules/capture",
+	"capture_import":               "internal/modules/capture",
+	"capture_thread_verdict":       "internal/modules/capture",
+	"capture_counterparty_hold":    "internal/modules/capture",
 	"capture_digest":               "internal/modules/capture",
 	"capture_auto_enrich_state":    "internal/modules/capture",
 	"capture_pending_counterparty": "internal/modules/capture",
@@ -316,6 +322,7 @@ var tableOwners = map[string]string{
 	// automation (the deterministic trigger-and-action catalog)
 	"workflow_run":            "internal/modules/automation",
 	"notice":                  "internal/modules/notices",
+	"intro_request":           "internal/modules/introductions",
 	"automation_effect_claim": "internal/modules/automation",
 	"automation":              "internal/modules/automation",
 	// signals (the warm-room signal spine + its append-only resolution log)
@@ -329,6 +336,7 @@ var tableOwners = map[string]string{
 	// means and how it renders, while integrations owns the run that bought
 	// it. That split is what lets a person page show a bought email beside a
 	// canonical one and say which is which.
+	"provider_applied_field":    "internal/modules/people",
 	"person_provider_claim":     "internal/modules/people",
 	"finance_external_customer": "internal/modules/finance",
 	"finance_customer_link":     "internal/modules/finance",
@@ -347,8 +355,6 @@ var tableOwners = map[string]string{
 	"erasure_suppression": "internal/modules/privacy",
 	// customfields (the governed add-field engine's catalog)
 	"custom_field": "internal/modules/customfields",
-	// quotas (RD-T06: owner-XOR-team revenue targets)
-	"quota": "internal/modules/quotas",
 	// knowledge (the asked document corpus; the chunk is a derived artifact of
 	// its document and carries no audit identity of its own)
 	"knowledge_corpus":     "internal/modules/knowledge",
@@ -400,8 +406,12 @@ var tableOwners = map[string]string{
 	// a weekly row on brief_run would become "the latest brief" to the reader
 	// that decides the next morning's overnight window, and weekly content on
 	// brief_item would be cascaded away by deleting a deal.
-	"weekly_review":      "internal/compose/weekly",
-	"weekly_review_deal": "internal/compose/weekly",
+	"weekly_review":          "internal/compose/weekly",
+	"team_weekly_review":     "internal/compose/weekly",
+	"team_weekly_review_rep": "internal/compose/weekly",
+	"weekly_plan":            "internal/modules/weeklyplan",
+	"weekly_plan_commitment": "internal/modules/weeklyplan",
+	"weekly_review_deal":     "internal/compose/weekly",
 	// The company view's per-user visit baseline: view state, not a record
 	// fact, so it is written without an audit row — the saved-view ruling.
 	// The person view acknowledges visits into the SAME table (one baseline
@@ -603,7 +613,7 @@ type tableWrite struct {
 // the field can actually hold. Ratified, not discovered: the reason must name
 // them, so the exception is re-checkable against the construction sites.
 var indirectTableArg = gatekit.Waive(map[string]string{
-	"internal/modules/people:w.table": "the evidence writer is one shape over two sidecars; the field is set at two struct literals in this package, to organization_fact and organization_profile_field, and people owns both",
+	"internal/modules/people:w.table": "the evidence writer is one shape over two sidecars; the field is set at four struct literals in this package, to the organization_fact constant and to organization_profile_field, and people owns both",
 })
 
 // tableArgText reads a storekit table argument: a string literal, or an

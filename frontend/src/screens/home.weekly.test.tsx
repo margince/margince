@@ -40,6 +40,13 @@ describe("HomeScreen — the weekly retrospective", () => {
       proposals_rejected: 2,
       brief_items_acted: 6,
       brief_items_dismissed: 3,
+      leads_routed: 9,
+      leads_answered_in_target: 7,
+      leads_breached: 2,
+      meetings_held: 5,
+      meetings_with_next_step: 3,
+      commitments_due: 4,
+      commitments_kept: 3,
     },
     deals: [
       {
@@ -175,5 +182,86 @@ describe("HomeScreen — the week's sentence", () => {
     // A pass that honestly found nothing is not a pass that never ran, and
     // claiming otherwise would tell the rep their week was never looked at.
     expect(screen.queryByText(en["home.weekly.noNarrative"])).toBeNull();
+  });
+});
+
+// ── What CHANGED, not only what happened ──
+
+// A count with no bar against it is a fact a rep cannot act on. "12 deals
+// moved" only becomes a review beside the week that came before it.
+describe("HomeScreen — the week against the one before", () => {
+  const counts = {
+    tasks_due: 5,
+    tasks_done: 4,
+    tasks_carried_over: 2,
+    deals_moved: 3,
+    deals_won: 3,
+    deals_lost: 1,
+    proposals_accepted: 7,
+    proposals_rejected: 2,
+    brief_items_acted: 6,
+    brief_items_dismissed: 3,
+    leads_routed: 9,
+    leads_answered_in_target: 7,
+    leads_breached: 2,
+    meetings_held: 5,
+    meetings_with_next_step: 3,
+    commitments_due: 4,
+    commitments_kept: 3,
+  };
+  const review = {
+    id: "01a04000-0000-7000-8000-00000000000a",
+    local_week_start: "2026-06-29",
+    generated_at: "2026-07-06T06:00:00Z",
+    as_of: "2026-07-06T06:00:00Z",
+    counts,
+    deals: [],
+  };
+  const withPrior = {
+    ...review,
+    prior: {
+      local_week_start: "2026-06-22",
+      // One won last week against three this week: a delta of +2 that a
+      // reader can check against the figure beside it.
+      counts: { ...counts, deals_won: 1 },
+    },
+  };
+
+  const mount = async (fixture: unknown) => {
+    stubApi({
+      "GET /weekly-reviews/latest": () => jsonResponse(fixture),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+    return screen.findByTestId("weekly-strip");
+  };
+
+  it("names the change since the week before", async () => {
+    const strip = await mount(withPrior);
+
+    expect(strip.textContent).toContain(
+      en["home.weekly.sincePrior"].replace("{delta}", "+2"),
+    );
+  });
+
+  // A week that stayed exactly level is a real answer. Printing "+0" dresses it
+  // as an increase, which is a small lie told every Monday.
+  it("says a level week stayed level", async () => {
+    const strip = await mount(withPrior);
+
+    expect(strip.textContent).toContain(
+      en["home.weekly.sincePrior"].replace("{delta}", "±0"),
+    );
+  });
+
+  // A rep's first week did not stay level — it had nothing to stay level
+  // against, and a "±0" beside every figure would claim a comparison that was
+  // never made.
+  it("draws no comparison for a first week", async () => {
+    const strip = await mount(review);
+
+    const marker = en["home.weekly.sincePrior"].replace("{delta}", "").trim();
+    expect(strip.textContent).not.toContain(marker);
   });
 });

@@ -15,26 +15,30 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (52)
+## Parity (58)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `accountreachcopies_test.go` | H2 | "Which activities belong to this account" has ONE answer, spelled twice. |
 | `agenttoolcatalogtiers_test.go` | H2 | The tool catalog's Tier column says what the contract says. |
 | `aiactivitycatalogparity_test.go` | H3 | The AI-activity contract must name exactly the work that can reach it, and cap exactly what the read caps. |
+| `aiegressdoc_test.go` | H2 | The egress page and the routing table say the same thing. |
 | `airoutingschema_test.go` | H3 | What the EDITOR accepts, checked against what the parser accepts. |
 | `aitaskparity_test.go` | H3 | Every ai\_task an emitter writes into the AI-activity projection must be a task the AI contract declares. |
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
 | `auditcoherence_test.go` | H3 | The audit\_log enum-coherence gate as a fitness function. |
 | `backfillwindow_test.go` | H3 | The CAP-PARAM-4 window set as a fitness function: the contract's four enums, the Go validator and the capture\_backfill CHECK all state the SAME set, derived from the tree rather than remembered here. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the SAME variable whether to publish a record, and both answer only to the same value. |
+| `coachingroles_test.go` | H2 | The seats that may coach are seats that exist. |
 | `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and this gate is what makes widening seven of them a failure instead of a silent half-job. |
 | `configschema_test.go` | H3 | The margince.yaml schema is editor tooling, and editor tooling that lies is worse than none: an operator trusts the squiggle. |
+| `consumergroupwiring_test.go` | H3 | Every lane the worker starts is a group the catalog declares. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts exactly the record types the search module can search, and the contract has to say the same set. |
 | `contractfrontendlane_test.go` | H3 | A contract change owes three regenerations, and the one that strands the FRONTEND types is enforced in two different places for two different readers. |
 | `contractvocabulary_test.go` | H3 | A membership set built from a generated enum's own constants must hold every member of that enum. |
 | `corepicklistcontract_test.go` | H3 | The core picklist value sets against the contract that owns them. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
+| `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
@@ -49,6 +53,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `goversionpins_test.go` | H3 | One Go version, pinned in several places, and they have to agree. |
 | `grantrenewalcauses_test.go` | H1 | Every reason a standing grant needs renewing must reach the card that asks for it. |
 | `idempotencymap_test.go` | H3 | The idempotency allowlist as a fitness function: the contract is the authority on which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must mirror it exactly. |
+| `identifierfields_test.go` | H3 | A provider's match rules are checked against IdentifierFields(), so that list has to name every field a person actually carries. |
 | `inboundsigningrecipe_test.go` | H3 | The signing scope is ONE invariant spelled on both sides of a wire. |
 | `issuelabels_test.go` | H3 | The label taxonomy is written down once and read from there. |
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
@@ -71,12 +76,15 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seedresetparity_test.go` | H3 | "What survives a reset" is one decision, and it is written down twice: the in-product data reset applies it in Go (internal/compose/datasweep.go's preservedResetTables), and the developer's `make seed-reset` applies it in SQL (scripts/seed-reset.sql). |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
+| `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (76)
+## Census (82)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `activityprojectionfields_test.go` | H2 | Every writer of `Activity.AudienceReason` is named here with the test that proves it withholds the reason from a reader who may not see the content. |
 | `agentgrantscopes_test.go` | H2 | A credential that does not fund the tools its agent declares buys a run that starts, discovers it cannot do its job, and stops. |
+| `aggregateaudience_test.go` | H2 | A reader that COUNTS messages asks the audience, exactly as one that shows them does. |
 | `aggregategatereach_test.go` | H3 | Every job the `ci` aggregate depends on can actually RUN on the merge queue. |
 | `aitaskcensus_test.go` | H3 | The census as a fitness function: the contract says which AI tasks ship and what their invocation sites are called, and this build must register exactly those. |
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
@@ -100,6 +108,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
 | `emptylistwire_test.go` | H2 | Every list envelope carries its rows in a field the writer can find. |
 | `envcontract_test.go` | H3 | Environment-variable contract fitness functions. |
+| `erasurecascadereach_test.go` | H2 | Every file the Art. 17 cascade executes SQL from is one the PII censuses read. |
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
@@ -134,8 +143,10 @@ The eight shapes, what each is for, and how each one silently passes:
 | `passportmint_test.go` | H1 | A passport is minted for the session user, and for nobody else. |
 | `personattachlock_test.go` | H2 | A relationship carrying a person is written under that person's row lock. |
 | `personprofilefieldwriter_test.go` | H2 | people.writePersonProfileField is the one writer of person\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
+| `piicolumncoverage_test.go` | H2 | The Art. 17 redaction, judged by COLUMN rather than by table. |
 | `piicoverage_test.go` | H2 | PII reach as a fitness function. |
 | `precheckwiring_test.go` | H2 | A precheck that exists but is not wired protects nothing. |
+| `preferencecentrewriters_test.go` | H2 | The public preference centre answers in ONE shape, and resolves "which address is theirs" in ONE place. |
 | `profilefieldreaders_test.go` | H2 | person\_profile\_field holds what a machine ASSERTED about a person, and ai\_feedback holds what a human then decided about that assertion. |
 | `projectionedgereaders_test.go` | H2 | The projection tier's read census. |
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
@@ -148,6 +159,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
 | `seatfanout_test.go` | H2 | A nightly agent acts FOR A PERSON, and the identity of one night's work has to say which person. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
+| `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
 | `tableownershipdiscovery_test.go` | H2 | WHICH packages the ownership gate walks, derived rather than remembered. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | WHERE the claim sweep looks, as against what it looks for. |
@@ -174,7 +186,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | The write-shape obligation as a fitness function: every mutation that writes an audit row commits a paired outbox event on the same static call path (data-model §11, events.md §4.2 — spelled once in storekit), across modules AND the composition layer. |
 
-## Shape (20)
+## Shape (21)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -184,6 +196,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensionsqlscope_test.go` | H1 | A unit's SQL addresses the unit's own tables. |
 | `fieldnames_test.go` | H2 | A field name published to a caller has to BE a field name. |
 | `geocodestaleness_test.go` | H1 | The staleness rule lives in the SCHEMA, and this holds it there. |
+| `gitcontent_test.go` | H3 | What belongs to the REPOSITORY, as against what happens to be in a working tree. |
 | `jobfault_test.go` | H2 | Every River worker returns through jobs.Fault. |
 | `jobfleetwide_test.go` | H2 | A FleetWide declaration is a promise: this job enumerates and enqueues, and does no tenant write of its own (jobs.FleetWide). |
 | `jobwirekey_test.go` | H2 | One workspace arg, one spelling, and only where it means something. |
@@ -199,7 +212,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `userrecordviewwriter_test.go` | H2 | user\_record\_view carries one fact per (user, record): the moment that human last said "I have seen this". |
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 
-## Prohibition (40)
+## Prohibition (41)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -213,6 +226,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensions_arch_test.go` | H2 | Extension-tier fitness functions (ADR-0069 §3): the compiler already walls extensions off from internal/\*\* (their module paths sit outside the backend module), these tests hold the rest of the import contract from the tree — every extension source dir (enabled or fixture) is enrolled the moment it exists. |
 | `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. |
 | `formulafieldscope_test.go` | H3 | The negative-scope half of the formula-field boundary proof (RD-AC-7): a formula field is a database-GENERATED artifact, never a runtime-authored one, so NO contract operation may accept a writable formula\_sql in its request body — ComputedField.formula\_sql (crm.yaml) is a response-only display field, never echoed back as an editable one. |
+| `fxconversioncallers_test.go` | H2 | Converting money to the base currency happens in ONE place, and this fails when a second appears. |
 | `googleconnectorregistration_test.go` | H2 | The Google connectors are built for the registry in ONE function, because putting one INTO the registry is a decision about REACHABILITY and that decision has been wrong once. |
 | `guardedversion_test.go` | H2 | A nil version is the request's answer, never the call site's. |
 | `integrationmigrateonce_test.go` | H2 | Migrate-once discipline for everything the integration lane compiles, as a fitness function. |
@@ -263,13 +277,14 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt — so its length is a running cost rather than a matter of taste. |
 | `workflowtimeouts_test.go` | H3 | Every workflow job carries a wall-clock ceiling. |
 
-## Falsification (8)
+## Falsification (9)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with SYNTHETIC unit sources rather than the tree — the real units are supposed to pass, so a gate proven only by "extensions/ is currently clean" is one that keeps passing after it stops working. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification, kept beside it: every dispatch shape the tree actually uses, proven accepted, and the shapes it exists to reject — a dispatcher doing a tenant's work, and a fan-out built around the chokepoints — proven rejected. |
 | `jobkindgate_test.go` | H2 | The registration gate's own falsification. |
+| `piicolumnreading_test.go` | H3 | Which way the PII census fails when it cannot read a statement. |
 | `piisqlreader_test.go` | H2 | Reading the SQL the PII census judges: where one statement ends and the next begins, which table a write lands on, which columns its SET clause names, and which of those the reader could not read at all. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
 | `retainedcolumncases_test.go` | H1 | The retention sweep's two SQL claims, driven with SYNTHETIC statements rather than the tree — the same reason extensionsqlscopecases\_test.go gives for its own cases. |

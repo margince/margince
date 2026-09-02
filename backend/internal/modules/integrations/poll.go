@@ -300,7 +300,17 @@ func (s *Store) terminalize(ctx context.Context, tx pgx.Tx, desc provider.Descri
 		 WHERE provider = $1`, name); err != nil {
 		return fmt.Errorf("integrations: stamping the connection's last use: %w", err)
 	}
-	return nil
+	// A run that reached the provider and got an answer heals a degraded
+	// connection. Only recordRefusal wrote the degraded statuses, and nothing
+	// wrote its way back out of them: one 429 flipped the connection to
+	// rate_limited and every later run was refused at admission, until an
+	// operator re-entered a key that was never the problem. A transient
+	// refusal became permanent, and the comment beside recordRefusal promised
+	// the opposite.
+	//
+	// Idempotent: writeStatusThrough refuses to rewrite a status that already
+	// says this, so a healthy connection is not re-audited once per run.
+	return s.writeStatusThrough(ctx, tx, name, "connected", "")
 }
 
 // pollFrom lifts a synchronous Submission into the poll shape terminalize

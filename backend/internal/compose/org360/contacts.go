@@ -31,7 +31,21 @@ import (
 func contactsSection(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time,
 	all []people.ContactStrength,
 ) ([]crmcontracts.Organization360Contact, crmcontracts.PageInfo, error) {
-	strengths, page := truncate(all)
+	// Ranked BEFORE the cut, because the cut is what the reader sees. `all`
+	// arrives ordered by person id — the roster read's own deterministic order,
+	// which is arbitrary as a reading order — and truncating that keeps the
+	// first 25 ids rather than the 25 contacts worth looking at. On an account
+	// with a hundred employees the one who answered last week sits wherever
+	// their id falls, so the section that is supposed to open the page could
+	// omit them entirely while reporting nothing worse than has_more.
+	//
+	// Ranking a COPY: `all` is the same slice the account roll-up folds, and
+	// reordering it under that reader would make the summary depend on which
+	// section ran first.
+	ranked := make([]people.ContactStrength, len(all))
+	copy(ranked, all)
+	people.RankContacts(ranked)
+	strengths, page := truncate(ranked)
 	if len(strengths) == 0 {
 		return []crmcontracts.Organization360Contact{}, page, nil
 	}

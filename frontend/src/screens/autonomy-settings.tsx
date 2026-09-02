@@ -75,6 +75,41 @@ function useUpdateAutonomy() {
 // Absent rather than a row of zeroes: "you have approved 0 of these unchanged"
 // invites the reader to weigh evidence that does not exist, where saying nothing
 // leaves the switch to be judged on the description above it.
+// noneDecidedYet reports whether this seat has decided none of these, of any
+// kind.
+//
+// DECIDED, not "received": the card reads a decision history, and a seat may
+// well have work waiting on it right now. Saying nothing has arrived would be a
+// claim about the queue that this card cannot see.
+//
+// The card is shown to every seat on purpose: approvals are STRUCTURAL, so
+// there is no role list a client could gate on, and the nearest available gate
+// — does this seat own any records — would make the card appear and disappear
+// under a rep as their book of business changes.
+//
+// What that leaves is a permanent zero for a seat nothing is ever routed to,
+// and a zero with no reading is merely accurate rather than honest. The
+// per-switch line already says there is no record; what it cannot say, being
+// about one kind, is WHY there is none of ANY kind and whether there ever will
+// be. That belongs once at the card, where it is about the seat.
+//
+// AN EMPTY LIST IS NOT A ZERO — and it never reaches here, because the gate
+// above answers it with the empty state instead. `every` is true of nothing, so
+// a seat with no eligible kind at all would otherwise be told it had decided
+// none of them: a sentence about a set that does not exist, standing on a card
+// with no switches under it.
+//
+// Guarded THERE rather than with a `rows.length > 0` here. Both read correctly,
+// and only one of them can be tested: with the empty state drawn, this function
+// is never called with an empty list, so a length check beside it is a claim no
+// case can fail — and an untestable guard is how a reader learns to trust the
+// wrong one of two.
+function noneDecidedYet(rows: readonly KindAutonomy[]): boolean {
+  return rows.every(
+    (row) => row.approved_clean + row.approved_edited + row.rejected === 0,
+  );
+}
+
 function decidedSoFar(
   row: KindAutonomy,
   t: Translator,
@@ -145,34 +180,47 @@ export function AutonomySettingsCard() {
     <Panel title={t("autonomy.title")}>
       <PanelBody className="form-stack">
         <p className="settings-panel-sub">{t("autonomy.sub")}</p>
-        <QueryGate query={query}>
+        {/* An empty list is its own answer, and it is not a blank card: this
+            installation routes this seat nothing of any kind, so there is no
+            switch to offer and no track record to be behind on. Saying so here
+            is also what keeps noneDecidedYet from having to speak for a set
+            that does not exist. */}
+        <QueryGate
+          query={query}
+          empty={(settings) => settings.data.length === 0}
+        >
           {(settings) => (
-            <SettingList>
-              {settings.data.map((row) => (
-                <SettingRow
-                  key={row.kind}
-                  label={kindLabel(row.kind, t)}
-                  description={[
-                    kindHelp(row.kind, t),
-                    decidedSoFar(row, t, locale),
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  control={
-                    <Switch
-                      testId={`autonomy-toggle-${row.kind}`}
-                      label={kindLabel(row.kind, t)}
-                      labelHidden
-                      checked={row.mode === "auto"}
-                      disabled={update.isPending}
-                      onChange={(next) =>
-                        update.mutate({ kind: row.kind, auto: next })
-                      }
-                    />
-                  }
-                />
-              ))}
-            </SettingList>
+            <>
+              {noneDecidedYet(settings.data) && (
+                <Callout tone="info">{t("autonomy.noneDecidedYet")}</Callout>
+              )}
+              <SettingList>
+                {settings.data.map((row) => (
+                  <SettingRow
+                    key={row.kind}
+                    label={kindLabel(row.kind, t)}
+                    description={[
+                      kindHelp(row.kind, t),
+                      decidedSoFar(row, t, locale),
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    control={
+                      <Switch
+                        testId={`autonomy-toggle-${row.kind}`}
+                        label={kindLabel(row.kind, t)}
+                        labelHidden
+                        checked={row.mode === "auto"}
+                        disabled={update.isPending}
+                        onChange={(next) =>
+                          update.mutate({ kind: row.kind, auto: next })
+                        }
+                      />
+                    }
+                  />
+                ))}
+              </SettingList>
+            </>
           )}
         </QueryGate>
         {update.isError && (

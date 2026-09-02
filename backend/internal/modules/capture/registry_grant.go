@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -88,6 +89,17 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	var id ids.UUID
 	var priorRef *string
 	if err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The SAME lock the OAuth-app write takes, before this row is counted
+		// by anything. refuseStrandingConnections reads the connection count
+		// under it and then commits the new client id; without this the count
+		// and that commit straddle a window in which this row can land, and the
+		// mailbox is connected against an id that no longer exists — the exact
+		// outcome the refusal is there to prevent, arrived at by timing.
+		if key := appSettingKeyForConnector(name); key != "" {
+			if err := settings.LockForWrite(ctx, tx, key); err != nil {
+				return err
+			}
+		}
 		var err error
 		id, priorRef, err = upsertConnection(ctx, tx, row)
 		return err
@@ -264,7 +276,16 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              share_acknowledged_at = CASE WHEN $7 THEN now()
 		                                           ELSE COALESCE(capture_connection.share_acknowledged_at, now()) END,
 		              account_label = EXCLUDED.account_label, provider_scopes = EXCLUDED.provider_scopes,
-		              generation = capture_connection.generation + CASE WHEN $7 THEN 1 ELSE 0 END,
+		              -- A rebind points this row at a DIFFERENT account, so the
+              -- previous mailbox's answer about who may read its mail is not
+              -- this one's to inherit. Reset to HELD rather than to the
+              -- classified default: the seat chose a posture for a mailbox
+              -- that is now gone, and the new one is held until they say
+              -- otherwise. The opening direction is the one that must never
+              -- happen by inheritance — rebinding a shared role mailbox to a
+              -- personal account would publish that account's mail on arrival.
+              mail_posture = CASE WHEN $7 THEN 'held' ELSE capture_connection.mail_posture END,
+              generation = capture_connection.generation + CASE WHEN $7 THEN 1 ELSE 0 END,
 		              sync_cursor = CASE WHEN $7 THEN NULL ELSE capture_connection.sync_cursor END,
 		              -- A rebind points this row at a DIFFERENT account, so the
 		              -- previous mailbox's answer about reading its signatures
@@ -277,6 +298,17 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              -- direction.
 		              signature_enrich_enabled = CASE WHEN $7 THEN NULL
 		                                              ELSE capture_connection.signature_enrich_enabled END,
+		              -- A rebind points this row at a DIFFERENT mailbox, and a
+		              -- watch handle names a subscription in the mailbox it was
+		              -- made against. Kept, it would send the next renewal to
+		              -- extend the previous mailbox's subscription — which the
+		              -- app is entitled to do, so it would succeed — leaving the
+		              -- new mailbox with no push at all and nothing failing to
+		              -- say so. The deadline goes with it: a stored deadline for
+		              -- a subscription this row no longer owns keeps the renewal
+		              -- scan away until it lapses.
+		              watch_ref = CASE WHEN $7 THEN NULL ELSE capture_connection.watch_ref END,
+		              watch_expires_at = CASE WHEN $7 THEN NULL ELSE capture_connection.watch_expires_at END,
 		              account_bound_at = CASE WHEN $7 THEN now() ELSE capture_connection.account_bound_at END
 		RETURNING id`,
 		in.provider, in.userID, in.scopes, string(in.ref), in.accountLabel, in.providerScopes, rebound).Scan(&id); err != nil {

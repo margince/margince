@@ -5,9 +5,9 @@
 
 package capture_test
 
-// The sweep is the other half of what the payload posture promises: with
-// trace_payloads on, this table holds correspondence content, and "24 hours"
-// is only true if something deletes it.
+// The sweep is the other half of what the payload posture promises: on the
+// default posture this table names the sender of every traced message and
+// keeps a clamped subject, and "24 hours" is only true if something deletes it.
 
 import (
 	"testing"

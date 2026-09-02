@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 func TestGoogleSignInConfigEnabled(t *testing.T) {
@@ -83,13 +85,18 @@ func TestWithGoogleSignInCompleteMountsAndReportsCapability(t *testing.T) {
 	}
 }
 
-func TestGoogleSignInMatchIdentityChecksAudience(t *testing.T) {
-	match := googleSignInMatchIdentity("cid")
+// The audience check is shared by every provider — a token minted for another
+// app's client id says nothing about who may sign in here, whoever issued it.
+func TestTheAudienceCheckRefusesAnotherAppsToken(t *testing.T) {
+	match := audienceIs("cid")
 	if err := match(oidcClaims{Aud: "cid"}); err != nil {
 		t.Fatalf("match(correct aud) = %v, want nil", err)
 	}
 	if err := match(oidcClaims{Aud: "someone-elses-client"}); err == nil {
 		t.Fatal("expected a mismatch to be rejected")
+	}
+	if err := match(oidcClaims{}); err == nil {
+		t.Fatal("a token naming no audience at all was accepted")
 	}
 }
 
@@ -127,7 +134,7 @@ func TestGoogleTokenExchangerAdapterDelegates(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	adapter := googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}}
+	adapter := oidcExchangerAdapter{ex: oidcCodeExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}}
 	idToken, err := adapter.Exchange(context.Background(), "code", "verifier", "https://app.example.com/cb")
 	if err != nil {
 		t.Fatalf("Exchange: %v", err)
@@ -161,5 +168,48 @@ func TestLoginStateSignerAdapterRoundTrips(t *testing.T) {
 
 	if _, _, _, err := adapter.Verify("not-a-real-token"); err == nil {
 		t.Fatal("expected an error to pass through for a malformed token")
+	}
+}
+
+// The intersection is the whole rule of the provider policy: an admin narrows
+// what the deployment composed and can never widen it, because a key nobody
+// holds credentials for cannot be made to work by choosing it.
+func TestOfferedProvidersOnlyEverNarrowsWhatTheDeploymentComposed(t *testing.T) {
+	google := identity.OIDCProviderConfig{Key: "google", Label: "Google"}
+	microsoft := identity.OIDCProviderConfig{Key: "microsoft", Label: "Microsoft"}
+	configured := []identity.OIDCProviderConfig{google, microsoft}
+
+	for name, tc := range map[string]struct {
+		chosen []string
+		want   []string
+	}{
+		// Never chosen is not the same as chose-none: an installation that
+		// upgrades into this setting keeps the login screen it had, rather than
+		// silently losing every provider on the deploy that introduced it.
+		"never chosen offers everything configured": {chosen: nil, want: []string{"google", "microsoft"}},
+		"an empty choice offers nothing":            {chosen: []string{}, want: nil},
+		"a choice narrows to itself":                {chosen: []string{"google"}, want: []string{"google"}},
+		// The reason this is an intersection rather than a lookup: an operator
+		// cannot invent a client id from a settings screen, so a key the
+		// deployment holds no credentials for must enable nothing at all.
+		"a key the deployment never composed enables nothing": {chosen: []string{"okta"}, want: nil},
+		"an unknown key alongside a real one narrows to the real one": {
+			chosen: []string{"okta", "microsoft"}, want: []string{"microsoft"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var got []string
+			for _, p := range offeredProviders(configured, tc.chosen) {
+				got = append(got, p.Key)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("offered %v, want %v", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("offered %v, want %v", got, tc.want)
+				}
+			}
+		})
 	}
 }

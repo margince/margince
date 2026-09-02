@@ -67,6 +67,16 @@ func (s *PendingStore) AwaitingReview(ctx context.Context, limit int) ([]Pending
 			       p.activity_id, p.owner_id
 			  FROM capture_pending_counterparty p
 			 WHERE p.status = 'unsure'
+			   -- Not a sender whose mail is held. The review queue is a shared
+			   -- surface: staging one puts its address and display name in
+			   -- front of colleagues who cannot read the message it came from,
+			   -- and asks them to decide about a correspondent they were never
+			   -- meant to know about. The sender stays unsure and the owner can
+			   -- still answer for them on their own Senders page.
+			   AND EXISTS (
+			     SELECT 1 FROM activity a
+			      WHERE a.id = p.activity_id AND a.audience = 'workspace'
+			        AND a.restricted_at IS NULL)
 			   AND NOT EXISTS (
 			     SELECT 1 FROM approval a
 			      WHERE a.id = p.proposal_id

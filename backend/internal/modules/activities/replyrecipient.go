@@ -28,17 +28,26 @@ import (
 
 // ReplyRecipient is who a reply to an activity is addressed to.
 //
-// Both fields may be empty, and that is an answer rather than a failure: an
+// Every field may be empty, and that is an answer rather than a failure: an
 // activity linked to no person, or to one this caller cannot read, leaves the
 // drafter with no name — and a draft that opens "Hallo," is correct there,
 // where one that guesses is not.
 type ReplyRecipient struct {
 	// FullName as recorded, for the drafter to greet by.
 	FullName string
-	// FirstName is what a greeting actually uses. Split here rather than in
+	// FirstName is what a familiar greeting uses. Split here rather than in
 	// the prompt: a model asked to shorten a name will shorten
 	// "Dr. Anne-Marie Weiß-Konrad" differently on every call.
 	FirstName string
+	// LastName is what a FORMAL greeting uses, and the two are not
+	// interchangeable. German is the case that shows it: "Sehr geehrter Herr"
+	// takes a surname, and a model given only a first name either drops the
+	// register or invents the missing half — "Sehr geehrte Frau/Herr Dietmar"
+	// is what that looks like in a draft a rep was about to send.
+	//
+	// Empty where the record holds no surname, which is an answer: the greeting
+	// falls back to the familiar form rather than to a guess.
+	LastName string
 }
 
 // ReplyRecipientFor names the person a reply to this activity is written to.
@@ -96,7 +105,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// a "to" recipient (our own outbound, where the addressee is the
 		// counterparty), then anyone else on it, then the bare link.
 		q := `
-			SELECT p.full_name, coalesce(p.first_name, '')
+			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, '')
 			  FROM person p
 			  JOIN (
 			       SELECT person_id,
@@ -115,7 +124,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		}
 		q += ` ORDER BY c.rank, c.created_at, c.id LIMIT 1`
 
-		err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName)
+		err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName, &out.LastName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Linked to nobody, or to a person out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather

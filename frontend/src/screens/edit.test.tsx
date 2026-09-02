@@ -241,3 +241,151 @@ describe("what a save says", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 });
+
+describe("what an edit is a reading of", () => {
+  // The guard this defeats is the whole reason the version column exists.
+  //
+  // A background refetch mid-edit — another person's save, a websocket
+  // invalidation, a window refocus — advances the record the screen renders
+  // from while the form's own values stay as the person left them. If the
+  // write takes its version from the LIVE record, the server's concurrency
+  // check compares the other person's version against itself and passes: the
+  // 409 that should have said "somebody changed this while you were editing"
+  // cannot fire, and the overwrite lands silently.
+  //
+  // Both readings are recorded on purpose. Asserting only the frozen one would
+  // pass against an implementation that reads the live record, because if the
+  // refetch never landed the two are the same — the test has to SEE them
+  // differ, or it is not about the race at all.
+  function raceScreen(seen: { opened?: unknown; live?: unknown }[]) {
+    return function Screen() {
+      const [record, setRecord] = useState({
+        id: "p1",
+        version: 3,
+        full_name: "Alice",
+      });
+      return (
+        <>
+          <Button
+            onClick={() =>
+              // Somebody else's save landing under the open dialog.
+              setRecord({ id: "p1", version: 9, full_name: "Alice Cooper" })
+            }
+          >
+            refetch
+          </Button>
+          <EditAction<{ id: string }>
+            label="Edit"
+            fields={fields}
+            record={record}
+            savedMessage="saved"
+            invalidate="people"
+            recordKey="person"
+            update={async (_values, _rows, opened) => {
+              seen.push({ opened, live: record });
+              return { id: "p1" };
+            }}
+          />
+        </>
+      );
+    };
+  }
+
+  async function editThroughARefetch(
+    seen: { opened?: unknown; live?: unknown }[],
+  ) {
+    const Screen = raceScreen(seen);
+    render(<Screen />);
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(screen.getByRole("button", { name: "refetch" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+    await waitFor(() => expect(seen).toHaveLength(1));
+  }
+
+  it("sends the version the form opened on, not the one that arrived while typing", async () => {
+    const seen: { opened?: unknown; live?: unknown }[] = [];
+    await editThroughARefetch(seen);
+
+    const { opened, live } = seen[0] as {
+      opened: { version?: number };
+      live: { version?: number };
+    };
+    // The refetch really landed, so the two readings really do disagree —
+    // without this the assertion below could hold for the wrong reason.
+    expect(live.version).toBe(9);
+    expect(opened.version).toBe(3);
+  });
+
+  // The same reading has to be the diff baseline, or an untouched field whose
+  // value moved under the dialog reads as this person's edit and is sent —
+  // overwriting a change nobody here made.
+  // A screen can swap the record under an open dialog without remounting it.
+  // The form is then showing one record's
+  // values while the caller's write addresses another, and the frozen reading
+  // would send the FIRST record's version against the second record's id.
+  it("re-reads when the record under the dialog is a different one", async () => {
+    const seen: { opened?: unknown; live?: unknown }[] = [];
+    function Screen() {
+      const [record, setRecord] = useState({
+        id: "p1",
+        version: 3,
+        full_name: "Alice",
+      });
+      return (
+        <>
+          <Button
+            onClick={() =>
+              setRecord({ id: "p2", version: 11, full_name: "Bruno" })
+            }
+          >
+            switch
+          </Button>
+          <EditAction<{ id: string }>
+            label="Edit"
+            fields={fields}
+            record={record}
+            savedMessage="saved"
+            invalidate="people"
+            recordKey="person"
+            update={async (_values, _rows, opened) => {
+              seen.push({ opened, live: record });
+              return { id: "p1" };
+            }}
+          />
+        </>
+      );
+    }
+
+    render(<Screen />);
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(screen.getByRole("button", { name: "switch" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+    await waitFor(() => expect(seen).toHaveLength(1));
+
+    const { opened } = seen[0] as {
+      opened: { id: string; version?: number; full_name?: string };
+    };
+    // The dialog is now about p2, so everything the write carries must be p2's
+    // — an id from one record and a version from another is the mismatch this
+    // guards.
+    expect(opened.id).toBe("p2");
+    expect(opened.version).toBe(11);
+    expect(opened.full_name).toBe("Bruno");
+  });
+
+  it("compares against the values it prefilled, not the ones that arrived after", async () => {
+    const seen: { opened?: unknown; live?: unknown }[] = [];
+    await editThroughARefetch(seen);
+
+    const { opened, live } = seen[0] as {
+      opened: { full_name?: string };
+      live: { full_name?: string };
+    };
+    expect(live.full_name).toBe("Alice Cooper");
+    expect(opened.full_name).toBe("Alice");
+  });
+});

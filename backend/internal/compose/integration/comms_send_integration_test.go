@@ -203,6 +203,16 @@ func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs s
 	return outcome, captured, gmailConnector
 }
 
+// drivenProvider is the connector this suite actually drives, read from its own
+// descriptor.
+//
+// NOT activities.DefaultSendProvider, which is what a store composed with no
+// send authority falls back to. The two carry the same value today and mean
+// different things: a test resting on the fallback would go on passing after
+// this suite was pointed at another vendor, asserting about a provider it no
+// longer drives.
+var drivenProvider = gmail.New(nil, nil).Descriptor().Name
+
 // connectorCtx is the principal the capture registry builds for a sync: the
 // connector identity acting under the granting human's permissions.
 func (p *preflightEnv) connectorCtx(t *testing.T) context.Context {
@@ -210,7 +220,7 @@ func (p *preflightEnv) connectorCtx(t *testing.T) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), p.workspaceID(t))
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalConnector, ID: "connector:" + activities.SendProvider,
+		Type: principal.PrincipalConnector, ID: "connector:" + drivenProvider,
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
 		Permissions: principal.Permissions{
 			Objects:  map[string]principal.ObjectGrant{"activity": {Create: true, Read: true}},
@@ -230,12 +240,29 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	rfc822, capturingConnector := p.transmit(t, deliveryID, "")
 
 	// BOTH halves of the natural key come from the capture side, never from the
-	// send side. source_system is the connector's own declared name — two
-	// independent constants (gmail.connectorName and activities.SendProvider)
-	// spell it today, and nothing but this comparison holds them equal. Feeding
-	// the send-side literal in here would assert the assumption and stay green
+	// send side. source_system is the connector's own declared name, and nothing
+	// but the comparison below holds it equal to what the send wrote. Feeding
+	// the send-side value in here would assert the assumption and stay green
 	// while every outbound email landed twice.
 	sourceSystem := capturingConnector.Descriptor().Name
+
+	// What the SEND actually resolved, read off the row it wrote.
+	//
+	// Not activities.DefaultSendProvider, which is only what a store with no
+	// send authority falls back to, and not drivenProvider either: the send
+	// path now resolves a provider PER SEND from the sender's own mailbox, so
+	// the only honest send-side value is the one that send arrived at. A
+	// constant here would go on matching after this suite was pointed at
+	// another vendor, and it is this very test — the one proving a sent mail
+	// does not land twice — that would be asserting about a provider nobody
+	// drove.
+	var sentSourceSystem string
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT source_system FROM activity WHERE id = $1`, sentActivity).Scan(&sentSourceSystem)
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	// The key comes out of the bytes, through the connector's own mapping —
 	// mailmap.Parse + ToRecord is precisely what the Gmail connector runs on
@@ -245,9 +272,11 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 		t.Fatalf("the message the connector produced does not parse:\n%s\n%v", rfc822, err)
 	}
 	echo := msg.AttestSentByOwner(true).ToRecord(sourceSystem, rfc822)
-	if echo.NaturalKey.SourceSystem != activities.SendProvider {
-		t.Fatalf("capture keys this message under source_system %q but the send path writes %q — the two constants have drifted apart",
-			echo.NaturalKey.SourceSystem, activities.SendProvider)
+	// This comparison is the point: it holds the capture side and the send side
+	// equal, each read from where it is actually decided.
+	if echo.NaturalKey.SourceSystem != sentSourceSystem {
+		t.Fatalf("capture keys this message under source_system %q but the send wrote %q — the two sides have drifted apart",
+			echo.NaturalKey.SourceSystem, sentSourceSystem)
 	}
 	if echo.NaturalKey.SourceID != messageID {
 		t.Fatalf("the captured copy keys on %q but the send wrote %q — every outbound email would land twice",

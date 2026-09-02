@@ -48,8 +48,10 @@ type Config struct {
 	// (Google: access_type/prompt/include_granted_scopes; Microsoft:
 	// response_mode) merged over the common set.
 	AuthParams map[string]string
-	// ScopeInTokenForms adds the space-joined scope to the exchange and
-	// refresh forms — Microsoft requires it, Google forbids it.
+	// ScopeInTokenForms adds the space-joined scope to the EXCHANGE form —
+	// Microsoft requires it there, Google forbids it. A refresh never carries
+	// the configured list (see AccessTokenForGrant for what that cost); it
+	// carries the grant's own scopes, or none.
 	ScopeInTokenForms bool
 
 	// AuthRejected wraps connector.ErrAuthRejected; Unreachable wraps
@@ -193,26 +195,80 @@ func (c *Client) grantedScopes(scope string) []string {
 	return c.cfg.Scopes
 }
 
-// AccessToken redeems the stored refresh token for a short-lived access
-// token. A provider that rotates the refresh token on redemption (Microsoft)
-// leaves the stored one valid for its own lifetime, so the rotation need not
-// be persisted here.
+// TokenRefresh is what one redemption of a refresh token yielded: the
+// short-lived access token, and — from a provider that rotates on use — the
+// replacement refresh token.
+//
+// Rotated is EMPTY when the provider returned none, and empty means "keep the
+// one you have" rather than "you now have none". Conflating the two would let a
+// provider that simply omits the field erase a working credential.
+type TokenRefresh struct {
+	AccessToken string
+	Rotated     string
+}
+
+// AccessToken redeems the stored refresh token for a short-lived access token,
+// asking for THE SCOPE ORIGINALLY GRANTED (RFC 6749 §6: an omitted scope on a
+// refresh means exactly that) and discarding any rotation.
+//
+// It is the shape for callers with nothing to persist to and no grant to hand
+// over — and it is deliberately still here rather than folded into Refresh:
+// most of this system's callers genuinely do not care, and making them all
+// handle a value they will drop is how the handling gets copy-pasted wrong.
 func (c *Client) AccessToken(ctx context.Context, refreshToken string) (string, error) {
+	refreshed, err := c.Refresh(ctx, refreshToken, nil)
+	if err != nil {
+		return "", err
+	}
+	return refreshed.AccessToken, nil
+}
+
+// Refresh redeems the stored refresh token, asking for exactly the scopes THIS
+// CONNECTION holds, and reports the rotation alongside the access token.
+//
+// GRANTED, not the deployment's configured list, and that distinction is the
+// whole point. The two are the same until the day a deployment ADDS a scope,
+// and from then on requesting the configured list on a refresh asks an older
+// grant for a permission it never consented to — which the provider answers by
+// refusing the REFRESH, so a mailbox that should merely have declined to send
+// stops capturing instead. An empty list falls back to RFC 6749 §6's default,
+// which is the same answer by a different route.
+//
+// The rotation is reported even though the OLD token stays valid for its own
+// lifetime: that lifetime is a ceiling, not a guarantee (Microsoft expires an
+// idle confidential-client refresh token at 90 days, and a password change or
+// an admin revoke cuts it shorter), so a connection that never persists the
+// replacement ages out on a schedule nobody set. A caller that persists it
+// keeps the connection alive indefinitely; one that does not is exactly where
+// it was.
+func (c *Client) Refresh(ctx context.Context, refreshToken string, granted []string) (TokenRefresh, error) {
 	form := url.Values{
 		"grant_type":    {"refresh_token"},
 		"refresh_token": {refreshToken},
 		paramClientID:   {c.cfg.ClientID},
 		"client_secret": {c.cfg.ClientSecret},
 	}
-	c.addScope(form)
+	// Deliberately NOT addScope: that spells the deployment's configured
+	// consent, which is the right answer for an exchange and the wrong one
+	// here.
+	if c.cfg.ScopeInTokenForms && len(granted) > 0 {
+		form.Set("scope", strings.Join(granted, " "))
+	}
 	tok, err := c.token(ctx, form)
 	if err != nil {
-		return "", err
+		return TokenRefresh{}, err
 	}
 	if tok.AccessToken == "" {
-		return "", fmt.Errorf("%s: token refresh returned no access token: %w", c.cfg.Provider, c.cfg.AuthRejected)
+		return TokenRefresh{}, fmt.Errorf("%s: token refresh returned no access token: %w", c.cfg.Provider, c.cfg.AuthRejected)
 	}
-	return tok.AccessToken, nil
+	rotated := tok.RefreshToken
+	if rotated == refreshToken {
+		// A provider that echoes the same token back has rotated nothing.
+		// Reporting it would make every sync re-seal the vault and retire a
+		// blob for no change.
+		rotated = ""
+	}
+	return TokenRefresh{AccessToken: tok.AccessToken, Rotated: rotated}, nil
 }
 
 func (c *Client) addScope(form url.Values) {

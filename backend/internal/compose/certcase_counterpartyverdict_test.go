@@ -140,7 +140,7 @@ func TestVerdictCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			expected:   capture.KindPerson,
 			answer:     func(id string) string { return verdictReply(id, capture.PendingStatusUnsure) },
 			wantResult: aitasks.OutcomeInvalid,
-			wantDetail: "is not one of person|role_mailbox",
+			wantDetail: "is not one of " + strings.Join(verdictKindNames(), "|"),
 		},
 		{
 			name:       "a reply that is not the required JSON",

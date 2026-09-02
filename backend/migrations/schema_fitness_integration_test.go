@@ -211,6 +211,13 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// The claim is a child of the run: it is written only by the domain's
 	// claim sink, from the run's own person_id, and never from a request body.
 	"person_provider_claim.person_id": "child row: written by the claim hand-off from the run's own subject, which QueueRun already gated; the fence is re-run immediately before every write (PI-AC-7)",
+	// The record of WHICH field a run filled, beside the claim that bought it.
+	// SCHEMA ONLY so far — nothing in the tree writes this table yet — so this
+	// entry is the obligation rather than a record of one already met: the
+	// subject a writer may name is the run's own, which QueueRun gated before
+	// the run existed, and a writer that named a person of its own instead
+	// would need its own gate and its own entry.
+	"provider_applied_field.person_id": "PENDING WRITER: the obligation on whoever writes it — the subject must be the run's own, which QueueRun already gated, as its sibling person_provider_claim.person_id is",
 	// telegram-oa design §6.4: the channel-aware ensure contract creates the
 	// Person (owner_id NULL) and this identity satellite in the same
 	// transaction, from the inbound message's own channel principal —
@@ -317,7 +324,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"activity_participant.person_id":   "server-derived: the counterparty the ensure chokepoint resolved, or a link the activities store already gated",
 	// The named audience of a limited activity. Written only by the audience
 	// endpoint, which has put the activity through the content gate first.
-	"activity_audience_member.activity_id": "child row: written only by the audience endpoint, beside the audience column it qualifies, after auth.EnsureActivityContentVisible",
+	"activity_audience_member.activity_id":     "child row: written only by the audience endpoint, beside the audience column it qualifies, after auth.EnsureActivityContentVisible",
+	"capture_thread_verdict.first_activity_id": "provenance, not a reach: the message that opened this thread for this seat, so a verdict can be traced to what it was asked about. NOTHING writes it yet — the classifier that records verdicts is a later change, and this column lands with the ledger it belongs to rather than being added under it. The obligation on that writer is the one stated here: the activity must be the one whose capture opened the thread — the ledger is keyed on (thread_key, user_id), and every decision it drives is asked of those two. ON DELETE SET NULL because losing the activity must not lose the verdict, which would re-open a thread a classifier already held",
+	"capture_import.activity_id":               "child row: written only by the capture sink, for the activity that same sink just landed or replayed, after mailboxWasARecipientTx, which requires one of the seat's own EXACT addresses on the message — a message's natural key is the sender-supplied Message-ID, so hitting an incumbent must grant the syncing seat nothing they cannot evidence",
 	// The interaction projection (CG-DDL-1) holds no fact of its own: every
 	// row is folded from activity_participant rows by the consumer, and no
 	// request body ever names a person here. Reads of it carry the person
@@ -380,6 +389,10 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"finance_customer_link.organization_id":   "schema only, no writer yet (#725): the mapping write does not exist, and when it lands it must put the named company through auth.EnsureLinkTarget — this entry is the obligation, not a record of one already met",
 	"finance_invoice.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",
 	"finance_payment.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",
+	"activity_reader_state.activity_id":       "gated: every disposition write goes through Store.judgeMessage, which puts the id through auth.EnsureActivityContentVisibleLive — the row-scoped CONTENT read, inside the same transaction as the write — before the reader-state row lands. A message the caller cannot read answers apperrors.ErrNotFound, the same as one that does not exist, so a rep cannot set aside — and thereby learn about — correspondence they may not read",
+	"intro_request.person_id":                 "gated: Store.Create puts the contact through auth.EnsureVisibleLive before the insert, so an ask cannot name a person its requester could not open",
+	"intro_request.through_person_id":         "gated: the intermediary is caller-supplied like the contact, and Store.Create puts it through the same auth.EnsureVisibleLive — without it a rep could learn a contact exists by routing an ask through them and reading which error came back",
+	"intro_request.source_activity_id":        "server-derived: the reply consumer names the activity it is already processing, and a human marking the handshake names one from the timeline they are already reading. ON DELETE SET NULL, so the ask still answers after the message is gone",
 })
 
 // TestFK_rowScopedTargetsHaveVisibilityDecision derives the H1 obligation

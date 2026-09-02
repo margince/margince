@@ -42,12 +42,19 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.
   "co.360.subject",
+  // A number and the SI symbol for millisecond. The symbol is the same in every
+  // language by definition — it is written "ms" in Vietnamese too — so a locale
+  // that changed it would be naming a different unit.
+  "aiHealth.ms",
   // An acronym, not a word: DNS is DNS in every language this product speaks,
   // and a "translation" of it would be a different protocol.
   "co.tech.lane.dns",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
   "dealmail.title",
+  // Same word, same reason, on the generic record mail box every other page
+  // shares.
+  "recordmail.title",
   // Same word, same reason: the exchange kind on the account's recent list.
   "co.recent.kind.email",
   // And on the record's chronology, for the same reason again.
@@ -57,18 +64,19 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.spine.kind.email",
   // Same word again, this time the confirm page's own field label.
   "confirm.field.email",
-  // Google's own field names. An admin reads these off the Google Cloud
-  // console, which shows them in English whatever the reader's locale, so
-  // translating them here would have the form ask for something the page they
-  // are copying from does not call by that name. The placeholder is an id
-  // SHAPE rather than prose and is the same string everywhere.
-  "firstRun.google.clientId",
-  "firstRun.google.clientSecret",
-  "firstRun.google.clientIdPlaceholder",
-  // "Embeddings" is the vocabulary of the routing document itself, which this
-  // form renders raw beside `premium` and `gemini`. The host placeholder is a
-  // URL, which is the same string in every language.
-  "aiRouting.embeddings.label",
+  // The vendors' own field names. An admin reads these off the Google Cloud
+  // console or the Entra portal, which show them in English whatever the
+  // reader's locale, so translating them here would have the form ask for
+  // something the page they are copying from does not call by that name. The
+  // placeholders are id SHAPES rather than prose and are the same string
+  // everywhere.
+  "oauthApp.clientId",
+  "oauthApp.clientSecret",
+  "oauthApp.google.clientIdPlaceholder",
+  "oauthApp.microsoft.clientIdPlaceholder",
+  "oauthApp.tenant",
+  "oauthApp.tenantPlaceholder",
+  // A URL, which is the same string in every language.
   "aiRouting.baseUrl.placeholder",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",
@@ -105,7 +113,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.s4.provMicrosoft",
   "ob.conv.connect.linkedinName",
   // "Email" is the loanword vi uses for the field, as en spells it.
-  "day.merge.fieldEmail",
   // Employee-count bands: digits and an en dash, the same in every locale.
   "lead.signal.employees.1-10",
   "lead.signal.employees.11-50",
@@ -149,7 +156,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "cf.obj.lead",
   "co.brief.cite.deal",
   "co.brief.cite.person",
-  "quotas.contributing.deal",
   "deals.unit",
   "history.actorAgent",
 
@@ -197,7 +203,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.conv.clarify.optionDetail",
   "create.linkedin",
   "person.enriched.field.linkedin",
-  "quotas.periodRange",
 
   // Units, version rows and other format-only strings: symbols/abbreviations
   // that do not translate (ms, a version-row template).

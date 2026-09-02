@@ -30,6 +30,33 @@ func (e PublicEventActivityChangedFieldsAudience) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityDispositionRecordedDisposition.
+const (
+	NotMine    PublicEventActivityDispositionRecordedDisposition = "not_mine"
+	NotSales   PublicEventActivityDispositionRecordedDisposition = "not_sales"
+	PickedUp   PublicEventActivityDispositionRecordedDisposition = "picked_up"
+	SalesAgain PublicEventActivityDispositionRecordedDisposition = "sales_again"
+	Snoozed    PublicEventActivityDispositionRecordedDisposition = "snoozed"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityDispositionRecordedDisposition enum.
+func (e PublicEventActivityDispositionRecordedDisposition) Valid() bool {
+	switch e {
+	case NotMine:
+		return true
+	case NotSales:
+		return true
+	case PickedUp:
+		return true
+	case SalesAgain:
+		return true
+	case Snoozed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventApprovalDecidedVerdict.
 const (
 	Approved PublicEventApprovalDecidedVerdict = "approved"
@@ -63,6 +90,66 @@ func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
 	case Hard:
 		return true
 	case Soft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventIntroRequestClosedReason.
+const (
+	IntroRequestClosedCancelled PublicEventIntroRequestClosedReason = "cancelled"
+	IntroRequestClosedExpired   PublicEventIntroRequestClosedReason = "expired"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventIntroRequestClosedReason enum.
+func (e PublicEventIntroRequestClosedReason) Valid() bool {
+	switch e {
+	case IntroRequestClosedCancelled:
+		return true
+	case IntroRequestClosedExpired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventIntroRequestCompletedOutcome.
+const (
+	IntroRequestCompletedIntroduced  PublicEventIntroRequestCompletedOutcome = "introduced"
+	IntroRequestCompletedNameDropped PublicEventIntroRequestCompletedOutcome = "name_dropped"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventIntroRequestCompletedOutcome enum.
+func (e PublicEventIntroRequestCompletedOutcome) Valid() bool {
+	switch e {
+	case IntroRequestCompletedIntroduced:
+		return true
+	case IntroRequestCompletedNameDropped:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventIntroRequestDecidedDecision.
+const (
+	IntroRequestDecidedAccepted         PublicEventIntroRequestDecidedDecision = "accepted"
+	IntroRequestDecidedDeclined         PublicEventIntroRequestDecidedDecision = "declined"
+	IntroRequestDecidedNameDropApproved PublicEventIntroRequestDecidedDecision = "name_drop_approved"
+	IntroRequestDecidedSuggestOther     PublicEventIntroRequestDecidedDecision = "suggest_other"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventIntroRequestDecidedDecision enum.
+func (e PublicEventIntroRequestDecidedDecision) Valid() bool {
+	switch e {
+	case IntroRequestDecidedAccepted:
+		return true
+	case IntroRequestDecidedDeclined:
+		return true
+	case IntroRequestDecidedNameDropApproved:
+		return true
+	case IntroRequestDecidedSuggestOther:
 		return true
 	default:
 		return false
@@ -124,6 +211,7 @@ func (e PublicEventTeamChangedChange) Valid() bool {
 const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
+	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
@@ -163,6 +251,11 @@ const (
 	EngagementReply                       SubscribableEventType = "engagement.reply"
 	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
 	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
+	IntroRequestClosed                    SubscribableEventType = "intro_request.closed"
+	IntroRequestCompleted                 SubscribableEventType = "intro_request.completed"
+	IntroRequestCreated                   SubscribableEventType = "intro_request.created"
+	IntroRequestDecided                   SubscribableEventType = "intro_request.decided"
+	IntroRequestReplied                   SubscribableEventType = "intro_request.replied"
 	LeadCreated                           SubscribableEventType = "lead.created"
 	LeadDemoted                           SubscribableEventType = "lead.demoted"
 	LeadDisqualified                      SubscribableEventType = "lead.disqualified"
@@ -211,7 +304,9 @@ const (
 	StageCreated                          SubscribableEventType = "stage.created"
 	StageUpdated                          SubscribableEventType = "stage.updated"
 	TeamChanged                           SubscribableEventType = "team.changed"
+	UserActivated                         SubscribableEventType = "user.activated"
 	UserDeactivated                       SubscribableEventType = "user.deactivated"
+	UserDeliveryChanged                   SubscribableEventType = "user_delivery.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
@@ -223,6 +318,8 @@ const (
 	VoiceProfileCreated                   SubscribableEventType = "voice.profile_created"
 	VoiceProfileUpdated                   SubscribableEventType = "voice.profile_updated"
 	VoiceVersionChanged                   SubscribableEventType = "voice.version_changed"
+	WeeklyPlanHelpRequested               SubscribableEventType = "weekly_plan.help_requested"
+	WeeklyPlanUpdated                     SubscribableEventType = "weekly_plan.updated"
 )
 
 // Valid indicates whether the value is a known member of the SubscribableEventType enum.
@@ -231,6 +328,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityArchived:
 		return true
 	case ActivityCaptured:
+		return true
+	case ActivityDispositionRecorded:
 		return true
 	case ActivityUpdated:
 		return true
@@ -309,6 +408,16 @@ func (e SubscribableEventType) Valid() bool {
 	case IncumbentConnected:
 		return true
 	case IncumbentDisconnected:
+		return true
+	case IntroRequestClosed:
+		return true
+	case IntroRequestCompleted:
+		return true
+	case IntroRequestCreated:
+		return true
+	case IntroRequestDecided:
+		return true
+	case IntroRequestReplied:
 		return true
 	case LeadCreated:
 		return true
@@ -406,7 +515,11 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case TeamChanged:
 		return true
+	case UserActivated:
+		return true
 	case UserDeactivated:
+		return true
+	case UserDeliveryChanged:
 		return true
 	case UserInvited:
 		return true
@@ -429,6 +542,28 @@ func (e SubscribableEventType) Valid() bool {
 	case VoiceProfileUpdated:
 		return true
 	case VoiceVersionChanged:
+		return true
+	case WeeklyPlanHelpRequested:
+		return true
+	case WeeklyPlanUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserReactivatedStatus.
+const (
+	Active  UserReactivatedStatus = "active"
+	Invited UserReactivatedStatus = "invited"
+)
+
+// Valid indicates whether the value is a known member of the UserReactivatedStatus enum.
+func (e UserReactivatedStatus) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Invited:
 		return true
 	default:
 		return false
@@ -482,6 +617,17 @@ type PublicEventActivityChangedFields struct {
 
 // PublicEventActivityChangedFieldsAudience The activity's new audience (absent when this update did not touch it). Who is named is not carried: a subscriber that must know re-reads the row under its own audience, exactly as a human does.
 type PublicEventActivityChangedFieldsAudience string
+
+// PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded — somebody decided what to do about a waiting message and the Worklist stopped showing it (activities/disposition.go). WHO it stopped showing it to is not on the wire, and the omission is deliberate: `not_sales` settles what the message is and holds for everybody, while `snoozed` and `not_mine` belong to the one reader who set them. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
+type PublicEventActivityDispositionRecorded struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Disposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the two reader states — a decision withdrawn is itself a decision, and a consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
+	Disposition PublicEventActivityDispositionRecordedDisposition `json:"disposition"`
+}
+
+// PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the two reader states — a decision withdrawn is itself a decision, and a consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
+type PublicEventActivityDispositionRecordedDisposition string
 
 // PublicEventActivityRelinkedRef The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 type PublicEventActivityRelinkedRef struct {
@@ -978,6 +1124,52 @@ type PublicEventIncumbentDisconnected struct {
 
 	// Status The connection's status after this change (revoked).
 	Status string `json:"status"`
+}
+
+// PublicEventIntroRequestClosed Payload for intro_request.closed — the ask ended without a handshake: withdrawn by the requester, or run out of time. `reason` says which, because a rep withdrawing and a queue timing out call for different follow-ups.
+type PublicEventIntroRequestClosed struct {
+	IntroRequestId openapi_types.UUID                  `json:"intro_request_id"`
+	PersonId       openapi_types.UUID                  `json:"person_id"`
+	Reason         PublicEventIntroRequestClosedReason `json:"reason"`
+}
+
+// PublicEventIntroRequestClosedReason defines model for PublicEventIntroRequestClosed.Reason.
+type PublicEventIntroRequestClosedReason string
+
+// PublicEventIntroRequestCompleted Payload for intro_request.completed — the handshake happened, or the rep used the name they were lent. `outcome` keeps the two apart: an introduction and a name-drop are different events, and a consumer that collapsed them would report doors opened that nobody opened.
+type PublicEventIntroRequestCompleted struct {
+	IntroRequestId openapi_types.UUID                      `json:"intro_request_id"`
+	Outcome        PublicEventIntroRequestCompletedOutcome `json:"outcome"`
+	PersonId       openapi_types.UUID                      `json:"person_id"`
+}
+
+// PublicEventIntroRequestCompletedOutcome defines model for PublicEventIntroRequestCompleted.Outcome.
+type PublicEventIntroRequestCompletedOutcome string
+
+// PublicEventIntroRequestCreated Payload for intro_request.created — a rep asked a colleague to open a door to this contact (introductions/store.go's Create). The entity is the CONTACT, because that is what the ask is about and what a consumer ranking a person's open work reads it against. The prose stays on the row: the internal reason and the forwardable note have different audiences, and neither belongs on a bus.
+type PublicEventIntroRequestCreated struct {
+	IntroRequestId   openapi_types.UUID `json:"intro_request_id"`
+	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
+	PersonId         openapi_types.UUID `json:"person_id"`
+	RequesterUserId  openapi_types.UUID `json:"requester_user_id"`
+}
+
+// PublicEventIntroRequestDecided Payload for intro_request.decided — the colleague gave one of the four bounded answers. `decision` carries which, because a consumer that had to re-read the row to tell an acceptance from a refusal would be deciding on state that may already have moved.
+type PublicEventIntroRequestDecided struct {
+	Decision         PublicEventIntroRequestDecidedDecision `json:"decision"`
+	IntroRequestId   openapi_types.UUID                     `json:"intro_request_id"`
+	IntroducerUserId openapi_types.UUID                     `json:"introducer_user_id"`
+	PersonId         openapi_types.UUID                     `json:"person_id"`
+}
+
+// PublicEventIntroRequestDecidedDecision defines model for PublicEventIntroRequestDecided.Decision.
+type PublicEventIntroRequestDecidedDecision string
+
+// PublicEventIntroRequestReplied Payload for intro_request.replied — the contact answered, observed from captured activity rather than asserted by a person. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
+type PublicEventIntroRequestReplied struct {
+	IntroRequestId   openapi_types.UUID  `json:"intro_request_id"`
+	PersonId         openapi_types.UUID  `json:"person_id"`
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 }
 
 // PublicEventLeadCreated Payload for lead.created — a lead was created. Two emit sites: a direct create (people/lead.go) that sets no fields, and the capture auto-create engine (capture/sink.go) that names its originating source system; source_system is therefore optional.
@@ -1542,6 +1734,14 @@ type PublicEventTeamChanged struct {
 // PublicEventTeamChangedChange defines model for PublicEventTeamChanged.Change.
 type PublicEventTeamChangedChange string
 
+// PublicEventUserActivated Payload for user.activated — an invited member redeemed their set-password link and became active (identity/reset.go's RedeemPasswordReset). This is the completion of `user.invited`: until it arrives the seat exists and holds its licence, but nobody can sign in as it.
+// There is no `by`. Possession of the single-use token IS the authority on this path, so the member activated themselves and there is no admin actor to name — unlike user.reactivated, which an admin performs.
+// A member resetting a FORGOTTEN password does not emit this: they were already active, and nothing transitioned.
+type PublicEventUserActivated struct {
+	// UserId The member who became active.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // PublicEventUserDeactivated Payload for user.deactivated — a member's sessions and passports were hard-revoked (identity/users.go's DeactivateUser). reason is the operator-supplied free text, absent when none was given.
 type PublicEventUserDeactivated struct {
 	// By The admin who deactivated the member.
@@ -1552,6 +1752,12 @@ type PublicEventUserDeactivated struct {
 
 	// UserId The deactivated member.
 	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// PublicEventUserDeliveryChanged Payload for user_delivery.changed — a member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way; this is about the nudge toward them, which is the one part a person is entitled to switch off. It names WHAT moved and not what it moved to. What somebody chose about their own inbox is theirs, and a fan-out carrying the values would tell every subscription owner who had turned their mail off — so the values stay on the row, which only that person and the job reads.
+type PublicEventUserDeliveryChanged struct {
+	// ChangedFields Which settings moved. Never empty: this event fires on a change, and a save that moved nothing writes nothing and publishes nothing.
+	ChangedFields []string `json:"changed_fields"`
 }
 
 // PublicEventUserInvited Payload for user.invited — an admin provisioned a new active member with a single-use set-password token (identity/users.go's InviteUser).
@@ -1587,10 +1793,15 @@ type PublicEventUserPasswordLinkIssued struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
-// PublicEventUserReactivated Payload for user.reactivated — a deactivated member was returned to active (identity/users.go's ReactivateUser).
+// PublicEventUserReactivated Payload for user.reactivated — a deactivated member was lifted out of deactivation (identity/users.go's ReactivateUser).
+// `status` says what they were returned TO, and it is not always `active`: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that assumed "reactivated means active" would restate exactly the falsehood the invited status exists to remove.
 type PublicEventUserReactivated struct {
 	// By The admin who reactivated the member.
 	By openapi_types.UUID `json:"by"`
+
+	// Status The status a reactivated member was restored to.
+	// It is not always `active`, which is the whole reason it travels: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that read the event type alone would record somebody as able to sign in who cannot.
+	Status UserReactivatedStatus `json:"status"`
 
 	// UserId The reactivated member.
 	UserId openapi_types.UUID `json:"user_id"`
@@ -1740,8 +1951,27 @@ type PublicEventVoiceVersionChanged struct {
 	Status string `json:"status"`
 }
 
+// PublicEventWeeklyPlanHelpRequested Payload for weekly_plan.help_requested — a rep asked their lead for help on one commitment. Its own type rather than another weekly_plan.updated, because this is the one change somebody else is meant to act on: an automation notifying a lead subscribes to this and not to every edit of a checkbox. The request text is NOT here. It stays on the row the lead opens, so what a rep says about being stuck does not ride a fan-out.
+type PublicEventWeeklyPlanHelpRequested struct {
+	CommitmentId openapi_types.UUID `json:"commitment_id"`
+	OwnerUserId  openapi_types.UUID `json:"owner_user_id"`
+	PlanId       openapi_types.UUID `json:"plan_id"`
+}
+
+// PublicEventWeeklyPlanUpdated Payload for weekly_plan.updated — a rep's plan for the week changed: opened, a commitment added, edited or settled. The entity is the rep whose week it is, because that is who the record belongs to. `changed_fields` names WHAT moved rather than carrying it; the labels and the help text stay on the row, since prose on two wires drifts.
+type PublicEventWeeklyPlanUpdated struct {
+	// ChangedFields Which parts of the plan moved — status, commitments.
+	ChangedFields []string           `json:"changed_fields"`
+	OwnerUserId   openapi_types.UUID `json:"owner_user_id"`
+	PlanId        openapi_types.UUID `json:"plan_id"`
+}
+
 // SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/organization, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
 type SubscribableEventType string
+
+// UserReactivatedStatus The status a reactivated member was restored to.
+// It is not always `active`, which is the whole reason it travels: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that read the event type alone would record somebody as able to sign in who cannot.
+type UserReactivatedStatus string
 
 func (PublicEventActivityArchived) EventType() string { return "activity.archived" }
 
@@ -1750,6 +1980,12 @@ func (PublicEventActivityArchived) EntityType() string { return "activity" }
 func (PublicEventActivityCaptured) EventType() string { return "activity.captured" }
 
 func (PublicEventActivityCaptured) EntityType() string { return "activity" }
+
+func (PublicEventActivityDispositionRecorded) EventType() string {
+	return "activity.disposition_recorded"
+}
+
+func (PublicEventActivityDispositionRecorded) EntityType() string { return "activity" }
 
 func (PublicEventActivityUpdated) EventType() string { return "activity.updated" }
 
@@ -1912,6 +2148,26 @@ func (PublicEventIncumbentConnected) EntityType() string { return "incumbent_con
 func (PublicEventIncumbentDisconnected) EventType() string { return "incumbent.disconnected" }
 
 func (PublicEventIncumbentDisconnected) EntityType() string { return "incumbent_connection" }
+
+func (PublicEventIntroRequestClosed) EventType() string { return "intro_request.closed" }
+
+func (PublicEventIntroRequestClosed) EntityType() string { return "person" }
+
+func (PublicEventIntroRequestCompleted) EventType() string { return "intro_request.completed" }
+
+func (PublicEventIntroRequestCompleted) EntityType() string { return "person" }
+
+func (PublicEventIntroRequestCreated) EventType() string { return "intro_request.created" }
+
+func (PublicEventIntroRequestCreated) EntityType() string { return "person" }
+
+func (PublicEventIntroRequestDecided) EventType() string { return "intro_request.decided" }
+
+func (PublicEventIntroRequestDecided) EntityType() string { return "person" }
+
+func (PublicEventIntroRequestReplied) EventType() string { return "intro_request.replied" }
+
+func (PublicEventIntroRequestReplied) EntityType() string { return "person" }
 
 func (PublicEventLeadCreated) EventType() string { return "lead.created" }
 
@@ -2105,9 +2361,17 @@ func (PublicEventTeamChanged) EventType() string { return "team.changed" }
 
 func (PublicEventTeamChanged) EntityType() string { return "team" }
 
+func (PublicEventUserActivated) EventType() string { return "user.activated" }
+
+func (PublicEventUserActivated) EntityType() string { return "user" }
+
 func (PublicEventUserDeactivated) EventType() string { return "user.deactivated" }
 
 func (PublicEventUserDeactivated) EntityType() string { return "user" }
+
+func (PublicEventUserDeliveryChanged) EventType() string { return "user_delivery.changed" }
+
+func (PublicEventUserDeliveryChanged) EntityType() string { return "user" }
 
 func (PublicEventUserInvited) EventType() string { return "user.invited" }
 
@@ -2153,6 +2417,14 @@ func (PublicEventVoiceVersionChanged) EventType() string { return "voice.version
 
 func (PublicEventVoiceVersionChanged) EntityType() string { return "voice_profile" }
 
+func (PublicEventWeeklyPlanHelpRequested) EventType() string { return "weekly_plan.help_requested" }
+
+func (PublicEventWeeklyPlanHelpRequested) EntityType() string { return "user" }
+
+func (PublicEventWeeklyPlanUpdated) EventType() string { return "weekly_plan.updated" }
+
+func (PublicEventWeeklyPlanUpdated) EntityType() string { return "user" }
+
 // PublicEventVersions maps every subscribable event type carrying a
 // PublicEvent<Event> schema to that schema's x-version extension
 // (default 1 when absent). It is the single generated source of truth for
@@ -2161,6 +2433,7 @@ func (PublicEventVoiceVersionChanged) EntityType() string { return "voice_profil
 var PublicEventVersions = map[string]int{
 	"activity.archived":                         1,
 	"activity.captured":                         1,
+	"activity.disposition_recorded":             1,
 	"activity.updated":                          1,
 	"approval.decided":                          1,
 	"approval.requested":                        1,
@@ -2200,6 +2473,11 @@ var PublicEventVersions = map[string]int{
 	"engagement.reply":                          1,
 	"incumbent.connected":                       1,
 	"incumbent.disconnected":                    1,
+	"intro_request.closed":                      1,
+	"intro_request.completed":                   1,
+	"intro_request.created":                     1,
+	"intro_request.decided":                     1,
+	"intro_request.replied":                     1,
 	"lead.created":                              1,
 	"lead.demoted":                              1,
 	"lead.disqualified":                         1,
@@ -2248,10 +2526,12 @@ var PublicEventVersions = map[string]int{
 	"stage.created":                             1,
 	"stage.updated":                             1,
 	"team.changed":                              1,
+	"user.activated":                            1,
 	"user.deactivated":                          1,
 	"user.invited":                              1,
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
+	"user_delivery.changed":                     1,
 	"user_locale.changed":                       1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,
@@ -2260,4 +2540,6 @@ var PublicEventVersions = map[string]int{
 	"voice.profile_created":                     1,
 	"voice.profile_updated":                     1,
 	"voice.version_changed":                     1,
+	"weekly_plan.help_requested":                1,
+	"weekly_plan.updated":                       1,
 }

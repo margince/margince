@@ -457,6 +457,21 @@
   place-items: center;
   box-shadow: var(--shadow-pop);
 }
+/* The same slot holding the COMPANY's mark. The chip's own ground and lift go:
+   what stands here is a logo drawn for its own background, or the monogram
+   Avatar tints from the record's identity, and either one on the brand gradient
+   would be a second surface behind a finished mark. The avatar fills the slot
+   so the collapsed rail keeps centring the same 32px box on the rows' glyph
+   axis. */
+.rail .ws-chip-company {
+  background: none;
+  box-shadow: none;
+}
+.rail .ws-chip-company .avatar {
+  width: 100%;
+  height: 100%;
+  font-size: var(--fs-body);
+}
 /* The head row is a column when collapsed, so flex-basis cannot squeeze this
    shut the way it does the nav labels — the width has to be explicit, or the
    faded-out text keeps its intrinsic width and pushes the logomark off centre.

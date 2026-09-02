@@ -9,6 +9,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // needsYouPage is how many decisions one read carries.
@@ -22,6 +23,19 @@ import (
 // reporting ninety beside it. Nothing was reachable past the ninth, and the two
 // numbers on screen contradicted each other.
 const needsYouPage = 10
+
+// batchScanDepth is how many staged decisions the RANKED queue reads.
+//
+// Deeper than needsYouPage on purpose, and for a reason that only applies to
+// the queue: a batch row states how many decisions it stands for, and a count
+// taken from a page of ten would say "10" over a pile of a hundred and fifty.
+// The lane feed's page is a prefetch for a surface that answers one at a time;
+// this is a census for a row that answers a group.
+//
+// Bounded by the approvals engine's own scan cap rather than by a number chosen
+// here — past that the count reads "200+", which is the same message to a reader
+// as the true figure.
+const batchScanDepth = 200
 
 // plannedCap bounds today's agreed work for the same reason. Higher than the
 // decision lane because reading a task costs less than deciding one.
@@ -50,6 +64,10 @@ type Service struct {
 	commitments Commitments
 	// atRisk is OPTIONAL for the reason commitments is: absent lane, not empty.
 	atRisk AtRisk
+	// waiting is OPTIONAL like the lanes above it: an installation that does
+	// not read the mail stream cannot say who is waiting, which is different
+	// from saying nobody is.
+	waiting Waiting
 	// decay is OPTIONAL for the same reason, and says nothing about atRisk:
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
@@ -70,19 +88,73 @@ type Service struct {
 	aiWork AIWork
 	// bounces is OPTIONAL and per-user exactly as the two above it.
 	bounces Bounces
+	// undelivered is OPTIONAL and per-user for the same reasons: mail that
+	// never left, beside mail that arrived and was refused.
+	undelivered Undelivered
 	// automations is OPTIONAL and role-withheld exactly as dsrs is.
 	automations AutomationHealth
 	// notices is OPTIONAL and per-user exactly as captureHealth is.
 	notices Notices
+	// introductions is OPTIONAL and per-user exactly as notices is: an ask names
+	// one colleague, so there is no wider tier for it to widen to.
+	introductions Introductions
 	// names is OPTIONAL like the lanes above it: nil means subjects travel
 	// unnamed and the client resolves display names itself (labels.go).
 	names Names
-	now   Clock
-	// mineOnly narrows the producers that can be narrowed to the acting
-	// reader's own work. Set per read (Assemble keeps the lane feed's
-	// behaviour; the ranked queue's default scope sets it), because the same
-	// service answers both surfaces.
-	mineOnly bool
+	// dealFacts is OPTIONAL in the same way: nil means a row whose producer
+	// carried only a deal id travels without the deal's figures.
+	dealFacts DealFacts
+	// fx is OPTIONAL in the same way, and money is one read's answer from it,
+	// written per read onto the request's own copy the way taskScope is.
+	// basemoney.go states what each means and why the copy matters.
+	fx    BaseMoney
+	money dayMoney
+	// machine answers whether an address is a sending system, for the group a
+	// routine contact decision joins. Nil means every address reads as a
+	// person's, which under-groups rather than hiding anything.
+	machine MachineSender
+	// teammates answers whether a team-scoped reader may open a named person's
+	// queue. Unlike the lanes above it, nil does NOT mean "absent lane": it
+	// means the question has no answer, and resolveOwner refuses rather than
+	// admits. A lane whose absence widened a scope would be a security hole
+	// wearing the shape of a missing feature.
+	teammates Teammates
+	// leads is the inbound leads still owed a first reply. Optional in the
+	// ordinary way: nil is a feed that does not read leads at all, which the
+	// queue reports as an absent source rather than as an empty one.
+	leads LeadResponses
+	// overdueLoad is the team board's COUNTING reader for tasks, beside the
+	// bounded listing reader the ranked queue uses. Optional, and its absence
+	// draws no column rather than a column of zeros.
+	overdueLoad OverdueLoad
+	// decisionDepth is how many staged decisions a read takes. The lane feed's
+	// page is a prefetch for a surface that answers one at a time; the ranked
+	// queue takes a census, because a batch row that says "10" over a pile of
+	// a hundred and fifty is a wrong number rather than a bounded one.
+	decisionDepth int
+	now           Clock
+	// taskScope narrows the task lane to whose work this read answers for. Set
+	// per read (Assemble keeps the lane feed's behaviour; the ranked queue's
+	// resolved scope sets it), because the same service answers both surfaces.
+	//
+	// A task carries an assignee and so has three answers available to it —
+	// anybody's, the reader's, nobody's — where a mailbox or a notice is
+	// per-reader by construction and has only one.
+	taskScope TaskScope
+	// taskOwner is whose queue TasksOwnedBy means. Zero for every other scope,
+	// and never read by them.
+	taskOwner ids.UUID
+}
+
+// forOwner returns a copy that reads one named person's queue. Same
+// copy-per-read reason as forReader: a service is shared by every request, and
+// an owner set on it would follow one manager's question onto another reader's
+// page.
+func (s *Service) forOwner(owner ids.UUID) *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksOwnedBy
+	narrowed.taskOwner = owner
+	return &narrowed
 }
 
 // forReader returns a copy of this service that reads only the acting reader's
@@ -91,7 +163,15 @@ type Service struct {
 // reader's page.
 func (s *Service) forReader() *Service {
 	narrowed := *s
-	narrowed.mineOnly = true
+	narrowed.taskScope = TasksMine
+	return &narrowed
+}
+
+// forUnowned returns a copy that reads the work nobody answers for. Same
+// copy-per-read reason as forReader.
+func (s *Service) forUnowned() *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksUnassigned
 	return &narrowed
 }
 
@@ -104,6 +184,15 @@ func NewService(
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
 		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
 	}
+}
+
+// countingDecisions returns a copy of this service that reads decisions to
+// census depth. A copy, because one Service serves every request and a depth
+// set on it would follow one reader's page onto another's.
+func (s *Service) countingDecisions() *Service {
+	deeper := *s
+	deeper.decisionDepth = batchScanDepth
+	return &deeper
 }
 
 // Assemble reads every lane and returns the day.
@@ -136,7 +225,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return crmcontracts.Attention{}, err
 	}
 
-	needsYou, count, err := s.decisions(ctx)
+	needsYou, count, err := s.decisionsToDepth(ctx, s.decisionsDepth())
 	omitted, err = fill(omitted, "needs_you", err, func() {
 		out.NeedsYou = needsYou
 		out.Counts.NeedsYou = count.items
@@ -149,7 +238,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return crmcontracts.Attention{}, err
 	}
 
-	planned, err := s.planned(ctx, asOf, s.mineOnly)
+	planned, err := s.planned(ctx, asOf, s.taskScope)
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = len(planned)
@@ -234,8 +323,19 @@ func (s *Service) thisMorning(ctx context.Context) ([]crmcontracts.AttentionItem
 // Duplicates take the first slot of each round. A merge is the one verb here
 // the product cannot undo, so it leads on stakes — but it leads by one place,
 // not by the whole page.
-func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, laneCount, error) {
-	pairs, err := s.duplicates.OpenCandidates(ctx, needsYouPage)
+// decisionsDepth answers how deep this read goes, defaulting to the lane
+// feed's page.
+func (s *Service) decisionsDepth() int {
+	if s.decisionDepth > 0 {
+		return s.decisionDepth
+	}
+	return needsYouPage
+}
+
+// decisionsToDepth is the same read at a depth the caller chooses: the lane feed
+// takes a page, and the ranked queue takes a census so its batch rows can count.
+func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontracts.AttentionItem, laneCount, error) {
+	pairs, err := s.duplicates.OpenCandidates(ctx, depth)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -243,7 +343,7 @@ func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, 
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	staged, err := s.approvals.ListWire(ctx, ApprovalQuery{Status: "pending", Limit: needsYouPage})
+	staged, err := s.approvals.ListWire(ctx, ApprovalQuery{Status: "pending", Limit: depth})
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -252,19 +352,19 @@ func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, 
 		return nil, laneCount{}, err
 	}
 
+	named, err := s.namePairs(ctx, pairs)
+	if err != nil {
+		return nil, laneCount{}, err
+	}
 	duplicates := make([]crmcontracts.AttentionItem, 0, len(pairs))
 	for _, pair := range pairs {
-		item, err := s.duplicateItem(ctx, pair)
-		if err != nil {
-			return nil, laneCount{}, err
-		}
-		duplicates = append(duplicates, item)
+		duplicates = append(duplicates, s.duplicateItem(pair, named))
 	}
 	approvals := make([]crmcontracts.AttentionItem, 0, len(staged))
 	for _, approval := range staged {
-		approvals = append(approvals, approvalItem(approval))
+		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	return interleave(duplicates, approvals, needsYouPage),
+	return interleave(duplicates, approvals, depth),
 		laneCount{items: openPairs + openStaged, duplicates: openPairs},
 		nil
 }
@@ -295,8 +395,8 @@ func endOfDay(asOf time.Time) time.Time {
 }
 
 // planned is today's agreed work, overdue first.
-func (s *Service) planned(ctx context.Context, asOf time.Time, mineOnly bool) ([]crmcontracts.AttentionItem, error) {
-	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, mineOnly)
+func (s *Service) planned(ctx context.Context, asOf time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
+	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, scope, s.taskOwner)
 	if err != nil {
 		return nil, err
 	}

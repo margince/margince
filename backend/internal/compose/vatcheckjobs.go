@@ -46,6 +46,19 @@ import (
 type CheckOrganizationVatArgs struct {
 	Workspace      ids.UUID `json:"workspace_id"`
 	OrganizationID ids.UUID `json:"organization_id"`
+	// Requested marks a consultation a PERSON asked for, and it does two things
+	// that both matter.
+	//
+	// It tells the worker to ask even when the stored answer already names this
+	// number: the automatic lanes ask only about a number they have not seen,
+	// because nothing re-reads a website on a schedule either, but a person
+	// pressing the button has said the stored answer is not good enough.
+	//
+	// It also makes the args DIFFER from a write-queued job's, which is what
+	// lets the request through the by-args dedupe below. Without it a request
+	// arriving while an automatic consultation was pending would be swallowed
+	// and the reader would watch a button do nothing.
+	Requested bool `json:"requested,omitempty"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
@@ -78,7 +91,7 @@ func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
 	if enqueue == nil {
 		return nil
 	}
-	return func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error {
+	return func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, requested bool) error {
 		ws, ok := principal.WorkspaceID(ctx)
 		if !ok {
 			// No tenant bound means no job that could ever be worked: River
@@ -89,6 +102,7 @@ func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
 		return enqueue.EnqueueTx(ctx, tx, CheckOrganizationVatArgs{
 			Workspace:      ws,
 			OrganizationID: orgID.UUID,
+			Requested:      requested,
 		}, vatCheckInsertOpts())
 	}
 }
@@ -167,6 +181,13 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 	if err != nil {
 		return jobs.FaultContext(wsCtx, fmt.Errorf("reading the VAT number to check: %w", err))
 	}
+	// A person who pressed the button asked for THIS consultation, so the only
+	// thing that stops it is the company stating no number at all. The staleness
+	// rule the automatic lanes obey is about not spending the installation's
+	// shared rate on questions nobody asked; this one was asked.
+	if args.Requested && number != "" {
+		ok = true
+	}
 	if !ok {
 		// Nothing to ask about: the company states no VAT number, or the one it
 		// states has already been consulted. Both mean "do not ask".
@@ -182,14 +203,23 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 
 	result, err := w.checker.Check(wsCtx, number)
 	if errors.Is(err, vatcheck.ErrMalformedNumber) {
-		// The page stated something that is not a VAT ID. No request was made,
-		// so the register said NOTHING — recording `invalid` here would be
-		// indistinguishable from a negative answer it never gave. It is
-		// recorded as unanswered, which is what actually happened.
+		// The stated value is not a VAT ID, so no request was made — and the
+		// answer a reader needs is INVALID.
+		//
+		// It was recorded as unanswered on the reasoning that the register said
+		// nothing, which is true and is the wrong fact to surface: the reader
+		// met "Register did not answer" beside their own typo and was told a
+		// public service had failed them. Whether a number is fake or merely
+		// misspelled changes nothing they would do about it.
+		//
+		// Nothing else records unanswered. A register that declines is snoozed
+		// or retried rather than written (below), so this branch was the only
+		// producer of that status and the distinction it protected was never
+		// visible to anybody.
 		return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
 			OrganizationID: orgID,
 			Number:         number,
-			Status:         people.VatCheckUnavailable,
+			Status:         people.VatCheckInvalid,
 			CheckedAt:      w.clock(),
 		}))
 	}

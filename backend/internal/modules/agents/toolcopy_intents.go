@@ -54,17 +54,21 @@ var whatsSlippingCopy = toolCopy{
 }
 
 var reviewCommitmentsCopy = toolCopy{
-	Purpose: "Answer \"what have we promised and not delivered?\": the open tasks across the " +
-		"workspace, earliest due date first and undated ones last, each with the person who owes " +
-		"it, when it came due and the record it was made about.",
-	Limits: "A promise appears here only because someone recorded it as a task — what was agreed " +
-		"in a meeting and never written down is absent — so this is what the workspace has on " +
-		"record, not everything owed. It is scoped to the records the caller may see.",
+	Purpose: "Answer \"what have we promised and not delivered?\": the open promises across the " +
+		"workspace, most overdue first, from BOTH places a promise is recorded — a task somebody " +
+		"filed, and a commitment read out of a captured conversation, which carries the sentence " +
+		"it was read from. Each names when it came due and the record it was made about.",
+	Limits: "It reads what the workspace captured: a promise made in an uncaptured call, or in a " +
+		"thread nobody filed, is absent. The two sources are not linked, so a promise both said " +
+		"and typed can appear twice. Narrowing by assignee or project returns recorded TASKS " +
+		"alone — a conversation commitment carries neither — so a narrowed answer is a smaller " +
+		"question than the unnarrowed one. It is scoped to the records the caller may see.",
 	Instead: "Use whats_slipping_this_week when the question is which DEALS are at risk rather " +
 		"than which promises are outstanding, and catch_me_up_on for everything that has happened " +
 		"on one record.",
-	Retain: "Each item carries task_id and, where there is one, assignee_id. Every state is " +
-		"judged against as_of, so carry that too if you report the answer later.",
+	Retain: "Each item carries source (task | conversation) and the id for that source — task_id " +
+		"or claim_id — plus assignee_id where a task has one. Every state is judged against " +
+		"as_of, so carry that too if you report the answer later.",
 }
 
 var prepareHandoffCopy = toolCopy{

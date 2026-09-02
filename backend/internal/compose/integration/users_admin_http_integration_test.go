@@ -44,8 +44,10 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 	}, nil, &invited); status != http.StatusCreated {
 		t.Fatalf("invite -> %d, want 201", status)
 	}
-	if invited.ID == "" || invited.Email != "newbie@acme.test" || invited.Status != "active" {
-		t.Fatalf("invited member = %+v, want active, lowercased email", invited)
+	// INVITED, not active: the seat exists and holds its licence, but it carries
+	// no password and signs in nowhere until the invitation link is redeemed.
+	if invited.ID == "" || invited.Email != "newbie@acme.test" || invited.Status != "invited" {
+		t.Fatalf("invited member = %+v, want invited, lowercased email", invited)
 	}
 	assertRoles(t, "invite", invited, "rep")
 	base := "/v1/users/" + invited.ID
@@ -87,13 +89,25 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 		t.Fatalf("deactivate with an over-long reason -> %d, want 422", status)
 	}
 
-	// The active-only roster shows the invited member.
+	// The active-only roster does NOT carry the invited member, and that is the
+	// point of it: this list feeds the share and assignee pickers, and offering
+	// somebody who signs in nowhere would assign work to a person who cannot
+	// open it — the same judgement transfer-ownership makes. The admin roster
+	// below still shows them, because an admin has to be able to see and revoke
+	// an invitation they sent.
 	var roster userListWire
 	if status := e.Call(t, "GET", "/v1/users", nil, nil, &roster); status != http.StatusOK {
 		t.Fatalf("list users -> %d, want 200", status)
 	}
-	if !containsUser(roster.Data, invited.ID) {
-		t.Fatalf("active roster missing the invited member %s", invited.ID)
+	if containsUser(roster.Data, invited.ID) {
+		t.Fatalf("the assignee roster offers the invited member %s, who cannot sign in", invited.ID)
+	}
+	var adminRoster userListWire
+	if status := e.Call(t, "GET", "/v1/users?include_inactive=true", nil, nil, &adminRoster); status != http.StatusOK {
+		t.Fatalf("list users with include_inactive -> %d, want 200", status)
+	}
+	if !containsUser(adminRoster.Data, invited.ID) {
+		t.Fatalf("the admin roster hides the invited member %s, so nobody can revoke the invitation", invited.ID)
 	}
 	// An admin's roster carries every member's role keys — the admin card reads
 	// the current role off them.
@@ -151,13 +165,16 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 	// still having lost the aggregate on this query's longer bind chain.
 	assertRoles(t, "include_inactive + q", withInactiveFiltered.Data[0], "manager")
 
-	// Reactivate.
+	// Reactivate. This member never redeemed their invitation, so they come back
+	// INVITED and not active: the row still carries no password and still signs
+	// in nowhere, and calling it active would restate the falsehood that status
+	// exists to remove. Their invitation link is still the way in.
 	var afterOn userWire
 	if status := e.Call(t, "POST", base+"/reactivate", nil, nil, &afterOn); status != http.StatusOK {
 		t.Fatalf("reactivate -> %d, want 200", status)
 	}
-	if afterOn.Status != "active" {
-		t.Fatalf("reactivated member status = %q, want active", afterOn.Status)
+	if afterOn.Status != "invited" {
+		t.Fatalf("reactivated member status = %q, want invited — they never set a password", afterOn.Status)
 	}
 
 	// A SUSPENDED member is not merely deactivated — the hold was placed for a

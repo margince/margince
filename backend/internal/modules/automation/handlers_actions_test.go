@@ -14,26 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// fakeLists is a DB-free stand-in for the Lists seam: records every
-// AddMember call so a test can assert add_to_list actually reaches it.
-type fakeLists struct {
-	err   error
-	calls []struct {
-		listID     ids.ListID
-		entityType string
-		entityID   ids.UUID
-	}
-}
-
-func (f *fakeLists) AddMember(_ context.Context, listID ids.ListID, entityType string, entityID ids.UUID) error {
-	f.calls = append(f.calls, struct {
-		listID     ids.ListID
-		entityType string
-		entityID   ids.UUID
-	}{listID, entityType, entityID})
-	return f.err
-}
-
 // fakeComms is a DB-free stand-in for the Comms seam: records every
 // DraftEmail call. The seam declares no send verb at all, so "draft_email
 // never sends" is a structural property of this interface, not merely a
@@ -111,8 +91,24 @@ func (p *fakeUpdateProvider) Update(_ context.Context, in datasource.UpdateInput
 	return in.Ref, p.err
 }
 
-func (p *fakeUpdateProvider) Read(context.Context, datasource.EntityRef) (datasource.Record, error) {
-	panic("fakeUpdateProvider: Read not stubbed for this test")
+func (p *fakeUpdateProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
+	return ownerlessRecord(ref), nil
+}
+
+// ownerlessRecord is what the doubles in this package answer Provider.Read
+// with: the record that was asked for, carrying no fields.
+//
+// No owner is the honest answer. Every case here is about how many tasks a
+// firing mints and what it names them after; the task effect reads the
+// triggering record only to ATTRIBUTE the task, so "nobody owns it" is a
+// complete answer to the only question asked of it.
+//
+// A body rather than the embedded interface's nil: a double that embeds an
+// interface panics on every method it does not write, and a panic is not a
+// loud failure in a test binary — it is the end of the binary. One unmodelled
+// method stopped every other test in this package from running.
+func ownerlessRecord(ref datasource.EntityRef) datasource.Record {
+	return datasource.Record{Ref: ref, Fields: json.RawMessage(`{}`)}
 }
 
 func (p *fakeUpdateProvider) Search(context.Context, datasource.SearchQuery) (datasource.SearchResult, error) {
@@ -206,50 +202,6 @@ func TestApplyActionsNotifyNeverSwallowsADeliveryFailure(t *testing.T) {
 
 	if !errors.Is(err, notifyErr) {
 		t.Fatalf("ApplyActions err = %v, want it to wrap %v", err, notifyErr)
-	}
-}
-
-// --- add_to_list ---
-
-func TestApplyActionsAddToListCallsListsAddMember(t *testing.T) {
-	lists := &fakeLists{}
-	listID := ids.New[ids.ListKind]()
-	target := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
-	action := workflow.Action{
-		Kind:   workflow.ActionAddToList,
-		Target: target,
-		Args:   json.RawMessage(`{"list_id":"` + listID.String() + `"}`),
-	}
-
-	applied, err := ApplyActions(context.Background(), Executors{Lists: lists}, workflow.Effect{Actions: []workflow.Action{action}})
-	if err != nil {
-		t.Fatalf("ApplyActions err = %v, want nil", err)
-	}
-	if len(applied) != 1 {
-		t.Fatalf("applied = %v, want the one add_to_list action", applied)
-	}
-	if len(lists.calls) != 1 {
-		t.Fatalf("AddMember called %d times, want exactly 1", len(lists.calls))
-	}
-	got := lists.calls[0]
-	if got.listID.String() != listID.String() || got.entityType != string(target.Type) || got.entityID != target.ID {
-		t.Errorf("AddMember called with %+v, want list=%v type=%q id=%v", got, listID, target.Type, target.ID)
-	}
-}
-
-func TestApplyActionsAddToListNeverSwallowsAnAddMemberFailure(t *testing.T) {
-	addErr := errors.New("collections: list is archived")
-	lists := &fakeLists{err: addErr}
-	action := workflow.Action{
-		Kind:   workflow.ActionAddToList,
-		Target: datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()},
-		Args:   json.RawMessage(`{"list_id":"` + ids.New[ids.ListKind]().String() + `"}`),
-	}
-
-	_, err := ApplyActions(context.Background(), Executors{Lists: lists}, workflow.Effect{Actions: []workflow.Action{action}})
-
-	if !errors.Is(err, addErr) {
-		t.Fatalf("ApplyActions err = %v, want it to wrap %v", err, addErr)
 	}
 }
 

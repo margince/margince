@@ -5,23 +5,22 @@
 
 package agentaccess
 
-// The consent screen's read model (GET /oauth/consent-request): which of the
-// signed-in human's passports may be lent to the requesting client. Each
-// exclusion the query enforces — own passports only, alive, unbound — is
-// asserted separately, so a query that dropped one filter would still fail a
-// test that only counted rows. What the client requested is NOT an exclusion,
-// which is its own test below.
+// The consent screen's read model (GET /oauth/consent-request): the fixed
+// scope vocabulary every client is offered (consentRequestPayload —
+// unit-tested at identity's TestConsentPayloadOffersTheWholeVocabulary), and
+// the deployment switch it follows like every other /oauth/ path. The old
+// per-human passport-selection read model this endpoint used to serve is gone
+// along with the flow it supported.
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -30,172 +29,6 @@ import (
 // restates the wire name catches a rename that would silently break every
 // browser mid-flow.
 const consentCookieName = "crm_oauth_consent"
-
-// mintPassport creates a hand-minted passport through the public surface and
-// returns its id — never an INSERT, so the row matches what a human's mint
-// actually writes.
-func (o *oauthEnv) mintPassport(t *testing.T, label string, scopes []string) string {
-	t.Helper()
-	var minted struct {
-		ID string `json:"passport_id"`
-	}
-	if status := o.Call(t, "POST", "/v1/passports", integration.AnyMap{
-		"label": label, "scopes": scopes,
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("mint %q → %d", label, status)
-	}
-	return minted.ID
-}
-
-func (o *oauthEnv) revokePassport(t *testing.T, id string) {
-	t.Helper()
-	if status := o.Call(t, "DELETE", "/v1/passports/"+id, nil, nil, nil); status != http.StatusNoContent {
-		t.Fatalf("revoke %s → %d", id, status)
-	}
-}
-
-// consentRequest reads the consent screen's model for a pending authorization.
-func (o *oauthEnv) consentRequest(t *testing.T, scope string) consentRequestWire {
-	t.Helper()
-	var got consentRequestWire
-	status := o.Call(t, "GET",
-		"/v1/oauth/consent-request?client_id="+url.QueryEscape(o.clientID)+
-			"&scope="+url.QueryEscape(scope), nil, nil, &got)
-	if status != http.StatusOK {
-		t.Fatalf("consent-request → %d", status)
-	}
-	return got
-}
-
-type consentRequestWire struct {
-	ClientName string `json:"client_name"`
-	Offline    bool   `json:"offline"`
-	Passports  []struct {
-		ID     string   `json:"id"`
-		Label  string   `json:"label"`
-		Scopes []string `json:"scopes"`
-	} `json:"passports"`
-}
-
-// A passport is lendable only if it is THIS human's, still alive, and not
-// already bound to a connection. Each exclusion is asserted separately: a query
-// that dropped one filter would still pass a test that only counted rows.
-func TestSelectablePassportsExcludesEveryUnlendableShape(t *testing.T) {
-	o := setupOAuth(t)
-	ctx := context.Background()
-
-	o.mintPassport(t, "lendable", []string{"read", "write"})
-	revoked := o.mintPassport(t, "revoked", []string{"read"})
-	o.revokePassport(t, revoked)
-	bound := o.mintPassport(t, "bound", []string{"read"})
-	if _, err := o.Owner.Exec(ctx,
-		`WITH new_grant AS (
-		   INSERT INTO oauth_grant (client_id, user_id, scopes, refresh_allowed)
-		   SELECT $2, on_behalf_of, ARRAY['read']::text[], false
-		   FROM passport WHERE id = $1 RETURNING id)
-		 UPDATE passport SET oauth_grant_id = new_grant.id
-		 FROM new_grant WHERE passport.id = $1`, bound, o.clientID); err != nil {
-		t.Fatalf("binding a passport to a grant: %v", err)
-	}
-
-	got := o.consentRequest(t, "read write")
-
-	var labels []string
-	for _, option := range got.Passports {
-		labels = append(labels, option.Label)
-	}
-	if !slices.Equal(labels, []string{"lendable"}) {
-		t.Fatalf("selectable passports = %v, want only [lendable]", labels)
-	}
-	// The scopes offered are the passport's own — the screen has one set to show,
-	// because the connection receives exactly it.
-	if got := got.Passports[0].Scopes; !slices.Equal(got, []string{"read", "write"}) {
-		t.Fatalf("scopes = %v, want [read write]", got)
-	}
-}
-
-// What the client asked for excludes nothing and narrows nothing: a passport
-// grants its own scopes, so one that overlaps the request in NOTHING is still
-// offered, and one WIDER than the request is offered at its full width. Both
-// halves matter — the old intersection rule would have dropped the first from
-// the list entirely and shown the second only its overlap.
-func TestSelectablePassportsIgnoresWhatTheClientRequested(t *testing.T) {
-	o := setupOAuth(t)
-	o.mintPassport(t, "broad", []string{"read", "write", "send"})
-	o.mintPassport(t, "disjoint", []string{"enrich"})
-
-	got := o.consentRequest(t, "read")
-
-	offered := map[string][]string{}
-	for _, option := range got.Passports {
-		offered[option.Label] = option.Scopes
-	}
-	if !slices.Equal(offered["broad"], []string{"read", "write", "send"}) {
-		t.Errorf("broad passport offers %v, want [read write send] — the request does not trim it",
-			offered["broad"])
-	}
-	if !slices.Equal(offered["disjoint"], []string{"enrich"}) {
-		t.Errorf("disjoint passport offers %v, want [enrich] — a passport sharing no scope with the request is still the human's to lend",
-			offered["disjoint"])
-	}
-}
-
-// An expired passport is a dead credential, not a template — the
-// expires_at > now() clause has to hold with no other exclusion in play, or
-// a dropped `AND expires_at > now()` would pass every other test here
-// silently. Set into the past through the owner connection rather than
-// waiting on a real clock: the SQL predicate is judged against the
-// database's own now(), so backdating the row is the deterministic way to
-// put a passport on the wrong side of it.
-func TestSelectablePassportsExcludesAnExpiredPassport(t *testing.T) {
-	o := setupOAuth(t)
-	ctx := context.Background()
-
-	expired := o.mintPassport(t, "expired", []string{"read"})
-	if _, err := o.Owner.Exec(ctx,
-		`UPDATE passport SET expires_at = now() - interval '1 minute' WHERE id = $1`, expired); err != nil {
-		t.Fatalf("backdating a passport's expiry: %v", err)
-	}
-
-	got := o.consentRequest(t, "read")
-	if len(got.Passports) != 0 {
-		t.Fatalf("passports = %v, want none — the only passport is expired", got.Passports)
-	}
-}
-
-// Another human's passport must never appear on THIS human's consent screen,
-// however completely it overlaps the request and however long it has left to
-// live — on_behalf_of = $1 is what stands between an agent and borrowing
-// authority nobody granted to it. The harness's only session is the
-// bootstrap admin's, and this suite has no way to sign in AS a second human
-// (that needs the password-reset flow's mailer, which lives in identity's own
-// unit tests, not this HTTP harness) — so the second user is minted through
-// the real admin invite endpoint, and their passport is inserted directly on
-// the owner connection, the same way the "bound" fixture above binds a grant.
-func TestSelectablePassportsExcludesAnotherUsersPassport(t *testing.T) {
-	o := setupOAuth(t)
-	ctx := context.Background()
-
-	var other struct {
-		ID string `json:"id"`
-	}
-	if status := o.Call(t, "POST", "/v1/users", integration.AnyMap{
-		"email": "otherhuman@acme.test", "display_name": "Other Human", "role": "rep",
-	}, nil, &other); status != http.StatusCreated {
-		t.Fatalf("inviting a second user → %d", status)
-	}
-	if _, err := o.Owner.Exec(ctx,
-		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
-		 SELECT id, id, 'not mine', ARRAY['read']::text[], 'other-user-'||id, now() + interval '1 day'
-		 FROM app_user WHERE id = $1`, other.ID); err != nil {
-		t.Fatalf("minting a passport for the second user: %v", err)
-	}
-
-	got := o.consentRequest(t, "read")
-	if len(got.Passports) != 0 {
-		t.Fatalf("passports = %v, want none — this passport belongs to another user", got.Passports)
-	}
-}
 
 // registerClientDirectly inserts a live oauth_client row over the owner
 // connection. The harness's normal path to a live client is POST
@@ -348,5 +181,128 @@ func TestAuthorizeRedirectsToTheSPAConsentScreen(t *testing.T) {
 	// The nonce must not be visible to the server on the redirect it rode in on.
 	if strings.Contains(before, nonce) {
 		t.Fatalf("the consent nonce leaked into the server-visible part of %q", location)
+	}
+}
+
+// The handshake an empty account can finish: `claude mcp add` for a brand-new
+// human who has never minted a passport by hand. Before the scopes-checkbox
+// flow replaced lending, the consent screen offered no approve control at
+// all without one — this is the case the whole change exists for, so it is
+// held here by a test that fails without it rather than left to be true only
+// by construction.
+
+// mcpTools drives tools/list on the connector transport with the given
+// bearer and returns the tool entries as untyped objects, so a caller can
+// read whichever field it needs (name, description) without this helper
+// growing a return type per caller.
+//
+//craft:ignore naked-any a tools/list entry is an open object by the MCP protocol — asserting on one means reading it untyped
+func (o *oauthEnv) mcpTools(t *testing.T, bearer string) []map[string]any {
+	t.Helper()
+	resp := listTools(t, o.AppEnv, bearer)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("tools/list → %d %s", resp.StatusCode, resp.Body)
+	}
+	result := rpcResult(t, resp.Body)
+	raw, ok := result["tools"].([]any)
+	if !ok {
+		t.Fatalf("tools/list result carries no tools array: %v", result)
+	}
+	tools := make([]map[string]any, 0, len(raw))
+	for _, entry := range raw {
+		tool, ok := entry.(map[string]any)
+		if !ok {
+			t.Fatalf("tools/list entry is not an object: %v", entry)
+		}
+		tools = append(tools, tool)
+	}
+	return tools
+}
+
+// toolRequiresScope reads a tool's advertised required scope off the
+// description DescribeForClient renders — the same text a human or a model
+// reading tools/list sees — rather than re-deriving it from the tool's name,
+// which would let this test and the surface it checks drift apart.
+func toolRequiresScope(t *testing.T, tool map[string]any, scope string) bool {
+	t.Helper()
+	description, _ := tool["description"].(string)
+	if description == "" {
+		t.Fatalf("tool %v carries no description to read its required scope from", tool)
+	}
+	return strings.Contains(description, fmt.Sprintf("requires passport scope %q", scope))
+}
+
+// TestAHumanWithNoPassportCanConnectAClient is the case that has never
+// passed: a human with zero passports still authorizes a client end to end,
+// on the scopes they tick, with nothing hand-minted first.
+func TestAHumanWithNoPassportCanConnectAClient(t *testing.T) {
+	o := setupOAuth(t)
+	assertOwnerCount(t, o, 0, `SELECT count(*) FROM passport`)
+
+	code := o.authorize(t, url.Values{"scope": {"read draft write send enrich"}})
+	status, body := o.exchange(t, url.Values{"code": {code}})
+	if status != http.StatusOK {
+		t.Fatalf("token → %d %v", status, body)
+	}
+	token, _ := body["access_token"].(string)
+	if token == "" {
+		t.Fatal("an account that has minted nothing must still be able to authorize a client")
+	}
+	if !o.accessTokenWorks(t, token) {
+		t.Fatal("the minted connection credential must authenticate")
+	}
+}
+
+// A connection-minted passport was never lendable, so under the old model
+// connecting a second client left the human just as stuck as connecting the
+// first — there was nothing of theirs to hand over. Under the scopes model
+// there is nothing to run out of: a second client ticks its own scopes and
+// connects on the same terms.
+func TestASecondClientNeedsNoHandMintedPassportEither(t *testing.T) {
+	o := setupOAuth(t)
+	code := o.authorize(t, url.Values{"scope": {"read"}})
+	if _, body := o.exchange(t, url.Values{"code": {code}}); body["access_token"] == nil || body["access_token"] == "" {
+		t.Fatalf("the first client did not connect: %v", body)
+	}
+
+	o.clientID = registerSecondClient(t, o)
+	code = o.authorize(t, url.Values{"scope": {"read"}})
+	status, second := o.exchange(t, url.Values{"code": {code}})
+	if token, _ := second["access_token"].(string); status != http.StatusOK || token == "" {
+		t.Fatalf("the second client must connect on the same terms as the first: %d %v", status, second)
+	}
+}
+
+// The tool list is the proof a human can check: a connection granted only
+// read must not be offered a write tool. Asserting the passport's scope
+// column instead would prove the row, not the surface a client actually
+// sees, and an empty list would pass every assertion below vacuously.
+func TestNarrowingOnTheScreenReachesTheToolSurface(t *testing.T) {
+	o := setupOAuth(t)
+	code := o.authorize(t, url.Values{"scope": {"read"}})
+	_, body := o.exchange(t, url.Values{"code": {code}})
+	token, _ := body["access_token"].(string)
+	if token == "" {
+		t.Fatalf("handshake left the client without a credential: %v", body)
+	}
+
+	tools := o.mcpTools(t, token)
+	if len(tools) == 0 {
+		t.Fatal("a read connection listed no tools at all; an empty list would pass this test vacuously")
+	}
+	sawReadTool := false
+	for _, tool := range tools {
+		for _, excluded := range []string{"draft", "write", "send", "enrich"} {
+			if toolRequiresScope(t, tool, excluded) {
+				name, _ := tool["name"].(string)
+				t.Fatalf("a read-only connection was offered the %s-scoped tool %q", excluded, name)
+			}
+		}
+		if toolRequiresScope(t, tool, "read") {
+			sawReadTool = true
+		}
+	}
+	if !sawReadTool {
+		t.Fatal("a read connection listed no read-scoped tool; the surface should narrow, not vanish")
 	}
 }

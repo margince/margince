@@ -27,9 +27,9 @@ export const completedProviderRun: components["schemas"]["ProviderRun"] = {
   requested_categories: ["email", "mobile"],
   reservations: [{ pool: "email", reserved_credits: 1, actual_credits: 1 }],
   claims_unwritten: false,
-  // A completed run whose values have reached the record. The gallery is named
-  // for the finished purchase, and a `completed` run that is not yet `applied`
-  // is the window where the page still looks empty — a different fixture.
+  // The run bought its values AND they reached the contact's record. A
+  // completed run that is not yet applied is a different state — bought but
+  // not landed — and these stories are all the after picture.
   applied: true,
   submitted_at: "2026-08-12T09:00:00Z",
   completed_at: "2026-08-12T09:02:00Z",

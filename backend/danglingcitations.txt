@@ -69,7 +69,6 @@ backend/internal/compose/embedreindextransport.go migration 0115
 backend/internal/compose/erasurequotations_integration_test.go core 0244
 backend/internal/compose/idempotencyretention.go migration 0033
 backend/internal/compose/integration/activitycontext_integration_test.go core 0038
-backend/internal/compose/integration/agentaccess/oauth_lend_integration_test.go migration 0172
 backend/internal/compose/integration/capture/capture_auto_enrich_sweep_integration_test.go migration 0121
 backend/internal/compose/integration/capture/capture_settings_integration_test.go migration 0121
 backend/internal/compose/integration/collections/segmentvocabulary_integration_test.go migration 0131
@@ -113,7 +112,6 @@ backend/internal/modules/automation/automations_catalog.go core 0035
 backend/internal/modules/automation/automations_catalog.go core 0078
 backend/internal/modules/automation/automations_runs.go migration 0061
 backend/internal/modules/automation/automations_runs_test.go migration 0061
-backend/internal/modules/automation/catalog_actions.go core 0008
 backend/internal/modules/automation/engine_blocked.go migration 0061
 backend/internal/modules/automation/gate.go migration 0061
 backend/internal/modules/automation/rundetail.go migration 0079
@@ -124,7 +122,6 @@ backend/internal/modules/capture/channelsend.go core 0217
 backend/internal/modules/capture/pending.go migration 0222
 backend/internal/modules/capture/pendingsweeps.go migration 0137
 backend/internal/modules/capture/projectkeytoken.go migration 0131
-backend/internal/modules/capture/sink.go migration 0137
 backend/internal/modules/collections/vocab.go core 0217
 backend/internal/modules/collections/vocab_test.go migration 0228
 backend/internal/modules/comms/store_test.go core 0136
@@ -135,7 +132,6 @@ backend/internal/modules/customfields/engine.go core 0171
 backend/internal/modules/customfields/fieldobjects_test.go core 0171
 backend/internal/modules/customfields/service.go core 0063
 backend/internal/modules/deals/offer.go core 0217
-backend/internal/modules/identity/oauth_lend.go migration 0172
 backend/internal/modules/identity/roles.go migration 0211
 backend/internal/modules/overlay/freshness_integration_test.go core 0217
 backend/internal/modules/overlay/teardown.go core 0012
@@ -158,8 +154,6 @@ backend/internal/modules/privacy/retentionpolicystore.go core 0217
 backend/internal/modules/privacy/retentionrestricted.go migration 0291
 backend/internal/modules/privacy/subjectcolumns.go core 0229
 backend/internal/modules/privacy/transcriptreadings.go core 0245
-backend/internal/modules/quotas/attainment.go core 0217
-backend/internal/modules/quotas/quotas.go core 0228
 backend/internal/modules/search/binding.go migration 0114
 backend/internal/modules/search/graph.go core 0038
 backend/internal/modules/search/graphactivitysubjects.go core 0038
@@ -263,4 +257,7 @@ scripts/deploy/db-bootstrap.sql migration 0015
 scripts/lib-testdb.sh migration 0015
 scripts/test-migration-versions.sh core 0002
 scripts/test-migration-versions.sh core 0003
+scripts/test-migration-versions.sh core 1799999997
+scripts/test-migration-versions.sh core 1799999998
 scripts/test-migration-versions.sh core 1799999999
+scripts/test-migration-versions.sh migration 1799999999

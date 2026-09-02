@@ -54,6 +54,7 @@ no code, no API, just the app.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md) — connect a mailbox for capture: Gmail OAuth (standing sync + backfill), IMAP app-password, Microsoft Graph OAuth, or Google Calendar — all standing connections.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md) — point the AI lanes at a local Ollama and enrich a company with no cloud key.
 - [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md) — the technical lookup: what DNS, certificate logs and a homepage fingerprint write onto a company, what triggers it, and the one setting that turns it on.
+- [check-a-vat-number.md](how-to/check-a-vat-number.md) — ask the EU register whether a company's stated VAT ID is real, read the receipt a tax authority accepts, and the one setting that turns it on.
 - [connect-telegram.md](how-to/connect-telegram.md) — bind a workspace-level Telegram bot for pull ingress and governed replies.
 - [import-your-linkedin-network.md](how-to/import-your-linkedin-network.md) — import your own `Connections.csv` as graph substrate, and read the reach it buys.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.
@@ -73,6 +74,7 @@ no code, no API, just the app.
 
 ### Reference — look it up
 - [modules.md](reference/modules.md) — the modules: what each owns, its tables, its HTTP surface.
+- [meeting-brief.md](reference/meeting-brief.md) — the pre-meeting brief and its preparation plan: the three invariants, what a caller is and is not shown, how a year of history becomes five moments, and why the plan and the sections have separate writers.
 - [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, egress, and overlay-mode behaviour.
 - [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.
 - [agent-tool-budget.md](reference/agent-tool-budget.md) — what each agent's tool menu costs in prompt tokens, agent by agent, against the published ceiling. Generated with its `.json` sibling, never hand-edited.

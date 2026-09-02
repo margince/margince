@@ -733,9 +733,13 @@ export function CompanyAct({
 
   // BEFORE the website question, and before the read theatre: an installation
   // that has bound no model cannot perform a cold-start read at all, so asking
-  // for a website first would take an answer and then refuse to act on it. The
-  // component draws nothing once the server says every blocking step is done,
-  // which is what lets this sit in front of the gate rather than beside it.
+  // for a website first would take an answer and then refuse to act on it.
+  //
+  // The condition and the component read the SAME predicate, which is why this
+  // can sit in front of the gate rather than beside it: `outstandingStep`
+  // answers only with a step the component has a panel for, so there is no
+  // report that keeps this branch taken while the component below draws
+  // nothing.
   if (setupOutstanding) {
     return <InstallationSetup />;
   }

@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -143,7 +144,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			return nil, byokKeyRequired(providerOpenAICompatible)
 		}
 		if cfg.BaseURL == "" {
-			return nil, fmt.Errorf("ai: provider openai_compatible needs a base_url (the vendor host root — no version segment, the adapter adds /v1; e.g. https://api.mistral.ai)")
+			return nil, fmt.Errorf("%w: openai_compatible (the vendor host root — no version segment, the adapter adds /v1; e.g. https://api.mistral.ai)", errNoBaseURL)
 		}
 		return &openAICompatClient{
 			http:            newOutboundClient(),
@@ -222,10 +223,25 @@ func cloudKey(provider string, keys config.Lookup) string {
 // is mandatory (ADR-0020). It names the env var to set so the fix is obvious.
 func byokKeyRequired(provider string) error {
 	if env := cloudKeyEnv[provider]; env != "" {
-		return fmt.Errorf("ai: provider %s needs an api key — set %s in the environment (BYOK — we provide no inference)", provider, env)
+		return fmt.Errorf("%w: provider %s — set %s in the environment (BYOK — we provide no inference)", errNoProviderKey, provider, env)
 	}
-	return fmt.Errorf("ai: provider %s needs an api key (BYOK — we provide no inference)", provider)
+	return fmt.Errorf("%w: provider %s (BYOK — we provide no inference)", errNoProviderKey, provider)
 }
+
+// The two refusals a CALLER can tell a reader how to fix: a vendor with no
+// credential is a key to paste, and an OpenAI-wire binding with no host is an
+// address to fill in. Sentinels rather than message matching, because the
+// availability read reports them as states of the installation rather than as
+// faults, and a screen that decided which by reading prose would break the
+// first time the prose improved.
+//
+// Package-local, not `apperrors`: that registry is the HTTP error contract, and
+// neither of these reaches a client as an error — they arrive as a named state
+// on a 200.
+var (
+	errNoProviderKey = errors.New("ai: provider needs an api key")
+	errNoBaseURL     = errors.New("ai: provider needs a base_url")
+)
 
 // ConfigItems declares the BYOK keys. They carry no MARGINCE_ prefix — the
 // names match each vendor's own convention so an operator already exporting one

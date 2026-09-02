@@ -13,10 +13,10 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 59 |
 | Resources | 9 |
-| Tool catalog | 164.2 KB |
+| Tool catalog | 169.8 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 42918 |
-| Largest tool | `read_project_360` (6.3 KB) |
+| Approx. wire tokens | 44349 |
+| Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the WIRE bytes: they carry each tool's output schema and the governance
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 76.1 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 39.1 KB | 23% | Yes, every step |
-| Input schemas | 36.5 KB | 22% | Yes, every step |
+| Output schemas | 81.4 KB | 47% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 39.4 KB | 23% | Yes, every step |
+| Input schemas | 36.5 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.5 KB | 7% | Partly |
-| **Description + input schema** | **75.6 KB** | **46%** | **the recurring cost** |
+| **Description + input schema** | **75.9 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -91,8 +91,8 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.8 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
-| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 4.0 KB |
-| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
+| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
+| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.2 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.0 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.4 KB |
@@ -102,14 +102,14 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.0 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
-| [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.2 KB |
+| [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.0 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
-| [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 2.9 KB |
+| [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 6.0 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
@@ -5602,6 +5602,539 @@ Get ready for a specific meeting: given the meeting, the same written brief a pe
             "generated_by": {
               "type": "string"
             },
+            "plan": {
+              "properties": {
+                "account_arc": {
+                  "items": {
+                    "properties": {
+                      "from": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "summary",
+                      "to"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "advance": {
+                  "properties": {
+                    "best": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "fallback": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "minimum": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "best",
+                    "fallback",
+                    "minimum"
+                  ],
+                  "type": "object"
+                },
+                "likely_asks": {
+                  "items": {
+                    "properties": {
+                      "basis": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "prepare": {
+                        "type": "string"
+                      },
+                      "question": {
+                        "type": "string"
+                      },
+                      "relevance": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "basis",
+                      "prepare",
+                      "question",
+                      "relevance"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "manager_coaching": {
+                  "properties": {
+                    "failure_mode": {
+                      "type": "string"
+                    },
+                    "focus": {
+                      "type": "string"
+                    },
+                    "intervene_if": {
+                      "type": "string"
+                    },
+                    "listen_for": {
+                      "type": "string"
+                    },
+                    "paths": {
+                      "items": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "play": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "label",
+                          "play"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "watch_for": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "failure_mode",
+                    "focus",
+                    "intervene_if",
+                    "listen_for",
+                    "watch_for"
+                  ],
+                  "type": "object"
+                },
+                "meeting_type": {
+                  "type": "string"
+                },
+                "meeting_type_confidence": {
+                  "type": "string"
+                },
+                "objective": {
+                  "properties": {
+                    "evidence": {
+                      "items": {
+                        "properties": {
+                          "record_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "record_type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "record_id",
+                          "record_type"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nature": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "evidence",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "objective_caveat": {
+                  "type": "string"
+                },
+                "opening": {
+                  "properties": {
+                    "evidence": {
+                      "items": {
+                        "properties": {
+                          "record_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "record_type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "record_id",
+                          "record_type"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nature": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "evidence",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "questions": {
+                  "items": {
+                    "properties": {
+                      "ask": {
+                        "type": "string"
+                      },
+                      "evidence": {
+                        "items": {
+                          "properties": {
+                            "record_id": {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            "record_type": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "record_id",
+                            "record_type"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "listen_for": {
+                        "type": "string"
+                      },
+                      "why": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ask",
+                      "evidence",
+                      "listen_for",
+                      "why"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "readiness": {
+                  "type": "string"
+                },
+                "scenarios": {
+                  "items": {
+                    "properties": {
+                      "evidence": {
+                        "items": {
+                          "properties": {
+                            "record_id": {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            "record_type": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "record_id",
+                            "record_type"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "play": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "evidence",
+                      "label",
+                      "play"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "top_risk": {
+                  "properties": {
+                    "avoid": {
+                      "type": "string"
+                    },
+                    "say": {
+                      "type": "string"
+                    },
+                    "show": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "avoid",
+                    "say",
+                    "show",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "unknowns": {
+                  "items": {
+                    "properties": {
+                      "kind": {
+                        "type": "string"
+                      },
+                      "question": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "question"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "advance",
+                "meeting_type",
+                "meeting_type_confidence",
+                "readiness"
+              ],
+              "type": "object"
+            },
             "project_id": {
               "format": "uuid",
               "type": "string"
@@ -5991,10 +6524,24 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
               "assignee_name": {
                 "type": "string"
               },
+              "claim_id": {
+                "format": "uuid",
+                "type": "string"
+              },
               "days_overdue": {
                 "type": "integer"
               },
               "due_at": {
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "source_activity_id": {
+                "format": "uuid",
                 "type": "string"
               },
               "state": {
@@ -6010,9 +6557,9 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
             },
             "required": [
               "about",
+              "source",
               "state",
-              "subject",
-              "task_id"
+              "subject"
             ],
             "type": "object"
           },
@@ -8096,10 +8643,24 @@ Read one project's whole page: company, phase history with time per phase, deals
                   "assignee_name": {
                     "type": "string"
                   },
+                  "claim_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
                   "days_overdue": {
                     "type": "integer"
                   },
                   "due_at": {
+                    "type": "string"
+                  },
+                  "quote": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "source_activity_id": {
+                    "format": "uuid",
                     "type": "string"
                   },
                   "state": {
@@ -8115,9 +8676,9 @@ Read one project's whole page: company, phase history with time per phase, deals
                 },
                 "required": [
                   "about",
+                  "source",
                   "state",
-                  "subject",
-                  "task_id"
+                  "subject"
                 ],
                 "type": "object"
               },
@@ -9612,7 +10173,7 @@ Find out whether the people and companies named in something you are holding alr
 
 **Review open commitments**
 
-Answer "what have we promised and not delivered?": the open tasks across the workspace, earliest due date first and undated ones last, each with the person who owes it, when it came due and the record it was made about. A promise appears here only because someone recorded it as a task — what was agreed in a meeting and never written down is absent — so this is what the workspace has on record, not everything owed. It is scoped to the records the caller may see. Use whats_slipping_this_week when the question is which DEALS are at risk rather than which promises are outstanding, and catch_me_up_on for everything that has happened on one record. Each item carries task_id and, where there is one, assignee_id. Every state is judged against as_of, so carry that too if you report the answer later. (Governance: runs immediately; requires passport scope "read".)
+Answer "what have we promised and not delivered?": the open promises across the workspace, most overdue first, from BOTH places a promise is recorded — a task somebody filed, and a commitment read out of a captured conversation, which carries the sentence it was read from. Each names when it came due and the record it was made about. It reads what the workspace captured: a promise made in an uncaptured call, or in a thread nobody filed, is absent. The two sources are not linked, so a promise both said and typed can appear twice. Narrowing by assignee or project returns recorded TASKS alone — a conversation commitment carries neither — so a narrowed answer is a smaller question than the unnarrowed one. It is scoped to the records the caller may see. Use whats_slipping_this_week when the question is which DEALS are at risk rather than which promises are outstanding, and catch_me_up_on for everything that has happened on one record. Each item carries source (task | conversation) and the id for that source — task_id or claim_id — plus assignee_id where a task has one. Every state is judged against as_of, so carry that too if you report the answer later. (Governance: runs immediately; requires passport scope "read".)
 
 Renders its result in [`ui://margince/commitments.html`](#commitments_view), visible to `model`, `app`.
 
@@ -9687,10 +10248,24 @@ Renders its result in [`ui://margince/commitments.html`](#commitments_view), vis
               "assignee_name": {
                 "type": "string"
               },
+              "claim_id": {
+                "format": "uuid",
+                "type": "string"
+              },
               "days_overdue": {
                 "type": "integer"
               },
               "due_at": {
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "source_activity_id": {
+                "format": "uuid",
                 "type": "string"
               },
               "state": {
@@ -9706,9 +10281,9 @@ Renders its result in [`ui://margince/commitments.html`](#commitments_view), vis
             },
             "required": [
               "about",
+              "source",
               "state",
-              "subject",
-              "task_id"
+              "subject"
             ],
             "type": "object"
           },

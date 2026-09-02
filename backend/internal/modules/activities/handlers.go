@@ -46,6 +46,31 @@ type Handlers struct {
 	// (OPS-CFG-12), injected by WithUploadLimit. Zero refuses every upload,
 	// which is the honest reading of "nobody has said" for a bound.
 	uploadLimit int64
+	// colleagues names the addresses that are ours by DOMAIN rather than by
+	// seat, so addressing a reply can skip a co-worker who has no login. The
+	// domains live in capture, which this module may not import, so compose
+	// injects the reader (WithColleagues).
+	//
+	// Nil answers no address rather than an unfiltered one: a reply addressed
+	// to a colleague is the defect ReplyAddressFor exists to prevent, and a
+	// deployment that has not wired this cannot tell one from a counterparty.
+	colleagues ColleagueDomains
+}
+
+// ColleagueDomains reports whether an address belongs to this installation's
+// own people — by registered email domain, which is how a co-worker with no
+// login is recognised at all.
+//
+// The predicate it returns is what ReplyAddressFor walks its candidates past,
+// so what this answers decides who a composed reply may go to.
+type ColleagueDomains interface {
+	Covers(ctx context.Context) (func(address string) bool, error)
+}
+
+// WithColleagues wires the own-domain reader that addressing a reply needs.
+func (h Handlers) WithColleagues(domains ColleagueDomains) Handlers {
+	h.colleagues = domains
+	return h
 }
 
 // EmailDrafter prepares a reply for an existing activity without sending it.

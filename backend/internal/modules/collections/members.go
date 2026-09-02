@@ -10,9 +10,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -265,20 +263,4 @@ func (s *Store) evaluateSegment(ctx context.Context, listID ids.ListID, listEnti
 		})
 	}
 	return out, page, nil
-}
-
-func wireMember(m memberRow) crmcontracts.ListMember {
-	out := crmcontracts.ListMember{
-		Id:         openapi_types.UUID(m.ID),
-		ListId:     openapi_types.UUID(m.ListID.UUID),
-		EntityType: crmcontracts.ListMemberEntityType(m.EntityType),
-		EntityId:   openapi_types.UUID(m.EntityID),
-		AddedBy:    &m.AddedBy,
-	}
-	// A computed segment member carries no explicit added-at instant; only
-	// a real list_member row does.
-	if !m.CreatedAt.IsZero() {
-		out.CreatedAt = &m.CreatedAt
-	}
-	return out
 }

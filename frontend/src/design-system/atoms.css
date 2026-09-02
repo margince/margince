@@ -387,23 +387,47 @@
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
 }
-/* The WIDE drawer: research and the composer.
+/* The WIDE drawer: research, the composer and the meeting brief.
  *
- * Both are surfaces a rep works IN rather than glances at — a numbered claim
- * list with its quotes, or a message being written — and at 460px each of
- * those wraps into a column too narrow to read. The upper bound rises to 30% of
- * the viewport so the drawer grows with the screen it sits on, and stops at
- * 560px because past that it stops being a margin and becomes the page.
+ * All three are surfaces a rep works IN rather than glances at — a numbered
+ * claim list with its quotes, a message being written, a brief read minutes
+ * before a room — and at 460px each of those wraps into a column too narrow to
+ * read. The upper bound is 52% of the viewport so the drawer grows with the
+ * screen it sits on, and stops at 860px because past that it stops being a
+ * margin and becomes the page.
+ *
+ * 52vw rather than the original 30vw because of what the widest of these
+ * drawers now holds: the meeting brief's preparation panels put an objective,
+ * a risk and its response, and a three-column close plan side by side, and at
+ * 384px (30vw of a 1280 laptop) the three columns had 100px each. A reader
+ * two minutes from a room reads the first screen or nothing, so the width is
+ * set by what must fit on it.
  *
  * Header and footer are STICKY: the close control and the commit button are
  * the two things a reader must always be able to reach, and a long claim list
  * would otherwise scroll both of them away. */
 .modal-drawer-wide {
-  width: clamp(360px, 30vw, 560px);
+  width: clamp(360px, 52vw, 860px);
   display: flex;
   flex-direction: column;
   padding: 0;
 }
+/* The SPLIT drawer: a reply, with the conversation it answers beside it.
+ *
+ * A reply written over the top of the thread it answers is the failure this
+ * width exists to fix — the centred box covered the timeline, and the wide
+ * drawer has room for one column, not two. It stops at 1040px for the same
+ * reason the wide one stops at 560: past that the drawer has stopped being a
+ * margin on the record and become the page.
+ *
+ * Below the fold width the two columns cannot both be read, so the layout
+ * collapses to one and the conversation folds into a disclosure above the
+ * form (composethread.css). The width follows it down rather than holding a
+ * two-column measure with one column in it. */
+.modal-drawer-split {
+  width: clamp(360px, 62vw, 1040px);
+}
+
 /* The zero padding above belongs to the head/body/foot split: those three
    bands pay their own, so the drawer must not pay it twice. A wide drawer
    that does NOT split — the composer, which is one scrolling form — has
@@ -452,6 +476,14 @@
     max-height: 100dvh;
     border-radius: 0;
     padding: var(--space-4);
+  }
+  /* A split drawer keeps paying its padding in its three bands, on a phone as
+     on a desktop. The rule above is written for the unsplit sheet and reaches
+     this one through .modal-drawer, so without this the sticky header sits one
+     --space-4 inside the sheet and the band's own edge-to-edge ground stops at
+     the padding — the seam reads as a rendering fault rather than a header. */
+  .modal-drawer-wide:has(> .drawer-head) {
+    padding: 0;
   }
   /* The actions sit at the foot of the sheet rather than after the content,
      so a long form does not bury its own confirm button. */
@@ -859,6 +891,22 @@
   margin-top: var(--space-4);
 }
 
+/* A TABLE ROW'S VERBS: the buttons in a table's trailing cell.
+ *
+ * Not `.card-actions`, which is a CARD's trailing row and carries a top margin
+ * for the prose above it — inside a cell that margin pushes the buttons off
+ * their row's baseline, and the wrap it allows turns two short verbs into a
+ * two-line cell that doubles the height of every row in the table.
+ *
+ * So: no top margin, and no wrapping. A cell too narrow for its verbs scrolls
+ * with the rest of the table inside `TableScroll`, which is the answer this
+ * table already has for a column that does not fit. */
+.cell-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
 /* A card that stacks above the next one in a rail. */
 .card-stack {
   margin-bottom: var(--space-4);
@@ -993,6 +1041,15 @@
   border-color: var(--danger);
 }
 .input[aria-invalid="true"]:focus {
+  box-shadow: var(--focus-glow-danger);
+}
+/* A textarea carries its own class rather than `.input`, so the boundary above
+   never reached one: a refused body sat unmarked beside a refused subject that
+   was outlined, and the pair read as though only one of them was the problem. */
+.textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.textarea[aria-invalid="true"]:focus {
   box-shadow: var(--focus-glow-danger);
 }
 .field-shell:has([aria-invalid="true"]) {
@@ -1205,41 +1262,6 @@
 
 .table-scroll {
   overflow-x: auto;
-}
-
-/* AttainmentRing (quotas): the arc rotates so 0% starts at 12 o'clock; the
- * band colour rides on the arc's stroke (set inline from the server band).
- * The centred figure overlays the SVG. */
-.attain-ring {
-  position: relative;
-  width: 160px;
-  height: 160px;
-  flex: none;
-}
-.attain-ring svg {
-  transform: rotate(-90deg);
-}
-.attain-ring-center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-}
-.attain-ring-pct {
-  font-weight: 500;
-  font-size: 34px;
-  color: var(--textPrimary);
-  letter-spacing: -0.02em;
-}
-.attain-ring-lbl {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-  color: var(--textMeta);
 }
 
 /* Disclosure: a section the reader opens when they want it. The chevron is the

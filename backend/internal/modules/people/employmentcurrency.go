@@ -85,6 +85,27 @@ func CurrentPrimaryEmploymentSQL(alias string) string {
 	return storekit.SQLf("%sis_current_primary AND %s", prefix, EmploymentIsCurrentSQL(prefix+"ended_at"))
 }
 
+// LiveEmploymentSlotSQL is the THIRD question, and the one uq_rel_employment
+// answers: does this person already hold a live employment edge to this company
+// at all, primary or not.
+//
+// It is the index's own predicate and so, like CurrentPrimarySlotSQL, it is
+// date-BLIND. Asking it with EmploymentIsCurrentSQL would read somebody serving
+// notice as having no edge while the index still holds one, and the write that
+// followed would be silently dropped by ON CONFLICT rather than skipped — which
+// is exactly how a sweep comes to offer the same work on every pass for ever.
+//
+// `alias` is the relationship table's alias at the call site, or "" when the
+// statement does not alias it.
+func LiveEmploymentSlotSQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return storekit.SQLf("%skind = 'employment' AND %sended_at IS NULL AND %sarchived_at IS NULL",
+		prefix, prefix, prefix)
+}
+
 // CurrentPrimarySlotSQL is the other question about `is_current_primary`:
 // WHICH ROW HOLDS THE SLOT that uq_rel_current_primary_employer keeps unique
 // per person. It is the index's own predicate, and so it is date-BLIND —

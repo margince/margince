@@ -26,6 +26,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"testing"
 
 	"github.com/riverqueue/river"
@@ -116,6 +117,17 @@ func bindsAWorkspace(spec jobs.Spec) bool {
 // sits apart from the test so the assertions there stay readable as the fleet
 // grows — the table is the fixture, not the reasoning.
 func workspaceRefusalDrivers() map[string]func(context.Context) error {
+	// Two halves, merged: they are the same census and they differ in what a
+	// driver has to hand its job before the guard is reached, which is worth
+	// stating once rather than in a comment halfway down one table.
+	drivers := zeroPayloadRefusalDrivers()
+	maps.Copy(drivers, idBearingRefusalDrivers())
+	return drivers
+}
+
+// zeroPayloadRefusalDrivers are the kinds whose guard is the FIRST thing their
+// Work method reaches, so a zero-value job is enough to drive it.
+func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 	return map[string]func(context.Context) error{
 		GeocodeOrganizationArgs{}.Kind(): func(ctx context.Context) error {
 			return (&geocodeWorker{}).Work(ctx, &river.Job[GeocodeOrganizationArgs]{})
@@ -128,6 +140,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		},
 		KnowledgeIngestArgs{}.Kind(): func(ctx context.Context) error {
 			return (&knowledgeIngestWorker{}).Work(ctx, &river.Job[KnowledgeIngestArgs]{})
+		},
+		VCardIngestArgs{}.Kind(): func(ctx context.Context) error {
+			return (&vcardIngestWorker{}).Work(ctx, &river.Job[VCardIngestArgs]{})
 		},
 		CloseDateWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&closeDateWorkspaceWorker{}).Work(ctx, &river.Job[CloseDateWorkspaceArgs]{})
@@ -156,6 +171,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		LinkedInRematchWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&linkedInRematchWorkspaceWorker{}).Work(ctx, &river.Job[LinkedInRematchWorkspaceArgs]{})
 		},
+		LinkReconcileWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
+			return (&linkReconcileWorkspaceWorker{}).Work(ctx, &river.Job[LinkReconcileWorkspaceArgs]{})
+		},
 		OrgNamePromotionWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&orgNamePromotionWorkspaceWorker{}).Work(ctx, &river.Job[OrgNamePromotionWorkspaceArgs]{})
 		},
@@ -177,6 +195,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		CaptureTraceSweepWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&captureTraceSweepWorkspaceWorker{}).Work(ctx, &river.Job[CaptureTraceSweepWorkspaceArgs]{})
 		},
+		ConfidentialityVerdictWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
+			return (&confidentialityVerdictWorkspaceWorker{}).Work(ctx, &river.Job[ConfidentialityVerdictWorkspaceArgs]{})
+		},
 		CounterpartyVerdictWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&counterpartyVerdictWorkspaceWorker{}).Work(ctx, &river.Job[CounterpartyVerdictWorkspaceArgs]{})
 		},
@@ -186,17 +207,24 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		GmailWatchRenewArgs{}.Kind(): func(ctx context.Context) error {
 			return (&gmailWatchRenewWorker{}).Work(ctx, &river.Job[GmailWatchRenewArgs]{})
 		},
+		GraphWatchRenewArgs{}.Kind(): func(ctx context.Context) error {
+			return (&graphWatchRenewWorker{}).Work(ctx, &river.Job[GraphWatchRenewArgs]{})
+		},
 		FxRateRefreshArgs{}.Kind(): func(ctx context.Context) error {
 			return (&fxRefreshWorker{}).Work(ctx, &river.Job[FxRateRefreshArgs]{})
 		},
 		AiModelRateRefreshArgs{}.Kind(): func(ctx context.Context) error {
 			return (&aiModelRateRefreshWorker{}).Work(ctx, &river.Job[AiModelRateRefreshArgs]{})
 		},
+	}
+}
 
-		// The kinds below parse one OTHER id before reaching the guard, so
-		// their args carry a valid one: with a zero-value payload the earlier
-		// parse would fail and the test would pass without the workspace guard
-		// ever running.
+// idBearingRefusalDrivers are the kinds that parse one OTHER id before reaching
+// the guard, so their args carry a valid one: with a zero-value payload the
+// earlier parse would fail and the test would pass without the workspace guard
+// ever running.
+func idBearingRefusalDrivers() map[string]func(context.Context) error {
+	return map[string]func(context.Context) error{
 		SendEmailArgs{}.Kind(): func(ctx context.Context) error {
 			return (&commsSendWorker{}).Work(ctx, &river.Job[SendEmailArgs]{
 				Args: SendEmailArgs{DeliveryID: ids.NewV7().String()},
@@ -245,36 +273,26 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		ProviderRunPollArgs{}.Kind(): func(ctx context.Context) error {
 			return (&providerRunPollWorker{}).Work(ctx, &river.Job[ProviderRunPollArgs]{})
 		},
+		ProviderLookupArgs{}.Kind(): func(ctx context.Context) error {
+			return (&providerLookupWorker{}).Work(ctx, &river.Job[ProviderLookupArgs]{})
+		},
 		ProviderRunSubmitArgs{}.Kind(): func(ctx context.Context) error {
-			// RunID travels through the worker unparsed, so the zero value
-			// would do; a real id keeps the args honest to what a live
-			// insert carries.
 			return (&providerRunSubmitWorker{}).Work(ctx, &river.Job[ProviderRunSubmitArgs]{
 				Args: ProviderRunSubmitArgs{RunID: ids.NewV7().String()},
 			})
 		},
 
-		// The scheduled-send alarm parses its row id before it binds the
-		// workspace, so a real id is what gets the call as far as the binding
-		// this test is about — a malformed one would refuse for the wrong
-		// reason and prove nothing.
 		ScheduledSendArgs{}.Kind(): func(ctx context.Context) error {
 			return (&scheduledSendWorker{}).Work(ctx, &river.Job[ScheduledSendArgs]{
 				Args: ScheduledSendArgs{ScheduledSendID: ids.NewV7().String()},
 			})
 		},
 
-		// The transcript reading refuses before it reaches the store, so a
-		// worker with no proposer and no store is enough to prove it: an
-		// unbound workspace is answered by the guard, not by a nil deref.
 		TranscriptProposeArgs{}.Kind(): func(ctx context.Context) error {
 			return (&transcriptProposeWorker{log: slog.New(slog.DiscardHandler)}).Work(
 				ctx, &river.Job[TranscriptProposeArgs]{Args: TranscriptProposeArgs{}})
 		},
 
-		// The document reading refuses before it reaches the store, so a worker
-		// with no extractor and no store is enough to prove it: an unbound
-		// workspace is answered by the guard, not by a nil deref.
 		DocumentExtractArgs{}.Kind(): func(ctx context.Context) error {
 			return (&documentExtractWorker{log: slog.New(slog.DiscardHandler)}).Work(
 				ctx, &river.Job[DocumentExtractArgs]{Args: DocumentExtractArgs{}})

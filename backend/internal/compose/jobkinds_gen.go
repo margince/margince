@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "2fee877a3146ccbae8d02f69a4492fbdff39de88aa2e6f208b824966838de2dd"
+const jobContractHash = "cc0508aa4201841e43826e2e824e02354b75b567add7d526a6757bf30d1f5d01"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -39,6 +39,8 @@ type declaredJobArgs interface {
 		CaptureBackfillArgs |
 		CaptureClassifyArgs |
 		CaptureClassifyWorkspaceArgs |
+		ConfidentialityVerdictArgs |
+		ConfidentialityVerdictWorkspaceArgs |
 		CounterpartyVerdictArgs |
 		CounterpartyVerdictWorkspaceArgs |
 		CaptureDigestArgs |
@@ -70,9 +72,14 @@ type declaredJobArgs interface {
 		GmailWatchRenewArgs |
 		GraphEdgeReconcileArgs |
 		GraphEdgeWorkspaceArgs |
+		GraphWatchArgs |
+		GraphWatchRenewArgs |
 		IdempotencyRetentionArgs |
 		IdempotencyRetentionWorkspaceArgs |
+		IntroExpiryArgs |
 		KnowledgeIngestArgs |
+		LinkReconcileArgs |
+		LinkReconcileWorkspaceArgs |
 		LinkedInRematchArgs |
 		LinkedInRematchWorkspaceArgs |
 		OrgNamePromotionArgs |
@@ -83,6 +90,8 @@ type declaredJobArgs interface {
 		ParticipantBackfillArgs |
 		ParticipantBackfillWorkspaceArgs |
 		PrivacyRetentionArgs |
+		ProviderLookupArgs |
+		ProviderLookupSweepArgs |
 		ProviderRunPollArgs |
 		ProviderRunPollSweepArgs |
 		ProviderRunSubmitArgs |
@@ -97,6 +106,7 @@ type declaredJobArgs interface {
 		TimeScanArgs |
 		TimeScanWorkspaceArgs |
 		TranscriptProposeArgs |
+		VCardIngestArgs |
 		VoiceBuildArgs |
 		VoiceBuildRetryArgs |
 		WebhookRetryArgs |
@@ -137,6 +147,7 @@ var (
 	_ jobs.FleetWide = BriefGenerateArgs{}
 	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
 	_ jobs.FleetWide = CaptureClassifyArgs{}
+	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
 	_ jobs.FleetWide = CaptureDigestArgs{}
 	_ jobs.FleetWide = CaptureEnrichArgs{}
@@ -148,11 +159,14 @@ var (
 	_ jobs.FleetWide = GmailSyncArgs{}
 	_ jobs.FleetWide = GmailWatchArgs{}
 	_ jobs.FleetWide = GraphEdgeReconcileArgs{}
+	_ jobs.FleetWide = GraphWatchArgs{}
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
+	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
 	_ jobs.FleetWide = OrgNamePromotionArgs{}
 	_ jobs.FleetWide = OverlayReconcileArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
+	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
@@ -169,6 +183,7 @@ var (
 	_ jobs.WorkspaceScoped = CaptureAutoEnrichWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureClassifyWorkspaceArgs{}
+	_ jobs.WorkspaceScoped = ConfidentialityVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CounterpartyVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureDigestWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureEnrichWorkspaceArgs{}
@@ -186,13 +201,16 @@ var (
 	_ jobs.WorkspaceScoped = GeocodeOrganizationArgs{}
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = GraphEdgeWorkspaceArgs{}
+	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = IdempotencyRetentionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
+	_ jobs.WorkspaceScoped = LinkReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = LinkedInRematchWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OrgNamePromotionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayRefetchArgs{}
 	_ jobs.WorkspaceScoped = ParticipantBackfillWorkspaceArgs{}
+	_ jobs.WorkspaceScoped = ProviderLookupArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunPollArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
 	_ jobs.WorkspaceScoped = SignalScanWorkspaceArgs{}
@@ -202,6 +220,7 @@ var (
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}
 	_ jobs.WorkspaceScoped = TimeScanWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
+	_ jobs.WorkspaceScoped = VCardIngestArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}
 	_ jobs.WorkspaceScoped = WeeklyReviewGenerateWorkspaceArgs{}
 )

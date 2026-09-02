@@ -11,10 +11,15 @@ package attention
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func item(id string, source crmcontracts.AttentionItemSource, opts ...func(*crmcontracts.AttentionItem)) crmcontracts.AttentionItem {
@@ -54,7 +59,7 @@ func TestEveryItemSaysWhatHappensIfTheReaderDoesNothing(t *testing.T) {
 		Bounces:  lane(item("b1", "bounce")),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	if len(rows) == 0 {
 		t.Fatal("classified nothing from a day with four items in it")
@@ -75,7 +80,7 @@ func TestADealPastItsCloseDateSlipsWhileAnIdleOneDrifts(t *testing.T) {
 		AtRisk: lane(item("late", "deal_at_risk", withKind("close_overdue")), item("idle", "deal_at_risk", withKind("quiet"))),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	for _, row := range rows {
 		want := crmcontracts.WorklistItemConsequence("deal_drifts")
@@ -100,7 +105,7 @@ func TestASendDecisionOutranksAContactDecision(t *testing.T) {
 		},
 	}
 
-	got := rankAll(classifyDay(day, rankInstant))
+	got := rankAll(classifyDay(day, rankInstant, dayMoney{}))
 
 	assertOrder(t, got, "send", "hygiene")
 	if got[0].Level != levelBlocking || got[1].Level != levelRoutine {
@@ -119,7 +124,7 @@ func TestAMeetingWithinTwoHoursLeadsAndALaterOneDoesNot(t *testing.T) {
 		),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	for _, row := range rows {
 		want := levelAgreed
@@ -145,8 +150,8 @@ func TestTheSummaryCountsTheSameItemsTheQueueCarries(t *testing.T) {
 		Commitments: lane(item("c1", "conversation_claim", withDue(rankInstant.Add(-24*time.Hour)))),
 	}
 
-	ordered := rankAll(classifyDay(day, rankInstant))
-	summary := summarize(ordered)
+	ordered := rankAll(classifyDay(day, rankInstant, dayMoney{}))
+	summary := summarize(ordered, materialBar{})
 
 	if summary.Total != len(ordered) {
 		t.Fatalf("summary totals %d over a queue of %d", summary.Total, len(ordered))
@@ -172,7 +177,7 @@ func TestAWithheldLaneIsNamedButTheRoleWithheldPrivacyLaneIsNot(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("named %d sources, wanted only the mailbox one", len(got))
 	}
-	if got[0].Source != "capture_health" || got[0].Reason != crmcontracts.Withheld {
+	if got[0].Source != "capture_health" || got[0].Reason != crmcontracts.WorklistSourceUnavailableReasonWithheld {
 		t.Fatalf("named %q/%q, wanted capture_health/withheld", got[0].Source, got[0].Reason)
 	}
 }
@@ -199,7 +204,7 @@ func TestAFilteredQueueCarriesOnlyThatKindOfWork(t *testing.T) {
 		AtRisk:   lane(item("r1", "deal_at_risk")),
 	}
 
-	kept := keepCategory(classifyDay(day, rankInstant), "deals_at_risk")
+	kept := keepCategory(classifyDay(day, rankInstant, dayMoney{}), "deals_at_risk")
 
 	if len(kept) != 1 || kept[0].item.Id != "r1" {
 		t.Fatalf("filtering for deals kept %d rows, wanted just the deal", len(kept))
@@ -218,7 +223,7 @@ func TestADecisionsExpiryIsNotCountedAsWorkDue(t *testing.T) {
 		Planned: []crmcontracts.AttentionItem{item("real-task", "task", withDue(rankInstant.Add(-time.Hour)))},
 	}
 
-	summary := summarize(rankAll(classifyDay(day, rankInstant)))
+	summary := summarize(rankAll(classifyDay(day, rankInstant, dayMoney{})), materialBarOf(day, dayMoney{}))
 
 	if summary.Due != 1 {
 		t.Fatalf("counted %d due, wanted only the task — a proposal's expiry is not the reader's deadline", summary.Due)
@@ -244,7 +249,7 @@ func TestARiskRowCarriesTheDealsFigures(t *testing.T) {
 		AtRisk: lane(item("d", "deal_at_risk", withDeal(160_100_00))),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	if rows[0].item.Deal == nil || rows[0].item.Deal.AmountMinor == nil {
 		t.Fatal("the deal facts the lane feed resolved never reached the queue row")
@@ -264,7 +269,7 @@ func TestOnlyADealAboveTheMedianReachesTheMaterialBand(t *testing.T) {
 		),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	for _, row := range rows {
 		want := levelAgreed
@@ -290,7 +295,7 @@ func TestADealPastItsCloseDateOutranksAQuieterOne(t *testing.T) {
 		),
 	}
 
-	got := rankAll(classifyDay(day, rankInstant))
+	got := rankAll(classifyDay(day, rankInstant, dayMoney{}))
 
 	assertOrder(t, got, "past-close", "quiet-longer")
 }
@@ -304,7 +309,7 @@ func TestTheOvernightBriefingReachesTheQueue(t *testing.T) {
 		ThisMorning: []crmcontracts.AttentionItem{item("brief-1", "brief_item")},
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	if len(rows) != 1 || rows[0].item.Source != "brief_item" {
 		t.Fatalf("the briefing lane produced %d queue rows, wanted one", len(rows))
@@ -321,7 +326,7 @@ func TestThePageIsSummarisedAndExplainedAgainstItself(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3)
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3, waitingRead{}, leadRead{}, worklistCursor{})
 
 	if out.Summary.Total != len(out.Queue) {
 		t.Fatalf("summary totals %d over a page of %d", out.Summary.Total, len(out.Queue))
@@ -341,7 +346,7 @@ func TestEveryOutboundSendKindBlocksCustomerWork(t *testing.T) {
 			NeedsYou: []crmcontracts.AttentionItem{item("a", "approval", withKind(kind))},
 		}
 
-		rows := classifyDay(day, rankInstant)
+		rows := classifyDay(day, rankInstant, dayMoney{})
 
 		if rows[0].item.Level != levelBlocking {
 			t.Fatalf("%q landed at level %d, wanted the blocking band", kind, rows[0].item.Level)
@@ -360,7 +365,7 @@ func TestOnlyAnArrivedDateCountsAsDue(t *testing.T) {
 		},
 	}
 
-	summary := summarize(rankAll(classifyDay(day, rankInstant)))
+	summary := summarize(rankAll(classifyDay(day, rankInstant, dayMoney{})), materialBarOf(day, dayMoney{}))
 
 	if summary.Due != 1 {
 		t.Fatalf("counted %d due, wanted only the one whose date has passed", summary.Due)
@@ -378,7 +383,7 @@ func TestTheBiggerOfTwoDealsIsMaterial(t *testing.T) {
 		),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	for _, row := range rows {
 		want := levelAgreed
@@ -388,5 +393,446 @@ func TestTheBiggerOfTwoDealsIsMaterial(t *testing.T) {
 		if row.item.Level != want {
 			t.Fatalf("%q landed at level %d, wanted %d", row.item.Id, row.item.Level, want)
 		}
+	}
+}
+
+// Somebody waiting on a reply is the top of the day, above every decision and
+// every drifting deal. It is the one thing here whose cost of inaction falls on
+// somebody else.
+func TestAWaitingCustomerLeadsTheDay(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:     rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{item("decision", "approval", withKind("send_email"))},
+		AtRisk:   lane(item("drifting", "deal_at_risk", withDeal(500_000_00))),
+	}
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000aaaa"),
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-2 * 24 * time.Hour),
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{})
+
+	if out.Queue[0].Source != "customer_waiting" {
+		t.Fatalf("the day led with %q, not the customer who is waiting", out.Queue[0].Source)
+	}
+	if out.Queue[0].Consequence != "buyer_waits" {
+		t.Fatalf("a waiting customer says %q happens if ignored", out.Queue[0].Consequence)
+	}
+}
+
+// One unanswered message is ONE row. The deal it belongs to must not also
+// appear as drifting, or the rep is asked twice for the same reply.
+func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
+	deal := ids.MustParse("01a05500-0000-7000-8000-00000000bbbb")
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item(deal.String(), "deal_at_risk", withDeal(160_100_00))),
+	}
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000cccc"),
+		Since:      rankInstant.Add(-3 * 24 * time.Hour),
+		DealID:     deal,
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{})
+
+	if len(out.Queue) != 1 {
+		t.Fatalf("one unanswered message produced %d rows", len(out.Queue))
+	}
+	if out.Queue[0].Source != "customer_waiting" {
+		t.Fatalf("the surviving row was %q, wanted the waiting one", out.Queue[0].Source)
+	}
+}
+
+// The longer somebody has waited, the higher they sit — among people who are
+// all waiting, the forgotten one is the one at risk.
+//
+// Both waits are inside the ordering ceiling. Past it every wait ties on age by
+// design, so a fixture that straddled the cap would be asserting the tie-break
+// below age while claiming to test age.
+func TestTheLongestWaitLeadsAmongWaitingCustomers(t *testing.T) {
+	waiting := []WaitingCustomer{
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000a"), Since: rankInstant.Add(-2 * 24 * time.Hour)},
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000b"), Since: rankInstant.Add(-9 * 24 * time.Hour)},
+	}
+
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{})
+
+	if out.Queue[0].Id != "01a05500-0000-7000-8000-00000000000b" {
+		t.Fatal("the two-day wait outranked the eighty-three-day one")
+	}
+}
+
+// A message the reader may not read produces NO row.
+//
+// The earlier cut kept the row and removed only its subject, which still
+// published the wait, its timing and the record it was filed under — and let a
+// reader watch a row vanish to learn that a reply they may not see had arrived.
+// The content gate now decides whether the row exists, so this is a property of
+// the query and the store test holds it; here we hold the shape that depends on
+// it: every waiting row that arrives may state its subject.
+func TestEveryWaitingRowMayStateItsSubject(t *testing.T) {
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000eeee"),
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-24 * time.Hour),
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{})
+
+	if out.Queue[0].Title == nil || *out.Queue[0].Title != "Re: pricing" {
+		t.Fatal("a waiting row the content gate admitted lost its subject line")
+	}
+}
+
+// Under `mine`, a thread about a colleague's deal is that colleague's to
+// answer. A message filed under nothing stays: an unowned customer writing in
+// is everybody's, and dropping it would leave nobody looking at it.
+func TestAColleaguesWaitingCustomerLeavesTheReadersOwnQueue(t *testing.T) {
+	reader := ids.MustParse("01a05500-0000-7000-8000-000000000001")
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000ff")
+	theirDeal := ids.MustParse("01a05500-0000-7000-8000-00000000dea1")
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, UserID: reader,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	at := []crmcontracts.AttentionItem{dealItemOwned(theirDeal, colleague)}
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
+	waiting := []WaitingCustomer{
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000a1"), Since: rankInstant.Add(-time.Hour), DealID: theirDeal},
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000a2"), Since: rankInstant.Add(-time.Hour)},
+	}
+
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{})
+
+	for _, row := range out.Queue {
+		if row.Id == "01a05500-0000-7000-8000-0000000000a1" {
+			t.Fatal("a thread about a colleague's deal reached a queue scoped to the reader")
+		}
+	}
+	if len(out.Queue) == 0 {
+		t.Fatal("the unfiled message was dropped too, leaving nobody looking at it")
+	}
+}
+
+func dealItemOwned(deal, owner ids.UUID) crmcontracts.AttentionItem {
+	ownerID := openapi_types.UUID(owner)
+	dealID := openapi_types.UUID(deal)
+	return crmcontracts.AttentionItem{
+		Id:      deal.String(),
+		Source:  "deal_at_risk",
+		Subject: &crmcontracts.AttentionSubject{Type: "deal", Id: dealID},
+		Deal:    &crmcontracts.AttentionDealFacts{OwnerId: &ownerID},
+		Actions: []crmcontracts.AttentionItemActions{},
+	}
+}
+
+// A pile of alike questions is one row. On the real workspace this is 152
+// contact decisions and 545 held drafts — no ordering saves a reader who must
+// scroll past them to reach the next thing.
+func TestAPileOfAlikeDecisionsBecomesOneRow(t *testing.T) {
+	staged := []crmcontracts.AttentionItem{}
+	for i := 0; i < 40; i++ {
+		staged = append(staged, item(
+			"c"+string(rune('a'+i%26))+string(rune('0'+i/26)),
+			"approval", withKind("capture_counterparty")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
+
+	if len(got) != 1 {
+		t.Fatalf("forty alike decisions drew %d rows", len(got))
+	}
+	if got[0].Batch == nil || got[0].Batch.Count != 40 {
+		t.Fatal("the row does not say how many decisions it stands for")
+	}
+}
+
+// Contact questions split by what they are ABOUT, and the split is derived
+// from the STAGED PAYLOAD rather than fabricated here — a test that writes the
+// marker itself proves nothing about the code that writes it in production.
+func TestContactDecisionsSplitByWhatTheyAreAbout(t *testing.T) {
+	staged := []crmcontracts.Approval{}
+	for i := 0; i < 3; i++ {
+		staged = append(staged,
+			captureApproval("noreply@vendor.example"),
+			captureApproval("anna.weber@customer.example"))
+	}
+	items := make([]crmcontracts.AttentionItem, 0, len(staged))
+	for _, approval := range staged {
+		items = append(items, approvalItem(approval, func(address string) bool {
+			return strings.HasPrefix(address, "noreply@")
+		}))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: items}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
+
+	keys := map[crmcontracts.WorklistBatchKey]int{}
+	for _, row := range got {
+		if row.Batch != nil {
+			keys[row.Batch.Key] = row.Batch.Count
+		}
+	}
+	if keys["likely_automated"] != 3 {
+		t.Fatalf("the machine group holds %d, wanted 3", keys["likely_automated"])
+	}
+	if keys["uncertain_contact"] != 3 {
+		t.Fatalf("the remainder holds %d, wanted 3", keys["uncertain_contact"])
+	}
+}
+
+// A company match needs a lookup this assembler does not make. The only
+// company-ish field on the payload is the sender's own display name, which
+// capture labels untrusted and never-for-matching — so `Alice <alice@gmail.com>`
+// must not read as a company we know.
+func TestASendersOwnDisplayNameIsNotACompanyMatch(t *testing.T) {
+	approval := captureApproval("alice@gmail.com")
+	change := map[string]any{"email": "alice@gmail.com", "display_name": "Alice Example"}
+	approval.ProposedChange = &change
+
+	item := approvalItem(approval, func(string) bool { return false })
+
+	if item.Detail != nil && strings.Contains(*item.Detail, stagedKnownCompany) {
+		t.Fatal("a sender's own display name was taken for a company we know")
+	}
+}
+
+func captureApproval(email string) crmcontracts.Approval {
+	change := map[string]any{"email": email}
+	summary := "Is " + email + " a contact worth keeping?"
+	return crmcontracts.Approval{
+		Id:             openapi_types.UUID(ids.NewV7()),
+		Kind:           "capture_counterparty",
+		Summary:        &summary,
+		ProposedChange: &change,
+	}
+}
+
+// A decision that blocks a customer is never folded, however many of it there
+// are: each holds up somebody different, and the reader has to see each one.
+func TestADecisionThatBlocksACustomerIsNeverFolded(t *testing.T) {
+	staged := []crmcontracts.AttentionItem{}
+	for i := 0; i < 5; i++ {
+		staged = append(staged, item("s"+string(rune('a'+i)), "approval", withKind("send_email")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
+
+	if len(got) != 5 {
+		t.Fatalf("five customer-blocking decisions drew %d rows", len(got))
+	}
+}
+
+// Two alike questions are not a pile. A reader answers both faster than they
+// would open a group, and a "batch of 2" costs more than it saves.
+func TestTwoAlikeDecisionsStayThemselves(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("a", "approval", withKind("capture_counterparty")),
+			item("b", "approval", withKind("capture_counterparty")),
+		},
+	}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
+
+	if len(got) != 2 {
+		t.Fatalf("two decisions drew %d rows", len(got))
+	}
+}
+
+// The group names a few members, so a reader can check it before answering it.
+func TestABatchNamesSomeOfWhatItHolds(t *testing.T) {
+	staged := []crmcontracts.AttentionItem{}
+	for i := 0; i < 6; i++ {
+		row := item("d"+string(rune('a'+i)), "approval", withKind("capture_counterparty"))
+		title := "Is address " + string(rune('a'+i)) + " a contact?"
+		row.Title = &title
+		staged = append(staged, row)
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
+
+	if got[0].Batch.Sample == nil || len(*got[0].Batch.Sample) != 3 {
+		t.Fatal("the group names none of what it holds, so it cannot be checked")
+	}
+}
+
+// A hundred unanswered threads is a real backlog, and a page that is nothing
+// but them tells a rep their day holds no deals, tasks or decisions. The
+// longest-waiting few lead; the rest are demoted, never dropped.
+func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
+	waiting := []WaitingCustomer{}
+	// Every wait is LIVE — hours apart, none old enough to go stale. Crowding
+	// and staleness both move a row down the page, and a fixture that aged past
+	// the stale line would pass this test while proving the other rule.
+	for i := 0; i < 30; i++ {
+		waiting = append(waiting, WaitingCustomer{
+			ActivityID: ids.NewV7(),
+			Subject:    "Thread " + string(rune('a'+i%26)) + string(rune('0'+i/26)),
+			Since:      rankInstant.Add(-time.Duration(30-i) * time.Hour),
+		})
+	}
+	day := crmcontracts.Attention{
+		AsOf:    rankInstant,
+		Planned: []crmcontracts.AttentionItem{item("task", "task", withDue(rankInstant.Add(-time.Hour)))},
+	}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 100, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{})
+
+	// Every wait is still on the page, and every one still SAYS it is a wait.
+	// Rewriting the level of the ninth would tell the reader it was agreed work
+	// while its own row went on saying a buyer wrote last.
+	kept := 0
+	for _, row := range out.Queue {
+		if row.Source == "customer_waiting" {
+			kept++
+			if row.Level != levelWaiting {
+				t.Fatalf("a waiting customer was relabelled as level %d", row.Level)
+			}
+		}
+	}
+	if kept != 30 {
+		t.Fatalf("thirty waits produced %d rows — some were dropped", kept)
+	}
+	// What changes is only the ORDER: the overdue task is reachable rather than
+	// buried under the whole backlog.
+	for i, row := range out.Queue {
+		if row.Source == "task" && i > waitingLead {
+			t.Fatalf("the overdue task sat at position %d, below the whole backlog", i+1)
+		}
+	}
+}
+
+// The concept's clearest complaint: the product knew the buyer had written,
+// knew nobody had answered, and knew the answer was to draft a reply — and the
+// page said only "no contact for 83 days".
+func TestAWaitingRowNamesTheMessageAReplyWouldAnswer(t *testing.T) {
+	message := ids.NewV7()
+	waiting := []WaitingCustomer{{
+		ActivityID: message,
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-83 * 24 * time.Hour),
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(),
+		crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true},
+		leadRead{}, worklistCursor{})
+
+	move := out.Queue[0].Move
+	if move == nil {
+		t.Fatal("the row reports a wait and names no next step")
+	}
+	if move.Action != "draft_reply" {
+		t.Fatalf("the move is %q, wanted the reply", move.Action)
+	}
+	if ids.UUID(move.ActivityId) != message {
+		t.Fatal("the move names the wrong message, so a reply would answer the wrong thing")
+	}
+}
+
+// And the deal's money rides onto the row that absorbed it. A reader told a
+// customer is waiting still wants to know the deal is worth six figures.
+func TestAnAbsorbedDealKeepsItsMoneyOnTheWaitingRow(t *testing.T) {
+	deal := ids.NewV7()
+	amount := int64(160_100_00)
+	dealID := openapi_types.UUID(deal)
+	at := []crmcontracts.AttentionItem{{
+		Id:      deal.String(),
+		Source:  "deal_at_risk",
+		Subject: &crmcontracts.AttentionSubject{Type: "deal", Id: dealID},
+		Deal:    &crmcontracts.AttentionDealFacts{AmountMinor: &amount},
+		Actions: []crmcontracts.AttentionItemActions{},
+	}}
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.NewV7(),
+		Since:      rankInstant.Add(-3 * 24 * time.Hour),
+		DealID:     deal,
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{})
+
+	if len(out.Queue) != 1 {
+		t.Fatalf("one message about one deal produced %d rows", len(out.Queue))
+	}
+	if out.Queue[0].Deal == nil || out.Queue[0].Deal.AmountMinor == nil {
+		t.Fatal("the deal's money was lost when its row was absorbed")
+	}
+	if *out.Queue[0].Deal.AmountMinor != amount {
+		t.Fatalf("the row says %d, wanted the deal's own amount", *out.Queue[0].Deal.AmountMinor)
+	}
+}
+
+// A lane the feed renders and the queue never reads is a lane nobody sees: the
+// rows are the page, and an item that reaches no row reaches no reader. This is
+// the arm that would have caught an undelivered card rendered into a lane the
+// classifier walked straight past.
+func TestAGivenUpSendReachesTheQueueAndSaysWhatItCost(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:        rankInstant,
+		Undelivered: lane(item("u1", "undelivered")),
+		Bounces:     lane(item("b1", "bounce")),
+	}
+
+	rows := classifyDay(day, rankInstant, dayMoney{})
+
+	var undelivered, bounced *ranked
+	for i := range rows {
+		switch rows[i].item.Id {
+		case "u1":
+			undelivered = &rows[i]
+		case "b1":
+			bounced = &rows[i]
+		}
+	}
+	if undelivered == nil {
+		t.Fatalf("the undelivered lane produced no row; the queue carries %d row(s) and none of them is the send", len(rows))
+	}
+	// Not the bounce's consequence: nobody received this one because nobody
+	// was ever sent it, and the reader's move is to send it rather than to
+	// fix an address.
+	if undelivered.item.Consequence != crmcontracts.WorklistItemConsequence("you_believe_it_happened") {
+		t.Errorf("a send that never left says %q, want you_believe_it_happened", undelivered.item.Consequence)
+	}
+	if bounced == nil || bounced.item.Consequence == undelivered.item.Consequence {
+		t.Errorf("the two send failures read alike (%v), and they are not the same news", bounced)
+	}
+}
+
+// A money reason with no currency is not a smaller answer, it is no answer:
+// the client refuses to format a figure it cannot name the units of, so the
+// row would say "material" with the number silently dropped.
+func TestAMaterialDealCarriesTheCurrencyOfItsOwnAmount(t *testing.T) {
+	amount := int64(160_100_00)
+	currency := "EUR"
+	at := []crmcontracts.AttentionItem{{
+		Id:      ids.NewV7().String(),
+		Source:  "deal_at_risk",
+		Deal:    &crmcontracts.AttentionDealFacts{AmountMinor: &amount, Currency: &currency},
+		Actions: []crmcontracts.AttentionItemActions{},
+	}}
+
+	rows := classifyDay(crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}, rankInstant, dayMoney{})
+
+	var money *crmcontracts.WorklistValue
+	for _, row := range rows {
+		for _, because := range row.item.Because {
+			if because.Kind == "material" || because.Kind == "below_material" {
+				money = because.Value
+			}
+		}
+	}
+	if money == nil {
+		t.Fatal("a deal with a recorded amount gave its row no money reason")
+	}
+	if money.Currency == nil || *money.Currency != currency {
+		t.Fatalf("the amount travels as %v with currency %v, and the client drops a figure it cannot name the units of",
+			money.Minor, money.Currency)
 	}
 }

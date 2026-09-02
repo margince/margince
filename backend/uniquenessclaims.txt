@@ -31,9 +31,11 @@
 # is whatever this file holds, and a second copy of it drifts.
 #
 # Sorted, one key per line: <path>#<declaration>.
-
+../cli/craft/gate/anthropic.go#func NewAnthropicClient
+../cli/craft/main.go#func pinnedModel
 ../desktop/launcher/console.go#func say
 ../desktop/launcher/main.go#type stack
+../desktop/launcher/postgres.go#type cluster.connArgs
 cmd/api/configitems.go#const oauthAccessTokenTTLEnv
 cmd/api/resetruntime.go#func newResetLane
 cmd/worker/boot.go#func workerModelPathSpec
@@ -46,6 +48,7 @@ gates/edgereaders_test.go#const edgeTable
 gates/edgereaders_test.go#var edgeReaderScope
 gates/enumsync_test.go#func recordChecks
 gates/envcontract_test.go#func liveEnvVars
+gates/extensioncapabilitycensus_test.go#var surfaceConstants
 gates/fieldnames_test.go#const internalTree
 gates/geocodestaleness_test.go#var addressColumns
 gates/jobargscontent_test.go#func declaredArgsRationales
@@ -55,6 +58,8 @@ gates/manifestdigest_test.go#func committedManifests
 gates/manifestdigest_test.go#var manifestDigestEncoding
 gates/modulepoolsharing_test.go#var poolConstructors
 gates/netguardparity_test.go#func TestPublishedReservedNetsMatchTheGuard
+gates/outboundanonymity_test.go#func isDefaultClient
+gates/preferencecentrewriters_test.go#func TestThePreferenceCentreResolvesOnePrimaryAddress
 gates/replayscope_test.go#var replayScopeConsts
 gates/restrictedreaders_test.go#var activityReaderScope
 gates/tableownership_test.go#var tableOwners
@@ -65,12 +70,14 @@ internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes
 internal/compose/agentgatecanon.go#const keyBindsTheRetry
 internal/compose/agentgatestaging.go#func resolveStagedTarget
-internal/compose/agentsplit.go#const block at const opAddListMember
+internal/compose/agentsplit.go#const block at const opApplyTag
+internal/compose/agenttasks.go#const taskColumns
 internal/compose/aicert/record.go#type Record.Scenarios
 internal/compose/aicert/reportcmd/report.go#var reportColumns
 internal/compose/aicert/run.go#type runCalls
 internal/compose/aicert/scenario.go#const sourceHandAuthored
 internal/compose/approval_kinds_test.go#var exportedApprovalKinds
+internal/compose/attentionseam.go#const approvalStatusApproved
 internal/compose/backfilltransport.go#func backfillStatusPayload
 internal/compose/backfilltransport.go#func writeBackfillJSON
 internal/compose/bodyceilingcensus_test.go#var httpMethods
@@ -78,7 +85,6 @@ internal/compose/brain.go#type agentBrain
 internal/compose/captureautoenrich.go#func startAutoEnrichRead
 internal/compose/capturedomaintriage.go#func startDomainTriageRead
 internal/compose/captureofflinedemo.go#method offlineDemoDirectory.accounts
-internal/compose/captureverdict.go#func createCounterpartyRecords
 internal/compose/certcase_agentloop_window.go#type agentLoopToolWindow
 internal/compose/certcase_fieldextract.go#method fieldExtractCases.CertifiedScope
 internal/compose/certcase_ratefx_test.go#type fxCompleterStub
@@ -96,22 +102,27 @@ internal/compose/commsjobs.go#type deliveryDispatcher
 internal/compose/commsjobs.go#type mailboxSenders
 internal/compose/commsjobs.go#type seatResolver
 internal/compose/commsjobs_test.go#func TestSendEmailJobDeclaresAUsableLadder
+internal/compose/costestimate/estimator.go#func expectedUnits
 internal/compose/costestimate/rules.go#type unitRule
 internal/compose/csvfields.go#const fieldFullName
+internal/compose/datareset.go#type resetDataResponse
 internal/compose/datasweep.go#const credentialHandleSuffix
 internal/compose/dbhandle.go#func ProjectsStore
 internal/compose/dealstatus/grounding.go#func knownIDs
 internal/compose/deepread_integration_test.go#func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames
+internal/compose/deepreadprincipal.go#func withClaimedRequester
 internal/compose/deploymentsecretseal.go#func resolveSecret
 internal/compose/deploymentsecretseal.go#method vaultBinding.open
 internal/compose/dispatch.go#func fanOutChildren
 internal/compose/dispatcher.go#func overlayModeOf
+internal/compose/documentextract.go#func documentFieldOrder
 internal/compose/documentextract.go#func toModelField
 internal/compose/draftcheck/draftcheck.go#func allDirectedRelationshipPhrases
 internal/compose/export.go#func exportableColumns
 internal/compose/extensions.go#func preflightRetentionClasses
 internal/compose/extensions.go#var composedExtensions
 internal/compose/extensions.go#var composedSubscriptions
+internal/compose/extensions.go#var composedVerbs
 internal/compose/extensiontools.go#method extensionTool.OwningUnit
 internal/compose/extjobs.go#var composedJobs
 internal/compose/extjobs_integration_test.go#func TestAHumanSeatIsNotAcceptedAsAJobPrincipal
@@ -129,11 +140,11 @@ internal/compose/flipclaim.go#func flipLockKey
 internal/compose/flipsource.go#const block at const flipObjectOrganization
 internal/compose/flipstages.go#const block at const stageSemanticOpen
 internal/compose/gmailpush.go#func handleGmailPush
+internal/compose/handlers_extensions.go#method extensionsHandlers.ListExtensions
 internal/compose/heldrelease_integration_test.go#const draftRecipient
 internal/compose/idempotency.go#const replayWindow
 internal/compose/installation.go#func seedRoutingBinding
 internal/compose/integration/agentaccess/oauth_integration_test.go#method oauthEnv.postToken
-internal/compose/integration/agentaccess/oauth_lend_integration_test.go#method oauthEnv.approve
 internal/compose/integration/apptest/appdsn.go#func AppDSN
 internal/compose/integration/auditlog_integration_test.go#func TestAuditLogWithholdsALimitedActivitysImageFromOutsideItsAudience
 internal/compose/integration/channels/telegram_fixture_integration_test.go#method fakeTelegramAPI.sentMessages
@@ -141,6 +152,7 @@ internal/compose/integration/channels/telegram_fixture_integration_test.go#type 
 internal/compose/integration/channels/telegram_fixture_integration_test.go#type fakeTelegramAPI.sent
 internal/compose/integration/channels/telegram_identity_integration_test.go#func TestErasedSubjectsNextMessageIsAcceptedAndPersistsNothing
 internal/compose/integration/collections/linkedleaves_integration_test.go#method fixture.customerAndSupplier
+internal/compose/integration/declaredfilters_integration_test.go#func TestTheLeadListNarrowsToOneTeamAndToTheUnownedQueue
 internal/compose/integration/deploymentsecretseal_integration_test.go#func TestARotatedDeclarationIsResealed
 internal/compose/integration/deploymentsecretseal_integration_test.go#func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense
 internal/compose/integration/employment_dedupe_integration_test.go#func TestAnEmploymentPastItsLastDayStopsCountingAtTheAccount
@@ -154,6 +166,7 @@ internal/compose/integration/queryplan_integration_test.go#var queryObjects
 internal/compose/integration/recordhistory_http_integration_test.go#const recordHistoryFixtureRows
 internal/compose/integration/requiredbodyids_http_integration_test.go#func requiredIDCases
 internal/compose/integration/scheduledsend_integration_test.go#method preflightEnv.seedConsentedRecipient
+internal/compose/integration/searchenv.go#var searchObjects
 internal/compose/integration/seatmatrix_integration_test.go#func seededRoles
 internal/compose/integration/workflow_replay_integration_test.go#const block at const routeLeadHandler
 internal/compose/integration/writeauthorityreview_integration_test.go#func TestAReadShareOfADealCannotRewriteItsContracts
@@ -190,6 +203,7 @@ internal/compose/org360/pipelineread.go#type pipeline.Stalled
 internal/compose/org360/sections.go#func edgeScope
 internal/compose/org360/suggestionreads.go#func newestMessage
 internal/compose/org360/suggestions.go#func candidateSuggestions
+internal/compose/org360/suggestions.go#func ptrString
 internal/compose/orgbrief/ask.go#const askSystem
 internal/compose/orgbrief/ask.go#var askInstruction
 internal/compose/orgbrief/ask_test.go#func declaredQuestions
@@ -199,6 +213,7 @@ internal/compose/orgdossier/doc.go#package orgdossier
 internal/compose/orgdossier/input.go#func KnownRecords
 internal/compose/orgdossier/service.go#var knownNature
 internal/compose/orgnamepromotion_integration_test.go#func seedDossierName
+internal/compose/orgrollupread.go#type fxConverter
 internal/compose/overlay.go#const incumbentHubSpot
 internal/compose/overlayincumbent_refusing_integration_test.go#func refusals
 internal/compose/overlayread.go#const block at const paramSort
@@ -219,6 +234,7 @@ internal/compose/project360/sectionswork.go#var entityTypeProject
 internal/compose/queryseam.go#func queryRunner
 internal/compose/replydraft.go#type replyDrafter.envelope
 internal/compose/replydraftmodel.go#method replyDrafter.completeChecked
+internal/compose/report.go#const block at const colOwnerID
 internal/compose/report.go#method reportSpec.fromClause
 internal/compose/reportcatalog.go#func catalogFilterNames
 internal/compose/reporterrors.go#const block at const slotGroupBy
@@ -228,6 +244,7 @@ internal/compose/routeshadow_test.go#func pathParameters
 internal/compose/sendpath.go#func consentGateFor
 internal/compose/sendpath.go#func registerLateApprovalEffects
 internal/compose/sendpreflight_test.go#func sendCapableCases
+internal/compose/sendvoiceoutcome_integration_test.go#type witnessDraftOutcome
 internal/compose/serverassembly.go#func NewCollectionsStore
 internal/compose/serveroptions.go#func WithMCPResource
 internal/compose/serveroptions_schema.go#func WithDataResetAvailable
@@ -247,15 +264,18 @@ internal/compose/telegrampollscope.go#func telegramRawSourceID
 internal/compose/transcriptproposetransport.go#func TranscriptReadOnLanding
 internal/modules/activities/activity.go#const block at const fieldKind
 internal/modules/activities/activitylinks.go#func insertActivityLinks
+internal/modules/activities/activityread.go#func scanActivity
 internal/modules/activities/attachment.go#func resolveAttachmentParent
 internal/modules/activities/channelsend.go#method outboundChannelMessage.activity
 internal/modules/activities/email.go#const sourceManual
 internal/modules/activities/handlers_email.go#func DeterministicEmailDraft
 internal/modules/activities/handlers_email.go#func IsMailThread
 internal/modules/activities/handlers_email.go#func writeSendOutcome
+internal/modules/activities/handlers_email.go#method Handlers.SendAccountEmail
 internal/modules/activities/lasttouch.go#method Store.LastTouchBefore
 internal/modules/activities/linktarget.go#var linkIDCoalesce
 internal/modules/activities/mapping.go#const fieldBody
+internal/modules/activities/messageidentity.go#const sourceIDImage
 internal/modules/activities/messageidentity.go#func copyEchoLinks
 internal/modules/activities/messageidentity_absorb_integration_test.go#func TestAbsorbLeavesTheEchosProjectLinkBehindWhenTheSurvivorHasOne
 internal/modules/activities/orgscope.go#func ActivityWithinProject
@@ -272,8 +292,8 @@ internal/modules/activities/scheduledsendstore.go#const scheduledSendStatusExpr
 internal/modules/activities/scheduling.go#const block at const businessDayStartHour
 internal/modules/activities/scheduling.go#var block at var errAvailabilityToNotAfterFrom
 internal/modules/activities/transcript_integration_test.go#func TestUpdateActivityNormalizesATranscriptBody
+internal/modules/activities/transcriptnorm.go#func transcriptLines
 internal/modules/activities/unsubscribe.go#func listUnsubscribeHeader
-internal/modules/activities/unsubscribe.go#func unsubscribeURL
 internal/modules/activities/unsubscribe.go#method Store.deliverability
 internal/modules/agents/approvals.go#func pinForWrite
 internal/modules/agents/apps/apps.go#const block at const AccountBriefURI
@@ -290,6 +310,7 @@ internal/modules/agents/conformance_test.go#func TestReadOnlyIsDerivedFromTheEnf
 internal/modules/agents/dispatch.go#const block at const jsonRPCVersion
 internal/modules/agents/dispatch.go#type rpcErrorData
 internal/modules/agents/modern.go#const block at const codeParseError
+internal/modules/agents/modern.go#const block at const metaProtocolVersion
 internal/modules/agents/modern.go#func supportedProtocolVersions
 internal/modules/agents/modernextensions.go#func declaresExtension
 internal/modules/agents/outputshapes.go#const block at const schemaObject
@@ -319,9 +340,11 @@ internal/modules/ai/railemit_test.go#func TestADegradedCallSaysWhyEvenWithNoSent
 internal/modules/ai/routing.go#method RoutingConfig.BoundModelIDsByProvider
 internal/modules/ai/selectbrain.go#var knownProviders
 internal/modules/ai/sovereignendpoint_test.go#func TestABracketedIPv6EndpointIsAccepted
+internal/modules/ai/voice_sendoutcome_integration_test.go#func TestRecordSendOutcomeCannotReachAnotherWorkspacesSignal
 internal/modules/ai/voicecorpus.go#const CorpusMeterVersion
 internal/modules/aiactivity/handler.go#var eventType
 internal/modules/aiactivity/store.go#method Change.args
+internal/modules/approvals/authority.go#const objectActivity
 internal/modules/approvals/decide.go#method Service.runDecisionEffect
 internal/modules/approvals/evidence.go#func validateEvidence
 internal/modules/approvals/expiresweep.go#method Service.ExpireDue
@@ -330,6 +353,7 @@ internal/modules/approvals/inbox.go#func approvalWhere
 internal/modules/approvals/stageagentcall.go#method Service.StageAgentCall
 internal/modules/approvals/staging.go#func withCanonicalIdentity
 internal/modules/approvals/targetvisibility.go#func targetDecidable
+internal/modules/automation/automations_catalog_renewal.go#func RenewalReminderObjects
 internal/modules/automation/automations_preview.go#const previewBaseWhereNotArchived
 internal/modules/automation/engine.go#const systemSource
 internal/modules/automation/handlers_clock.go#func renewalAnchor
@@ -344,25 +368,29 @@ internal/modules/capture/channelconnfixture_test.go#method countingVault.mintedR
 internal/modules/capture/channelconnfixture_test.go#method fakeTelegram.clearedWebhooks
 internal/modules/capture/channelsend.go#method Registry.liveChannelBindings
 internal/modules/capture/freemaildomain.go#const block at const auditKeyDomain
-internal/modules/capture/gcal/event.go#type meeting.addresses
 internal/modules/capture/gmail/send.go#method Connector.stampedIdentity
 internal/modules/capture/lifecycleaudit.go#func connectionAuditImage
+internal/modules/capture/mailmap/htmltext.go#func linkText
 internal/modules/capture/mailmap/mailmap.go#method Message.Addresses
 internal/modules/capture/mailmap/mailmap.go#type Message.addresses
 internal/modules/capture/oauthflow/oauthflow.go#package oauthflow
 internal/modules/capture/offlinedemo/locale.go#const block at const threadKickoff
 internal/modules/capture/offlinedemo/locale.go#type templateWords
 internal/modules/capture/pending.go#func normalizeEmail
+internal/modules/capture/rawcapture.go#func InsertRawCaptureTx
 internal/modules/capture/registry_connections.go#const sendableConnection
 internal/modules/capture/sink.go#const fieldError
 internal/modules/capture/sinkchannel.go#func admitCounterpartyShape
+internal/modules/capture/sinkraw.go#const RawCaptureBase64Encoding
 internal/modules/capture/telegram/api.go#func classify
 internal/modules/capture/telegram/api.go#method httpAPI.callWith
 internal/modules/capture/telegram/connector.go#const CapturedByTelegram
 internal/modules/capture/telegram/send.go#const ProviderName
 internal/modules/capture/telegram/sendfiles.go#func declaredType
 internal/modules/capture/telegram/sendfiles.go#func partName
+internal/modules/capture/traceladder.go#func holdsSharedChannelGrant
 internal/modules/capture/traceladder.go#type TraceLadder
+internal/modules/collections/handlers.go#func NewHandlers
 internal/modules/collections/savedviews.go#const block at const viewFilterKey
 internal/modules/collections/vocab.go#const projectEntity
 internal/modules/collections/vocab.go#const tagFilterField
@@ -388,11 +416,13 @@ internal/modules/contracts/store.go#const contractColumns
 internal/modules/contracts/visibility.go#func VisibleClause
 internal/modules/customfields/create.go#func marshalOptions
 internal/modules/customfields/create.go#func unmarshalOptions
+internal/modules/customfields/engine.go#const codeUnsupportedObject
 internal/modules/customfields/engine.go#func quoteIdentifier
 internal/modules/customfields/engine.go#type FieldSpec
 internal/modules/customfields/engine.go#var FieldObjects
 internal/modules/customfields/privilege_boundary_test.go#func isStorekitAuditCall
 internal/modules/customfields/service.go#const catalogColumns
+internal/modules/dealrooms/document_read.go#const inTheDealsFilesArea
 internal/modules/dealrooms/document_read.go#func documentIDOf
 internal/modules/dealrooms/errors.go#const block at const codeTooLong
 internal/modules/dealrooms/errors.go#const codeRequired
@@ -407,16 +437,15 @@ internal/modules/deals/store.go#const block at const listCreatedAtColumn
 internal/modules/finance/audit.go#const block at const entityInvoice
 internal/modules/identity/authority.go#func RBACObjectGrantable
 internal/modules/identity/handlers_roster.go#func rosterUserMapping
+internal/modules/identity/installation.go#func slugify
+internal/modules/identity/installationsettings.go#method InstallationSettingsStore.UpdateInstallation
 internal/modules/identity/internal/policy/composable_test.go#func reset
 internal/modules/identity/nonproduction.go#method Handlers.WithDataResetAvailable
 internal/modules/identity/oauth_audience.go#func audienceMatches
-internal/modules/identity/oauth_consent.go#const lendablePassportPredicate
 internal/modules/identity/oauth_consentnonce.go#func setConsentCookie
 internal/modules/identity/oauth_consentscreen.go#func redirectToConsentScreen
 internal/modules/identity/oauth_discovery.go#func requestIssuer
 internal/modules/identity/oauth_grant.go#func oauthPassportLabel
-internal/modules/identity/oauth_lend_lock_integration_test.go#func lockWaitBoundedService
-internal/modules/identity/oauth_lockorder_integration_test.go#method revocationEnv.connectOAuthLent
 internal/modules/identity/oauth_redirect.go#var responseParams
 internal/modules/identity/oauth_refresh.go#var errRefreshRejected
 internal/modules/identity/oauth_token.go#func writeTokenResponse
@@ -425,6 +454,7 @@ internal/modules/identity/passport.go#func auditPassportRevoked
 internal/modules/identity/passport.go#func mintPassport
 internal/modules/identity/passport.go#var passportScopeVocabulary
 internal/modules/identity/passwordlink.go#func passwordLink
+internal/modules/identity/rbacobjects.go#func RegisterRbacObjects
 internal/modules/identity/roles.go#method Service.ListRoles
 internal/modules/identity/seatusage.go#const fullSeatsInUseQuery
 internal/modules/identity/service.go#func passwordLengthError
@@ -446,11 +476,14 @@ internal/modules/overlay/hubspot/mapping_hs.go#const industryField
 internal/modules/overlay/hubspot/mapping_hs.go#const unmappedPolicyFlag
 internal/modules/overlay/incumbent.go#const block at const IncumbentClassContacts
 internal/modules/overlay/mirrorstore.go#const ingestSQL
+internal/modules/overlay/mirrorstore.go#method MirrorStore.Ingest
 internal/modules/overlay/provider_writeback_integration_test.go#const writebackOwner
 internal/modules/overlay/reconcilefloor.go#func reconcileFloor
 internal/modules/overlay/teardown.go#func RevertToNative
 internal/modules/overlay/usermapadmin.go#func auditRevokedMappings
+internal/modules/overlay/usermapadmin.go#method MirrorStore.SetManualUserMap
 internal/modules/overlay/usermapservice.go#func requireUserMapAdmin
+internal/modules/people/company.go#const block at const fieldOfferSummary
 internal/modules/people/companysitereadcomparison.go#func PrintedSiteReadValue
 internal/modules/people/domainadmission.go#func reopenAdmittedDomainTx
 internal/modules/people/employmentedge.go#const relationshipOriginCapture
@@ -459,6 +492,7 @@ internal/modules/people/geocode.go#var organizationAddressColumns
 internal/modules/people/handlers_projectstakeholder.go#const block at const ProjectStakeholderKind
 internal/modules/people/lead_list.go#const block at const leadNameColumn
 internal/modules/people/lead_read.go#const liveOnlyClause
+internal/modules/people/leadmanualsignal.go#func manualSignalImage
 internal/modules/people/leadstatus.go#method LeadStatus.Open
 internal/modules/people/linkedinmatch.go#method Store.MatchLinkedInConnections
 internal/modules/people/linkedinmatch.go#var suggestNameEmployerMatchSQL
@@ -467,7 +501,10 @@ internal/modules/people/linkedinrenormalize.go#func matchRank
 internal/modules/people/linkedinrenormalize.go#var matchRankOrder
 internal/modules/people/listfilters.go#const block at const filterOwnerID
 internal/modules/people/listpage.go#func aiWrittenClause
+internal/modules/people/merge.go#const targetIDField
 internal/modules/people/organization_profile_field_write.go#const block at const auditKeyValue
+internal/modules/people/partner.go#method Store.MarginTierOf
+internal/modules/people/personarchive.go#func archivePersonRows
 internal/modules/people/projectstakeholder.go#method Store.PersonNames
 internal/modules/people/provider.go#func pageOf
 internal/modules/people/relationship_conflict_test.go#func TestRelationshipUniquenessRefusalKeepsBothTheSentinelAndTheConstraint
@@ -477,7 +514,11 @@ internal/modules/people/resolvecreate.go#type OrgSpec
 internal/modules/people/resolvecreate.go#type PersonSpec
 internal/modules/people/store.go#type Store.consumerMail
 internal/modules/people/strength.go#func personScopePredicate
+internal/modules/privacy/auditfilter_test.go#func TestEveryPublishedAuditFilterReachesTheStore
 internal/modules/privacy/auditlog.go#const auditContentStateKey
+internal/modules/privacy/auditlog.go#func ScrubNewerThanRowSQL
+internal/modules/privacy/erasure.go#const block at const evidenceKeyCause
+internal/modules/privacy/erasure_approvals.go#const subjectApprovalMatch
 internal/modules/privacy/fieldhistory.go#const entityTypeActivity
 internal/modules/privacy/handlers_restriction.go#type qualifyingRecordWire
 internal/modules/privacy/legalholdarms_test.go#func activityHoldSelectors
@@ -496,6 +537,7 @@ internal/modules/projects/keymint.go#const projectKeyField
 internal/modules/projects/keymint.go#func mintProjectKey
 internal/modules/projects/listfilters.go#const block at const filterKey
 internal/modules/projects/project.go#const projectObject
+internal/modules/search/binding.go#const systemPrincipalID
 internal/modules/search/binding.go#func releaseReembeddingTx
 internal/modules/search/binding.go#method Store.SeedBinding
 internal/modules/search/embedgen.go#const block at const entityPerson
@@ -520,6 +562,7 @@ internal/modules/signals/signal.go#func OfOrganizationWhere
 internal/modules/signals/warmroom.go#func RankRouteIn
 internal/modules/signals/warmroom.go#func RouteInEdges
 internal/modules/webhooks/store.go#const fieldEventTypes
+internal/platform/agentquota/counter.go#func CounterFor
 internal/platform/agentquota/meter_test.go#var governedCounters
 internal/platform/auth/capturePrivacyCoverage_test.go#func TestEveryTableThatCanHoldAnOwnerRowIsOwnerPrivate
 internal/platform/auth/edgeread.go#const relationshipObject
@@ -531,9 +574,12 @@ internal/platform/auth/linkscope.go#const block at const tablePerson
 internal/platform/auth/rbac.go#func UpsertAction
 internal/platform/auth/rbac.go#func refuseBuyer
 internal/platform/auth/rowscope.go#var ownerPrivateTables
+internal/platform/auth/writescope.go#const grantAccessWrite
 internal/platform/cliflags/cliflags.go#method Env.Items
 internal/platform/database/statementbudget.go#func BoundStatement
+internal/platform/database/storekit/claim.go#func ClaimOwnership
 internal/platform/database/storekit/customcolumns.go#func quoteColumnIdentifier
+internal/platform/database/storekit/patch.go#func PlainDate
 internal/platform/database/storekit/predicate.go#func ReferenceTargets
 internal/platform/database/storekit/query.go#method Query.CountMatching
 internal/platform/database/storekit/sqlstate.go#const block at const pgUniqueViolation
@@ -543,11 +589,14 @@ internal/platform/database/storekit/storekit.go#package storekit
 internal/platform/events/dedupe.go#const DedupeKeyPrefix
 internal/platform/events/relay.go#func ClientOptions
 internal/platform/extsecrets/store.go#package extsecrets
+internal/platform/extsecrets/store_integration_test.go#func TestSecretsUserScopeRefusesAnUnknownUser
 internal/platform/httperr/decoderefusal.go#func fieldDecodeRefusal
 internal/platform/httperr/decoderefusal_test.go#var block at var intoAdvanceDeal
 internal/platform/httperr/decoderefusal_test.go#var decodeRefusalCases
 internal/platform/httperr/faulttest/faulttest.go#package faulttest
 internal/platform/httperr/httperr.go#func Classify
+internal/platform/httperr/httperr.go#type DetailedError.Fields
+internal/platform/httperr/wire.go#const codeBodyTooLarge
 internal/platform/jobs/composed.go#var composed
 internal/platform/jobs/fault.go#func faultFor
 internal/platform/jobs/fault.go#func faultLogAttrs
@@ -558,6 +607,8 @@ internal/platform/jobs/faultreschedule_test.go#var transientClass
 internal/platform/jobs/spec.go#func DeclaredQueues
 internal/platform/jobs/stats.go#const sweepTagPredicate
 internal/platform/jobs/stats.go#type StateRow.Untenanted
+internal/platform/settings/entry.go#const CodeInvalidValue
+internal/platform/settings/store.go#type Store
 internal/platform/testdb/dropschema.go#const unreferencedTables
 internal/platform/testdb/redis.go#func RedisDB
 internal/platform/testdb/reset.go#const resetTables
@@ -565,6 +616,7 @@ internal/platform/testdb/river.go#func EnsureRiverSchema
 internal/shared/buildinfo/buildinfo.go#var ReleaseVersion
 internal/shared/gatekit/scope.go#method Scope.normalizedRoots
 internal/shared/kernel/draftfloor/envelope.go#func langOrDefault
+internal/shared/kernel/events/catalog.go#const streamOverlay
 internal/shared/kernel/pipelinetrace/registry.go#func FunnelStages
 internal/shared/kernel/principal/principal.go#const HumanIDPrefix
 internal/shared/kernel/promptfence/promptfence.go#func FromMarker
@@ -612,8 +664,10 @@ tools/gen-composition/astreader_subscriptions.go#method unitReader.readSubscript
 tools/gen-composition/astreader_subscriptions_test.go#func TestSubscriptionRulesAreThePublishedOnes
 tools/gen-composition/astreader_test.go#func TestPackageInitIsRejected
 tools/gen-composition/astreadertools.go#method unitReader.readHandle
+tools/gen-composition/contracts.go#const apiLayer
 tools/gen-composition/emit.go#func composedWork
 tools/gen-composition/emit.go#type composition.Files
+tools/gen-composition/extfrontend_test.go#func TestCollectUnitFrontendRefusesAnEntryPointOutsideTheLayer
 tools/gen-composition/extmigrations.go#func derivedIdentifier
 tools/gen-composition/extverbs.go#const extensionRoutePrefix
 tools/gen-composition/extverbs.go#func operationHash

@@ -73,6 +73,11 @@ type SARPackage struct {
 	// rather than given by them, which is precisely the holding Art. 15(1)(g)
 	// makes the SOURCE of disclosable too.
 	ProviderClaims []map[string]any `json:"provider_claims"`
+	// ProviderAppliedFields is what those purchases put ON the record: which
+	// field each run filled, and for a plain column the value it wrote. A
+	// subject asking what we hold is owed the fact that a purchase changed
+	// their record, not only that we made one.
+	ProviderAppliedFields []map[string]any `json:"provider_applied_fields"`
 	// ProviderRuns is why and when that purchase happened: which provider was
 	// asked, what was requested, what came back. Art. 15(1)(a)-(d) asks for
 	// the purposes and the categories, and a values-only export would answer

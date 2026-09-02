@@ -68,6 +68,21 @@ var selfOnlyEvents = map[string]struct{}{
 	// subscription owner would tell colleagues who was notified of what.
 	"notice.created": {},
 	"notice.read":    {},
+	// A weekly plan is one rep's own — what they mean to do and what they say
+	// they are stuck on. Its entity is `user`, which is workspace-level, so
+	// without this the fan-out would tell every subscription owner that a
+	// colleague had asked for help.
+	//
+	// This admits the OWNER only, so a lead does not receive their rep's plan
+	// events either. That is the right default: a lead reads the plan through
+	// the endpoint that gates on their shared team, and a webhook has no such
+	// gate to apply.
+	"weekly_plan.updated":        {},
+	"weekly_plan.help_requested": {},
+	// What a member chose about their own inbox. Its entity is `user`, which is
+	// workspace-level, so without this the fan-out would tell every
+	// subscription owner which colleagues had switched their mail off.
+	"user_delivery.changed": {},
 }
 
 var workspaceLevelEntities = map[string]struct{}{

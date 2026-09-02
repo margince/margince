@@ -9,7 +9,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -22,8 +21,13 @@ import (
 // the TERMINAL no-record outcomes qualify (captured without a counterparty,
 // suppressed); a deferred sender may still be admitted and linked later, and
 // a connector-supplied link keeps the row readable through that record.
-func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, decision counterpartyDecision) error {
-	if decision.create || len(rec.Links) > 0 {
+// derivedLinks is what a link writer inside THIS transaction actually wrote —
+// a captured meeting filed under the people who were in it. It is a count of
+// links written rather than attempted, because this write is deterministic: a
+// row claimed to be linked and left unlinked would be workspace-readable with
+// nothing filing it anywhere.
+func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, decision counterpartyDecision, derivedLinks int) error {
+	if decision.create || len(rec.Links) > 0 || derivedLinks > 0 {
 		return nil
 	}
 	if decision.traceOutcome != TraceCaptured && decision.traceOutcome != TraceSuppressed {
@@ -35,7 +39,13 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 	// No inequality guard: with mail sharing off the row was BORN
 	// participants-only, and a pin that then matched zero rows would abort
 	// the capture of a message that is already exactly as held as asked.
-	tag, err := tx.Exec(ctx, `UPDATE activity SET audience = $2 WHERE id = $1`, id, audienceParticipants)
+	// The reason travels with the hold. The audience derivation runs after this
+	// and would otherwise see a participants-only row that no import row asks
+	// for, and widen it back — the reason is how a hold placed for something
+	// other than a mailbox's posture survives being recomputed.
+	tag, err := tx.Exec(ctx,
+		`UPDATE activity SET audience = $2, audience_reason = $3 WHERE id = $1`,
+		id, audienceParticipants, audienceReasonNoRecord)
 	if err != nil {
 		return fmt.Errorf("capture: limiting a link-less message to its participants: %w", err)
 	}
@@ -49,24 +59,33 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 // is held in (platform/auth ActivityContentClause names the arms).
 const audienceParticipants = "participants"
 
-// capturedAudience answers the audience a freshly captured activity is born
-// with. Mail sharing ON (the default) births an email workspace-readable —
-// the point of capturing into a shared CRM. Switched OFF, an email is held to
-// its participants and the capturing mailbox owner from the moment it lands;
-// the setting moves the default for NEW mail only, and non-mail kinds
-// (meetings, channel messages) keep the workspace default either way.
-func capturedAudience(ctx context.Context, tx pgx.Tx, kind string) (string, error) {
-	if kind != "email" {
-		return audienceWorkspace, nil
-	}
-	sharing, err := settings.ApplyTx(ctx, tx, MailSharing)
-	if err != nil {
-		return "", fmt.Errorf("capture: reading the mail-sharing posture: %w", err)
-	}
-	if sharing {
-		return audienceWorkspace, nil
-	}
-	return audienceParticipants, nil
-}
+// The reasons this module stamps on a held message, mirroring the constants of
+// the same names in activities.
+//
+// Two copies because a module never imports a sibling: capture WRITES these
+// words and activities READS them, and a drift on either side silently un-holds
+// mail — the derivation stops recognising the hold, finds no contributor asking
+// for one, and widens the row. TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay
+// drives the sink and compares what it stamped against the activities constants,
+// so it fails from either side.
+const (
+	// The mailbox asked for it, and a verdict on the thread can clear it.
+	audienceReasonPosture = "posture"
+	// Nothing has judged the thread yet.
+	audienceReasonPendingVerdict = "pending_verdict"
+	// The message is filed under no record at all.
+	audienceReasonNoRecord = "no_record"
+	// The workspace turned mail sharing off. No verdict clears this one.
+	audienceReasonWorkspaceFloor = "workspace_floor"
+	// This seat holds mail with one of the parties, whatever it is about.
+	audienceReasonCounterparty = "counterparty"
+	// The sender said so in the subject line.
+	audienceReasonConfidentialMarker = "explicitly_confidential"
+	// The thread already carried a holding verdict — a classifier's, or the
+	// owner's own. Never the audience's DECIDING reason, because a holding
+	// verdict already narrows through verdict_status; recorded so a widening
+	// can tell "held only by a counterparty hold" from "held anyway".
+	audienceReasonInheritedVerdict = "inherited_verdict"
+)
 
 const audienceWorkspace = "workspace"

@@ -247,7 +247,7 @@ func TestEnsureCounterpartyQuarantinesImpersonationSuspects(t *testing.T) {
 	}
 }
 
-func TestApplySignatureFieldsWithdrawsEvidenceWhenTheFillLosesItsRace(t *testing.T) {
+func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
@@ -259,8 +259,9 @@ func TestApplySignatureFieldsWithdrawsEvidenceWhenTheFillLosesItsRace(t *testing
 	}
 	personID := ids.From[ids.PersonKind](ids.UUID(person.Id))
 
-	// Occupy the title after candidate selection would have seen it
-	// empty — the guarded fill must lose and withdraw its evidence.
+	// A title somebody typed. The contact's own signature, read from a message
+	// dated after it, replaces it — that is the rule this pass now carries, and
+	// the typed value is kept where a reader can put it back.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE person SET title = 'Human-set CTO' WHERE id = $1`, personID)
 		return err
@@ -275,32 +276,34 @@ func TestApplySignatureFieldsWithdrawsEvidenceWhenTheFillLosesItsRace(t *testing
 	if err != nil {
 		t.Fatalf("ApplySignatureFields: %v", err)
 	}
-	if res.Applied != 0 || res.Skipped != 2 {
-		t.Fatalf("apply = %+v, want 0 applied / 2 skipped", res)
+	if res.Applied != 1 || res.Skipped != 1 {
+		t.Fatalf("apply = %+v, want 1 applied (the newer statement) / 1 skipped (the blank)", res)
 	}
 	var title string
-	var evidenceRows int
+	var superseded *string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `SELECT title FROM person WHERE id = $1`, personID).Scan(&title); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `SELECT count(*) FROM person_profile_field WHERE person_id = $1`, personID).Scan(&evidenceRows)
+		return tx.QueryRow(ctx,
+			`SELECT superseded_value FROM person_profile_field WHERE person_id = $1 AND field = 'title'`,
+			personID).Scan(&superseded)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if title != "Human-set CTO" {
-		t.Fatalf("title = %q — the occupied value must never be touched", title)
+	if title != "AI CTO" {
+		t.Fatalf("title = %q — the contact's later statement must replace what was typed", title)
 	}
-	if evidenceRows != 0 {
-		t.Fatalf("%d evidence rows persisted for an unapplied fill, want 0", evidenceRows)
+	if superseded == nil || *superseded != "Human-set CTO" {
+		t.Fatalf("superseded_value = %v, want the typed title: a replacement nobody can undo is a deletion", superseded)
 	}
 
-	// Same race on the phone lane: an existing phone keeps its place and
-	// the evidence is withdrawn.
+	// The phone lane is a LIST, so a number stated later takes the place of the
+	// one it replaces and the replaced row is archived rather than dropped.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO person_phone (person_id, phone, phone_type, is_primary, position, source, captured_by)
-			VALUES ($1, '+49 30 9999999', 'work', true, 0, 'manual', 'human:test')`, personID)
+			INSERT INTO person_phone (person_id, phone, phone_type, is_primary, position, source, captured_by, observed_at)
+			VALUES ($1, '+49 30 9999999', 'work', true, 0, 'manual', 'human:test', now() - interval '30 days')`, personID)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -311,23 +314,44 @@ func TestApplySignatureFieldsWithdrawsEvidenceWhenTheFillLosesItsRace(t *testing
 	if err != nil {
 		t.Fatalf("phone apply: %v", err)
 	}
-	if res.Applied != 0 || res.Skipped != 1 {
-		t.Fatalf("phone apply = %+v, want 0 applied / 1 skipped", res)
+	if res.Applied != 1 {
+		t.Fatalf("phone apply = %+v, want 1 applied: the signature states a newer number", res)
+	}
+	var live, archived string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx,
+			`SELECT phone FROM person_phone WHERE person_id = $1 AND archived_at IS NULL`,
+			personID).Scan(&live); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx,
+			`SELECT phone FROM person_phone WHERE person_id = $1 AND archived_at IS NOT NULL`,
+			personID).Scan(&archived)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if live != "+49301234567" || archived != "+49 30 9999999" {
+		t.Fatalf("live = %q, archived = %q — the newer number rings and the older one stays recoverable", live, archived)
 	}
 
-	// A sidecar-only field applies cleanly, and a second verdict for the
-	// same field defers to the first (one row per person+field, forever).
-	res, err = e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{
-		{Name: "role", Value: "Decision maker", Evidence: "CTO", Confidence: 0.7},
+	// A statement OLDER than the one on the record changes nothing: mail is
+	// re-delivered, and a replay must not walk a value backwards.
+	res, err = e.store.ApplySignatureFields(ctx, personID, e.agedSignatureSource(ctx, t), []SignatureField{
+		{Name: "title", Value: "Stale Title", Evidence: "Stale Title", Confidence: 0.9},
 	})
-	if err != nil || res.Applied != 1 {
-		t.Fatalf("role apply = %+v (err %v), want 1 applied", res, err)
+	if err != nil {
+		t.Fatalf("aged apply: %v", err)
 	}
-	res, err = e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{
-		{Name: "role", Value: "Champion", Evidence: "CTO again", Confidence: 0.9},
-	})
-	if err != nil || res.Applied != 0 || res.Skipped != 1 {
-		t.Fatalf("second role verdict = %+v (err %v), want skipped (first verdict wins)", res, err)
+	if res.Applied != 0 || res.Skipped != 1 {
+		t.Fatalf("aged apply = %+v, want 0 applied: an older statement never wins", res)
+	}
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT title FROM person WHERE id = $1`, personID).Scan(&title)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if title != "AI CTO" {
+		t.Fatalf("title = %q after an older statement, want the newer one to stand", title)
 	}
 
 	if res, err = e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), nil); err != nil || res.Applied != 0 || res.Skipped != 0 {

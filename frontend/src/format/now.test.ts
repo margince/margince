@@ -2,7 +2,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../i18n";
-import { formatCountdown, useNow } from "./now";
+import { formatCountdown, formatElapsed, useNow } from "./now";
 
 // Task 9 (AC-7 groundwork): useNow/formatCountdown feed Task 10's live
 // expiry countdown. No real clock in tests (craft T11) — vi.useFakeTimers()
@@ -71,5 +71,46 @@ describe("useNow (interval clock)", () => {
     expect(result.current).toBe(4000);
 
     unmount();
+  });
+});
+
+// formatElapsed is formatCountdown's other direction — how long AGO — and it
+// drives the AI page's "last call" line. Every boundary is pinned because the
+// unit it picks is the whole answer: a span that reads "1 h ago" when it is a
+// day old tells an operator the runtime is healthy.
+describe("formatElapsed (pure)", () => {
+  it("floors under a minute to just now", () => {
+    expect(formatElapsed(0, t, "en")).toBe("just now");
+    expect(formatElapsed(59_999, t, "en")).toBe("just now");
+  });
+
+  it("crosses into minutes at exactly one", () => {
+    expect(formatElapsed(60_000, t, "en")).toBe("1 min ago");
+    expect(formatElapsed(59 * 60_000, t, "en")).toBe("59 min ago");
+  });
+
+  it("crosses into hours at exactly one", () => {
+    expect(formatElapsed(60 * 60_000, t, "en")).toBe("1 h ago");
+    expect(formatElapsed(23 * 60 * 60_000, t, "en")).toBe("23 h ago");
+  });
+
+  it("crosses into days at exactly one", () => {
+    expect(formatElapsed(24 * 60 * 60_000, t, "en")).toBe("1 d ago");
+    expect(formatElapsed(9 * 24 * 60 * 60_000, t, "en")).toBe("9 d ago");
+  });
+
+  // Two machines disagreeing about the clock, not an event in the future. A
+  // negative age would read as one, so the floor holds on both sides of zero.
+  it("reads a stamp from the future as just now rather than a negative age", () => {
+    expect(formatElapsed(-1, t, "en")).toBe("just now");
+    expect(formatElapsed(-90_000, t, "en")).toBe("just now");
+  });
+
+  // One unit, never two: this is read to decide whether a figure is current,
+  // and the second unit buys nothing for that question.
+  it("names one unit only", () => {
+    expect(formatElapsed(25 * 60 * 60_000 + 42 * 60_000, t, "en")).toBe(
+      "1 d ago",
+    );
   });
 });

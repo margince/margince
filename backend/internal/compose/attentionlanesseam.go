@@ -17,16 +17,16 @@ package compose
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -86,12 +86,17 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 // disagree about which deals are in trouble. Only the patience differs, and it
 // is named here rather than buried: a queue exists to warn, and the stalled
 // threshold is a status rather than a warning.
-type attentionAtRisk struct{ lister agents.SlippingLister }
+// The depth-reporting scanner, not the plain SlippingLister: the team board
+// needs to know whether the sweep was cut, and that cannot be recovered from the
+// rows it returns.
+type attentionAtRisk struct {
+	lister func(context.Context) ([]agents.SlippingDeal, bool, error)
+}
 
-func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, error) {
-	candidates, err := a.lister(ctx)
+func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool, error) {
+	candidates, cut, err := a.lister(ctx)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	now := clockNow()
 	risky := make([]attention.RiskyDeal, 0, len(candidates))
@@ -108,7 +113,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, erro
 			ExpectedCloseDate: deal.ExpectedCloseDate,
 		})
 	}
-	return risky, nil
+	return risky, cut, nil
 }
 
 // idleDaysOf is how long the deal has been quiet, counted from the base the
@@ -238,63 +243,200 @@ func quietRelationships(
 	return lapsed
 }
 
-// attentionMeetings reads today's remaining meetings through the activities
-// store — the same gated list every other activity surface reads.
-//
-// The WINDOW is applied in SQL, not here. An earlier cut read ten times the
-// lane and narrowed the time range in Go, which is lossy in the one direction
-// that hides itself: a day with more than the scan's worth of later activity
-// pushes a real meeting off the page, and the lane draws a free afternoon over
-// a booked one. ListActivitiesInput carries OccurredAfter/OccurredBefore and
-// the store applies both as predicates, so the bound is the day rather than a
-// guess about how busy the day might be.
-//
-// The STATUS filter stays in Go: the store has no dial for it, and the set it
-// removes is bounded by the window the database already applied.
-type attentionMeetings struct{ store *activities.Store }
+// attentionWaiting binds the who-is-waiting lane to the activities module's
+// own gated read. The thread walk, the discover gate and the audience arm all
+// live there; nothing about who may see what is decided here.
+type attentionWaiting struct {
+	store *activities.Store
+	now   attention.Clock
+}
 
-func (m attentionMeetings) Today(
-	ctx context.Context, from, until time.Time, limit int,
-) ([]attention.Meeting, error) {
-	kind := string(crmcontracts.ActivityKindMeeting)
-	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{
-		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until, Limit: &limit,
-	})
+// The instant comes from the caller so the whole read is one snapshot. Asking
+// the clock again here would let the anti-joins judge against a moment the rest
+// of the day was not read at.
+func (w attentionWaiting) Unanswered(
+	ctx context.Context, asOf time.Time,
+) ([]attention.WaitingCustomer, bool, error) {
+	rows, err := w.store.WaitingReplies(ctx, asOf)
+	if err != nil {
+		return nil, false, err
+	}
+	// Asked of what the STORE returned, before keepWaitingCustomers runs.
+	//
+	// That filter drops machine senders and folds duplicate threads, so what it
+	// returns is smaller than what was read — and a caller comparing the
+	// SURVIVORS against the scan bound would read a full scan whose survivors
+	// are few as a complete one. This is the only place both numbers exist.
+	cut := len(rows) >= activities.WaitingScanCap
+	out := make([]attention.WaitingCustomer, 0, len(rows))
+	for _, row := range keepWaitingCustomers(rows) {
+		out = append(out, attention.WaitingCustomer{
+			ActivityID:     row.ActivityID,
+			Subject:        row.Subject,
+			Since:          row.OccurredAt,
+			PersonID:       row.PersonID,
+			OrganizationID: row.OrganizationID,
+			DealID:         row.DealID,
+			HasOpenDeal:    row.HasOpenDeal,
+			OwnerID:        row.OwnerID,
+		})
+	}
+	return out, cut, nil
+}
+
+// keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
+//
+// Two rules, both learned from the live page.
+//
+// A machine is not a customer. Judged by capture's own address rule rather than
+// a second one spelled here: an e-signature notification, a shared-folder
+// notice and a booking confirmation opened a rep's day, and a queue that asks
+// somebody to answer a no-reply address teaches them to stop reading it.
+//
+// One subject FROM ONE SENDER is one row. A notification service sends the same
+// request on several threads, and two rows reading identically are two
+// obligations to somebody scanning the page.
+//
+// Keyed on sender AND subject, never subject alone: two customers both writing
+// "Re: proposal" are two people waiting, and folding them would drop the second
+// one silently — the worst failure this queue has, because nothing on the page
+// would say a customer had been hidden.
+//
+// An UNTITLED message is never folded, because several untitled waits are
+// several customers and collapsing them would hide all but one behind an empty
+// string.
+func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingReply {
+	kept := make([]activities.WaitingReply, 0, len(rows))
+	seen := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		if capture.IsMachineAddress(row.Sender) {
+			continue
+		}
+		if row.Subject != "" {
+			key := row.Sender + "\x00" + row.Subject
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+		}
+		kept = append(kept, row)
+	}
+	return kept
+}
+
+// attentionDealFacts reads deal figures through the deals store, under the
+// reader's own grants: a deal they may not see is absent from the answer and
+// the row simply states less about it.
+type attentionDealFacts struct{ store *deals.Store }
+
+func (f attentionDealFacts) Figures(
+	ctx context.Context, dealIDs []ids.UUID,
+) (map[ids.UUID]attention.DealFigures, error) {
+	found, err := f.store.Figures(ctx, dealIDs)
 	if err != nil {
 		return nil, err
 	}
-	ahead := make([]attention.Meeting, 0, len(rows))
+	out := make(map[ids.UUID]attention.DealFigures, len(found))
+	for id, figures := range found {
+		out[id] = attention.DealFigures{
+			StageID:           figures.StageID,
+			OwnerID:           figures.OwnerID,
+			AmountMinor:       figures.AmountMinor,
+			Currency:          figures.Currency,
+			ExpectedCloseDate: figures.ExpectedCloseDate,
+		}
+	}
+	return out, nil
+}
+
+// attentionTasks reads open tasks through the activities store. A task is an
+// activity of kind `task`, so this is the same read the task queue makes.
+type attentionTasks struct{ store *activities.Store }
+
+func (t attentionTasks) OpenForViewer(
+	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+) ([]attention.Task, error) {
+	// The store answers "open and due by then" itself, so the limit bounds the
+	// rows that QUALIFY. This used to read ten times the lane and narrow
+	// afterwards, which put the bound on the wrong set: a pile of completed
+	// tasks filled the scan, the overdue promise underneath never reached the
+	// reader, and the day rendered clear while the work was still there.
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until, Limit: &limit}
+	// Narrowed in the QUERY, so the store's own bound applies to the rows that
+	// qualify. Filtering the answer instead would let a colleague's twelve
+	// tasks fill the page and hide the reader's own overdue one behind them.
+	switch scope {
+	case attention.TasksMine:
+		actor, ok := principal.Actor(ctx)
+		if !ok || actor.UserID.IsZero() {
+			// No human, no "own work" to answer for. Reading every task and
+			// calling the result theirs is the widening this narrowing exists
+			// to prevent.
+			return nil, nil
+		}
+		// Exactly theirs. A task they wrote themselves carries their name from
+		// the moment it is written, so this needs no unassigned arm — and the
+		// arm it used to have is what put an automation's follow-up on every
+		// colleague's queue.
+		assignee := ids.From[ids.UserKind](actor.UserID)
+		in.OwnQueueOf = &assignee
+	case attention.TasksUnassigned:
+		in.UnassignedQueue = true
+	case attention.TasksOwnedBy:
+		// One named person's open work. The scope resolver already refused a
+		// reader whose tier does not reach past themselves, and the store's own
+		// row-scope gate still applies underneath — this narrows, never widens.
+		named := ids.From[ids.UserKind](owner)
+		in.OwnQueueOf = &named
+	case attention.TasksVisible:
+		// Every open task the reader may see; the row-scope gate in the store
+		// is the only narrowing.
+	}
+	rows, _, err := t.store.ListActivities(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	open := make([]attention.Task, 0, len(rows))
 	for _, row := range rows {
-		if !meetingStillWorthPreparing(row) {
+		// The filter above answers only dated rows, so this skip is unreachable
+		// today. It is here because the alternative to a skip is a nil deref
+		// that panics the WHOLE day's page, and the guarantee lives in a WHERE
+		// clause one package away — too far for the next reader of this loop to
+		// see it.
+		if row.DueAt == nil {
 			continue
 		}
-		ahead = append(ahead, attention.Meeting{
-			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
+		due := *row.DueAt
+		linkType, linkID := primaryLink(row)
+		open = append(open, attention.Task{
+			ID:       ids.UUID(row.Id),
+			Subject:  subjectOfActivity(row),
+			DueAt:    &due,
+			LinkType: linkType,
+			LinkID:   linkID,
 		})
 	}
-	// Soonest first: the lane is a countdown, and the store returns activities
-	// newest-first, which is the opposite order for a day still ahead.
-	sort.SliceStable(ahead, func(i, j int) bool { return ahead[i].StartsAt.Before(ahead[j].StartsAt) })
-	return ahead, nil
+	return open, nil
 }
 
-// meetingStillWorthPreparing keeps the meetings a rep can still do something
-// about: booked, rather than held, cancelled or a no-show. The time window is
-// the database's to apply.
+// attentionOverdue counts overdue tasks per assignee for the team board.
 //
-// A meeting with no status is treated as booked. Capture writes calendar events
-// without one, and dropping them would empty this lane on exactly the
-// installations whose calendars are connected.
-func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
-	return row.MeetingStatus == nil || *row.MeetingStatus == crmcontracts.ActivityMeetingStatusBooked
-}
+// A second reader over the same table attentionTasks lists from, and the reason
+// is the bound rather than the rows: that lane stops at a dozen, so a board that
+// counted its answer would report every loaded rep as holding exactly twelve.
+// The store's aggregate is unbounded and answers the count itself.
+type attentionOverdue struct{ store *activities.Store }
 
-// subjectOfMeeting is the line a meeting shows. Unlike a task, a meeting may
-// honestly have no subject — a calendar event with a blank title is a real
-// thing a provider hands over — so the fallback is a routine case here.
-func subjectOfMeeting(row crmcontracts.Activity) string {
-	if row.Subject != nil && *row.Subject != "" {
-		return *row.Subject
+func (o attentionOverdue) OverduePerAssignee(
+	ctx context.Context, asOf time.Time,
+) (map[ids.UUID]int, error) {
+	rows, err := o.store.OverdueLoadByAssignee(ctx, asOf)
+	if err != nil {
+		return nil, err
 	}
-	return "(untitled meeting)"
+	per := make(map[ids.UUID]int, len(rows))
+	for _, row := range rows {
+		per[row.OwnerID] = row.Overdue
+	}
+	return per, nil
 }

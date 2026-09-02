@@ -106,16 +106,20 @@ func scanCallSummary(row rowScanner) (CallSummary, error) {
 	return summary, err
 }
 
-func finishCallPage(items []CallSummary, limit int) CallPage {
+func finishCallPage(items []CallSummary, limit int) (CallPage, error) {
 	page := CallPage{Items: items}
 	if len(page.Items) <= limit {
-		return page
+		return page, nil
 	}
 	page.Items = page.Items[:limit]
 	last := page.Items[len(page.Items)-1]
-	page.NextCursor = storekit.EncodeCursor(last.OccurredAt, last.ID)
+	next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+	if err != nil {
+		return CallPage{}, err
+	}
+	page.NextCursor = next
 	page.HasMore = true
-	return page
+	return page, nil
 }
 
 // ListCalls returns terminal attempts newest-first. Retry siblings remain
@@ -183,7 +187,10 @@ func (s *CallReadStore) ListCalls(
 	if err != nil {
 		return CallPage{}, err
 	}
-	page := finishCallPage(items, n)
+	page, err := finishCallPage(items, n)
+	if err != nil {
+		return CallPage{}, err
+	}
 	page.Tasks = tasks
 	return page, nil
 }

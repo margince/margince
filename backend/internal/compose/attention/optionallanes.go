@@ -86,7 +86,12 @@ func (s *Service) optionalLanes(
 		{
 			name: "at_risk", bound: s.atRisk != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				risky, err := s.atRisk.Quiet(ctx)
+				// The lane's own cut flag is not read here: boundedSources
+				// answers truncation for /attention's whole page from the row
+				// counts, and moving this one source off that reading would
+				// leave two spellings of "was this cut" side by side. The team
+				// board, which has no row counts to fall back on, reads the flag.
+				risky, _, err := s.atRisk.Quiet(ctx)
 				return renderEach(risky, riskItem), err
 			},
 			into: &out.AtRisk, count: &out.Counts.AtRisk,
@@ -177,6 +182,18 @@ func (s *Service) operationalLanes(
 			into: &out.Notices, count: &out.Counts.Notices,
 		},
 		{
+			name: "introductions", bound: s.introductions != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// No window, for the notices lane's reason turned around: an ask
+				// carries its OWN deadline, and the seam orders by it. Aging one
+				// out here would hide the request closest to lapsing, which is
+				// the one a colleague most needs to see.
+				pending, err := s.introductions.Pending(ctx, doneCap)
+				return renderEach(pending, introductionItem), err
+			},
+			into: &out.Introductions, count: &out.Counts.Introductions,
+		},
+		{
 			name: "automation_health", bound: s.automations != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// The same week the bounce lane keeps: a broken rule needs
@@ -196,6 +213,18 @@ func (s *Service) operationalLanes(
 				return renderEach(undelivered, bounceItem), err
 			},
 			into: &out.Bounces, count: &out.Counts.Bounces,
+		},
+		{
+			name: "undelivered", bound: s.undelivered != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// The bounce lane's week, for the same reason: a message
+				// nobody sent is not less urgent for being a day older, and
+				// the sender is the only person who can decide to send it
+				// again.
+				parked, err := s.undelivered.ParkedSends(ctx, asOf.Add(-7*24*time.Hour), doneCap)
+				return renderEach(parked, parkedItem), err
+			},
+			into: &out.Undelivered, count: &out.Counts.Undelivered,
 		},
 	}
 }

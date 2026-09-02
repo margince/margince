@@ -12,48 +12,42 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
-// voiceContext is the loaded active profile a voiced draft injects.
-type voiceContext struct {
-	profile ai.VoiceProfile
-	version ai.VoiceProfileVersion
-	ok      bool
-}
-
-// loadVoice resolves the actor's active voice; any lookup failure degrades
-// to the plain draft with the failure visible in the log — a broken voice
-// read must never take reply drafting down with it.
-func (d replyDrafter) loadVoice(ctx context.Context) voiceContext {
+// loadVoice resolves the actor's active voice through the same seam the two
+// composers use, so a reply and a composed mail cannot disagree about whose
+// voice they are written in.
+//
+// Held by: TestEveryDraftingSurfaceLoadsTheSenderVoice
+// (backend/internal/compose/draftvoiceparity_test.go), which sweeps the tree
+// for every surface composing draftrules.Shared and fails when one of them
+// reaches a model without calling draftvoice.Load.
+//
+// A nil store is a deployment with no voice lane; a lookup failure degrades to
+// the plain draft with the reason logged, because a broken voice read must
+// never take reply drafting down with it.
+func (d replyDrafter) loadVoice(ctx context.Context) draftvoice.Context {
 	if d.voice == nil {
-		return voiceContext{}
+		return draftvoice.Context{}
 	}
-	profile, version, ok, err := d.voice.ActiveVoiceForActor(ctx)
-	if err != nil {
-		d.logger().WarnContext(ctx, "voice profile lookup failed; drafting without voice", "err", err)
-		return voiceContext{}
-	}
-	return voiceContext{profile: profile, version: version, ok: ok}
+	return draftvoice.Load(ctx, d.voice, d.logger())
 }
 
 // completeVoiced drafts with the voice block when one is loaded, enforcing
 // the deterministic anti-AI floor: detect → one critic retry → sanitize →
 // on surviving violations fall back to the plain draft and record the
 // failure as a rejected learning signal.
-func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data replyActivityData, voice voiceContext) (replyDraft, *int, *string, error) {
-	if !voice.ok {
+func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data replyActivityData, voice draftvoice.Context) (replyDraft, *int, *string, error) {
+	if !voice.OK {
 		draft, err := d.completeChecked(ctx, replyDraftSystem, data, nil)
 		return draft, nil, nil, err
 	}
-	block := func(fence promptfence.Fence) string {
-		return voiceDraftPromptBlock(voice.profile.PersonalityMD, voice.version.VoiceProfileMD,
-			ai.VersionExemplars(voice.version), ai.DecodeVersionStats(voice.version), fence)
-	}
+	block := voice.Block
 	draft, err := d.completeChecked(ctx, replyDraftSystem, data, block)
 	if err != nil {
 		return replyDraft{}, nil, nil, err
@@ -64,16 +58,15 @@ func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data 
 	// retry fixes the sentence, not just the punctuation.
 	if violations := voiceDraftViolations(draft); len(violations) > 0 {
 		withFeedback := func(fence promptfence.Fence) string {
-			return block(fence) + voiceViolationFeedback(violations)
+			return block(fence) + draftvoice.Feedback(violations)
 		}
 		retried, retryErr := d.complete(ctx, data, withFeedback)
 		if retryErr == nil {
 			draft = retried
 		}
 	}
-	draft.Subject = ai.SanitizeAIPatterns(draft.Subject)
-	draft.Body = ai.SanitizeAIPatterns(draft.Body)
-	version := voice.version.ProfileVersion
+	draft.Subject, draft.Body = draftvoice.Sanitize(draft.Subject, draft.Body)
+	version := voice.Version.ProfileVersion
 	// The sanitizer edits text, so the floor AND the shape are re-checked on
 	// what would actually be served.
 	if len(voiceDraftViolations(draft)) > 0 || validateReplyDraft(draft) != nil {
@@ -91,48 +84,39 @@ func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data 
 // voiceDraftViolations runs the deterministic floor over subject and body
 // independently; concatenation would hide a canned opener inside the body.
 func voiceDraftViolations(draft replyDraft) []ai.VoiceViolation {
-	return append(ai.DetectAIPatterns(draft.Subject), ai.DetectAIPatterns(draft.Body)...)
-}
-
-func voiceViolationFeedback(violations []ai.VoiceViolation) string {
-	var b strings.Builder
-	b.WriteString("\n\nThe previous attempt violated these hard rules; rewrite without them:\n")
-	for _, violation := range violations {
-		b.WriteString("- " + violation.Detail + "\n")
-	}
-	return b.String()
+	return draftvoice.Violations(draft.Subject, draft.Body)
 }
 
 // voiceDraftRef keys one served draft for learning-signal feedback. It
 // covers profile, version, anchor, and the full draft: two drafts for the
 // same activity with the same body but different subjects — or from
 // different profile versions — never collide.
-func voiceDraftRef(voice voiceContext, anchor ids.UUID, draft replyDraft) string {
+func voiceDraftRef(voice draftvoice.Context, anchor ids.UUID, draft replyDraft) string {
 	sum := sha256.Sum256([]byte(draft.Subject + "\n" + draft.Body))
 	return fmt.Sprintf("replydraft:%s:%s:v%d:%s",
-		voice.profile.ID, anchor, voice.version.ProfileVersion, hex.EncodeToString(sum[:8]))
+		voice.Profile.ID, anchor, voice.Version.ProfileVersion, hex.EncodeToString(sum[:8]))
 }
 
-func (d replyDrafter) recordVoiceDraft(ctx context.Context, voice voiceContext, anchor ids.UUID, draft replyDraft) {
+func (d replyDrafter) recordVoiceDraft(ctx context.Context, voice draftvoice.Context, anchor ids.UUID, draft replyDraft) {
 	if d.voice == nil {
 		return
 	}
-	if err := d.voice.RecordDraftedSignal(ctx, voice.profile.ID, voice.version.ProfileVersion,
+	if err := d.voice.RecordDraftedSignal(ctx, voice.Profile.ID, voice.Version.ProfileVersion,
 		voiceDraftRef(voice, anchor, draft), draft.Body); err != nil {
 		d.logger().WarnContext(ctx, "voice draft signal not recorded", "err", err)
 	}
 }
 
-func (d replyDrafter) recordVoiceRejection(ctx context.Context, voice voiceContext, anchor ids.UUID, draft replyDraft) {
+func (d replyDrafter) recordVoiceRejection(ctx context.Context, voice draftvoice.Context, anchor ids.UUID, draft replyDraft) {
 	if d.voice == nil {
 		return
 	}
 	ref := voiceDraftRef(voice, anchor, draft)
-	if err := d.voice.RecordDraftedSignal(ctx, voice.profile.ID, voice.version.ProfileVersion, ref, draft.Body); err != nil {
+	if err := d.voice.RecordDraftedSignal(ctx, voice.Profile.ID, voice.Version.ProfileVersion, ref, draft.Body); err != nil {
 		d.logger().WarnContext(ctx, "voice rejection signal not recorded", "err", err)
 		return
 	}
-	if _, err := d.voice.RejectDraft(ctx, voice.profile.ID, ref); err != nil {
+	if _, err := d.voice.RejectDraft(ctx, voice.Profile.ID, ref); err != nil {
 		d.logger().WarnContext(ctx, "voice rejection signal not recorded", "err", err)
 	}
 }

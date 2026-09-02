@@ -68,6 +68,7 @@ var sharedSpellings = gatekit.Waive(map[string]string{
 	"internal/modules/ai/feedback.go:fieldSubjectType":           "the second is the same word as a key in the AuditEvent image, where it names a column of the ledger row rather than the request field a refusal points at",
 	"internal/modules/search/queryjoins.go:objectRelationship":   "the second is the relationship TABLE's name in the join spec beside it, not the RBAC object governing it — the two agree today and are free to diverge",
 	"internal/shared/ports/datasource/shapewords.go:objectShape": "the second is the same two words inside a rendered sentence, where they are English rather than the shape word this constant names",
+	"internal/modules/customfields/engine.go:fieldObject":        "the second is the English word in structuralKeywords, which a user's LABEL is smell-tested against — \"add an object for invoices\" is refused as a request to model something new. It is a word somebody typed, not the request field this constant names, and tying the two would make the heuristic's vocabulary follow the wire.",
 })
 
 // claimedConst is one string constant a claim sits on.

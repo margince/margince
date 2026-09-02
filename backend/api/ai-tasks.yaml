@@ -85,14 +85,24 @@ tasks:
     no_payload: true
 
   capture_counterparty_verdict:
-    ladder: [local_small, cheap_cloud]
+    ladder: [local_small]
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
     sites: [verdict]
     no_payload: true
     company_context: none
-    doc: "ADR-0072/A118: the ambiguous first-time-sender creation gate — real|noise|unsure per address, floor 0.7 (below → unsure, never noise). Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring."
+    doc: "ADR-0072/A118: the ambiguous first-time-sender creation gate. Exactly one KIND per address from a closed vocabulary — person, role_mailbox, organization_sender, newsletter, transactional, spam, personal, advisor — each resolving to a real|noise lifecycle status, floor 0.7 (below → unsure, never noise). Two kinds create a contact and they differ in WHO can see it: `person` becomes an ordinary workspace contact, and `advisor` becomes an owner-scoped one — a founder's lawyer is a genuine contact whose existence is not the workspace's business. Every other kind creates none. The question is WHO WROTE, because the older yes/no gate grouped a person and a company under one `real` answer and so named a contact after the company that sent the mail. `unsure` is deliberately not answerable — abstention is derived from the floor, not self-reported, so a model cannot talk its way past it by claiming certainty about its own uncertainty. Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. Local-only ladder: the prompt carries subject and body, and this is the task that decides whether a sender is personal — a cloud rung would send a founder's family mail off the machine to ask whether it was family mail."
+
+  capture_confidentiality_verdict:
+    ladder: [local_small]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    sites: [thread]
+    no_payload: true
+    company_context: none
+    doc: "Decides what one email THREAD is about, so a classified mailbox can open the ordinary ones instead of holding everything. Closed vocabulary; exactly one kind (ordinary) opens a thread and every other kind holds it, so a wrong answer, an outage and a budget stop all fail towards privacy. Asymmetric floor: an opening answer below 0.8 resolves to unsure, which holds; a holding answer needs no floor, because requiring confidence to hold would publish the threads the model found hardest. Local-only ladder for the same reason as the sender verdict: the prompt carries subject, body and attachment names, and this is the task that decides whether a thread is private."
 
   signal_extract:
     ladder: [cheap_cloud, premium]
@@ -113,6 +123,15 @@ tasks:
     company_context: none
     doc: "S-E04.3 / MEET-AC-3/4: read the next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from (ADR-0058). Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Every proposal is a structural claim, so it STAGES for a human (approval kind transcript_proposal) and writes nothing until confirmed."
 
+  propose_roles:
+    ladder: [cheap_cloud, premium]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    sites: [committee]
+    company_context: none
+    doc: "Read the buying roles out of what a contact has actually written - who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and the person who WROTE that message must be the person the role is proposed for - both contacts sit in one prompt, so evidence unbound from its author lets one sender hand a role to a colleague they have never spoken for. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the evidence lives on the audit row so a reader can check it, and the ai_suggested mark stays until a human confirms. Degrade is the budget answer but there is no deterministic floor: with no lane the endpoint declares 501 rather than guessing a role from a title."
+
   enrich:
     ladder: [local_small, cheap_cloud]
     execution_mode: background
@@ -127,9 +146,9 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
-    sites: [org_brief, org_ask, org_dossier]
+    sites: [org_brief, org_ask, org_dossier, meeting_plan]
     company_context: {scopes: [identity], token_budget: 300, conditional: true}
-    doc: "Three sites on the company view, all grounded prose over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because org_ask is served from the same handlers. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision."
+    doc: "Four grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because org_ask is served from the same handlers. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what people actually wrote."
 
   growth_fit:
     ladder: [cheap_cloud, premium]
@@ -145,9 +164,9 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
-    sites: [reply, person, account, first]
+    sites: [reply, person, account, first, intro]
     company_context: {scopes: [positioning, sales, proof, market], token_budget: 1400}
-    doc: "Four sites, one task: the reply to an activity, the person page's composer, the company page's first-touch outbound, and the message that opens a conversation from a stated intent alone (draft_email over MCP, which names records to file under rather than records to write from). They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them."
+    doc: "Five sites, one task: the reply to an activity, the person page's composer, the company page's first-touch outbound, the message that opens a conversation from a stated intent alone, and the ask a rep sends a COLLEAGUE for an introduction (the only one of the five written to somebody on our own side, which is why it carries its own phrasing) (draft_email over MCP, which names records to file under rather than records to write from). They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them."
 
   nl_search:
     ladder: [cheap_cloud, premium]

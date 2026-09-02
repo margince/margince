@@ -88,7 +88,11 @@ func TestAnEmailedFileIsListedOnTheDealItIsLinkedToAndCanBeHidden(t *testing.T) 
 	}
 
 	store := activities.NewStore(db)
-	rep := asRep(ctx, ids.NewV7())
+	// The rep reading the list is the one whose mailbox captured the message.
+	// A captured mail is held to its participants until a classifier judges its
+	// thread, so a rep who was never on it correctly sees nothing — which is a
+	// different test from this one, and is covered in the capture suite.
+	rep := asRep(ctx, captureSeat(ctx))
 	docs, _, err := store.ListDealDocuments(rep, dealID, activities.DealDocumentFilters{})
 	if err != nil {
 		t.Fatalf("list: %v", err)

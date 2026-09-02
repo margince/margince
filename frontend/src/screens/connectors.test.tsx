@@ -76,6 +76,12 @@ type StubOpts = {
   connect?: { authorize_url?: string } | { status: number };
   /** The messaging-channel roster the Telegram panel reads. */
   channels?: ChannelConnection[];
+  /** The installation's outward address, as GET /connectors reports it. */
+  publicOrigin?: {
+    origin: string;
+    reachable?: boolean | null;
+    detail?: string | null;
+  };
 };
 
 function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
@@ -89,7 +95,11 @@ function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
         if (opts.listStatus) {
           return jsonResponse({ detail: "boom" }, opts.listStatus);
         }
-        return jsonResponse({ data: connections });
+        return jsonResponse(
+          opts.publicOrigin
+            ? { data: connections, public_origin: opts.publicOrigin }
+            : { data: connections },
+        );
       }
       // Every ConnectorsCard mount now also reads the Telegram channel
       // panel's own list — these tests exercise the mail-connector rows
@@ -139,7 +149,7 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
 }
 
 // Adding a connection is the card's create verb, so it lives in the panel
-// header and its provider picks live in the dialog it opens — a strip of four
+// header and its provider picks live in the dialog it opens — a strip of
 // buttons in a row's right column was the shape it replaced. Every claim about
 // a pick therefore opens the dialog first and scopes its queries to it.
 async function openAddDialog() {
@@ -225,7 +235,8 @@ describe("the connected-inboxes card", () => {
     for (const provider of [
       "Gmail",
       "Google Calendar",
-      "Microsoft",
+      "Outlook",
+      "Outlook Calendar",
       "IMAP mailbox",
     ]) {
       expect(
@@ -580,7 +591,10 @@ describe("add a connection", () => {
       within(dialog).getByRole("button", { name: "Connect Google Calendar" }),
     ).toBeTruthy();
     expect(
-      within(dialog).getByRole("button", { name: "Connect Microsoft" }),
+      within(dialog).getByRole("button", { name: "Connect Outlook" }),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole("button", { name: "Connect Outlook Calendar" }),
     ).toBeTruthy();
     expect(
       within(dialog).getByRole("button", { name: "Connect IMAP mailbox" }),
@@ -608,11 +622,11 @@ describe("add a connection", () => {
     render(<ConnectorsCard />);
     const dialog = await openAddDialog();
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Connect Microsoft" }),
+      within(dialog).getByRole("button", { name: "Connect Outlook" }),
     );
     expect(
       await within(dialog).findByText(
-        "Microsoft isn't configured in this deployment.",
+        "Outlook isn't configured in this deployment.",
       ),
     ).toBeTruthy();
   });
@@ -622,7 +636,7 @@ describe("add a connection", () => {
     render(<ConnectorsCard />);
     const dialog = await openAddDialog();
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Connect Microsoft" }),
+      within(dialog).getByRole("button", { name: "Connect Outlook" }),
     );
 
     const alert = await screen.findByRole("alert");
@@ -632,10 +646,11 @@ describe("add a connection", () => {
     expect(dialog.contains(alert)).toBe(true);
   });
 
-  // Four provider names decide nothing: Gmail and Google Calendar are two
-  // halves of one account, only Gmail can ever send, and IMAP is the answer for
-  // every host with no OAuth. Each pick carries the sentence that says so, and
-  // it lands in that button's own aria-describedby.
+  // Five provider names decide nothing: on both vendors the mail and the
+  // calendar are two halves of one account and two separate connections, only
+  // the OAuth mailboxes can send, and IMAP is the answer for every host with no
+  // OAuth. Each pick carries the sentence that says so, and it lands in that
+  // button's own aria-describedby.
   it("gives every pick the sentence its choice needs", async () => {
     stubApi([]);
     render(<ConnectorsCard />);
@@ -650,12 +665,13 @@ describe("add a connection", () => {
     expect(describedBy).not.toBeNull();
   });
 
-  it("withdraws the header verb when all four providers are connected", async () => {
+  it("withdraws the header verb when every provider is connected", async () => {
     stubApi([
       gmailConnected,
       { ...gmailConnected, id: "c2", provider: "gcal" },
       { ...gmailConnected, id: "c3", provider: "graph" },
-      { ...gmailConnected, id: "c4", provider: "imap" },
+      { ...gmailConnected, id: "c4", provider: "graphcal" },
+      { ...gmailConnected, id: "c5", provider: "imap" },
     ]);
     render(<ConnectorsCard />);
     await screen.findByText("Google Calendar"); // a roster row label
@@ -718,5 +734,58 @@ describe("the Telegram connector panel", () => {
     // observable proof it bound to that row and not to the first.
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(/^Pending/)).toBeTruthy();
+  });
+  // The address this installation puts in emailed links, on the card that
+  // already asks whether it can reach the outside world.
+  //
+  // It exists because the value is otherwise invisible: a deployment
+  // configured with a localhost origin sends mail whose unsubscribe links
+  // open nothing, and the only way to find out was for a recipient to
+  // click one.
+  it("shows the address used in emailed links, and that it answers", async () => {
+    stubApi([], {
+      publicOrigin: {
+        origin: "https://crm.example.com",
+        reachable: true,
+        detail: "http 200",
+      },
+    });
+    render(<ConnectorsCard />);
+
+    const row = await screen.findByTestId("public-origin");
+    expect(within(row).getByText("https://crm.example.com")).toBeTruthy();
+    expect(within(row).getByText("Answering")).toBeTruthy();
+  });
+
+  it("says so when the address does not answer", async () => {
+    stubApi([], {
+      publicOrigin: { origin: "https://crm.example.com", reachable: false },
+    });
+    render(<ConnectorsCard />);
+    expect(
+      within(await screen.findByTestId("public-origin")).getByText(
+        "Not answering",
+      ),
+    ).toBeTruthy();
+  });
+
+  // Null is "not asked yet", which must not read as a failure.
+  it("distinguishes an unchecked address from a failing one", async () => {
+    stubApi([], {
+      publicOrigin: { origin: "https://crm.example.com", reachable: null },
+    });
+    render(<ConnectorsCard />);
+    expect(
+      within(await screen.findByTestId("public-origin")).getByText(
+        "Not checked yet",
+      ),
+    ).toBeTruthy();
+  });
+
+  // No origin configured is not a broken origin: the row is absent.
+  it("shows no address row when none is configured", async () => {
+    stubApi([]);
+    render(<ConnectorsCard />);
+    expect(screen.queryByTestId("public-origin")).toBeNull();
   });
 });

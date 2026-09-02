@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -65,6 +66,32 @@ func (s *Store) retrievedAt(ctx context.Context, tx pgx.Tx, runID string) (time.
 // needs a pgx.Tx and that package is stdlib-only.
 type WriteClaimsFunc func(ctx context.Context, tx pgx.Tx, w ClaimWrite) error
 
+// ApplyStoredClaimsFunc folds a purchase that is ALREADY stored onto the
+// subject's record. The same domain work the claim writer does at hand-off,
+// reached by run id instead of by a payload, because the sweep's runs completed
+// before this build could hold their values and their claims are already in the
+// domain's own table.
+//
+// Its own callback rather than a second use of WriteClaimsFunc: that one takes
+// the claims it is about to store, and a sweep has none to hand over. Passing an
+// empty slice would make the writer's contract depend on which caller it was.
+//
+// It reports whether it FOUND anything to apply. A run reaches its terminal
+// state in one transaction and its claims arrive in the next, so a sweep landing
+// in that window sees a completed run with nothing stored — and treating that as
+// applied stamps a purchase that has not reached the record. The stamp is what a
+// waiting client reads, so the false one stops it one step before the values
+// exist and nothing comes back to say they arrived.
+type ApplyStoredClaimsFunc func(ctx context.Context, tx pgx.Tx, personID, runID string) (applied bool, err error)
+
+// WithStoredClaimApplier binds it. Without it the sweep applies nothing and
+// says so by leaving applied_at NULL, which is the honest record for a build
+// with no domain bound.
+func (s *Store) WithStoredClaimApplier(fn ApplyStoredClaimsFunc) *Store {
+	s.applyStoredClaims = fn
+	return s
+}
+
 // WithClaimWriter binds the owning domain's claim write. Compose supplies it;
 // without it every hand-off attempt fails and the ladder exhausts into
 // claims_unwritten — the honest record for a build with no domain bound.
@@ -85,10 +112,18 @@ func (s *Store) handoffClaims(ctx context.Context, runID, personID, name string,
 // already holds — the polled path opens one for it, the synchronous path
 // reuses its own terminal transaction because it has no handle to recover by.
 func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, personID, name string, claims []provider.Claim) error {
-	if s.writeClaims == nil || s.fence == nil {
+	if s.writeClaims == nil || s.holdSubject == nil {
 		return errors.New("integrations: no claim writer is bound, so the hand-off must wait for the sweep")
 	}
-	verdict, err := s.fence(ctx, tx, personID)
+	// The HOLDING fence, not the reading one. This transaction is about to put
+	// values on the subject's own record, and the queue-time answer is a
+	// snapshot an erasure can commit behind. holdSubject takes the row first,
+	// so the write that follows either happens before the erasure or refuses
+	// after it, rather than landing on top of it.
+	//
+	// It is also the FIRST row this transaction locks, which is the ordering
+	// the eraser requires — nothing above may take another subject's lock.
+	verdict, err := s.holdSubject(ctx, tx, personID)
 	if err != nil {
 		return err
 	}
@@ -109,8 +144,14 @@ func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, personI
 	}
 	// Cleared with the write: a crash after the claims commit but before a
 	// separate clear would merely re-run an idempotent upsert.
+	//
+	// applied_at is stamped here rather than by the domain, because provider_run
+	// is this module's table. It says the answers reached the record, which is a
+	// different fact from completed_at: a run can be paid and complete while the
+	// values are still only beside the record, and a client that stopped
+	// watching at "completed" would show a page that still looks empty.
 	if _, err := tx.Exec(ctx, `
-		UPDATE provider_run SET next_attempt_at = NULL
+		UPDATE provider_run SET next_attempt_at = NULL, applied_at = now()
 		 WHERE id = $1`, runID); err != nil {
 		return fmt.Errorf("integrations: clearing the claims-pending marker: %w", err)
 	}
@@ -214,4 +255,30 @@ func (s *Store) bumpClaimAttempt(ctx context.Context, tx pgx.Tx, runID string) (
 // least likely to be ready.
 func claimBackoff(attempt int) time.Duration {
 	return time.Minute << (attempt - 1)
+}
+
+// holdSubjectForSettlement takes the subject's row before a settlement that may
+// go on to write about them, so this transaction's lock order matches the
+// eraser's: person first, then the run.
+//
+// It asks the domain to LOCK, not to judge. The verdict is discarded here on
+// purpose — whether the subject may still receive values is writeClaimsInline's
+// question, asked once, at the point the values would land. Asking it twice
+// would be two answers to one question, and the second would be the one nobody
+// read.
+//
+// A subject that has vanished under the run is not an error to fail the
+// settlement with: the run's own outcome still has to be recorded, and the
+// hand-off below will decline the values on its own terms.
+func (s *Store) holdSubjectForSettlement(ctx context.Context, tx pgx.Tx, personID string) error {
+	if s.holdSubject == nil || personID == "" {
+		return nil
+	}
+	if _, err := s.holdSubject(ctx, tx, personID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }

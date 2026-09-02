@@ -1,0 +1,33 @@
+name: a_private_correspondent_is_not_a_business_contact
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Silke Renner
+  email: s.renner@webmail.example
+  subject: Fotos vom Wochenende
+  body: |
+    Hallo Tobias,
+
+    anbei die Bilder von Sonntag. Mama fragt, ob ihr an Ostern kommt, sie will
+    wegen der Betten Bescheid wissen. Ruf sie doch mal an, sie freut sich.
+
+    Liebe Grüße
+    Silke
+expect:
+  outcome: accepted
+  answer: personal
+  rubric: >
+    A family letter that arrived in a mailbox the CRM reads. Nothing here is
+    about the business: no company, no product, no commercial need, and the
+    register is domestic. "personal" is the correct verdict and scores high.
+    "person" is the failure this scenario exists to catch — it publishes a
+    founder's sister to every colleague as a contact, and scores zero above the
+    floor whatever the stated confidence. "spam" and "newsletter" are also
+    wrong, but wrong in the safe direction: the mail is not unsolicited, it is
+    simply not the company's, so they score in the middle.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

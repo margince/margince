@@ -1,0 +1,281 @@
+/*
+ * The relationship map.
+ *
+ * Every fact the drawing carries is readable without colour: an edge's strength
+ * is its THICKNESS, and the weakest band is dashed as well; a node's kind is its
+ * shape; engagement is a word on the node rather than a tint. Colour agrees with
+ * all of it and carries none of it alone.
+ */
+
+.rmap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+@media (min-width: 900px) {
+  .rmap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-areas: "map panel" "note panel";
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  .rmap-scroll {
+    grid-area: map;
+  }
+
+  .rmap-completeness {
+    grid-area: note;
+  }
+
+  .rmap-panel {
+    grid-area: panel;
+  }
+}
+
+/* The drawing has an intrinsic width, so a narrow screen scrolls the PICTURE
+ * inside its own box rather than making the page scroll sideways. */
+.rmap-scroll {
+  overflow-x: auto;
+  background: var(--bgElevated);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  padding: var(--space-3);
+}
+
+.rmap-svg {
+  display: block;
+}
+
+/* A lane heading IS an eyebrow, and the eyebrow has ONE spelling — the
+ * .t-eyebrow class the element carries. All this adds is what that class
+ * cannot say inside an SVG, where text takes `fill` and not `color`. */
+.rmap-lane {
+  fill: var(--textTertiary);
+}
+
+.rmap-name {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  fill: var(--textPrimary);
+}
+
+.rmap-sub {
+  font-size: var(--fs-meta);
+  fill: var(--textMeta);
+}
+
+.rmap-pill {
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+}
+
+.rmap-pill-answered {
+  fill: var(--success);
+}
+
+.rmap-pill-no_reply {
+  fill: var(--warn);
+}
+
+.rmap-pill-untried {
+  fill: var(--textMeta);
+}
+
+.rmap-box {
+  fill: var(--bgElevated);
+  stroke: var(--borderStrong);
+  stroke-width: 1;
+}
+
+.rmap-user .rmap-box {
+  fill: var(--bgCard);
+}
+
+.rmap-organization .rmap-box {
+  stroke: var(--borderControl);
+  stroke-width: 2;
+}
+
+.rmap-deal .rmap-box {
+  fill: var(--bgCard);
+  stroke: var(--borderControl);
+}
+
+/* A gap is a hole, and it looks like one: dashed, in the warning family, with
+ * the words inside it. */
+.rmap-gap .rmap-box {
+  fill: var(--warnBg);
+  stroke: var(--warnBorder);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.rmap-gap .rmap-name {
+  fill: var(--warn);
+}
+
+.rmap-node {
+  cursor: pointer;
+}
+
+.rmap-node:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.rmap-node[data-focused="true"] .rmap-box {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.rmap-node[data-related="true"] .rmap-box {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+/* Faded, never hidden: a node the reader can still tab to and still read,
+ * pushed back so the lit route is what the eye lands on. */
+.rmap-node[data-faded="true"] {
+  opacity: 0.25;
+}
+
+.rmap-node[data-added="true"] .rmap-box {
+  stroke: var(--accent);
+  stroke-dasharray: 2 2;
+}
+
+.rmap-more rect {
+  fill: none;
+  stroke: var(--borderStrong);
+  stroke-dasharray: 3 3;
+}
+
+.rmap-more text {
+  font-size: var(--fs-meta);
+  fill: var(--accentText);
+}
+
+/* THICKNESS is the band. Cold is dashed as well, so the three are told apart
+ * in a screenshot, on a projector, and by a reader who does not see colour. */
+.rmap-edge {
+  fill: none;
+  stroke: var(--borderControl);
+}
+
+.rmap-band-strong {
+  stroke-width: 3.5;
+}
+
+.rmap-band-developing {
+  stroke-width: 2;
+}
+
+.rmap-band-cold {
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.rmap-edge-membership {
+  stroke: var(--borderSubtle);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.rmap-edge[data-lit="true"] {
+  stroke: var(--accent);
+}
+
+.rmap-edge[data-faded="true"] {
+  opacity: 0.25;
+}
+
+.rmap-completeness {
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+
+.rmap-panel {
+  background: var(--bgElevated);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  padding: var(--space-4);
+}
+
+.rmap-panel-title {
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+}
+
+.rmap-panel-sub {
+  margin: 2px 0 var(--space-3);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+
+/* Likewise an eyebrow: the class carries the type, this carries the spacing
+ * that belongs to its place in the panel. */
+.rmap-panel-label {
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.rmap-panel-line {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--textContent);
+  line-height: 1.55;
+}
+
+.rmap-panel-alt {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+
+.rmap-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.rmap-hint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--textMeta);
+}
+
+.rmap-empty {
+  background: var(--bgElevated);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.rmap-empty-title {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--fw-semibold);
+}
+
+.rmap-empty-body {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--textMeta);
+}
+
+/* The transition is declared ONLY where motion is welcome, so there is no
+ * `reduce` block to order and nothing running for the axe sweep to catch
+ * mid-flight. */
+@media (prefers-reduced-motion: no-preference) {
+  .rmap[data-motion="in"] .rmap-node,
+  .rmap[data-motion="in"] .rmap-edge {
+    transition:
+      opacity var(--dur-state) var(--ease-in-out),
+      stroke-width var(--dur-state) var(--ease-in-out);
+  }
+}

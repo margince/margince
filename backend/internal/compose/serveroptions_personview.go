@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/persondraft"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // WithPersonDraft binds the lane that writes an email to one contact — the
@@ -24,13 +25,15 @@ import (
 // deployment running no model still has a rep who pressed "Write email", and a
 // short opener they edit beats a refusal.
 //
-// It takes no pool. That is the zero-write guarantee expressed as a dependency:
-// drafting reads the caller's 360 and writes nothing, so there is nothing for a
-// transaction to do.
+// The pool it takes is for READS only — the sender's own voice profile and the
+// identity behind the envelope. Drafting still writes nothing; persondraft is
+// handed the voice READ seam rather than the store, so the zero-write
+// guarantee stays a dependency rather than a rule somebody remembers.
 func WithPersonDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		svc := persondraft.NewService(s.person360Svc, brain).
-			WithEnvelope(draftEnvelope(pool, s.log))
+			WithEnvelope(draftEnvelope(pool, s.log)).
+			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.personDraftHandlers = persondraft.NewHandlers(svc, s.sorDispatch.isOverlay)
 	}
 }

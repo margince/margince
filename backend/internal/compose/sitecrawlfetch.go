@@ -27,13 +27,14 @@ import (
 func (c *siteCrawler) ReadSeed(ctx context.Context, seedURL string) (crawlPage, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.wall)
 	defer cancel()
-	answered, page, err := c.fetchSeed(ctx, c.newPacer(), seedURL)
+	seed, err := c.fetchSeed(ctx, c.newPacer(), seedURL)
 	if err != nil {
 		return crawlPage{}, err
 	}
 	return crawlPage{
-		URL: answered, Kind: crmcontracts.SiteReadPageKindHome,
-		Text: page.Text, Bytes: page.Bytes, Fingerprint: page.Fingerprint,
+		URL: seed.URL, Kind: crmcontracts.SiteReadPageKindHome,
+		Text: seed.Page.Text, Bytes: seed.Page.Bytes, Fingerprint: seed.Page.Fingerprint,
+		UnresolvedForward: seed.UnresolvedForward,
 	}, nil
 }
 

@@ -47,7 +47,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -57,7 +56,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
-	"github.com/margince/margince/backend/migrations"
 )
 
 // seededDefaults is the matrix identity seeds, as identity itself renders it.
@@ -163,7 +161,9 @@ func TestTheRealBootstrapSeedsTheDocumentedMatrix(t *testing.T) {
 	if len(live) == 0 {
 		t.Fatal("the bootstrap wrote no system roles at all")
 	}
-	assertSameMatrix(t, seeded, live, "the real bootstrap")
+	// A fresh bootstrap runs no migration, so any marker on it was written by
+	// nothing — which is exactly what it should not be.
+	assertSameMatrix(t, seeded, live, "the real bootstrap", markerStamps{})
 }
 
 // Every write a migration makes to role.permissions leaves an installation on
@@ -180,9 +180,9 @@ func TestTheRealBootstrapSeedsTheDocumentedMatrix(t *testing.T) {
 //     it back onto the matrix.
 //   - it writes some other path (`{row_scope}`, say) — the prior value is
 //     knowable only by reading the migration's own predicate, which this gate
-//     does not do. The weaker claim it can still make is that replaying against
-//     an already-correct installation moves nothing, which catches a write that
-//     fires unconditionally.
+//     does not do. The weaker claim it can still make is that the writes TAKEN
+//     TOGETHER land on the matrix, which catches a write that fires
+//     unconditionally and one whose predicate never matches.
 func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 	seeded := readSeededDefaults(t)
 	writes := rolePermissionMigrations(t)
@@ -201,36 +201,57 @@ func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 	ctx := context.Background()
 	bootstrapInstallation(t, e)
 
+	// IN ORDER, CUMULATIVELY, and compared once at the end.
+	//
+	// Each replay used to be judged alone, which held while every backfill
+	// converged on the same matrix. It stopped holding the moment one of them
+	// CHANGED the matrix: 1787449829 pins the seeded roles at own scope and
+	// 1788244324 moves the manager to team, so replaying the first by itself
+	// now lands on an answer that was right when it was written and is not the
+	// answer today. Neither migration is wrong; asking one of them in isolation
+	// is.
+	//
+	// So this asks what an installation actually experiences — every write, in
+	// version order, over the documents the baseline left — and requires the
+	// END of that to be the seeded matrix. A backfill that diverges is still
+	// caught, unless a LATER one happens to correct it, which is exactly the
+	// case the isolated reading called a failure and an installation calls
+	// Tuesday.
+	//
+	// The objects every write names are rewound first, together: an
+	// installation predating all of them held today's matrix minus all of them.
+	var rewound []string
 	for _, write := range writes {
-		t.Run(write.name, func(t *testing.T) {
-			rewindTo(ctx, t, e, write.objects)
-			for _, statement := range write.statements {
-				if _, err := e.Owner.Exec(ctx, statement); err != nil {
-					t.Fatalf("replaying a role.permissions write from %s: %v\n%s",
-						write.name, err, statement)
-				}
-			}
-			assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), write.name)
-			assertControlRoleUntouched(ctx, t, e.Owner, write.name)
-		})
+		rewound = append(rewound, write.objects...)
 	}
+	rewindTo(ctx, t, e, rewound)
+	for _, write := range writes {
+		for _, statement := range write.statements {
+			if _, err := e.Owner.Exec(ctx, statement); err != nil {
+				t.Fatalf("replaying a role.permissions write from %s: %v\n%s",
+					write.name, err, statement)
+			}
+		}
+	}
+	assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), "every backfill in order",
+		markerWrites(t, writes))
+	assertControlRoleUntouched(ctx, t, e.Owner, "every backfill in order")
 }
 
 // Every write COMPOSED, replayed in version order over the documents an
 // installation bootstrapped at the baseline actually held.
 //
-// The per-write arm above cannot make this claim. It rebuilds a pre-state per
-// migration, so write B is always replayed against a database that already
-// contains write A's result — an ordering dependency between two backfills has
-// nowhere to show itself, and an installation older than both is never the thing
-// under test.
+// The convergence arm above cannot make this claim. Its pre-state is derived
+// from the writes themselves — the objects they name, rewound out of today's
+// matrix — so an installation older than all of them is never the thing under
+// test, and neither is a document those writes never mention.
 //
 // It is also the arm that catches the ORIGINAL defect: an object added to the
-// policy with no backfill written for it. The per-write arm derives its pre-state
-// from the writes themselves, so an object no migration mentions is never absent
-// from the pre-state and its missing backfill is invisible. Here the pre-state
-// is derived from history, independently of what the migrations happen to say, so
-// the object is missing at the start and still missing at the end.
+// policy with no backfill written for it. An object no migration mentions is
+// never absent from a pre-state built out of what the migrations say, so its
+// missing backfill is invisible there. Here the pre-state is derived from
+// history, independently of what the migrations happen to say, so the object is
+// missing at the start and still missing at the end.
 //
 // Version order and not file order: dbmigrate sorts versions as STRINGS and
 // applies them in that order, and rolePermissionMigrations INHERITS that order
@@ -265,7 +286,7 @@ func TestTheBackfillsComposeFromTheOldestUpgradableInstallation(t *testing.T) {
 		}
 	}
 	const via = "the composed replay from the baseline era"
-	assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), via)
+	assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), via, markerWrites(t, writes))
 	assertControlRoleUntouched(ctx, t, e.Owner, via)
 }
 
@@ -314,7 +335,82 @@ func assertPreStateIsNotAlreadyTheAnswer(t *testing.T, before, after map[string]
 // Both directions: a role the database holds and the fixture does not is as much
 // a divergence as the reverse, and reporting only one of them is how half a
 // defect goes unnoticed.
-func assertSameMatrix(t *testing.T, want map[string]roleDocument, got map[string]json.RawMessage, via string) {
+// markerWrites is the set of version literals the replayed statements actually
+// WRITE into the provenance key, so a marker can be held to naming its writer.
+//
+// Not merely a version that was replayed: the down migration matches the marker
+// against the exact version it wrote, so a marker naming a DIFFERENT migration
+// — even a real one, even one that ran — leaves the rollback unable to tell a
+// scope it widened from one an operator chose, and the manager stays at team
+// scope through a rollback that was supposed to narrow it.
+//
+// The set holds what was WRITTEN rather than which migration wrote it, and the
+// two are only the same while every migration stamps its own version. So this
+// also fails a statement that stamps somebody else's: a marker is a rollback's
+// handle on its own work, and one that names a migration whose down will not
+// look for it is a widening nothing narrows back.
+//
+// Mentioning the key is not writing it. Detection is the jsonb PATH the write
+// addresses, which is why 1788244324's down — matching `permissions ->>
+// 'row_scope_set_by'` to find what to strip — and the prose above it are not
+// mistaken for writers. Naming a non-writer is precisely the false pass this
+// set exists to refuse, so it cannot be found by looking for the key anywhere
+// in the text.
+//
+// It reads the spelling the migrations use today. A write addressing the same key
+// another way — an ARRAY path, a jsonb concat — is not seen, and the marker it
+// leaves is then reported as naming a non-writer. That is the direction to fail
+// in: it costs a migration author one line here, where a lenient match costs a
+// rollback the ability to tell its own work from an operator's.
+func markerWrites(t *testing.T, writes []permissionWrite) markerStamps {
+	t.Helper()
+	out := markerStamps{replayed: true, versions: map[string]bool{}}
+	for _, write := range writes {
+		version := strings.SplitN(write.name, "_", 2)[0]
+		for _, statement := range write.statements {
+			for _, match := range markerWritePattern.FindAllStringSubmatch(statement, -1) {
+				if match[1] != version {
+					t.Errorf("%s stamps %s into %s, rather than its own version. The down migration "+
+						"looks for the version it wrote, so a marker carrying another one is a "+
+						"widening its own rollback cannot find", write.name, match[1], rowScopeSetBy)
+					// The rejected literal is deliberately NOT recorded. Recording
+					// it would let the per-role check below accept the very marker
+					// reported here, so one defect would be named once and waved
+					// through everywhere it actually landed.
+					continue
+				}
+				out.versions[match[1]] = true
+			}
+		}
+	}
+	return out
+}
+
+// markerStamps is what a replay left in a position to have written the
+// provenance marker: the version literals it actually stamped, and whether it
+// ran any migration at all.
+//
+// Two different facts, kept apart on purpose. A bootstrap replays nothing, and
+// a replay whose every stamp was REJECTED also ends up stamping nothing — and
+// the reader each case should send somebody to is not the same one. Reading it
+// off an empty set would tell an author auditing a bad migration to go and look
+// at the seed.
+type markerStamps struct {
+	replayed bool
+	versions map[string]bool
+}
+
+// The jsonb path a write addresses, and the version literal it puts there:
+// `jsonb_set(permissions, '{row_scope_set_by}', '"1788244324"'::jsonb, true)`.
+var markerWritePattern = regexp.MustCompile(`'\{` + rowScopeSetBy + `\}'\s*,\s*'"([^"]*)"'`)
+
+// rowScopeSetBy is the provenance key. The comparison below reads it, and
+// markerWrites looks for the statement that writes it.
+const rowScopeSetBy = "row_scope_set_by"
+
+func assertSameMatrix(t *testing.T, want map[string]roleDocument, got map[string]json.RawMessage, via string,
+	stamped markerStamps,
+) {
 	t.Helper()
 	for _, role := range sortedKeys(want) {
 		raw, ok := got[role]
@@ -331,7 +427,7 @@ func assertSameMatrix(t *testing.T, want map[string]roleDocument, got map[string
 		}
 		if !sameJSON(t, expected, raw) {
 			assertSameDocument(t, role, want[role], decodeRoleDocument(t, role, raw), via)
-			assertNoUnmodelledKeys(t, role, raw, via)
+			assertNoUnmodelledKeys(t, role, raw, via, stamped)
 		}
 	}
 	for _, role := range sortedKeys(got) {
@@ -359,7 +455,7 @@ func decodeRoleDocument(t *testing.T, role string, raw json.RawMessage) roleDocu
 // field_masks is the live case: policy.Document declares it, this file does not
 // model it, and it is a privacy control — so a replay that introduced or dropped
 // one has to be visible even though no per-field check covers it.
-func assertNoUnmodelledKeys(t *testing.T, role string, raw json.RawMessage, via string) {
+func assertNoUnmodelledKeys(t *testing.T, role string, raw json.RawMessage, via string, stamped markerStamps) {
 	t.Helper()
 	var keys map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &keys); err != nil {
@@ -367,6 +463,42 @@ func assertNoUnmodelledKeys(t *testing.T, role string, raw json.RawMessage, via 
 	}
 	for key := range keys {
 		if key == "objects" || key == "row_scope" {
+			continue
+		}
+		// PROVENANCE, not permission — and JUDGED rather than waved through.
+		//
+		// row_scope_set_by records WHICH migration widened a seeded role, so
+		// the down migration can tell a scope it moved from one an operator
+		// chose themselves: matching on the value alone cannot, since both look
+		// identical afterwards and a rollback would narrow a setting it never
+		// made. It grants nothing and masks nothing, and a migrated
+		// installation carries it where a fresh one does not — so comparing it
+		// against the seeded document would report that difference as a
+		// PERMISSION difference, which is the one thing this file never says.
+		//
+		// What it must still not be is a free-text field nobody reads: a marker
+		// naming a version that does not exist is a rollback the down migration
+		// cannot reason about. So the value has to name one of the migrations
+		// actually replayed.
+		if key == rowScopeSetBy {
+			var version string
+			switch err := json.Unmarshal(keys[key], &version); {
+			case !stamped.replayed:
+				// Nothing was replayed here, so nothing stamped anything. The
+				// defect is the marker's PRESENCE, not the version it names:
+				// saying it names the wrong migration would be false of a
+				// literal a real migration writes, and would send the reader to
+				// the migration instead of to the seed that invented it.
+				t.Errorf("%s: role %q carries %s = %s, and no migration ran to write it — a bootstrap "+
+					"stamps provenance for an upgrade it never performed, and the down migration "+
+					"would then strip a scope this installation was seeded with",
+					via, role, rowScopeSetBy, keys[key])
+			case err != nil || !stamped.versions[version]:
+				t.Errorf("%s: role %q was widened by %s, which is not a version any replayed migration "+
+					"STAMPS — the down migration matches the marker against the exact version it "+
+					"wrote, so a marker naming another one leaves a rollback unable to tell a scope "+
+					"it widened from one an operator chose", via, role, keys[key])
+			}
 			continue
 		}
 		t.Errorf("%s: role %q carries document key %q, which this comparison does not model: %s.\n"+
@@ -527,270 +659,6 @@ func rewindToBaselineEra(ctx context.Context, t *testing.T, e *apptest.AppEnv, d
 	seedControlRole(ctx, t, e)
 }
 
-// permissionWrite is one migration's writes to role.permissions.
-//
-// `statements`, not the whole file: a backfill rides along with the migration
-// that introduces its object, so the same file also CREATEs its tables. Replaying
-// the file against a database already at head fails on the CREATE and says
-// nothing about the grant. The schema half is the head-catalog gate's job.
-type permissionWrite struct {
-	name       string
-	statements []string
-	objects    []string
-}
-
-var (
-	// A candidate migration: one that mentions the column at all.
-	// DELIBERATELY WEAK — a filter, not the judgement. The strict pattern below
-	// decides, and a candidate the strict pattern cannot read is a hard failure
-	// rather than a skip, so a spelling nobody anticipated (`UPDATE role AS r`,
-	// `UPDATE ONLY role`, an upsert) stops the gate instead of vanishing from it.
-	//
-	// UNBOUNDED, and the word `role` is deliberately not required. This filter
-	// used to demand the two words within 400 characters of each other, which
-	// broke the contract above in the one direction that cannot be noticed: a
-	// migration whose UPDATE carried a long comment before its SET fell out of
-	// the candidate set with no fatal, was never replayed, and the arm still
-	// converged — because the write it skipped was the write that would have
-	// diverged. Measured: a ~460-character gap gives candidate=false while the
-	// strict pattern matches. A distance window in front of a census is the
-	// shortcut CLAUDE.md rule 8 forbids by name, and nothing measured that this
-	// one bought anything.
-	mentionsRolePermissions = regexp.MustCompile(`(?i)\bpermissions\b`)
-	// A statement that writes the column, however the write is spelled. MERGE and
-	// a quoted schema qualifier are included because Postgres accepts them and
-	// this pattern deciding "not a write" is how a real grant leaves the gate.
-	rolePermissionWrite = regexp.MustCompile(
-		`(?is)\b(?:UPDATE|INSERT\s+INTO|MERGE\s+INTO)\s+(?:ONLY\s+)?(?:"?public"?\.)?"?role"?\b[\s\S]*?\bpermissions\b`)
-	// The object a write grants, in EITHER jsonb path spelling Postgres accepts:
-	// the brace text literal `'{objects,deal}'` and the array form
-	// `ARRAY['objects', 'deal']`. Only the first was recognised, which made a
-	// write using the second invisible to the rewind — no object removed, so the
-	// isolating arm replayed it against the already-seeded grant and passed
-	// without testing it. The array form is not exotic: it is what rewindTo uses
-	// one screen below.
-	objectPath      = regexp.MustCompile(`'\{objects,([a-z_0-9]+)\}'`)
-	objectArrayPath = regexp.MustCompile(`(?i)ARRAY\[\s*'objects'\s*,\s*'([a-z_0-9]+)'\s*\]`)
-	// Every objects-path literal, whatever the name inside. Its DISTINCT names are
-	// counted against objectPath's so a name that class misses is loud rather
-	// than dropped — distinct on both sides, because one object is normally
-	// granted by several statements in the same migration.
-	anyObjectPath = regexp.MustCompile(`'\{objects,([^}]*)\}'`)
-	// Every array-form objects path, whatever is inside, counted against the
-	// strict one for the same reason: a name that class cannot read must be loud.
-	// The whole tail, not just the next element: the brace form tells a deeper
-	// path from a plain one by the comma inside its capture, and an array pattern
-	// that stopped at the second element produced a comma-free name for
-	// ARRAY['objects','deal','delete'] — which then failed as an unreadable name
-	// instead of being logged as out of rewind scope. Both spellings have to
-	// reach the same judgement or the asymmetry IS the defect.
-	anyObjectArrayPath = regexp.MustCompile(`(?i)ARRAY\[\s*'objects'\s*,\s*([^\]]*)\]`)
-)
-
-// rolePermissionMigrations reads the EMBEDDED core namespace — the same bytes
-// dbmigrate applies — rather than walking the directory, so a moved package or a
-// renamed suffix cannot quietly narrow what this gate examines.
-func rolePermissionMigrations(t *testing.T) []permissionWrite {
-	t.Helper()
-	core, err := migrations.Core()
-	if err != nil {
-		t.Fatalf("loading the core migrations: %v", err)
-	}
-	var found []permissionWrite
-	for _, migration := range core.Migrations {
-		if !mentionsRolePermissions.MatchString(migration.UpSQL) {
-			continue
-		}
-		name := migration.Version + "_" + migration.Name
-		statements := rolePermissionStatements(migration.UpSQL)
-		if len(statements) == 0 {
-			// The baseline declares the table and seeds nothing into it, which is
-			// the one candidate that legitimately carries no write.
-			//
-			// Judged per STATEMENT. As a substring search over the whole file this
-			// hatch was satisfied by a comment, so any migration that merely
-			// mentioned the phrase could carry a write in a spelling the strict
-			// pattern missed and leave the gate silent instead of failing it.
-			if onlyDeclaresPermissions(migration.UpSQL) {
-				continue
-			}
-			t.Fatalf("%s mentions permissions but no statement matched the write pattern.\n"+
-				"Teach the pattern the spelling it uses — do NOT let the gate go quiet, because a "+
-				"write it cannot see is a grant nobody checks.", name)
-		}
-		body := strings.Join(statements, "\n")
-		objects := dedupe(append(
-			objectPath.FindAllStringSubmatch(body, -1),
-			objectArrayPath.FindAllStringSubmatch(body, -1)...))
-		// Every objects-path literal, whatever its shape, must be accounted for.
-		// A path naming a VERB (`{objects,deal,delete}`) is a legitimate write
-		// this rewind cannot undo — removing the whole object would overshoot —
-		// so it is reported as out of scope rather than as a name the pattern
-		// failed to read. Fatalling on it refused the verb-widening backfill that
-		// assertPreStateIsNotAlreadyTheAnswer calls the likelier next one.
-		declared := dedupe(append(
-			anyObjectPath.FindAllStringSubmatch(body, -1),
-			normalizeArrayPaths(anyObjectArrayPath.FindAllStringSubmatch(body, -1))...))
-		for _, m := range declared {
-			if slices.Contains(objects, m) {
-				continue
-			}
-			if strings.Contains(m, ",") {
-				t.Logf("%s writes the deeper path {objects,%s}: the composed arm replays it, and the "+
-					"per-write rewind leaves the object in place because removing it would undo more "+
-					"than the write does", name, m)
-				continue
-			}
-			t.Fatalf("%s names object %q, which the object pattern could not read; an object left in "+
-				"place by the rewind makes the write a no-op and the comparison pass for the wrong "+
-				"reason", name, m)
-		}
-		found = append(found, permissionWrite{name: name, statements: statements, objects: objects})
-	}
-	// NOT re-sorted. migrations.Core() returns dbmigrate.Load's output, which is
-	// already ordered by VERSION — the order a real upgrade applies. Sorting here
-	// by `version + "_" + name` looked like the same key and is not: '_' (0x5F)
-	// outranks every digit, so whenever one version is a prefix of another
-	// (178744982 beside 1787449829) the two orders invert, and mixed version
-	// widths are exactly what this namespace ships. One invariant, one writer.
-	return found
-}
-
-// normalizeArrayPaths rewrites an array-form path tail into the shape a brace
-// capture has — `'deal', 'delete'` becomes `deal,delete` — so one comma test
-// answers "is this a deeper path" for both spellings.
-func normalizeArrayPaths(matches [][]string) [][]string {
-	out := make([][]string, 0, len(matches))
-	for _, m := range matches {
-		tail := strings.NewReplacer("'", "", " ", "", "\t", "", "\n", "").Replace(m[1])
-		out = append(out, []string{m[0], tail})
-	}
-	return out
-}
-
-// onlyDeclaresPermissions reports whether every statement in this migration that
-// mentions the column merely DECLARES it — the baseline creating the table.
-func onlyDeclaresPermissions(sql string) bool {
-	sawDeclaration := false
-	for _, statement := range splitStatements(sql) {
-		if !strings.Contains(strings.ToLower(statement), "permissions") {
-			continue
-		}
-		trimmed := strings.ToUpper(strings.TrimSpace(statement))
-		if !strings.HasPrefix(trimmed, "CREATE TABLE") && !strings.HasPrefix(trimmed, "ALTER TABLE") {
-			return false
-		}
-		sawDeclaration = true
-	}
-	return sawDeclaration
-}
-
-// rolePermissionStatements returns the statements in one migration that write
-// role.permissions, and nothing else it does.
-func rolePermissionStatements(sql string) []string {
-	var out []string
-	for _, statement := range splitStatements(sql) {
-		if rolePermissionWrite.MatchString(statement) {
-			out = append(out, statement)
-		}
-	}
-	return out
-}
-
-// splitStatements cuts SQL on top-level semicolons.
-//
-// Quote-, dollar-quote- and block-comment aware, because a semicolon inside any
-// of them is not a statement boundary. That matters more than it looks: pgx runs
-// an argument-less Exec through the simple query protocol, which accepts several
-// statements at once, so a wrong split can EXECUTE and leave this gate reporting
-// green over a boundary it got wrong rather than failing loudly.
-func splitStatements(sql string) []string {
-	var out []string
-	var current strings.Builder
-	var quoted bool
-	var tag string // the active $tag$ delimiter, empty when not dollar-quoted
-	var block int  // /* */ nesting depth; Postgres allows nesting
-
-	for i := 0; i < len(sql); i++ {
-		rest := sql[i:]
-		switch {
-		case tag != "":
-			if strings.HasPrefix(rest, tag) {
-				current.WriteString(tag)
-				i += len(tag) - 1
-				tag = ""
-				continue
-			}
-		case block > 0:
-			if strings.HasPrefix(rest, "*/") {
-				block--
-				current.WriteString("*/")
-				i++
-				continue
-			}
-			if strings.HasPrefix(rest, "/*") {
-				block++
-				current.WriteString("/*")
-				i++
-				continue
-			}
-		case quoted:
-			switch {
-			case sql[i] == '\\' && i+1 < len(sql):
-				// E'…\'…': the backslash escapes the next byte, and consuming it
-				// here is what stops a quote-parity flip.
-				current.WriteString(sql[i : i+2])
-				i++
-				continue
-			case sql[i] == '\'':
-				if i+1 < len(sql) && sql[i+1] == '\'' {
-					current.WriteString("''")
-					i++
-					continue
-				}
-				quoted = false
-			}
-		case sql[i] == '\'':
-			quoted = true
-		case strings.HasPrefix(rest, "/*"):
-			block++
-			current.WriteString("/*")
-			i++
-			continue
-		case strings.HasPrefix(rest, "--"):
-			end := strings.IndexByte(rest, '\n')
-			if end < 0 {
-				i = len(sql)
-				continue
-			}
-			i += end
-			current.WriteByte('\n')
-			continue
-		case sql[i] == '$':
-			if open := dollarTag.FindString(rest); open != "" {
-				tag = open
-				current.WriteString(open)
-				i += len(open) - 1
-				continue
-			}
-		case sql[i] == ';':
-			if trimmed := strings.TrimSpace(current.String()); trimmed != "" {
-				out = append(out, trimmed+";")
-			}
-			current.Reset()
-			continue
-		}
-		current.WriteByte(sql[i])
-	}
-	if trimmed := strings.TrimSpace(current.String()); trimmed != "" {
-		out = append(out, trimmed)
-	}
-	return out
-}
-
-// dollarTag matches an opening $$ or $name$ delimiter at the cursor.
-var dollarTag = regexp.MustCompile(`^\$[a-zA-Z_0-9]*\$`)
-
 // bootstrapInstallation provisions the installation these tests read.
 //
 // apptest.SetupApp resets the database and provisions nothing — `role`,
@@ -879,17 +747,5 @@ func sortedKeys[V any](m map[string]V) []string {
 		out = append(out, k)
 	}
 	sort.Strings(out)
-	return out
-}
-
-func dedupe(matches [][]string) []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, m := range matches {
-		if !seen[m[1]] {
-			seen[m[1]] = true
-			out = append(out, m[1])
-		}
-	}
 	return out
 }

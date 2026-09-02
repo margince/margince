@@ -561,11 +561,11 @@ function PersonActionBadges({
           "social.linkedin": stringField(person.social?.linkedin),
           ...cf.recordSlice(person),
         }}
-        update={async (values) => {
+        update={async (values, _rows, opened) => {
           const { data, error } = await api.PATCH("/people/{id}", {
             params: {
               path: { id },
-              ...ifMatch(requireVersion(person.version)),
+              ...ifMatch(requireVersion(opened?.version)),
             },
             body: {
               ...mapPersonUpdate(values),
@@ -573,7 +573,7 @@ function PersonActionBadges({
               // snapshot sends `null` for every empty custom field,
               // and the API reads that as clearing a column nobody
               // touched.
-              ...cf.toPatch(values, cf.recordSlice(person)),
+              ...cf.toPatch(values, opened ?? {}),
             },
           });
           if (error) {

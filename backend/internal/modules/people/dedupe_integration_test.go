@@ -140,6 +140,25 @@ func (e *dedupeEnv) openSignatureSource(ctx context.Context, t *testing.T) ids.U
 	return id
 }
 
+// agedSignatureSource is the same message dated a year back — a re-delivery, or
+// mail a connector backfilled long after it was sent. What it states is older
+// than what the record holds, so the pass must leave the record alone.
+func (e *dedupeEnv) agedSignatureSource(ctx context.Context, t *testing.T) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by, audience)
+			VALUES ($1, 'email', 'Regards, Dana | VP Finance', 'inbound', now() - interval '365 days',
+			        'gmail:seed', 'connector:gmail', 'workspace')`,
+			id)
+		return err
+	}); err != nil {
+		t.Fatalf("seed the aged signature source: %v", err)
+	}
+	return id
+}
+
 func (e *dedupeEnv) seedEmployedPerson(ctx context.Context, t *testing.T, name, email, orgName, domain string) (ids.PersonID, ids.OrganizationID) {
 	t.Helper()
 	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{

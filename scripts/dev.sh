@@ -94,12 +94,42 @@ MINIO_PORT="${MINIO_PORT:-29000}"
 # `command not found` and left the claim behind.
 
 kill_pids() { # pid… — TERM, then KILL whatever is still standing
-  local pids=("$@") alive=()
+  #
+  # SIGNED FIRST, and re-checked before the KILL. There are five seconds between
+  # the TERM and the SIGKILL, and a process that honours the TERM frees its pid
+  # inside them: the kernel reissues numbers, and the SIGKILL then lands on
+  # whatever took it — somebody's editor, their own shell. A pid is not an
+  # identity, and the wait is exactly where it stops being one.
+  #
+  # The signature is the command line as it was when the TERM was sent. What it
+  # proves is not what the process IS but that it is still the same one.
+  local pids=("$@") alive=() p signature
   [[ ${#pids[@]} -gt 0 ]] || return 0
+  local -a signed=()
+  for p in "${pids[@]}"; do
+    # `|| true` because `set -o pipefail` is in force and ps exits non-zero for
+    # a pid it cannot see — a recorded process that has already gone, which is
+    # the ordinary case during a failed boot. Without it the pipeline aborts
+    # kill_pids under `set -e`, and the EXIT trap that called it leaves the api,
+    # the vite and the claim standing: the cleanup fails on the one path it
+    # exists for.
+    signature=$({ ps -o command= -p "$p" 2>/dev/null || true; } | tr -d ' \t\n')
+    # A pid with no signature is one nothing can identify. It is not killed —
+    # an empty signature matches every command line, which would licence the
+    # SIGKILL below against whatever holds that number now.
+    [[ -n "$signature" ]] && signed+=("$p:$signature")
+  done
+  [[ ${#signed[@]} -gt 0 ]] || return 0
   kill "${pids[@]}" 2>/dev/null || true
   for _ in $(seq 1 10); do
     alive=()
-    for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive+=("$p"); done
+    for entry in "${signed[@]}"; do
+      p="${entry%%:*}"
+      signature="${entry#*:}"
+      case "$(ps -o command= -p "$p" 2>/dev/null | tr -d ' \t\n')" in
+        *"$signature"*) alive+=("$p") ;;
+      esac
+    done
     [[ ${#alive[@]} -eq 0 ]] && return 0
     sleep 0.5
   done
@@ -110,11 +140,35 @@ kill_pids() { # pid… — TERM, then KILL whatever is still standing
 # sleep leaves its file behind, and by the time the next `make dev` reads it
 # that number can belong to anything. The pgrep paths already re-check the
 # live command line before killing — a recorded pid gets the same proof.
-still_ours() { # pid
-  local cmd
+still_ours() { # pid [database]
+  local cmd stack_db="${2:-${db:-}}"
   cmd=$(ps -o command= -p "$1" 2>/dev/null || true)
   [[ -n "$cmd" ]] || return 1
-  [[ "$cmd" == *margince* || "$cmd" == *"$repo_root"* ]]
+  # The repo root as a PATH COMPONENT, not a prefix: a sibling checkout at
+  # /…/margince-old starts with /…/margince, and a substring match would read
+  # that stack's processes as this one's.
+  #
+  # And THIS STACK'S DATABASE, not the repository's name. The api and the worker
+  # carry no repository path in their argv, so they are recognised by the `--dsn`
+  # they were launched with — but `*margince*` matched the word anywhere, which
+  # every sibling checkout's path also contains. That alternative was answered
+  # first, so the two path components below decided nothing at all and the
+  # narrowing they exist for was dead code.
+  #
+  # The database name ends the DSN's path, so it is matched at its end: followed
+  # by nothing, by the query string, or by the next argument. A prefix match
+  # would read margince_dev_wt10's stack as margince_dev_wt1's.
+  # The stack's database name is not optional here: without it this reads only
+  # the path arms, and the api and the worker — which carry no path — become
+  # invisible to every caller. Refusing is the safe direction (nothing is killed
+  # or claimed on a "no"), and it says so rather than answering quietly.
+  if [[ -z "$stack_db" ]]; then
+    echo "dev.sh: still_ours was asked about pid $1 before a stack's database name was resolved" >&2
+    return 1
+  fi
+  local dsn_db="/${stack_db}"
+  [[ "$cmd" == *"$dsn_db" || "$cmd" == *"$dsn_db"' '* || "$cmd" == *"$dsn_db"'?'* \
+    || "$cmd" == *"$repo_root"/* || "$cmd" == *"$repo_root" ]]
 }
 # is_dev_launcher reports whether a pid is a live run of THIS script. The starter
 # recorded in a reservation is a shell running dev.sh, so that is what to look for
@@ -126,11 +180,76 @@ is_dev_launcher() { # pid
   [[ "$cmd" == *dev.sh* ]]
 }
 
-# release_unconfirmed_stack — give back this run's claim, and take down whatever
-# it started. Called from the EXIT trap while stack_recorded is 0, which is every
-# path that does not reach a stack answering its own readiness probe.
+# stack_already_up answers whether a previous run's processes for THIS stack are
+# still standing, read from the state file it left behind.
+#
+# A recorded pid is not enough on its own — pids are recycled — so the command
+# line is checked too, through the same still_ours the sweep uses.
+#
+# NOT narrowed to this worktree's path, though the question is about this
+# worktree's stack: the api and the worker are launched as `./bin/api` and
+# `./bin/worker` and carry no repository path in their argv at all. They are
+# recognised by the other half of still_ours instead, the database name their
+# DSN carries. Requiring the path answered "nothing here" for a live api whose
+# vite had exited — and the release then deletes the record naming it.
+#
+# ANY of the three, not the api alone. An api that crashed while its vite is
+# still serving is a stack that is still up as far as :8080 is concerned, and
+# answering "no" for it would let a second run delete the record — leaving vite
+# holding the port with nothing able to name it. The question this answers is
+# "is there anything here I did not start", and one surviving process is enough
+# to mean yes.
+#
+# Both `up` paths ask it, and for the same reason: what a run did not start, it
+# must not tear down. The claimed path asks BEFORE claim_stack rewrites the file
+# it reads; the primary path has nothing to rewrite and asks where it arms.
+stack_already_up() {
+  local recorded pid
+  recorded=$(
+    BACKEND_PID=''
+    FE_PID=''
+    WORKER_PID=''
+    # shellcheck disable=SC1090
+    [[ -f "$(dev_state_dir "$slug")/env" ]] && . "$(dev_state_dir "$slug")/env"
+    printf '%s %s %s' "${BACKEND_PID:-}" "${FE_PID:-}" "${WORKER_PID:-}"
+  )
+  for pid in $recorded; do
+    still_ours "$pid" && return 0
+  done
+  return 1
+}
+
+# release_unconfirmed_stack — take down whatever this run started, and give back
+# the record it was going to be found by. Called from the EXIT trap while
+# stack_recorded is 0, which is every path that does not reach a stack answering
+# its own readiness probe.
+#
+# The primary stack claims no port and no Redis database, so for it "release" is
+# the processes and the state file and nothing else. It arms this all the same:
+# an api or a vite that outlives a failed boot holds :8080 against the next
+# `make dev`, which then reports the port as already in use — a different fault
+# entirely, and the one this used to be read as.
 release_unconfirmed_stack() {
   [[ "${stack_recorded:-1}" == "0" ]] || return 0
+  # WHAT THIS RUN STARTED COMES DOWN FIRST, whatever the record turns out to
+  # belong to.
+  #
+  # The two questions are separate and were answered as one: whose RECORD this
+  # is decides whether the file may be deleted, and it says nothing about the
+  # processes in front of it. A second `make dev` that found a stack already up,
+  # started its own api and vite, and then failed its readiness probe used to
+  # return here before the kill — leaving exactly the orphan holding a port that
+  # this whole cleanup exists to prevent, and doing it on the path where a
+  # colleague's stack is already running.
+  #
+  # TERM then KILL, through the helper the sweep uses: a bare TERM can leave a
+  # server standing after its claim is gone.
+  local pids=()
+  local p
+  for p in "${be_pid:-}" "${fe_pid:-}" "${worker_pid:-}"; do
+    [[ -n "$p" ]] && pids+=("$p")
+  done
+  [[ ${#pids[@]} -gt 0 ]] && kill_pids "${pids[@]}"
   # Never release a claim this run did not create: it belongs to a stack that was
   # already up, and taking its record away would leave it running with nothing
   # able to stop it.
@@ -146,14 +265,30 @@ release_unconfirmed_stack() {
     printf '%s' "${STARTER_PID:-}"
   )
   [[ -n "$owner" && "$owner" != "$$" ]] && return 0
-  # TERM then KILL, through the helper the sweep uses: a bare TERM can leave a
-  # server standing after its claim is gone, which is the orphan this is for.
-  local pids=()
-  local p
-  for p in "${be_pid:-}" "${fe_pid:-}" "${worker_pid:-}"; do
-    [[ -n "$p" ]] && pids+=("$p")
+  # The record goes only if it is THIS RUN'S. Two `make dev` calls for one slug
+  # race: the second reads the state file before the first has finished writing
+  # it, sees no live pid, and claims — and claim_stack stamps its own starter
+  # into the file, so the owner guard above then reads this run as the owner of
+  # a record the first run is still booting against. Comparing the recorded pids
+  # against the ones this run started answers that without a lock: a record
+  # naming somebody else's processes is somebody else's.
+  local recorded
+  recorded=$(
+    BACKEND_PID=''
+    FE_PID=''
+    WORKER_PID=''
+    # shellcheck disable=SC1090
+    [[ -f "$(dev_state_dir "$slug")/env" ]] && . "$(dev_state_dir "$slug")/env"
+    printf '%s %s %s' "${BACKEND_PID:-}" "${FE_PID:-}" "${WORKER_PID:-}"
+  )
+  for p in $recorded; do
+    case " ${be_pid:-} ${fe_pid:-} ${worker_pid:-} " in
+      *" $p "*) ;;
+      *)
+        [[ -n "$p" ]] && still_ours "$p" && return 0
+        ;;
+    esac
   done
-  [[ ${#pids[@]} -gt 0 ]] && kill_pids "${pids[@]}"
   # The CLAIM goes; the LOG stays. Removing the directory took the log with it,
   # so a failed boot deleted the one file that said why it failed — which cost a
   # debugging cycle here before it could cost anyone else one.
@@ -342,43 +477,34 @@ if [[ -z "$slug" ]]; then
   fe_port=8080
   api_port=18080
   redis_db=0
+  # Nothing was claimed, but something may already be RUNNING — and a second
+  # `make dev` that fails its port check must leave the first one's state file
+  # alone, or `make dev-stop` has nothing left to stop it by.
+  STACK_CLAIM_PREEXISTING=0
+  if [[ "$cmd" == "up" ]] && stack_already_up; then
+    STACK_CLAIM_PREEXISTING=1
+  fi
 elif [[ "$cmd" == "up" ]]; then
   # Assign first, THEN read: `read … <<<"$(claim_stack)"` reports read's status,
   # not the claim's, so a refused claim printed its FAIL and the stack carried on
   # with an empty port and an api listening on :10000.
-  # Computed HERE, not inside claim_stack: that runs in a command substitution,
-  # which is a subshell, so a variable it sets never reaches this shell. The first
-  # version set it in there and the trap read the default — deleting the pids of a
-  # stack that was still running. Same subshell trap as the swallowed claim status
-  # above, one line apart.
-  STACK_CLAIM_PREEXISTING=0
-  recorded_be=$(
-    BACKEND_PID=''
-    # shellcheck disable=SC1090
-    [[ -f "$(dev_state_dir "$slug")/env" ]] && . "$(dev_state_dir "$slug")/env"
-    printf '%s' "${BACKEND_PID:-}"
-  )
+  #
   # ALIVE, not merely recorded. A crashed stack leaves its pids in the file, and
   # treating that as a live claim would disable the release for every later failed
   # boot — the stale reservation then holds a port and a Redis database forever.
-  if [[ -n "$recorded_be" ]] && still_ours "$recorded_be"; then
+  #
+  # Asked in THIS shell, not inside claim_stack: that runs in a command
+  # substitution, which is a subshell, so a variable it sets never reaches here.
+  # The first version set it in there and the release read the default — deleting
+  # the pids of a stack that was still running.
+  STACK_CLAIM_PREEXISTING=0
+  if stack_already_up; then
     STACK_CLAIM_PREEXISTING=1
   fi
   export STACK_STARTER_PID=$$
   claimed="$(claim_stack "$slug")" || exit 1
   read -r redis_db fe_port <<<"$claimed"
   api_port=$(( fe_port + DEV_API_PORT_OFFSET ))
-  # A reservation that outlives a failed boot holds its port and Redis database
-  # against every later stack until somebody sweeps by hand, and nothing says so
-  # — the next `make dev` in a fresh worktree just gets a higher number, and the
-  # block runs out sixteen stacks early. Released on any exit before the final
-  # state write, which is the point the stack is actually running.
-  # Released on any exit before the stack is CONFIRMED up, and the release kills
-  # whatever this run started. Deleting the claim alone would leave an api or a
-  # vite running that nothing records any more — an orphan holding the port the
-  # claim just gave back, which is worse than the leak it was fixing.
-  stack_recorded=0
-  trap 'release_unconfirmed_stack' EXIT
 else
   # stop and sweep READ; only `up` claims. Claiming here would mint a reservation
   # for a stack nobody asked to start, and then the caller would tear it down
@@ -387,6 +513,24 @@ else
   redis_db="${MINE_DB:-0}"
   fe_port="${MINE_PORT:-0}"
   api_port=$(( fe_port == 0 ? 0 : fe_port + DEV_API_PORT_OFFSET ))
+fi
+
+# EVERY `up` arms the same cleanup, claimed or not. A reservation that outlives a
+# failed boot holds its port and Redis database against every later stack until
+# somebody sweeps by hand, and nothing says so — the next `make dev` in a fresh
+# worktree just gets a higher number, and the block runs out sixteen stacks
+# early. The primary stack reserves neither and still leaves an api or a vite
+# holding :8080 the same way, which is why it is armed here rather than in the
+# branch that claims.
+#
+# Disarmed only when the stack is CONFIRMED up, which is after its own readiness
+# probe rather than at the state write before it. Below that point every exit —
+# a readiness failure, a bad DSN, a Ctrl-C — goes through the release, so no
+# failure path spells a kill of its own: one cleanup, and it is the one that
+# follows TERM with KILL.
+if [[ "$cmd" == "up" ]]; then
+  stack_recorded=0
+  trap 'release_unconfirmed_stack' EXIT
 fi
 REDIS_ADDR="localhost:${REDIS_PORT}/${redis_db}"
 
@@ -607,6 +751,46 @@ margince_server_pids() {
   done
 }
 
+# stack_server_pids names THIS stack's api and worker wherever they came from —
+# including a run whose pid the state file no longer holds.
+#
+# The state file records one BACKEND_PID/WORKER_PID and every `make dev`
+# overwrites it, so a worker that outlived its own start is invisible to the
+# only thing that would kill it. The api is caught anyway, by its port; a worker
+# binds none, so nothing looked for it and they accumulated — four against one
+# database, three of them stale builds. They share a River leader election, and
+# the leader is what inserts the periodic jobs: an old leader renewing its lease
+# schedules only the job kinds ITS binary knows, so a job kind added since is
+# never enqueued at all. Every other lane keeps running, which is what makes a
+# stale worker read as a broken feature rather than as a process nobody stopped.
+#
+# Matched on the DSN, and on the Redis address when the caller knows it. The
+# database name is already one-to-one with the slug — `margince` for the primary
+# worktree, `margince_dev_<slug>` for a linked one — so the DSN alone names a
+# stack. The Redis address narrows it further and is passed whenever a record
+# supplies it.
+#
+# It is OMITTED rather than guessed when there is no record. A stack whose state
+# file is gone has no claim to read, and the registry's fallback for "no claim"
+# is logical database 0 — the PRIMARY stack's. Passing that would ask for a
+# linked worktree's database on the primary's Redis database, match nothing, and
+# clean up nothing, silently: the same shape of miss this function exists to
+# close.
+# The DSN match ends at a WORD BOUNDARY, never mid-value. `margince` is a prefix
+# of every `margince_dev_<slug>`, so a substring test run from the primary
+# worktree matches every linked worktree's servers — and the primary is the one
+# whose cleanup would then kill all of them at once.
+stack_server_pids() { # dsn [redis_addr]
+  local pid cmd
+  for pid in $(pgrep -f 'bin/(api|worker)|exe/(api|worker)' 2>/dev/null || true); do
+    [[ "$pid" == "$$" ]] && continue
+    cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
+    [[ "$cmd" == *"--dsn $1 "* || "$cmd" == *"--dsn $1" ]] || continue
+    [[ -n "${2:-}" && "$cmd" != *"--redis $2 "* && "$cmd" != *"--redis $2" ]] && continue
+    echo "$pid"
+  done
+}
+
 # Vite resolves out of <repo>/frontend/node_modules, so its command line carries
 # the worktree path — that is what distinguishes our dev server from any other
 # Vite project the developer happens to be running.
@@ -637,18 +821,25 @@ vite_pids() {
 
 
 sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
-  local victims=() pids p port state_file
-  local BACKEND_PID FE_PID WORKER_PID API_PORT FE_PORT
+  local victims=() pids p port state_file entry_db
+  local SLUG BACKEND_PID FE_PID WORKER_PID API_PORT FE_PORT
   # 1. Every stack this script ever recorded — its own pids and its own ports.
   #    The locals above shadow what the state file sets, so sourcing one cannot
   #    leak a stale pid into the rest of the run.
   for state_file in "$(dev_state_root)"/*/env; do
     [[ -f "$state_file" ]] || continue
-    BACKEND_PID=''; FE_PID=''; WORKER_PID=''; API_PORT=''; FE_PORT=''
+    SLUG=''; BACKEND_PID=''; FE_PID=''; WORKER_PID=''; API_PORT=''; FE_PORT=''
     # shellcheck disable=SC1090
     . "$state_file"
+    # THIS ENTRY'S database, not the invocation's. Every recorded stack has its
+    # own — that is what the slug names — and asking still_ours with the sweeping
+    # run's `db` answers about a stack nobody is sweeping: every other slug's
+    # processes read as not-ours and survive a sweep that promises to clear the
+    # machine.
+    entry_db="margince"
+    [[ -n "$SLUG" ]] && entry_db="margince_dev_${SLUG}"
     for p in "$BACKEND_PID" "$FE_PID" "$WORKER_PID"; do
-      [[ -n "$p" ]] && still_ours "$p" && victims+=("$p")
+      [[ -n "$p" ]] && still_ours "$p" "$entry_db" && victims+=("$p")
     done
     for port in "$API_PORT" "$FE_PORT"; do
       [[ -n "$port" ]] || continue
@@ -990,10 +1181,9 @@ up)
 
   if ! wait_ready "http://localhost:${api_port}/readyz" 90; then
     echo "FAIL: $label api did not become ready — see ${log}" >&2
-    # The FE too: it is started BEFORE the api now (the api reads its view
-    # documents from it), so bailing out here would leave vite holding the port
-    # and the next `make dev` would report it as already in use.
-    kill "$be_pid" "$fe_pid" 2>/dev/null || true
+    # Vite comes down too, through the EXIT trap: it is started BEFORE the api
+    # now (the api reads its view documents from it), so bailing out here used to
+    # leave it holding the port and the next `make dev` reported it as in use.
     exit 1
   fi
   # No demo records: `make dev` brings up a COLD START — the installation the
@@ -1053,7 +1243,6 @@ up)
     echo "  Its own reason is in the log, under the 'worker' role:" >&2
     echo "    make dev-logs${slug:+ DEV_SLUG=$slug} ROLE=worker" >&2
     echo "    ${log}" >&2
-    kill "$be_pid" "$fe_pid" 2>/dev/null || true
     exit 1
   fi
   if [[ "$gmail_enabled" == "1" ]]; then
@@ -1080,7 +1269,6 @@ up)
       echo "  Its own reason is in the log, under the 'worker' role:" >&2
       echo "    make dev-logs${slug:+ DEV_SLUG=$slug} ROLE=worker" >&2
       echo "    ${log}" >&2
-      kill "$be_pid" "$fe_pid" 2>/dev/null || true
       exit 1
     fi
     # CONFIRMED up, and only here. This used to be set at the state write above,
@@ -1112,8 +1300,7 @@ up)
     echo "  stop     make dev-stop${slug:+ DEV_SLUG=$slug}"
   else
     echo "FAIL: $label FE did not become ready in time — see ${log}" >&2
-    # Don't leave the api (and vite) orphaned when the FE readiness poll fails.
-    kill "$be_pid" "$fe_pid" ${worker_pid:+"$worker_pid"} 2>/dev/null || true
+    # The api, vite and the worker all come down through the EXIT trap.
     exit 1
   fi
   ;;
@@ -1123,20 +1310,46 @@ stop)
   if [[ -f "$state" ]]; then
     # shellcheck disable=SC1090
     . "$state"
-    kill "${BACKEND_PID:-}" "${FE_PID:-}" "${WORKER_PID:-}" 2>/dev/null || true
+    victims=()
+    for p in "${BACKEND_PID:-}" "${FE_PID:-}" "${WORKER_PID:-}"; do
+      [[ -n "$p" ]] && victims+=("$p")
+    done
     # Backstop: free the recorded ports by listener (reaps vite, pnpm's child).
     for p in "${API_PORT:-}" "${FE_PORT:-}"; do
       [[ -n "$p" ]] || continue
-      pids=$(lsof -ti "tcp:${p}" 2>/dev/null || true)
-      [[ -n "$pids" ]] && kill $pids 2>/dev/null || true
+      for q in $(port_listeners "$p"); do victims+=("$q"); done
     done
+    # And this stack's servers whatever their pid — the state file holds ONE
+    # worker and every `make dev` overwrites it, so an earlier run's worker is
+    # reachable by nothing else. It binds no port, so the port backstop above
+    # misses it too; stack_server_pids says what that cost.
+    for q in $(stack_server_pids "$(with_database "$APP_DSN" "${DB:-$db}")" \
+                                 "localhost:${REDIS_PORT}/${REDIS_DB:-0}"); do
+      victims+=("$q")
+    done
+    # kill_pids, not a bare `kill`: TERM alone leaves a server that ignores it
+    # standing after its record is gone, which is the orphan this is for.
+    stopped=$(printf '%s\n' "${victims[@]+"${victims[@]}"}" | grep -E '^[0-9]+$' | sort -u || true)
+    # shellcheck disable=SC2086
+    [[ -n "$stopped" ]] && kill_pids $stopped
     rm -rf "$rundir"
     echo "stopped $label (freed :${API_PORT:-?} :${FE_PORT:-?})"
   else
-    # Ports are CLAIMED now, not derived from the slug, so there is nothing to
-    # guess at for a stack that was never recorded: naming a port here would
-    # print `:0`. Say what is true instead.
-    echo "no recorded stack for $label — nothing to stop"
+    # No claim, which does not mean no processes: the record is what a crash or
+    # an interrupted boot loses first, and its servers keep running against this
+    # database with nothing left pointing at them. Ports are CLAIMED now rather
+    # than derived from the slug, so there is nothing to guess at there — but the
+    # DATABASE is the slug's, so the servers can still be named.
+    # No Redis address: see stack_server_pids. Without a claim, REDIS_ADDR here
+    # names logical database 0 whatever the slug, which is the primary stack's.
+    orphans=$(stack_server_pids "$(with_database "$APP_DSN" "$db")" | sort -u || true)
+    if [[ -n "$orphans" ]]; then
+      # shellcheck disable=SC2086
+      kill_pids $orphans
+      echo "stopped $label ($(printf '%s\n' $orphans | wc -l | tr -d ' ') process(es) whose claim was gone)"
+    else
+      echo "no recorded stack for $label — nothing to stop"
+    fi
   fi
   if [[ "$drop" == "1" ]]; then
     if [[ -z "$slug" ]]; then

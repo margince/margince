@@ -15,6 +15,7 @@ import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "./story-utils";
 
@@ -107,9 +108,20 @@ function mount(
   tab: (typeof PERSON_TABS)[number],
   page: Person360 = view,
   guardEntries: readonly PersonConsentGuardEntry[] = [],
+  // Routes a test adds for the write it makes; the reads every mount needs
+  // stay here.
+  extraRoutes: RouteMap = {},
+  // What the caller may do. Logging needs `activity.create`, which the store
+  // behind the form requires, so a spec that logs must hold it here or it
+  // passes under an authorization production refuses.
+  allow: Parameters<typeof meRoute>[0] = {
+    person: ["read", "update"],
+    activity: ["create"],
+  },
 ) {
   installFetchStub({
-    "GET /me": meRoute({ person: ["read", "update"] }),
+    ...extraRoutes,
+    "GET /me": meRoute(allow, { seat: "full" }),
     "GET /people/p-1/360": () => jsonResponse(page),
     "GET /people/p-1/brief": () =>
       jsonResponse({ person_id: "p-1", sentences: [], generated_by: "rules" }),
@@ -202,6 +214,38 @@ describe("the contact record's tabs", () => {
   });
 });
 
+describe("the overview tab's added capabilities", () => {
+  it("lets a reader confirm or correct a field Margince read off a signature", async () => {
+    const withEnrichment: Person360 = {
+      ...view,
+      profile_fields: [
+        {
+          field: "title",
+          value: "Head of Procurement",
+          evidence_snippet: "Head of Procurement, Brandt Automotive GmbH",
+          source: "capture_enrich",
+          captured_by: "agent:enrich",
+          captured_at: "2026-08-01T08:00:00Z",
+        },
+      ],
+    };
+    mount("overview", withEnrichment);
+    expect(await screen.findByText("What Margince read")).toBeTruthy();
+    expect(screen.getByText("Head of Procurement")).toBeTruthy();
+    // The heading and the value alone don't prove the page reaches the
+    // control the ticket was about — the confirm/correct buttons themselves
+    // have to be there too, or this passes on a row that reads but does not
+    // write.
+    // Both buttons are gated on the caller's own grant, off a SEPARATE query
+    // (/me) than the field's own read — findByRole waits it out rather than
+    // catching the render before that query has settled.
+    expect(
+      await screen.findByRole("button", { name: "That is right" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Correct" })).toBeTruthy();
+  });
+});
+
 describe("a moment action that opens the composer", () => {
   // The steering field's own value, read off the element rather than through a
   // matcher: this file carries no jest-dom, and narrowing beats asserting.
@@ -229,23 +273,23 @@ describe("a moment action that opens the composer", () => {
     expect(await intentValue()).toBe("follow up — it has gone quiet");
   });
 
-  it("opens an empty one for the generic Email verb, whatever a rung asked for before", async () => {
-    // The two buttons share one drawer, so the rung's reason has to be dropped
-    // on the way in: inherited, it would draft a follow-up for a reader who
-    // asked for a blank sheet.
+  it("opens the shared compose drawer for the generic Email verb, not the steering composer", async () => {
+    // Mail as the only way in goes to the drawer every record shares — the
+    // one that knows the record's conversations. The rung's labelled verb
+    // above keeps the steering composer, because it arrives carrying an
+    // intent the shared drawer has no field for.
     const user = userEvent.setup();
     mount("overview", { ...view, moment: quietMoment }, [mailAllowed]);
-
-    await user.click(
-      await screen.findByRole("button", { name: "Draft a follow-up" }),
-    );
-    expect(await intentValue()).toBe("follow up — it has gone quiet");
-    await user.keyboard("{Escape}");
 
     const header = await recordHeader();
     await user.click(within(header).getByRole("button", { name: "Email" }));
 
-    expect(await intentValue()).toBe("");
+    expect(
+      await screen.findByRole("dialog", { name: /Send this email/ }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("textbox", { name: "What should it be about?" }),
+    ).toBeNull();
   });
 });
 
@@ -412,9 +456,21 @@ describe("which meeting the brief drawer asks about", () => {
     },
   };
 
-  it("requests the brief for the meeting the reader picked", async () => {
-    const asked: string[] = [];
-    installFetchStub({
+  // Which meeting the drawer asked the server about, recorded per test. The
+  // routes are shared because four tests below all turn on the SAME question —
+  // was the brief fetched, and for which meeting — and a second copy of them
+  // would let one drift into stubbing a meeting the others do not have.
+  function briefRoutes(asked: string[]): RouteMap {
+    const brief = (id: string) => () => {
+      asked.push(id);
+      return jsonResponse({
+        activity_id: id,
+        generated_at: "2026-08-13T09:00:00Z",
+        generated_by: "deterministic",
+        sections: [],
+      });
+    };
+    return {
       "GET /me": meRoute({ person: ["read", "update"], activity: ["read"] }),
       "GET /people/p-1/360": () => jsonResponse(withMeetings),
       "GET /people/p-1/brief": () =>
@@ -426,25 +482,14 @@ describe("which meeting the brief drawer asks about", () => {
       "GET /people/p-1/consent/guard": () =>
         jsonResponse({ person_id: "p-1", entries: [] }),
       "GET /channel-providers": () => jsonResponse({ data: [] }),
-      "GET /activities/a-held/meeting-brief": () => {
-        asked.push("a-held");
-        return jsonResponse({
-          activity_id: "a-held",
-          generated_at: "2026-08-13T09:00:00Z",
-          generated_by: "deterministic",
-          sections: [],
-        });
-      },
-      "GET /activities/a-booked/meeting-brief": () => {
-        asked.push("a-booked");
-        return jsonResponse({
-          activity_id: "a-booked",
-          generated_at: "2026-08-13T09:00:00Z",
-          generated_by: "deterministic",
-          sections: [],
-        });
-      },
-    });
+      "GET /activities/a-held/meeting-brief": brief("a-held"),
+      "GET /activities/a-booked/meeting-brief": brief("a-booked"),
+    };
+  }
+
+  it("requests the brief for the meeting the reader picked", async () => {
+    const asked: string[] = [];
+    installFetchStub(briefRoutes(asked));
     render(
       <StoryProviders>
         <PersonPageV2 id="p-1" tab="meetings" />
@@ -458,6 +503,68 @@ describe("which meeting the brief drawer asks about", () => {
 
     await waitFor(() => expect(asked.length).toBe(1));
     expect(asked).toEqual(["a-held"]);
+  });
+
+  // The brief is the one drawer another SCREEN sends a reader to, so it is the
+  // one with an address. Held in useState alone it could only ever be opened by
+  // pressing a button on this page, which is not what a "prepare the meeting"
+  // link on the worklist means.
+  it("opens the brief the address names, with nothing pressed", async () => {
+    const asked: string[] = [];
+    installFetchStub(briefRoutes(asked));
+    window.location.hash = "#/contacts/p-1/meetings?prep=a-held";
+    render(
+      <StoryProviders>
+        <PersonPageV2 id="p-1" tab="meetings" />
+      </StoryProviders>,
+    );
+
+    await waitFor(() => expect(asked).toEqual(["a-held"]));
+  });
+
+  // The reason it is derived from the address rather than seeded from it: a
+  // drawer in useState stays open when the reader navigates back out of it,
+  // because nothing tells it the address changed. Back is how a reader closes
+  // a thing they arrived at by link, and it has to work.
+  it("closes the brief when the address stops naming it", async () => {
+    const asked: string[] = [];
+    installFetchStub(briefRoutes(asked));
+    window.location.hash = "#/contacts/p-1/meetings?prep=a-held";
+    render(
+      <StoryProviders>
+        <PersonPageV2 id="p-1" tab="meetings" />
+      </StoryProviders>,
+    );
+    await waitFor(() => expect(asked).toEqual(["a-held"]));
+
+    window.location.hash = "#/contacts/p-1/meetings";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+    // The BRIEF's dialog by its own label, not "a dialog": the page carries
+    // other modals, and querying for any of them would pass on a page where
+    // the brief never closed and something else happened to be shut.
+    await waitFor(() =>
+      expect(
+        document.querySelector('[aria-labelledby="person-meeting-title"]'),
+      ).toBeNull(),
+    );
+  });
+
+  // A link somebody edited by hand, or one whose meeting has since been
+  // deleted. The page renders; it does not throw and it does not open an empty
+  // drawer that asks the server about nothing.
+  it("renders normally when the address names no meeting", async () => {
+    const asked: string[] = [];
+    installFetchStub(briefRoutes(asked));
+    window.location.hash = "#/contacts/p-1/meetings?prep=";
+    render(
+      <StoryProviders>
+        <PersonPageV2 id="p-1" tab="meetings" />
+      </StoryProviders>,
+    );
+
+    await screen.findAllByRole("button", { name: "Brief me" });
+    expect(asked).toEqual([]);
   });
 });
 
@@ -545,5 +652,99 @@ describe("the contact's LinkedIn on the header", () => {
     expect(link.getAttribute("href")).toBe(
       "https://de.linkedin.com/in/dana-buyer",
     );
+  });
+});
+
+// The one thing a CRM must let a rep do on a person is write down what
+// happened. Two ways in, one form: the header verb that is always there, and
+// the moment card's action when its rung decides logging is the next step.
+describe("logging an activity", () => {
+  // The "nothing needed" rung, whose one action is to log an interaction.
+  const quietDayMoment: Person360["moment"] = {
+    claim_key: "moment:nothing_needed",
+    evidence_fingerprint: "quiet",
+    rule: "nothing_needed",
+    headline: "Nothing needs you today",
+    why_now:
+      "No meeting is close, nothing is owed, and nobody is waiting on a reply.",
+    confidence: "observed_fact",
+    evidence: [],
+    recommended_action: {
+      kind: "log_activity",
+      label: "Log an interaction",
+      state: "available",
+      destination: { surface: "activity_log" },
+    },
+  };
+
+  it("opens the log form from the header, whatever the moment card offers", async () => {
+    const user = userEvent.setup();
+    mount("overview");
+
+    // Disabled until the caller's grants have arrived, and the header is
+    // rebuilt when they do — so the button is looked up fresh each time
+    // rather than held from before the grant landed.
+    const logButton = async () =>
+      within(await recordHeader()).getByRole("button", {
+        name: "Log activity",
+      });
+    await waitFor(async () =>
+      expect(await logButton()).toHaveProperty("disabled", false),
+    );
+    await user.click(await logButton());
+
+    expect(
+      await screen.findByRole("dialog", { name: "Log activity" }),
+    ).toBeTruthy();
+  });
+
+  it("keeps the verb on the page but refuses it without the create grant", async () => {
+    // The store refuses a save without `activity.create`, so the button must
+    // not open a form it cannot complete — and it stays visible, because a
+    // reader who cannot tell "not mine to do" from "no such button" learns
+    // nothing from an absence.
+    mount("overview", view, [], {}, { person: ["read", "update"] });
+
+    const header = await recordHeader();
+    const button = within(header).getByRole("button", {
+      name: /Log activity/,
+    });
+    expect(button).toHaveProperty("disabled", true);
+    expect(
+      within(header).getByText(
+        "You do not have permission to log activities on this record.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("logs a meeting on this person from the moment card's action", async () => {
+    const user = userEvent.setup();
+    const posted: unknown[] = [];
+    mount("overview", { ...view, moment: quietDayMoment }, [], {
+      "POST /activities": (body) => {
+        posted.push(body);
+        return jsonResponse({}, 201);
+      },
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "Log an interaction" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    await user.click(within(dialog).getByRole("combobox", { name: "Type" }));
+    await user.click(await screen.findByRole("option", { name: "Meeting" }));
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Subject" }),
+      "Coffee at the fair",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      kind: "meeting",
+      subject: "Coffee at the fair",
+      meeting_status: "held",
+      links: [{ entity_type: "person", entity_id: "p-1" }],
+    });
   });
 });

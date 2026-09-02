@@ -85,7 +85,7 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 		t.Fatalf("List-Unsubscribe = %q, want a one-click URL on the configured base (%s…) — an unconfigured store yields the empty string here",
 			staged.ListUnsubscribe, wantPrefix)
 	}
-	if !strings.Contains(staged.Body, "Unsubscribe: "+toolSurfaceBaseURL+"/v1/public/preferences/") {
+	if !strings.Contains(staged.Body, "Unsubscribe: "+toolSurfaceBaseURL+"/#/unsubscribe/") {
 		t.Fatalf("no visible unsubscribe footer on the transmitted body:\n%s", staged.Body)
 	}
 	// The minted identity is qualified by the configured origin, not by the

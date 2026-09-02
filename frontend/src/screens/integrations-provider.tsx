@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "./integrations-provider.css";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plug, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import {
   Badge,
@@ -26,10 +27,10 @@ import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { categoryName } from "./provider-categories";
 import {
-  type ConnectionsResult,
   connectionLabel,
   connectionTone,
   useProviderConnections,
@@ -294,55 +295,48 @@ function CreditsReading({
   );
 }
 
-// The half of the saved policy this card decides. A patch carries only the
-// switch that moved, so the two toggles never overwrite each other's value on
-// the way past — the server merges the rest of the policy itself.
-type PolicyPatch = Pick<
-  components["schemas"]["ProviderConfigurationPatch"],
-  "automatic_individual_create" | "automatic_import"
->;
-
-function usePatchConfiguration(
-  provider: ProviderConnection["provider"],
-  version: number,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (configuration: PolicyPatch) => {
-      const { data, error } = await api.PATCH(
-        "/provider-connections/{provider}",
-        {
-          params: {
-            path: { provider },
-            // The saved policy carries a version, and a blind write would
-            // silently overwrite a colleague's edit. A 409 is version skew,
-            // which the refetch below resolves by showing what is actually
-            // stored.
-            header: { "If-Match": String(version) },
-          },
-          body: { configuration },
-        },
-      );
+// The installation's lookup posture, read and written through its own surface.
+//
+// NOT the connection's configuration. Whether contacts are looked up without
+// anybody asking is one answer for the installation, and the three
+// per-connection fields that used to carry it are deprecated and ignored by
+// admission. A card that still PATCHed them would save successfully, answer
+// 200, and change nothing — worse than a missing control, because the screen
+// would be telling the reader the opposite of what the system does.
+function useLookupPosture() {
+  return useQuery({
+    queryKey: ["integrations-settings"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/integrations/settings");
       if (error) {
         throwProblem(error);
       }
       return data;
     },
-    onSuccess: (updated) => {
-      queryClient.setQueryData(
-        ["provider-connections"],
-        (current: ConnectionsResult | undefined) =>
-          current
-            ? {
-                ...current,
-                connections: current.connections.map((c) =>
-                  c.provider === updated?.provider ? updated : c,
-                ),
-              }
-            : current,
-      );
+  });
+}
+
+function usePatchLookupPosture() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // The posture travels as the mutation's variable rather than closing over
+    // render state: the switch that was pressed is the one that must be saved,
+    // even if the card re-rendered while the write was in flight.
+    mutationFn: async (automaticLookup: boolean) => {
+      const { data, error } = await api.PATCH("/integrations/settings", {
+        body: { automatic_lookup: automaticLookup },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
     },
-    onError: () => {
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["integrations-settings"],
+      });
+      // The backlog rides the connection, and the posture decides whether it
+      // is paused — so the card's other half has to re-read too.
       void queryClient.invalidateQueries({
         queryKey: ["provider-connections"],
       });
@@ -350,84 +344,222 @@ function usePatchConfiguration(
   });
 }
 
-// The two auto-enrich switches are the controls here that a reader who may not
-// change them still needs to READ: this is the only place the installation says
-// whether new contacts are being enriched at somebody's expense. So neither is
-// absent (that would hide a granted read) nor withheld (there is a fact to
-// show) — each is the shape the design system keeps for exactly this: a Switch,
-// because flipping it writes, with `reason` carrying the denial to a screen
-// reader through aria-describedby rather than leaving it beside the control as
+// The lookup switch is the control here that a reader who may not change it
+// still needs to READ: this is the only place the installation says whether
+// contacts are being looked up at somebody's expense. So it is neither absent
+// (that would hide a granted read) nor withheld (there is a fact to show) — it
+// is the shape the design system keeps for exactly this: a Switch, because
+// flipping it writes, with `reason` carrying the denial to a screen reader
+// through aria-describedby rather than leaving it beside the control as
 // decoration.
+//
+// ONE switch, where there were two. Those asked which WRITER a purchase
+// followed — a colleague typing a contact, a connector importing one — and the
+// answer differed because a connector's thousands of contacts each spent
+// credits. A lookup now buys only what the provider gives away, so that
+// distinction stopped paying for itself, and what is left is a question about
+// the installation rather than about the writer.
 function PolicyRow({
   connection,
   canEdit,
 }: Readonly<{ connection: ProviderConnection; canEdit: boolean }>) {
   const t = useT();
-  const patch = usePatchConfiguration(connection.provider, connection.version);
-  const configuration = connection.configuration;
-  const disconnected = connection.status !== "connected";
+  const posture = useLookupPosture();
+  const patch = usePatchLookupPosture();
   return (
     <>
       <FreeTierNote catalog={connection.catalog ?? []} />
       <SettingRow
-        label={t("provider.autoEnrich")}
-        description={t("provider.autoEnrichHint")}
+        label={t("provider.automaticLookup")}
+        // Two paragraphs, not one string with a blank line in it: HTML collapses
+        // the break, and the half that would have been glued on is the one an
+        // operator in the wrong jurisdiction has to read.
+        description={
+          <>
+            <span className="provider-hint-para">
+              {t("provider.automaticLookupHint")}
+            </span>
+            <span className="provider-hint-para">
+              {t("provider.automaticLookupJurisdiction")}
+            </span>
+          </>
+        }
         control={(control) => (
           <Switch
-            // The row's description reaches the switch: what auto-enrich DOES
+            // The row's description reaches the switch: what the lookup DOES
             // is the sentence on the left, and a node-form control cannot see
             // the id the row minted for it.
             describedBy={control["aria-describedby"]}
-            checked={configuration.automatic_individual_create ?? false}
-            onChange={(next) =>
-              patch.mutate({ automatic_individual_create: next })
-            }
+            checked={posture.data?.automatic_lookup ?? false}
+            onChange={(next) => patch.mutate(next)}
             // Three causes, and only one of them is worth words. A permission
             // is permanent and has to be explained; a write in flight explains
-            // itself by finishing, and a disconnected provider is already
-            // stated by the status beside the provider's name.
+            // itself by finishing, and a posture still loading resolves on its
+            // own.
             //
             // The shared single-control sentence, not the card's own posture
             // line: that one names why the CARD is read-only and would say the
             // same thing twice here, once as prose and once attached to the
             // control.
+            //
+            // NOT disabled while disconnected, unlike the switches this
+            // replaces. The answer belongs to the installation rather than to
+            // the connection, and an operator deciding it BEFORE connecting a
+            // provider is the order this setting is meant to support.
             reason={canEdit ? undefined : t("captureSettings.adminOnly")}
-            disabled={!canEdit || disconnected}
+            disabled={!canEdit || posture.isPending || posture.isError}
             pending={patch.isPending}
             // The row already draws this name on the left, so the switch keeps
             // its own copy hidden: it owns its accessible name by design (see
             // switch.tsx) and pointing it at the row's span as well would name
             // it twice.
-            label={t("provider.autoEnrich")}
+            label={t("provider.automaticLookup")}
             labelHidden
           />
         )}
       />
-      {/* Arrivals from a connection, decided separately from the ones a
-          colleague types. Every connector — a mailbox, a channel, an extension
-          — mints a person per counterparty it sees, so this switch spends per
-          arrival where the one above spends per deliberate act. That is why
-          the customer answers them apart, and why this one starts off. */}
-      <SettingRow
-        label={t("provider.autoImport")}
-        description={t("provider.autoImportHint")}
-        control={(control) => (
-          <Switch
-            describedBy={control["aria-describedby"]}
-            checked={configuration.automatic_import ?? false}
-            reason={canEdit ? undefined : t("captureSettings.adminOnly")}
-            disabled={!canEdit || disconnected}
-            pending={patch.isPending}
-            onChange={(next) => patch.mutate({ automatic_import: next })}
-            label={t("provider.autoImport")}
-            labelHidden
-          />
-        )}
-      />
+      <LookupBacklogRow connection={connection} />
+      <PricedCategoryRows connection={connection} canEdit={canEdit} />
       {/* Under the row whose flip failed, at the row's full width, rather than
           squeezed into the control column beside the switch: the reason names
           what the reader just tried to change, and a sentence sharing a
           nowrap flex line with a switch is a sentence nobody reads. */}
+      {/* The READ's failure as well as the write's. A posture we could not ask
+          for renders the switch off, and "off" is a claim about the
+          installation — so a failed GET has to say so rather than let the
+          control answer a question nobody could reach. */}
+      {(patch.error || posture.error) && (
+        <div className="provider-row-note">
+          <Callout tone="danger" live="alert">
+            {problemMessageOf(patch.error ?? posture.error, t)}
+          </Callout>
+        </div>
+      )}
+    </>
+  );
+}
+
+// What this installation is willing to BUY, one switch per priced category.
+//
+// Switching one on does not spend anything and does not schedule anything. It
+// decides which buy buttons a rep is offered on a contact — every purchase is
+// still a person pressing a priced button on one named record, which is the
+// split the free tier exists to keep. So the switch means "available to buy",
+// never "will be bought", and the row's own copy has to say so: an admin who
+// reads it as the latter leaves the whole paid half of the product switched off.
+//
+// The free categories are deliberately NOT here. They are what the automatic
+// lookup takes, the switch above already governs them as one decision, and a
+// second control that could turn one of them off would be a way to half-disable
+// a feature with nothing on screen explaining the difference.
+function PricedCategoryRows({
+  connection,
+  canEdit,
+}: Readonly<{ connection: ProviderConnection; canEdit: boolean }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const patch = usePatchCategories();
+  const priced = (connection.catalog ?? []).filter((entry) => !entry.free);
+  // A provider nobody has connected is listed anyway — with its catalog, so the
+  // card can say what it sells before a key exists — but it has no row, and the
+  // server omits the version for one. The contract declares `version` required,
+  // so nothing in the types objects to reading it; at runtime the patch would
+  // carry `If-Match: undefined` and be refused as malformed every time.
+  //
+  // Absent rather than disabled: there is no connection to decide about yet, and
+  // a dead switch beside a key field reads as a permission the reader lacks.
+  // The switches appear with the connection, which is the order the decision
+  // actually has — a key, then what it may be spent on.
+  const version = connection.version;
+  if (priced.length === 0 || version === undefined) {
+    return null;
+  }
+  const selection = connection.configuration.categories ?? {};
+  return (
+    <>
+      {priced.map((entry) => {
+        // A category the provider only issues alongside another cannot be
+        // bought while that one is off — the vendor refuses the request, so
+        // the switch would promise a purchase nobody can make and the buy
+        // button would never appear, with nothing on screen saying why.
+        //
+        // Disabled with the reason rather than hidden: an admin looking for
+        // the mobile number needs to find it and learn what it depends on. A
+        // row that vanished would read as "this provider does not sell it".
+        // Truthy, not `!== undefined`: the contract types this as
+        // `[string, 'null']`, so an absent prerequisite arrives as null on the
+        // wire and as undefined from a fixture that omits the key. Both mean
+        // "stands alone", and a check that caught only one would block every
+        // row the server sent.
+        const prerequisite = entry.requires ? entry.requires : undefined;
+        const on = selection[entry.category] ?? false;
+        // Refused only where the flip would turn it ON. Switching a
+        // prerequisite off leaves its dependent saved as on, and blocking that
+        // row outright would strand the admin: the only control able to undo
+        // the combination would be the one they cannot reach, and turning the
+        // prerequisite back on to release it spends nothing but reads like the
+        // card fighting them. Off is always allowed.
+        const blocked =
+          prerequisite !== undefined && !selection[prerequisite] && !on;
+        const dependency =
+          prerequisite === undefined
+            ? undefined
+            : t("provider.buyableNeeds", {
+                prerequisite: categoryName(prerequisite, t),
+              });
+        return (
+          <SettingRow
+            key={entry.category}
+            label={t("provider.buyable", {
+              category: categoryName(entry.category, t),
+            })}
+            // The dependency sentence belongs to the Switch's `reason`, which
+            // renders it AND announces it — repeating it here read it to a
+            // screen reader twice and printed it twice on the card.
+            description={plural(
+              "provider.buyableHint",
+              creditsOf(entry),
+              // Priced for the pair where there is one, so a dependent row
+              // never quotes a figure smaller than the press spends.
+              { credits: formatNumber(creditsOf(entry), locale) },
+            )}
+            control={(control) => (
+              <Switch
+                describedBy={control["aria-describedby"]}
+                checked={selection[entry.category] ?? false}
+                // The WHOLE selection, not the one key. The contract's patch
+                // replaces the map rather than merging into it, so sending one
+                // pair would switch off every category not named — including the
+                // free ones the automatic lookup runs on.
+                onChange={(next) =>
+                  patch.mutate({
+                    provider: connection.provider,
+                    version,
+                    categories: { ...selection, [entry.category]: next },
+                  })
+                }
+                // The admin denial comes first: a seat that may not edit
+                // anything is not told instead about a dependency it could
+                // not act on either way.
+                reason={
+                  canEdit
+                    ? blocked
+                      ? dependency
+                      : undefined
+                    : t("captureSettings.adminOnly")
+                }
+                disabled={!canEdit || blocked}
+                pending={patch.isPending}
+                label={t("provider.buyable", {
+                  category: categoryName(entry.category, t),
+                })}
+                labelHidden
+              />
+            )}
+          />
+        );
+      })}
       {patch.error && (
         <div className="provider-row-note">
           <Callout tone="danger" live="alert">
@@ -436,6 +568,94 @@ function PolicyRow({
         </div>
       )}
     </>
+  );
+}
+
+/** The credits one category costs, summed across pools. A category priced in
+ *  two pools is one purchase, and two figures on one row would read as a
+ *  choice between them. */
+function creditsOf(
+  entry: components["schemas"]["ProviderCategoryCost"],
+): number {
+  return Object.values(entry.cost).reduce((total, n) => total + n, 0);
+}
+
+type CategoryPatch = {
+  provider: components["schemas"]["Provider"];
+  version: number;
+  categories: Record<string, boolean>;
+};
+
+// Saving the fetch scope, with the version the card was rendered from.
+//
+// If-Match rather than a blind write: two admins on this card are two people
+// deciding what the installation may spend on, and a lost update there is a
+// category switched on by somebody who never saw it happen.
+function usePatchCategories() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ provider, version, categories }: CategoryPatch) => {
+      const { data, error } = await api.PATCH(
+        "/provider-connections/{provider}",
+        {
+          params: { path: { provider }, ...ifMatch(version) },
+          body: { configuration: { categories } },
+        },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["provider-connections"],
+      });
+    },
+  });
+}
+
+// How much of the installation is still waiting to be looked up.
+//
+// The count alone would be a number that sometimes stops moving for reasons
+// nobody on this screen can see: the posture switched off, the day's ceiling
+// spent, the provider not usable. So the server answers both, and the row says
+// which of the two the reader is looking at — a figure that is not falling is
+// explained rather than read as a stuck sweep.
+//
+// Absent only at zero. NOT hidden while disconnected: "the provider is not
+// usable" is one of the three causes the paused sentence names, and an
+// installation that disconnects with a thousand contacts pending still has
+// them pending. Hiding the count in the state its own copy explains would be
+// the row disappearing exactly when it had something to say.
+function LookupBacklogRow({
+  connection,
+}: Readonly<{ connection: ProviderConnection }>) {
+  const t = useT();
+  const plural = usePlural();
+  // The reader's own notation: a five-figure backlog is the ordinary case on a
+  // real installation, and 12345 reads as a serial number.
+  const { locale } = useLocale();
+  const backlog = connection.lookup_backlog;
+  if (!backlog || backlog.remaining === 0) {
+    return null;
+  }
+  return (
+    <SettingRow
+      label={t("provider.backlog")}
+      description={
+        backlog.paused
+          ? t("provider.backlogPaused")
+          : t("provider.backlogWorking")
+      }
+      control={() => (
+        <span className="provider-backlog-count">
+          {plural("provider.backlogRemaining", backlog.remaining, {
+            count: formatNumber(backlog.remaining, locale),
+          })}
+        </span>
+      )}
+    />
   );
 }
 

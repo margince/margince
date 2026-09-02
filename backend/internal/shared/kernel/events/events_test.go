@@ -75,7 +75,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"read":               true,
 		"read_back_proposed": true, "detected": true, "resolved": true,
 		"deactivated": true, "revoked": true, "restricted": true,
-		"invited": true, "reactivated": true,
+		"invited": true, "activated": true, "reactivated": true,
 		// The Deal Room lifecycle. `published` is the human act that makes a
 		// release buyer-visible; `closed` freezes content while access
 		// continues, which is why it is not `archived`.
@@ -112,6 +112,25 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// A won deal earned its partner a commission. Past tense like the rest;
 		// `decided` above already covers the approve/pay/void half.
 		"accrued": true,
+		// An introduction ran its course. `completed` rather than `introduced`
+		// because the two outcomes it covers are different events — a handshake
+		// and a lent name — and naming the type for one of them would leave the
+		// other with no way to be reported.
+		"completed": true,
+		// The contact answered. It is a verb of its own because nothing a person
+		// presses produces it: the fact is observed from captured activity.
+		"replied": true,
+		// A rep decided what to do about a waiting message and it left the
+		// queue. The verb carries its object for the reason password_link_issued
+		// does: "recorded" alone would not say what was recorded, and on the
+		// activity stream — which also carries captures and edits — the
+		// distinction is the whole point of the type.
+		"disposition_recorded": true,
+		// Same shape and the same reason: "requested" alone would not say what
+		// was asked for, and a weekly plan's stream also carries its ordinary
+		// updates — the distinction is the point of the type, because this is
+		// the one change somebody else is meant to act on.
+		"help_requested": true,
 	}
 
 	for _, typ := range Types() {
@@ -178,7 +197,11 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The LinkedIn ghost matcher (ADR-0078 §8b): a contact appearing is a
 		// chance to attach a ghost, and so is an account appearing — employer
 		// resolution is what most unmatched ghosts are waiting on.
-		"cg:linkedin-match":     {"gw:events:crm:organization", "gw:events:crm:person"},
+		"cg:linkedin-match": {"gw:events:crm:organization", "gw:events:crm:person"},
+		// The captured-cohort repair: a person's earlier mail is linked when the
+		// person appears or gains an address. Its own group so a slow enrichment
+		// cannot delay a record becoming complete.
+		"cg:cohort-promote":     {"gw:events:crm:person"},
 		"cg:person-auto-enrich": {"gw:events:crm:person"},
 		// The prompt half of captured-organization auto-enrich: an
 		// organization appearing or changing queues the workspace's enrich
@@ -190,10 +213,30 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// consumer whose retries buy data must not share a cursor with one
 		// whose retries are free.
 		"cg:person-data": {"gw:events:crm:person"},
+		// Mail landing queues the signature-enrich pass. Its own group for
+		// cg:person-data's reason: this one spends the customer's token budget,
+		// and a consumer whose retries cost money must not share a cursor with
+		// one whose retries are free.
+		"cg:capture-enrich": {"gw:events:crm:activity"},
+		// A card attached to captured mail imports itself. Its own group beside
+		// the one above: that one needs a model and this one only parses, so
+		// they run in different deployments and must not share a cursor.
+		"cg:vcard-ingest": {"gw:events:crm:activity"},
 		// Turning a won deal into what its partner earned. Its own group
 		// because accrual is money: a projection rebuild must not be able to
 		// stall it, and a failure to accrue must not read as a failure to index.
 		"cg:commissions": {"gw:events:crm:deal"},
+		// Closing an introduction the contact answered. Its own group because
+		// `replied` may only be reached from a captured message: a lane wedged
+		// behind an enrichment backlog leaves every introduction reading as
+		// unanswered, which to the rep who asked looks like a refusal.
+		//
+		// BOTH streams. The activity stream is the reply arriving; the person
+		// stream is the repair, because capture promotes an address to a
+		// contact in a transaction AFTER the one that wrote the message — so a
+		// reply captured before its sender was a person names nobody the
+		// activity arm can act on.
+		"cg:intro-advance": {"gw:events:crm:activity", "gw:events:crm:person"},
 		// What happened in a Deal Room, written onto the deal's timeline. Its
 		// own group because a room's traffic is live: a projection backlog must
 		// not delay the note saying the buyer just asked something.
@@ -213,7 +256,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the commission accrual, the AI-activity projection, and the Deal Room timeline", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the signature-enrich trigger, and the introduction reply consumer", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

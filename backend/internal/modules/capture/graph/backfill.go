@@ -11,11 +11,10 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -25,14 +24,15 @@ const backfillPageSize = 100
 
 // EstimateBackfill asks the provider how many messages the window holds.
 func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, after time.Time) (int, error) {
-	var st authState
-	if err := json.Unmarshal(auth, &st); err != nil {
-		return 0, fmt.Errorf("graph: malformed auth state: %w", err)
-	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	st, err := graphconn.Read(connectorName, auth)
 	if err != nil {
 		return 0, err
 	}
+	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
+	if err != nil {
+		return 0, err
+	}
+	access := refreshed.AccessToken
 	return c.api.EstimateAfter(ctx, access, after)
 }
 
@@ -41,17 +41,19 @@ func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, a
 // provider's own @odata.nextLink (the client refuses one that points off the
 // Graph API).
 func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after time.Time, pageToken string, sink connector.Sink) (connector.BackfillPageResult, error) {
-	var st authState
-	if err := json.Unmarshal(auth, &st); err != nil {
-		return connector.BackfillPageResult{}, fmt.Errorf("graph: malformed auth state: %w", err)
-	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	st, err := graphconn.Read(connectorName, auth)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
-	// The backfill walks the whole mailbox, Sent Items included — unlike the
-	// incremental delta, which is inbox-only — so this is where the T1
-	// correspondence evidence (ADR-0072 §1) is available to collect. Resolved
+	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
+	if err != nil {
+		return connector.BackfillPageResult{}, err
+	}
+	access := refreshed.AccessToken
+	// The backfill walks the whole mailbox in one pass, so unlike the
+	// incremental delta — which follows the two folders separately and knows
+	// which one it is in — it has to ask which folder holds sent mail before
+	// it can collect the T1 correspondence evidence (ADR-0072 §1). Resolved
 	// BEFORE anything is captured: a page that cannot tell sent mail from
 	// received would stamp its whole window un-attested, and the natural key
 	// makes that permanent. Treated like any other provider fault — the page

@@ -14,6 +14,7 @@ package compose
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -213,8 +214,21 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		// The caller's mistake, not a provider condition: retrying it
 		// unchanged buys nothing, so it is a 422 rather than a retryable
 		// failure.
+		//
+		// The store's own sentence is passed through rather than replaced.
+		// This sentinel now covers three different mistakes and only one of
+		// them is "the connection does not buy that": the others are a
+		// fallback asked for without its trigger, and a category asked for
+		// without the one it needs an answer from. A reader told the
+		// connection does not buy a category it visibly does buy cannot act
+		// on that, and the mobile case is exactly that shape.
+		//
+		// Safe to surface: every message behind this sentinel names category
+		// keys off the descriptor, which the same caller already reads from
+		// the catalog on the connection. No vendor prose, no identifier,
+		// nothing internal.
 		httperr.Write(w, r, httperr.Validation("categories", "not_permitted",
-			"this connection does not buy that category"))
+			strings.TrimPrefix(err.Error(), "integrations: ")))
 		return
 	}
 	httperr.Write(w, r, err)

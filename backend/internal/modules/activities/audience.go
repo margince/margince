@@ -65,13 +65,35 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 	}
 	var out crmcontracts.Activity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+		held, err := lockActivityForWrite(ctx, tx, id.UUID)
+		if err != nil {
 			return err
 		}
-		if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
+		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 			return err
 		}
-		if err := ensureVersion(ctx, tx, id, in.IfVersion); err != nil {
+		// A CAPTURED message is not one person's to set.
+		//
+		// Its audience is derived across every mailbox that imported it, and
+		// each importer's contribution is theirs alone — so writing the column
+		// directly would either override a colleague's hold or be silently
+		// undone by the next recompute, and both are worse than a refusal. The
+		// owner endpoint changes the contribution instead, which is the thing
+		// the derivation actually reads.
+		//
+		// A hand-logged row has no contributors and stays writable here.
+		//
+		// held skips this: a captured, held row is refused by
+		// activity_refuse_restricted_mutation below either way, and that
+		// refusal outranks this one — 422 tells the caller their request is
+		// fixable by asking the owner endpoint instead, which a held row's
+		// request never is.
+		if !held {
+			if err := refuseCapturedAudienceWrite(ctx, tx, id); err != nil {
+				return err
+			}
+		}
+		if err := ensureVersion(ctx, tx, id, in.IfVersion, held); err != nil {
 			return err
 		}
 		if err := ensureAudienceSubjectsExist(ctx, tx, members); err != nil {
@@ -81,7 +103,20 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `UPDATE activity SET audience = $2 WHERE id = $1`, id, in.Audience); err != nil {
+		// The reason moves with the audience, and becomes `manual`.
+		//
+		// Not NULL, and not the previous reason. Leaving the previous one would
+		// re-narrow the row: RecomputeAudienceTx reads audience_reason to
+		// recognise a hold no capture_import row records, so a stale
+		// `workspace_floor` on a row a person just opened is read as a live hold
+		// on the next sync of any mailbox that has the message. Clearing it to
+		// NULL loses the opposite thing — that a HUMAN decided this — and the
+		// derivation would widen the row back for the same reason.
+		//
+		// `manual` says both: a person set this, and no derivation may move it.
+		if _, err := tx.Exec(ctx,
+			`UPDATE activity SET audience = $2, audience_reason = $3 WHERE id = $1`,
+			id, in.Audience, ReasonManual); err != nil {
 			return err
 		}
 		if err := replaceAudienceMembers(ctx, tx, id, members); err != nil {
@@ -121,7 +156,9 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 // over, and an order difference is not a change anyone made.
 func readAudienceImage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (map[string]any, error) {
 	var audience string
-	if err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE id = $1`, id).Scan(&audience); err != nil {
+	var reason *string
+	if err := tx.QueryRow(ctx,
+		`SELECT audience, audience_reason FROM activity WHERE id = $1`, id).Scan(&audience, &reason); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx,
@@ -143,7 +180,11 @@ func readAudienceImage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (map[s
 		return nil, err
 	}
 	slices.Sort(members)
-	return map[string]any{"audience": audience, "members": members}, nil
+	why := ""
+	if reason != nil {
+		why = *reason
+	}
+	return map[string]any{auditFieldAudience: audience, auditFieldAudienceReason: why, "members": members}, nil
 }
 
 // audienceMembersFor validates the member set: read only for `selected`,
@@ -168,12 +209,24 @@ func audienceMembersFor(in SetAudienceInput) ([]AudienceMember, error) {
 
 // ensureVersion is the If-Match compare, against the row the caller just
 // locked; a mismatch is version skew, which the wire answers as 409.
-func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
-	if ifVersion == nil {
+//
+// held=true skips the compare entirely: every write to a held row is
+// refused by activity_refuse_restricted_mutation regardless of which
+// version the caller supplied, so a stale version on a held row still owes
+// 423, the reachable answer the write below reaches — not 409, which
+// would tell the caller a refetch-and-retry could ever succeed against a
+// row nothing can write to.
+//
+// No archived filter otherwise: lockActivityForWrite already proved the
+// row exists, live or held, before this runs, so re-filtering here would
+// hide a held row's version from under a lock that already resolved it —
+// exactly the 404-instead-of-423 lockActivityForWrite exists to remove.
+func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, held bool) error {
+	if ifVersion == nil || held {
 		return nil
 	}
 	var current int64
-	if err := tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND archived_at IS NULL`, id).Scan(&current); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1`, id).Scan(&current); err != nil {
 		return err
 	}
 	if current != *ifVersion {
@@ -280,4 +333,39 @@ func (e *InvalidAudienceError) Error() string {
 // field.
 func (e *InvalidAudienceError) FieldFault() (field, code, message string) {
 	return "audience", "invalid_audience", e.Error()
+}
+
+// refuseCapturedAudienceWrite stops a direct audience write on a message a
+// mailbox brought in.
+//
+// The test is whether any seat has an import row: that is what makes the
+// audience derived rather than declared. A row with none was hand-logged, and
+// its audience is exactly what somebody set.
+func refuseCapturedAudienceWrite(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+	var imported bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM capture_import WHERE activity_id = $1)`,
+		id.UUID).Scan(&imported); err != nil {
+		return fmt.Errorf("activities: reading whether a message was imported: %w", err)
+	}
+	if imported {
+		return &CapturedAudienceError{}
+	}
+	return nil
+}
+
+// CapturedAudienceError refuses a direct audience write on captured mail and
+// says where the decision belongs instead.
+type CapturedAudienceError struct{}
+
+func (e *CapturedAudienceError) Error() string {
+	return "activities: a captured message's audience is derived from its importers; " +
+		"share or hold the thread instead"
+}
+
+// FieldFault maps the refusal onto the wire.
+func (e *CapturedAudienceError) FieldFault() (field, code, message string) {
+	return "audience", "audience_is_derived",
+		"This message came from a mailbox, so who can read it follows from what each " +
+			"importing mailbox asks for. Share or keep the thread private instead."
 }

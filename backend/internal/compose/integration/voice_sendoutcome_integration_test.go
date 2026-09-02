@@ -228,7 +228,7 @@ func TestAComposedSendRecordsTheVoiceOutcomeOnTheApprovedBody(t *testing.T) {
 	sent := e.send(t, ref, voiceSentBody)
 
 	transmitted := e.transmittedBody(t, sent)
-	if !strings.Contains(transmitted, "/v1/public/preferences/") {
+	if !strings.Contains(transmitted, "/#/unsubscribe/") {
 		t.Fatalf("the transmitted body carries no unsubscribe footer, so this case proves nothing:\n%s", transmitted)
 	}
 	if transmitted == voiceSentBody {

@@ -296,10 +296,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
   {
-    file: "screens/oauthconsent.test.tsx",
-    why: "The date-boundary case that started this rule: asserts the expiry does NOT read on a fixed zone's calendar, which needs that zone named to compare against.",
-  },
-  {
     file: "screens/personfiles.test.tsx",
     why: "Installation-settings fixture backing the person-files read.",
   },
@@ -314,18 +310,6 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "screens/privacy.assignee.test.tsx",
     why: "Its `User` fixtures carry the member's own stored `timezone`, which is a field on the wire rather than a zone this code renders in.",
-  },
-  {
-    file: "screens/quotas.forms.stories.tsx",
-    why: "The `me` fixture behind the quota forms carries the reader's stored `timezone` as wire data.",
-  },
-  {
-    file: "screens/quotas.stories.tsx",
-    why: "Same `me` fixture behind the quotas story: a stored user setting the story has to supply.",
-  },
-  {
-    file: "screens/quotas.test.tsx",
-    why: "Same `me` fixture behind the quotas suite: a stored user setting, not a formatting decision.",
   },
   {
     file: "screens/scheduledsends.stories.tsx",

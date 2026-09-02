@@ -22,16 +22,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -51,6 +51,36 @@ type Review struct {
 	// the week unremarkable" — the two read identically as silence otherwise.
 	Narrative  string
 	NarratedAt *time.Time
+
+	// What the week did to the pipeline, in the installation's base currency.
+	//
+	// Beside Counts rather than inside it because a tally and a conversion fail
+	// differently: every count is always answerable, and this one has a third
+	// outcome — not computable — that a tally has no room for.
+	Money Money
+
+	// The review this week is measured against: the same rep's most recent
+	// earlier one, or nil for their first.
+	//
+	// The deltas themselves are NOT stored: a stored difference is a third copy
+	// of what the two rows already say, and the three drift the first time one
+	// row is rewritten.
+	//
+	// Held by: TestNoDeltaIsStoredBesideTheTwoFrozenRows
+	// (backend/internal/compose/weekly/weeklycompare_integration_test.go)
+	PriorReviewID *ids.UUID
+	// Prior is that row's own frozen figures, loaded for a reader that wants
+	// the comparison. Nil when there is no prior week, and nil on the prior
+	// row itself: a review carries ONE step of history, not a chain that
+	// lengthens every week a rep works here.
+	Prior *PriorWeek
+}
+
+// PriorWeek is the earlier review a week is compared against.
+type PriorWeek struct {
+	LocalWeekStart time.Time
+	Counts         Counts
+	Money          Money
 }
 
 // Counts are the week's tallies. Every one is as-of the review's AsOf, which
@@ -67,6 +97,40 @@ type Counts struct {
 	ProposalsRejected   int
 	BriefItemsActed     int
 	BriefItemsDismissed int
+
+	// How the week's inbound leads were answered. A lead still inside its
+	// target when the row was written is in neither of the last two: it has
+	// not yet been either answered in time or missed.
+	// What the week's PLAN came to. Read through a seam rather than queried
+	// here: weeklyplan owns those tables, and a review that counted them
+	// itself would be a second reader of somebody else's rows.
+	CommitmentsDue  int
+	CommitmentsKept int
+
+	LeadsRouted           int
+	LeadsAnsweredInTarget int
+	LeadsBreached         int
+
+	// Meetings held, and how many left a next step behind. The second is the
+	// one a rep can act on.
+	MeetingsHeld         int
+	MeetingsWithNextStep int
+}
+
+// Money is a base-currency figure, or the honest absence of one.
+//
+// The three totals travel together with their currency because they are one
+// answer: either the week's pipeline movement converted, or it did not. A
+// caller cannot be handed two of the three and left to guess about the rest.
+type Money struct {
+	CreatedMinor int64
+	WonMinor     int64
+	LostMinor    int64
+	Currency     string
+	// Known is false when a deal in the week could not be converted, or when
+	// the installation names no base currency. The zero value is therefore the
+	// honest "not computable", not a week in which nothing happened.
+	Known bool
 }
 
 // DealLine is one deal the week is about, frozen at the moment it was written.
@@ -92,10 +156,36 @@ const (
 )
 
 // Engine assembles and reads weekly reviews.
-type Engine struct{ pool *pgxpool.Pool }
+type Engine struct {
+	pool *pgxpool.Pool
+	// plan settles the rep's week-ahead and reports what it came to. Nil where
+	// no plan module is bound — the review then counts no commitments rather
+	// than failing, because a retrospective is still worth having without one.
+	plan WeekPlan
+}
+
+// WeekPlan settles the closing week's plan and says what it came to.
+//
+// The one edge between the retrospective and the plan, in ONE direction. This
+// package cannot import the module that owns those tables, and would not want
+// to: what it needs is two integers, and asking for them through an interface
+// is what keeps the plan's rows the plan's business.
+type WeekPlan interface {
+	// CloseWeek settles the caller's plan for the week that closed and returns
+	// how many commitments were owed and how many kept. Idempotent: a second
+	// call over a settled week answers the same figures without moving a row.
+	CloseWeek(ctx context.Context, now time.Time) (due, kept int, err error)
+}
 
 // NewEngine binds the engine to the installation pool.
 func NewEngine(pool *pgxpool.Pool) *Engine { return &Engine{pool: pool} }
+
+// WithPlan binds the week-ahead, so a closed review carries what the plan came
+// to. Absent, the review's commitment counts stay zero.
+func (e *Engine) WithPlan(plan WeekPlan) *Engine {
+	e.plan = plan
+	return e
+}
 
 // reviewUser is the acting rep. A review is a personal record — whose week it
 // was — so there is no argument by which a caller asks for somebody else's.
@@ -132,7 +222,10 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 			 ORDER BY local_week_start DESC
 			 LIMIT 1`, userID, weekStart)
 		var err error
-		review, err = scanReview(ctx, tx, row)
+		if review, err = scanReview(ctx, tx, row); err != nil {
+			return err
+		}
+		review.Prior, err = readPriorWeek(ctx, tx, review.PriorReviewID, userID)
 		return err
 	})
 	if err != nil {
@@ -152,6 +245,11 @@ const reviewSelect = `
 	       deals_moved, deals_won, deals_lost,
 	       proposals_accepted, proposals_rejected,
 	       brief_items_acted, brief_items_dismissed,
+	       commitments_due, commitments_kept,
+	       leads_routed, leads_answered_in_target, leads_breached,
+	       meetings_held, meetings_with_next_step,
+	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
+	       base_currency, prior_review_id,
 	       coalesce(narrative, ''), narrated_at
 	  FROM weekly_review`
 
@@ -159,17 +257,33 @@ const reviewSelect = `
 func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 	var review Review
 	c := &review.Counts
+	var created, won, lost *int64
+	var currency *string
 	switch err := row.Scan(&review.ID, &review.UserID, &review.LocalWeekStart,
 		&review.GeneratedAt, &review.AsOf,
 		&c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
 		&c.DealsMoved, &c.DealsWon, &c.DealsLost,
 		&c.ProposalsAccepted, &c.ProposalsRejected,
 		&c.BriefItemsActed, &c.BriefItemsDismissed,
+		&c.CommitmentsDue, &c.CommitmentsKept,
+		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
+		&c.MeetingsHeld, &c.MeetingsWithNextStep,
+		&created, &won, &lost, &currency, &review.PriorReviewID,
 		&review.Narrative, &review.NarratedAt); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return Review{}, apperrors.ErrNotFound
 	case err != nil:
 		return Review{}, err
+	}
+	// Known reads off the CURRENCY, which the table's own CHECK ties to the
+	// three figures: either all four are present or none is. Reading it off a
+	// sum would call a genuine zero — a week that created no pipeline — an
+	// unconvertible one.
+	if currency != nil {
+		review.Money = Money{
+			CreatedMinor: deref(created), WonMinor: deref(won), LostMinor: deref(lost),
+			Currency: *currency, Known: true,
+		}
 	}
 	lines, err := readDealLines(ctx, tx, review.ID)
 	if err != nil {
@@ -257,21 +371,51 @@ func readDealLines(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) ([]DealLin
 // no error.
 func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool, error) {
 	c := review.Counts
+	// Column and value paired at the point of writing, and the placeholders
+	// derived from the argument slice. Twenty-odd hand-numbered $N in one
+	// statement is a column-and-argument miscount waiting to happen, and
+	// nothing checks that the three lists agree.
+	cols, args := insertColumns{}, []any(nil)
+	add := func(name string, value any) {
+		cols = append(cols, name)
+		args = append(args, value)
+	}
+	add("user_id", review.UserID)
+	add("local_week_start", review.LocalWeekStart)
+	add("as_of", review.AsOf)
+	add("tasks_due", c.TasksDue)
+	add("tasks_done", c.TasksDone)
+	add("tasks_carried_over", c.TasksCarriedOver)
+	add("deals_moved", c.DealsMoved)
+	add("deals_won", c.DealsWon)
+	add("deals_lost", c.DealsLost)
+	add("proposals_accepted", c.ProposalsAccepted)
+	add("proposals_rejected", c.ProposalsRejected)
+	add("brief_items_acted", c.BriefItemsActed)
+	add("brief_items_dismissed", c.BriefItemsDismissed)
+	add("leads_routed", c.LeadsRouted)
+	add("leads_answered_in_target", c.LeadsAnsweredInTarget)
+	add("leads_breached", c.LeadsBreached)
+	add("meetings_held", c.MeetingsHeld)
+	add("meetings_with_next_step", c.MeetingsWithNextStep)
+	add("commitments_due", c.CommitmentsDue)
+	add("commitments_kept", c.CommitmentsKept)
+	add("prior_review_id", review.PriorReviewID)
+	// The four money columns are written together or not at all — the table's
+	// own CHECK says a figure names its currency and a currency names figures.
+	// An unconvertible week writes four nulls, which is the honest absence.
+	if review.Money.Known {
+		add("pipeline_created_minor", review.Money.CreatedMinor)
+		add("pipeline_won_minor", review.Money.WonMinor)
+		add("pipeline_lost_minor", review.Money.LostMinor)
+		add("base_currency", review.Money.Currency)
+	}
+
 	var id ids.UUID
-	err := tx.QueryRow(ctx, `
-		INSERT INTO weekly_review (user_id, local_week_start, as_of,
-		    tasks_due, tasks_done, tasks_carried_over,
-		    deals_moved, deals_won, deals_lost,
-		    proposals_accepted, proposals_rejected,
-		    brief_items_acted, brief_items_dismissed)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	err := tx.QueryRow(ctx, fmt.Sprintf(`
+		INSERT INTO weekly_review (%s) VALUES (%s)
 		ON CONFLICT ON CONSTRAINT uq_weekly_review_user_week DO NOTHING
-		RETURNING id`,
-		review.UserID, review.LocalWeekStart, review.AsOf,
-		c.TasksDue, c.TasksDone, c.TasksCarriedOver,
-		c.DealsMoved, c.DealsWon, c.DealsLost,
-		c.ProposalsAccepted, c.ProposalsRejected,
-		c.BriefItemsActed, c.BriefItemsDismissed).Scan(&id)
+		RETURNING id`, cols.names(), cols.placeholders()), args...).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The week already had a review. The loser of that race is not an
 		// error: the constraint did its job.
@@ -287,66 +431,14 @@ func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool
 	return id, true, nil
 }
 
-// Narrate writes the week's sentence onto an existing review.
-//
-// A SECOND WRITE onto a row the deterministic pass already committed, never
-// part of assembling it. The counts and the deal lines are the review; this is
-// what a colleague would say about them, and it must be able to fail without
-// costing the rep any of it.
-//
-// Idempotent by replacement: a later pass over the same week is a correction,
-// not an addition. The stamp moves with it.
-//
-// Empty prose stores as NULL with the stamp still written — the CHECK admits
-// that deliberately, so a pass that ran and found the week unremarkable is
-// distinguishable from one that never ran.
-func (e *Engine) Narrate(ctx context.Context, reviewID ids.UUID, sentence string, now time.Time) error {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return err
-	}
-	userID, err := reviewUser(ctx)
-	if err != nil {
-		return err
-	}
-	// Bounded HERE as well as in the parser, because this is the writer: a
-	// caller that reaches Narrate without going through narrative.Parse would
-	// otherwise learn the ceiling from a driver error at 06:00 on a Monday.
-	// Runes, because the column counts characters — a German sentence full of
-	// umlauts is fewer characters than bytes.
-	if n := len([]rune(sentence)); n > narrative.MaxNarrativeRunes {
-		return httperr.Validation("narrative", "too_long",
-			fmt.Sprintf("the sentence is %d characters, over the %d the column holds",
-				n, narrative.MaxNarrativeRunes))
-	}
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		var before *string
-		var beforeStamp *time.Time
-		// The owner check is the row scope: a review belongs to the rep whose
-		// week it was, and the id alone must not reach anybody else's.
-		row := tx.QueryRow(ctx, `
-			SELECT narrative, narrated_at FROM weekly_review
-			 WHERE id = $1 AND user_id = $2
-			 FOR UPDATE`, reviewID, userID)
-		switch err := row.Scan(&before, &beforeStamp); {
-		case errors.Is(err, pgx.ErrNoRows):
-			return apperrors.ErrNotFound
-		case err != nil:
-			return err
-		}
+type insertColumns []string
 
-		stamp := now.UTC()
-		var stored *string
-		if sentence != "" {
-			stored = &sentence
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE weekly_review SET narrative = $2, narrated_at = $3 WHERE id = $1`,
-			reviewID, stored, stamp); err != nil {
-			return err
-		}
-		_, err := storekit.Audit(ctx, tx, "update", "weekly_review", reviewID,
-			map[string]any{"narrative": before, "narrated_at": beforeStamp},
-			map[string]any{"narrative": stored, "narrated_at": stamp})
-		return err
-	})
+func (c insertColumns) names() string { return strings.Join(c, ", ") }
+
+func (c insertColumns) placeholders() string {
+	holders := make([]string, len(c))
+	for i := range c {
+		holders[i] = "$" + strconv.Itoa(i+1)
+	}
+	return strings.Join(holders, ", ")
 }

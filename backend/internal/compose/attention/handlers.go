@@ -8,6 +8,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Handlers is the feed's HTTP surface: one read, no verbs.
@@ -27,6 +28,20 @@ func NewHandlers(svc *Service) Handlers { return Handlers{svc: svc} }
 // already ran.
 func (h Handlers) GetAttention(w http.ResponseWriter, r *http.Request) {
 	out, err := h.svc.Assemble(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// GetTeamBoard answers what each teammate is carrying.
+//
+// No parameters: whose team it is comes from the principal, so a reader cannot
+// ask about somebody else's. The row-scope tier that admits the read is checked
+// in the service, beside the roster it draws.
+func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+	out, err := h.svc.TeamBoard(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -67,7 +82,32 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 		}
 		scope = string(*params.Scope)
 	}
-	out, err := h.svc.Worklist(r.Context(), scope, filter, limit)
+	// The generated type already refused anything that is not a uuid, so an
+	// unparseable owner never reaches the resolver.
+	var owner ids.UUID
+	if params.Owner != nil {
+		// A named owner and a wider scope are two answers to one question, and
+		// nothing defines which wins. Letting the owner take it silently left
+		// the response echoing the scope that had been ignored — one rep's work
+		// labelled `"scope": "unassigned"`, which is the most misleading
+		// direction available. Refused, so the caller says which they meant.
+		if scope != "" && scope != scopeMine {
+			httperr.Write(w, r, httperr.Validation("owner", "conflicts_with_scope",
+				"asking for one person's queue and for a wider scope are different questions; send one"))
+			return
+		}
+		owner = ids.UUID(*params.Owner)
+	}
+	// Passed through as the caller sent it, unchecked here on purpose. What a
+	// token means is a question about the scope and owner this read RESOLVES to,
+	// which happens in the service beside the resolution itself. Fingerprinting
+	// the request's words instead would refuse a caller who spelled out the
+	// default on page two of a walk they had started without it.
+	token := ""
+	if params.Cursor != nil {
+		token = *params.Cursor
+	}
+	out, err := h.svc.Worklist(r.Context(), scope, filter, owner, limit, token)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

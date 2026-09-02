@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 // fixedVerifier/fixedExchanger/fixedStateSigner satisfy the three injected
@@ -341,5 +342,71 @@ func TestTruncateForLogNeverSplitsAMultiByteRune(t *testing.T) {
 	}
 	if got := truncateForLog("short", 63); got != "short" {
 		t.Fatalf("a string under the limit must be returned unchanged, got %q", got)
+	}
+}
+
+// A provider the admin has turned off must be refused at BOTH ends of the
+// flow. Filtering only the capabilities response would leave these routes
+// live: the button disappears from the login screen while the endpoint goes
+// on minting sessions for anyone who kept the URL, and a flow already at the
+// consent screen would still complete after the provider was disabled.
+func TestADisabledProviderIsRefusedAtStartAndAtCallback(t *testing.T) {
+	disabled := func(ctx context.Context) ([]OIDCProviderConfig, error) {
+		return []OIDCProviderConfig{}, nil
+	}
+	h := Handlers{
+		oidcProviders: map[string]OIDCProviderConfig{
+			"google": {Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"},
+		},
+		oidcPerIP: ratelimit.New(30, time.Minute),
+	}.WithOIDCProvidersEnabledFn(disabled)
+
+	start := httptest.NewRecorder()
+	h.StartOidcSignIn(start, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	if start.Code != http.StatusNotFound {
+		t.Errorf("start for a disabled provider = %d, want 404 — indistinguishable from one that was never configured", start.Code)
+	}
+
+	// The callback REDIRECTS rather than answering 404, and the difference is
+	// not cosmetic: this route is reached by a full-page browser navigation
+	// back from the consent screen, so a JSON refusal renders as raw text. What
+	// matters is that the flow does not complete.
+	callback := httptest.NewRecorder()
+	h.OidcSignInCallback(callback, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=y", nil),
+		"google", crmcontracts.OidcSignInCallbackParams{})
+	if callback.Code != http.StatusFound {
+		t.Errorf("callback for a disabled provider = %d, want a redirect to the neutral failure page", callback.Code)
+	}
+	if cookie := callback.Header().Get("Set-Cookie"); strings.Contains(cookie, "session") {
+		t.Error("a disabled provider's callback minted a session; the flow completed after the provider was turned off")
+	}
+}
+
+// A policy read that FAILS is not the same answer as a provider that is off.
+// 404 means "no such provider", so reporting an outage that way would send an
+// operator to debug a configuration that is perfectly fine.
+//
+// This holds the START route, which can answer a caller directly. The CALLBACK
+// cannot: it is a browser redirect target, so every refusal there lands on the
+// neutral failure page, and what distinguishes an outage ("provider policy")
+// from a provider the admin turned off ("provider disabled") is the reason the
+// fail() path writes to system_log, not the response.
+func TestAFailedProviderPolicyReadDoesNotReadAsAnAbsentProvider(t *testing.T) {
+	h := Handlers{
+		oidcProviders: map[string]OIDCProviderConfig{
+			"google": {Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"},
+		},
+		oidcPerIP: ratelimit.New(30, time.Minute),
+	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
+		return nil, errors.New("the settings row is unreachable")
+	})
+
+	rec := httptest.NewRecorder()
+	h.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	if rec.Code == http.StatusNotFound {
+		t.Error("a failed policy read answered 404, which claims the provider does not exist")
+	}
+	if rec.Code < 500 {
+		t.Errorf("a failed policy read = %d, want a server-side failure the operator can act on", rec.Code)
 	}
 }

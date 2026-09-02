@@ -244,9 +244,9 @@ own consumption.
 
 Connecting or disconnecting a workspace's incumbent binding is destructive, workspace-wide config — it
 purges the mirror and flips `x_sor_mode` for every user in the workspace — so it follows the same
-posture as quota configuration: **create/update/delete are admin/ops-only**; every role may read the
-connection status (a rep can see whether overlay mode is live, the same as reading a quota's
-attainment). `POST /overlay/reconcile` (a manual reconciliation sweep) is object-RBAC-gated the same
+posture as custom-field configuration: **create/update/delete are admin/ops-only**; every role may
+read the connection status (a rep can see whether overlay mode is live, the same as reading the
+custom-field catalog). `POST /overlay/reconcile` (a manual reconciliation sweep) is object-RBAC-gated the same
 way, as `ActionUpdate` on `overlay_connection`. See
 [how-to/connect-a-hubspot-overlay.md](../how-to/connect-a-hubspot-overlay.md) for the operator recipe,
 and [authorization.md](authorization.md) for how object RBAC is enforced at the store/service entry

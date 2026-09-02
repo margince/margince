@@ -98,12 +98,14 @@ type Server struct {
 	ownDomainHandlers
 	installationSettingsHandlers
 	licenseHandlers
-	googleAppHandlers
+	connectorAppHandlers
 	installationSetupHandlers
 	consumerMailDomainHandlers
 	blockedDomainHandlers
+	captureSenderHandlers
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
+	captureCounterpartyHoldHandlers
 	claimHandlers
 	importHandlers
 	channelHandlers
@@ -115,7 +117,6 @@ type Server struct {
 	orgRollupHandlers
 	strengthHandlers
 	customfieldsHandlers
-	quotasHandlers
 	attachmentExtractionHandlers
 	overlayHandlers
 	embedReindexHandlers
@@ -151,11 +152,29 @@ type Server struct {
 	// The notices transport: one verb (mark read); the content reaches the
 	// reader on the Worklist's notices lane.
 	noticesHandlers
+	// The week ahead: the rep's own plan, and the one write their lead has on
+	// it. The week just gone is weeklyHandlers, which shares no table with it.
+	weeklyPlanHandlers
+	// The introductions transport: one rep asking a colleague to open a door,
+	// the colleague's bounded answer, and what came of it.
+	introductionHandlers
+
+	// signInProviders accumulates the federated sign-in providers this
+	// deployment composed, in registration order. It exists because each
+	// provider arrives in its own Option while the identity handlers take the
+	// set as maps that are ASSIGNED — see signinregistry.go for why the union
+	// is rebuilt on every registration rather than merged in place.
+	signInProviders []signInProvider
 
 	// gmailPush is the Pub/Sub push webhook (built on the shared chassis,
 	// webhook.go), injected by WithGmailPush only when a subscription token
 	// is configured — the route is absent otherwise, never open.
 	gmailPush http.Handler
+
+	// graphPush is the Microsoft Graph change-notification webhook (the same
+	// chassis), injected by WithGraphPush only when a notification token is
+	// configured — the route is absent otherwise, never open.
+	graphPush http.Handler
 
 	// overlayWebhook is the HubSpot webhook-as-signal receiver (OVA-WIRE-10),
 	// injected by WithOverlayWebhook only when the overlay app secret is
@@ -209,6 +228,14 @@ type Server struct {
 	// it feeds a /readyz probe and backs the attachment handlers; nil means
 	// a role that stores no objects.
 	blob blobstore.Store
+	// threadAudience applies an owner own decision about a thread they imported.
+	threadAudience *ThreadAudienceSetter
+
+	// originProbe answers whether the configured public origin responds.
+	// Nil until WithPublicBaseURL runs, and nil forever in a role with no
+	// origin configured — which the Connections screen renders as an
+	// absent row rather than a failure.
+	originProbe *publicOriginProbe
 
 	// vault is the secret store, injected by WithKeyvault. When configured
 	// it feeds a /readyz probe and backs the capture connector-credential
@@ -234,18 +261,25 @@ type Server struct {
 	// client credentials but no state key — which mounts no api-side connect
 	// transport yet sends perfectly well from the worker — still counts as
 	// configured. False is the honest default for a composition never told about
-	// a Google app at all. Gmail is the only provider with a field here because
-	// it is the only one comms.SendScopeFor gives a send scope.
+	// a Google app at all.
 	gmailAppConfigured bool
-	// googleAppResolver resolves the installation's STORED Google app, built by
-	// WithKeyvault and named in every connectorHandlers literal.
+	// graphAppConfigured is the Microsoft twin, recorded by WithGraphCapture on
+	// the same condition and read by the same pre-flight. It exists because
+	// Outlook now sends too: comms.SendScopeFor gives a send scope to both mail
+	// providers, so both reach the pre-flight and a missing field would report
+	// a configured deployment as unable to send.
+	graphAppConfigured bool
+	// googleAppResolver and microsoftAppResolver resolve the installation's
+	// STORED app for each vendor, built by WithKeyvault and named in every
+	// connectorHandlers literal.
 	//
-	// It lives on the Server rather than only inside those handlers because the
+	// They live on the Server rather than only inside those handlers because the
 	// struct is REPLACED wholesale in two places, and a field assigned beside a
 	// composite literal is one the next literal drops without a word — which is
 	// exactly how this arrived inert the first time. Kept here, each construction
-	// has to name it, and a reader sees the omission.
-	googleAppResolver googleAppResolver
+	// has to name them, and a reader sees the omission.
+	googleAppResolver    appResolver
+	microsoftAppResolver appResolver
 
 	// schemaPoolReady is the /readyz schema-pool probe, injected only by
 	// WithSchemaPool — a role that never mounted --schema-dsn declares
@@ -403,4 +437,9 @@ func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
 // GetWorklist forwards the ranked read to the same assembled surface.
 func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmcontracts.GetWorklistParams) {
 	s.attentionHandlers.GetWorklist(w, r, params)
+}
+
+// GetTeamBoard forwards the manager's read of the same work.
+func (s Server) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+	s.attentionHandlers.GetTeamBoard(w, r)
 }

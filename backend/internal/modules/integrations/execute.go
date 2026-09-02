@@ -181,6 +181,24 @@ func (s *Store) leaseForSubmit(ctx context.Context, tx pgx.Tx, name, runID strin
 	if err != nil {
 		return none, false, err
 	}
+	// The identifiers are read again HERE, so they are checked again here.
+	// admission asked the same question, but a record can lose a profile link
+	// or an employer between being queued and being sent — an edit, a merge, a
+	// retention pass — and the vendor answers an unmatchable request with a
+	// rejection the platform reads as a provider fault, marking the whole
+	// connection broken. That is the defect this guard exists to stop, and a
+	// check only at queue time leaves the window open.
+	//
+	// Skipped rather than cancelled: `skipped` is excluded from spend exactly
+	// as `cancelled` is, so the hold is released either way, and the reason is
+	// what the person page needs to say what changed.
+	desc, err := s.registry.Descriptor(name)
+	if err != nil {
+		return none, false, err
+	}
+	if !req.Identifiers.Matchable(desc.MatchRules) {
+		return none, false, s.markSkipped(ctx, tx, runID, provider.SkipNoIdentifiers)
+	}
 	cred, err := s.unseal(ctx, tx, conn.credentialRef)
 	if err != nil {
 		return none, false, err
@@ -311,6 +329,21 @@ func cascadesFor(desc provider.Descriptor, requested []provider.Category) []prov
 // submission_unknown with its reservation held, PI-AC-4's exact state.
 func (s *Store) settleSubmit(ctx context.Context, desc provider.Descriptor, name, runID string, lease execLease, sub provider.Submission) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// SUBJECT FIRST. A synchronous provider answers inside this
+		// transaction, so this settlement may go on to write the subject's
+		// record — and the eraser locks the person before it scrubs the runs
+		// that bought their data. Taking the connection and the run first and
+		// the person last would close a cycle against it: one of the two dies
+		// on a deadlock, either failing somebody's Art. 17 request or burning
+		// a paid run's hand-off into claims_unwritten.
+		//
+		// Held for every outcome, not only the synchronous one. Which branch
+		// recordSubmission takes is not known until the epoch has been
+		// re-read, and a lock order that depends on the answer is not an
+		// order.
+		if err := s.holdSubjectForSettlement(ctx, tx, lease.person); err != nil {
+			return err
+		}
 		if err := storekit.LockWriteIdentity(ctx, tx, "provider_connection", name); err != nil {
 			return err
 		}

@@ -251,7 +251,7 @@ func TestTheMessageIDSurvivesARoundTripThroughMailmap(t *testing.T) {
 	}
 	// Feed the bytes we actually produced through the same normalization the
 	// Gmail connector runs on a captured message. The auth fixture's Owner
-	// ("rep@acme.test") is the From address buildRFC822 stamped, so it must
+	// ("rep@acme.test") is the From address mailwire.Build stamped, so it must
 	// match here too or Parse would classify the message as inbound.
 	c.owner = "rep@acme.test"
 	recs, err := c.Normalize(context.Background(), connector.RawRecord(decodeMIME(t, raw)))

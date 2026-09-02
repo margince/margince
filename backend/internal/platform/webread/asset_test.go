@@ -81,7 +81,8 @@ func TestHeadAssetExtraction(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotOG, gotIcons := extractHeadAssets(tc.html, base)
+			head := extractHeadAssets(tc.html, base)
+			gotOG, gotIcons := head.ogImage, head.icons
 			if gotOG != tc.wantOG {
 				t.Fatalf("og:image = %q, want %q", gotOG, tc.wantOG)
 			}
@@ -272,14 +273,18 @@ func TestOnlyTheHeadDeclaresTheVisualIdentity(t *testing.T) {
 	// A page carrying user-generated content is exactly where body markup an
 	// attacker wrote shows up. The head's declaration is the site's; the
 	// body's is anybody's.
-	og, icons := extractHeadAssets(
+	head := extractHeadAssets(
 		`<html><head><link rel="icon" href="/real.png"></head>`+
 			`<body><link rel="icon" href="/injected.png">`+
+			`<meta http-equiv="refresh" content="0; URL=/injected-page">`+
 			`<meta property="og:image" content="/injected-share.png"></body></html>`, base)
-	if og != "" {
-		t.Fatalf("og:image = %q, want nothing — it was declared in the body", og)
+	if head.ogImage != "" {
+		t.Fatalf("og:image = %q, want nothing — it was declared in the body", head.ogImage)
 	}
-	if len(icons) != 1 || icons[0].URL != "https://acme.example/real.png" {
-		t.Fatalf("icons = %+v, want only the head's declaration", icons)
+	if head.refresh != "" {
+		t.Fatalf("refresh = %q, want nothing — it was declared in the body", head.refresh)
+	}
+	if len(head.icons) != 1 || head.icons[0].URL != "https://acme.example/real.png" {
+		t.Fatalf("icons = %+v, want only the head's declaration", head.icons)
 	}
 }

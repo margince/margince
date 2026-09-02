@@ -10,13 +10,11 @@ package integration
 // collision — poc-1 REJECTS a second default, it never auto-demotes the
 // incumbent), keyset listing with a locale filter and include_archived,
 // optimistic If-Match updates on the full-replace PUT, idempotent
-// archive that never writes a second audit row, the Product/Quota
-// config RBAC posture (rep create+read+update, read_only read-only, no
-// row-scope probe), and RLS tenant isolation. Rides the same Env/e.As
-// harness as quotas_integration_test.go; the HTTP-level coverage (the
+// archive that never writes a second audit row, the Product config RBAC
+// posture (rep create+read+update, read_only read-only, no row-scope
+// probe), and RLS tenant isolation. The HTTP-level coverage (the
 // two named 409 shapes and the six-operation wire surface) lives in the
-// sibling offertemplate_http_integration_test.go, mirroring how
-// quotas_integration_test.go/quotas_http_integration_test.go split.
+// sibling offertemplate_http_integration_test.go.
 
 import (
 	"errors"

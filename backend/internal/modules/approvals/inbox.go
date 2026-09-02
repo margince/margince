@@ -248,8 +248,7 @@ func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInp
 		}
 		from = after(batch[len(batch)-1])
 	}
-	rows, page := capPage(out, in.Limit, nil)
-	return rows, page, nil
+	return capPage(out, in.Limit, nil)
 }
 
 // listForTarget answers the inbox scoped to ONE record.
@@ -289,8 +288,7 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	rows, page := capPage(out, in.Limit, scanned)
-	return rows, page, nil
+	return capPage(out, in.Limit, scanned)
 }
 
 // approvalWhere is the ONE spelling of "which staged rows this read wants":

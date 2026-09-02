@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -194,5 +195,155 @@ func TestReplayRefusesBeforeQueryingWhenTheIDIsUnreadable(t *testing.T) {
 				t.Fatalf("err = %v, want ErrNotFound", err)
 			}
 		})
+	}
+}
+
+// A companion reference the body carries but cannot be read as an id refuses
+// before any transaction opens, exactly as the primary does.
+//
+// The nil pool is the assertion: reaching the database would panic, so
+// surviving the call is proof the refusal came first. It is also what makes
+// this case readable — a companion whose value is garbage is a body the
+// middleware cannot vouch for, and "cannot tell" is not "allowed".
+func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
+	for _, tc := range []struct{ name, route, body string }{
+		{
+			name:  "quick capture names an unreadable employer",
+			route: "POST /v1/people/quick-capture",
+			body:  `{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":"garbage"}`,
+		},
+		{
+			name:  "a promotion names an unreadable deal",
+			route: "POST /v1/leads/{id}/promote",
+			body:  `{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"deal_id":"garbage"}`,
+		},
+		{
+			name:  "a demotion names an unreadable person",
+			route: "POST /v1/leads/{id}/demote",
+			body:  `{"lead":{"id":"01a00000-0000-7000-8000-000000000001"},"person_id":"garbage"}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := ensureReplayVisible(context.Background(), nil, nil, tc.route, tc.body); !errors.Is(err, apperrors.ErrNotFound) {
+				t.Fatalf("err = %v, want ErrNotFound", err)
+			}
+		})
+	}
+}
+
+// A companion that is absent, or present and null, names no record — these
+// fields are optional by contract, and a person captured with no employer
+// carries no organization id. Skipping them is not a hole: there is nothing to
+// probe.
+//
+// Asserted against ensureCompanionsVisible DIRECTLY, and it has to be: through
+// the whole gate both a skip and a refusal answer ErrNotFound, so a version
+// that rejected every optional shape would pass a test that only read the
+// verdict. The nil pool is the second half — reaching the database would panic,
+// so nil is proof the loop skipped rather than probed.
+func TestReplaySkipsACompanionTheBodyDoesNotName(t *testing.T) {
+	const route = "POST /v1/people/quick-capture"
+	target := replayableOperations[route]
+	// The companion this case is ABOUT, not merely one: with a different path
+	// both bodies below read as absent and the case passes having exercised
+	// nothing.
+	if !slices.Contains(target.companions, companionRef{table: tableOrganization, idPath: companionOrgField}) {
+		t.Fatalf("%s declares companions %+v, and this case is about {organization, %s} — with a different path both bodies read as absent",
+			route, target.companions, companionOrgField)
+	}
+	for _, body := range []string{
+		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"}}`,
+		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":null}`,
+	} {
+		if err := ensureCompanionsVisible(context.Background(), nil, target, body); err != nil {
+			t.Errorf("body %s: err = %v, want nil — an optional companion the body does not name is skipped, not refused", body, err)
+		}
+	}
+}
+
+// replayTableFor is the choice of WHICH table a body's record lives in, and it
+// has three answers with three different failure modes.
+//
+// Getting it wrong is not a refusal, it is a lookup in the wrong table: a send
+// answered as an activity when it was scheduled finds nothing and turns a
+// legitimate retry into a 404, which a client then "recovers" from with a fresh
+// key and a second message to the customer.
+func TestReplayTableForPicksTheShapeTheBodyIs(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		target replayTarget
+		body   string
+		want   string
+		refuse bool
+	}{
+		{
+			name:   "the entry's own table when it names one",
+			target: replayTarget{table: tablePerson, idPath: "id"},
+			body:   `{"id":"x"}`,
+			want:   tablePerson,
+		},
+		{
+			name:   "a send that went now is its activity",
+			target: replayTarget{table: tableActivity, altTable: tableScheduledSend, altMarker: "scheduled_at"},
+			body:   `{"id":"x"}`,
+			want:   tableActivity,
+		},
+		{
+			name:   "a send that will go later is its scheduled send",
+			target: replayTarget{table: tableActivity, altTable: tableScheduledSend, altMarker: "scheduled_at"},
+			body:   `{"id":"x","scheduled_at":"2026-07-05T09:00:00Z"}`,
+			want:   tableScheduledSend,
+		},
+		{
+			// Present and null is the same answer as absent: the field carries
+			// no discriminator, so the body is the primary shape.
+			name:   "a null marker is not the alternate shape",
+			target: replayTarget{table: tableActivity, altTable: tableScheduledSend, altMarker: "scheduled_at"},
+			body:   `{"id":"x","scheduled_at":null}`,
+			want:   tableActivity,
+		},
+		{
+			name:   "a polymorphic reference reads its table off the body",
+			target: replayTarget{tableField: "record_type", idPath: "record_id"},
+			body:   `{"record_type":"deal","record_id":"x"}`,
+			want:   tableDeal,
+		},
+		{
+			// The table is the thing being resolved, so a body that does not
+			// name one cannot be probed at all.
+			name:   "a polymorphic reference with no table refuses",
+			target: replayTarget{tableField: "record_type", idPath: "record_id"},
+			body:   `{"record_id":"x"}`,
+			refuse: true,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := replayTableFor(c.target, c.body)
+			switch {
+			case c.refuse && !errors.Is(err, apperrors.ErrNotFound):
+				t.Fatalf("err = %v, want ErrNotFound", err)
+			case c.refuse:
+			case err != nil:
+				t.Fatalf("err = %v, want nil", err)
+			case got != c.want:
+				t.Errorf("table = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// A companion present as an EMPTY STRING is a body the middleware cannot vouch
+// for, not a body that names no record. Skipping it would replay a malformed
+// answer on the strength of a valid primary.
+//
+// It sits beside the skip case deliberately: an empty string resolves through
+// stringAt as ("", nil) — present, unlike absent or null — and is what tells a
+// reader that "the field is there but says nothing" refuses while "the field is
+// not there" does not.
+func TestReplayRefusesAnEmptyCompanionID(t *testing.T) {
+	err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/people/quick-capture",
+		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":""}`)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }

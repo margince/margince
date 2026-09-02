@@ -90,11 +90,22 @@ const unconnected: ProviderConnection = {
   updated_at: "2026-01-05T09:00:00Z",
 };
 
-function cardStory(allow: GrantSpec, connections: ProviderConnection[]) {
+function cardStory(
+  allow: GrantSpec,
+  connections: ProviderConnection[],
+  automaticLookup = true,
+) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
       "GET /provider-connections": () => jsonResponse({ data: connections }),
+      // Routed explicitly, and defaulting to the INSTALLATION's own default of
+      // on. The stub's fallback answers an empty page, which reads as
+      // `automatic_lookup: undefined` and draws every switch off — so a story
+      // that skipped this route would show the posture off in its screenshot
+      // while its name claimed something else.
+      "GET /integrations/settings": () =>
+        jsonResponse({ automatic_lookup: automaticLookup }),
     });
     return (
       <StoryProviders>
@@ -141,17 +152,33 @@ export const ConnectDialog: Story = {
   },
 };
 
-// Both switches on: the state where a mailbox sync is also buying data, which
-// no other story draws. The two rows carry the same control at the same x, so
-// the only thing separating them is their labels — the picture worth having,
-// since a reader who misreads which one is on has misread the bill.
-export const OperatorEnrichingCapturedContacts: Story = {
+// An installation still working through the contacts it had before the provider
+// was connected. The count and the sentence under it are the picture worth
+// having: a figure alone stops moving for reasons this card would not explain,
+// so the row says whether the sweep is running or paused.
+export const OperatorCatchingUp: Story = {
   render: cardStory(OPERATOR, [
-    {
-      ...connected,
-      configuration: { ...connected.configuration, automatic_import: true },
-    },
+    { ...connected, lookup_backlog: { remaining: 1240, paused: false } },
   ]),
+};
+
+// The same backlog, going nowhere. Every cause — the posture off, the day's
+// ceiling spent, a provider that stopped answering — reads identically as a
+// number that will not fall, which is why the card says so in words.
+export const OperatorCatchUpPaused: Story = {
+  render: cardStory(
+    OPERATOR,
+    [{ ...connected, lookup_backlog: { remaining: 1240, paused: true } }],
+    // Paused BECAUSE the posture is off, which is one of the three causes the
+    // row's sentence names and the only one a screenshot can show.
+    false,
+  ),
+};
+
+// The posture off with nothing pending: what an installation in a jurisdiction
+// that forbids trading personal data looks like after somebody switched it off.
+export const OperatorLookupsOff: Story = {
+  render: cardStory(OPERATOR, [connected], false),
 };
 
 // May bind a key, may not destroy what it bought — so the overflow that holds
@@ -203,4 +230,35 @@ export const OperatorConnectedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: cardStory(OPERATOR, [connected]),
+};
+
+/**
+ * The paid half of the card, which no other story reaches: none of them carries
+ * a catalog, so the switches that decide what a rep may buy render nowhere.
+ *
+ * The mobile row is the case worth looking at. The provider only issues a
+ * number alongside the work email, so with that switch off the mobile cannot be
+ * bought at all — the switch is refused and says what it needs, rather than
+ * sitting on while the buy button it promises never appears on any contact.
+ */
+export const OperatorPricedCategories: Story = {
+  render: cardStory(OPERATOR, [
+    {
+      ...connected,
+      configuration: {
+        ...connected.configuration,
+        categories: { linkedin_profile: true, professional_email: false },
+      },
+      catalog: [
+        { category: "linkedin_profile", free: true, cost: {} },
+        { category: "professional_email", free: false, cost: { email: 1 } },
+        {
+          category: "mobile",
+          free: false,
+          cost: { email: 1, mobile: 1 },
+          requires: "professional_email",
+        },
+      ],
+    },
+  ]),
 };

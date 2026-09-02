@@ -292,7 +292,11 @@ func (s *Store) ListSignals(ctx context.Context, in ListSignalsInput) ([]crmcont
 		if len(signals) > limit {
 			signals = signals[:limit]
 			last := signals[len(signals)-1]
-			page = storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))}
+			next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+			if err != nil {
+				return err
+			}
+			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
 		return nil
 	})

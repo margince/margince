@@ -70,6 +70,17 @@ The window can only be **widened** later, never narrowed. And when the progress
 bar fills, the import is finished but the AI work is not — classification runs
 hourly and enrichment daily afterwards.
 
+**Everything it brings in is held to begin with.** A new mailbox is *Held until
+classified*, so a backfill of five years of mail does not put five years of mail
+in front of your colleagues: each thread stays with the people who were on it
+until a classifier judges it ordinary business. That is also true of the records
+the import mints — a contact created from a thread nothing has judged yet is
+yours alone until the verdict clears it.
+
+Which means a backfill is worth watching in two places once it finishes:
+**Senders**, for what was concluded about each address it saw, and your own
+timeline, for the threads still held. Both are under Settings → Connections.
+
 ## What happens to one message
 
 Four stages, in order.
@@ -94,10 +105,11 @@ event. **The audit record stores metadata only, never a subject or a body.**
 
 **4. Deciding about the sender.** See the ladder below.
 
-You can watch all of this. **Settings → Capture activity** shows "What happened
-to your messages in the last 24 hours", and any single message can be opened to
-see **"How this message was handled"** — every step in the order it met them,
-each marked Done, Skipped, Waiting, Failed, Did not apply, or Cannot tell.
+You can watch all of this. **Settings → Capture activity** counts what the last
+24 hours turned into, and holds the senders you keep out. Under **Messages**,
+which you open when you want it, any single message can be opened again to see
+**"How this message was handled"** — every step in the order it met them, each
+marked Done, Skipped, Waiting, Failed, Did not apply, or Cannot tell.
 
 ## Who the message belongs to
 
@@ -262,10 +274,16 @@ person on a channel, or the person has blocked the bot, there is no reply
 button. And a send without consent for that purpose is blocked outright, with a
 **Review consent** link rather than a silent failure.
 
-**Sender and subject are not kept in the capture trace** unless an operator
-explicitly turns that on in the deployment file. There is no in-app switch,
-because it retains correspondence the CRM otherwise refuses to store. When it is
-off, the trace says so: "content not stored".
+**The capture trace names the sender and keeps a bounded subject** — one address
+and one subject line, never a body, deleted with the row after 24 hours. That is
+what lets the log answer why a message did not arrive; without it the page is a
+list of decisions naming nobody. You see only rows from your own connections.
+
+An operator can turn this off in the deployment file (`capture.trace_payloads:
+false`) where a works agreement requires it. There is no in-app switch either
+way, so neither posture is one member's to change for their colleagues. When it
+is off, the log says so once, above its rows, as a fact about the installation
+rather than about any one message.
 
 ## Things you control yourself
 
@@ -274,9 +292,10 @@ your company. This is what makes internal mail internal. Changing it is
 irreversible in one direction: mail skipped while a domain was registered is
 never offered again by any mailbox.
 
-**Keep out of capture** — addresses and domains whose messages never enter the
-CRM. Your own rules bind only the mailboxes you connected; the organization's
-rules bind everyone. Takes effect from the next message; messages already
+**Keep out of capture** (Settings → Capture activity) — addresses and domains
+whose messages never enter the CRM. Your own rules bind only the mailboxes you
+connected; the organization's rules bind everyone, and only an administrator may
+change one of those. Takes effect from the next message; messages already
 captured stay.
 
 **Consumer mail domains** — which domains count as personal mailboxes. "Mail
@@ -287,10 +306,41 @@ company."
 what decided each one: a model verdict, a heuristic, or a person. Letting a
 domain back in re-opens the company question rather than merely clearing a flag.
 
-**Email sharing** — on by default. "Captured mail is readable by every colleague
-who can see the contact. On by default — it is what makes the pipeline shared."
-The app warns you honestly if you turn it off: doing so "will make usage of the
-CRM difficult."
+**Who may read mail from this inbox** (Settings → Connections, under each
+mailbox) — the posture that mailbox asks for. Three answers:
+
+- **Held until classified** — the default for every new mailbox. A message stays
+  with the people who were on it until a classifier judges the thread ordinary
+  business; only then can colleagues read it. Nothing is shared before a
+  decision, so a classifier that is down or out of budget leaves mail held
+  rather than open.
+- **Always held** — the same, minus the classifier. You share a thread yourself,
+  one at a time, from its row on the record timeline.
+- **Shared with the team** — a captured message is readable the moment it lands.
+  Off unless an admin allows it for the organization, because reading an
+  employee's mailbox into a shared CRM is what a works-council agreement covers
+  in Germany and Austria. Margince does not verify that one exists.
+
+Changing the posture governs mail captured afterwards. The same dialog offers to
+narrow what is already captured; it only ever narrows, because re-opening what
+was captured under a stricter answer is a separate decision.
+
+**Senders** (Settings → Connections) — every address your mailbox brought in and
+what the classifier concluded about each: a person, a role mailbox, an automated
+tool, a newsletter, an advisor, personal. You can overrule any of them. "This is
+business" readmits a sender; "keep out" destroys what they brought into your
+mailbox and stops the next message. A decision you make is never overwritten by
+a later verdict.
+
+**Private correspondence** (a contact's or company's page) — keep your mail with
+one party to the people on it, without deciding message by message. A domain
+hold covers the whole firm, which is usually what you want for a lawyer or an
+accountant. It binds mail from then on, and lifting it re-opens nothing.
+
+**Email sharing** (Settings → Capture, admin) — the organization-wide floor. On
+by default; turned off, every message captured from then on is held to its
+participants whatever any mailbox asks for. The app warns you honestly that
+doing so "will make usage of the CRM difficult."
 
 ## Whose capture activity you can see
 
@@ -301,3 +351,14 @@ bot, belong to nobody in particular and are shown to people granted that access.
 
 **No permission grant ever reaches a colleague's mailbox.** The organization-wide
 view never returns a member's personal rows.
+
+A held message is not hidden — it is visible as a row with its date and kind,
+and its content withheld. You learn that a conversation happened and nothing
+about it, including why it is held: the reason describes what the message is
+about, so it is withheld with the content. An admin is no exception, and neither
+the audit log nor an export names a held message's subject or attachments.
+
+When a message reached two mailboxes, each owner contributes what their own
+mailbox asks for and the message ends at the strictest of those. Sharing
+releases your own hold only; if a colleague is still holding it, the response
+says how many other seats are, and never who.

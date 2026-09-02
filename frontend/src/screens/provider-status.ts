@@ -63,14 +63,18 @@ export function connectionLabel(status: ProviderConnectionStatus): MessageKey {
   return CONNECTION_LABEL[status];
 }
 
-// The person page's fourteen states. Three of them mean "nothing here" and
-// they are deliberately three: nobody connected a provider, this person is
-// not eligible for one, and nobody has asked yet are different answers to
-// "why is this empty", and only one of them is something the reader can act
-// on.
+// The person page's fifteen states. Four of them mean "nothing here" and they
+// are deliberately four: nobody connected a provider, this person is not
+// eligible for one, this record carries nothing to look them up by, and nobody
+// has asked yet are different answers to "why is this empty". Two of them are
+// something the reader can act on, and the actions differ.
 const PROFILE_TONE: Record<ProviderProfileState, StatusTone> = {
   not_connected: undefined,
   not_eligible: undefined,
+  // Not a fault and not a refusal: the record is missing something, and
+  // saying so in a warning tone would blame the reader for a gap they can
+  // simply fill.
+  nothing_to_look_up: undefined,
   never_run: undefined,
   queued: undefined,
   in_progress: undefined,
@@ -95,6 +99,7 @@ const PROFILE_TONE: Record<ProviderProfileState, StatusTone> = {
 const PROFILE_LABEL: Record<ProviderProfileState, MessageKey> = {
   not_connected: "provider.profile.notConnected",
   not_eligible: "provider.profile.notEligible",
+  nothing_to_look_up: "provider.profile.nothingToLookUp",
   never_run: "provider.profile.neverRun",
   queued: "provider.profile.queued",
   in_progress: "provider.profile.inProgress",
@@ -146,18 +151,41 @@ export function isRunning(state: ProviderProfileState): boolean {
  *  refuses it — and not where no provider is connected, since there is
  *  nothing to ask.
  *
+ *  `running` is the CALLER's answer, from the run, because this state cannot
+ *  give it. Two ways it is wrong on its own, and both leave a spending button
+ *  where there should be none: it puts the connection's condition first, so a
+ *  live run under a connection whose last call failed reads `provider_error`;
+ *  and a run that is `completed` but whose values have not been folded onto the
+ *  record yet reads `completed`, while the duplicate-spend fence in the server
+ *  covers only the live states — so the same priced detail is buyable twice.
+ *
  *  `stale` is refused for the same reason as `not_connected`, and the two are
  *  one fact wearing two labels: stale IS the disconnected provider whose
  *  purchases we retained. The section says so ("the provider is no longer
  *  connected, so this cannot be refreshed"), and the server agrees — a run
  *  needs a connected connection. A button beside that sentence is one the
- *  server was always going to refuse. */
-export function canEnrichNow(state: ProviderProfileState): boolean {
+ *  server was always going to refuse.
+ *
+ *  `nothing_to_look_up` KEEPS its button, unlike the three above, and the
+ *  difference is who can fix the situation. Nobody can conjure a provider
+ *  connection from this page, but the reader can paste a LinkedIn URL into the
+ *  record — and the sentence beside the button asks them to. Withdrawing it
+ *  would leave them told to do something with no way to say they had done it:
+ *  the automatic sweep only revisits a declined contact after a day, and only
+ *  when automatic lookup is on at all.
+ *
+ *  It costs nothing to offer. The server re-reads the record's identifiers and
+ *  declines before any credit is reserved, so a press on a record still
+ *  missing them buys nothing and writes one skipped run. */
+export function canEnrichNow(
+  state: ProviderProfileState,
+  running: boolean,
+): boolean {
   return (
     state !== "not_connected" &&
     state !== "not_eligible" &&
     state !== "stale" &&
-    !isRunning(state)
+    !running
   );
 }
 

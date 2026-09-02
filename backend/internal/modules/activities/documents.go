@@ -454,8 +454,9 @@ func documentPage(last crmcontracts.Attachment) (storekit.Page, error) {
 		return storekit.Page{}, err
 	}
 	pinned := strconv.FormatBool(last.Pinned != nil && *last.Pinned)
-	return storekit.Page{
-		HasMore:    true,
-		NextCursor: sort.EncodePageCursor(&pinned, last.CreatedAt, ids.UUID(last.Id)),
-	}, nil
+	next, err := sort.EncodePageCursor(&pinned, last.CreatedAt, ids.UUID(last.Id))
+	if err != nil {
+		return storekit.Page{}, err
+	}
+	return storekit.Page{HasMore: true, NextCursor: next}, nil
 }

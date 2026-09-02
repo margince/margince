@@ -125,7 +125,7 @@ func TestPayloadTraceSkipsCallWithoutPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("openPayloadTrace: %v", err)
 	}
-	if err := trace.record("candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, ai.Call{}); err != nil {
+	if err := trace.record("candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, 1, ai.Call{}); err != nil {
 		t.Fatalf("record with nil Payload should be a no-op, got: %v", err)
 	}
 	if err := trace.close(); err != nil {
@@ -141,7 +141,7 @@ func TestPayloadTraceSkipsCallWithoutPayload(t *testing.T) {
 // off.
 func TestPayloadTraceNilReceiverIsSafe(t *testing.T) {
 	var trace *payloadTrace
-	if err := trace.record("candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, payloadCall()); err != nil {
+	if err := trace.record("candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, 1, payloadCall()); err != nil {
 		t.Fatalf("nil.record = %v, want nil", err)
 	}
 	if err := trace.close(); err != nil {
@@ -149,7 +149,7 @@ func TestPayloadTraceNilReceiverIsSafe(t *testing.T) {
 	}
 	// traceCalls reaches the receiver only through record, so it inherits the
 	// nil-safety — must not panic.
-	traceCalls(wsContext(t), trace, "candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, []ai.Call{payloadCall()}, quietLogger())
+	traceCalls(wsContext(t), trace, "candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, []ai.Call{payloadCall()}, quietLogger())
 }
 
 // traceCalls is best-effort: a write failure is logged and swallowed so a
@@ -163,14 +163,14 @@ func TestTraceCallLogsAndContinuesOnWriteFailure(t *testing.T) {
 	if err := trace.close(); err != nil {
 		t.Fatalf("close: %v", err)
 	}
-	if err := trace.record("candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, payloadCall()); err == nil {
+	if err := trace.record("candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, 1, payloadCall()); err == nil {
 		t.Fatal("record on a closed trace should error (the write-failure case under test)")
 	}
 
 	var buf bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	// Must not panic and must not surface the error to the caller.
-	traceCalls(wsContext(t), trace, "candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, []ai.Call{payloadCall()}, log)
+	traceCalls(wsContext(t), trace, "candidate", ai.TaskSummarize, testScenario("s", wideBands), 1, 1, []ai.Call{payloadCall()}, log)
 	if !strings.Contains(buf.String(), "payload trace write failed") {
 		t.Fatalf("expected a warning about the failed trace write, got: %q", buf.String())
 	}

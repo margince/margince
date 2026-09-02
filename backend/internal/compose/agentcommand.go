@@ -87,7 +87,6 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"approveImportRun":     commitImportCommand,
 	"archiveActivity":      archiveCommand,
 	"archiveDeal":          archiveCommand,
-	"archiveList":          archiveCommand,
 	"archiveTag":           archiveCommand,
 	"archiveOffer":         archiveCommand,
 	"archiveOfferTemplate": archiveCommand,
@@ -105,7 +104,6 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"replyDealRoomThread":       createRoomItemCommand,
 	"createImportRun":           previewImportCommand,
 	"createLead":                createCommand,
-	"createList":                createCommand,
 	"createOfferTemplate":       createCommand,
 	"createOrganization":        createCommand,
 	"createPerson":              createCommand,
@@ -136,6 +134,8 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// onto update_record's own {record_type, id, fields} arguments cannot
 	// express (margince/margince#928 task 5).
 	"confirmOrganizationFact":         confirmFactCommand,
+	"createOrganizationFact":          createFactCommand,
+	"deleteOrganizationFact":          deleteFactCommand,
 	"updateOrganizationFact":          updateFactCommand,
 	"confirmOrganizationProfileField": confirmProfileFieldCommand,
 	"updateOrganizationProfileField":  updateProfileFieldCommand,
@@ -146,22 +146,22 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"setProjectCompany":               setCompanyCommand,
 	"removeProjectCompany":            removeCompanyCommand,
 
-	// The six bespoke auto-execute commands (agentcommandnested.go). All six
-	// are nested creates or child/membership actions that are 🟢 today and
-	// have NEVER staged: registered anyway, because a tier floor tightening
-	// one would otherwise leave this door with only the route's own shape to
+	// The five bespoke auto-execute commands (agentcommandnested.go). All
+	// five are nested creates or child actions that are 🟢 today and have
+	// NEVER staged: registered anyway, because a tier floor tightening one
+	// would otherwise leave this door with only the route's own shape to
 	// name a target from, and for createOffer that shape is provably wrong:
 	// the routed id is the parent deal (margince/margince#1046).
 	//
-	// upsertPartner was a seventh and is gone: setting a partner's margin tier
-	// is human-only (crm.yaml), so no agent reaches that route and a decoder
-	// for it would read as coverage of a door nobody can open.
+	// upsertPartner was one and is gone: setting a partner's margin tier is
+	// human-only (crm.yaml), so no agent reaches that route and a decoder for
+	// it would read as coverage of a door nobody can open. addListMember was
+	// another, retired with the list routes themselves.
 	//
-	// Five of the six share their operationId constant with agentsplit.go's
-	// own (opAddListMember's own comment says why); createOffer has no such
-	// twin at all, since create_record never reaches the split.
-	opAddListMember: addListMemberCommand,
-	opApplyTag:      applyTagCommand,
+	// Four of the five share their operationId constant with agentsplit.go's
+	// own (opApplyTag's own comment says why); createOffer has no such twin
+	// at all, since create_record never reaches the split.
+	opApplyTag: applyTagCommand,
 	// removeTag binds to the same subject applyTag does — the tag — so it
 	// resolves the same command rather than a near-copy of it.
 	opRemoveTag:           applyTagCommand,

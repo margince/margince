@@ -75,6 +75,7 @@ import { QualifyDialog } from "./leads.qualify";
 import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
 import { LogActivity } from "./logactivity";
+import { RecordEmailAside } from "./recordemail";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
 import "./leads.css";
@@ -1353,6 +1354,9 @@ function LeadOverviewPane({
       {!lead.archived_at && !overlay && (
         <LogActivity entityType="lead" entityId={id} onLogged={onTouchLogged} />
       )}
+      {!lead.archived_at && !overlay && (
+        <RecordEmailAside entityType="lead" entityId={id} detectWaitingReply />
+      )}
       <CustomFieldsCard object="lead" record={lead} />
     </div>
   );
@@ -1424,18 +1428,18 @@ function LeadActions({
           company_name: lead.company_name ?? "",
           ...cf.recordSlice(lead),
         }}
-        update={async (values) => {
+        update={async (values, _rows, opened) => {
           const { data, error } = await api.PATCH("/leads/{id}", {
             params: {
               path: { id },
-              ...ifMatch(requireVersion(lead.version)),
+              ...ifMatch(requireVersion(opened?.version)),
             },
             body: {
               ...mapLeadUpdate(values),
               // A diff against what the form prefilled from: a snapshot sends
               // `null` for every empty custom field, and the API reads that as
               // clearing a column nobody touched.
-              ...cf.toPatch(values, cf.recordSlice(lead)),
+              ...cf.toPatch(values, opened ?? {}),
             },
           });
           if (error) {

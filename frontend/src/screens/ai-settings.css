@@ -1,0 +1,187 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* Settings → AI. Two shapes live here and nothing else: the page header's pair
+ * of readings, and the lane row that reports one binding on a single line. */
+
+/* The header: the sentence that names the page, then the two readings an
+ * operator opens it for. */
+.ai-settings-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Two readings side by side, wrapping to one column before either is squeezed
+ * to a width its figure cannot sit on. `auto-fit` rather than two fixed columns
+ * so the pair centres itself on a wide page instead of stranding the second
+ * card against the gutter. */
+.ai-settings-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+/* The half of the providers reading that is bad news, in the tone the rest of
+ * the tree spells a warning in. It shares a line with the last-call note, so it
+ * carries the colour rather than the whole detail block. */
+.ai-settings-missing {
+  color: var(--danger);
+}
+
+/* One lane, as a line: the lane's name, the vendor, the model it binds, what is
+ * wrong with that pairing, and the way in. The model takes the slack because it
+ * is the only part whose length is the vendor's to choose; everything else is
+ * sized by its own content. Wrapping, because five items on one line is a
+ * desktop reading and a phone gets the same facts stacked. */
+.ai-lane {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* What this lane is bound to: vendor, model, where it is reached, what it
+ * costs, and anything wrong with the pairing. One flex item so the row's two
+ * anchors — the lane's name and the way in — keep their edges, and the wrapping
+ * happens between the facts instead of stranding the button on a line of its
+ * own. */
+.ai-lane-binding {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 14rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+/* The lane's own name, which is the row's subject: it holds a column of its own
+ * so a reader travels one edge down the card rather than re-finding the name
+ * behind a vendor of a different width on every row. */
+.ai-lane-name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 0 0 15rem;
+  min-width: 0;
+}
+
+/* The lane's id, which is the row's subject: it holds a column of its own so a
+ * reader travels one edge down the card rather than re-finding the name behind
+ * a vendor of a different width on every row. */
+.ai-lane-id {
+  font-weight: 600;
+}
+
+/* What the lane is for. Quieter and smaller than the id, because it explains
+ * the id rather than competing with it — a reader who already knows the ladder
+ * reads straight past it. */
+.ai-lane-gloss {
+  color: var(--textMeta);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+/* What a call on this lane costs. Meta weight beside the model it prices: the
+ * figure is why the ladder is ordered the way it is, not a fact about the
+ * binding's identity. */
+.ai-lane-price {
+  color: var(--textMeta);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+/* The model id: the one string here long enough to need the room, and the one
+ * that may be truncated without losing the row's meaning — the name and the
+ * vendor beside it already say which binding this is. */
+.ai-lane-model {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The way in, pinned to the row's trailing edge. The slack lives HERE rather
+ * than in the model id, so the pills that qualify a binding stay beside the
+ * binding they qualify instead of drifting across the row to sit against the
+ * button. */
+.ai-lane-open {
+  margin-inline-start: auto;
+}
+
+/* The broker an OpenAI-wire lane is reached at, beside the model it binds.
+ * Quieter than the model id: the address qualifies the vendor badge rather than
+ * naming the thing this row is about. */
+.ai-lane-host {
+  color: var(--textMeta);
+}
+
+/* One provider credential, as a line: who, whether it is keyed, and the way to
+ * change that. Same skeleton as `.ai-lane`, because a reader crossing between
+ * the two tabs is answering the same shape of question twice. */
+.ai-provider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* The vendor over the variable its key may also arrive in: two facts about one
+ * subject, so they stack into one column rather than competing for the row. */
+.ai-provider-who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 0 0 14rem;
+  min-width: 0;
+}
+
+.ai-provider-vendor {
+  font-weight: 600;
+}
+
+.ai-provider-env {
+  color: var(--textMeta);
+  overflow-wrap: anywhere;
+}
+
+/* The paste field and the verbs that act on it, on one line: the box takes the
+ * width and Save sits at the end of it, where a reader's eye already is when
+ * they finish pasting. Removal follows Save because it is the rarer act and the
+ * destructive one, so it is never the button under the cursor.
+ *
+ * `align-items: start` rather than centre: the field can grow a validation line
+ * under it, and centred buttons would then drift down beside a box that has not
+ * moved. */
+.ai-key-entry {
+  display: flex;
+  align-items: start;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* The field takes the slack and the buttons take their own content. A floor, so
+ * a password box never squeezes to a width nothing can be pasted into — below
+ * it the row wraps and the buttons take a line of their own. */
+.ai-key-entry > :first-child {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+/* Air between a row's reading and the fields it opens — the same interval on
+ * both tabs, because the two rows ask the same shape of question. Without it a
+ * field's own label sat directly under the last line of the summary and the two
+ * read as one block instead of a reading and the thing it opened. */
+.ai-provider + *,
+.ai-lane + * {
+  margin-top: var(--space-4);
+}
+
+/* Under the lanes: what the model lists are as of, and the way to move them on.
+ * One line, because the sentence and the button are one thought — a date with
+ * no way past it is just bad news. */
+.ai-sheet-age {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}

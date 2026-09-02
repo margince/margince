@@ -32,11 +32,15 @@ const redacted = "[redacted]"
 // bearer credential rather than an identifier.
 //
 // A route belongs here when possession of the segment grants access. It does
-// NOT belong here merely for being unguessable: the public booking page
-// (/v1/public/booking/) carries a slug the host hands out deliberately, which
-// resolves to free/busy slots and nothing else, and redacting it would cost
-// the access log the only thing naming which booking page was hit while
-// buying nothing.
+// NOT belong here merely for sitting on a public route: the deal room
+// (/v1/public/rooms/) spells an operation name in that position — peek,
+// exchange, link-request — and presents its credential as a Bearer, so the
+// segment names what was asked for rather than who was allowed to ask.
+//
+// Nor does "the holder published it" put a route outside this list. Published
+// to the people a host chooses and written into every log aggregator, support
+// paste and third-party log service are not the same audience, and only the
+// first is a decision the holder made.
 var credentialPrefixes = []string{
 	// The preference centre: the token resolves straight to a
 	// (workspace, person) consent state and can change it.
@@ -45,6 +49,15 @@ var credentialPrefixes = []string{
 	// so a token in a log line is a readable copy of somebody's personal
 	// data sitting in operations.
 	"/v1/public/confirm/",
+	// The public booking page. The slug is the ONLY admission check on a
+	// route that WRITES: an anonymous request holding it creates or matches a
+	// person by email, records a consent grant against them, and books a
+	// meeting on the host's calendar (activities.BookPublicMeeting). That is
+	// the criterion above, whatever the host does with the URL afterwards.
+	//
+	// The cost is real and was weighed: the access log no longer names which
+	// booking page was hit. The booking it produces still does.
+	"/v1/public/booking/",
 }
 
 // Redact replaces the ONE path segment that follows a credential prefix and

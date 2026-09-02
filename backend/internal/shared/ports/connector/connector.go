@@ -71,6 +71,47 @@ type Watcher interface {
 type WatchResult struct {
 	HistoryID string
 	ExpiresAt time.Time
+	// Ref is the connector's OPAQUE HANDLE on the subscription it just made.
+	// Stored verbatim in capture_connection.watch_ref and handed back to
+	// WatchRenewer.RenewWatch, so a renewal addresses the subscription it made
+	// rather than going looking for it.
+	//
+	// Opaque to everything outside the connector that minted it, which is what
+	// lets a connector decide for itself what a renewal needs to hold. It is
+	// also the reason the contract says nothing about the FORM: for Graph it is
+	// the subscription id and nothing else, because whether that subscription
+	// still points at the endpoint being renewed is a question Microsoft
+	// answers, and a stored answer would be a copy of a URL carrying the token
+	// that admits a notification. This column reaches every database reader and
+	// every backup, so what a handle does not have to hold, it does not hold.
+	//
+	// Empty where the provider has no such handle: a Gmail watch is addressed by
+	// the mailbox and the topic, and there is nothing to remember.
+	//
+	// The registry's side of the contract is to store it and to CLEAR it when
+	// the connection is rebound to a different account — a handle names a
+	// subscription in the mailbox it was made against, and that mailbox is gone.
+	Ref string
+}
+
+// WatchRenewer renews a push subscription BY THE HANDLE the provider gave it.
+//
+// Optional and type-asserted, exactly like Watcher: a provider whose watch is
+// addressed by the mailbox alone has no handle to renew by and does not
+// implement this. The registry falls back to Watch, which is also what happens
+// on the first registration and for a connection made before any handle was
+// stored.
+//
+// Separate from Watcher rather than a wider Watch, because the two questions are
+// different: Watch says "make sure there is a subscription", and answering it
+// without a handle means finding one first. RenewWatch says "extend THIS one",
+// which is the question a renewal actually has.
+type WatchRenewer interface {
+	// RenewWatch extends the subscription named by ref and returns its new
+	// deadline. A ref the provider no longer knows is not an error the caller
+	// has to handle specially: the implementation registers a fresh
+	// subscription and returns its handle, which is what the caller wanted.
+	RenewWatch(ctx context.Context, auth Auth, topic, ref string) (WatchResult, error)
 }
 
 // AccountLabeler names the account an Auth bundle belongs to — the mailbox

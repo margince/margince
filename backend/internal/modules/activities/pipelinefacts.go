@@ -66,7 +66,7 @@ const ClassifyBacklogPredicate = `capture_label IS NULL
 // drawer would be four times the cost for no separation anybody benefits from.
 type PipelineFacts struct {
 	// HasPersonLink answers the person-creation rung. The link is the durable
-	// signal: it is also how the nightly reconcile finds its work, so a
+	// signal: it is also how the link_reconcile sweep finds its work, so a
 	// link-less connector activity is precisely what "not linked yet" means.
 	HasPersonLink bool
 

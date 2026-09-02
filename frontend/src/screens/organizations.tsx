@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWriteRecord } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, useRoute } from "../app/router";
@@ -12,7 +11,6 @@ import {
   Badge,
   Button,
   Card,
-  Disclosure,
   EmptyState,
   Modal,
   Skeleton,
@@ -22,7 +20,6 @@ import {
   type TimelineEntry,
   type TimelineGroup,
 } from "../design-system/composed";
-import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { ListChip } from "../design-system/listsurface";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -46,7 +43,6 @@ import {
   coldFieldLabel,
   problemMessageOf,
   QueryGate,
-  QueryStates,
   throwProblem,
   useSorMode,
   useViewerId,
@@ -56,7 +52,6 @@ import {
   DealsCard,
   NextSteps,
   type Org360Result,
-  PeopleCard,
   recordNamesIn,
   StateStrip,
   type SuggestionAction,
@@ -87,6 +82,9 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
+import { CompanyPeopleList } from "./companypeople/contacts";
+import { CoverageBand } from "./companypeople/summary";
+import { CompanyProfileForm } from "./companyprofiletab";
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { CompanyRecentList } from "./companyrecent";
@@ -96,16 +94,14 @@ import {
   companyTabRoute,
   isCompanyTab,
 } from "./companytab";
-import { isTechnicalFact, TechnicalProfileCard } from "./companytechnical";
+import { TechnicalProfileCard } from "./companytechnical";
 import { TodayOnThisAccount } from "./companytoday";
-import { VatCheckCard } from "./companyvatcheck";
 import {
   CompanyWorkCard,
   hasWorkInFlight,
   sinceLastVisitFooter,
 } from "./companywork";
 import { ComposeModal, TimelineActions } from "./compose";
-import { ConnectionsCard } from "./connections";
 import {
   CreateAction,
   type CreateField,
@@ -115,13 +111,6 @@ import {
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { useRoster } from "./entityref";
-import { derivedSource } from "./evidencesource";
-import {
-  EvidenceVerdict,
-  factClaim,
-  profileFieldClaim,
-} from "./evidenceverdict";
-import { type FactGroup, factFieldLabelKey, groupFacts } from "./factview";
 import { RecordHistoryTab } from "./history";
 import {
   type ListPage,
@@ -131,8 +120,8 @@ import {
   useListQuery,
   useOwnerChips,
 } from "./listquery";
+import { PersonMeetingBrief } from "./meetingbrief";
 import { PartnerTab } from "./partners";
-import { PersonMeetingBrief } from "./persondrawers";
 import { OverlayFallback, RecordSpine } from "./record360";
 import {
   ChronologyFilter,
@@ -188,9 +177,7 @@ type CreateOrganizationRequest =
   components["schemas"]["CreateOrganizationRequest"];
 type UpdateOrganizationRequest =
   components["schemas"]["UpdateOrganizationRequest"];
-type CompanyProfileField = components["schemas"]["CompanyProfileField"];
 type Organization360View = components["schemas"]["Organization360"];
-type OrganizationFact = components["schemas"]["OrganizationFact"];
 
 // Lives in companylookups.ts, same reason as LIFECYCLE_LABELS above: the
 // rail's Details grid (companyraildetails.tsx) builds a size-band picker off
@@ -988,7 +975,7 @@ function SiteReadPanel({
               count: formatNumber(report.proposal_ids.length, locale),
             })}
           </span>
-          <Button small onClick={() => navigate({ screen: "today" })}>
+          <Button small onClick={() => navigate({ screen: "worklist" })}>
             {t("enrich.toInbox")}
           </Button>
         </p>
@@ -1225,273 +1212,12 @@ const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {
 
 // The onboarding wording is the fallback, so a field added there still reads
 // as words rather than as a column name here.
-function profileFieldLabel(field: string, t: ReturnType<typeof useT>): string {
+export function profileFieldLabel(
+  field: string,
+  t: ReturnType<typeof useT>,
+): string {
   const key = PROFILE_FIELD_LABELS[field];
   return key ? t(key) : coldFieldLabel(field, t);
-}
-
-function ProfileFieldRow({
-  orgId,
-  field,
-  onOpenHistory,
-}: Readonly<{
-  orgId: string;
-  field: CompanyProfileField;
-  onOpenHistory?: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const canEdit = useCan("organization", "update");
-  return (
-    <div className="co-field">
-      <span className="t-label">{profileFieldLabel(field.field, t)}</span>
-      <div>
-        <EvidenceMark
-          value={field.value}
-          source={derivedSource(field, locale, recordZone)}
-          onOpenHistory={onOpenHistory}
-        />
-        {/* The verdict beside the value, not inside the mark: the mark says
-            where the value came from, and this says what the reader makes of
-            it. Folding the second into the first would hide the only action on
-            the page that stops a wrong extraction being rewritten tomorrow. */}
-        <EvidenceVerdict
-          orgId={orgId}
-          claim={profileFieldClaim(orgId, field)}
-          canEdit={canEdit}
-        />
-      </div>
-    </div>
-  );
-}
-
-// The Firmographics & legal card: the org's confirmed profile fields, rendered
-// evidence-or-omit — a field with no stored value is simply absent, never
-// guessed. An empty read is stated honestly ("nothing read yet"), never
-// fabricated into blank rows. This card carries the region's loading/error
-// surface; the sibling facts card stays silent when it has nothing to add.
-function ProfileFieldsCard({
-  orgId,
-  onOpenHistory,
-}: Readonly<{ orgId: string; onOpenHistory?: () => void }>) {
-  const t = useT();
-  const fieldsQuery = useQuery({
-    queryKey: ["org-profile-fields", orgId],
-    queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/organizations/{id}/profile-fields",
-        { params: { path: { id: orgId } } },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data ?? [];
-    },
-  });
-
-  return (
-    <Card
-      title={t("co.profile.title")}
-      style={{ marginBottom: "var(--space-4)" }}
-    >
-      <QueryStates query={fieldsQuery}>
-        {fieldsQuery.data && fieldsQuery.data.length === 0 ? (
-          <p className="t-caption">{t("org.firmographicsEmpty")}</p>
-        ) : (
-          (fieldsQuery.data ?? []).map((field) => (
-            <ProfileFieldRow
-              key={field.field}
-              orgId={orgId}
-              field={field}
-              onOpenHistory={onOpenHistory}
-            />
-          ))
-        )}
-      </QueryStates>
-    </Card>
-  );
-}
-
-// Facts read from the site, grouped into the four fixed categories. Empty
-// categories are omitted and an empty read renders nothing at all — the
-// profile card above already carries the region's honest empty state, so a
-// second "nothing here" would only be noise.
-//
-// Ordering and duplicate collapsing live in factview.ts; the category order
-// comes from there too, so the card has one source for what it draws.
-//
-// FACT_PREVIEW is how many rows of a category are shown before the reader asks
-// for the rest. A real account returns ninety-odd facts, and rendering them all
-// made this card taller than the page it sits beside — at which point nobody
-// reads any of it.
-const FACT_PREVIEW = 5;
-
-const FACT_CATEGORY_LABELS: Record<OrganizationFact["category"], MessageKey> = {
-  company: "org.factCategory.company",
-  offering: "org.factCategory.offering",
-  market: "org.factCategory.market",
-  signal: "org.factCategory.signal",
-};
-
-// One fact row: the value carries its own evidence mark, the same
-// affordance every derived value on this page uses.
-// Why a fact looks wrong, in the words a reader can act on. Typed against the
-// schema union, so a rule added upstream fails the build here rather than
-// rendering a raw reason code.
-type FactSuspectReason = NonNullable<OrganizationFact["suspect_reason"]>;
-
-const FACT_SUSPECT_LABELS: Record<FactSuspectReason, MessageKey> = {
-  phone_shaped_location: "co.factSuspect.phoneShapedLocation",
-  not_a_phone: "co.factSuspect.notAPhone",
-  not_a_year: "co.factSuspect.notAYear",
-  not_an_email: "co.factSuspect.notAnEmail",
-  not_a_size: "co.factSuspect.notASize",
-};
-
-function FactRow({
-  orgId,
-  fact,
-  onOpenHistory,
-}: Readonly<{
-  orgId: string;
-  fact: OrganizationFact;
-  onOpenHistory?: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const canEdit = useCan("organization", "update");
-  return (
-    <div className="co-field">
-      <span className="t-label">{t(factFieldLabelKey(fact.field))}</span>
-      <div>
-        <EvidenceMark
-          value={fact.value}
-          source={derivedSource(fact, locale, recordZone)}
-          onOpenHistory={onOpenHistory}
-        />
-        {/* The value contradicts its own field — a phone number filed as a
-            location, a register number filed as a headcount. The fact is still
-            shown with its evidence: hiding it would be a worse answer than
-            flagging it, and the reader is the one who can tell. */}
-        {fact.suspect_reason && (
-          <span className="co-fact-suspect">
-            <Badge tone="warn">
-              {t(FACT_SUSPECT_LABELS[fact.suspect_reason])}
-            </Badge>
-          </span>
-        )}
-        {/* A flagged fact is exactly the one a reader should be able to fix
-            without leaving the page — the flag says the machine doubts itself,
-            and only a person can settle it. */}
-        <EvidenceVerdict
-          orgId={orgId}
-          claim={factClaim(orgId, fact)}
-          canEdit={canEdit}
-        />
-      </div>
-    </div>
-  );
-}
-
-// One category of facts. Only the first few rows are drawn until the reader
-// asks for the rest, and the count of what is hidden is on the button — a
-// truncated list with no number reads as "that is everything".
-function FactCategory({
-  orgId,
-  group,
-  onOpenHistory,
-}: Readonly<{
-  orgId: string;
-  group: FactGroup;
-  onOpenHistory?: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const [expanded, setExpanded] = useState(false);
-  const hidden = group.facts.length - FACT_PREVIEW;
-  const shown = expanded ? group.facts : group.facts.slice(0, FACT_PREVIEW);
-  return (
-    <div className="co-facts-group">
-      <div className="t-label co-facts-heading">
-        {t(FACT_CATEGORY_LABELS[group.category])}
-      </div>
-      {shown.map((fact) => (
-        <FactRow
-          key={`${fact.field}:${fact.value_key}`}
-          orgId={orgId}
-          fact={fact}
-          onOpenHistory={onOpenHistory}
-        />
-      ))}
-      {hidden > 0 && (
-        <Button small onClick={() => setExpanded(!expanded)}>
-          {expanded
-            ? t("co.facts.showLess")
-            : t("co.facts.showAll", {
-                count: formatNumber(group.facts.length, locale),
-              })}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function FactsCard({
-  orgId,
-  onOpenHistory,
-}: Readonly<{ orgId: string; onOpenHistory?: () => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const factsQuery = useQuery({
-    queryKey: ["org-facts", orgId],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/facts", {
-        params: { path: { id: orgId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data ?? [];
-    },
-  });
-
-  // A read that failed is surfaced, never swallowed as "no facts" — an empty
-  // read and a 404/network error must stay distinguishable and retryable.
-  if (factsQuery.isError) {
-    return (
-      <Card title={t("org.facts")} style={{ marginBottom: "var(--space-4)" }}>
-        <QueryStates query={factsQuery}>{null}</QueryStates>
-      </Card>
-    );
-  }
-
-  // Otherwise facts are supplementary: while the read is in flight, or if it
-  // has nothing to show, the card stays absent rather than flashing a skeleton
-  // or an empty shell next to the profile card that owns the region's states.
-  //
-  // The technical fields are excluded because the technical card claims them.
-  // Both cards read the same endpoint, so without this every mail provider and
-  // operated service would render twice on one tab, and a reader correcting
-  // one copy would watch the other disagree.
-  const facts = factsQuery.data?.filter((fact) => !isTechnicalFact(fact));
-  if (!facts || facts.length === 0) {
-    return null;
-  }
-
-  return (
-    <Card title={t("org.facts")} style={{ marginBottom: "var(--space-4)" }}>
-      {groupFacts(facts, t, locale).map((group) => (
-        <FactCategory
-          key={group.category}
-          orgId={orgId}
-          group={group}
-          onOpenHistory={onOpenHistory}
-        />
-      ))}
-    </Card>
-  );
 }
 
 // Overview · People · Deals · Tasks · History · Documents · Profile, the
@@ -2325,7 +2051,6 @@ function CompanyRecordBody({
   // company is read-only for everyone, but a LIVE company somebody else owns is
   // read-only too, and the page had no way to know that until the record
   // started carrying the answer.
-  const orgWritable = useCanWriteRecord("organization", org);
   // The meeting whose brief is open. "Prepare meeting" used to open the
   // composer on the meeting, which is a reply to a room nobody has sat in
   // yet; the brief drawer is what prepares a reader for one.
@@ -2419,18 +2144,22 @@ function CompanyRecordBody({
           side, is the duplication this page's own rule forbids. */}
       {tab === "people" && (
         <div className="co-panel-stack">
-          <PeopleCard
-            view={view}
-            writable={orgWritable}
-            orgId={org.id}
-            loading={loading}
-          />
-          {/* The connection map under the roster: who here deals with the
-              account, who there is to deal with, and — expanded — the diagram
-              with the contact-to-contact lines. The roster answers "who works
-              there"; this answers "who talks to whom", and the People tab is
-              where a reader asks both. */}
-          <ConnectionsCard orgId={org.id} />
+          {/* The account's people, ranked and paged. One representation, not
+              three: the roster card, the connections card and its diagram all
+              answered "who works here" again in a different shape, and the
+              reader's question is which of them to write to. */}
+          {!overlay && !view?.sections_omitted?.includes("people") && (
+            <CompanyPeopleList
+              orgId={org.id}
+              bandSlot={(narrow) => (
+                <CoverageBand
+                  orgId={org.id}
+                  accountName={org.display_name}
+                  onNarrow={narrow}
+                />
+              )}
+            />
+          )}
         </div>
       )}
       {/* Files get the whole column on their own tab, which is what the mockup
@@ -3191,47 +2920,37 @@ function ReferenceDisclosures({
   t: ReturnType<typeof useT>;
 }>): ReactNode {
   return (
-    <>
-      <Disclosure summary={t("co.profile.title")}>
-        <ProfileFieldsCard orgId={org.id} onOpenHistory={onOpenHistory} />
-      </Disclosure>
-      {/* Directly under the profile, because this VERIFIES one of its fields:
-          the register's answer is only meaningful next to the USt-IdNr. the
-          imprint stated, and a reader who has just read that number is the one
-          who wants to know whether it holds up. */}
-      <Disclosure summary={t("co.vat.title")}>
-        <VatCheckCard orgId={org.id} />
-      </Disclosure>
-      {/* Documents are deliberately NOT here: they have their own tab, and a
-          reader given the same list in two places has two lists to
-          reconcile. */}
-      <Disclosure summary={t("co.evidence.title")}>
-        <FactsCard orgId={org.id} onOpenHistory={onOpenHistory} />
-      </Disclosure>
-      {/* Who this account is connected to, and the account's own tools and
-          configuration. Neither reads like an "overview" or a "deal" or a
-          "task" — both are reference material about the RECORD itself, which
-          is exactly what the rest of this tab already is, so a reader who
-          wants any of it checks one place rather than a scatter across
-          others. */}
-      <Disclosure summary={t("co.relationships.title")}>
-        <RelationshipsTab scope={{ organization_id: org.id }} />
-      </Disclosure>
-      <Disclosure summary={t("co.tools.title")}>
-        <CustomFieldsCard object="organization" record={org} />
-        <HierarchyRollupCard orgId={org.id} />
-        {/* Only where the Brief is not already offering it: an account with
-            nothing on file meets the offer at the top of its own column, and
-            two offers to research the same company is none. */}
-        {!offerOnOverview && <DeepReadCard orgId={org.id} />}
-        {/* What the company RUNS, beside what it SAYS — read from public
-            records the company never wrote for us: DNS, certificates, the
-            markup of their own homepage. It sits under the read that produces
-            it rather than in a disclosure of its own, because the site read
-            above is what queues it and a reader who just started one looks
-            here for what it brought back. */}
-        <TechnicalProfileCard orgId={org.id} />
-      </Disclosure>
-    </>
+    <CompanyProfileForm
+      org={org}
+      onOpenHistory={onOpenHistory}
+      tools={
+        <>
+          {/* Documents are deliberately NOT here: they have their own tab, and a
+              reader given the same list in two places has two lists to
+              reconcile. */}
+          <Panel title={t("co.relationships.title")}>
+            <PanelBody>
+              <RelationshipsTab scope={{ organization_id: org.id }} />
+            </PanelBody>
+          </Panel>
+          <Panel title={t("co.tools.title")}>
+            <PanelBody>
+              <CustomFieldsCard object="organization" record={org} />
+              <HierarchyRollupCard orgId={org.id} />
+              {/* Only where the Brief is not already offering it: an account
+                  with nothing on file meets the offer at the top of its own
+                  column, and two offers to research the same company is none. */}
+              {!offerOnOverview && <DeepReadCard orgId={org.id} />}
+              {/* What the company RUNS, beside what it SAYS — read from public
+                  records the company never wrote for us: DNS, certificates, the
+                  markup of their own homepage. It sits under the read that
+                  produces it rather than in a section of its own, because the
+                  site read above is what queues it. */}
+              <TechnicalProfileCard orgId={org.id} />
+            </PanelBody>
+          </Panel>
+        </>
+      }
+    />
   );
 }

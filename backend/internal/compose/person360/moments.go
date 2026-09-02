@@ -46,6 +46,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -54,7 +55,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "person-moment-ladder-v1"
+const ruleVersion = "person-moment-ladder-v3"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -81,21 +82,50 @@ const prefillIntent = "intent"
 //
 // It runs LAST among the sections so it can read what the others gathered.
 func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now time.Time, out *crmcontracts.Person360) error {
-	moment := deriveMoment(now, out)
-	dismissed, err := s.momentDismissed(ctx, tx, personID, moment)
-	if err != nil {
-		return err
+	var readErr error
+	dismissed := func(moment crmcontracts.PersonMoment) bool {
+		if readErr != nil {
+			return false
+		}
+		put, err := s.momentDismissed(ctx, tx, personID, moment)
+		if err != nil {
+			readErr = err
+		}
+		return put
 	}
-	if dismissed {
-		// Dismissed against THIS evidence. The quiet success state is what the
-		// reader asked for by dismissing, and it is a moment of its own rather
-		// than an empty card.
-		quiet := nothingNeededMoment(now, out)
-		out.Moment = &quiet
-		return nil
+	moment := deriveMomentPast(ctx, now, out, dismissed)
+	if readErr != nil {
+		return readErr
 	}
+	withholdLogActivity(ctx, &moment)
 	out.Moment = &moment
 	return nil
+}
+
+// withholdLogActivity turns a log-activity action the caller may not perform
+// into a blocked one that says so. The ladder derives its actions from the
+// page alone and knows nothing about the caller; the store behind the form
+// requires `activity.create`, so an action offered as available to a reader
+// without that grant is a button that opens a form whose save is refused.
+func withholdLogActivity(ctx context.Context, moment *crmcontracts.PersonMoment) {
+	if auth.Require(ctx, "activity", principal.ActionCreate) == nil {
+		return
+	}
+	reason := "You do not have permission to log activities"
+	withhold := func(action *crmcontracts.PersonMomentAction) {
+		if action.Kind != crmcontracts.PersonMomentActionKindLogActivity {
+			return
+		}
+		action.State = crmcontracts.PersonMomentActionStateBlocked
+		action.BlockedReason = &reason
+		action.Destination = nil
+	}
+	withhold(&moment.RecommendedAction)
+	if moment.SecondaryActions != nil {
+		for i := range *moment.SecondaryActions {
+			withhold(&(*moment.SecondaryActions)[i])
+		}
+	}
 }
 
 // momentDismissed asks whether this viewer has already put this moment away
@@ -142,15 +172,46 @@ func (s *Service) momentDismissed(ctx context.Context, tx pgx.Tx, personID ids.P
 // Rungs 3 (job change) and 7 (public signal) are absent by design — both need
 // inputs this build does not have, and a rule that cannot fire belongs nowhere
 // on the page.
-func deriveMoment(now time.Time, page *crmcontracts.Person360) crmcontracts.PersonMoment {
+func deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Person360) crmcontracts.PersonMoment {
+	return deriveMomentPast(ctx, now, page, func(crmcontracts.PersonMoment) bool { return false })
+}
+
+// deriveMomentPast walks the same ladder and skips the rungs whose card this
+// reader has already put away.
+//
+// A DISMISSAL SILENCES ONE CARD, NOT THE RECORD. Stopping at the first rung
+// and answering "nothing needs you today" when that card was dismissed says
+// something false about everything below it: a reader who puts one promise
+// away is told the contact needs nothing while a second promise sits open.
+// The card they dismissed is the card they meant, and the next reason down is
+// still a reason.
+//
+// A rung that fires and is dismissed is passed over rather than ending the
+// walk, so the ladder's order still decides what the reader sees — they see
+// the highest rung they have NOT put away.
+func deriveMomentPast(
+	ctx context.Context, now time.Time, page *crmcontracts.Person360,
+	dismissed func(crmcontracts.PersonMoment) bool,
+) crmcontracts.PersonMoment {
 	for _, rung := range momentLadder {
-		if moment, ok := rung(now, page); ok {
-			return moment
+		moment, ok := rung(ctx, now, page)
+		if !ok || !dismissed(moment) {
+			if ok {
+				return moment
+			}
+			continue
+		}
+		// The rung fired and this reader has put THAT card away. Ask it again
+		// without the dismissed card in front of it: a rung speaks for a set —
+		// three open promises, one card — so passing over the rung would hide
+		// the other two along with the one that was dismissed.
+		if next, ok := rungPast(ctx, now, page, rung, dismissed); ok {
+			return next
 		}
 	}
 	// 10. Nothing needs you today. A quiet success state, not a blank card:
 	// "there is nothing here" is an answer, and the reader came for an answer.
-	return nothingNeededMoment(now, page)
+	return nothingNeededMoment(ctx, now, page)
 }
 
 // momentLadder is the ladder itself, named so a test can walk every rung.
@@ -159,11 +220,12 @@ func deriveMoment(now time.Time, page *crmcontracts.Person360) crmcontracts.Pers
 // constructing a page that makes it win, and the rungs below it then never run
 // at all - which is how three dead buttons sat on untested rungs while a test
 // claiming to be a general rule covered two.
-var momentLadder = []func(time.Time, *crmcontracts.Person360) (crmcontracts.PersonMoment, bool){
+var momentLadder = []func(context.Context, time.Time, *crmcontracts.Person360) (crmcontracts.PersonMoment, bool){
 	meetingPrepMoment,      // 1. a meeting within 72 hours
 	reEngagedMoment,        // 2. new inbound after a material quiet period
-	overduePromiseMoment,   // 4. an open commitment of ours is overdue
+	overduePromiseMoment,   // 4. a promise of ours is past its date, from mail or the task list
 	goneQuietMoment,        // 5. outbound unanswered past the configured rule
+	openPromiseMoment,      // 5b. an open task we owe them, undated or ahead
 	roleChangeMoment,       // 6. a new deal role or material relationship change
 	missingNextStepMoment,  // 8. an open deal with no next step involving them
 	thinRelationshipMoment, // 9. no captured interaction or network
@@ -178,6 +240,7 @@ var momentLadderNames = []string{
 	"re_engaged",
 	"overdue_promise",
 	"gone_quiet",
+	"open_promise",
 	"role_change",
 	"missing_next_step",
 	"thin_relationship",
@@ -185,7 +248,7 @@ var momentLadderNames = []string{
 
 // meetingPrepMoment: a meeting is close enough that preparing for it is the
 // most valuable thing the reader could do.
-func meetingPrepMoment(now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	if page.NextMeeting == nil {
 		return crmcontracts.PersonMoment{}, false
 	}
@@ -238,7 +301,7 @@ func meetingPrepMoment(now time.Time, page *crmcontracts.Person360) (crmcontract
 
 // reEngagedMoment: they came back. The strongest reason captured data alone can
 // produce, and the one most likely to be acted on the same hour.
-func reEngagedMoment(now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	if page.LastInboundAt == nil {
 		return crmcontracts.PersonMoment{}, false
 	}
@@ -280,52 +343,12 @@ func reEngagedMoment(now time.Time, page *crmcontracts.Person360) (crmcontracts.
 	}, true
 }
 
-// overduePromiseMoment: WE said we would do something and the date has passed.
-//
-// Ours outranks theirs on purpose. A promise we owe is entirely within the
-// reader's control, and it is the one they would be most embarrassed to
-// discover from the other side.
-func overduePromiseMoment(now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
-	claim, ok := oldestOverdueCommitment(now, page)
-	if !ok {
-		return crmcontracts.PersonMoment{}, false
-	}
-	overdue := elapsed.Days(*claim.DueAt, now)
-	evidence := []crmcontracts.PersonMomentEvidence{{
-		Type:       crmcontracts.PersonMomentEvidenceTypeActivity,
-		Id:         &claim.SourceActivityId,
-		Label:      claim.Body,
-		Snippet:    &claim.SourceQuote,
-		ObservedAt: claim.DueAt,
-	}}
-	return crmcontracts.PersonMoment{
-		ClaimKey:            "moment:overdue_promise",
-		Rule:                crmcontracts.PersonMomentRuleOverduePromise,
-		RuleVersion:         ptr(ruleVersion),
-		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
-		WhyNow:              fmt.Sprintf("Promised for a date that passed %d days ago.", overdue),
-		Confidence:          crmcontracts.PersonMomentConfidenceObservedFact,
-		Evidence:            evidence,
-		FreshnessAt:         claim.DueAt,
-		RecommendedAction: crmcontracts.PersonMomentAction{
-			Kind:  crmcontracts.PersonMomentActionKindDraftReply,
-			Label: "Send it now",
-			State: crmcontracts.PersonMomentActionStateWillConfirm,
-			Destination: &crmcontracts.PersonMomentDestination{
-				Surface: crmcontracts.PersonMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": claim.Body}),
-			},
-		},
-	}, true
-}
-
 // goneQuietMoment: our outbound has gone unanswered past the configured rule.
 //
 // The moment names the rule in its own text. A reader who disagrees with the
 // verdict can see what produced it, which is the difference between a system
 // that judges and one that explains.
-func goneQuietMoment(now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+func goneQuietMoment(_ context.Context, now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	if page.LastOutboundAt == nil {
 		return crmcontracts.PersonMoment{}, false
 	}
@@ -393,21 +416,17 @@ func askColleague() crmcontracts.PersonMomentAction {
 }
 
 // logInteraction offers the one thing worth doing on a record with nothing
-// pending: write down something that happened off-system.
-//
-// Blocked for the same reason as askColleague, and it was found by the test
-// that pins that rule rather than by a report — which is the argument for
-// having written the rule instead of the one fix. The screen for it exists
-// (frontend logactivity.tsx, the contract's logActivity POST), but the person
-// page does not route to it and the destination vocabulary has no surface
-// naming it, so an available action here is a button that does nothing.
+// pending: write down something that happened off-system. It opens the
+// log-activity form the person page mounts, the same form the deal and lead
+// pages keep in their rail.
 func logInteraction() crmcontracts.PersonMomentAction {
-	reason := "Logging an interaction from this card is not available yet"
 	return crmcontracts.PersonMomentAction{
-		Kind:          crmcontracts.PersonMomentActionKindLogActivity,
-		Label:         "Log an interaction",
-		State:         crmcontracts.PersonMomentActionStateBlocked,
-		BlockedReason: &reason,
+		Kind:  crmcontracts.PersonMomentActionKindLogActivity,
+		Label: "Log an interaction",
+		State: crmcontracts.PersonMomentActionStateAvailable,
+		Destination: &crmcontracts.PersonMomentDestination{
+			Surface: crmcontracts.PersonMomentDestinationSurfaceActivityLog,
+		},
 	}
 }
 
@@ -417,7 +436,7 @@ func logInteraction() crmcontracts.PersonMomentAction {
 // It is a moment rather than an absence because the reader opened the page to
 // be told what to do, and "nothing" is a legitimate answer that an empty card
 // fails to give.
-func nothingNeededMoment(now time.Time, page *crmcontracts.Person360) crmcontracts.PersonMoment {
+func nothingNeededMoment(_ context.Context, now time.Time, page *crmcontracts.Person360) crmcontracts.PersonMoment {
 	why := "No meeting is close, nothing is owed, and nobody is waiting on a reply."
 	// Every rung above this one either fired or found nothing, and "found
 	// nothing" includes "was not allowed to look". Saying nobody is waiting on

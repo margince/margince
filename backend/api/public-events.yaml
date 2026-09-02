@@ -91,7 +91,16 @@ components:
         - engagement.reply
         - comms.delivery_bounced
         - notice.created
+        - user_delivery.changed
+        - weekly_plan.updated
+        - weekly_plan.help_requested
+        - activity.disposition_recorded
         - notice.read
+        - intro_request.created
+        - intro_request.decided
+        - intro_request.completed
+        - intro_request.replied
+        - intro_request.closed
         - consent.changed
         - email_signature.changed
         - user_locale.changed
@@ -110,6 +119,7 @@ components:
         - voice.version_changed
         - voice.draft_outcome_recorded
         - user.invited
+        - user.activated
         - user.password_link_issued
         - user.deactivated
         - user.reactivated
@@ -1784,6 +1794,62 @@ components:
           $ref: '#/components/schemas/PublicEventActivityChangedFields'
       additionalProperties: false
 
+    PublicEventWeeklyPlanUpdated:
+      type: object
+      x-event-type: weekly_plan.updated
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for weekly_plan.updated — a rep's plan for the week changed:
+        opened, a commitment added, edited or settled. The entity is the rep
+        whose week it is, because that is who the record belongs to.
+        `changed_fields` names WHAT moved rather than carrying it; the labels
+        and the help text stay on the row, since prose on two wires drifts.
+      required:
+        - plan_id
+        - owner_user_id
+        - changed_fields
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        owner_user_id:
+          type: string
+          format: uuid
+        changed_fields:
+          type: array
+          items:
+            type: string
+          description: Which parts of the plan moved — status, commitments.
+      additionalProperties: false
+    PublicEventWeeklyPlanHelpRequested:
+      type: object
+      x-event-type: weekly_plan.help_requested
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for weekly_plan.help_requested — a rep asked their lead for
+        help on one commitment. Its own type rather than another
+        weekly_plan.updated, because this is the one change somebody else is
+        meant to act on: an automation notifying a lead subscribes to this and
+        not to every edit of a checkbox.
+        The request text is NOT here. It stays on the row the lead opens, so
+        what a rep says about being stuck does not ride a fan-out.
+      required:
+        - plan_id
+        - commitment_id
+        - owner_user_id
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        commitment_id:
+          type: string
+          format: uuid
+        owner_user_id:
+          type: string
+          format: uuid
+      additionalProperties: false
     PublicEventNoticeCreated:
       type: object
       x-event-type: notice.created
@@ -1809,6 +1875,162 @@ components:
         kind:
           type: string
           description: The producing flow's own label (automation, lead_sla).
+      additionalProperties: false
+
+    PublicEventActivityDispositionRecorded:
+      type: object
+      x-event-type: activity.disposition_recorded
+      x-entity-type: activity
+      x-version: 1
+      description: >-
+        Payload for activity.disposition_recorded — somebody decided what to do
+        about a waiting message and the Worklist stopped showing it
+        (activities/disposition.go). WHO it stopped showing it to is not on the
+        wire, and the omission is deliberate: `not_sales` settles what the
+        message is and holds for everybody, while `snoozed` and `not_mine`
+        belong to the one reader who set them. A consumer reading this as a
+        workspace-wide fact would report a colleague's private set-aside as the
+        thread's own state. The reader stays on the row, for a caller entitled
+        to it.
+      required:
+        - activity_id
+        - disposition
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        disposition:
+          type: string
+          enum: [not_sales, sales_again, snoozed, not_mine, picked_up]
+          description: >-
+            What was decided. `sales_again` and `picked_up` are the undos of
+            `not_sales` and of the two reader states — a decision withdrawn is
+            itself a decision, and a consumer counting dispositions has to see
+            it happen rather than infer it from a row going quiet.
+      additionalProperties: false
+
+    PublicEventIntroRequestCreated:
+      type: object
+      x-event-type: intro_request.created
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.created — a rep asked a colleague to open a
+        door to this contact (introductions/store.go's Create). The entity is
+        the CONTACT, because that is what the ask is about and what a consumer
+        ranking a person's open work reads it against. The prose stays on the
+        row: the internal reason and the forwardable note have different
+        audiences, and neither belongs on a bus.
+      required:
+        - intro_request_id
+        - person_id
+        - requester_user_id
+        - introducer_user_id
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        requester_user_id: { type: string, format: uuid }
+        introducer_user_id: { type: string, format: uuid }
+      additionalProperties: false
+
+    PublicEventIntroRequestDecided:
+      type: object
+      x-event-type: intro_request.decided
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.decided — the colleague gave one of the four
+        bounded answers. `decision` carries which, because a consumer that had
+        to re-read the row to tell an acceptance from a refusal would be
+        deciding on state that may already have moved.
+      required:
+        - intro_request_id
+        - person_id
+        - introducer_user_id
+        - decision
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        introducer_user_id: { type: string, format: uuid }
+        decision:
+          type: string
+          enum: [accepted, name_drop_approved, suggest_other, declined]
+          x-enum-varnames:
+            [
+              IntroRequestDecidedAccepted,
+              IntroRequestDecidedNameDropApproved,
+              IntroRequestDecidedSuggestOther,
+              IntroRequestDecidedDeclined,
+            ]
+      additionalProperties: false
+
+    PublicEventIntroRequestCompleted:
+      type: object
+      x-event-type: intro_request.completed
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.completed — the handshake happened, or the
+        rep used the name they were lent. `outcome` keeps the two apart: an
+        introduction and a name-drop are different events, and a consumer that
+        collapsed them would report doors opened that nobody opened.
+      required:
+        - intro_request_id
+        - person_id
+        - outcome
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        outcome:
+          type: string
+          enum: [introduced, name_dropped]
+          x-enum-varnames:
+            [
+              IntroRequestCompletedIntroduced,
+              IntroRequestCompletedNameDropped,
+            ]
+      additionalProperties: false
+
+    PublicEventIntroRequestReplied:
+      type: object
+      x-event-type: intro_request.replied
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.replied — the contact answered, observed from
+        captured activity rather than asserted by a person. `source_activity_id`
+        is the evidence, so a reader can open the message the claim rests on.
+      required:
+        - intro_request_id
+        - person_id
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        source_activity_id: { type: string, format: uuid }
+      additionalProperties: false
+
+    PublicEventIntroRequestClosed:
+      type: object
+      x-event-type: intro_request.closed
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for intro_request.closed — the ask ended without a handshake:
+        withdrawn by the requester, or run out of time. `reason` says which,
+        because a rep withdrawing and a queue timing out call for different
+        follow-ups.
+      required:
+        - intro_request_id
+        - person_id
+        - reason
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        reason:
+          type: string
+          enum: [cancelled, expired]
+          x-enum-varnames:
+            [IntroRequestClosedCancelled, IntroRequestClosedExpired]
       additionalProperties: false
 
     PublicEventNoticeRead:
@@ -1959,6 +2181,31 @@ components:
             member empties the field, which is a deliberate "send unsigned".
       additionalProperties: false
 
+    PublicEventUserDeliveryChanged:
+      type: object
+      x-event-type: user_delivery.changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user_delivery.changed — a member chose what the product may
+        send them (identity/userdelivery.go's SaveMyDelivery). The brief and the
+        weekly are on their screen either way; this is about the nudge toward
+        them, which is the one part a person is entitled to switch off.
+        It names WHAT moved and not what it moved to. What somebody chose about
+        their own inbox is theirs, and a fan-out carrying the values would tell
+        every subscription owner who had turned their mail off — so the values
+        stay on the row, which only that person and the job reads.
+      required:
+        - changed_fields
+      properties:
+        changed_fields:
+          type: array
+          items:
+            type: string
+          description: >-
+            Which settings moved. Never empty: this event fires on a change, and
+            a save that moved nothing writes nothing and publishes nothing.
+      additionalProperties: false
     PublicEventUserLocaleChanged:
       type: object
       x-event-type: user_locale.changed
@@ -2646,20 +2893,68 @@ components:
       x-entity-type: user
       x-version: 1
       description: >-
-        Payload for user.reactivated — a deactivated member was returned to
-        active (identity/users.go's ReactivateUser).
+        Payload for user.reactivated — a deactivated member was lifted out of
+        deactivation (identity/users.go's ReactivateUser).
+
+        `status` says what they were returned TO, and it is not always `active`:
+        a member deactivated before redeeming their invitation comes back
+        `invited`, because they still hold no password and still sign in
+        nowhere. A subscriber that assumed "reactivated means active" would
+        restate exactly the falsehood the invited status exists to remove.
       required:
         - user_id
         - by
+        - status
       properties:
         user_id:
           type: string
           format: uuid
           description: The reactivated member.
+        status:
+          $ref: '#/components/schemas/UserReactivatedStatus'
         by:
           type: string
           format: uuid
           description: The admin who reactivated the member.
+      additionalProperties: false
+
+    UserReactivatedStatus:
+      type: string
+      enum: [invited, active]
+      description: >-
+        The status a reactivated member was restored to.
+
+        It is not always `active`, which is the whole reason it travels: a member deactivated
+        before redeeming their invitation comes back `invited`, because they still hold no password
+        and still sign in nowhere. A subscriber that read the event type alone would record
+        somebody as able to sign in who cannot.
+      x-extensible-enum: true
+
+    PublicEventUserActivated:
+      type: object
+      x-event-type: user.activated
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user.activated — an invited member redeemed their
+        set-password link and became active (identity/reset.go's
+        RedeemPasswordReset). This is the completion of `user.invited`: until it
+        arrives the seat exists and holds its licence, but nobody can sign in as
+        it.
+
+        There is no `by`. Possession of the single-use token IS the authority on
+        this path, so the member activated themselves and there is no admin
+        actor to name — unlike user.reactivated, which an admin performs.
+
+        A member resetting a FORGOTTEN password does not emit this: they were
+        already active, and nothing transitioned.
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: The member who became active.
       additionalProperties: false
 
     PublicEventTeamChanged:

@@ -76,20 +76,80 @@ describe("the provider status vocabulary", () => {
     // state where both answers were true would be a double-spend invitation.
     for (const state of PROFILE_STATES) {
       if (isRunning(state)) {
-        expect(canEnrichNow(state), state).toBe(false);
+        expect(canEnrichNow(state, true), state).toBe(false);
       }
+    }
+  });
+
+  it("refuses a purchase over a live run whatever the section says", () => {
+    // The section state cannot answer "is a run happening": it puts the
+    // CONNECTION's condition first, so a live run under a connection whose
+    // last call failed reads provider_error — and a run that is completed but
+    // whose values have not been folded onto the record yet reads completed.
+    //
+    // Both are states this function otherwise permits, and the server's
+    // duplicate-spend fence covers only the live run states, so the priced
+    // button offered in that window buys the same detail a second time.
+    for (const state of PROFILE_STATES) {
+      expect(canEnrichNow(state, true), state).toBe(false);
     }
   });
 
   it("offers the purchase exactly where one could succeed", () => {
     // not_connected has nobody to ask; not_eligible has been refused for
     // this subject. Every other terminal state is a fair retry.
-    expect(canEnrichNow("not_connected")).toBe(false);
-    expect(canEnrichNow("not_eligible")).toBe(false);
-    expect(canEnrichNow("never_run")).toBe(true);
-    expect(canEnrichNow("no_match")).toBe(true);
-    expect(canEnrichNow("completed")).toBe(true);
-    expect(canEnrichNow("provider_error")).toBe(true);
+    expect(canEnrichNow("not_connected", false)).toBe(false);
+    expect(canEnrichNow("not_eligible", false)).toBe(false);
+    expect(canEnrichNow("never_run", false)).toBe(true);
+    expect(canEnrichNow("no_match", false)).toBe(true);
+    expect(canEnrichNow("completed", false)).toBe(true);
+    expect(canEnrichNow("provider_error", false)).toBe(true);
+  });
+
+  it("keeps the button where the reader is the one who can fix it", () => {
+    // The section tells somebody to add a LinkedIn URL or a company. Taking
+    // the button away with it would leave them no way to say they had: the
+    // automatic sweep revisits a declined contact only after a day, and only
+    // while automatic lookup is switched on at all.
+    //
+    // Offering it is free — the server re-reads the identifiers and declines
+    // before reserving any credit — so the cost of a wasted press is one
+    // skipped run, against a reader otherwise stuck for a day.
+    expect(canEnrichNow("nothing_to_look_up", false)).toBe(true);
+  });
+
+  it("does not claim an installation-wide pause on one contact's failed run", () => {
+    // The person page's provider_error is reached two ways: the CONNECTION is
+    // degraded, or this contact's newest run failed under a healthy one. The
+    // copy used to assert the first for both — "Automatic lookups are paused;
+    // a free check that gets through resumes them" — and on a healthy
+    // connection every word of that is false. In one installation 205 contacts
+    // showed it while the connection was `connected` and working, and the
+    // suggested remedy could not fire: those contacts carry nothing to look
+    // them up by, so a free check is skipped rather than passed.
+    //
+    // The installation-wide story belongs to the settings card, which has its
+    // own connection-level sentence for it.
+    const message = en[profileLabel("provider_error")];
+    expect(message).not.toMatch(/paus/i);
+    // And it must stay true for BOTH causes: this key is also what a
+    // degraded CONNECTION renders, before any run history is read. Wording
+    // that named this contact's own lookup would be a false claim on every
+    // page during an outage, including contacts nobody ever asked about.
+    expect(message).not.toMatch(/this contact/i);
+  });
+
+  it("tells the reader what to add rather than blaming the provider", () => {
+    // The defect: a record with no profile link and no company was sent
+    // anyway, the vendor rejected the request, and the page reported "the
+    // last call to the provider failed" — which names the wrong party and
+    // sits beside a button that can only fail again. The sentence has to name
+    // the missing fact, because supplying it is the only thing that helps.
+    const message = en[profileLabel("nothing_to_look_up")];
+    expect(message).toMatch(/LinkedIn/);
+    expect(message).toMatch(/company/i);
+    // And it must not read as a fault of the provider or of the contact.
+    expect(message).not.toMatch(/failed|error|not eligible/i);
   });
 
   it("colours a refused key as danger and an unconnected provider as neither", () => {

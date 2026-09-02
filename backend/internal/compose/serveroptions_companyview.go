@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // WithAccountDraft binds the lane that writes an account-started email
@@ -37,14 +38,16 @@ import (
 // deployment running no model still has a rep who pressed "Write email", and
 // a short opener they edit beats a refusal.
 //
-// It takes no pool, unlike every other option here. That is the zero-write
-// guarantee expressed as a dependency: drafting reads the caller's 360 and
-// writes nothing, so there is nothing for a transaction to do.
+// The pool it takes is for READS only — the sender's own voice profile and the
+// identity behind the envelope. Drafting still writes nothing; accountdraft is
+// handed the voice READ seam rather than the store, so the zero-write
+// guarantee stays a dependency rather than a rule somebody remembers.
 func WithAccountDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		svc := accountdraft.NewService(s.org360Svc, brain).
 			WithEnvelope(draftEnvelope(pool, s.log)).
-			WithDossier(s.orgDossierSvc)
+			WithDossier(s.orgDossierSvc).
+			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.accountDraftHandlers = accountdraft.NewHandlers(svc, s.sorDispatch.isOverlay)
 	}
 }
@@ -144,5 +147,55 @@ func WithDealStatusWriter(brain completer, routingVersion string) Option {
 			return
 		}
 		s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc.WithLane(brain, routingVersion))
+	}
+}
+
+// WithRoleProposals binds the lane that reads a deal's buying roles out of
+// what its contacts have written.
+//
+// Unlike every other lane on this page, its absence is a 501 rather than a
+// deterministic answer. Each of the others degrades to a template — a draft
+// still has words, a status card still has the deal's own facts. A buying role
+// has no template, because the only thing left to read one from would be the
+// job title, and inferring a role from a title is precisely what this endpoint
+// exists not to do. So a role that wires no lane declares the capability
+// absent instead of guessing.
+func WithRoleProposals(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		if s.org360Svc == nil {
+			return
+		}
+		s.org360Handlers = s.WithRoleLane(brain)
+	}
+}
+
+// WithIntroRequestDraft binds the lane that phrases an introduction request.
+//
+// Its absence is a template, not a 501 — the opposite of WithRoleProposals
+// beside it, and for a reason worth stating: an ask for an introduction is
+// short, and its facts are few enough that a template states every one of them
+// honestly. What the model buys here is phrasing. A buying role has no such
+// floor, because the only thing left to read one from is the job title.
+func WithIntroRequestDraft(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		if s.org360Svc == nil {
+			return
+		}
+		s.org360Handlers = s.WithIntroLane(brain)
+	}
+}
+
+// WithIntroNoteDraft binds the lane that phrases the forwardable note.
+//
+// The OTHER message in one workflow. WithIntroRequestDraft above binds the ask
+// written TO a colleague; this binds the prospect-facing note that colleague
+// forwards. Two options rather than one because they are two prompts with two
+// registers, and a deployment could reasonably want the internal one and not
+// the outward one — the note is read by a customer.
+//
+// Its absence is a template, not a 501, for the reason stated above.
+func WithIntroNoteDraft(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.Reads = s.WithIntroNoteLane(brain)
 	}
 }

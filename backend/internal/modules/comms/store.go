@@ -413,8 +413,17 @@ func detachedWrite(ctx context.Context) (context.Context, context.CancelFunc) {
 // RecordSent — a stale attempt losing a race against a newer one that
 // already closed the row reports ErrTerminal, a benign no-op the dispatcher
 // must not treat as retryable.
+//
+// It stamps parked_at from the store's own clock — the clock every other
+// receipt on this row is written by — and it is the ONLY park that does. A send parked after
+// the message went out (ParkTransmitted) is an operational trace, not a
+// message that failed to arrive, and a pending send parked by an erasure or a
+// processing restriction is the law being applied. The stamp is what the
+// sender's own queue reads, so it must mean one thing: this send was given up
+// on and nobody has been told.
 func (s *Store) Park(ctx context.Context, id ids.UUID, reason string) error {
-	return s.update(ctx, `UPDATE comms_outbound SET status = 'parked', reason = $2 WHERE id = $1 AND status = 'pending'`, id, reason)
+	return s.update(ctx, `UPDATE comms_outbound SET status = 'parked', reason = $2, parked_at = $3 WHERE id = $1 AND status = 'pending'`,
+		id, reason, s.now().UTC())
 }
 
 // RecordFailure notes a transient fault and leaves the delivery pending for

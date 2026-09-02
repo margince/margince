@@ -139,7 +139,7 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.getByRole("img", { name: "confirm-first" })).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Open the Worklist" }));
-    expect(window.location.hash).toContain("today");
+    expect(window.location.hash).toContain("worklist");
   });
 
   it("says a transcript stated nothing, in the server's own words, and offers no trip to Today", async () => {

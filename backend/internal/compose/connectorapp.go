@@ -22,18 +22,19 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
+	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// writeGoogleAppFailure turns a credential-resolution failure into an answer the
-// caller can act on.
+// writeConnectorAppFailure turns a credential-resolution failure into an answer
+// the caller can act on.
 //
 // A missing vault is the operator's to fix and nothing the caller sent, so it
 // reads as unavailable — the same 503 the write path answers, rather than two
 // surfaces disagreeing about one condition. Anything else is a sealed secret
 // that would not open, which is a real fault and keeps its 500.
-func writeGoogleAppFailure(w http.ResponseWriter, r *http.Request, err error) {
+func writeConnectorAppFailure(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, capture.ErrNoVault) {
 		httperr.ServiceUnavailable(w, r, capture.ErrNoVault.Error())
 		return
@@ -55,7 +56,9 @@ func (h connectorHandlers) providerWired(provider string) bool {
 	case providerGcal:
 		return h.gcalOAuth != nil || (h.googleCredentials != nil && h.canRunConsent(providerGcal))
 	case providerGraph:
-		return h.graphOAuth != nil
+		return h.graphOAuth != nil || (h.microsoftCredentials != nil && h.canRunConsent(providerGraph))
+	case providerGraphCal:
+		return h.graphCalOAuth != nil || (h.microsoftCredentials != nil && h.canRunConsent(providerGraphCal))
 	default:
 		return false
 	}
@@ -66,15 +69,13 @@ func (h connectorHandlers) providerWired(provider string) bool {
 //
 // A stored app is only usable where BOTH halves exist: this transport to run the
 // consent flow, and a registered connector for `Registry.Connect` to hand the
-// credential to. The registry registers the Google connectors only when the
-// deployment composed the app from its environment, so an installation whose app
-// arrived at runtime has the transport and not the connector.
+// credential to. The two are composed by different options, so a role can hold
+// one without the other.
 //
 // Checked here so that gap answers the declared 501 at the gate, rather than
-// letting a person through Google's consent screen and failing afterwards with
-// "connector not registered" — a refusal they cannot act on, having already
-// granted access. Registering the connectors from the stored app is the change
-// that turns this on, and it is deliberately not this one.
+// letting a person through the vendor's consent screen and failing afterwards
+// with "connector not registered" — a refusal they cannot act on, having already
+// granted access.
 func (h connectorHandlers) canRunConsent(provider string) bool {
 	// A usable signer first. The transport mounts on the deployment's state key,
 	// so an unmounted one leaves this zero — and a stored app must not carry the
@@ -94,7 +95,7 @@ func (h connectorHandlers) canRunConsent(provider string) bool {
 	return false
 }
 
-// googleAppCredentials resolves the installation's STORED Google app.
+// storedApp resolves the installation's STORED app for one vendor.
 //
 // `stored` false means fall back to whatever the environment composed at boot:
 // what an admin set through Settings outranks the environment, because the
@@ -105,11 +106,11 @@ func (h connectorHandlers) canRunConsent(provider string) bool {
 // quietly connecting with an older environment copy would hide that behind a
 // flow that half works, and reporting it as "not configured" would send an
 // operator to set up an app they already have.
-func (h connectorHandlers) googleAppCredentials(ctx context.Context) (clientID, clientSecret string, stored bool, err error) {
-	if h.googleCredentials == nil {
-		return "", "", false, nil
+func storedApp(ctx context.Context, resolve appResolver) (capture.ConnectorApp, bool, error) {
+	if resolve == nil {
+		return capture.ConnectorApp{}, false, nil
 	}
-	return h.googleCredentials(ctx)
+	return resolve(ctx)
 }
 
 // oauthApp resolves the OAuth app for a provider; false when this installation
@@ -127,7 +128,9 @@ func (h connectorHandlers) oauthApp(ctx context.Context, provider string) (oauth
 	case providerGcal:
 		return h.gcalApp(ctx)
 	case providerGraph:
-		return h.graphApp()
+		return h.graphApp(ctx)
+	case providerGraphCal:
+		return h.graphCalApp(ctx)
 	default:
 		return oauthApp{}, false, nil
 	}
@@ -143,13 +146,15 @@ func (h connectorHandlers) gmailApp(ctx context.Context) (oauthApp, bool, error)
 	if h.oauth == nil && !h.canRunConsent(providerGmail) {
 		return oauthApp{}, false, nil
 	}
-	id, secret, stored, err := h.googleAppCredentials(ctx)
+	app, stored, err := storedApp(ctx, h.googleCredentials)
 	if err != nil {
 		return oauthApp{}, false, err
 	}
 	oauth := h.oauth
 	if stored && h.canRunConsent(providerGmail) {
-		oauth = gmail.NewOAuth(gmail.OAuthConfig{ClientID: id, ClientSecret: secret, Scopes: gmailScopes})
+		oauth = gmail.NewOAuth(gmail.OAuthConfig{
+			ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes,
+		})
 	}
 	if oauth == nil {
 		return oauthApp{}, false, nil
@@ -183,13 +188,13 @@ func (h connectorHandlers) gcalApp(ctx context.Context) (oauthApp, bool, error) 
 	if h.gcalOAuth == nil && !h.canRunConsent(providerGcal) {
 		return oauthApp{}, false, nil
 	}
-	id, secret, stored, err := h.googleAppCredentials(ctx)
+	app, stored, err := storedApp(ctx, h.googleCredentials)
 	if err != nil {
 		return oauthApp{}, false, err
 	}
 	oauth := h.gcalOAuth
 	if stored && h.canRunConsent(providerGcal) {
-		oauth = gcal.NewOAuth(gcal.OAuthConfig{ClientID: id, ClientSecret: secret})
+		oauth = gcal.NewOAuth(gcal.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
 	}
 	if oauth == nil {
 		return oauthApp{}, false, nil
@@ -206,21 +211,70 @@ func (h connectorHandlers) gcalApp(ctx context.Context) (oauthApp, bool, error) 
 	}, true, nil
 }
 
-// graphApp is the Microsoft app, still composed entirely from the deployment's
-// environment — it has no stored half to resolve, which is why it takes no
-// context.
-func (h connectorHandlers) graphApp() (oauthApp, bool, error) {
-	if h.graphOAuth == nil {
+// graphApp is the Microsoft MAIL half of the installation's Entra registration —
+// the stored app where it can run the flow, the environment's otherwise, exactly
+// as the Google pair resolves.
+func (h connectorHandlers) graphApp(ctx context.Context) (oauthApp, bool, error) {
+	// Nothing to resolve when neither source can serve this provider. Checked
+	// BEFORE the credential read so the refusal costs no settings round-trip and
+	// does not unseal a secret that cannot be used.
+	if h.graphOAuth == nil && !h.canRunConsent(providerGraph) {
+		return oauthApp{}, false, nil
+	}
+	app, stored, err := storedApp(ctx, h.microsoftCredentials)
+	if err != nil {
+		return oauthApp{}, false, err
+	}
+	oauth := h.graphOAuth
+	if stored && h.canRunConsent(providerGraph) {
+		oauth = graph.NewOAuth(graph.OAuthConfig{
+			ClientID: app.ClientID, ClientSecret: app.ClientSecretRef,
+			Tenant: app.Tenant, Scopes: graphScopes,
+		})
+	}
+	if oauth == nil {
 		return oauthApp{}, false, nil
 	}
 	return oauthApp{
-		authCodeURL: h.graphOAuth.AuthCodeURL,
+		authCodeURL: oauth.AuthCodeURL,
 		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
 			req, err := graph.AuthRequestFrom(code, redirectURI)
 			if err != nil {
 				return nil, err
 			}
-			return graph.New(h.graphOAuth, h.graphAPI).Authenticate(ctx, req)
+			return graph.New(oauth, h.graphAPI).Authenticate(ctx, req)
+		},
+	}, true, nil
+}
+
+// graphCalApp is the Microsoft CALENDAR authorization on the same registration —
+// its own consent, requesting the calendar permission alone, so it resolves
+// separately from the mailbox's even though one Entra app serves both.
+func (h connectorHandlers) graphCalApp(ctx context.Context) (oauthApp, bool, error) {
+	if h.graphCalOAuth == nil && !h.canRunConsent(providerGraphCal) {
+		return oauthApp{}, false, nil
+	}
+	app, stored, err := storedApp(ctx, h.microsoftCredentials)
+	if err != nil {
+		return oauthApp{}, false, err
+	}
+	oauth := h.graphCalOAuth
+	if stored && h.canRunConsent(providerGraphCal) {
+		oauth = graphcal.NewOAuth(graphcal.OAuthConfig{
+			ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Tenant: app.Tenant,
+		})
+	}
+	if oauth == nil {
+		return oauthApp{}, false, nil
+	}
+	return oauthApp{
+		authCodeURL: oauth.AuthCodeURL,
+		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
+			req, err := graphcal.AuthRequestFrom(code, redirectURI)
+			if err != nil {
+				return nil, err
+			}
+			return graphcal.New(oauth, h.graphCalAPI).Authenticate(ctx, req)
 		},
 	}, true, nil
 }

@@ -164,153 +164,11 @@ export const en = {
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
   "nav.today": "Worklist",
-  "day.title": "Worklist",
-  "day.thisMorning": "This morning",
-  "day.thisMorning.empty":
-    "The overnight brief found nothing worth your first hour. That is the answer, not an omission.",
-  "day.loading": "Reading your day…",
-  "day.lead.oneDecision": "One decision is waiting on you.",
-  "day.lead.decisions": "{count} decisions are waiting on you.",
-  "day.lead.plannedOnly": "Nothing to decide — {count} planned for today.",
-  "day.lead.promises": "You promised {count} — those come first.",
-  "day.lead.meetings": "{count} on the calendar today.",
-  "day.lead.dsr_one": "{count} privacy request is on the clock. That first.",
-  "day.lead.dsr_other":
-    "{count} privacy requests are on the clock. Those first.",
-  "day.lead.didNotRun":
-    "{count} you approved did not run. Look at those first.",
-  "day.lead.atRisk": "{count} going quiet. Nothing else is waiting on you.",
-  "day.lead.decay":
-    "{count} you have not spoken to in a while. Nothing is waiting on you.",
-  "day.lead.morningOnly":
-    "Nothing waiting on you — the night picked out {count} to start with.",
-  "day.lead.ranOvernight": "Nothing needs you. Here is what ran overnight.",
-  "day.lead.clearOfWhatWasRead":
-    "Nothing is waiting in the lanes on this page.",
-  "day.lead.clear": "Your day is clear.",
-  "day.lead.partial": "Part of your day is hidden from your account.",
-  "day.lane.withheld": "Hidden from your account.",
-  "day.needsYou": "Needs you",
-  "day.needsYou.empty": "Nothing needs a decision.",
-  "day.meetings": "Today's meetings",
-  "day.meetings.empty": "Nothing in the calendar.",
-  "day.atRisk": "Going quiet",
-  "day.atRisk.empty": "No deal is drifting.",
-  "day.risk.quiet": "No contact for {days} days.",
-  "day.didNotRun": "Approved, but did not run",
-  "day.automation.way.failed": "Failed",
-  "day.automation.way.blocked": "Blocked",
-  "day.automation.way.generic": "Did not run",
-  "day.lead.automation": "{count} automation firings did not do their work.",
-  "day.lead.notices_one": "{count} notice is waiting for you.",
-  "day.lead.notices_other": "{count} notices are waiting for you.",
-  "day.notices": "For your attention",
-  "day.notices.empty": "Nothing waiting for your attention.",
-  "day.acknowledge": "Got it",
-  "day.automation": "Rules that stopped working",
-  "day.automation.empty": "Every rule is doing its work.",
-  "day.automation.kind.generic": "An automation did not run",
-  "day.bounces": "Never arrived",
-  "day.bounces.empty": "Every send arrived.",
-  "day.bounces.kind.generic": "An email did not reach its address",
-  "day.lead.bounces_one":
-    "{count} of your emails never arrived — the address is dead.",
-  "day.lead.bounces_other":
-    "{count} of your emails never arrived — the addresses are dead.",
-  "day.aiWork": "AI work that went wrong",
-  "day.aiWork.empty": "Everything you handed to the AI ran.",
-  "day.aiWork.kind.failed": "A task you handed to the AI failed",
-  "day.aiWork.kind.stalled": "A task you handed to the AI is stuck",
-  "day.aiWork.kind.generic": "A task you handed to the AI needs a look",
-  "day.lead.aiWork": "Something you handed to the AI did not run.",
-  "day.captureHealth": "Mailbox connections",
-  "day.captureHealth.empty": "All your mailboxes are capturing.",
-  "day.captureHealth.kind.reauth_required":
-    "A mailbox needs you to sign in again",
-  "day.captureHealth.kind.connection_error": "A mailbox connection is failing",
-  "day.captureHealth.kind.sync_failing": "A mailbox has stopped syncing",
-  "day.captureHealth.kind.backfill_failed": "A mailbox history import failed",
-  "day.captureHealth.kind.generic": "A mailbox connection needs attention",
-  "day.lead.captureHealth": "One of your mailbox connections needs attention.",
-  "day.syncHealth": "CRM sync",
-  "day.syncHealth.empty": "Your existing CRM is in sync.",
-  "day.lead.syncHealth": "The sync to your existing CRM needs attention.",
-  "day.syncHealth.kind.sync_failing":
-    "The connection to your existing CRM is failing",
-  "day.syncHealth.kind.budget_degraded":
-    "Calls to your existing CRM are being throttled",
-  "day.syncHealth.kind.objects_stale":
-    "Some records are behind your existing CRM",
-  "day.syncHealth.kind.backfill_incomplete":
-    "The initial import is still running",
-  "day.syncHealth.kind.generic": "A sync concern",
-  "day.syncHealth.cause.auth":
-    "The connection was refused — the credentials need attention.",
-  "day.syncHealth.cause.rate_limited":
-    "The other side is rate-limiting us; syncing is paced down.",
-  "day.syncHealth.cause.internal":
-    "The last sync attempts failed; retrying automatically.",
-  "day.syncHealth.band.warn": "Approaching the call limit.",
-  "day.syncHealth.band.shed":
-    "Live calls are paused to stay inside the call limit.",
-  "day.dsr": "Privacy requests",
-  "day.dsr.empty": "No open requests from data subjects.",
-  "day.dsr.kind.access": "Someone wants to know what data we hold",
-  "day.dsr.kind.erasure": "Someone wants to be deleted",
-  "day.dsr.kind.rectify": "Someone wants their data corrected",
-  "day.dsr.kind.generic": "An open privacy request",
-  "day.didNotRun.empty": "Everything you approved actually ran.",
-  "day.decay": "Relationships going quiet",
-  "day.decay.empty": "You are in touch with everyone you were.",
-  "day.decay.quiet": "You have not spoken in {days} days.",
-  "day.decay.quietSince":
-    "You have not spoken in {days} days — last on {date}.",
-  "day.risk.closeOverdue": "Expected to close {date} — still open.",
-  "day.commitments": "You promised",
-  "day.commitments.empty": "No promises coming due.",
-  "day.commitment.detail": "\u201c{quote}\u201d \u00b7 due {due}",
-  "day.planned": "Planned",
-  "day.planned.empty": "Nothing due today.",
-  "day.done": "Done for you",
-  "day.done.empty": "Nothing ran on its own.",
-  "day.overdue": "Overdue",
-  "day.complete": "Done",
-  "day.snooze": "Tomorrow",
-  "day.match": "{percent}% match",
-  "day.item.untitled": "Waiting on you",
-  "day.duplicate.person": "Two contacts look like the same person",
-  "day.duplicate.org": "Two companies look like the same one",
-  "day.duplicate.lead": "Two leads look like the same one",
-  "day.duplicate.generic": "Two records look like the same one",
-  "day.duplicatesOpen": "{count} duplicate pairs open in all",
   // The decision lane, one at a time: how far through the reader is, and the
   // cleared plate the whole surface is built to reach.
-  "day.focus.progress": "Decision {position} of {total}",
-  "day.focus.clear": "Nothing left to decide.",
-  "day.focus.clearedCount": "{count} decided today.",
-  "day.focus.later": "Later",
   // The merge decision. Both values survive a merge — choosing a side decides
   // which record stands and which value is shown first — so the copy never says
   // "delete", because nothing is deleted.
-  "day.merge.question": "Are these the same?",
-  "day.merge.carries": "carries {count} related records",
-  "day.merge.blank": "empty",
-  "day.merge.withheld":
-    "One of these records is hidden from your account, so this pair cannot be decided here.",
-  "day.merge.refused": "That decision could not be saved.",
-  "day.merge.pickFirst": "Choose which record stands first.",
-  "day.merge.cta": "Merge them",
-  "day.merge.keepBoth": "Different records",
-  "day.merge.fieldDisplayName": "Company name",
-  "day.merge.fieldLegalName": "Legal name",
-  "day.merge.fieldName": "Name",
-  "day.merge.fieldEmail": "Email",
-  "day.merge.fieldPhone": "Phone",
-  "day.merge.fieldMatchedLane": "Matched on",
-  "day.merge.fieldChannel": "Channel identity",
-  "day.merge.signalAgree": "agree",
-  "day.merge.signalCollide": "conflict",
-  "day.merge.signalOneSided": "one side only",
   "nav.reports": "Reports",
   "nav.ai": "Ask Margince",
   "nav.settings": "Settings",
@@ -327,6 +185,8 @@ export const en = {
   "shell.aside.show": "Show the context panel",
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "{company} home, powered by Margince",
+  "shell.poweredBy": "Powered by Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
@@ -1097,13 +957,6 @@ export const en = {
   "signal.kind.leadership_change": "Leadership change",
   "signal.kind.expansion": "Expansion",
   "signal.kind.product_launch": "Product launch",
-  "co.routeIn.open": "Route in",
-  "co.routeIn.title": "Who here talks to {name}",
-  "co.routeIn.none": "Nobody here has written to them yet.",
-  "co.routeIn.partial":
-    "No way in among the connections this page could read — some were withheld or left out.",
-  "co.routeIn.mayBeMore":
-    "Some connections were withheld or left out, so there may be more.",
   "co.routeIn.band.strong": "in regular contact",
   "co.routeIn.band.some": "some contact",
   "co.routeIn.band.faint": "barely in contact",
@@ -1232,7 +1085,7 @@ export const en = {
   // The later of the two directions \u2014 which side wrote last moved to the
   // daily brief's own detail line, so the header states only that the
   // relationship is or is not live.
-  "co.pulse.lastExchange": "Last exchange {when}",
+  "co.pulse.lastExchange": "Last contact {when}, either way",
   "co.pulse.neverTouched": "Never contacted",
   "co.pulse.owner": "Owner",
   "co.pulse.strongestLead": "Way in",
@@ -1356,25 +1209,12 @@ export const en = {
   "commercial.offer.rejected": "Rejected",
   "commercial.offer.expired": "Expired",
   "commercial.offer.superseded": "Superseded",
-  "co.coverage.contacts_one": "{count} contact",
-  "co.coverage.contacts_other": "{count} contacts",
-  "co.coverage.contactsAtLeast": "{count}+ contacts",
-  "co.coverage.untried": "{count} never written to",
-  "co.coverage.gaps_one": "{count} role gap",
-  "co.coverage.gaps_other": "{count} role gaps",
   "co.section.restricted": "Hidden \u2014 your role cannot read this",
   "co.next.title": "Next steps",
   "co.next.empty": "No open task on this account.",
   "co.next.overdue": "Overdue",
   "co.next.due": "Due {when}",
   "co.next.undated": "No date",
-  "co.people.title": "People",
-  "co.people.empty": "No contact linked to this account yet.",
-  "co.people.singleThread":
-    "One contact only \u2014 the account is single-threaded",
-  "co.people.consentGranted": "May contact",
-  "co.people.consentWithdrawn": "Withdrawn",
-  "co.people.consentUnknown": "No consent on file",
   "co.facts.pipeline": "Open pipeline",
   "co.facts.inFlight": "In flight",
   "co.facts.reading": "Reading\u2026",
@@ -1608,32 +1448,6 @@ export const en = {
   "co.commercial.allDeals": "All deals",
   "co.commercial.truncated":
     "This account has more open deals than fit here. Open All deals to see the rest.",
-  "co.connections.title": "Connections",
-  "co.connections.empty": "Nothing linked to this account yet.",
-  "co.connections.ourSide": "Your side",
-  "co.connections.theirSide": "At this account",
-  "co.connections.expand": "See it larger",
-  "co.connections.collapse": "Close",
-  "co.connections.introPath": "Route in",
-  "co.connections.intro.askForIntro": "Ask for an introduction",
-  "co.connections.intro.writeDirectly": "Write to them directly",
-  "co.connections.intro.via": "Through",
-  "co.connections.more": "{count} more not shown here.",
-  "co.connections.withheld": "Hidden from you: {groups}",
-  "co.connections.rel.employment": "works here",
-  "co.connections.rel.has_deal": "open deal",
-  "co.connections.rel.deal_stakeholder": "stakeholder on a deal",
-  "co.connections.rel.parent": "parent company",
-  "co.connections.rel.child": "subsidiary",
-  "co.connections.rel.partner_of.counterparty": "partner on this account",
-  "co.connections.rel.partner_of.owner": "this account is their partner",
-  "co.connections.rel.referred_by.counterparty": "referred this account",
-  "co.connections.rel.referred_by.owner": "referred by this account",
-  "co.connections.rel.co_sell_with": "co-selling",
-  "co.connections.rel.owns": "owns this account",
-  "co.connections.rel.in_contact_with": "in contact",
-  "co.connections.rel.corresponds_with": "corresponds with each other",
-  "co.connections.noSignal": "no signal yet",
   "linkedinImport.title": "LinkedIn connections",
   "linkedinImport.sub":
     "Import your own export to see who your team already knows",
@@ -1674,10 +1488,6 @@ export const en = {
   "linkedinReach.footnote":
     "Showing {shown} of {total} accounts. {unresolved} connections work somewhere that is not an account on file yet.",
   "linkedinImport.skipped": "Rows skipped (no usable name)",
-  "co.connections.group.contacts": "contacts",
-  "co.connections.group.deals": "deals",
-  "co.connections.group.intro_path": "the warm intro",
-  "co.connections.group.our_side": "who here is connected",
   "co.signals.title": "Margince also spotted",
   "co.signals.emptyDetail":
     "Margince reads meetings, mail and invoices for promises, blockers and risks. It needs at least one of those first.",
@@ -1710,6 +1520,17 @@ export const en = {
   "timeline.kind.message": "Message",
   "timeline.kind.change": "Record",
   "timeline.withheld": "Content for participants only",
+  "compose.deadRecipients":
+    "Mail to {addresses} is bouncing. The last delivery there was refused, and no delivery since has got through. Send anyway, or use another address.",
+  "compose.threadShare": "Share thread",
+  "compose.threadKeepPrivate": "Keep private",
+  "compose.threadStillHeld":
+    "Still held: {count} other seat(s) on this thread have not shared it.",
+  "compose.reason.posture": "Held by your setting",
+  "compose.reason.workspaceFloor": "Held by the organization",
+  "compose.reason.noRecord": "Held, no record",
+  "compose.reason.pendingVerdict": "Held until classified",
+  "compose.reason.manual": "Kept private",
   "compose.audience": "Visibility",
   "compose.audienceTitle": "Who may read this message?",
   "compose.audienceLegend": "Visibility of this one message",
@@ -1745,29 +1566,107 @@ export const en = {
   "co.profileField.register_number": "Register number",
   "co.profileField.industry": "Industry",
   "co.profileField.history": "History",
-  "co.profile.title": "Company profile",
-  "co.reach.window": "Contact status for the last 90 days",
+  "co.narrative.title": "What they do",
+  "co.narrative.sub":
+    "The account's own story, as its website tells it. Correct anything wrong - a correction sticks, and the next read will not overwrite it.",
+  "co.narrative.add": "Add",
+  "co.people.engagement": "Engagement",
+  "co.people.lastInteraction": "Last exchange",
+  "co.people.strength": "Relationship",
+  "co.people.neverInTouch": "No exchange yet",
+  "co.people.theyWrote": "They wrote",
+  "co.people.weWrote": "We wrote",
+  "co.people.filter.status": "Engagement",
+  "co.people.filter.statusAll": "Any engagement",
+  "co.people.band.wayIn": "Best way in",
+  "co.people.band.noWayIn": "Nobody has answered",
+  "co.people.band.noWayInWhy":
+    "Everyone here was written to and nobody replied",
+  "co.people.band.showAnswered": "Show who answered",
+  "co.people.band.committee": "Buying team",
+  "co.people.band.missing": "No {role}",
+  "co.people.band.committeeComplete": "Champion and economic buyer named",
+  "co.people.band.committeeUnread": "Hidden from you",
+  "co.people.band.committeeUnreadWhy":
+    "Your role cannot read this account's deals",
+  "co.people.band.seatsHeld": "{count} on the team",
+  "co.people.band.someHidden": "{count} more you cannot see",
+  "co.people.band.coverage": "Coverage",
+  "co.people.band.reachable": "{count} answering",
+  "co.people.band.untried": "{count} never approached",
+  "co.people.band.showUntried": "Show who is untried",
+  "co.people.board.nobodyHolds": "Nobody holds this role",
+  "co.people.band.noOpenDeal": "No open deal",
+  "co.people.band.noOpenDealWhy": "Buying roles are recorded on a deal",
+  "co.people.band.committeePartial": "Cannot be judged",
+  "co.people.band.showAll": "Show everyone",
+  "co.people.board.otherRoles": "Other roles",
+  "co.people.band.unavailable": "Could not be read",
+  "co.people.band.unavailableWhy":
+    "The coverage reading failed; the list below is unaffected",
+  "co.people.view": "Committee view",
+  "co.people.view.board": "Board",
+  "co.people.view.map": "Map",
+  "co.people.map.region": "Who can reach whom at this account",
+  "co.people.map.bestRoute": "Best route",
+  "co.people.map.alternatives": "Alternatives",
+  "co.people.map.noRoute": "No route recorded",
+  "co.people.map.more": "Show {count} more",
+  "co.people.map.clear": "Clear selection",
+  "co.people.map.emptyTitle": "No route recorded yet",
+  "co.people.map.emptyBody":
+    "Assign the buying roles, or import the interactions this account already has.",
+  "co.people.map.nothingSelected":
+    "Select a person to see the best route into them.",
+  "co.people.map.ourSide": "Our side",
+  "co.people.map.account": "Account",
+  "co.people.map.missing": "{role} missing",
+  "co.people.map.awaiting": "awaiting reply",
+  "co.people.map.replied": "they replied",
+  "co.people.map.never": "never written to",
+  "co.people.map.onDeal": "on the deal",
+  "co.people.map.routesWithheld": "Who can reach them is hidden from you",
+  "co.people.map.assignHint": "Nobody is carrying this deal",
+  "co.people.map.scope": "{count} on the buying team · selected deal only.",
+  "co.people.map.scopePartial":
+    "{count} on the buying team · {hidden} more you cannot see.",
+  "co.people.board.readFromMessages": "Read from their messages",
+  "co.intro.title": "Ask for an introduction",
+  "co.intro.who": "Asking {colleague} to introduce you to {contact}.",
+  "co.intro.write": "Write the message",
+  "co.intro.writing": "Writing",
+  "co.intro.fromTemplate":
+    "Written from a template — this installation has no model configured.",
+  "co.intro.subject": "Subject",
+  "co.intro.body": "Message",
+  "co.intro.basedOn": "Based on",
+  "co.intro.copy": "Copy",
+  "co.intro.copyFailed":
+    "This browser would not let the page copy. Select the message and copy it yourself.",
+  "co.intro.copied": "Copied",
+  "co.intro.openMail": "Open in your mail app",
+  "co.map.askIntro": "Ask for an intro",
+  "co.people.board.suggest": "Suggest roles",
+  "co.people.board.suggesting": "Reading their messages",
+  "co.people.board.suggestNoDeal":
+    "Roles are recorded on a deal, and this account has no open one.",
+  "co.people.board.suggestWrote": "Seated {count} from what they wrote.",
+  "co.people.board.suggestUnavailable":
+    "Reading roles needs a model, and this installation has none configured.",
+  "co.people.board.suggestNothing": "Nothing in their messages says who buys.",
+  "co.people.board.suggestRefused":
+    "Nothing was clear enough to record. {count} reading(s) were dropped for weak evidence.",
+  "co.people.board.confirm": "Confirm",
+  "co.people.board.confirming": "Confirming",
+  "co.people.board.change": "Change role",
   "co.reach.answered": "Answered",
   "co.reach.silent": "No reply",
   "co.reach.untried": "Not approached",
-  "co.role.set": "Set role",
-  "co.role.setOn": "What is {name} on this deal?",
-  "co.role.explain":
-    "The champion argues for you when you are not in the room. The economic buyer signs. Naming both is what turns a list of contacts into a picture of the decision.",
-  "co.role.onDeal": "On which deal",
-  "co.role.role": "Role",
   "co.role.champion": "champion",
   "co.role.economic_buyer": "economic buyer",
   "co.role.blocker": "blocker",
   "co.role.influencer": "influencer",
   "co.role.user": "end user",
-  "co.people.missing":
-    "No {roles} is named on the open deal yet — set one on the contact who is.",
-  "co.people.missingOnDeal":
-    "No {roles} is named on {deal} yet — set one on the contact who is.",
-  "co.people.untriedHint_other":
-    "{count} people here have never been approached.",
-  "co.people.untriedHint_one": "{count} person here has never been approached.",
   "co.evidence.extractedUnconfirmed": "AI extracted · not yet confirmed",
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
@@ -1798,9 +1697,12 @@ export const en = {
   "co.factField.email_security": "Mail authentication",
   "co.factField.hosting_provider": "Hosting",
   "co.factField.operated_service": "Operated service",
-  "co.vat.title": "VAT registration",
-  "co.vat.sub":
-    "What the EU VAT register answered about this company's VAT ID, and the proof it was asked.",
+  "co.vat.markVerdict": "VAT ID: {verdict}",
+  "co.vat.markUnchecked": "VAT ID: not checked with the register yet",
+  "co.vat.markUnreadable":
+    "VAT ID: the check could not be read just now — press to try again",
+  "co.vat.numberMoved":
+    "The number on this record has changed since this check. Ask the register again to check the new one.",
   "co.vat.verdict": "Register answer",
   "co.vat.number": "Number consulted",
   "co.vat.registeredName": "Registered to",
@@ -1809,11 +1711,15 @@ export const en = {
   "co.vat.receipt": "Consultation number",
   "co.vat.status.valid": "Valid",
   "co.vat.status.invalid": "Not valid",
-  "co.vat.status.unavailable": "Register did not answer",
   "co.vat.noReceipt":
     "None issued. The register issues a receipt only for a check made under your own VAT ID — add yours in the settings and the next check carries proof a tax authority accepts.",
   "co.vat.never":
-    "This company's VAT ID has not been consulted. It is checked on its own when the number is read from the company's imprint.",
+    "This company's VAT ID has not been consulted. It is checked on its own when the number is read from the company's imprint, and you can ask the register now.",
+  "co.vat.askNow": "Check with the register",
+  "co.vat.askAgain": "Check again",
+  "co.vat.askingBusy": "Asking the register",
+  "co.vat.asking":
+    "Asking the register — the answer appears here once it replies.",
   "co.tech.title": "Technology",
   "co.tech.sub":
     "What this company publicly runs, read from its DNS records, its certificates and its own homepage.",
@@ -1831,11 +1737,24 @@ export const en = {
   "co.tech.lane.homepage": "Homepage",
   "signal.kind.technical_change": "Technology changed",
   "co.factField.quantified_outcome": "Result",
+  "co.facts.title": "Facts about this company",
+  "co.facts.empty":
+    "Nothing on file yet. Read the website, or state what you already know.",
+  "co.facts.add": "Add fact",
+  "co.facts.addField": "What kind of fact",
+  "co.facts.addValue": "What it says",
+  "co.facts.addSave": "Save fact",
+  "co.facts.addCancel": "Cancel",
+  "co.facts.addIncomplete":
+    "Pick what kind of fact this is and type what it says.",
+  "co.facts.remove": "Remove {value}",
+  "co.facts.removeTitle": "Remove this fact?",
+  "co.facts.removeConfirm": "Remove",
+  "co.facts.removeAsk":
+    "{field} is recorded as \u201c{value}\u201d. Removing it says this is not a fact about the company. A later read of their website may state it again.",
   "co.facts.showAll": "Show all {count}",
   "co.facts.showLess": "Show fewer",
-  "co.tags.lists": "Lists",
   "co.tags.tags": "Tags",
-  "co.tags.noLists": "Not on any list.",
   "co.tags.noTags": "No tags applied.",
   "co.project.new": "New project",
   "co.deal.new": "New deal",
@@ -1846,11 +1765,6 @@ export const en = {
   "co.tags.pick": "Tag name",
   "co.tags.overCap":
     "There are more tags than this list can show, so a tag missing from it may still exist. Ask an admin to prune the tags before adding a new one.",
-  "co.lists.added": "Added to “{name}”",
-  "co.lists.add": "Add to list",
-  "co.lists.pick": "List name",
-  "co.lists.overCap":
-    "There are more lists than can be shown, so a list missing from them may still exist. Ask an admin to prune the lists before adding a new one.",
   "co.recent.title": "What happened lately",
   "co.recent.emptyDetail":
     "Once you send an email, log a call or hold a meeting, the exchange appears here, with who did what on each side.",
@@ -1869,14 +1783,11 @@ export const en = {
   "co.recent.dir.both": "both sides",
   "co.recent.minutes": "{count} min",
   "co.recent.re": "on a deal",
-  "co.tags.title": "Lists & tags",
+  "co.tags.title": "Tags",
   "co.timeline.empty": "Nothing logged on this account yet.",
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
   "org.domains": "Domains",
-  "org.firmographicsEmpty":
-    "Nothing read yet — grounded profile fields appear here once a site read confirms them.",
-  "org.facts": "Facts read from the site",
   "org.factCategory.company": "Company",
   "org.factCategory.offering": "Offering",
   "org.factCategory.market": "Market",
@@ -2393,7 +2304,6 @@ export const en = {
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
   "home.asOf": "as of {at}",
-  "home.refresh": "Refresh brief",
   "home.refreshing": "Ranking…",
   "home.generate": "Get today's brief now",
   "home.noneBody":
@@ -2425,6 +2335,12 @@ export const en = {
     "No summary of this week — Margince did not run a pass over it. The numbers below are still the week's own.",
   "home.weekly.queueWorked": "Morning queue",
   "home.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
+  "home.weekly.sincePrior": "{delta} vs last week",
+  "home.weekly.leadsAnswered": "Leads answered in time",
+  "home.weekly.ofRouted": "{answered} of {routed}",
+  "home.weekly.promisesKept": "Promises kept",
+  "home.weekly.meetingsHeld": "Meetings with a next step",
+  "home.weekly.ofMeetings": "{withStep} of {held}",
   "home.weekly.carriedOver": "Carried over",
   "home.weekly.outcome.moved": "moved",
   "home.weekly.outcome.won": "won",
@@ -2663,6 +2579,8 @@ export const en = {
   "field.addLegalName": "Add legal name",
   "field.addIndustry": "Add industry",
   "field.addLinkedinUrl": "Add LinkedIn URL",
+  "field.addRegisterVat": "Add VAT ID",
+  "field.addRegisteredAddress": "Add registered address",
   "field.addFullName": "Add name",
   "field.addTitle": "Add title",
   "field.addAddressLine1": "Add street and number",
@@ -2734,6 +2652,7 @@ export const en = {
   "today.draft.to": "Draft follow-up to {name}",
   "today.draft.act": "Draft",
 
+  "evidence.mark": "read",
   "evidence.confirm": "Confirm",
   "evidence.correct": "Correct",
   "evidence.save": "Save",
@@ -2742,8 +2661,6 @@ export const en = {
   "evidence.correctedValue": "Corrected value",
   "evidence.confirmedAt": "Confirmed by a person {when}",
   "evidence.humanSet": "Set by a person",
-  "co.routes.untried": "Untried — nobody here has written to them",
-  "co.routes.more": "+{count} more",
   "acctCoverage.open": "Compare coverage",
   "acctCoverage.title": "Who covers this account",
   "acctCoverage.contact": "Contact",
@@ -2973,6 +2890,13 @@ export const en = {
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send this email?",
+  "compose.threadHeading": "This conversation",
+  "compose.continueHeading": "Continue a conversation?",
+  "compose.threadLeave": "Choose another",
+  "compose.messageCount_one": "{count} message",
+  "compose.messageCount_other": "{count} messages",
+  "compose.threadContinuing": "The last exchange, which this will continue",
+  "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "You are sending this email now. This is an outbound, irreversible action.",
   // A moment picked in the field above turns this dialog into a different
@@ -3020,6 +2944,9 @@ export const en = {
   "compose.relinkThreadHint":
     "Every message in this thread you can edit moves with it, in one step.",
   "compose.emptyRecipients": "Add at least one recipient.",
+  "compose.missingSubject": "Give this email a subject.",
+  "compose.missingBody": "Write the message before sending it.",
+  "compose.missingPurpose": "Choose what this message is for.",
   "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 
@@ -3050,12 +2977,12 @@ export const en = {
   "ai.tierAutoExecute": "Read & draft run instantly.",
   "ai.tierAutoExecuteDetail":
     "Lookups, summaries, drafts — visible, reversible, logged.",
-  "ai.tierConfirmationRequired": "Write & send wait for you.",
+  "ai.tierConfirmationRequired": "Sensitive changes wait for you.",
   "ai.tierConfirmationRequiredDetail":
-    "External sends and record changes stage into the inbox first.",
+    "New custom fields, webhook subscriptions and paid enrichment stage into the inbox first. Most record changes and sends run instantly, within the scopes you granted.",
   "ai.connect": "Connect an agent",
   "ai.connectDetail":
-    "Mint a passport in Settings and point any MCP-capable agent at your organization. It reads only what you can see.",
+    "Point any MCP-capable agent at your organization and approve the access it asks for. There is nothing to set up first.",
   "ai.paletteHint": "Ask from anywhere with",
 
   "settings.accountCard": "Your account",
@@ -3078,6 +3005,15 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
+  "brief.coverage.summary": "Some sources have more than this page shows",
+  "brief.coverage.bounded": "{shown} shown of at least {considered} read",
+  "delivery.morningLabel": "Your morning brief",
+  "delivery.morningHelp":
+    "Whether the day's brief also arrives by email. It is on your Brief page either way.",
+  "delivery.weeklyLabel": "Your weekly review",
+  "delivery.weeklyHelp": "Whether Monday's review also arrives by email.",
+  "delivery.byEmail": "By email",
+  "delivery.none": "Not by email",
   "settings.languageHelp": "Lasts for this session.",
   "role.admin": "Admin",
   "role.management": "Management",
@@ -3102,7 +3038,7 @@ export const en = {
   "passport.select": "Passport",
   "passport.noneOption": "No passport",
   "settings.passportsLendHint":
-    "These are yours to lend. Connect an MCP client and it asks which one to hand over — the connection then carries exactly that passport's scopes.",
+    "Credentials you have minted for scripts and integrations. Connecting an MCP client does not use these — it creates its own connection, listed below.",
   "settings.passportLabel": "Agent name",
   "settings.mint": "Mint passport",
   "settings.minting": "Minting…",
@@ -3201,15 +3137,12 @@ export const en = {
   "agent.activity.offerDraft.stalled":
     "Drafting your offer has taken unusually long. It may have stopped.",
   "agent.panel.runningNow": "Running now",
-  "agent.panel.finishedToday": "Finished today",
-  "agent.panel.stoppedEarly": "Why it stopped",
 
   "agents.connected": "Connected agents",
   "agents.connectedSub":
-    "MCP clients holding their own credential, derived from a passport you lent",
+    "MCP clients holding their own credential, scoped to what you ticked when you authorized them",
   "agents.noneConnected": "No agent is connected yet.",
   "agents.connectedOn": "connected {date}",
-  "agents.lentFrom": "lent from “{label}”",
   "agents.disconnect": "Disconnect",
   "agents.disconnectOpen": "Disconnect",
   "agents.disconnectNamed": "Disconnect {client}",
@@ -3221,10 +3154,10 @@ export const en = {
   "agents.revokeGrantOpen": "End connection",
   "agents.revokeGrantNamed": "End the connection to {client}",
   "agents.disconnectConfirm":
-    "This ends the whole connection, not just one credential: the agent loses access on its next call and cannot renew. Reconnecting means lending a passport again.",
+    "This ends the whole connection, not just one credential: the agent loses access on its next call and cannot renew. Reconnecting means approving access again.",
   "agents.connectHow": "Connect an agent",
   "agents.connectSteps":
-    "Mint a passport above, then run one of these. The client registers itself and brings you back here to choose which passport to lend.",
+    "Run one of these. The client registers itself and brings you back here to choose the access it can have.",
   "agents.connectAntigravityPath":
     "Antigravity has no add command — put that block in ~/.gemini/config/mcp_config.json.",
   "agents.connectorOff": "The MCP connector is off for this installation.",
@@ -3942,6 +3875,74 @@ export const en = {
     "You said yes, but the authority Margince was working under has expired. Turn this off and on again to renew it — until then your brief is not being prepared.",
   "overnightGrant.renewScope":
     "You said yes, but Margince has learned to do more since, and the authority you gave does not cover the new work. Turn this off and on again to widen it — until then your brief is not being prepared.",
+  "aiHealth.title": "Model lanes",
+  "aiHealth.sub":
+    "Whether each model tier is answering. A lane that stopped and one that is merely cautious look the same everywhere else — captured mail stays held either way.",
+  "aiHealth.noCalls": "no model was called in the last {hours} hour(s)",
+  "aiHealth.colTier": "Tier",
+  "aiHealth.colState": "State",
+  "aiHealth.colCalls": "Last {hours}h",
+  "aiHealth.colLatency": "Median",
+  "aiHealth.colLast": "Last answer",
+  "aiHealth.answering": "Answering",
+  "aiHealth.notAnswering": "Not answering",
+  "aiHealth.callCounts": "{calls} calls, {failures} failed",
+  "aiHealth.ms": "{ms} ms",
+  "heldThreads.title": "Held back from your team",
+  "heldThreads.sub":
+    "Threads your mailbox is withholding. Releasing one lets every colleague read it; nobody else can release yours.",
+  "heldThreads.empty": "your mailbox is withholding nothing right now",
+  "heldThreads.colThread": "Thread",
+  "heldThreads.colWhy": "Why it is held",
+  "heldThreads.colWhen": "Arrived",
+  "heldThreads.colActions": "What you can do",
+  "heldThreads.release": "Share with the team",
+  "heldThreads.released": "Shared with the team",
+  "heldThreads.noSubject": "the message this began with is gone",
+  "heldThreads.blankSubject": "no subject",
+  "heldThreads.nothingToShare":
+    "There is no message left to share — this thread\u2019s first message was erased, and the hold stays so a later reply does not arrive open.",
+  "heldThreads.pending": "Waiting on a verdict",
+  "heldThreads.attempts": "asked {count} time(s)",
+  "heldThreads.heldByOthers":
+    "Still held: {count} other mailbox imported this message and has not shared it. A thread opens only when everyone who received it agrees.",
+  "heldThreads.kind.legal": "Legal",
+  "heldThreads.kind.financialCorporate": "Company finances",
+  "heldThreads.kind.personnel": "Personnel",
+  "heldThreads.kind.personal": "Personal",
+  "heldThreads.kind.securityIncident": "Security incident",
+  "heldThreads.kind.explicitlyConfidential": "Marked confidential",
+  "senders.title": "Senders",
+  "senders.sub":
+    "What was decided about each address your mailbox brought in — and your own answer where you gave one. Your senders only; a colleague never sees this list.",
+  "senders.emptyTitle": "Nothing decided yet",
+  "senders.emptyBody":
+    "Once your mailbox has brought in mail, every sender it saw is listed here with what became of them.",
+  "senders.colSender": "Sender",
+  "senders.colDecision": "Decided",
+  "senders.colRecord": "Contact",
+  "senders.colActions": "What you can do",
+  "senders.recordYes": "Yes",
+  "senders.recordNo": "No",
+  "senders.byYou": "— you decided",
+  "senders.markBusiness": "Business",
+  "senders.keepOut": "Keep out",
+  "senders.withdraw": "Undo",
+  "senders.keepOutTitle": "Keep this sender out for good?",
+  "senders.keepOutBody":
+    "No contact is created, and the mail this sender already brought into your mailbox is destroyed. Mail a colleague also imported stays theirs.",
+  "senders.keepOutConfirm": "Keep out and destroy",
+  "senders.kind.person": "A person",
+  "senders.kind.roleMailbox": "A role mailbox",
+  "senders.kind.organizationSender": "An organization",
+  "senders.kind.newsletter": "A newsletter",
+  "senders.kind.transactional": "An automated tool",
+  "senders.kind.spam": "Spam",
+  "senders.kind.personal": "Personal",
+  "senders.kind.advisor": "An advisor",
+  "senders.kind.business": "Business",
+  "senders.kind.keptOut": "Kept out",
+  "senders.kind.undecided": "Not yet decided",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
     "Captured mail is readable by every colleague who can see the contact. On by default — it is what makes the pipeline shared.",
@@ -3950,7 +3951,16 @@ export const en = {
     "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
   "mailSharing.danger":
     "DANGER: Switching off email sharing will make usage of the CRM difficult. New mail will be visible only to the people on each message.",
+  "mailSharing.sharedPosture.label": "Allow mailboxes to share on arrival",
+  "mailSharing.sharedPosture.help":
+    "Lets a colleague put their own mailbox in the shared posture, where a captured message is readable by the team the moment it lands, before anything has judged it. Off by default.",
+  "mailSharing.sharedPosture.warning":
+    "Reading an employee's mailbox into a shared CRM is what a works-council agreement covers in Germany and Austria. Turning this on says your organization holds one. Margince does not check.",
   "mailSharing.save": "Save",
+  "connectors.originLabel": "Address used in emailed links",
+  "connectors.originReachable": "Answering",
+  "connectors.originUnreachable": "Not answering",
+  "connectors.originUnchecked": "Not checked yet",
   "connectors.sub":
     "Mailboxes capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
   "connectors.loading": "Loading your connections…",
@@ -3958,7 +3968,8 @@ export const en = {
   "connectors.empty": "No inbox is connected yet.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
-  "connectors.provGraph": "Microsoft",
+  "connectors.provGraph": "Outlook",
+  "connectors.provGraphCal": "Outlook Calendar",
   "connectors.provImap": "IMAP mailbox",
   "connectors.statusConnected": "Capturing",
   "connectors.statusPending": "Pending — not yet confirmed live",
@@ -3977,11 +3988,51 @@ export const en = {
     "Mail capture isn't configured in this deployment.",
   "connectors.reconnect": "Reconnect",
   "connectors.disconnect": "Disconnect",
-  "connectors.signatureEnrich.label": "Read signatures from this mailbox",
+  "connectors.signatureEnrich.label": "Read contact details from this mailbox",
   "connectors.signatureEnrich.followingDefault":
     "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
   "connectors.signatureEnrich.ownAnswer":
     "This mailbox's own answer, kept whatever your organization's setting becomes.",
+  "hold.sectionTitle": "Private correspondence",
+  "hold.notHeld": "Mail with this contact follows your mailbox setting.",
+  "hold.heldByAddress": "You keep mail with this address to the people on it.",
+  "hold.heldByDomain": "You keep mail with {domain} to the people on it.",
+  "hold.holdAddress": "Keep private",
+  "hold.holdDomain": "Keep all of {domain} private",
+  "hold.lift": "Lift",
+  "hold.liftingWidensNothing":
+    "Lifting applies to new mail. What was held stays held.",
+  "hold.confirmVerb": "Keep private",
+  "hold.confirmTitle": "Keep this correspondence private?",
+  "hold.confirmAddressBody":
+    "Mail with {address} stays with the people who were on it. It is still captured and still yours to read — colleagues do not see it.",
+  "hold.confirmDomainBody":
+    "Mail with anyone at {domain}, including subdomains, stays with the people who were on it. It is still captured and still yours to read — colleagues do not see it.",
+  "hold.confirmHistoryNote":
+    "This covers mail from here on. Mail already captured keeps the visibility it has.",
+  "captureNotice.whatHappens":
+    "Margince reads this mailbox and files what it finds: the messages, who was on them, and the contacts and companies behind the addresses. Attachments are stored with their message.",
+  "captureNotice.whoReads":
+    "A new mailbox is held by default. A message stays with the people who were on it until a classifier judges the thread to be ordinary business — only then can colleagues read it. You can set the mailbox to hold everything instead, at any time.",
+  "captureNotice.yourControl":
+    "You decide per sender and per thread, under Settings → Connections: keep a correspondent out entirely, share a thread with the team, or delete what a sender brought in. Nothing here asks you to agree — this is what happens, so you know it before you connect.",
+  "connectors.mailPosture.label": "Who may read mail from this inbox",
+  "connectors.mailPosture.classified": "Held until classified",
+  "connectors.mailPosture.held": "Always held",
+  "connectors.mailPosture.shared": "Shared with the team",
+  "connectors.mailPosture.sharedNeedsAdmin":
+    "“Shared with the team” needs an admin to allow it for this organization.",
+  "connectors.mailPosture.help.classified":
+    "A new message is held to the people on it until a classifier judges the thread ordinary. Colleagues see nothing before that.",
+  "connectors.mailPosture.help.held":
+    "A new message is held to the people on it, whatever any classifier concludes. You share a thread yourself, one at a time.",
+  "connectors.mailPosture.help.shared":
+    "A new message is readable by colleagues the moment it lands.",
+  "connectors.mailPosture.historyTitle": "And the mail already captured?",
+  "connectors.mailPosture.historyBody":
+    "This answer governs mail captured from here on. Mail already in the CRM keeps the audience it has, unless you narrow it to match.",
+  "connectors.mailPosture.historyConfirm": "Change what colleagues may read",
+  "connectors.mailPosture.historyApply": "Also narrow mail already captured",
   "connectors.disconnectTitle": "Disconnect this inbox?",
   "connectors.disconnectBody":
     "This will delete the credential we stored for this mailbox. Capture stops immediately; everything already captured stays in your CRM, and reconnecting will ask for permission again.",
@@ -4029,11 +4080,13 @@ export const en = {
   "connectors.connectProvider": "Connect {provider}",
   "connectors.rosterLabel": "Mailboxes capturing",
   "connectors.addGmailBrings":
-    "The mail you send and receive, from Google — and the only connection Margince can send from.",
+    "The mail you send and receive, from Google. Margince can send from it too.",
   "connectors.addGcalBrings":
     "Your Google calendar. It connects separately from Gmail.",
   "connectors.addGraphBrings":
-    "Mail and calendar on a Microsoft work account, over the Graph API. Capture only.",
+    "The mail you send and receive on a Microsoft work account. Margince can send from it too.",
+  "connectors.addGraphCalBrings":
+    "Your Outlook calendar. It connects separately from your Outlook mail.",
   "connectors.addImapBrings":
     "Any other mail host, with an app password. Capture only.",
   "connectors.providerNotConfigured":
@@ -4357,11 +4410,6 @@ export const en = {
   "ob.conv.scene.detour": "A quick detour",
   "ob.conv.scene.decisionSub":
     "Your site names several legal entities. The one you pick goes on every quote and invoice.",
-  "ob.conv.scene.settleEyebrow": "It stopped on something only you can settle",
-  "ob.conv.review.boardTitle": "What I understand about your company.",
-  "ob.conv.review.boardSub":
-    "Every line says where it came from. Nothing is written until you confirm.",
-  "ob.conv.manual.boardTitle": "Fill it in yourself.",
   "ob.conv.scene.continue": "Continue",
   "ob.conv.scene.candidates": "{count} candidates",
   "ob.conv.connect.sceneTitle": "Connect your accounts.",
@@ -4442,9 +4490,6 @@ export const en = {
   "ob.conv.scene.evidence": "evidence",
   "ob.conv.scene.hideEvidence": "hide evidence",
   "ob.conv.scene.whyThis": "What I read",
-  // Reads straight into the value beside it, which is the point: the reader
-  // sees the exact string before choosing, not a description of it.
-  "ob.conv.scene.writes": "Writes",
   "ob.conv.scene.foundOn": "Found on",
   "ob.conv.guide.decision":
     "I need one decision from you: {question} It is on the right, with the evidence for each option.",
@@ -4563,15 +4608,6 @@ export const en = {
   "ob.gate.titleAnonymous": "I am the Margince AI.",
   "ob.gate.sub":
     "I read your site and draft your company profile. You approve before anything is saved. About two minutes.",
-  // The Core is aria-hidden and its state is motion first, so the band names it
-  // in words (WDS-CORE-4). This is what the ORB is doing, not what the read is:
-  // the phase line already says the second, and one fact in two places is two
-  // places to keep agreeing. One entry per state in the closed list.
-  "ob.core.idle": "core · at rest",
-  "ob.core.ingest": "core · taking it in",
-  "ob.core.working": "core · working it out",
-  "ob.core.warning": "core · something needs a look",
-  "ob.core.error": "core · stopped",
   "ob.gate.trustToggle": "How this works",
   "ob.gate.trustBody":
     "I read only public pages. Nothing is saved until you confirm it, and nothing is ever sent without your approval.",
@@ -4610,39 +4646,13 @@ export const en = {
   "ob.scan.phaseDeferred": "Paused for now",
   "ob.scan.pagesRead": "{pages} pages read",
   "ob.scan.pagesSkipped": "{count} skipped",
-  // The two figures the read is earning, as labels under running numbers. No
-  // denominator on either: the crawl does not know how many pages a site has,
-  // and a total it invented would be the one number here nobody could check.
-  "ob.scan.tallyPages": "pages read",
-  "ob.scan.tallyFacts": "facts found",
+  "ob.scan.factsSoFar": "{count} facts so far",
   "ob.scan.stillReading": "still reading",
-  // The stops of the passage, for the band's marks. Two words each: they are
-  // read at a glance to find a place, never read as a sentence.
-  "ob.digest.where": "Where this lands",
-  "ob.digest.written": "{n} of {m} lines written",
-  "ob.digest.sources": "Read from",
-  "ob.digest.blank": "not written yet",
-  "ob.digest.deciding": "you are deciding this now",
-  "ob.digest.yours": "yours",
-  "ob.deck.counter": "{n} of {m}",
-  "ob.deck.left": "{n} of {m} left",
-  "ob.deck.settled": "{count} facts went in on evidence, without you",
-  "ob.deck.needed": "Needed to continue",
-  "ob.deck.optional": "Worth a look",
-  "ob.deck.next": "Next",
-  "ob.deck.leaveOut": "Leave it out",
-  "ob.deck.readWhole": "Read the whole profile",
-  "ob.deck.confirm": "Confirm the profile",
-  "ob.deck.clear": "Nothing left to settle. {count} facts are on the record.",
-  "ob.deck.eyebrow": "Everything else went in on evidence",
-  "ob.deck.title": "It will not guess at these.",
-  "ob.stage.flow": "Setup",
-  "ob.stop.read": "Read the site",
   "ob.scan.pageStripLabel": "Pages read so far",
+  "ob.scan.logLabel": "The pages I am walking, newest first",
   "ob.scan.pageFetched": "{url}: read",
   "ob.scan.pageSkipped": "{url}: skipped, {reason}",
   "ob.scan.pageFailed": "{url}: could not be read, {reason}",
-  "ob.scan.logLabel": "The pages I am walking, newest first",
   "ob.scan.pageNoReason": "no reason recorded",
   "ob.scan.pageStatusFetched": "read",
   "ob.scan.pageStatusSkipped": "skipped: {reason}",
@@ -4862,7 +4872,7 @@ export const en = {
   "auth.noticeSessionExpired":
     "Your session expired. Sign in again to continue.",
   "auth.noticeOidcFailed":
-    "Sign-in with Google didn't work. Try again or use your password.",
+    "Sign-in with Google didn't work. If you were invited, open the link in your invitation email to finish setting up your account.",
   "auth.connectionTitle": "Margince couldn't be reached",
   "auth.connectionBody":
     "Check your connection and try again. If the problem persists, the server may be restarting.",
@@ -5007,6 +5017,36 @@ export const en = {
   "prefs.title": "Choose what you hear from us",
   "prefs.sub":
     "Each purpose is separate — this isn't all-or-nothing. Transactional messages can't be switched off here, because you need them; everything else is yours to control.",
+  "prefs.unsub.title": "Stop receiving these emails?",
+  "prefs.unsub.lead":
+    "One click stops messages of this kind to your address. Nothing else changes.",
+  "prefs.unsub.loading": "Opening your email preferences\u2026",
+  "prefs.unsub.afterTitle": "What happens next",
+  "prefs.unsub.afterBody":
+    "We stop sending you emails of this kind. Security and service messages you need for something you asked for are not affected.",
+  "prefs.unsub.confirm": "Unsubscribe from these emails",
+  "prefs.unsub.busy": "Recording your choice\u2026",
+  "prefs.unsub.seeAll": "See all preferences",
+  "prefs.unsub.privacy":
+    "No login needed. This personal link only controls your email preferences \u2014 please don't share it.",
+  "prefs.unsub.doneTitle": "Unsubscribed",
+  "prefs.unsub.doneBody":
+    "You won't receive {label} from us again. The change applies immediately.",
+  "prefs.unsub.manage": "Manage preferences",
+  "prefs.unsub.alreadyOff":
+    "These emails were already switched off. Nothing changed.",
+  "prefs.unsub.lockedTitle": "These messages can't be switched off",
+  "prefs.unsub.lockedBody":
+    "They're needed for something you asked for \u2014 a password reset, or a confirmation you requested.",
+  "prefs.unsub.retry": "Try again",
+  "prefs.unsub.unknownPurpose":
+    "This link doesn't name a kind of email we send. Open your preferences to see everything.",
+  "prefs.purpose.business_correspondence": "Direct correspondence",
+  "prefs.purpose.marketing_email": "Product news",
+  "prefs.purpose.transactional": "Security & service messages",
+  "prefs.sentVia": "Sent via Margince",
+  "prefs.noObjection": "On — you have not objected to these",
+  "prefs.optedOut": "Off — you asked us to stop these",
   "prefs.invalidLink":
     "This link is no longer valid. Preference links expire and can be withdrawn — ask for a fresh one from any recent email.",
   "buyer.opening": "Opening your Deal Room…",
@@ -5093,6 +5133,11 @@ export const en = {
   "dealmail.sub.fresh": "Write to the people on this deal.",
   "dealmail.reply": "Draft the reply",
   "dealmail.send": "Send an email",
+  "recordmail.title": "Email",
+  "recordmail.sub.reply": "An answer is owed.",
+  "recordmail.sub.fresh": "Write to this record's contacts.",
+  "recordmail.reply": "Draft the reply",
+  "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
   "deal360.readFull": "Read the full briefing",
   "deal360.createTask": "Add this task",
@@ -5101,9 +5146,7 @@ export const en = {
     "This briefing could not be read. Reload the page, or write it again.",
   "prefs.rateLimited":
     "Too many attempts from here just now. Wait a minute and reload.",
-  "prefs.subscribed": "Subscribed",
-  "prefs.notSubscribed":
-    "Not subscribed — you receive nothing for this purpose",
+  "prefs.subscribed": "On — you asked for these",
   "prefs.alwaysOn": "always on",
   // The public confirm-your-details page. Margince speaks in first person here,
   // as it does in onboarding: short flat sentences, says what it will and will
@@ -5134,9 +5177,9 @@ export const en = {
     "I have recorded your answer. Anything you changed goes to a person here to apply, and this link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used already, or it may have expired.",
-  "prefs.lockedWhy": "Transactional — exempt from opt-out.",
+  "prefs.lockedWhy": "Needed for something you asked for, so it stays on.",
   "prefs.confirmationNeededWhy":
-    "To start receiving this, use the confirmation link we email you. You can stop it here at any time.",
+    "To switch this on, use the confirmation link in our email. You can switch it off here at any time.",
   "prefs.notSaved": "Not saved yet.",
   "prefs.savePending": "Pending: {changes}.",
   "prefs.saveProof":
@@ -5145,13 +5188,17 @@ export const en = {
   "prefs.discard": "Discard",
   "prefs.partialSave":
     "Something went wrong part-way. Some of your choices may have been saved — we've reloaded your current settings so you can see exactly where you stand.",
+  "prefs.wording.business_correspondence":
+    "“Send me replies and direct messages about our conversations.”",
+  "prefs.wording.transactional":
+    "“Send me what I need for something I asked for.”",
   "prefs.wordingGeneric": '"Send me {label}."',
   "prefs.wording.marketing_email":
     '"Send me product updates & occasional marketing email."',
   "prefs.wording.events": '"Send me event & webinar invitations."',
-  "prefs.unsubscribeAll": "Unsubscribe from all marketing",
+  "prefs.unsubscribeAll": "Stop everything I can switch off",
   "prefs.unsubscribeAllHint":
-    "Prefer to stop all non-essential mail at once? You'll still get transactional messages.",
+    "This switches off every row above that has a checkbox you can use. Rows marked ALWAYS ON stay on — you need them for things you asked for.",
   "prefs.oneClickDone":
     "Done — you're off our marketing email. It takes effect immediately across every campaign.",
   "prefs.oneClickAlreadyOff": "Nothing to do — these were already off.",
@@ -5159,7 +5206,10 @@ export const en = {
   "prefs.undoExplicit":
     "Re-subscribing is an explicit opt-in — we won't silently turn it back on. Save below to record your consent, or discard.",
 
-  "auto.sub": "a closed catalog — pick a type, set its parameters, enable it",
+  "auto.tier.runs": "runs",
+  "auto.tier.approval": "approval",
+  "auto.sub":
+    'A rule marked "runs" acts on its own. One marked "approval" stages into the approval inbox.',
   "auto.readOnly":
     "Read-only view — you do not have permission to change automations.",
   "auto.catalog": "Starter library",
@@ -5408,7 +5458,8 @@ export const en = {
   "settings.tab.privacy": "Privacy & audit",
   "settings.tab.capture-activity": "Capture activity",
   "captureActivity.title": "Capture activity",
-  "captureActivity.sub": "What happened to your messages in the last 24 hours.",
+  "captureActivity.sub":
+    "What the last 24 hours of your mail turned into. The senders you keep out are above.",
   "captureActivity.scope.label": "Whose activity",
   "captureActivity.outcomes": "Outcomes",
   "captureActivity.messages": "Messages",
@@ -5423,7 +5474,8 @@ export const en = {
     "none of the loaded rows match — load more to reach the rest of the window",
   "captureActivity.loadMore": "Load more",
   "captureActivity.empty": "no capture activity in the last 24 hours",
-  "captureActivity.contentNotStored": "content not stored",
+  "captureActivity.payloadsOff":
+    "This installation does not record who sent a message or what it was about, so the rows below name the decision only.",
   "captureActivity.contentNone": "no sender recorded",
   "captureActivity.outcome.captured": "Captured",
   "captureActivity.outcome.internal": "Dropped as internal",
@@ -5460,7 +5512,7 @@ export const en = {
   "pipeline.sub":
     "Every step of the capture pipeline, in the order this message met them.",
   "pipeline.payloadsOff":
-    "No sender or subject is stored for any step: this deployment did not turn payload capture on.",
+    "No sender or subject is stored for any step: this deployment turned payload capture off.",
   "pipeline.transport": "Carried by",
   "pipeline.unavailable": "this message's pipeline steps could not be read",
   "pipeline.status.done": "Done",
@@ -5801,10 +5853,12 @@ export const en = {
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "No teams yet.",
   "users.teamMembersLabel": "Who is in this team",
+  "users.teamMembersAdminOnly": "Membership is visible to admins only.",
   "users.teamNobodyToAdd": "No users to add yet.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Named groups you can share records with. Being in a team grants no access on its own — customers, contacts, leads and deals are readable by everyone here.",
+  "users.teamsAdminOnly": "Managing teams is available to admins only.",
   "users.deactivated": "{name} deactivated",
   "users.reactivated": "{name} reactivated",
   "users.roleSaved": "Role changed for {name}",
@@ -5867,6 +5921,7 @@ export const en = {
   "users.deactivate": "Deactivate",
   "users.reactivate": "Reactivate",
   "users.status.active": "Active",
+  "users.status.invited": "Invited",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
   "users.link.action": "Get set-password link",
@@ -5895,6 +5950,18 @@ export const en = {
   "settings.companyTrust":
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
+  "settings.companyMark": "Company mark",
+  "settings.companyMarkPresent":
+    "Shown wherever this company appears, including the top of the sidebar.",
+  "settings.companyMarkNone":
+    "No mark yet, so the initials stand in. A website read fills this in, or add one here.",
+  "settings.companyMarkAdd": "Add a mark",
+  "settings.companyMarkReplace": "Replace",
+  "settings.companyMarkRemove": "Remove",
+  "settings.companyMarkPick": "Company mark",
+  "settings.companyMarkHint":
+    "PNG, JPEG, GIF, WebP, ICO or SVG. It is squared and resized on upload, and a mark you choose stays until you remove it.",
+  "settings.companyMarkEmpty": "Drop an image here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",
@@ -6067,81 +6134,6 @@ export const en = {
   "countdown.minutesSeconds": "{minutes}m {seconds}s",
   "countdown.expired": "Expired",
 
-  // Quotas & attainment (RD-T06): human-set revenue targets with
-  // server-computed attainment, surfaced under the Reports "Quotas" segment.
-  "quotas.tab": "Quotas",
-  // The selector panel's own title. The Reports segment picker directly above
-  // it already reads "Quotas", so this names what the LIST holds — one row per
-  // owner or team carrying a target — rather than repeating the page.
-  "quotas.selector.title": "Who has a quota",
-  "quotas.sub": "revenue targets — human-set, attainment computed",
-  "quotas.role.owner": "Individual quota",
-  "quotas.role.team": "Team quota",
-  "quotas.periodRange": "{start} – {end}",
-  "quotas.empty.title": "No quota set",
-  "quotas.empty.body":
-    "A quota is a target a human sets — owner or team, period, amount. We don't guess one for you. Set a target to start tracking attainment from closed-won deals.",
-  "quotas.empty.cta": "Set a target",
-  "quotas.attained": "attained",
-  "quotas.closedWon": "Closed-won this period",
-  "quotas.target": "Target",
-  "quotas.gap": "Gap to target",
-  "quotas.baseCurrencyNote":
-    "Figures in the organization's base currency ({currency}).",
-  "quotas.pace.ahead":
-    "Ahead of pace — {pct}% attained vs {pace}% of period elapsed.",
-  "quotas.pace.behind":
-    "Behind pace — {pct}% attained vs {pace}% of period elapsed.",
-  "quotas.pace.met": "Target met — {pct}% attained.",
-  "quotas.computed": "computed server-side",
-  "quotas.contributing.title": "What counts toward attainment",
-  "quotas.contributing.subtitle": "closed-won deals · base value in the period",
-  "quotas.contributing.deal": "Deal",
-  "quotas.contributing.amount": "Counted amount",
-  "quotas.contributing.total": "Counted total",
-  "quotas.contributing.caption":
-    "Base currency · open / lost / omitted deals excluded",
-  "quotas.explain.formula":
-    "attainment = Σ(closed-won base value) ÷ target, to the cent",
-  "quotas.explain.closedWon":
-    "closed-won = {sum} ({count} deals in the period)",
-  "quotas.explain.target": "target = {target} (human-set)",
-  "quotas.explain.result": "attainment = {sum} ÷ {target} = {pct}%",
-  "quotas.explain.exclusions":
-    "open / lost / omitted deals are excluded; clean-core only",
-  "quotas.scopeNote.title": "What this quota deliberately is",
-  "quotas.scopeNote.flag": "flagged, not hidden",
-  "quotas.scopeNote.body":
-    "The target is human-set — the AI never invents a quota number. Attainment is computed from closed-won base value and is fully auditable. There is no AI-set goal, no forecast-to-quota auto-fill, and no comp/commission engine yet.",
-  "quotas.target.title": "Period target",
-  "quotas.target.new": "Set a target",
-  "quotas.target.edit": "Edit target",
-  "quotas.target.save": "Save target",
-  "quotas.target.note":
-    "Editing writes a human-typed value and logs the change. Attainment recomputes against it.",
-  "quotas.target.sideFixed":
-    "A quota's owner/team side is fixed — switch it by archiving and recreating.",
-  "quotas.side.label": "Assigned to",
-  "quotas.side.owner": "Owner",
-  "quotas.side.team": "Team",
-  "quotas.owner": "Owner",
-  "quotas.team": "Team",
-  "quotas.pickOwner": "Select an owner…",
-  "quotas.pickTeam": "Select a team…",
-  "quotas.amountHint": "Whole units of the currency below. No decimals.",
-  "quotas.periodStart": "Period start",
-  "quotas.periodEnd": "Period end",
-  "quotas.amount": "Target amount",
-  "quotas.currency": "Currency",
-  "quotas.err.targetZero": "This quota has no target yet",
-  "quotas.err.computeFailed": "Attainment couldn't be computed",
-  "quotas.err.ownerXorTeam": "Choose exactly one of owner or team.",
-  "quotas.saveDone": "Quota saved",
-  "quotas.archiveDone": "Quota archived",
-  "quotas.archive.title": "Archive quota",
-  "quotas.archive.confirm":
-    "Archiving drops this quota from the list and stops tracking its attainment. Archived quotas can't be edited.",
-
   "installationSettings.orgTitle": "Installation",
   "installationSettings.orgSub":
     "What this installation is called, and the zone every reporting period is computed in.",
@@ -6170,172 +6162,128 @@ export const en = {
   "installationSettings.edit": "Edit",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
-  "googleApp.title": "Google app",
-  "googleApp.sub":
-    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials rather than ours.",
-  "googleApp.configured": "In use: {clientId}",
-  "googleApp.absent":
-    "No app stored. Gmail and Calendar cannot be connected until one is.",
-  "googleApp.replaceHint":
-    "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
-  "googleApp.store": "Store app",
-  "googleApp.replace": "Replace app",
-  "googleApp.removeConfirmTitle": "Remove the Google app?",
-  "googleApp.removeConfirmBody":
+  "signInMethods.title": "Sign-in methods",
+  "signInMethods.sub":
+    "Which ways people may sign in here. The list is what this deployment holds credentials for, so an admin can turn one off but cannot add one.",
+  "signInMethods.password": "Email and password",
+  "signInMethods.passwordAlways":
+    "Always available. Every account can be reached this way, which is what makes the others safe to switch off.",
+  "signInMethods.passwordReason":
+    "Password sign-in cannot be turned off. It is the method that keeps an installation enterable.",
+  "signInMethods.providerHint":
+    "Offer this provider on the login screen. Turning it off stops sign-ins already in progress, and existing sessions are unaffected.",
+  "signInMethods.noneConfigured":
+    "This deployment has no external provider configured, so there is nothing to offer besides a password.",
+  "oauthApp.google.title": "Google app",
+  "oauthApp.google.sub":
+    "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your organization’s own credentials are used rather than ours.",
+  "oauthApp.google.absent":
+    "No app is available from any source. Gmail and Calendar cannot be connected, and Google sign-in cannot be offered.",
+  "oauthApp.google.redirectSub":
+    "Register every URI below on the OAuth client in the Google console. A missing one fails at the consent screen with redirect_uri_mismatch, which does not say which URI was wrong.",
+  "oauthApp.google.clientIdPlaceholder":
+    "000000000000-xxxx.apps.googleusercontent.com",
+  "oauthApp.google.removeConfirmTitle": "Remove the Google app?",
+  "oauthApp.google.removeConfirmBody":
     "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
-  "googleApp.remove": "Remove app",
+  "oauthApp.microsoft.title": "Microsoft app",
+  "oauthApp.microsoft.sub":
+    "Outlook mailboxes and calendars are connected, and people sign in with Microsoft, through an Entra app registration you own. Your organization’s own credentials are used rather than ours.",
+  "oauthApp.microsoft.absent":
+    "No app is available from any source. Outlook mail and calendar cannot be connected, and Microsoft sign-in cannot be offered.",
+  "oauthApp.microsoft.redirectSub":
+    "Register every URI below under Authentication on the Entra app registration, as a Web platform. A missing one fails at the consent screen with AADSTS50011, which does not say which URI was wrong.",
+  "oauthApp.microsoft.clientIdPlaceholder":
+    "00000000-0000-0000-0000-000000000000",
+  "oauthApp.microsoft.removeConfirmTitle": "Remove the Microsoft app?",
+  "oauthApp.microsoft.removeConfirmBody":
+    "The client secret cannot be read back, so removing it means re-entering both halves from the Entra portal. Outlook mail and calendar connections are made through this app. Google and IMAP mailboxes are not affected. First-run setup will ask for one again.",
+  "oauthApp.configured": "In use: {clientId}",
+  "oauthApp.fromEnvironment":
+    "In use from this deployment’s configuration: {clientId}. Storing an app here replaces it for as long as one is stored.",
+  "oauthApp.pinnedToDirectory": "Pinned to directory {tenant}.",
+  "oauthApp.replaceHint":
+    "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
+  "oauthApp.store": "Store app",
+  "oauthApp.replace": "Replace app",
+  "oauthApp.remove": "Remove app",
+  "oauthApp.redirectCopied": "Copied",
+  "oauthApp.redirectCopy": "Copy {purpose} URI",
+  "oauthApp.redirect.mailbox_connect": "Mailbox",
+  "oauthApp.redirect.calendar_connect": "Calendar",
+  "oauthApp.redirect.sign_in": "Sign-in",
+  "oauthApp.redirectTitle": "Authorized redirect URIs",
+  "oauthApp.clientId": "Client ID",
+  "oauthApp.clientSecret": "Client secret",
+  "oauthApp.tenant": "Directory (tenant) ID",
+  "oauthApp.tenantHint":
+    "Optional. Pins the app to one Entra directory, so only its members may authorize. Leave it empty to allow any organization.",
+  "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Continue",
-  // The step's place in first run, over its title. Two questions, and the
-  // reader is told which one they are on rather than left to count.
-  // A CLAIM about the installation, not a counter. The band above already says
-  // which stop this is and draws the marks for the rest, and a fraction beside
-  // a step name is the same fact a third time. What an eyebrow can say that
-  // neither of those can is what is true of this installation right now.
-  "firstRun.ai.eyebrow": "Nothing here can think yet",
-  "firstRun.google.eyebrow": "It thinks. It cannot reach anyone yet",
-  // The band's own names for the two stops, short enough to sit beside the
-  // progress marks. Not the titles: a hero headline in a 12px band wraps.
-  "firstRun.step.model": "The model",
-  "firstRun.step.platform": "Your platform",
-  // The Core's state in words comes from `ob.core.*`, which every onboarding
-  // surface reads: the orb saying the same thing on two screens must not read
-  // as two different things.
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
     "Margince has no AI of its own. It thinks through your vendor account, and you can change any of this later under Settings → AI.",
   "firstRun.ai.provider": "Provider",
   "firstRun.ai.key": "API key",
-  // The environment-variable path is real and belongs to whoever runs the
-  // server, who is not necessarily the person on this screen. It lives in the
-  // docs; what a reader here needs to know is what happens to the key they are
-  // about to type.
   "firstRun.ai.keyHint": "Sealed in the key vault, never shown again.",
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
     "A starting point. Any model your provider serves will do.",
-  // What the live rows in the chat list ARE, so a reader knows what put them
-  // in that order. "Top ten" on its own is a claim nobody can check, and the
-  // measure is somebody else's published one rather than ours.
-  "firstRun.ai.rankedHint":
-    "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
-  "firstRun.ai.rankedUnavailable":
-    "OpenRouter's live model list could not be read just now, so this offers what your price sheet holds.",
   "firstRun.ai.embedModel": "Embedding model",
-  // What the binding on screen will cost, from this installation's own price
-  // sheet. The lane labels name the JOB rather than the mechanism: a first-time
-  // admin is choosing what the product thinks with and what it remembers with,
-  // and "chat tier" and "embeddings lane" are the internal words for that.
-  "aiRates.chatLane": "What it thinks with",
-  "aiRates.embedLane": "What it remembers with",
-  "aiRates.perMTokInOut": "per million tokens, in → out",
-  "aiRates.perMTok": "per million tokens",
-  "aiRates.unpriced": "No price on file",
-  "aiRates.unpricedDetail":
-    "It will still serve calls. They report as unpriced, so they are missing from usage and spend until someone adds a rate under Settings → AI.",
-  "aiRates.priced": "Priced from {date}",
-  "aiRates.proposed": "OpenRouter's price",
-  "aiRates.proposedDetail":
-    "Read from the vendor just now, not from your price sheet. Bind it and it goes to your approvals inbox, so usage and spend can price it once you confirm.",
-  // ONE question, not two. Mail and sign-in are separate mechanisms in the
-  // server and the same decision for an organization: a company on Workspace
-  // reads mail through a Google app and signs in with Google accounts, through
-  // that same app. Asking twice would be asking somebody to answer the same
-  // fact in two places and then keep the two agreeing.
-  // The four seconds after a model is bound. Every line is a claim that is true
-  // at the moment it is drawn, and the last one is the one worth hearing while
-  // the first two land: the product can think now, and it still cannot act.
-  "firstRun.ignite.title": "It has a pulse.",
-  // The sub says what just happened; the list under it says what that changed.
-  // Neither repeats the other, and neither repeats the title.
-  "firstRun.ignite.sub":
-    "The key is sealed and the model answered. Here is what that changes.",
-  "firstRun.ignite.sealed": "sealed in the vault · {vendor}",
-  "firstRun.ignite.reaching": "reaching the model for the first time…",
-  "firstRun.ignite.canNow": "can now",
-  "firstRun.ignite.cannot": "cannot",
-  "firstRun.ignite.read": "read your website and tell you what it found",
-  "firstRun.ignite.draft": "draft in a voice you taught it",
-  "firstRun.ignite.act": "send anything, or change a record, unless you say so",
-  "firstRun.ignite.carryOn": "Carry on",
-  "firstRun.platform.title": "What does your organization run on?",
-  "firstRun.platform.sub":
-    "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
-  "firstRun.platform.legend": "The platform this organization runs on",
-  "firstRun.platform.google": "Google Workspace",
-  // One line each. Side by side on three plates, a paragraph per answer is
-  // twelve lines of prose for a question most readers settle by recognising
-  // the platform they already run.
-  "firstRun.platform.googleWhat":
-    "Mail, calendar and sign-in through one Google app you own.",
-  "firstRun.platform.microsoft": "Microsoft 365",
-  "firstRun.platform.microsoftWhat":
-    "Mail and calendar through Microsoft Graph. Sign-in is email and password.",
-  "firstRun.platform.other": "Neither",
-  "firstRun.platform.otherWhat":
-    "Each mailbox connects over IMAP. Sign-in is email and password.",
-  // What the two paths that need no app here still need somewhere else. Named
-  // because it is not this screen's to do and a reader has to know whose it is.
-  // First sentence plus where the rest lives. The variable names are work for
-  // whoever runs the server and are in the docs; naming them here spent four
-  // lines of an onboarding screen on something its reader cannot act on.
-  "firstRun.platform.microsoftOperator":
-    "Nothing to fill in here. Microsoft’s app is set up by whoever runs the server, before it starts.",
-  "firstRun.platform.otherOperator":
-    "Nothing to fill in here. Each mailbox is set up under Settings → Integrations.",
-  // The honest statement of a gap this screen cannot close. First run still
-  // requires a Google app whatever the answer above, so the two paths that need
-  // none are held here — and a refusal that says why beats a Continue that
-  // fails with a validation error from the server.
-  // The Google path's own gap, and it has to be here because the option above
-  // promises sign-in. Saving the app below makes mail and calendar work; it does
-  // NOT turn the login door on, because sign-in reads the pair from the process
-  // environment when the server starts rather than from what is stored. An
-  // operator who finished this screen and then looked for the button would find
-  // nothing and nothing telling them why.
-  "firstRun.platform.stillNeedsGoogle":
-    "First run still asks for a Google app whatever you answer, so this path cannot finish yet. Paste one below to get past it.",
-  // The one qualification each step carries, on the card's bottom edge. Each is
-  // true of the whole screen rather than of a field on it.
-  "firstRun.ai.foot":
-    "Nothing is sent to your vendor until you press Continue.",
-  "firstRun.google.foot":
-    "Saving this app connects mail and calendar. Google sign-in needs one more step from whoever runs the server.",
-  // The step itself, in the disclosure rather than on the screen: it names two
-  // environment variables and a restart, which is not this reader's work.
-  "firstRun.google.helpSignIn":
-    "For Google sign-in, whoever runs the server also exports the same pair as MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restarts it. Sign-in reads them at startup, not from what is saved here.",
-  "firstRun.google.clientIdPlaceholder":
-    "000000000000-xxxx.apps.googleusercontent.com",
-  "firstRun.google.clientId": "Client ID",
-  "firstRun.google.clientSecret": "Client secret",
-  // Where the two values above come from. It is operator work in somebody
-  // else's console, and this screen used to name neither the console nor the
-  // redirect URI — which is the half people get wrong, because Google rejects
-  // the consent silently until it matches.
-  "firstRun.google.helpToggle": "Where do I get these?",
-  "firstRun.google.helpStep1":
-    "In the Google Cloud console, open a project and go to APIs & Services → Credentials → Create credentials → OAuth client ID, and choose Web application.",
-  "firstRun.google.helpStep2":
-    "Enable the Gmail API, and put both the gmail.readonly and gmail.send scopes on the consent screen. They ride one consent on purpose: Google will not add a scope to a refresh token it already issued, so asking for send later means connecting the mailbox twice.",
-  "firstRun.google.helpStep3":
-    "Add an authorized redirect URI for each thing you will use. Mail is the only one you need; add Calendar if you want calendar too, and the sign-in one if people will sign in to Margince with their Google account.",
-  "firstRun.google.helpRedirectMail": "Mail",
-  "firstRun.google.helpRedirectCalendar": "Calendar",
-  "firstRun.google.helpRedirectSignIn": "Google sign-in",
-  "firstRun.google.helpStep4":
-    "Copy the client ID and client secret Google shows you into the two fields below. The secret is sent once and sealed in the key vault; it is never readable again, here or anywhere.",
-  "firstRun.google.helpConsole": "Google Cloud credentials console",
-  "firstRun.google.helpRedirectHost":
-    "{host} is wherever this installation's API answers, which is the address in the server's own MARGINCE_API_BASE_URL or MARGINCE_PUBLIC_BASE_URL. In a local dev stack that is http://localhost:8080.",
-  "firstRun.google.helpDocs":
-    "The full prerequisites, Microsoft and IMAP included: docs/how-to/connect-a-mailbox.md",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
+  "aiSettings.sub": "Where this installation's text goes, and what it costs.",
+  "aiSettings.tabs": "Which part of the AI settings is open",
+  "aiSettings.tab.routing": "Routing",
+  "aiSettings.tab.providers": "Providers",
+  "aiSettings.tab.automations": "Automations",
+  "aiSettings.tab.usage": "Usage",
+  "aiSettings.tab.logs": "Logs",
+  "aiSettings.withheld": "Not yours to see",
+  "aiSettings.unread": "Could not be read",
+  "aiSettings.pending": "Reading…",
+  "aiSettings.spend.label": "Spend this month",
+  "aiSettings.spend.value": "{spent} of {budget} tokens",
+  "aiSettings.spend.estimated": "≈ {amount} estimated",
+  "aiSettings.providers.label": "Providers",
+  "aiSettings.providers.value": "{count} keyed",
+  "aiSettings.providers.missing": "{count} bound with no key",
+  "aiSettings.providers.lastCall": "last call {elapsed}",
+  "aiSettings.discardTitle": "Leave the routing edits behind?",
+  "aiSettings.discardBody":
+    "The bindings you changed have not been saved. Leaving this tab discards them.",
+  "aiSettings.discard": "Discard",
+  "elapsed.justNow": "just now",
+  "elapsed.minutes": "{minutes} min ago",
+  "elapsed.hours": "{hours} h ago",
+  "elapsed.days": "{days} d ago",
+  "aiRouting.lane.local_small": "Bulk classifying, on your own hardware",
+  "aiRouting.lane.cheap_cloud": "Everyday work — enrichment, summaries, triage",
+  "aiRouting.lane.premium": "Anything a customer will read",
+  "aiRouting.lane.frontier": "The hardest reasoning, used sparingly",
+  "aiRouting.lane.local_large": "Heavier work that must not leave your hosts",
+  "aiRouting.lane.embeddings": "Search and retrieval across your records",
+  "aiRouting.lanes.title": "Routing lanes",
+  "aiRouting.lanes.sub":
+    "Cheapest first. A task picks a lane; the lane picks the model.",
+  "aiRouting.priceSheet": "Price sheet",
+  "aiRouting.provider.label": "Provider",
+  "aiRouting.change": "Change",
+  "aiRouting.done": "Done",
+  "aiRouting.noKey": "no key",
+  "aiRouting.unpriced": "unpriced",
+  "aiRouting.effect":
+    "Saved bindings reach every process within a minute, without a restart.",
   "aiProviderKeys.title": "Model provider keys",
   "aiProviderKeys.sub":
     "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",
-  "aiProviderKeys.configured": "Key stored",
-  "aiProviderKeys.absent": "No key",
+  "aiProviderKeys.keyless": "no key needed",
+  "aiProviderKeys.field": "API key",
+  "aiProviderKeys.save": "Save key",
+  "aiProviderKeys.adminOnly":
+    "Only an admin or ops can change a provider credential.",
+  "aiProviderKeys.configured": "configured",
+  "aiProviderKeys.absent": "not set",
   "aiProviderKeys.configuredHint":
     "Sealed in the key vault. It cannot be read back — paste a new one to replace it. It may also arrive as {envVar}.",
   "aiProviderKeys.absentHint":
@@ -6353,10 +6301,15 @@ export const en = {
   "aiRouting.withheld":
     "Only an operator who may change the model binding can see which models this installation uses.",
   "aiRouting.title": "Model routing",
+  "aiRouting.sheetAsOf":
+    "Model lists are the price sheet as of {date}. Any newer id your provider serves works too — type it.",
+  "aiRouting.sheetUnknown":
+    "Model lists come from the price sheet, which is not yours to read. Any id your provider serves works — type it.",
   "aiRouting.sub":
     "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",
   "aiRouting.unbound":
     "This installation has no models bound, so its AI features are off. A deployment declares its first binding under seeds.ai_routing in margince.yaml.",
+  "aiRouting.profile.card": "Deployment profile",
   "aiRouting.profile.label": "Location",
   "aiRouting.profile.help":
     "Where inference runs. Sovereign means zero egress: only models on your own hosts, refused at save time rather than at the first call.",
@@ -6366,11 +6319,20 @@ export const en = {
   "aiRouting.dimensions.label": "Vector width",
   "aiRouting.dimensions.help":
     "Leave blank for the provider's default. A value outside 1 to 2000 is refused.",
-  "aiRouting.embeddings.label": "Embeddings",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "The vendor's host root, with no version segment. The adapter adds /v1. Required for openai_compatible, which has no default of its own.",
+  "aiRouting.models.noKey":
+    "Showing the price sheet only — this vendor holds no key, so it cannot be asked what it serves. Any id it serves still works: type it.",
+  "aiRouting.models.noEndpoint":
+    "Showing the price sheet only — fill in the host above and this vendor can be asked what it serves. Any id it serves still works: type it.",
+  "aiRouting.models.profileForbids":
+    "Showing the price sheet only — this deployment profile does not permit reaching this vendor.",
+  "aiRouting.models.notPublished":
+    "Showing the price sheet only — this vendor publishes no model list.",
+  "aiRouting.models.unreachable":
+    "Showing the price sheet only — this vendor did not answer. Any id it serves still works: type it.",
   "aiRouting.model.label": "Model",
   "aiRouting.model.help":
     "The models listed are the ones this installation can price, per million tokens in → out. Any other id your provider serves works too — type it.",
@@ -6381,6 +6343,8 @@ export const en = {
   "autonomy.title": "What answers itself",
   "autonomy.sub":
     "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",
+  "autonomy.noneDecidedYet":
+    "You have not decided any of these yet. What reaches this list depends on the records you own and the work your team routes to you, so a seat with neither stays empty. The switches still decide what happens when something appears.",
   "autonomy.noRecord": "You have not decided one of these yet.",
   "autonomy.record":
     "So far: {clean} approved as proposed, {edited} after an edit, {rejected} turned down.",
@@ -6399,10 +6363,9 @@ export const en = {
   "captureSettings.autoEnrich.label": "Auto-enrich captured companies",
   "captureSettings.autoEnrich.help":
     "When on, each new company created from captured mail gets an automatic web dossier — its site is read and its profile filled in. Runs under a daily limit.",
-  "captureSettings.signatureEnrich.label":
-    "Read signatures for contact details",
+  "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, a nightly pass lifts what a contact states under their own name in mail they sent you — a title, a phone number, a company. Nothing is inferred: a detail the signature does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
+    "When on, Margince reads what a contact states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
 
   "ownDomains.companyTitle": "Company domains",
@@ -6495,6 +6458,8 @@ export const en = {
   "webhooks.deliveries.status.delivered": "Delivered",
   "webhooks.deliveries.status.retrying": "Retrying",
   "webhooks.deliveries.status.dead_lettered": "Dead-lettered",
+  "webhooks.deliveries.status.visibility_revoked":
+    "Stopped — no longer visible",
   "webhooks.deliveries.replay": "Replay",
   "webhooks.deliveries.replayConfirm.title": "Replay this delivery?",
   "webhooks.deliveries.replayConfirm.body":
@@ -6538,27 +6503,24 @@ export const en = {
   "embedreindex.impact.queued": "would be queued",
 
   "consent.title": "Authorize access",
-  "consent.asks": "{client} wants to act in Margince as you.",
+  "consent.asks":
+    "{client} will be able to act in Margince as you, with the access checked below.",
   "consent.redirectsTo": "Margince will send the authorization back to {host}.",
   "consent.redirectsToLoopback":
     "That is an address on this computer, and this connection cannot prove which program is listening on it.",
-  "consent.lend": "Lend it one of your agent passports",
-  "consent.grantedNote":
-    "This connection gets exactly the scopes shown — the ones this passport carries.",
+  "consent.scopeNote.read": "sees what you can see",
+  "consent.scopeNote.draft": "prepares messages for your review",
+  "consent.scopeNote.write": "creates, edits and archives records as you",
+  "consent.scopeNote.send": "sends messages as you, without asking first",
+  "consent.scopeNote.enrich":
+    "spends enrichment credits — each purchase still asks you first",
+  "consent.ceiling":
+    "Never more than your own permissions. You can disconnect any time in Settings → Agents.",
+  "consent.pickOne": "Pick at least one, or deny.",
   "consent.offline":
     "It will stay connected without asking again, renewing access until you revoke it.",
   "consent.approve": "Authorize",
   "consent.deny": "Deny access",
-  "consent.emptyTitle": "You need an agent passport first",
-  "consent.emptyBody":
-    "A passport is the authority you lend an agent — it never exceeds your own permissions, and you can revoke it at any time. Mint one and we'll bring you back here to finish connecting {client}.",
-  "consent.emptyCta": "Mint a passport",
-  "consent.expires": "expires {date}",
-  "consent.resumeTitle": "Finish connecting {client}",
-  "consent.resumeBody":
-    "You came here to mint a passport for {client}. Once you have one, pick up where you left off.",
-  "consent.resume": "Continue connecting",
-  "consent.resumeDismiss": "Cancel this connection",
   "consent.reentering": "Reconnecting…",
   "consent.backToApp": "Back to Margince",
   "consent.staleTitle": "This request has expired",
@@ -6566,13 +6528,9 @@ export const en = {
   // client's name is not available to name here.
   "consent.staleBody":
     "The connection request is no longer valid. Go back to the app you were connecting and start again — reloading this page will not help.",
-  "consent.unlendableTitle": "That passport can no longer be lent",
-  "consent.unlendableBody":
-    "The passport you chose for {client} was revoked, expired, or is already bound to another connection. Choose a different one below.",
   "consent.invalidTitle": "This connection request could not be completed",
   "consent.invalidBody":
     "This installation will not authorize the request as it stands — the app may no longer be registered here. Go back to the app you were connecting and start again.",
-  "consent.unnamedPassport": "Unnamed passport ({id})",
   "person.thin.title": "What we know so far",
   "person.thin.known":
     "We have {what} for {name}, but nobody here has a recorded exchange with them yet.",
@@ -6589,7 +6547,11 @@ export const en = {
   "person.enriched.field.role": "Role",
   "person.enriched.field.linkedin": "LinkedIn",
   "person.enriched.field.org_name": "Company",
+  "person.enriched.field.address": "Address",
+  "person.enriched.field.website": "Website",
   "person.enriched.readFrom": "Read from {source} on {when}",
+  "person.enriched.undo": "Undo",
+  "person.enriched.replaced": "Replaced “{was}”, which was older.",
   "person.enriched.correctedByYou": "Corrected by you",
   "person.enriched.confirmed": "Confirmed",
   "person.enriched.correct": "Correct",
@@ -6597,18 +6559,12 @@ export const en = {
   "person.enriched.save": "Save the correction",
   "person.enriched.cancel": "Cancel",
   "person.graph.loading": "Reading the network around this contact…",
-  "person.graph.routeTitle": "The warmest way in",
   "person.graph.routeDirect": "{name} already corresponds with them.",
   "person.graph.routeVia":
     "{name} corresponds with {through} at the same company.",
   "person.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
-  "person.graph.direct": "Who knows them",
   "person.graph.noDirect": "Nobody here has corresponded with them.",
-  "person.graph.account": "At the same company",
-  "person.graph.noAccount": "No other contacts on record at their company.",
-  "person.graph.peer": "Who they talk to",
-  "person.graph.noPeer": "Nobody else observed on their threads yet.",
   "person.graph.recordWorksWith": "Record: works with {name}",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",
@@ -6618,10 +6574,139 @@ export const en = {
   "person.graph.countsOnly":
     "Counts only — the messages themselves stay on the timeline.",
   "person.graph.untitledMessage": "Message with no subject",
-  "person.graph.dropped": "{count} more not shown.",
-  "person.network.ringTitle": "Who reaches them",
-  "person.network.ringSub":
-    "Our side and this account, by how warm the relationship is. Pick anyone to see what it is made of.",
+  "person.intro.routesTitle": "Ways in",
+  "person.graph.droppedNote": "{count} more not shown.",
+  "person.graph.withheldDirect": "Some colleagues are not shown.",
+  "person.graph.withheldAccount":
+    "Some contacts at this company are not shown.",
+  "person.intro.askFirstName": "Ask {name} for an intro",
+  "person.intro.leadEyebrow": "Recommended route",
+  "person.intro.leadRouteBadge": "Strong route",
+  "person.intro.heroDirect": "knows them directly",
+  "person.intro.heroIndirect": "reaches them through {through}",
+  "person.intro.factReciprocal": "Reciprocal",
+  "person.intro.factOneSided": "One-sided",
+  "person.intro.factDirect": "Direct relationship",
+  "person.intro.factIndirect": "Through a colleague",
+  "person.intro.factReceipts": "{count} visible receipts",
+  "person.intro.stripPath": "Best path",
+  "person.intro.stripDirect": "Direct relationship",
+  "person.intro.stripVia": "Through {through}",
+  "person.intro.stripNoPath": "Nobody here reaches them yet",
+  "person.intro.stripWhyNow": "Why now",
+  "person.intro.stripWhyNowSub": "The most recent change on this relationship",
+  "person.intro.stripNoMoment": "Nothing new",
+  "person.intro.stripNoMomentSub": "No recent change on this relationship",
+  "person.intro.stripHandoff": "Request status",
+  "person.intro.handoffNotStarted": "Not started",
+  "person.intro.handoffNotStartedSub": "No introduction has been asked for",
+  "person.intro.handoffOwner": "{name} owns the next move",
+  "person.intro.ownerColleague": "your colleague",
+  "person.intro.ownerYou": "you",
+  "person.intro.ownerNobody": "nobody",
+  "person.intro.relayTitle": "Introduction status",
+  "person.intro.relaySubOpen": "Where the handoff has got to.",
+  "person.intro.relaySubNone": "No request is open.",
+  "person.intro.stepRoute": "Choose route",
+  "person.intro.stepRoutePick": "pick who to ask",
+  "person.intro.stepRequest": "Request",
+  "person.intro.stepNotSent": "not sent",
+  "person.intro.stepAwaitingAnswer": "waiting on your colleague",
+  "person.intro.stepIntroduction": "Introduction",
+  "person.intro.stepNameDrop": "Name used",
+  "person.intro.stepWaiting": "waiting",
+  "person.intro.stepRecorded": "recorded",
+  "person.intro.stepReply": "Reply",
+  "person.intro.stepObserved": "observed from activity",
+  "person.intro.stepDone": "Done",
+  "person.intro.stepCurrent": "Now",
+  "person.intro.stepPending": "Later",
+  "person.intro.laneOurs": "Our team",
+  "person.intro.laneTheirs": "Their company",
+  "person.intro.laneTarget": "Target",
+  "person.intro.useThisRoute": "Use this route",
+  "person.intro.mapRegion": "Who can reach this contact, and through whom",
+  "person.intro.edgeDirect": "{name} corresponds with them directly",
+  "person.intro.edgeAccount": "works with {name}",
+  "person.intro.routesSub":
+    "Best first. Pick the one you can actually use — the second is here because the first is not always available.",
+  "person.intro.best": "Best",
+  "person.intro.alternative": "Alternative",
+  "person.intro.evidenceTwoWay_one":
+    "{total} two-way exchange in 90 days · {when}",
+  "person.intro.evidenceTwoWay_other":
+    "{total} two-way exchanges in 90 days · {when}",
+  "person.intro.evidenceOneSided_one":
+    "{total} interaction in 90 days, one-sided · {when}",
+  "person.intro.evidenceOneSided_other":
+    "{total} interactions in 90 days, one-sided · {when}",
+  "person.intro.whenToday": "last contact today",
+  "person.intro.whenYesterday": "last contact yesterday",
+  "person.intro.whenDays": "last contact {days} days ago",
+  "person.intro.whenNever": "no recent contact",
+  "person.intro.askTitle": "Ask for an introduction to {name}",
+  "person.intro.cancel": "Cancel",
+  "person.intro.askAction": "Request introduction",
+  "person.intro.askFailed": "The ask could not be recorded.",
+  "person.intro.reasonLabel": "Why you are asking",
+  "person.intro.reasonHint":
+    "Your colleague reads this, not the contact. Say what makes the introduction worth making.",
+  "person.intro.valueLabel": "What is in it for them",
+  "person.intro.valueHint":
+    "The reason the contact would want this conversation.",
+  "person.intro.noteLabel": "Note your colleague can forward",
+  "person.intro.noteHint":
+    "The only part the contact reads. Write it so it can be pasted as it stands.",
+  "person.intro.nameDropAsk": "Ask permission to mention their name",
+  "person.intro.fallbackLegend": "If they say no",
+  "person.intro.fallbackNone": "Nothing further",
+  "person.intro.fallbackNoneHelp":
+    "The ask closes and you decide what to do next.",
+  "person.intro.fallbackNameDrop": "Ask to use their name instead",
+  "person.intro.fallbackNameDropHelp":
+    "You would reach out yourself, mentioning them.",
+  "person.intro.fallbackNextRoute": "Try the next route",
+  "person.intro.fallbackNextRouteHelp":
+    "Move on to the next colleague on the list.",
+  "person.intro.decideTitle": "An introduction to {name}",
+  "person.intro.decideLegend": "Your answer",
+  "person.intro.decideAction": "Record answer",
+  "person.intro.decideFailed": "The answer could not be recorded.",
+  "person.intro.decideReasonLabel": "Anything to add",
+  "person.intro.decideReasonHint": "Your colleague sees this as you write it.",
+  "person.intro.noteByModel": "Drafted by Margince",
+  "person.intro.nameDropRequested":
+    "They also asked whether they may mention your name.",
+  "person.intro.answerAccept": "I will introduce you",
+  "person.intro.answerAcceptHelp": "You make the introduction yourself.",
+  "person.intro.answerNameDrop": "You may use my name",
+  "person.intro.answerNameDropHelp":
+    "They reach out themselves and mention you. This is not an introduction, and nothing records it as one.",
+  "person.intro.answerSuggest": "Ask someone else",
+  "person.intro.answerSuggestHelp": "Name the colleague better placed to help.",
+  "person.intro.answerDecline": "Not this time",
+  "person.intro.answerDeclineHelp": "The ask closes. Say why if it helps.",
+  "person.intro.asksTitle": "Introductions",
+  "person.intro.asksSub": "The asks you are part of, newest first.",
+  "person.intro.answerAction": "Answer",
+  "person.intro.completeIntroducedAction": "Mark introduced",
+  "person.intro.completeNameDroppedAction": "Mark name used",
+  "person.intro.completeFailed": "The outcome could not be recorded.",
+  "person.intro.withdrawAction": "Withdraw",
+  "person.intro.withdrawFailed": "The ask could not be withdrawn.",
+  "person.intro.stateRequested": "Waiting on your colleague",
+  "person.intro.stateAccepted": "They will introduce you",
+  "person.intro.stateNameDropApproved": "You may use their name",
+  "person.intro.stateSuggestOther": "They suggested someone else",
+  "person.intro.stateDeclined": "Declined",
+  "person.intro.stateIntroduced": "Introduced",
+  "person.intro.stateNameDropped": "Name used",
+  "person.intro.stateReplied": "They replied",
+  "person.intro.stateExpired": "No answer in time",
+  "person.intro.stateCancelled": "Withdrawn",
+  "person.intro.alreadyRequested": "Already asked",
+  "person.intro.declined": "Declined before",
+  "person.intro.unavailable": "Not available",
   "person.network.momentsTitle": "What changed lately",
   "person.network.momentsSub":
     "Movements in this relationship, from the messages themselves.",
@@ -6736,6 +6821,8 @@ export const en = {
   "person.action.meetings": "See meetings",
   "person.action.addTask": "Add task",
   "person.action.research": "Research",
+  "person.action.logRefused":
+    "You do not have permission to log activities on this record.",
 
   "person.strip.lastInbound": "Last inbound",
   "person.strip.lastOutbound": "Last outbound",
@@ -6759,6 +6846,7 @@ export const en = {
   "person.moment.rule.job_change": "They moved on",
   "person.moment.rule.overdue_promise": "Promise overdue",
   "person.moment.rule.gone_quiet": "Gone quiet",
+  "person.moment.rule.open_promise": "You owe them",
   "person.moment.rule.role_change": "Role changed",
   "person.moment.rule.public_signal": "Said in public",
   "person.moment.rule.missing_next_step": "Nothing scheduled",
@@ -6808,6 +6896,7 @@ export const en = {
   "person.loops.dueInDays": "in {count} days",
   "person.loops.waiting": "waiting",
   "person.loops.open": "open",
+  "person.loops.atLeast": "at least {count}",
 
   "person.memory.title": "Conversation memory",
   "person.memory.empty": "Nothing captured on this channel yet.",
@@ -6939,6 +7028,34 @@ export const en = {
   "person.meeting.risks": "Risks and watch-outs",
   "person.meeting.talking_points": "Suggested talking points",
   "person.meeting.company_context": "When you last met",
+  "person.meeting.objective": "The outcome to earn",
+  "person.meeting.openWith": "Open with",
+  "person.meeting.arc": "The account arc",
+  "person.meeting.arcSub": "Only the moments that change today's conversation.",
+  "person.meeting.close": "Close the meeting",
+  "person.meeting.advance.minimum": "Minimum advance",
+  "person.meeting.advance.best": "Best advance",
+  "person.meeting.advance.fallback": "Fallback",
+  "person.meeting.unknowns": "What the record does not show",
+  "person.meeting.likelyAsks": "What they are likely to ask",
+  "person.meeting.beReady": "Be ready for this",
+  "person.meeting.say": "Say",
+  "person.meeting.show": "Show",
+  "person.meeting.avoid": "Avoid",
+  "person.meeting.scenarios": "If the meeting goes another way",
+  "person.meeting.relevance.high": "Likely",
+  "person.meeting.relevance.medium": "Possible",
+  "person.meeting.relevance.low": "Less likely",
+  "person.meeting.coach.title": "Coach the rep on one thing",
+  "person.meeting.coach.eyebrow": "Manager view",
+  "person.meeting.coach.listenFor": "Listen for",
+  "person.meeting.coach.watchFor": "Watch for",
+  "person.meeting.coach.interveneIf": "Step in only if",
+  "person.meeting.coach.paths": "How this meeting can go",
+  "person.meeting.background": "Background and sources",
+  "person.meeting.omittedSource": "Not in this brief",
+  "person.meeting.preparedFor": "Prepared for {name}",
+  "person.meeting.preparedForAt": "Prepared for {name} · {org}",
 
   "co.strip.healthSummary": "Health",
   "co.strip.healthSummary.failingOf": "{failing} of {rated} at risk",
@@ -6986,12 +7103,25 @@ export const en = {
   "provider.deleteDataConfirm.body":
     "Every value this provider supplied is removed from every contact. What you spent stays in your records; the data does not. This cannot be undone.",
   "provider.deleteDataConfirm.typed": "Type the provider's name to confirm",
-  "provider.autoEnrich": "Enrich new contacts automatically",
-  "provider.autoEnrichHint":
-    "When somebody adds a contact by hand, buy their details straight away.",
-  "provider.autoImport": "Enrich contacts that arrive from a connection",
-  "provider.autoImportHint":
-    "Every mailbox, channel and other connection adds a contact for each person it sees, and buying one spends credits.",
+  "provider.automaticLookup": "Look up contacts automatically",
+  "provider.automaticLookupHint":
+    "Every contact is looked up once for whatever the connection selects that the provider charges nothing for — typically the professional profile link, the current role and employer, and the work history. Email addresses and mobile numbers are never bought this way: those cost credits and stay a decision you make per contact.",
+  "provider.automaticLookupJurisdiction":
+    "Switch this off if your contacts fall under a law that forbids trading personal data, Vietnam's among them. The button on each contact still works, which keeps the decision with the person making it.",
+  "provider.buyable": "Allow buying {category}",
+  "provider.buyableHint_one":
+    "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credit, so somebody can buy this detail for one person at a time.",
+  "provider.buyableHint_other":
+    "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credits, so somebody can buy this detail for one person at a time.",
+  "provider.buyableNeeds":
+    "The provider looks for this only alongside the {prerequisite}, so it cannot be bought on its own. Allow that one first.",
+  "provider.backlog": "Still to look up",
+  "provider.backlogRemaining_one": "{count} contact",
+  "provider.backlogRemaining_other": "{count} contacts",
+  "provider.backlogWorking":
+    "Contacts that were already here when the provider was connected are being looked up a few at a time.",
+  "provider.backlogPaused":
+    "Nothing is being looked up right now: automatic lookups are off, the day's limit is spent, or the provider is not usable.",
   "provider.credits": "Credits left with the provider",
   "provider.credits.none": "The provider has not told us a balance yet.",
   "provider.credits.notConnected":
@@ -7019,9 +7149,13 @@ export const en = {
     "No data provider is connected, so nothing has been bought.",
   "provider.profile.notEligible":
     "This contact is not eligible — they have objected, or the record is archived.",
+  "provider.profile.nothingToLookUp":
+    "There is nothing to look this contact up by. Add their LinkedIn URL, or the company they work for, and the lookup can run.",
   "provider.profile.neverRun": "Nobody has looked this contact up yet.",
   "provider.profile.queued": "Queued",
   "provider.profile.inProgress": "Looking them up…",
+  "provider.profile.working": "Asking {provider}. This takes up to a minute.",
+  "provider.profile.landing": "Answer received. Putting it on the record.",
   "provider.profile.completed": "Found",
   "provider.profile.noMatch": "The provider had nothing for this contact.",
   "provider.profile.stale":
@@ -7032,12 +7166,14 @@ export const en = {
     "Not bought: the credit budget for this month is spent.",
   "provider.profile.rateLimited":
     "Not bought: the provider asked us to slow down.",
-  "provider.profile.providerError": "The provider could not answer.",
+  "provider.profile.providerError":
+    "The last lookup did not get through. Try again, or check the provider's card in Settings if it keeps happening.",
   "provider.profile.submissionUnknown":
     "We never learned how this lookup ended. It may have been charged for.",
   "provider.profile.claimsUnwritten":
     "Paid for, but the details never reached this record. Nobody has to hunt for them — this is the gap.",
-  "provider.profile.enrichNow": "Look this contact up",
+  "provider.profile.enrichNow": "Look this contact up · free",
+  "provider.profile.recheck": "Check again · free",
   "provider.profile.lookingUp": "Asking the provider. This takes a moment.",
   "provider.profile.emptyTitle": "Nothing bought for this contact yet",
   "provider.profile.emptyBody":
@@ -7054,13 +7190,15 @@ export const en = {
   "provider.profile.location": "Location",
   "provider.profile.departments": "Departments",
   "provider.profile.seniorities": "Seniority",
-  "provider.profile.notRequested":
-    "Not asked for: {categories}. A blank here means nobody bought it, not that the provider had nothing.",
+  "provider.profile.notRequested": "Never asked for: {categories}.",
   // The receipt. Without it a lookup that returned one detail out of six read
   // exactly like one that returned all six, and nothing on the page said when
   // the answer arrived.
   // The price rides the button because the decision IS the spend.
-  "provider.profile.buy": "Buy {category} · {credits} credit",
+  "provider.profile.buy_one": "Buy {category} · {credits} credit",
+  "provider.profile.buy_other": "Buy {category} · {credits} credits",
+  "provider.profile.buyRebuys":
+    "The price includes the {categories} again: the provider will not look for this without it, and it charges for whatever it sends back.",
   "provider.freeTier.hint":
     "LinkedIn profile, current role and work history cost no credits. Leave this on: every new contact gets them without anybody deciding.",
   "provider.pricedTier.hint":
@@ -7068,8 +7206,7 @@ export const en = {
   "provider.profile.receiptAt": "Looked up {at}.",
   "provider.profile.receipt":
     "Looked up {at} · asked for {asked} details, got {answered} back.",
-  "provider.profile.noAnswer":
-    "Asked for and not found: {categories}. The provider was asked and had nothing for this contact.",
+  "provider.profile.noAnswer": "Asked for, none found: {categories}.",
   // The provider's own vocabulary, in words a reader knows. Not translated
   // one-for-one from the key: these are what a rep would call the thing.
   "provider.category.professionalEmail": "work email",
@@ -7151,10 +7288,6 @@ export const en = {
   "filters.pickRecord": "Choose one",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Choose a value",
-  "filters.saveList": "Save as list",
-  "filters.saveListTitle": "Save this filter as a dynamic list",
-  "filters.listName": "List name",
-  "filters.saveListConfirm": "Create list",
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 
@@ -7357,6 +7490,314 @@ export const en = {
     "This deal is attached to {project}, but the project is not in delivery yet. Move it now?",
   "deal.startDeliveryBody":
     "This deal is won and names no project. Attach it to {project} and move the project into delivery?",
+
+  // The Worklist's own words: the ranked queue, its dials, and the phrase
+  // for every fact the server sends as a closed vocabulary.
+  "worklist.loading": "Reading your day…",
+  "worklist.queue": "What to do next",
+  "worklist.summary": "{urgent} urgent · {due} due · {lower} lower-priority",
+  "worklist.completeness": "{shown} of {considered} shown",
+  "worklist.completeness.bounded":
+    "{shown} shown · {sources} sources have more",
+  "worklist.clear": "Nothing is waiting on you.",
+  "worklist.clearOfWhatWasRead":
+    "Nothing is waiting among the sources that answered.",
+  "worklist.partial": "{sources}, so this is not the whole day.",
+  "worklist.overdue": "Overdue",
+  "worklist.pane.title": "About this record",
+  "worklist.pane.openRow": "Show what {position}, {title}, is about",
+  "worklist.pane.loading": "Reading the record…",
+  "worklist.pane.nothing": "Nothing recorded yet.",
+  "worklist.pane.lastInbound": "They last wrote",
+  "worklist.pane.lastOutbound": "We last wrote",
+  "worklist.pane.never": "Never",
+  "worklist.focus.title": "Do this next",
+  "worklist.focus.verb.decide": "Decide",
+  "worklist.focus.verb.merge": "Review the pair",
+  "worklist.focus.verb.complete": "Complete it",
+  "worklist.focus.verb.act": "Act on it",
+  // Required by the template's key type, never produced: worthFocusing
+  // excludes primary_action "acknowledge" before this key is ever built.
+  "worklist.focus.verb.acknowledge": "Acknowledge",
+  "worklist.focus.verb.open": "Open it",
+  "worklist.focus.verb.snooze": "Open it",
+  "worklist.focus.verb.dismiss": "Open it",
+  "worklist.focus.verb.set_aside": "Open it",
+  "worklist.band.now": "Now",
+  "worklist.band.build_pipeline": "Build pipeline",
+  "worklist.band.keep_momentum": "Keep momentum",
+  "worklist.band.review": "Review",
+  "worklist.disposition.verb.snooze": "Later",
+  "worklist.disposition.verb.not_mine": "Not mine",
+  "worklist.disposition.verb.not_sales": "Not a customer",
+  "worklist.disposition.done.snooze": "Back on your list tomorrow.",
+  "worklist.disposition.done.not_mine":
+    "Off your list. Whoever owns it still sees it.",
+  "worklist.disposition.done.not_sales": "Off everyone's list.",
+  "worklist.disposition.undo": "Undo",
+  "worklist.disposition.undoFailed":
+    "That could not be undone. The message is still off your list.",
+  "worklist.disposition.failed": "That could not be put down.",
+  "worklist.scope.label": "Whose work",
+  "worklist.scope.mine": "Mine",
+  "worklist.scope.unassigned": "Unassigned",
+  "worklist.scope.team": "My team",
+  "worklist.scope.all": "All",
+  "worklist.owner.label": "Whose queue",
+  "worklist.manager.cancel": "Cancel",
+  "worklist.owner.mine": "My own day",
+  "worklist.owner.backToMine": "Back to my own day",
+  "worklist.manager.reassign": "Reassign",
+  "worklist.manager.reassignTo": "Hand it to",
+  "worklist.manager.reassignConfirm": "Hand it over",
+  "worklist.manager.reassigned": "Handed over.",
+  "worklist.manager.reassignFailed": "That could not be handed over.",
+  "worklist.manager.coach": "Leave a note",
+  "worklist.manager.coachAbout": "About",
+  "worklist.manager.coachConfirm": "Leave the note",
+  "worklist.manager.coached": "Your note is on their queue.",
+  "worklist.manager.coachFailed": "That note could not be left.",
+  "worklist.manager.note": "Your note (optional)",
+  "worklist.manager.kind.reply_aging": "An aging reply",
+  "worklist.manager.kind.next_step": "A deal's next step",
+  "worklist.manager.kind.review_backlog": "Review work",
+  "worklist.manager.kind.general": "Something else",
+  "worklist.board.title": "How my team is doing",
+  "worklist.board.loading": "Reading your team's work…",
+  "worklist.board.empty": "Nobody has been put on a team with you yet.",
+  "worklist.board.member": "Who",
+  "worklist.board.waiting": "Waiting on a reply",
+  "worklist.board.atRisk": "Deals at risk",
+  "worklist.board.overdue": "Past due",
+  "worklist.board.nobody": "Nobody yet",
+  "worklist.board.truncated":
+    "There is more work than this could count. These are floors, not totals.",
+  "worklist.filter.label": "Kind of work",
+  "worklist.filter.all": "All",
+  "worklist.filter.customer_waiting": "Customer waiting",
+  "worklist.filter.leads": "Leads",
+  "worklist.filter.deals_at_risk": "Deals at risk",
+  "worklist.filter.meetings": "Meetings",
+  "worklist.filter.tasks": "Tasks",
+  "worklist.filter.decisions": "Decisions",
+  "worklist.filter.system": "System",
+  "worklist.category.customer_waiting": "Customer waiting",
+  "worklist.category.leads": "Lead",
+  "worklist.category.deals_at_risk": "Deal at risk",
+  "worklist.category.meetings": "Meeting",
+  "worklist.category.tasks": "Task",
+  "worklist.category.decisions": "Decision",
+  "worklist.category.system": "System",
+  "worklist.because.pinned": "You pinned this",
+  "worklist.because.buyer_wrote_last": "They wrote last",
+  "worklist.because.waiting_days": "waiting",
+  "worklist.because.waiting_days.value": "waiting {value} days",
+  "worklist.because.overdue": "overdue",
+  "worklist.because.due_today": "due today",
+  "worklist.because.closing_soon": "has a close date",
+  "worklist.because.expected_revenue": "expected revenue",
+  "worklist.because.expected_revenue.value": "worth {value}",
+  "worklist.because.material": "above the typical open deal",
+  "worklist.because.material.value":
+    "worth {value}, above the typical open deal",
+  "worklist.because.below_material": "below the typical open deal",
+  "worklist.because.below_material.value":
+    "worth {value}, below the typical open deal",
+  "worklist.because.quiet_days": "gone quiet",
+  "worklist.because.quiet_days.value": "quiet for {value} days",
+  "worklist.because.no_champion": "no champion",
+  "worklist.because.promised": "you promised this",
+  "worklist.because.approved_and_failed": "you approved it and it did not run",
+  "worklist.because.blocks_customer_work": "a customer is held up",
+  "worklist.because.routine": "routine tidying",
+  "worklist.because.repeated_failure": "the same thing keeps failing",
+  "worklist.because.legal_deadline": "a legal deadline is running",
+  "worklist.because.meeting_soon": "starting shortly",
+  "worklist.because.meeting_unprepared": "nothing prepared",
+  "worklist.because.response_overdue": "reply overdue",
+  "worklist.because.response_due_soon": "reply due soon",
+  "worklist.because.unassigned": "nobody owns it",
+  "worklist.because.stale": "waiting a long time",
+  "worklist.above.pin": "Above the next because you pinned it.",
+  "worklist.above.level":
+    "Above the next because it is a more pressing kind of work.",
+  "worklist.above.deadline": "Above the next on its date.",
+  "worklist.above.deadline.pair": "Above the next: {mine} against {theirs}.",
+  "worklist.above.expected_revenue": "Above the next on expected revenue.",
+  "worklist.above.expected_revenue.pair":
+    "Above the next: {mine} against {theirs}.",
+  "worklist.above.waiting_days": "Above the next on how long it has waited.",
+  "worklist.above.waiting_days.pair":
+    "Above the next: {mine} against {theirs}.",
+  "worklist.above.relationship":
+    "Above the next on how close the relationship is.",
+  "worklist.consequence.buyer_waits": "If you do nothing, they keep waiting.",
+  "worklist.consequence.promise_breaks": "If you do nothing, a promise breaks.",
+  "worklist.consequence.deal_drifts":
+    "If you do nothing, the deal keeps drifting.",
+  "worklist.consequence.deal_slips_past_close":
+    "If you do nothing, it slips past the date the customer agreed.",
+  "worklist.consequence.meeting_unprepared":
+    "If you do nothing, you walk in unprepared.",
+  "worklist.consequence.task_slips": "If you do nothing, it slips.",
+  "worklist.consequence.work_blocked": "If you do nothing, work stays blocked.",
+  "worklist.consequence.customer_never_received":
+    "If you do nothing, the customer never gets it.",
+  "worklist.consequence.you_believe_it_happened":
+    "If you do nothing, you go on believing it happened.",
+  "worklist.consequence.legal_deadline_missed":
+    "If you do nothing, a legal deadline passes.",
+  "worklist.consequence.mailbox_blind":
+    "If you do nothing, this page keeps missing what is not arriving.",
+  "worklist.consequence.data_drifts": "If you do nothing, the records drift.",
+  "worklist.untitled.approval": "A decision is waiting",
+  "worklist.untitled.dedupe_candidate": "Two records look like the same one",
+  "worklist.untitled.task": "A task",
+  "worklist.untitled.brief_item": "The night picked this out",
+  "worklist.untitled.conversation_claim": "A promise you made",
+  "worklist.untitled.customer_waiting": "Someone is waiting for a reply",
+  "worklist.untitled.lead_response": "A lead",
+  "worklist.untitled.deal_at_risk": "A deal is drifting",
+  "worklist.untitled.meeting": "A meeting",
+  "worklist.untitled.relationship_decay": "A relationship is going quiet",
+  "worklist.untitled.failed_approval": "Something you approved did not run",
+  "worklist.untitled.dsr": "An open privacy request",
+  "worklist.untitled.sync_health": "The CRM sync needs attention",
+  "worklist.untitled.capture_health": "A mailbox connection needs attention",
+  "worklist.untitled.ai_work_health": "AI work needs a look",
+  "worklist.untitled.bounce": "An email did not arrive",
+  "worklist.untitled.undelivered": "An email was never sent",
+  "worklist.untitled.automation_run": "A rule did not do its work",
+  "worklist.untitled.notice": "A notice for you",
+  "worklist.untitled.introduction_request":
+    "A colleague asked you for an introduction",
+  "worklist.verb.decide": "Decide",
+  "worklist.verb.merge": "Merge",
+  "worklist.verb.open": "Open",
+  "worklist.verb.complete": "Open",
+  "worklist.verb.snooze": "Open",
+  "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
+  "worklist.source.failed": "{source} could not be read",
+  "worklist.source.withheld": "{source} is hidden from your account",
+  "worklist.untitled.generic": "Something needs you",
+  "worklist.batch.likely_automated": "{count} likely automated senders",
+  "worklist.batch.company_match": "{count} addresses at companies you know",
+  "worklist.batch.uncertain_contact": "{count} addresses to decide on",
+  "worklist.batch.duplicates": "{count} possible duplicate records",
+  "worklist.batch.held_draft": "{count} drafts waiting to be sent",
+  "worklist.untitled.batch": "A group of routine decisions",
+  "worklist.verb.review_batch": "Review",
+  "worklist.verb.draft_reply": "Open to reply",
+  "worklist.deal.closes": "closes {date}",
+  "worklist.batch.system_incident": "{cause} failed {count} times",
+  "worklist.batch.unnamedCause": "Something",
+
+  "ob.conv.scene.settleEyebrow": "It stopped on something only you can settle",
+  "ob.conv.review.boardTitle": "What I understand about your company.",
+  "ob.conv.review.boardSub":
+    "Every line says where it came from. Nothing is written until you confirm.",
+  "ob.conv.manual.boardTitle": "Fill it in yourself.",
+  "ob.conv.scene.writes": "Writes",
+  "ob.core.idle": "core · at rest",
+  "ob.core.ingest": "core · taking it in",
+  "ob.core.working": "core · working it out",
+  "ob.core.warning": "core · something needs a look",
+  "ob.core.error": "core · stopped",
+  "ob.scan.tallyPages": "pages read",
+  "ob.scan.tallyFacts": "facts found",
+  "ob.digest.where": "Where this lands",
+  "ob.digest.written": "{n} of {m} lines written",
+  "ob.digest.sources": "Read from",
+  "ob.digest.blank": "not written yet",
+  "ob.digest.deciding": "you are deciding this now",
+  "ob.digest.yours": "yours",
+  "ob.deck.counter": "{n} of {m}",
+  "ob.deck.left": "{n} of {m} left",
+  "ob.deck.settled": "{count} facts went in on evidence, without you",
+  "ob.deck.needed": "Needed to continue",
+  "ob.deck.optional": "Worth a look",
+  "ob.deck.next": "Next",
+  "ob.deck.leaveOut": "Leave it out",
+  "ob.deck.readWhole": "Read the whole profile",
+  "ob.deck.confirm": "Confirm the profile",
+  "ob.deck.clear": "Nothing left to settle. {count} facts are on the record.",
+  "ob.deck.eyebrow": "Everything else went in on evidence",
+  "ob.deck.title": "It will not guess at these.",
+  "ob.stage.flow": "Setup",
+  "ob.stop.read": "Read the site",
+  "firstRun.ai.eyebrow": "Nothing here can think yet",
+  "firstRun.google.eyebrow": "It thinks. It cannot reach anyone yet",
+  "firstRun.step.model": "The model",
+  "firstRun.step.platform": "Your platform",
+  "firstRun.ai.rankedHint":
+    "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
+  "firstRun.ai.rankedUnavailable":
+    "OpenRouter's live model list could not be read just now, so this offers what your price sheet holds.",
+  "aiRates.chatLane": "What it thinks with",
+  "aiRates.embedLane": "What it remembers with",
+  "aiRates.perMTokInOut": "per million tokens, in → out",
+  "aiRates.perMTok": "per million tokens",
+  "aiRates.unpriced": "No price on file",
+  "aiRates.unpricedDetail":
+    "It will still serve calls. They report as unpriced, so they are missing from usage and spend until someone adds a rate under Settings → AI.",
+  "aiRates.priced": "Priced from {date}",
+  "aiRates.proposed": "OpenRouter's price",
+  "aiRates.proposedDetail":
+    "Read from the vendor just now, not from your price sheet. Bind it and it goes to your approvals inbox, so usage and spend can price it once you confirm.",
+  "firstRun.ignite.title": "It has a pulse.",
+  "firstRun.ignite.sub":
+    "The key is sealed and the model answered. Here is what that changes.",
+  "firstRun.ignite.sealed": "sealed in the vault · {vendor}",
+  "firstRun.ignite.reaching": "reaching the model for the first time…",
+  "firstRun.ignite.canNow": "can now",
+  "firstRun.ignite.cannot": "cannot",
+  "firstRun.ignite.read": "read your website and tell you what it found",
+  "firstRun.ignite.draft": "draft in a voice you taught it",
+  "firstRun.ignite.act": "send anything, or change a record, unless you say so",
+  "firstRun.ignite.carryOn": "Carry on",
+  "firstRun.platform.title": "What does your organization run on?",
+  "firstRun.platform.sub":
+    "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
+  "firstRun.platform.legend": "The platform this organization runs on",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Mail, calendar and sign-in through one Google app you own.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Mail and calendar through Microsoft Graph. Sign-in is email and password.",
+  "firstRun.platform.other": "Neither",
+  "firstRun.platform.otherWhat":
+    "Each mailbox connects over IMAP. Sign-in is email and password.",
+  "firstRun.platform.microsoftOperator":
+    "Nothing to fill in here. Microsoft’s app is set up by whoever runs the server, before it starts.",
+  "firstRun.platform.otherOperator":
+    "Nothing to fill in here. Each mailbox is set up under Settings → Integrations.",
+  "firstRun.platform.stillNeedsGoogle":
+    "First run still asks for a Google app whatever you answer, so this path cannot finish yet. Paste one below to get past it.",
+  "firstRun.ai.foot":
+    "Nothing is sent to your vendor until you press Continue.",
+  "firstRun.google.foot":
+    "Saving this app connects mail and calendar. Google sign-in needs one more step from whoever runs the server.",
+  "firstRun.google.helpSignIn":
+    "For Google sign-in, whoever runs the server also exports the same pair as MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restarts it. Sign-in reads them at startup, not from what is saved here.",
+  "firstRun.google.helpToggle": "Where do I get these?",
+  "firstRun.google.helpStep1":
+    "In the Google Cloud console, open a project and go to APIs & Services → Credentials → Create credentials → OAuth client ID, and choose Web application.",
+  "firstRun.google.helpStep2":
+    "Enable the Gmail API, and put both the gmail.readonly and gmail.send scopes on the consent screen. They ride one consent on purpose: Google will not add a scope to a refresh token it already issued, so asking for send later means connecting the mailbox twice.",
+  "firstRun.google.helpStep3":
+    "Add an authorized redirect URI for each thing you will use. Mail is the only one you need; add Calendar if you want calendar too, and the sign-in one if people will sign in to Margince with their Google account.",
+  "firstRun.google.helpRedirectMail": "Mail",
+  "firstRun.google.helpRedirectCalendar": "Calendar",
+  "firstRun.google.helpRedirectSignIn": "Google sign-in",
+  "firstRun.google.helpStep4":
+    "Copy the client ID and client secret Google shows you into the two fields below. The secret is sent once and sealed in the key vault; it is never readable again, here or anywhere.",
+  "firstRun.google.helpConsole": "Google Cloud credentials console",
+  "firstRun.google.helpRedirectHost":
+    "{host} is wherever this installation's API answers, which is the address in the server's own MARGINCE_API_BASE_URL or MARGINCE_PUBLIC_BASE_URL. In a local dev stack that is http://localhost:8080.",
+  "firstRun.google.helpDocs":
+    "The full prerequisites, Microsoft and IMAP included: docs/how-to/connect-a-mailbox.md",
 } as const;
 
 export type MessageKey = keyof typeof en;

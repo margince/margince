@@ -15,9 +15,11 @@ package integration
 // reaches the store.
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
@@ -123,52 +125,107 @@ func TestIdempotencyReplayRefusesAnArchivedRecord(t *testing.T) {
 	}
 }
 
-// TestIdempotencyKeyReplay_createQuota proves the promise for an
-// operation with no natural-key dedupe behind it: without transport
-// idempotency a retried createQuota lands a second, identical target.
-func TestIdempotencyKeyReplay_createQuota(t *testing.T) {
+// TestAPromoteReplayStillWorksThoughItArchivedItsOwnLead is the boundary the
+// companion probe has to respect.
+//
+// Promoting a lead ARCHIVES it, and the response names that lead. A companion
+// probe that asked whether the lead is still LIVE would answer no on every
+// promote — refusing the retry the idempotency key exists to serve, which is a
+// worse failure than the disclosure it was meant to close. What a companion
+// discloses is an id, so what it is checked against is row SCOPE.
+func TestAPromoteReplayStillWorksThoughItArchivedItsOwnLead(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Idem Promote", "admin@idempromote.test", "Admin")
+
+	var lead AnyMap
+	if status := e.Call(t, "POST", "/v1/leads", AnyMap{
+		"full_name":    "Promotable Prospect",
+		"email":        "promotable@example.org",
+		"company_name": "Promotable AG",
+		"source":       "import:idem",
+	}, nil, &lead); status != http.StatusCreated {
+		t.Fatalf("create lead = %d %v", status, lead)
+	}
+	leadID, _ := lead["id"].(string)
+	if leadID == "" {
+		t.Fatalf("created lead carries no id: %v", lead)
+	}
+
+	keyed := map[string]string{"Idempotency-Key": "promote-retry-1"}
+	var first AnyMap
+	promoteReq := AnyMap{"trigger": "human_qualify"}
+	if status := e.Call(t, "POST", "/v1/leads/"+leadID+"/promote", promoteReq, keyed, &first); status != http.StatusOK {
+		t.Fatalf("promote = %d %v", status, first)
+	}
+	if first["lead_id"] == nil {
+		t.Fatalf("the promotion names no lead, so this test would prove nothing about the companion: %v", first)
+	}
+
+	// The lead is archived BY the promotion, so this is the retry a live probe
+	// would have refused.
+	var replay AnyMap
+	if status := e.Call(t, "POST", "/v1/leads/"+leadID+"/promote", promoteReq, keyed, &replay); status != http.StatusOK {
+		t.Fatalf("promote replay = %d %v, want the original 200 — the lead it archived is not a lost companion", status, replay)
+	}
+	if !reflect.DeepEqual(first, replay) {
+		t.Errorf("replayed response differs from the original:\n first: %v\nreplay: %v", first, replay)
+	}
+}
+
+// TestIdempotencyKeyReplay_createOfferTemplate proves the promise where the
+// store ALSO carries a natural key, which is the case the two arms below
+// separate.
+//
+// A retried create here is refused by offer_template_name_unique whether or
+// not transport idempotency exists, so the row count alone proves nothing.
+// What it proves is the SHAPE of the answer: a replay under the same key
+// returns the original 201 and the original body, not the 409 the name
+// constraint would raise on its own. A caller retrying a request it never
+// saw the answer to gets told the record it made, rather than told that
+// somebody else already made one.
+func TestIdempotencyKeyReplay_createOfferTemplate(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var me AnyMap
-	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
-		t.Fatalf("/me = %d", status)
-	}
-	adminID := me["user"].(AnyMap)["id"].(string)
-
-	keyed := map[string]string{"Idempotency-Key": "quota-retry-1"}
-	quotaReq := AnyMap{
-		"owner_id": adminID, "period_start": "2026-01-01", "period_end": "2026-03-31",
-		"target_minor": 1000000, "currency": "EUR",
+	keyed := map[string]string{"Idempotency-Key": "offer-template-retry-1"}
+	templateReq := AnyMap{
+		"name":   "Retried Standard DE",
+		"layout": AnyMap{"logo_url": "https://example.test/logo.png"},
 	}
 
 	var first AnyMap
-	if status := e.Call(t, "POST", "/v1/quotas", quotaReq, keyed, &first); status != http.StatusCreated {
-		t.Fatalf("keyed create quota = %d %v", status, first)
+	if status := e.Call(t, "POST", "/v1/offer-templates", templateReq, keyed, &first); status != http.StatusCreated {
+		t.Fatalf("keyed create offer template = %d %v", status, first)
 	}
 	var replay AnyMap
-	if status := e.Call(t, "POST", "/v1/quotas", quotaReq, keyed, &replay); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/offer-templates", templateReq, keyed, &replay); status != http.StatusCreated {
 		t.Fatalf("keyed replay = %d %v, want the original 201", status, replay)
 	}
 	if !reflect.DeepEqual(first, replay) {
 		t.Errorf("replayed response differs from the original:\n first: %v\nreplay: %v", first, replay)
 	}
 
-	var quotas struct {
+	var templates struct {
 		Data []AnyMap `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/quotas", nil, nil, &quotas); status != http.StatusOK {
-		t.Fatalf("list quotas = %d", status)
+	if status := e.Call(t, "GET", "/v1/offer-templates", nil, nil, &templates); status != http.StatusOK {
+		t.Fatalf("list offer templates = %d", status)
 	}
-	if len(quotas.Data) != 1 {
-		t.Fatalf("replayed create produced %d quotas, want exactly 1", len(quotas.Data))
+	if len(templates.Data) != 1 {
+		t.Fatalf("replayed create produced %d offer templates, want exactly 1", len(templates.Data))
+	}
+	// The replay is the RECORDED answer, not a second write refused by the
+	// name constraint: a 409 here would also have left exactly one row.
+	if replay["id"] != first["id"] {
+		t.Errorf("the replay answered about a different record: first %v, replay %v",
+			first["id"], replay["id"])
 	}
 
 	// The same key with a DIFFERENT body is a conflict, never a replay.
 	var problem AnyMap
-	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
-		"owner_id": adminID, "period_start": "2026-04-01", "period_end": "2026-06-30",
-		"target_minor": 2000000, "currency": "EUR",
+	status := e.Call(t, "POST", "/v1/offer-templates", AnyMap{
+		"name":   "A Different Template",
+		"layout": AnyMap{"logo_url": "https://example.test/other.png"},
 	}, keyed, &problem)
 	if status != http.StatusConflict || problem["code"] != "idempotency_key_conflict" {
 		t.Fatalf("mismatched body under a reused key = %d %v, want 409 idempotency_key_conflict", status, problem)
@@ -214,5 +271,84 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 	}
 	if len(activities.Data) != 1 {
 		t.Fatalf("replayed log produced %d activities, want exactly 1", len(activities.Data))
+	}
+}
+
+// TestAScheduledSendReplayProbesTheScheduleNotTheActivity is the alt-table half
+// of the replay probe.
+//
+// One route answers two tables behind the same "id": the outbound ACTIVITY when
+// the message went now, the SCHEDULED SEND when the caller asked for later, and
+// scheduled_at is what tells them apart. Probing the activity table for a
+// scheduled send would look up an id that is not there and refuse every retry.
+func TestAScheduledSendReplayProbesTheScheduleNotTheActivity(t *testing.T) {
+	p := setupPreflight(t)
+	p.connect(t, gmailReadonlyScope, gmailSendScope)
+
+	route := "/v1/activities/" + p.activityID + "/send-email"
+	keyed := map[string]string{"Idempotency-Key": "schedule-retry-1"}
+	req := AnyMap{
+		"subject": "Monday morning", "body": "Written the night before.",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
+		"scheduled_tz": "Europe/Berlin",
+	}
+
+	var first AnyMap
+	if status := p.Call(t, "POST", route, req, keyed, &first); status != http.StatusCreated {
+		t.Fatalf("keyed schedule = %d %v", status, first)
+	}
+	if first["scheduled_at"] == nil {
+		t.Fatalf("the answer carries no scheduled_at, so the replay would be gated on the activity table and this test would prove nothing: %v", first)
+	}
+
+	var replay AnyMap
+	if status := p.Call(t, "POST", route, req, keyed, &replay); status != http.StatusCreated {
+		t.Fatalf("keyed replay = %d %v, want the original 201", status, replay)
+	}
+	if !reflect.DeepEqual(first, replay) {
+		t.Errorf("replayed response differs from the original:\n first: %v\nreplay: %v", first, replay)
+	}
+}
+
+// TestAScheduledSendReplayRefusesAMessageThatIsNoLongerTheCallersOwn is the
+// refusal that probe exists for.
+//
+// A scheduled message is the SENDER's own: an unsent body and its blind-copy
+// list are not workspace-readable the way a sent activity is, so the scope
+// asked here is the scheduled_by predicate the store itself reads with. The
+// row moving to another sender is what the test reaches through SQL — the
+// transport key is scoped per principal, so nothing in the API can hand one
+// caller another's key today, and this is the guard for the day something can.
+func TestAScheduledSendReplayRefusesAMessageThatIsNoLongerTheCallersOwn(t *testing.T) {
+	p := setupPreflight(t)
+	p.connect(t, gmailReadonlyScope, gmailSendScope)
+
+	route := "/v1/activities/" + p.activityID + "/send-email"
+	keyed := map[string]string{"Idempotency-Key": "schedule-retry-2"}
+	req := AnyMap{
+		"subject": "Monday morning", "body": "Written the night before.",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"scheduled_at": time.Now().Add(3 * time.Hour).UTC().Format(time.RFC3339),
+		"scheduled_tz": "Europe/Berlin",
+	}
+
+	var first AnyMap
+	if status := p.Call(t, "POST", route, req, keyed, &first); status != http.StatusCreated {
+		t.Fatalf("keyed schedule = %d %v", status, first)
+	}
+
+	colleague := SeedIDRow(t, p.Owner,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'other@preflight.test', 'Other Sender')`)
+	if _, err := p.Owner.Exec(context.Background(),
+		`UPDATE scheduled_send SET scheduled_by = $1 WHERE id = $2`, colleague, first["id"]); err != nil {
+		t.Fatalf("handing the schedule to another sender: %v", err)
+	}
+
+	// Existence-hiding, like every other row scope: somebody else's message is
+	// not found rather than forbidden.
+	var replay AnyMap
+	if status := p.Call(t, "POST", route, req, keyed, &replay); status != http.StatusNotFound {
+		t.Fatalf("replay of a schedule now owned by another sender = %d %v, want 404", status, replay)
 	}
 }

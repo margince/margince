@@ -274,20 +274,13 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		}
 
 		id = Identity{UserID: account.UserID, WorkspaceID: wsID, Email: email, DisplayName: account.DisplayName, SeatType: account.SeatType}
-		// The setting row read directly, not through platform/settings: this
-		// runs BEFORE a principal exists, and that package's readers take the
-		// installation_settings object gate, which has no actor to judge. The
-		// name is the installation's own label, not tenant data.
-		//
-		// coalesced, and to the empty string rather than an error: this is a
-		// display label on a login that has ALREADY succeeded. An installation
-		// with no stored name is a misconfiguration, and failing here would
-		// answer correct credentials with a 500 while wrong ones still got
-		// 401 — telling an attacker which passwords are right.
-		if err := tx.QueryRow(ctx,
-			`SELECT coalesce((SELECT value #>> '{}' FROM setting WHERE key = $1), '')`, Name.Key(),
-		).Scan(&id.WorkspaceName); err != nil {
-			return err
+		// Failing here would answer correct credentials with a 500 while
+		// wrong ones still got 401 — telling an attacker which passwords
+		// are right — so InstallationNameOf coalesces an absent row to
+		// the empty string rather than erroring.
+		var nameErr error
+		if id.WorkspaceName, nameErr = InstallationNameOf(ctx, tx); nameErr != nil {
+			return nameErr
 		}
 		var loadErr error
 		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, account.UserID)

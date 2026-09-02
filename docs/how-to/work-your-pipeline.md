@@ -192,14 +192,12 @@ weighted total, and the count of open deals. Won deals are not in it — that is
 pipeline. If your permissions hide some deals, the line says so rather than quietly
 understating.
 
-**Reports** (under Intelligence) holds three deal reports plus quotas:
+**Reports** (under Intelligence) holds three deal reports:
 
 - **Deals by stage** — every stage, unweighted next to weighted, split by currency.
 - **Forecast** — tiles per category (Commit, Best case, Pipeline, Omitted, Slipped) for each
   currency.
 - **Open deals per company** — where the open pipeline is concentrated.
-- **Quotas** — human-set revenue targets with attainment computed from closed-won deals.
-  Margince never guesses a target for you.
 
 Every deal report has **Explain this number**. It opens the actual rows the headline is built
 from, so a figure you distrust can be taken apart rather than argued about. Weighting is

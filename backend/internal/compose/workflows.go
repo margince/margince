@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
-	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -63,7 +62,6 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	ex := automation.Executors{
 		Provider:  NewDispatcher(NewProvider(db.Pool()), NewOverlayProvider(db.Pool(), failClosedOverlayMeter(), nil), db.Pool()),
 		Approvals: automationApprovalsAdapter{svc: approvals.NewService(db)},
-		Lists:     listsAdapter{store: collections.NewStore(db)},
 		// The zero SendPath is the honest one here: automation.Comms declares
 		// DraftEmail alone, so no send is reachable from this surface to
 		// configure. What an automation composes waits as a held draft, and
@@ -91,19 +89,10 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	for _, handler := range activities.FollowUpWorkflows(activityStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}
+	for _, handler := range activities.OwnershipWorkflows(activityStore) {
+		engine.RegisterSystemWorkflow(handler)
+	}
 	return engine
-}
-
-// listsAdapter maps automation.Lists onto collections.Store.AddMember,
-// dropping the returned member row: an add_to_list action only needs to
-// know whether the membership write succeeded.
-type listsAdapter struct{ store *collections.Store }
-
-var _ automation.Lists = listsAdapter{}
-
-func (l listsAdapter) AddMember(ctx context.Context, listID ids.ListID, entityType string, entityID ids.UUID) error {
-	_, err := l.store.AddMember(ctx, listID, entityType, entityID)
-	return err
 }
 
 // automationApprovalsAdapter maps the automation module's staging seam

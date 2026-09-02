@@ -116,6 +116,17 @@
  * drew the slot was decided by stylesheet import order rather than by intent,
  * and the pressed fill was repainted by the StatCard's own background anyway. */
 
+/* Said once, about the installation, above the rows it qualifies. Meta ink and
+ * the small size, because it is the list's own footnote rather than a warning:
+ * a deployment that stores no addresses is the DEFAULT posture, and colouring
+ * it as a problem would tell every reader their installation is misconfigured. */
+.capture-activity__note {
+  color: var(--textMeta);
+  font-size: var(--fs-sm);
+  margin: 0;
+  max-width: 60ch;
+}
+
 /* Both numbers, so a filtered view can never be read as the whole window. */
 .capture-activity__count {
   color: var(--textMeta);

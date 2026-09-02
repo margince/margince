@@ -12,11 +12,13 @@ package consent
 // on the unsubscribe path never withdraws (only POST is routed to it).
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // GetPreferenceCenter implements (GET /public/preferences/{token}): the
@@ -27,12 +29,12 @@ func (h Handlers) GetPreferenceCenter(w http.ResponseWriter, r *http.Request, to
 		writeConsentErr(w, r, err)
 		return
 	}
-	choices, err := h.store.PublicPurposeStates(r.Context(), ref.PersonID)
+	view, err := h.store.PublicPreferenceView(r.Context(), ref.PersonID)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"purposes": wirePurposeChoices(choices)})
+	writePreferenceCenter(w, view, nil)
 }
 
 // OneClickUnsubscribe implements (POST /public/preferences/{token}/unsubscribe):
@@ -41,40 +43,58 @@ func (h Handlers) GetPreferenceCenter(w http.ResponseWriter, r *http.Request, to
 // the message was sent under); otherwise every withdrawable purpose is.
 // Idempotent — re-asserting a withdrawal writes no second proof row.
 func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, token string, params crmcontracts.OneClickUnsubscribeParams) {
+	if err := requireOneClickBody(r); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	ref, err := h.store.ResolvePreferenceToken(r.Context(), token)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	var withdrawn []string
-	if params.Purpose != nil && strings.TrimSpace(*params.Purpose) != "" {
-		key := strings.ToLower(strings.TrimSpace(*params.Purpose))
-		if _, err := h.store.PublicSetConsent(r.Context(), ref.PersonID, key, "withdrawn", nil); err != nil {
-			writeConsentErr(w, r, err)
-			return
-		}
-		withdrawn = append(withdrawn, key)
-	} else {
-		choices, err := h.store.PublicPurposeStates(r.Context(), ref.PersonID)
-		if err != nil {
-			writeConsentErr(w, r, err)
-			return
-		}
-		for _, c := range choices {
-			if c.Locked || ConsentState(c.State) != StateGranted {
-				continue
-			}
-			if _, err := h.store.PublicSetConsent(r.Context(), ref.PersonID, c.Key, "withdrawn", nil); err != nil {
-				writeConsentErr(w, r, err)
-				return
-			}
-			withdrawn = append(withdrawn, c.Key)
-		}
+	wanted, err := h.unsubscribeTargets(r.Context(), ref.PersonID, params)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	withdrawn, err := h.store.PublicWithdrawAll(r.Context(), ref.PersonID, wanted)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
 	}
 	if withdrawn == nil {
 		withdrawn = []string{}
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"unsubscribed": withdrawn})
+}
+
+// unsubscribeTargets picks which purposes this press should stop.
+//
+// A named purpose is taken as given — it is the one the message was sent
+// under, and the mailbox provider naming it must not be second-guessed.
+// Unnamed means "all of it", and that selection reads the recipient's
+// CHOICE, not the raw stored state: a lane running on no-objection has no
+// 'granted' row, so a filter on granted skipped exactly the direct
+// correspondence a reader pressing "unsubscribe from everything" was
+// looking at.
+func (h Handlers) unsubscribeTargets(
+	ctx context.Context, personID ids.PersonID, params crmcontracts.OneClickUnsubscribeParams,
+) ([]string, error) {
+	if params.Purpose != nil && strings.TrimSpace(*params.Purpose) != "" {
+		return []string{strings.ToLower(strings.TrimSpace(*params.Purpose))}, nil
+	}
+	view, err := h.store.PublicPreferenceView(ctx, personID)
+	if err != nil {
+		return nil, err
+	}
+	var keys []string
+	for _, c := range view.Purposes {
+		if c.Locked || c.Choice == ChoiceOptedOut {
+			continue
+		}
+		keys = append(keys, c.Key)
+	}
+	return keys, nil
 }
 
 // maxPreferenceChoices bounds a single granular save. The consent purpose
@@ -83,10 +103,37 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 const maxPreferenceChoices = 64
 
 // UpdatePreferences implements (PUT /public/preferences/{token}): the
-// granular save. Each choice is recorded per purpose (a withdrawal of one
-// never touches another — per-purpose default-deny) with the exact wording
-// shown, stored verbatim as proof.
+// granular save, committed as ONE transaction. Each choice carries the
+// exact wording shown, stored verbatim as proof. A grant the engine
+// refuses is reported back by name rather than taking the save with it —
+// see preferencesave.go for why that is not "all or nothing".
 func (h Handlers) UpdatePreferences(w http.ResponseWriter, r *http.Request, token string) {
+	choices, ok := decodePreferenceChoices(w, r)
+	if !ok {
+		return
+	}
+	ref, err := h.store.ResolvePreferenceToken(r.Context(), token)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	refused, err := h.store.PublicSaveChoices(r.Context(), ref.PersonID, choices)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	view, err := h.store.PublicPreferenceView(r.Context(), ref.PersonID)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	writePreferenceCenter(w, view, refused)
+}
+
+// decodePreferenceChoices admits the body: shape, size, states and keys,
+// with a purpose named twice settled toward its withdrawal before
+// anything is written.
+func decodePreferenceChoices(w http.ResponseWriter, r *http.Request) ([]PreferenceChoiceInput, bool) {
 	var req struct {
 		Choices []struct {
 			PurposeKey string  `json:"purpose_key"`
@@ -95,83 +142,54 @@ func (h Handlers) UpdatePreferences(w http.ResponseWriter, r *http.Request, toke
 		} `json:"choices"`
 	}
 	if !httperr.Decode(w, r, &req) {
-		return
+		return nil, false
 	}
 	if len(req.Choices) == 0 {
 		httperr.Write(w, r, httperr.Validation("choices", "required", "at least one per-purpose choice is required"))
-		return
+		return nil, false
 	}
 	// A legitimate save carries at most one choice per tracked purpose;
 	// the catalog is a small closed set. Cap the array so a valid token
-	// cannot amplify a single 1 MiB body into tens of thousands of serial
-	// per-choice transactions.
+	// cannot amplify a single 1 MiB body into tens of thousands of
+	// per-choice writes.
 	if len(req.Choices) > maxPreferenceChoices {
 		httperr.Write(w, r, httperr.Validation("choices", "too_many", "more choices than there are tracked purposes"))
-		return
+		return nil, false
 	}
-	ref, err := h.store.ResolvePreferenceToken(r.Context(), token)
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	states := make([]ConsentState, len(req.Choices))
-	// Keys are compared AS PublicSetConsent will read them. It trims and
-	// lowercases before resolving the purpose, so "Newsletter " and "newsletter"
-	// are one purpose downstream — and a duplicate check on the raw strings
-	// would not see them as a pair, letting the grant land after the withdrawal
-	// on the very surface the rule below exists to protect.
-	keys := make([]string, len(req.Choices))
-	for i, c := range req.Choices {
+	out := make([]PreferenceChoiceInput, 0, len(req.Choices))
+	for _, c := range req.Choices {
 		state, err := ParseRecordableState(c.State)
 		if err != nil {
 			httperr.Write(w, r, httperr.Validation("state", "invalid", "must be granted or withdrawn"))
-			return
+			return nil, false
 		}
-		states[i] = state
-		keys[i] = normalizedPurposeKey(c.PurposeKey)
+		// Normalized HERE, as the engine will read it, so a duplicate
+		// check cannot miss "Newsletter " and "newsletter" as a pair.
+		out = append(out, PreferenceChoiceInput{
+			PurposeKey: normalizedPurposeKey(c.PurposeKey),
+			State:      state,
+			Wording:    c.Wording,
+		})
 	}
-	// A purpose named twice in one save is settled BEFORE anything is written,
-	// and it settles toward the withdrawal. Request order used to decide it by
-	// accident; the two passes below would have decided it the other way, and
-	// on a consent surface the direction is not a coin toss — a body carrying
-	// both answers for one purpose is a client bug, and suppressing is the safe
-	// reading of it.
-	for i := range req.Choices {
-		for j := i + 1; j < len(req.Choices); j++ {
-			if keys[j] != keys[i] {
-				continue
-			}
-			if states[i] == StateWithdrawn || states[j] == StateWithdrawn {
-				states[i], states[j] = StateWithdrawn, StateWithdrawn
-				req.Choices[i].State, req.Choices[j].State = string(StateWithdrawn), string(StateWithdrawn)
-			}
-		}
+	return settleTowardWithdrawal(out), true
+}
+
+// writePreferenceCenter is the one spelling of this response, so the read
+// and the save cannot answer in different shapes.
+//
+// Held by: TestThePreferenceCentreAnswersInOneShape (backend/gates/preferencecentrewriters_test.go)
+func writePreferenceCenter(w http.ResponseWriter, view PreferenceView, refused []ChoiceOutcome) {
+	body := map[string]any{
+		"purposes":       wirePurposeChoices(view.Purposes),
+		"masked_email":   view.MaskedEmail,
+		"workspace_name": view.WorkspaceName,
 	}
-	// WITHDRAWALS FIRST, and that ordering is load-bearing rather than tidy.
-	//
-	// A save carries several choices and this loop stops at the first refusal.
-	// Record refuses a GRANT for an archived subject and admits a withdrawal
-	// from anyone — so a mixed save recorded in request order would refuse
-	// halfway and drop the withdrawals behind it, losing the one thing a
-	// subject in that state most needs this page to do. Taking them first means
-	// a refused grant can only cost the grant.
-	for _, pass := range []ConsentState{StateWithdrawn, StateGranted} {
-		for i, c := range req.Choices {
-			if states[i] != pass {
-				continue
-			}
-			if _, err := h.store.PublicSetConsent(r.Context(), ref.PersonID, c.PurposeKey, c.State, c.Wording); err != nil {
-				writeConsentErr(w, r, err)
-				return
-			}
-		}
+	out := make([]map[string]any, 0, len(refused))
+	for _, f := range refused {
+		out = append(out, map[string]any{fieldPurposeKey: f.PurposeKey, "reason": f.Reason})
 	}
-	choices, err := h.store.PublicPurposeStates(r.Context(), ref.PersonID)
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"purposes": wirePurposeChoices(choices)})
+	body["refused"] = out
+	httperr.WriteJSON(w, http.StatusOK, body)
 }
 
 func wirePurposeChoices(choices []PurposeChoice) []map[string]any {
@@ -183,6 +201,8 @@ func wirePurposeChoices(choices []PurposeChoice) []map[string]any {
 			"state":                    c.State,
 			"locked":                   c.Locked,
 			"grant_needs_confirmation": c.GrantNeedsConfirmation,
+			"choice":                   string(c.Choice),
+			"can_opt_in":               c.CanOptIn,
 		})
 	}
 	return out

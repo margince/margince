@@ -13,38 +13,41 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/cliflags"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // apiConfig is the parsed boot configuration of the api process.
 type apiConfig struct {
-	dsn                 string
-	configPath          string
-	schemaDSN           string
-	addr                string
-	redisAddr           string
-	inlineRelay         bool
-	routingPath         string
-	fakeBrain           bool
-	logLevel            string
-	logFormat           string
-	publicBaseURL       string
-	mcpAppsBaseURL      string
-	apiBaseURL          string
-	gmailClientID       string
-	gmailClientSecret   string
-	gmailPushToken      string
-	gmailPushAudience   string
-	gmailPushSA         string
-	gmailJWKSURL        string
-	graphClientID       string
-	graphClientSecret   string
-	graphTenant         string
-	hubspotAppSecret    string
-	connectorStateKey   string
-	webhookKey          string
-	metricsToken        string
-	oauthAccessTokenTTL time.Duration
+	dsn                   string
+	configPath            string
+	schemaDSN             string
+	addr                  string
+	redisAddr             string
+	inlineRelay           bool
+	routingPath           string
+	fakeBrain             bool
+	logLevel              string
+	logFormat             string
+	publicBaseURL         string
+	mcpAppsBaseURL        string
+	apiBaseURL            string
+	gmailClientID         string
+	gmailClientSecret     string
+	gmailPushToken        string
+	gmailPushAudience     string
+	gmailPushSA           string
+	gmailJWKSURL          string
+	graphPushToken        string
+	graphClientID         string
+	graphClientSecret     string
+	graphTenant           string
+	microsoftSignInTenant string
+	hubspotAppSecret      string
+	connectorStateKey     string
+	webhookKey            string
+	metricsToken          string
+	oauthAccessTokenTTL   time.Duration
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
 	// (OPS-CFG-2) rather than at each of the three places that used to ask.
 	// It selects the configuration overlay and which license authorities are
@@ -97,7 +100,9 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	env.String(fs, &cfg.gmailJWKSURL, "gmail-jwks-url", "MARGINCE_GMAIL_JWKS_URL", "", "override Google's OIDC JWKS URL; test/dev only")
 	env.String(fs, &cfg.graphClientID, "graph-client-id", "MARGINCE_GRAPH_CLIENT_ID", "", "Microsoft (Entra) application id for the Outlook/M365 capture connector; with the secret, state key and public-base-url, enables /connectors/graph/*")
 	env.String(fs, &cfg.graphClientSecret, "graph-client-secret", "MARGINCE_GRAPH_CLIENT_SECRET", "", "Microsoft client secret for the Outlook/M365 capture connector")
+	env.String(fs, &cfg.graphPushToken, "graph-push-token", "MARGINCE_GRAPH_PUSH_TOKEN", "", "shared secret on the Graph change-notification URL; enables POST /webhooks/graph (empty = route absent)")
 	env.String(fs, &cfg.graphTenant, "graph-tenant", "MARGINCE_GRAPH_TENANT", "", "Microsoft identity tenant for the consent endpoint (default: common — any organization)")
+	env.String(fs, &cfg.microsoftSignInTenant, "microsoft-signin-tenant", "MARGINCE_MICROSOFT_SIGNIN_TENANT", "", "Entra DIRECTORY ID (a GUID) whose members may sign in; defaults to --graph-tenant when that names a directory. Sign-in cannot run on common/organizations/consumers — it matches a token address to a member, and any tenant admin controls their own users mail attribute")
 	env.String(fs, &cfg.hubspotAppSecret, "hubspot-app-secret", "MARGINCE_HUBSPOT_APP_SECRET", "", "HubSpot app client secret; verifies inbound overlay webhook v3 signatures and, when set, mounts /webhooks/hubspot (absent otherwise)")
 	env.String(fs, &cfg.apiBaseURL, "api-base-url", "MARGINCE_API_BASE_URL", "", "the api's externally-reachable base for the OAuth callback redirect_uri; defaults to --public-base-url (same-origin deployments), set only when the api is on a different origin than the SPA (e.g. dev)")
 	env.String(fs, &cfg.connectorStateKey, "connector-state-key", "MARGINCE_CONNECTOR_STATE_KEY", "", "HMAC key (>=32 bytes) signing the OAuth connect `state`; required for the Gmail and Graph connect flows")
@@ -188,4 +193,17 @@ func envDuration(key string) (time.Duration, error) {
 		return 0, fmt.Errorf("api: %s=%q is not a duration (e.g. 15m, 24h): %w", key, raw, err)
 	}
 	return d, nil
+}
+
+// senderConfigured reports whether this deployment can put a message in
+// somebody else's mailbox — by its own SMTP relay, or through a mailbox
+// connector a rep has linked.
+//
+// It is the trigger for the public-origin rule: an installation that
+// sends nothing may be configured however an operator likes, because no
+// recipient ever sees a link built from it.
+func senderConfigured(cfg apiConfig, deployCfg deployconfig.Config) bool {
+	return deployCfg.Email.Enabled ||
+		(cfg.gmailClientID != "" && cfg.gmailClientSecret != "") ||
+		(cfg.graphClientID != "" && cfg.graphClientSecret != "")
 }

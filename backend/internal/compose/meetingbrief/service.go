@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -65,6 +64,10 @@ type Service struct {
 	// lane rewrites the deterministic floor in Margince's voice when a
 	// deployment binds one. Nil is the floor, which is not an error state.
 	lane Completer
+	// teammates answers whether the reader shares a live team with somebody in
+	// the room, which is half the coaching rule. Nil is a composition that
+	// wired no coaching, and projects none.
+	teammates Teammates
 }
 
 // NewService binds the brief to the reads it is written from.
@@ -150,7 +153,20 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	// to "what language is AI writing in" — the admin's setting — and a brief
 	// that asked the browser instead would be the single surface disagreeing
 	// with every other one.
-	sections, writtenBy := Write(ctx, s.lane, in, identity.BaseLanguageForPrompt(ctx, s.pool))
+	written := s.write(ctx, in)
+	plan := wirePlan(written.plan, in)
+	plan.GeneratedBy = written.planBy
+	// Coaching is attached OVER the finished plan, never generated beside it.
+	// The plan above was built blind to who is reading it, so a lead and their
+	// rep are looking at the same meeting and the lead is looking at one more
+	// thing — which is the property the "same facts" test holds.
+	coached, err := s.coachingProjected(ctx, in.Seats)
+	if err != nil {
+		return crmcontracts.MeetingBrief{}, nil, err
+	}
+	if coached {
+		plan.ManagerCoaching = wireCoaching(coachingFor(written.plan))
+	}
 	var filed *ids.UUID
 	if in.Project != nil {
 		id, err := ids.Parse(in.Project.ID)
@@ -166,10 +182,11 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		// Always the instant of the read. Nothing is stored, so there is no
 		// older instant this could honestly report.
 		GeneratedAt: s.now().UTC(),
-		GeneratedBy: writtenBy,
+		GeneratedBy: written.sectionsBy,
 		Scope:       scope,
-		Sections:    wireSections(sections),
+		Sections:    wireSections(written.sections),
 		Omitted:     omissions(in),
+		Plan:        &plan,
 	}, filed, nil
 }
 
@@ -179,14 +196,66 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 // contract's field is optional, and an empty array on the wire invites a client
 // to render an empty "what you cannot see" heading.
 func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
-	if !in.RoomHidden {
+	var out []crmcontracts.MeetingBriefOmission
+	if in.RoomHidden {
+		out = append(out, crmcontracts.MeetingBriefOmission{
+			Source: "deal_room",
+			Reason: "You do not have access to Deal Rooms, so what the buyer did in this deal's room is not in this brief.",
+		})
+	}
+	// A history this caller may not read is the difference between a quiet
+	// account and one whose conversations are somebody else's. The arc is built
+	// from what is left, so without this line a thin arc reads as a thin
+	// relationship — which is exactly the wrong thing to walk into a room
+	// believing.
+	if withheld := withheldCount(in.History); withheld > 0 {
+		out = append(out, crmcontracts.MeetingBriefOmission{
+			Source: "activity_history",
+			Reason: fmt.Sprintf(
+				"%s in this account %s not yours to read, so the account arc is built from the rest.",
+				plural(withheld, "conversation"), isAre(withheld)),
+		})
+	}
+	if len(out) == 0 {
 		return nil
 	}
-	out := []crmcontracts.MeetingBriefOmission{{
-		Source: "deal_room",
-		Reason: "You do not have access to Deal Rooms, so what the buyer did in this deal's room is not in this brief.",
-	}}
 	return &out
+}
+
+// isAre keeps the omission sentence grammatical for one and for many.
+func isAre(count int) string {
+	if count == 1 {
+		return "is"
+	}
+	return "are"
+}
+
+// foldRoom turns what the transaction read into the shape the writers take.
+//
+// Its own step because it is its own concept: the read above decides what this
+// caller may SEE, and this decides what the brief is written FROM. Keeping them
+// in one function meant eleven locals threaded through a closure, which is more
+// than a reader can hold while also following the gating.
+func (s *Service) foldRoom(
+	room meeting,
+	perAttendee map[ids.UUID][]crmcontracts.ConversationClaim,
+	earlier []priorMeeting,
+	lastSpoke *time.Time,
+	moves []DealMoveIn,
+	roomHidden bool,
+	history []HistoryIn,
+	excerpts []ExcerptIn,
+	seats []ids.UUID,
+) Input {
+	in := FromMeeting(room, perAttendee, s.now().UTC())
+	in.PriorMeetings = foldPriorMeetings(earlier)
+	in.LastSpokeAt = lastSpoke
+	in.DealMoves = moves
+	in.RoomHidden = roomHidden
+	in.History = history
+	in.Excerpts = excerpts
+	in.Seats = seats
+	return in
 }
 
 // assembleInput gathers everything the brief is written from.
@@ -209,6 +278,9 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var lastSpoke *time.Time
 	var moves []DealMoveIn
 	var roomHidden bool
+	var history []HistoryIn
+	var excerpts []ExcerptIn
+	var seats []ids.UUID
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The requested project is gated BEFORE the meeting is read, because
 		// the meeting read already narrows by it (the attendees' last-touch
@@ -236,6 +308,24 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		if err != nil {
 			return err
 		}
+		// Both evidence passes run here, before the first-contact early return
+		// below: a room with no baseline still HAS a history — that is what
+		// "first contact with this reader" means, as against "first contact
+		// with this company" — and reading it after that return would leave the
+		// arc empty for exactly the caller who most needs the background.
+		history, err = s.readHistory(ctx, tx, loaded, scope, s.now().UTC())
+		if err != nil {
+			return err
+		}
+		seats, err = s.readSeats(ctx, tx, activityID)
+		if err != nil {
+			return err
+		}
+		excerpts, err = s.readExcerpts(ctx, tx,
+			excerptTargets(clusterThreads(threadsOf(history))))
+		if err != nil {
+			return err
+		}
 		spoke, ever, err := s.readLastSpoke(ctx, tx, loaded, scope, s.now().UTC())
 		if err != nil {
 			return err
@@ -256,11 +346,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		return Input{}, nil, err
 	}
 
-	in := FromMeeting(room, perAttendee, s.now().UTC())
-	in.PriorMeetings = foldPriorMeetings(earlier)
-	in.LastSpokeAt = lastSpoke
-	in.DealMoves = moves
-	in.RoomHidden = roomHidden
+	in := s.foldRoom(room, perAttendee, earlier, lastSpoke, moves, roomHidden, history, excerpts, seats)
 	if len(room.Attendees) == 0 {
 		// Nobody in the room this caller may see. The header still stands, and
 		// assembling a 360 for a person nobody named would be a read of a

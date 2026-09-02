@@ -118,7 +118,10 @@ connector off; the code default is off, so an absent block exposes nothing.
 **Decide the retention posture before first boot if the installation must keep
 everything.** By default the shipped storage-limitation ladder runs: an
 unconverted lead is anonymized after a year, a meeting transcript and an AI
-payload are erased after a year (Art. 5(1)(e), compliant out of the box). An
+payload are erased after a year, which is the storage-limitation obligation of
+Art. 5(1)(e) and only that one — see the [compliance
+handbook](handbook/compliance.md) for what an installation reading employee
+mailboxes still owes, none of which this product checks. An
 installation under a contractual or statutory keep-everything obligation sets
 
 ```yaml
@@ -155,7 +158,7 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 | path | service |
 | --- | --- |
 | `/v1`, `/healthz`, `/readyz`, `/metrics` | api |
-| `/webhooks/gmail`, `/webhooks/hubspot` | api (present only with that connector configured) |
+| `/webhooks/gmail`, `/webhooks/graph`, `/webhooks/hubspot` | api (present only where that receiver's own token is set — which is a separate switch from whether the connector itself is configured) |
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
 

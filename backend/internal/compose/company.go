@@ -23,6 +23,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -58,7 +59,11 @@ const (
 )
 
 type companyHandlers struct {
-	store   *people.Store
+	store *people.Store
+	// Where an uploaded company mark's bytes live. Nil in a role that stores no
+	// objects, which is what makes the upload route answer 501 rather than
+	// accepting an image nothing could serve back.
+	blob    blobstore.Store
 	rollout string
 }
 
@@ -245,7 +250,12 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 		OrganizationId: openapi_types.UUID(c.OrganizationID.UUID),
 		DisplayName:    c.DisplayName,
 		Website:        c.Website,
-		UpdatedAt:      &c.UpdatedAt,
+		// The module's own spelling of the logo endpoint, not a second one: the
+		// shell draws the installation's mark from this profile and the record
+		// screens draw it from Organization.logo_url, and a company with two
+		// faces is a company nobody recognises.
+		LogoUrl:   people.LogoURL(c.OrganizationID.UUID, c.LogoObjectKey),
+		UpdatedAt: &c.UpdatedAt,
 	}
 	profileFields := make([]crmcontracts.CompanyProfileField, 0, len(c.ProfileFields))
 	for _, field := range c.ProfileFields {
@@ -253,17 +263,18 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 			Field: crmcontracts.CompanyProfileFieldField(field.Field), Value: field.Value,
 			Source: crmcontracts.CompanyProfileFieldSource(field.Source), CapturedBy: &field.CapturedBy,
 			EvidenceSnippet: nonEmptyString(field.EvidenceSnippet), SourceUrl: nonEmptyString(field.SourceURL),
-			Confidence: &field.Confidence, UpdatedAt: field.UpdatedAt,
+			Confidence: field.Confidence, UpdatedAt: field.UpdatedAt,
 		})
 	}
 	facts := make([]crmcontracts.OrganizationFact, 0, len(c.Facts))
 	for _, fact := range c.Facts {
+		version := crmcontracts.RowVersion(fact.Version)
 		facts = append(facts, crmcontracts.OrganizationFact{
 			Category: crmcontracts.OrganizationFactCategory(fact.Category),
 			Field:    crmcontracts.OrganizationFactField(fact.Field), Value: fact.Value, ValueKey: fact.ValueKey,
 			Source: crmcontracts.OrganizationFactSource(fact.Source), CapturedBy: &fact.CapturedBy,
 			EvidenceSnippet: nonEmptyString(fact.EvidenceSnippet), SourceUrl: nonEmptyString(fact.SourceURL),
-			Confidence: &fact.Confidence, UpdatedAt: fact.UpdatedAt,
+			Confidence: fact.Confidence, UpdatedAt: fact.UpdatedAt, Version: &version,
 		})
 	}
 	out.Fields = &profileFields

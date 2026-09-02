@@ -316,3 +316,57 @@ type Capabilities struct {
 	// text-only.
 	AttachmentMIMEs []string
 }
+
+// Lister is implemented by an adapter whose vendor publishes what it
+// currently serves.
+//
+// Deliberately NOT part of Client. A vendor list endpoint is a different
+// question from inference, not every adapter has one to answer, and widening
+// Client would make five adapters carry a method two of them can only refuse.
+// A caller type-asserts, exactly as it does for any other optional capability,
+// and treats a client that does not implement it as "this vendor does not
+// publish a list" rather than as a failure.
+//
+// It answers AVAILABILITY, never price. Only a broker (OpenRouter) publishes
+// per-model prices on the same endpoint; the native vendors put theirs on an
+// HTML page, which is why the price sheet is its own effective-dated record and
+// stays the authority on cost. A model listed here that the sheet cannot price
+// is bindable and reports UNPRICED — that is honest, and it is the reason the
+// two must not be folded into one read.
+type Lister interface {
+	// ListModels reports what the vendor serves, newest first where the vendor
+	// dates its models and in the vendor's own order where it does not.
+	ListModels(ctx context.Context) ([]Info, error)
+}
+
+// Info is one model a vendor says it serves.
+//
+// Three fields and no fourth. The vendors disagree about everything else they
+// publish — context windows, modalities, deprecation dates, owners — and a
+// field only some of them fill is one the caller cannot rely on. What every
+// list endpoint agrees on is an id, and what a picker needs is that id plus
+// enough to sort and label it.
+type Info struct {
+	// ID is the string a binding names, exactly as the vendor spells it.
+	ID string
+	// DisplayName is the vendor's own human label, empty where it publishes
+	// none. A caller shows the ID when this is empty rather than inventing a
+	// prettier form of the id — the id is what an operator greps for.
+	DisplayName string
+	// Lane is what the vendor says the model is FOR, empty where it does not
+	// say. Only Gemini states it (supportedGenerationMethods); the rest publish
+	// one undifferentiated list. Empty means unknown, NOT chat: a caller that
+	// needs the distinction filters on a stated lane rather than assuming one,
+	// because binding an embedder to a chat tier produces a call that cannot
+	// succeed.
+	Lane string
+}
+
+// The lanes an Info can state. Spelled here rather than imported from the
+// ai module because the port cannot depend on a module, and duplicated
+// deliberately: these are the wire's own two words, and the ai module's Lane
+// type is what maps them onto its price sheet.
+const (
+	LaneChat       = "chat"
+	LaneEmbeddings = "embeddings"
+)

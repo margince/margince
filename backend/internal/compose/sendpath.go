@@ -23,6 +23,9 @@ package compose
 // drift this shape exists to make impossible.
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -33,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // SendPath is the deployment configuration the send path needs and cannot
@@ -47,6 +51,10 @@ type SendPath struct {
 	// means a marketing send refuses (the store's fail-loud branch) rather
 	// than emitting a forgeable link.
 	PublicBaseURL string
+	// Environment decides whether a loopback PublicBaseURL is a working dev
+	// stack or a link the recipient's mail client cannot open. The zero
+	// value is production, which is the direction that fails safe.
+	Environment runtimeenv.Environment
 	// Delivery records an accepted message for transmission, in either shape a
 	// message takes. Nil means the send path refuses rather than log an
 	// activity nothing will carry.
@@ -123,6 +131,14 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	send := s.send.withPoolDefaults(pool)
 	s.activitiesHandlers = s.activitiesHandlers.
 		WithPublicBaseURL(send.PublicBaseURL).
+		WithRuntimeEnvironment(send.Environment).
+		// Wired on BOTH transports, which is what this file is for: without
+		// it here, a short message sent over HTTP got an English footer while
+		// the same message sent through the tool surface got the
+		// installation's language.
+		WithBaseLanguage(activities.BaseLanguageFunc(func(ctx context.Context) string {
+			return identity.BaseLanguageForPrompt(ctx, pool)
+		})).
 		WithDelivery(send.Delivery).
 		// One machinery, both staging shapes: a nil Delivery converts to a nil
 		// channel stager too, so the reply surface fails closed exactly as the
@@ -138,6 +154,10 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// nothing but the caller's transaction, so a deployment cannot forget
 		// it and leave an account-started send unable to resolve anyone.
 		WithRecipientDirectory(recipientDirectory{}).
+		// Unconditional for the same reason, and a sharper one: addressing a
+		// reply must skip a co-worker who has no seat, and a deployment that
+		// forgot to wire this would compose replies to its own staff.
+		WithColleagues(colleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}).
 		WithSendAuthority(send.SendAuthority).
 		WithDraftOutcome(send.DraftOutcome)
 	decisions := s.approvalsHandlers
@@ -220,6 +240,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 	return activities.NewStore(InstallationDB(pool)).
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
 		WithPublicBaseURL(send.PublicBaseURL).
+		WithRuntimeEnvironment(send.Environment).
 		WithSendAuthority(send.SendAuthority).
 		WithChannelReachability(send.ChannelRecipients).
 		WithRecipientDirectory(recipientDirectory{}).
@@ -229,6 +250,9 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		// because the request arrived on the tool surface. An agent principal
 		// still signs nothing — signedBody decides that, not this wiring.
 		WithSignature(people.NewStore(InstallationDB(pool))).
+		WithBaseLanguage(activities.BaseLanguageFunc(func(ctx context.Context) string {
+			return identity.BaseLanguageForPrompt(ctx, pool)
+		})).
 		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
 		WithHeldNotifier(send.HeldNotifier).
 		WithDraftOutcome(send.DraftOutcome)
@@ -252,4 +276,18 @@ func newCommsAdapter(pool *pgxpool.Pool, drafter activities.EmailDrafter, send S
 		timer:         send.ScheduleTimer,
 		own:           capture.NewOwnDomainStore(InstallationDB(pool)),
 	}
+}
+
+// colleagueDomains adapts the own-domain store to the seam the activities
+// handlers take. The module may not import capture, and the reply-address
+// question needs to know who is ours by DOMAIN rather than by seat — a
+// co-worker with no login is still not somebody to compose a reply to.
+type colleagueDomains struct{ store *capture.OwnDomainStore }
+
+func (c colleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
+	own, err := c.store.Colleagues(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading who counts as a colleague: %w", err)
+	}
+	return own.Covers, nil
 }

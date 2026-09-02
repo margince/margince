@@ -10,17 +10,21 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import { InstallationSetup } from "./installation-setup";
+import { InstallationSetup, outstandingStep } from "./installation-setup";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
-type Step = { step: string; configured: boolean; blocking: boolean };
+// The wire row, spelled from the generated contract rather than as a loose
+// `string`: a fixture naming a step the server cannot report would be a test of
+// a shape nothing serves.
+type Step = components["schemas"]["InstallationSetupStep"];
 
 // The seeded price sheet a fresh installation is provisioned with, which is
 // also the catalogue both model fields offer from. The full wire row, prices
@@ -73,16 +77,24 @@ const SEEDED_SHEET = [
   ),
 ];
 
-/** The server's answer, in the order the server gives it. */
+/**
+ * The server's answer, in the order and with the policy the server gives it:
+ * the model binding blocks, the Google app is reported and does not.
+ *
+ * `complete` follows from the blocking steps alone, because that is what the
+ * contract says it means — a fixture that waited on the Google app too would be
+ * describing an installation this server never reports, and the screen under
+ * test would be passing against a shape that does not exist.
+ */
 function setupReport(
   ai: boolean,
   google: boolean,
 ): { complete: boolean; steps: Step[] } {
   return {
-    complete: ai && google,
+    complete: ai,
     steps: [
       { step: "ai_models", configured: ai, blocking: true },
-      { step: "google_app", configured: google, blocking: true },
+      { step: "oauth_app", configured: google, blocking: false },
     ],
   };
 }
@@ -93,15 +105,8 @@ function mount(
   refuse: readonly string[] = [],
 ) {
   const writes: { url: string; body: unknown }[] = [];
-  // Counted because WHEN the setup report is re-read is a product decision on
-  // this screen: the ignition holds it back so the reader, not the query,
-  // decides when the model step is over.
-  const setupReads: number[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     const url = new URL(request.url).pathname;
-    if (request.method === "GET" && url.endsWith("/installation/setup")) {
-      setupReads.push(Date.now());
-    }
     if (request.method !== "GET") {
       writes.push({ url, body: JSON.parse(await request.text()) });
       if (refuse.some((p) => url.endsWith(p))) {
@@ -121,39 +126,82 @@ function mount(
       <LocaleProvider>{children}</LocaleProvider>
     </QueryClientProvider>
   );
-  render(<InstallationSetup />, { wrapper: Wrap });
-  return { writes, setupReads };
+  const { container } = render(<InstallationSetup />, { wrapper: Wrap });
+  return { writes, container, qc };
+}
+
+/**
+ * Waits until the report has actually ARRIVED.
+ *
+ * Every "draws nothing" assertion below needs this, and none of them can get it
+ * from the DOM: the screen renders nothing while the query is in flight for
+ * exactly the same reason it renders nothing when the step is done, so a
+ * `waitFor` over an absence is satisfied by the first pending frame and the test
+ * passes without the answer ever landing. That is not a slow assertion, it is a
+ * vacuous one — it passed against a build that rendered the model form for a
+ * step it was never given.
+ */
+async function reportArrived(qc: QueryClient) {
+  await waitFor(() =>
+    expect(qc.getQueryState(["installation-setup"])?.status).toBe("success"),
+  );
 }
 
 describe("the first-run setup gate", () => {
-  // The order is the product decision the server pins: somebody with no model
-  // bound cannot be shown a cold start, while the mailbox can wait.
-  it("asks for the model binding before the platform question", async () => {
+  // The model binding is the one thing a cold start cannot proceed without, so
+  // it is the one thing asked for here.
+  it("asks for the model binding", async () => {
     mount(setupReport(false, false));
     expect(await screen.findByText("Choose a model provider")).toBeTruthy();
-    expect(
-      screen.queryByText("What does your organization run on?"),
-    ).toBeNull();
   });
 
-  it("asks what the organization runs on once the models are bound", async () => {
-    mount(setupReport(true, false));
-    expect(
-      await screen.findByText("What does your organization run on?"),
-    ).toBeTruthy();
-    expect(screen.queryByText("Choose a model provider")).toBeNull();
+  // The regression this screen was built wrong for. An installation with no
+  // Google app never reaches the company form, so `GET /company` keeps
+  // answering 404 and the shell's onboarding gate rewrites every route back to
+  // onboarding — an operator deploying without a Google app was locked out of
+  // the whole product, with `PUT /v1/company` the only way past.
+  it("lets a reader through with the models bound and no Google app", async () => {
+    // The panel is gone entirely rather than replaced by a Google one: the app
+    // is stored from settings, where the card also shows the redirect URIs
+    // Google's console asks for.
+    const { container, qc } = mount(setupReport(true, false));
+    await reportArrived(qc);
+    expect(container.innerHTML).toBe("");
   });
 
   // Nothing at all when there is nothing outstanding, so a caller can put this
   // in front of the next screen without asking the same question twice.
   it("draws nothing once every blocking step is done", async () => {
-    mount(setupReport(true, true));
-    await waitFor(() =>
-      expect(screen.queryByText("Choose a model provider")).toBeNull(),
-    );
-    expect(
-      screen.queryByText("What does your organization run on?"),
-    ).toBeNull();
+    const { container, qc } = mount(setupReport(true, true));
+    await reportArrived(qc);
+    expect(container.innerHTML).toBe("");
+  });
+
+  // A frontend older than its server, meeting a blocking step it has no panel
+  // for. It lets the reader PAST rather than drawing the panel it does have —
+  // the model form under an `oauth_app` heading would take a reader's API key
+  // against a step they were never asked about — and past is what matters,
+  // because the caller gates on this same predicate and would otherwise hold an
+  // empty screen in front of them forever. The server pins ai_models as the
+  // only blocker (TestOnlyTheModelBindingBlocksFirstRun); this is the far side
+  // of that, for the deployment where the two versions disagree.
+  it("lets a reader past a blocking step it has no panel for", async () => {
+    const report: { complete: boolean; steps: Step[] } = {
+      complete: false,
+      steps: [
+        { step: "ai_models", configured: true, blocking: true },
+        { step: "oauth_app", configured: false, blocking: true },
+      ],
+    };
+    // The caller's own question, asked the caller's way. An empty screen alone
+    // would not tell the two failures apart: a gate that lets nobody through
+    // and a gate that is finished both draw nothing, and it is this answer the
+    // onboarding act reads to decide whether to keep the gate up at all.
+    expect(outstandingStep(report)).toBeUndefined();
+
+    const { container, qc } = mount(report);
+    await reportArrived(qc);
+    expect(container.innerHTML).toBe("");
   });
 
   // The key BEFORE the binding: a binding whose vendor has no key reads as
@@ -240,117 +288,6 @@ describe("the first-run setup gate", () => {
     expect(
       screen.getByRole("button", { name: "Continue" }).getAttribute("disabled"),
     ).toBeNull();
-  });
-
-  it("sends the Google app as one pair", async () => {
-    const user = userEvent.setup();
-    const { writes } = mount(setupReport(true, false));
-    await screen.findByText("What does your organization run on?");
-    await user.type(
-      screen.getByLabelText("Client ID"),
-      "123-abc.apps.googleusercontent.com",
-    );
-    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-    await waitFor(() => expect(writes.length).toBe(1));
-    expect(writes[0].url).toBe("/v1/installation/google-app");
-    expect(writes[0].body).toEqual({
-      client_id: "123-abc.apps.googleusercontent.com",
-      client_secret: "GOCSPX-secret",
-    });
-  });
-
-  // Binding a model is the one write in first run that the screen marks rather
-  // than getting out of the way of. What that costs mechanically is a deferred
-  // refetch, and these are the two halves of it.
-  describe("the ignition", () => {
-    async function bind(): Promise<ReturnType<typeof mount>> {
-      const user = userEvent.setup();
-      const harness = mount(setupReport(false, false));
-      await screen.findByText("Choose a model provider");
-      await user.type(screen.getByLabelText("API key"), "AIza-secret");
-      await user.click(screen.getByRole("button", { name: "Continue" }));
-      await waitFor(() => expect(harness.writes.length).toBe(2));
-      return harness;
-    }
-
-    it("holds the screen after the binding lands, and names whose key was sealed", async () => {
-      const { setupReads } = await bind();
-      // The sequence is on screen, not the next question.
-      expect(
-        await screen.findByText(/sealed in the vault · Google Gemini/),
-      ).toBeTruthy();
-      expect(screen.getByText("It has a pulse.")).toBeTruthy();
-      // And the one thing it may still not do, which is the point of saying any
-      // of it here.
-      expect(screen.getByText(/unless you say so/)).toBeTruthy();
-      // The report has NOT been re-read: the write landed, and the screen is the
-      // reader's to leave.
-      const readsWhileWatching = setupReads.length;
-      await waitFor(() => expect(setupReads.length).toBe(readsWhileWatching));
-    });
-
-    it("re-reads the report only once the reader presses past it", async () => {
-      const user = userEvent.setup();
-      const { setupReads } = await bind();
-      await screen.findByText(/sealed in the vault/);
-      const before = setupReads.length;
-      await user.click(screen.getByRole("button", { name: "Carry on" }));
-      await waitFor(() => expect(setupReads.length).toBeGreaterThan(before));
-    });
-  });
-
-  // The platform answer is one question covering mail AND sign-in, and what it
-  // changes on screen is which gap the reader is told about. Every answer has
-  // one: the two that need no Google app here cannot finish first run, and the
-  // one that does still does not turn the login door on. A screen that names two
-  // of the three reads as a guarantee for the third.
-  describe("what each platform answer says it still leaves undone", () => {
-    // Reads the notices as the reader sees them — by their words rather than by
-    // a live-region role, so which of the two announces stays the surface's
-    // decision and not something this test pins.
-    async function choose(label: string): Promise<void> {
-      const user = userEvent.setup();
-      mount(setupReport(true, false));
-      await screen.findByText("What does your organization run on?");
-      await user.click(screen.getByRole("radio", { name: new RegExp(label) }));
-    }
-
-    const STUCK = /cannot finish yet/;
-
-    it("tells the Google path that saving the app does not enable sign-in", async () => {
-      await choose("Google Workspace");
-      expect(screen.getByText(/MARGINCE_GMAIL_CLIENT_ID/)).toBeTruthy();
-      // And does NOT claim first run is stuck: this path can finish.
-      expect(screen.queryByText(STUCK)).toBeNull();
-    });
-
-    it("sends the Microsoft path to whoever runs the server, and says it cannot finish", async () => {
-      await choose("Microsoft 365");
-      // Whose work it is, not which variables they set: the names are
-      // deployment detail and left this screen with the rest of them.
-      expect(
-        screen.getByText(/set up by whoever runs the server/),
-      ).toBeTruthy();
-      expect(screen.getByText(STUCK)).toBeTruthy();
-    });
-
-    it("tells the IMAP path the credentials live on the mailbox", async () => {
-      await choose("Neither");
-      expect(
-        screen.getByText(/Each mailbox is set up under Settings/),
-      ).toBeTruthy();
-      expect(screen.getByText(STUCK)).toBeTruthy();
-    });
-
-    // The fields stay usable on every answer, because pasting an app is the only
-    // way past the blocking step — hiding them on the two paths that do not need
-    // one would leave a reader with a refusal and no way to answer it.
-    it("keeps the app fields usable whichever platform is chosen", async () => {
-      await choose("Microsoft 365");
-      expect(screen.getByLabelText("Client ID")).toBeTruthy();
-      expect(screen.getByLabelText("Client secret")).toBeTruthy();
-    });
   });
 
   // A first-time admin should not have to know a model id by heart. The sheet

@@ -39,7 +39,7 @@ import {
 import { type DemoRun, useDemoRun } from "./agentrail-demo";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
-import { lineFor, PANEL_HEADING, RUN_DETAIL_LABEL } from "./ai-activity-lines";
+import { lineFor, PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { useAgentTierMap } from "./autonomy";
 import { useCan } from "./capability";
@@ -488,11 +488,6 @@ type AiActivityItem = components["schemas"]["AiActivityItem"];
  * has never heard of this run, and a surface that answers that with an invented
  * sentence is a surface a reader cannot trust about the runs it DOES name. When
  * that empties the section, the section is absent too.
- *
- * `degrade_reason` is server-authored operator vocabulary and untranslated, so
- * it lives here as detail under its own label and never inside the line: a raw
- * internal token in a localized sentence is the defect, whichever sentence it
- * is.
  */
 function RunSection({
   heading,
@@ -515,15 +510,6 @@ function RunSection({
         {said.map(({ item, line }) => (
           <li className="arbox arrun" key={item.id}>
             <span className="arrunline">{line}</span>
-            {item.degrade_reason ? (
-              <span className="arrundetail">
-                <i>{t(RUN_DETAIL_LABEL.stopped)}</i>
-                {item.degrade_reason}
-              </span>
-            ) : null}
-            {item.summary ? (
-              <span className="arrundetail">{item.summary}</span>
-            ) : null}
           </li>
         ))}
       </ul>
@@ -536,7 +522,6 @@ function AgentPanel({
   setState,
   line,
   running,
-  recent,
   signals,
   model,
   spend,
@@ -550,8 +535,6 @@ function AgentPanel({
   line: string;
   /** The scheduled runs the server reports as live. */
   running: readonly AiActivityItem[];
-  /** The runs that settled since local midnight, newest first. */
-  recent: readonly AiActivityItem[];
   signals: Signals;
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
   spend: Readonly<{
@@ -600,14 +583,12 @@ function AgentPanel({
         )}
       </header>
 
-      {/* Above the counts: a run happening this second outranks a queue that has
-          been waiting since yesterday, and what finished overnight outranks it
-          too — it is the work the reader slept through. Settled runs are read
-          HERE and nowhere else: the terminal states, and with them every
-          `degrade_reason` and `summary`, exist only on a run that has finished.
-          Either section is absent when its list is, rather than drawn empty. */}
+      {/* Above the counts: a run happening this second outranks a queue that
+          has been waiting since yesterday. Only live work is listed — a settled
+          run reaches the reader through the resting rotation on the card, not
+          as a list here. The section is absent when its list is, rather than
+          drawn empty. */}
       <RunSection heading={PANEL_HEADING.running} items={running} />
-      <RunSection heading={PANEL_HEADING.settled} items={recent} />
 
       {/* The one count somebody opens this panel to act on, as a tile rather
           than a row: a number in a list of rows reads as one more line of text.
@@ -639,7 +620,7 @@ function AgentPanel({
                   spoken alone is not a sentence about anything. */}
               <a
                 className="arbox artile"
-                href="#/today"
+                href="#/worklist"
                 aria-label={`${LABELS.approvals} ${formatNumber(signals.waiting, locale)}`}
               >
                 <b>{formatNumber(signals.waiting, locale)}</b>
@@ -863,13 +844,30 @@ function usePanelFrame(
 /**
  * The state the section shows when nobody has overridden it.
  *
- * ONE SUBJECT: the agent. Nothing the browser does reaches this function. The
- * rail used to derive `ingest` from a query being in flight and `working` from a
- * mutation, which meant the Core spoke the agent's vocabulary while reporting
- * the reader's own clicks: the orb went to `ingest` because a list was loading,
- * and `ingest` was therefore the one state the agent could never cause. What the
- * tool is doing is still reported, in its own quieter line under this one, and
- * it no longer borrows the agent's voice to do it.
+ * ONE SUBJECT: the agent. The rail used to derive `ingest` from a query being in
+ * flight and `working` from any mutation, which meant the Core spoke the agent's
+ * vocabulary while reporting the reader's own clicks: the orb went to `ingest`
+ * because a list was loading, and `ingest` was therefore the one state the agent
+ * could never cause. What the TOOL is doing is still reported, in its own
+ * quieter line under this one, and it no longer borrows the agent's voice.
+ *
+ * The subject stayed the agent when a second observer of it was added. Two
+ * things watch the same work from different ends: the server's projection, which
+ * knows what a run IS and is the only thing that may name it, and this tab's own
+ * count of requests it is holding open to a route whose handler calls a model
+ * and waits (`asking`, from api/model-inflight.ts). The projection arrives on a
+ * poll, so between a person pressing "Draft with AI" and the next read there was
+ * a live model call nothing on screen reported: the orb sat at rest through the
+ * whole of the work it exists to show. `asking` closes that window and claims
+ * nothing else: it ranks BELOW every occurrence the feed carries, so it can
+ * never outrank a run, and the moment the feed can name the work it does.
+ *
+ * The correction that ranking allows is real and is the design working, not a
+ * defect to hide: `asking` answers `working` because a request in flight cannot
+ * say which half of the lifecycle it is in, so a route whose task turns out to
+ * be `ingest` (the enrich and cold-start lanes) shows `working` for the
+ * moment before the feed arrives and settles into its own lane after. A guess
+ * the owner of the fact overrules is the right shape for a bridge.
  *
  * The order is severity, and it starts with the faults that stop the agent
  * running AT ALL, because an agent with no model bound is not a broken run, it
@@ -939,6 +937,18 @@ function derive(
   const live = server.running.find((item) => item.state !== "stalled");
   if (live) {
     return { state: laneFor(live), cause: live };
+  }
+  // This tab's own ask, which the feed has not caught up with yet. `working`
+  // rather than a lane read from the kind, because the kind is exactly what is
+  // not known here: a request in flight says the agent is busy and says nothing
+  // about which half of its lifecycle it is in. `working` is the same answer
+  // laneFor gives an unnamed kind, and for the same reason: the honest half of
+  // what is known. No cause travels with it, so the line under the orb falls
+  // back to the generic word instead of borrowing a sentence about some other
+  // run, and the moment the feed carries the occurrence the branch above wins
+  // and names it.
+  if (server.asking) {
+    return { state: "working", cause: null };
   }
   // A request that failed a moment ago does NOT colour the orb. One dropped
   // request on a flaky connection would otherwise flash the corner of every
@@ -1234,7 +1244,6 @@ export function AgentRail({
               demo={demo}
               line={line}
               running={server.running}
-              recent={server.recent}
               spend={spend}
             />
           </div>,
@@ -1249,11 +1258,10 @@ export function AgentRail({
         ref={trigger}
         aria-expanded={open}
         aria-label={open ? LABELS.collapse : LABELS.expand}
-        // Opening the panel is what acknowledges a broken run: the panel is
-        // where it is listed, in words, with whatever the source said about why
-        // it stopped, so opening it is the moment the reader has actually been
-        // told. Until then the orb holds the fault, however many hours it takes
-        // them to look.
+        // Opening the panel is what acknowledges a broken run: it is the
+        // reader turning to the agent's report, so it is the moment the fault
+        // stops needing to be held. Until then the orb holds it, however many
+        // hours it takes them to look.
         onClick={() => {
           if (!open) {
             acknowledge();

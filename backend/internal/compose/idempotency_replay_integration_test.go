@@ -29,17 +29,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// keyedQuotaRouter mounts a stub handler on an idempotency-mapped route,
+// keyedTemplateRouter mounts a stub handler on an idempotency-mapped route,
 // wired exactly as the generated router wires the middleware (per-route,
 // so the chi RoutePattern the map is keyed by is bound).
-func keyedQuotaRouter(e *integration.Env, handler http.HandlerFunc) chi.Router {
+func keyedTemplateRouter(e *integration.Env, handler http.HandlerFunc) chi.Router {
 	r := chi.NewRouter()
-	r.With(idempotency(e.Pool, nil)).Post("/v1/quotas", handler)
+	r.With(idempotency(e.Pool, nil)).Post("/v1/offer-templates", handler)
 	return r
 }
 
-func keyedQuotaCall(ctx context.Context, r chi.Router, key string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPost, "/v1/quotas", strings.NewReader(`{"target_minor":1}`)).WithContext(ctx)
+func keyedTemplateCall(ctx context.Context, r chi.Router, key string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/v1/offer-templates", strings.NewReader(`{"name":"t"}`)).WithContext(ctx)
 	req.Header.Set("Idempotency-Key", key)
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
@@ -51,7 +51,7 @@ func TestIdempotencyReplayRepeatsTheRecordedContentType(t *testing.T) {
 	ctx := e.Admin() // ONE principal: the claim is scoped per (workspace, principal, key, path)
 
 	calls := 0
-	r := keyedQuotaRouter(e, func(w http.ResponseWriter, _ *http.Request) {
+	r := keyedTemplateRouter(e, func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		w.Header().Set("Content-Type", "application/problem+json")
 		w.WriteHeader(http.StatusCreated)
@@ -60,12 +60,12 @@ func TestIdempotencyReplayRepeatsTheRecordedContentType(t *testing.T) {
 		}
 	})
 
-	first := keyedQuotaCall(ctx, r, "content-type-replay")
+	first := keyedTemplateCall(ctx, r, "content-type-replay")
 	if first.Code != http.StatusCreated {
 		t.Fatalf("first keyed call = %d, want 201", first.Code)
 	}
 
-	replay := keyedQuotaCall(ctx, r, "content-type-replay")
+	replay := keyedTemplateCall(ctx, r, "content-type-replay")
 	if calls != 1 {
 		t.Fatalf("handler ran %d times, want 1 — the second call must be a replay", calls)
 	}
@@ -82,7 +82,7 @@ func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 	ctx := e.Admin()
 
 	calls := 0
-	r := keyedQuotaRouter(e, func(w http.ResponseWriter, _ *http.Request) {
+	r := keyedTemplateRouter(e, func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		w.Header().Set("Content-Type", "application/problem+json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
@@ -94,8 +94,8 @@ func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 	// A non-2xx outcome releases the claim, so the keyed retry
 	// re-executes — the 422 the client sees is always the handler's own
 	// problem+json, never a stored copy that could go stale or mistyped.
-	first := keyedQuotaCall(ctx, r, "failure-retry")
-	retry := keyedQuotaCall(ctx, r, "failure-retry")
+	first := keyedTemplateCall(ctx, r, "failure-retry")
+	retry := keyedTemplateCall(ctx, r, "failure-retry")
 	if calls != 2 {
 		t.Fatalf("handler ran %d times, want 2 — a failed attempt must release the claim for the retry", calls)
 	}

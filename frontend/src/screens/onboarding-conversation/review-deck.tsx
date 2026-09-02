@@ -81,6 +81,7 @@ export function ReviewDeck({
   onReadWhole,
   pending,
   disabled,
+  digest,
 }: Readonly<{
   cards: readonly DeckCard[];
   /** How many facts went onto the record without needing anybody. */
@@ -235,7 +236,7 @@ function DeckCardFace({
         <span className="rdeck-source">{card.source}</span>
       )}
       <div className="rdeck-acts">
-        <Button variant="secondary" onClick={onNext}>
+        <Button variant="ghost" onClick={onNext}>
           {t(card.required ? "ob.deck.next" : "ob.deck.leaveOut")}
         </Button>
       </div>

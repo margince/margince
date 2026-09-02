@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -137,10 +136,14 @@ type CompanyProfileField struct {
 	Value           string
 	EvidenceSnippet string
 	SourceURL       string
-	Confidence      float32
-	Source          string
-	CapturedBy      string
-	UpdatedAt       time.Time
+	// Nil when the row records no confidence, which the column allows and a
+	// non-site_read write leaves empty. Nil is not zero: a value nobody scored
+	// is not a value scored as worthless, and the list read of the same table
+	// (ListOrganizationFacts) already answers null for it.
+	Confidence *float32
+	Source     string
+	CapturedBy string
+	UpdatedAt  time.Time
 }
 
 // CompanyFact is one accepted repeatable fact about the company.
@@ -151,10 +154,16 @@ type CompanyFact struct {
 	ValueKey        string
 	EvidenceSnippet string
 	SourceURL       string
-	Confidence      float32
-	Source          string
-	CapturedBy      string
-	UpdatedAt       time.Time
+	// Nil for the same reason as the profile field's above, and reachable here
+	// today: the technical-signal write records no confidence at all.
+	Confidence *float32
+	Source     string
+	CapturedBy string
+	UpdatedAt  time.Time
+	// Carried because this fact reaches the browser as the same
+	// OrganizationFact the account endpoints return, and that schema promises a
+	// version for the If-Match a correction or removal sends.
+	Version int64
 }
 
 // Company is the installation's own company as the form reads and writes it.
@@ -166,11 +175,16 @@ type Company struct {
 	OrganizationSource     string
 	OrganizationCapturedBy string
 	Website                *string
-	Fields                 map[string]string
-	ProfileFields          []CompanyProfileField
-	Facts                  []CompanyFact
-	MinimumComplete        bool
-	UpdatedAt              time.Time
+	// The bucket path of the mark the record is wearing — one a website read
+	// resolved, or one a person uploaded (SetCompanyLogo) — and nil when it
+	// wears none. It never reaches the wire: LogoURL turns it into the endpoint
+	// that streams the bytes.
+	LogoObjectKey   *string
+	Fields          map[string]string
+	ProfileFields   []CompanyProfileField
+	Facts           []CompanyFact
+	MinimumComplete bool
+	UpdatedAt       time.Time
 }
 
 // SaveCompanyInput is one submission of the company form. A nil field was not
@@ -423,73 +437,4 @@ func createAnchorOrganization(ctx context.Context, tx pgx.Tx, displayName, by st
 		return ids.OrganizationID{}, err
 	}
 	return orgID, nil
-}
-
-// readCompany assembles the form's view: the name and website from the
-// organization, every profile field from its provenance row.
-func readCompany(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (Company, error) {
-	out := Company{OrganizationID: orgID, Fields: map[string]string{}}
-	if err := tx.QueryRow(ctx,
-		`SELECT o.display_name, o.source, o.captured_by, o.updated_at, d.domain
-		   FROM organization o
-		   LEFT JOIN organization_domain d
-		     ON d.organization_id = o.id AND d.is_primary AND d.archived_at IS NULL
-		  WHERE o.id = $1`,
-		orgID).Scan(&out.DisplayName, &out.OrganizationSource, &out.OrganizationCapturedBy,
-		&out.UpdatedAt, &out.Website); err != nil {
-		return Company{}, fmt.Errorf("read company: %w", err)
-	}
-
-	rows, err := tx.Query(ctx,
-		`SELECT field, value, evidence_snippet, source_url, confidence,
-		        source, captured_by, updated_at
-		   FROM organization_profile_field
-		  WHERE organization_id = $1
-		  ORDER BY field`,
-		orgID)
-	if err != nil {
-		return Company{}, fmt.Errorf("read company fields: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var field CompanyProfileField
-		if err := rows.Scan(&field.Field, &field.Value, &field.EvidenceSnippet,
-			&field.SourceURL, &field.Confidence, &field.Source, &field.CapturedBy,
-			&field.UpdatedAt); err != nil {
-			return Company{}, fmt.Errorf("scan company field: %w", err)
-		}
-		out.Fields[field.Field] = field.Value
-		out.ProfileFields = append(out.ProfileFields, field)
-	}
-	if err := rows.Err(); err != nil {
-		return Company{}, fmt.Errorf("read company fields: %w", err)
-	}
-
-	facts, err := tx.Query(ctx,
-		`SELECT category, field, value, value_key, evidence_snippet, source_url,
-		        confidence, source, captured_by, updated_at
-		   FROM organization_fact
-		  WHERE organization_id = $1
-		  ORDER BY category, field, value_key, value`,
-		orgID)
-	if err != nil {
-		return Company{}, fmt.Errorf("read company facts: %w", err)
-	}
-	defer facts.Close()
-	for facts.Next() {
-		var fact CompanyFact
-		if err := facts.Scan(&fact.Category, &fact.Field, &fact.Value, &fact.ValueKey,
-			&fact.EvidenceSnippet, &fact.SourceURL, &fact.Confidence, &fact.Source,
-			&fact.CapturedBy, &fact.UpdatedAt); err != nil {
-			return Company{}, fmt.Errorf("scan company fact: %w", err)
-		}
-		out.Facts = append(out.Facts, fact)
-	}
-	if err := facts.Err(); err != nil {
-		return Company{}, fmt.Errorf("read company facts: %w", err)
-	}
-	out.MinimumComplete = strings.TrimSpace(out.DisplayName) != "" &&
-		strings.TrimSpace(out.Fields[fieldOfferSummary]) != "" &&
-		strings.TrimSpace(out.Fields[fieldICP]) != ""
-	return out, nil
 }

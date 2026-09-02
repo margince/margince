@@ -139,10 +139,33 @@ func (s *Store) poolUsedThisMonth(ctx context.Context, tx pgx.Tx, connID, pool s
 	return used, nil
 }
 
+// unreportedPoolCharge is what one pool costs when the provider's answer named
+// no figure for it.
+//
+// A run can match on one category and find nothing on another — buy a mobile
+// for somebody whose employment is already known, and the run completes while
+// the mobile pool is silent. That run is `matched`, so the whole-run release
+// above does not fire, and the silent pool used to fall through to its hold.
+// The customer paid a credit for a number the provider did not have.
+//
+// The basis decides it. Per-successful-result charges only for a match, so
+// silence about a pool IS the no-match for that pool and the hold is released.
+// Per-request charges whether or not anything came back, so silence leaves the
+// hold standing — there was no refund to pass on, and assuming one would
+// understate what the customer was charged.
+func unreportedPoolCharge(desc provider.Descriptor, reserved int) int {
+	if desc.Billing == provider.BillingPerSuccessfulResult {
+		return 0
+	}
+	return reserved
+}
+
 // reconcile settles a run's holds against what the provider actually charged.
-// The billing basis decides what a no-match releases: a provider that charges
-// per successful result refunds it, one that charges per request does not,
-// because there was no refund to pass on.
+// The billing basis decides what an unanswered pool releases: a provider that
+// charges per successful result refunds it, one that charges per request does
+// not, because there was no refund to pass on. That question is asked twice —
+// once for a run that matched nothing, and once per pool for a run that matched
+// some categories and not others.
 func (s *Store) reconcile(ctx context.Context, tx pgx.Tx, desc provider.Descriptor,
 	runID string, spend map[provider.Pool]int, matched bool) error {
 
@@ -177,10 +200,8 @@ func (s *Store) reconcile(ctx context.Context, tx pgx.Tx, desc provider.Descript
 	}
 
 	for pool, reserved := range held {
-		actual := reserved
-		// The provider's own number wins where it gave one. Where it said
-		// nothing, the hold stands as spent — assuming a refund nobody
-		// promised would understate what the customer was charged.
+		actual := unreportedPoolCharge(desc, reserved)
+		// The provider's own number wins where it gave one.
 		if v, ok := spend[provider.Pool(pool)]; ok {
 			actual = v
 		}

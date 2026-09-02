@@ -183,7 +183,12 @@ var catalog = map[string]struct {
 	// stream for the same reason the sign-off does: it is a fact about that
 	// person rather than about the installation, which names its own language
 	// in a setting and publishes nothing per reader.
-	"user_locale.changed":      {personStreamEntity, 1},
+	"user_locale.changed": {personStreamEntity, 1},
+	// What a member wants DELIVERED rides the identity stream rather than the
+	// person one its neighbour above uses. A display language is something a
+	// subscriber rendering for this person needs; what lands in their inbox is
+	// nobody else's business, and the stream is the first place that is said.
+	"user_delivery.changed":    {identityStreamEntity, 1},
 	"linkedin_account.changed": {personStreamEntity, 1},
 	// One import act, not one row: an export is thousands of rows and a
 	// per-row event would bury every other event in the stream, while the
@@ -277,6 +282,16 @@ var catalog = map[string]struct {
 	"activity.captured": {activityStreamEntity, 1},
 	"activity.updated":  {activityStreamEntity, 1},
 	"activity.archived": {activityStreamEntity, 1},
+	// Somebody decided what to do about a waiting message and the Worklist
+	// stopped offering it. `disposition_recorded` rather than `disposition_set`
+	// because the catalog's verbs are past tense, and a compound one puts the
+	// object first — the shape `password_link_issued` already takes.
+	//
+	// Its own type rather than an activity.updated: the
+	// message did not change, only what one person (or the workspace) decided
+	// about it, and a consumer counting edits to correspondence must not read a
+	// rep clearing their queue as the customer's mail being rewritten.
+	"activity.disposition_recorded": {activityStreamEntity, 1},
 	// §5.11: a thread-matched inbound is an activity-family fact, emitted
 	// by capture alongside activity.captured (EVT-SEM-14 — idempotent per
 	// reply; a duplicate inbound for the same reply does not re-emit).
@@ -291,6 +306,23 @@ var catalog = map[string]struct {
 	// read is the recipient settling it.
 	"notice.created": {identityStreamEntity, 1},
 	"notice.read":    {identityStreamEntity, 1},
+
+	// A weekly plan belongs to one rep, so its changes ride the same identity
+	// stream a notice does. help_requested is its own type rather than another
+	// updated: it is the one change somebody else is meant to act on, and an
+	// automation notifying a lead subscribes to that and not to every tick of
+	// a checkbox.
+	"weekly_plan.updated":        {identityStreamEntity, 1},
+	"weekly_plan.help_requested": {identityStreamEntity, 1},
+
+	// An introduction request is about a CONTACT — who can open a door to
+	// them, and what came of asking — so it rides the person stream a
+	// consumer ranking that contact's open work already reads.
+	"intro_request.created":   {personStreamEntity, 1},
+	"intro_request.decided":   {personStreamEntity, 1},
+	"intro_request.completed": {personStreamEntity, 1},
+	"intro_request.replied":   {personStreamEntity, 1},
+	"intro_request.closed":    {personStreamEntity, 1},
 
 	"approval.requested": {approvalStreamEntity, 1},
 	"approval.decided":   {approvalStreamEntity, 1},
@@ -316,6 +348,7 @@ var catalog = map[string]struct {
 	// passport are identity-owned facts, so all three ride the identity
 	// stream rather than gaining per-entity streams of their own.
 	"user.invited":              {identityStreamEntity, 1},
+	"user.activated":            {identityStreamEntity, 1},
 	"user.password_link_issued": {identityStreamEntity, 1},
 	"user.deactivated":          {identityStreamEntity, 1},
 	"user.reactivated":          {identityStreamEntity, 1},

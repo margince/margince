@@ -107,7 +107,11 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 		if len(recs) > limit {
 			recs = recs[:limit]
 			createdAt, id := spec.cursorKey(recs[len(recs)-1])
-			page = storekit.Page{HasMore: true, NextCursor: sorted.EncodePageCursor(cursorKeys[limit-1], createdAt, id)}
+			next, err := sorted.EncodePageCursor(cursorKeys[limit-1], createdAt, id)
+			if err != nil {
+				return err
+			}
+			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
 		return spec.attach(ctx, tx, recs)
 	})

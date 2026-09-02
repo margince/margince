@@ -95,7 +95,7 @@ const interactionRoles = `('from','to','cc','bcc','attendee','organizer')`
 // changed does not know which pairs that touched, so it hands over the
 // activity and this resolves the pairs itself — including, on a relink, the
 // pair the activity used to belong to, which is the pair the caller could not
-// have named.
+// have named and which no longer appears on the activity's own rows.
 //
 // Deleting is as important as writing. A pair whose last qualifying
 // interaction was just archived must lose its row, not keep a stale one: an
@@ -122,38 +122,6 @@ func RecomputeEdgesForActivities(ctx context.Context, tx pgx.Tx, activityIDs []i
 		return err
 	}
 	return recomputePairs(ctx, tx, pairs)
-}
-
-// pair is one (user, person) key.
-type pair struct {
-	user   ids.UUID
-	person ids.UUID
-}
-
-// affectedPairs resolves which edges the named activities can affect: every
-// (user, person) combination appearing on their participant rows, plus every
-// pair that currently has a row citing one of those activities.
-func affectedPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]pair, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT u.user_id, p.person_id
-		  FROM activity_participant u
-		  JOIN activity_participant p ON p.activity_id = u.activity_id
-		 WHERE u.activity_id = ANY($1)
-		   AND u.user_id IS NOT NULL
-		   AND p.person_id IS NOT NULL`, activityIDs)
-	if err != nil {
-		return nil, fmt.Errorf("search: resolving the pairs an activity touches: %w", err)
-	}
-	defer rows.Close()
-	var out []pair
-	for rows.Next() {
-		var pr pair
-		if err := rows.Scan(&pr.user, &pr.person); err != nil {
-			return nil, err
-		}
-		out = append(out, pr)
-	}
-	return out, rows.Err()
 }
 
 // RecomputeEdgesForPerson re-folds every edge touching one contact — the

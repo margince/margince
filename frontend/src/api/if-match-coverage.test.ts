@@ -51,15 +51,24 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/relationships.tsx DELETE /relationships/{id}",
   "screens/contractform.tsx PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",
+  // The two FACT writes stay: OrganizationFact carries no version on the wire,
+  // so no caller can pin one. Its sibling, CompanyProfileField, now does — the
+  // profile-field lines that used to sit here are gone because both verbs send
+  // the precondition.
   "screens/evidenceverdict.tsx PATCH /organizations/{id}/facts/{factKey}",
-  "screens/evidenceverdict.tsx PATCH /organizations/{id}/profile-fields/{field}",
   "screens/evidenceverdict.tsx POST /organizations/{id}/facts/{factKey}/confirm",
-  "screens/evidenceverdict.tsx POST /organizations/{id}/profile-fields/{field}/confirm",
   "screens/extension-access.tsx PATCH /roles/{key}/objects/{object}",
-  "screens/integrations-provider.tsx PATCH /provider-connections/{provider}",
   "screens/settings.tsx DELETE /stages/{id}",
   "screens/share.tsx DELETE /record-grants/{id}",
+  // The two activity writes stay for the reason the FACT writes above do:
+  // Activity carries no version on the wire, so no caller can pin one. The
+  // server honours the precondition when one arrives
+  // (activities/handlers_lifecycle.go), so what is missing is the client's
+  // ability to KNOW the version — and closing that means putting it on the
+  // entity for every caller at once, rather than threading ETag reads through
+  // one screen.
   "screens/taskactions.tsx PATCH /activities/{id}",
+  "screens/worklist.queries.ts PATCH /activities/{id}",
   "screens/voice-dna.tsx DELETE /voice-profiles/{id}/sources/{sourceId}",
   "screens/voice-dna.tsx PATCH /voice-profiles/{id}",
 ];

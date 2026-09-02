@@ -110,6 +110,62 @@ describe("AutonomySettingsCard", () => {
     ).not.toBeNull();
   });
 
+  // A PERMANENT ZERO DESERVES A READING. The card is shown to every seat on
+  // purpose — approvals are structural, so there is no role list to gate on —
+  // which leaves a seat nothing is routed to looking at switches that will
+  // never have anything to switch. "You have not decided one of these yet" is
+  // true of one kind; it says nothing about why there is none of any kind.
+  //
+  // DECIDED, not "received": a seat may have work waiting on it right now, and
+  // this card cannot see the queue.
+  it("says why the record is empty when this seat has decided none of them", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        row("close_date_correction", "manual"),
+        row("stage_correction", "manual"),
+      ]).fetchMock,
+    );
+    render(<AutonomySettingsCard />);
+
+    expect(
+      await screen.findByText(/have not decided any of these yet/i),
+    ).not.toBeNull();
+  });
+
+  // And it goes away the moment one HAS. A note that stands beside a real track
+  // record tells a working seat their queue is empty while they read its
+  // history.
+  it("says nothing of the sort once the seat has decided one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        row("close_date_correction", "manual", 3),
+        row("stage_correction", "manual"),
+      ]).fetchMock,
+    );
+    render(<AutonomySettingsCard />);
+
+    expect(await screen.findByText(/3 approved as proposed/i)).not.toBeNull();
+    expect(screen.queryByText(/have not decided any of these yet/i)).toBeNull();
+  });
+
+  // AND NOT WHEN THERE IS NOTHING TO HAVE DECIDED. "You have not decided any of
+  // these yet" is a sentence about a set, and with no eligible kinds there is no
+  // set — it reads as a queue the seat is behind on rather than an installation
+  // that routes them nothing.
+  it("says nothing of the sort when there is no kind to decide", async () => {
+    vi.stubGlobal("fetch", backendFor([]).fetchMock);
+    render(<AutonomySettingsCard />);
+
+    // Awaited on the EMPTY STATE, which only the settled query can draw. The
+    // card's own sub-copy renders before the fetch resolves, so waiting on that
+    // would read the absence below off a card that had not loaded yet — an
+    // assertion no implementation could fail.
+    expect(await screen.findByText(/nothing here yet/i)).not.toBeNull();
+    expect(screen.queryByText(/have not decided any of these yet/i)).toBeNull();
+  });
+
   it("shows the track record under a kind the reader has decided", async () => {
     vi.stubGlobal(
       "fetch",

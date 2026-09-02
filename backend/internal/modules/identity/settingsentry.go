@@ -176,6 +176,73 @@ var FiscalYearStartMonth = settings.Define[int](
 	},
 ).AsInstallationIdentity()
 
+// The ceilings on the provider list, mirroring the contract's maxItems and
+// maxLength. Generous against any real deployment — nobody wires 32 identity
+// providers — and small enough that the anonymous read behind the login screen
+// cannot be made expensive by one admin write.
+const (
+	maxEnabledOidcProviders = 32
+	maxProviderKeyLen       = 64
+)
+
+// EnabledOidcProviders is which external identity providers this installation
+// offers on its login screen, of those the deployment holds credentials for.
+// The effective list is the INTERSECTION: this setting can only ever narrow
+// what the deployment composed, because an operator cannot invent a client id
+// and secret from the settings screen.
+//
+// PASSWORD IS NOT A MEMBER OF THIS SET, and that is the whole reason the entry
+// is named for providers rather than for login methods. Password is the method
+// every installation always has and the one an admin must not be able to strand
+// everybody by removing, so "it cannot be disabled" is a property of the shape
+// here — there is no value of this setting that turns it off — rather than a
+// validation rule a later change could relax. GetAuthCapabilities reports
+// Password as a constant for the same reason.
+//
+// Absent (nil) means every provider the deployment configured, so an
+// installation that upgrades into this setting keeps the login screen it had
+// and nobody has to be told to go and re-enable Google.
+//
+// It SURVIVES A DATA RESET, which is what AsInstallationIdentity buys and is
+// the reason for it here — the marker reads as "identity" but what it decides
+// is whether a wipe spares the row. Absent means every configured provider, so
+// a reset that deleted this would silently re-open a sign-in method an admin
+// had deliberately closed. A data reset clears customers and deals; it is not a
+// decision to change who may sign in.
+var EnabledOidcProviders = settings.Define[[]string](
+	"identity.enabled_oidc_providers",
+	installationSettingsObject,
+	"update",
+	nil,
+	func(keys []string) error {
+		// Bounded HERE and not only in the contract, because this value is read
+		// back on an ANONYMOUS request: the capabilities probe unmarshals it on
+		// every login screen, so an oversized list stored once would be paid for
+		// by every stranger who loads the page. The entry binds the non-HTTP
+		// writer too, which the contract's own limits cannot reach.
+		if len(keys) > maxEnabledOidcProviders {
+			return fmt.Errorf("at most %d providers may be listed, not %d", maxEnabledOidcProviders, len(keys))
+		}
+		for _, key := range keys {
+			if len(key) > maxProviderKeyLen {
+				return fmt.Errorf("a provider key is at most %d characters", maxProviderKeyLen)
+			}
+			if strings.TrimSpace(key) == "" {
+				return fmt.Errorf("a provider key cannot be blank")
+			}
+			// Refused rather than trimmed, because the match downstream is
+			// exact: a key saved as " google" would store cleanly, report
+			// success, and enable nothing — a setting that lies about having
+			// been applied. Saying so is better than silently repairing it,
+			// since the repaired value may not be the one they meant.
+			if strings.TrimSpace(key) != key {
+				return fmt.Errorf("the provider key %q carries surrounding whitespace, which would match no provider", key)
+			}
+		}
+		return nil
+	},
+).AsInstallationIdentity()
+
 // Definitions is identity's contribution to the settings registry.
 func Definitions() []settings.Definition {
 	return []settings.Definition{
@@ -184,6 +251,7 @@ func Definitions() []settings.Definition {
 		BaseCurrency,
 		BaseLanguage,
 		FiscalYearStartMonth,
+		EnabledOidcProviders,
 		SMTPPasswordRef,
 		LicenseTokenRef,
 	}
@@ -289,4 +357,37 @@ func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 		return string(textlang.English)
 	}
 	return lang
+}
+
+// InstallationNameOf reads the installation's own display label inside a
+// transaction the caller already holds.
+//
+// The setting row is read directly rather than through platform/settings:
+// this answers surfaces that run with no principal to judge the
+// installation_settings object gate — the login that has not built one
+// yet, and the public preference page, which has no seat at all. The name
+// is the installation's own label, not tenant data.
+//
+// Coalesced to the empty string rather than an error, for the same reason
+// the login does it: this is a display label, and an installation with no
+// stored name is a misconfiguration that must not turn a working page
+// into a 500.
+func InstallationNameOf(ctx context.Context, tx pgx.Tx) (string, error) {
+	var name string
+	err := tx.QueryRow(ctx,
+		`SELECT coalesce((SELECT value #>> '{}' FROM setting WHERE key = $1), '')`, Name.Key(),
+	).Scan(&name)
+	return name, err
+}
+
+// InstallationNameForPublicPage answers the installation's label for a
+// surface holding only a pool — the public preference centre's seam.
+func InstallationNameForPublicPage(ctx context.Context, pool *pgxpool.Pool) (string, error) {
+	var name string
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		name, err = InstallationNameOf(ctx, tx)
+		return err
+	})
+	return name, err
 }

@@ -50,6 +50,7 @@ import {
   throwProblem,
   useSorMode,
 } from "./common";
+import { CounterpartyHoldRow } from "./counterparty-hold";
 import { stillHeld, today } from "./employmentcurrency";
 import { interactionIcon } from "./interactionchrome";
 import { consentWord } from "./personstrip";
@@ -151,9 +152,32 @@ export function PersonRail({
         <WhoKnows view={view} firstName={firstName} />
         <SignalsAndRisks view={view} />
         <ConsentAndChannels view={view} guard={guard} />
+        {/* Beside consent, because it is the same subject from the seat's own
+            side: consent says what this contact allows us to send, the hold
+            says what the seat is willing for colleagues to read. */}
+        <PersonHoldSection view={view} />
         <RecentActivity view={view} />
       </Panel>
     </div>
+  );
+}
+
+// --- Keeping this correspondence private -------------------------------
+
+// The hold control, in the rail's own section shape. Drawn for every contact
+// with an address, held or not: a control that appeared only once a hold
+// existed would leave a reader with no way to place the first one.
+function PersonHoldSection({ view }: Readonly<{ view: Person360 }>) {
+  const t = useT();
+  const email = view.person?.emails?.[0]?.email;
+  if (!email) {
+    return null;
+  }
+  return (
+    <section className="pe-rail-section">
+      <h3 className="pe-rail-heading">{t("hold.sectionTitle")}</h3>
+      <CounterpartyHoldRow email={email} />
+    </section>
   );
 }
 

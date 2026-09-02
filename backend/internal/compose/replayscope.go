@@ -15,22 +15,6 @@ package compose
 // answering what governs it. Whatever a route does NOT re-check carries its
 // reason in the same entry — never silently.
 
-import (
-	"context"
-	"encoding/json"
-	"strings"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-)
-
 // replayTarget locates the row-scoped record inside a recorded response:
 // which table it lives in, and where its id sits in the body. `activity`
 // scopes through its links rather than an owner column, so it takes the
@@ -62,6 +46,29 @@ type replayTarget struct {
 	// with a fresh key and a second message.
 	altTable  string
 	altMarker string // the body field whose presence means altTable
+	// companions are the OTHER row-scoped records a recorded body names.
+	//
+	// The primary record is what the replay is FOR; a companion is a record
+	// the body points at, and pointing at one discloses that it exists and
+	// what it was to this call. QuickCapturePersonResult hands back the person
+	// created plus the organization_id they were attached to, and probing only
+	// the person returned an employer id to a caller who may since have lost
+	// sight of that employer. PromoteLeadResponse has the same shape twice
+	// over.
+	//
+	// A companion missing from the body is not a failure: these fields are
+	// optional, and an absent one names no record. One that is PRESENT and no
+	// longer visible refuses the whole replay rather than being edited out —
+	// masking would hand the caller a body the product never produced, and the
+	// caller is retrying an operation whose answer they are entitled to only
+	// while they can still see what it says.
+	companions []companionRef
+}
+
+// companionRef is one record a body points at, and where its id sits.
+type companionRef struct {
+	table  string
+	idPath string
 }
 
 // The row-scoped tables, and the RBAC objects that mirror them word for word.
@@ -97,14 +104,17 @@ const (
 	// contract.
 	probeDealRoom = "deal_room"
 
-	// The field an offer names its deal by.
-	offerDealField = "deal_id"
+	// The fields a body names another record by, spelled where the table that
+	// uses them is.
+	offerDealField       = "deal_id"
+	companionPersonField = "person_id"
+	companionOrgField    = "organization_id"
+	companionLeadField   = "lead_id"
 
 	objectOffer         = "offer"
 	objectPipeline      = "pipeline"
 	objectCustomField   = "custom_field"
 	objectSignal        = "signal"
-	objectQuota         = "quota"
 	objectOfferTemplate = "offer_template"
 	objectProduct       = "product"
 	objectIntegrations  = "integrations"
@@ -143,11 +153,20 @@ const (
 var replayableOperations = map[string]replayTarget{
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
-	"POST /v1/people":                   {object: tablePerson, table: tablePerson, idPath: "id"},
-	"POST /v1/people/quick-capture":     {object: tablePerson, table: tablePerson, idPath: "person.id"},
-	"PATCH /v1/people/{id}":             {object: tablePerson, table: tablePerson, idPath: "id"},
-	"POST /v1/people/{id}/merge":        {object: tablePerson, table: tablePerson, idPath: "id"},
-	"POST /v1/leads/{id}/promote":       {object: tablePerson, table: tablePerson, idPath: "person.id"},
+	"POST /v1/people": {object: tablePerson, table: tablePerson, idPath: "id"},
+	"POST /v1/people/quick-capture": {
+		object: tablePerson, table: tablePerson, idPath: "person.id",
+		companions: []companionRef{{table: tableOrganization, idPath: companionOrgField}},
+	},
+	"PATCH /v1/people/{id}":      {object: tablePerson, table: tablePerson, idPath: "id"},
+	"POST /v1/people/{id}/merge": {object: tablePerson, table: tablePerson, idPath: "id"},
+	"POST /v1/leads/{id}/promote": {
+		object: tablePerson, table: tablePerson, idPath: "person.id",
+		companions: []companionRef{
+			{table: tableLead, idPath: companionLeadField},
+			{table: tableDeal, idPath: offerDealField},
+		},
+	},
 	"POST /v1/organizations":            {object: tableOrganization, table: tableOrganization, idPath: "id"},
 	"PATCH /v1/organizations/{id}":      {object: tableOrganization, table: tableOrganization, idPath: "id"},
 	"POST /v1/organizations/{id}/merge": {object: tableOrganization, table: tableOrganization, idPath: "id"},
@@ -157,12 +176,14 @@ var replayableOperations = map[string]replayTarget{
 	// replayed body is the sidecar row, which has no id of its own on the wire.
 	"PATCH /v1/organizations/{id}/profile-fields/{field}":        {object: tableOrganization, table: tableOrganization, pathParam: "id"},
 	"POST /v1/organizations/{id}/profile-fields/{field}/confirm": {object: tableOrganization, table: tableOrganization, pathParam: "id"},
+	"POST /v1/organizations/{id}/facts":                          {object: tableOrganization, table: tableOrganization, pathParam: "id"},
 	"PATCH /v1/organizations/{id}/facts/{factKey}":               {object: tableOrganization, table: tableOrganization, pathParam: "id"},
+	"DELETE /v1/organizations/{id}/facts/{factKey}":              {object: tableOrganization, rowNote: "the removal answers 204: the row is gone, so a replay has no record to re-probe — what the original write was gated on was the organization named in the path, and that gate ran then"},
 	"POST /v1/organizations/{id}/facts/{factKey}/confirm":        {object: tableOrganization, table: tableOrganization, pathParam: "id"},
 	"POST /v1/deals":                       {object: tableDeal, table: tableDeal, idPath: "id"},
 	"PATCH /v1/deals/{id}":                 {object: tableDeal, table: tableDeal, idPath: "id"},
 	"POST /v1/deals/{id}/advance":          {object: tableDeal, table: tableDeal, idPath: "id"},
-	"POST /v1/contracts":                   {object: "contract", moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or organization, so the contracts store owns the probe"},
+	"POST /v1/contracts":                   {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or organization, so the contracts store owns the probe"},
 	"POST /v1/deal-rooms":                  {object: probeDealRoom, moduleProbe: probeDealRoom, idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
 	"POST /v1/projects":                    {object: tableProject, table: tableProject, idPath: "id"},
 	"PATCH /v1/projects/{id}":              {object: tableProject, table: tableProject, idPath: "id"},
@@ -170,13 +191,18 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
 	"PATCH /v1/leads/{id}":                 {object: tableLead, table: tableLead, idPath: "id"},
-	"POST /v1/leads/{id}/demote":           {object: tableLead, table: tableLead, idPath: "lead.id"},
-	"POST /v1/activities":                  {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/tasks":                       {object: tableActivity, table: tableActivity, idPath: "id"},
-	"PATCH /v1/activities/{id}":            {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/activities/{id}/relink":      {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/activities/relink-thread":    {object: tableActivity, rowNote: "the response is a count, not a record: every row moved was gated on the caller's write authority when it ran, and a replay hands back the number alone"},
-	"POST /v1/activities/relink-bulk":      {object: tableActivity, rowNote: "the response is a count, not a record: every named row was gated on the caller's sight and write authority when it ran, or nothing moved at all"},
+	// The demote answers the lead it restored plus the person it was demoted
+	// FROM — a second record, beside the one the replay is keyed on.
+	"POST /v1/leads/{id}/demote": {
+		object: tableLead, table: tableLead, idPath: "lead.id",
+		companions: []companionRef{{table: tablePerson, idPath: companionPersonField}},
+	},
+	"POST /v1/activities":               {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/tasks":                    {object: tableActivity, table: tableActivity, idPath: "id"},
+	"PATCH /v1/activities/{id}":         {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/activities/{id}/relink":   {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/activities/relink-thread": {object: tableActivity, rowNote: "the response is a count, not a record: every row moved was gated on the caller's write authority when it ran, and a replay hands back the number alone"},
+	"POST /v1/activities/relink-bulk":   {object: tableActivity, rowNote: "the response is a count, not a record: every named row was gated on the caller's sight and write authority when it ran, or nothing moved at all"},
 	// A send answers its outbound ACTIVITY when it went now, and its SCHEDULED
 	// SEND when the caller asked for it later — different tables behind the
 	// same "id". scheduled_at is the discriminator because only the second
@@ -243,8 +269,6 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/products":             {object: objectProduct, rowNote: noOwnerCatalog},
 	"POST /v1/offer-templates":      {object: objectOfferTemplate, rowNote: noOwnerTemplate},
 	"PUT /v1/offer-templates/{id}":  {object: objectOfferTemplate, rowNote: noOwnerTemplate},
-	"POST /v1/quotas":               {object: objectQuota, rowNote: "workspace-shared revenue target config (RD-T06), no owner column"},
-	"PATCH /v1/quotas/{id}":         {object: objectQuota, rowNote: "workspace-shared revenue target config (RD-T06), no owner column"},
 	"POST /v1/signals":              {object: objectSignal, table: tableSignal, idPath: "id"},
 	"PATCH /v1/signals/{id}":        {object: objectSignal, table: tableSignal, idPath: "id"},
 	"POST /v1/signals/{id}/resolve": {object: objectSignal, table: tableSignal, idPath: "id"},
@@ -302,178 +326,4 @@ var replayableOperations = map[string]replayTarget{
 	// through the handler's own EnsureVisible; what a replay hands back is the
 	// receipt, which names no subject.
 	"POST /v1/people/{id}/enrichment-runs": {object: tablePerson, rowNote: "a run receipt: state, cost and requested categories, carrying no person values to scope"},
-}
-
-// replayProbe answers whether the caller may still see one record, for the
-// bodies whose scope rule lives inside a module rather than in a row-scoped
-// table. Compose injects them at the composition root, so this package borrows
-// the module's own rule instead of keeping a second copy that could drift.
-type replayProbe func(ctx context.Context, id ids.UUID) error
-
-// ensureReplayVisible re-runs, against the caller as they are NOW, whichever
-// gates govern the body about to be replayed. Anything it cannot resolve fails
-// CLOSED: the middleware cannot show the caller may still see what it is
-// handing back, and serving it on the strength of a parse failure is the one
-// outcome this exists to prevent.
-func ensureReplayVisible(ctx context.Context, pool *pgxpool.Pool, probes map[string]replayProbe, route, body string) error {
-	target, replayable := replayableOperations[route]
-	if !replayable {
-		// The middleware only claims keys for routes in this table, so this
-		// is unreachable; if it is ever reached, the unclassified case is
-		// exactly the one that must not pay out.
-		return apperrors.ErrNotFound
-	}
-
-	if target.table == "" && target.tableField == "" && target.moduleProbe == "" {
-		return nil
-	}
-
-	if target.moduleProbe != "" {
-		probe, wired := probes[target.moduleProbe]
-		if !wired {
-			// An unwired probe cannot show the caller may still see this, and
-			// the composition root is the only place that could have wired it.
-			return apperrors.ErrNotFound
-		}
-		id, err := replayRecordID(ctx, target, body)
-		if err != nil {
-			return err
-		}
-		return probe(ctx, id)
-	}
-
-	table := target.table
-	if target.tableField != "" {
-		resolved, err := stringAt(body, target.tableField)
-		if err != nil {
-			return err
-		}
-		table = resolved
-	}
-	// A route that answers two shapes says which one this body is. The marker
-	// is a field only the alternate carries, so the choice is read off the
-	// recorded body rather than guessed from the route.
-	if target.altTable != "" && bodyHasField(body, target.altMarker) {
-		table = target.altTable
-	}
-	id, err := replayRecordID(ctx, target, body)
-	if err != nil {
-		return err
-	}
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		switch table {
-		case tableActivity:
-			return auth.EnsureActivityContentVisibleLive(ctx, tx, id)
-		case tableSignal:
-			// A signal has no owner column but is scoped through its subject
-			// entity; "no owner_id" is never on its own a reason to skip.
-			return auth.EnsureSignalVisibleLive(ctx, tx, id)
-		case tableScheduledSend:
-			// A scheduled message is the SENDER's own — an unsent body and its
-			// blind-copy list are not workspace-readable the way a sent
-			// activity is — so the probe is the same scheduled_by predicate the
-			// store reads with, not the generic row-scope clause. It also has
-			// no archived_at, which the generic probe requires.
-			return ensureScheduledSendVisibleLive(ctx, tx, id)
-		}
-		// LIVE, not merely visible. The recorded body is a frozen snapshot the
-		// store itself would no longer serve: Art. 17 erasure anonymizes the
-		// person row in place, stamps archived_at and leaves owner_id alone, so
-		// a plain visibility probe still answers "yours" and the middleware
-		// would hand back the pre-erasure names, e-mails and phone numbers that
-		// every live read path now refuses. EnsureVisibleLive also declines to
-		// skip the existence half for an unbounded actor, which is the same
-		// hole one role wider.
-		//
-		// auth rejects any name outside its closed row-scoped set, so an
-		// unexpected value refuses the replay rather than reaching SQL.
-		return auth.EnsureVisibleLive(ctx, tx, table, id)
-	})
-}
-
-// ensureScheduledSendVisibleLive refuses a replay whose scheduled message no
-// longer belongs to the caller. Existence-hiding, like every other row scope:
-// somebody else's message is not found rather than forbidden.
-func ensureScheduledSendVisibleLive(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	actor, err := storekit.Actor(ctx)
-	if err != nil {
-		return err
-	}
-	var visible bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM scheduled_send WHERE id = $1 AND scheduled_by = $2)`,
-		id, actor.UserID).Scan(&visible); err != nil {
-		return err
-	}
-	if !visible {
-		return apperrors.ErrNotFound
-	}
-	return nil
-}
-
-// bodyHasField reports whether the recorded body carries a non-null field —
-// the discriminator between two response shapes one route can answer.
-func bodyHasField(body, field string) bool {
-	if field == "" {
-		return false
-	}
-	var probe map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(body), &probe); err != nil {
-		return false
-	}
-	raw, ok := probe[field]
-	return ok && string(raw) != jsonNull
-}
-
-// replayRecordID resolves the record whose scope governs this body: from the
-// recorded body where it names its own record, or from the route parameter
-// naming its parent where the body is a projection that omits it.
-func replayRecordID(ctx context.Context, target replayTarget, body string) (ids.UUID, error) {
-	if target.pathParam == "" {
-		return recordIDAt(body, target.idPath)
-	}
-	raw := chi.RouteContext(ctx).URLParam(target.pathParam)
-	id, err := ids.Parse(raw)
-	if err != nil {
-		return ids.UUID{}, apperrors.ErrNotFound
-	}
-	return id, nil
-}
-
-// recordIDAt walks a dotted path to the record id in a recorded body.
-func recordIDAt(body, path string) (ids.UUID, error) {
-	raw, err := stringAt(body, path)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	id, err := ids.Parse(raw)
-	if err != nil {
-		return ids.UUID{}, apperrors.ErrNotFound
-	}
-	return id, nil
-}
-
-// stringAt walks a dotted path to a string in a recorded body. Every miss is
-// ErrNotFound rather than a distinct error: whichever way the body surprised
-// us, the middleware cannot prove the caller may still see what it is about to
-// hand back, and that is the client-visible fact.
-func stringAt(body, path string) (string, error) {
-	var node any
-	if err := json.Unmarshal([]byte(body), &node); err != nil {
-		return "", apperrors.ErrNotFound
-	}
-	for _, segment := range strings.Split(path, ".") {
-		object, ok := node.(map[string]any)
-		if !ok {
-			return "", apperrors.ErrNotFound
-		}
-		if node, ok = object[segment]; !ok {
-			return "", apperrors.ErrNotFound
-		}
-	}
-	text, ok := node.(string)
-	if !ok {
-		return "", apperrors.ErrNotFound
-	}
-	return text, nil
 }

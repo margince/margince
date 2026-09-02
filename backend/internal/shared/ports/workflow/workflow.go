@@ -130,12 +130,10 @@ const (
 )
 
 // The user-facing catalog's actions that have no lower-level kind: notify
-// is delivery to a human, add_to_list writes through the list engine, and
-// draft_email creates a draft and never sends — the send is a separate,
-// approval-gated act.
+// is delivery to a human, and draft_email creates a draft and never sends —
+// the send is a separate, approval-gated act.
 const (
 	ActionNotify     ActionKind = "notify"
-	ActionAddToList  ActionKind = "add_to_list"
 	ActionDraftEmail ActionKind = "draft_email"
 )
 
@@ -146,7 +144,7 @@ func AllActionKinds() []ActionKind {
 	return []ActionKind{
 		ActionCreateRecord, ActionUpdateRecord, ActionCreateTask, ActionAssignOwner,
 		ActionAdvanceDeal, ActionSendEmail, ActionEmitFlowEvent, ActionRecomputeScore,
-		ActionEnqueueJob, ActionNotify, ActionAddToList, ActionDraftEmail,
+		ActionEnqueueJob, ActionNotify, ActionDraftEmail,
 	}
 }
 

@@ -11,17 +11,14 @@ package person360
 // scroll through seven rule bodies to find out.
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -34,7 +31,7 @@ import (
 // for a signal the system does not produce is a contract question, tracked
 // separately; what must not happen meanwhile is the page telling a rep that
 // somebody's seat moved on the strength of a reply.
-func roleChangeMoment(_ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+func roleChangeMoment(_ context.Context, _ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	change, ok := findChange(page, relstrength.ChangeRepliedAfterGap)
 	if !ok {
 		return crmcontracts.PersonMoment{}, false
@@ -83,7 +80,7 @@ func withheld(page *crmcontracts.Person360, sections ...crmcontracts.Person360Se
 
 // missingNextStepMoment: there is an open deal and nothing scheduled with the
 // person who sits on it. The gap is the finding.
-func missingNextStepMoment(_ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	// "Nothing is scheduled" is only true if this reader could see the schedule.
 	if withheld(page, crmcontracts.Person360SectionsOmittedNextMeeting,
 		crmcontracts.Person360SectionsOmittedNextSteps,
@@ -129,7 +126,7 @@ func missingNextStepMoment(_ time.Time, page *crmcontracts.Person360) (crmcontra
 // and because saying it too eagerly on a record whose activity section was
 // simply withheld would be a lie. Both inputs must be READ and empty, not
 // absent.
-func thinRelationshipMoment(_ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+func thinRelationshipMoment(_ context.Context, _ time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
 	if page.Activities == nil || page.Network == nil {
 		// A section the caller may not read contributes no moment. Absent is
 		// not the same as empty, and only one of them is a fact about the
@@ -215,34 +212,6 @@ func bookMeeting() crmcontracts.PersonMomentAction {
 	}
 }
 
-// oldestOverdueCommitment finds the promise of OURS that has been late longest.
-//
-// Oldest rather than newest: the one that has been waiting longest is the one
-// with the most damage already done, and the one a reader would be most
-// embarrassed to discover from the other side.
-func oldestOverdueCommitment(now time.Time, page *crmcontracts.Person360) (crmcontracts.ConversationClaim, bool) {
-	if page.Claims == nil {
-		return crmcontracts.ConversationClaim{}, false
-	}
-	var oldest *crmcontracts.ConversationClaim
-	for i := range *page.Claims {
-		claim := &(*page.Claims)[i]
-		if claim.Kind != crmcontracts.CommitmentOurs || claim.Status != crmcontracts.ConversationClaimStatusOpen {
-			continue
-		}
-		if !deadline.Passed(claim.DueAt, now) {
-			continue
-		}
-		if oldest == nil || claim.DueAt.Before(*oldest.DueAt) {
-			oldest = claim
-		}
-	}
-	if oldest == nil {
-		return crmcontracts.ConversationClaim{}, false
-	}
-	return *oldest, true
-}
-
 // inboundEvidence names the actual message where the page is showing it, and
 // falls back to the bare fact when the timeline is capped past it.
 //
@@ -309,28 +278,20 @@ func findActivityAt(page *crmcontracts.Person360, at time.Time) (crmcontracts.Ac
 // fingerprintOf digests what a moment fired on, so a dismissal can be held
 // against the evidence rather than against the moment's name.
 //
-// It hashes the identity and timing of each piece — not the label, which is
-// prose this build may reword without the underlying fact having moved. A
-// reworded headline must not silently un-dismiss a moment the reader put away.
+// The digest itself is kernel/owedwork's, shared with the company page's card:
+// two spellings of one hash do not fail loudly when they drift, they silently
+// stop matching, and every dismissal a reader ever made stops working at once.
+// This maps the contract's evidence into the marks that hash reads.
 func fingerprintOf(evidence []crmcontracts.PersonMomentEvidence) string {
-	// Built as one string and hashed once. sha256's Write never returns an
-	// error, but writing through it would still spread unchecked returns
-	// across four calls to say something a single Sum says here.
-	var b strings.Builder
+	marks := make([]owedwork.Mark, 0, len(evidence))
 	for _, e := range evidence {
-		b.WriteString(string(e.Type))
-		b.WriteByte(0)
+		mark := owedwork.Mark{Kind: string(e.Type), At: e.ObservedAt}
 		if e.Id != nil {
-			b.WriteString(e.Id.String())
+			mark.ID = e.Id.String()
 		}
-		b.WriteByte(0)
-		if e.ObservedAt != nil {
-			b.WriteString(strconv.FormatInt(e.ObservedAt.UTC().UnixNano(), 10))
-		}
-		b.WriteByte(0)
+		marks = append(marks, mark)
 	}
-	sum := sha256.Sum256([]byte(b.String()))
-	return hex.EncodeToString(sum[:])
+	return owedwork.Fingerprint(marks)
 }
 
 // entityType lifts a destination's entity type, which the contract models as a

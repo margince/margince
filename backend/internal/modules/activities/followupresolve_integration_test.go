@@ -233,3 +233,232 @@ func TestALeadLeavingTheOpenPoolCompletesItsSystemTasks(t *testing.T) {
 		t.Error("the promoted lead's system follow-up is still open — a reminder chasing a closed loop")
 	}
 }
+
+// Two firings for one lead — an activity.captured racing a lead.promoted —
+// both select the same open task while it is still open. Only the one that
+// actually flips it may write a completion: the other adds an audit row and an
+// activity.updated event saying the task was finished, about a task that was
+// already finished, and the record's history then shows the same thing
+// happening twice.
+//
+// The interleaving is FORCED rather than hoped for. A sequential second call
+// proves nothing here — it re-runs the open-task query, finds nothing, and
+// writes nothing whatever the completion path does.
+func TestAFiringThatSelectedBeforeSomebodyElseFinishedWritesNothing(t *testing.T) {
+	e := setupResolve(t)
+	task := e.seedTask(t, "system", "system")
+
+	firing := e.startBlockedFiring(t, task)
+	// The winner: the task is completed and its version moves, under the lock
+	// the firing is waiting on.
+	firing.exec(`UPDATE activity SET is_done = true, done_at = now(), version = version + 1 WHERE id = $1`, task)
+	got := firing.release()
+
+	if got.err != nil {
+		t.Fatalf("the losing firing failed instead of standing down: %v", got.err)
+	}
+	if got.completed != 0 {
+		t.Errorf("the losing firing reports %d completions, want none — it completed nothing", got.completed)
+	}
+	if events := e.completionEvents(t, task); events != 0 {
+		t.Fatalf("the losing firing wrote %d activity.updated event(s) for a task it did not finish", events)
+	}
+}
+
+// An ordinary edit that lands between the selection and the completion moves
+// the version without finishing anything. The task still has to be completed:
+// the loop that opened it has closed, and no later firing is promised for this
+// lead — treating every version change as "somebody else did it" trades a noisy
+// history for a follow-up that stays open forever.
+func TestAnEditUnderTheFiringDoesNotLeaveTheTaskOpen(t *testing.T) {
+	e := setupResolve(t)
+	task := e.seedTask(t, "system", "system")
+
+	firing := e.startBlockedFiring(t, task)
+	// Not a completion: somebody retitled the task. The version moves and the
+	// task stays open.
+	firing.exec(`UPDATE activity SET subject = 'Follow up (renamed)', version = version + 1 WHERE id = $1`, task)
+	got := firing.release()
+
+	if got.err != nil {
+		t.Fatalf("the firing failed instead of completing the task it selected: %v", got.err)
+	}
+	if got.completed != 1 {
+		t.Errorf("the firing completed %d tasks, want the one it selected — an edit is not somebody else finishing it", got.completed)
+	}
+	if !e.isDone(t, task) {
+		t.Fatal("the task is still open after the firing that was supposed to close it — a rename cost the follow-up its completion")
+	}
+}
+
+// A task archived between the selection and the write is gone, not a failure.
+// The row lock is taken live, so the completion answers not-found — and
+// failing the firing on it would strand every OTHER task the same call
+// selected, which is what the sibling below is here to catch.
+func TestATaskArchivedUnderTheFiringIsNotAFailure(t *testing.T) {
+	e := setupResolve(t)
+	task := e.seedTask(t, "system", "system")
+	sibling := e.seedTask(t, "system", "system")
+
+	firing := e.startBlockedFiring(t, task)
+	firing.exec(`UPDATE activity SET archived_at = now() WHERE id = $1`, task)
+	got := firing.release()
+
+	if got.err != nil {
+		t.Fatalf("a task that went away failed the firing: %v", got.err)
+	}
+	if !e.isDone(t, sibling) {
+		t.Fatal("the firing stopped at the archived task and left its sibling open")
+	}
+	// And the archived task itself is left alone. Completing it would write an
+	// activity.updated event about a record that is no longer on any timeline,
+	// which is the opposite of the skip this branch exists for.
+	if e.isDone(t, task) {
+		t.Error("the firing completed a task that had been archived under it")
+	}
+	if events := e.completionEvents(t, task); events != 0 {
+		t.Errorf("the firing wrote %d activity.updated event(s) for an archived task", events)
+	}
+	if got.completed != 1 {
+		t.Errorf("the firing reports %d completions, want only the sibling", got.completed)
+	}
+}
+
+// blockedFiring is the shape all three race cases are: hold the task's row,
+// start a firing that gets past its SELECT and stops at its write, act under
+// the lock, then release and read what the firing did.
+//
+// One harness rather than three copies, because what makes these tests mean
+// anything is the ORDERING — and the ordering is the part that took two
+// corrections to get right (a waiter shows neither as an ungranted relation
+// lock nor as an `active` backend). A change to it has to land in one place.
+type blockedFiring struct {
+	t        *testing.T
+	blocking pgx.Tx
+	done     chan firingResult
+}
+
+func (e *resolveEnv) startBlockedFiring(t *testing.T, task ids.UUID) *blockedFiring {
+	t.Helper()
+	blocking, err := e.owner.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := blocking.Exec(context.Background(),
+		`SELECT id FROM activity WHERE id = $1 FOR UPDATE`, task); err != nil {
+		t.Fatal(err)
+	}
+
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	ctx := e.systemCtx()
+	done := make(chan firingResult, 1)
+	go func() {
+		completed, err := store.CompleteOpenSystemTasksForLead(ctx, ids.From[ids.LeadKind](e.lead))
+		done <- firingResult{completed, err}
+	}()
+
+	b := &blockedFiring{t: t, blocking: blocking, done: done}
+	// However the test ends, the lock is released and the firing is waited
+	// for: a goroutine still holding a pooled connection outlives the test,
+	// and the next one resets the database under it.
+	t.Cleanup(func() {
+		//craft:ignore swallowed-errors the lock is normally released by release() and this rollback is then a designed no-op; on the failure paths it is the release itself, and a failing release could tell this test nothing its own assertions have not
+		_ = blocking.Rollback(context.Background())
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Error("the firing never returned after the lock was released")
+		}
+	})
+
+	e.waitForBlockedWriter(t, done)
+	return b
+}
+
+// exec runs one statement UNDER the held lock — what the winner of the race
+// did before this firing could reach its write.
+func (b *blockedFiring) exec(sql string, args ...any) {
+	b.t.Helper()
+	if _, err := b.blocking.Exec(context.Background(), sql, args...); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
+// release commits the blocking transaction and answers what the firing then
+// did. The result is put back for the cleanup above, so both can read it.
+func (b *blockedFiring) release() firingResult {
+	b.t.Helper()
+	if err := b.blocking.Commit(context.Background()); err != nil {
+		b.t.Fatal(err)
+	}
+	var got firingResult
+	select {
+	case got = <-b.done:
+	case <-time.After(10 * time.Second):
+		b.t.Fatal("the firing never returned after the lock was released")
+	}
+	b.done <- got
+	return got
+}
+
+// firingResult is one CompleteOpenSystemTasksForLead call's answer, carried
+// back from the goroutine that raced.
+type firingResult struct {
+	completed int
+	err       error
+}
+
+// waitForBlockedWriter waits until the firing under test is stopped on the row
+// lock. Polled rather than slept on: the point of the test is the ordering,
+// and a fixed pause would either be flaky or slow.
+func (e *resolveEnv) waitForBlockedWriter(t *testing.T, firing <-chan firingResult) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		// A firing that RETURNED never reached the write, so the ordering this
+		// test needs did not happen and nothing it goes on to assert would
+		// mean anything. Said here rather than as a timeout, because "it
+		// finished early" and "it never started" are different faults.
+		select {
+		case got := <-firing:
+			t.Fatalf("the firing returned before it blocked (completed=%d err=%v): the race was never set up",
+				got.completed, got.err)
+		default:
+		}
+		var blocked int
+		// Blocked BY US specifically, through pg_blocking_pids: any other
+		// waiter in this database would otherwise release the wait early and
+		// the test would go on to assert about a race it never set up.
+		//
+		// A waiter on a ROW lock does not appear as an ungranted lock on the
+		// relation — it waits on the holder's transaction id — and its
+		// `state` reads "idle in transaction" rather than "active", so
+		// neither of those is what identifies it.
+		if err := e.owner.QueryRow(context.Background(),
+			`SELECT count(*) FROM pg_stat_activity
+			  WHERE datname = current_database()
+			    AND pg_backend_pid() = ANY(pg_blocking_pids(pid))`).Scan(&blocked); err != nil {
+			t.Fatal(err)
+		}
+		if blocked > 0 {
+			return
+		}
+		//craft:ignore test-sleep the wait IS on the condition — a backend stopped on the lock — and this is only the interval between checks; the deadline above fails the test loudly rather than letting it pass on a race that never happened
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("no writer ever blocked on the row: the race this test reproduces did not happen, so it proves nothing")
+}
+
+// completionEvents counts the activity.updated events this task produced — the
+// noise a redundant write leaves behind.
+func (e *resolveEnv) completionEvents(t *testing.T, id ids.UUID) int {
+	t.Helper()
+	var count int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM event_outbox
+		  WHERE envelope->>'type' = 'activity.updated'
+		    AND envelope->'entity'->>'id' = $1::text`, id.String()).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	return count
+}

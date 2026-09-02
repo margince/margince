@@ -12,9 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -355,28 +353,4 @@ func (e *BadInputError) Error() string { return "collections: " + e.Field + ": "
 // FieldFault names the list or tag argument that was rejected.
 func (e *BadInputError) FieldFault() (field, code, message string) {
 	return e.Field, "invalid", e.Reason
-}
-
-func wireList(l listRow) crmcontracts.List {
-	out := crmcontracts.List{
-		Id:         openapi_types.UUID(l.ID.UUID),
-		Name:       l.Name,
-		EntityType: crmcontracts.ListEntityType(l.EntityType),
-		ListType:   crmcontracts.ListListType(l.ListType),
-		CreatedAt:  &l.CreatedAt,
-		UpdatedAt:  &l.UpdatedAt,
-		ArchivedAt: l.ArchivedAt,
-	}
-	if len(l.Definition) > 0 {
-		out.Definition = &l.Definition
-	}
-	if l.OwnerID != nil {
-		owner := openapi_types.UUID(l.OwnerID.UUID)
-		out.OwnerId = &owner
-	}
-	if l.TeamID != nil {
-		team := openapi_types.UUID(l.TeamID.UUID)
-		out.TeamId = &team
-	}
-	return out
 }

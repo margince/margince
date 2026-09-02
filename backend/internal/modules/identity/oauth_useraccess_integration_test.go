@@ -73,6 +73,11 @@ func TestRotationRefusesForAHumanWhoIsNoLongerActive(t *testing.T) {
 		"deactivated": `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
 		"suspended":   `UPDATE app_user SET status = 'suspended' WHERE id = $1`,
 		"archived":    `UPDATE app_user SET archived_at = now() WHERE id = $1`,
+		// Invited is the status a member can be returned to, so a grant issued
+		// while they were active must not survive the trip back: they sign in
+		// nowhere until they redeem, and a live refresh chain would be authority
+		// outliving the account that justified it.
+		"invited": `UPDATE app_user SET status = 'invited' WHERE id = $1`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := setupRevocationEnv(t, "rotation-human-"+name)

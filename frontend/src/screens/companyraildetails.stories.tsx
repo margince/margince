@@ -19,6 +19,7 @@ export default meta;
 
 type Story = StoryObj;
 type Organization = components["schemas"]["Organization"];
+type ProfileField = components["schemas"]["CompanyProfileField"];
 
 const page = { has_more: false, next_cursor: null };
 
@@ -52,7 +53,34 @@ const org: Organization = {
   updated_at: "2026-06-01T08:00:00Z",
 } as unknown as Organization;
 
-function Details({ organization }: Readonly<{ organization: Organization }>) {
+// The two sidecar claims the grid reads, as a crawl that found an imprint
+// leaves them. Stories that want the unstated case pass an empty list.
+const sidecarFields: ProfileField[] = [
+  {
+    id: "pf-vat",
+    field: "register_vat",
+    value: "DE811907980",
+    source: "site_read",
+    captured_by: "agent:deepread",
+    updated_at: "2026-06-01T08:00:00Z",
+  },
+  {
+    id: "pf-addr",
+    field: "registered_address",
+    value: "Kaiserdamm 1, 14057 Berlin",
+    source: "site_read",
+    captured_by: "agent:deepread",
+    updated_at: "2026-06-01T08:00:00Z",
+  },
+];
+
+function Details({
+  organization,
+  profileFields = sidecarFields,
+}: Readonly<{
+  organization: Organization;
+  profileFields?: readonly ProfileField[];
+}>) {
   installFetchStub({
     "GET /me": () =>
       jsonResponse({
@@ -64,6 +92,8 @@ function Details({ organization }: Readonly<{ organization: Organization }>) {
         data: [{ id: "u-1", display_name: "Mira Voss" }],
         page,
       }),
+    "GET /organizations/o-1/profile-fields": () =>
+      jsonResponse({ data: profileFields }),
   });
   return (
     <StoryProviders>
@@ -133,9 +163,19 @@ export const Archived: Story = {
 // `data-empty` attribute of its own, just `render(value)` falling through to
 // `field.unset` as the button's own label, chevron included, because the
 // button is drawn whenever `canEdit` is true regardless of what `value` is.
+// The legal identity nobody has stated: no imprint was found, so the VAT and
+// registry-address rows draw their own invitations. This is the state the two
+// rows exist for — before them a rep who knew the number had nowhere to put it,
+// and the VAT consultation a written number queues was unreachable for exactly
+// the companies a person would want to check.
+export const LegalIdentityUnstated: Story = {
+  render: () => <Details organization={org} profileFields={[]} />,
+};
+
 export const EmptyFields: Story = {
   render: () => (
     <Details
+      profileFields={[]}
       organization={{
         ...org,
         legal_name: null,

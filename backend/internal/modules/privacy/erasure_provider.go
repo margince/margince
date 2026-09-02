@@ -43,6 +43,16 @@ func purgeProviderPurchases(ctx context.Context, tx pgx.Tx, subjects []ids.UUID)
 		`DELETE FROM person_provider_claim WHERE person_id = ANY($1)`, subjects); err != nil {
 		return fmt.Errorf("deleting the subject's purchased claims: %w", err)
 	}
+	// What a purchase FILLED on the record, alongside what it said. These rows
+	// carry the subject's own title and profile URL verbatim — the revert needs
+	// the value to tell a bought one from a colleague's later edit — so they are
+	// subject data and go with the claims. The person row is anonymized in
+	// place rather than deleted, so the foreign key's cascade never fires and
+	// this statement is what removes them.
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM provider_applied_field WHERE person_id = ANY($1)`, subjects); err != nil {
+		return fmt.Errorf("deleting what the subject's purchases filled: %w", err)
+	}
 	// The SET clause is storekit's, shared with the per-provider delete-data
 	// action so the six identifying columns cannot drift apart again — they
 	// did once, and the erasure cleaned two of the six the settings toggle

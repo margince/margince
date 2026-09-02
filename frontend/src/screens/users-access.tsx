@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useHoldsAdminRole } from "../app/capability";
 import {
   Button,
   Checkbox,
@@ -20,7 +21,7 @@ import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 import "./users-access.css";
 
@@ -145,6 +146,12 @@ export function TeamsCard() {
   const t = useT();
   const toast = useToast();
   const qc = useQueryClient();
+  const me = useMe();
+  // Team membership is admin surface, the same authority `UsersAdminCard`
+  // gates on: an ops seat reads the roster below but does not change who is
+  // on a team. `me.isSuccess` below keeps the read-only line from flashing
+  // at an admin while /me is still in flight.
+  const canAdminister = useHoldsAdminRole();
   // The shared roster read, not a second query of this card's own. Both spell
   // the same list under the same cache key, so whichever mounted first decided
   // what the other one read back — and only one of the two follows the
@@ -206,9 +213,15 @@ export function TeamsCard() {
     // create verb goes. It used to be the LAST ROW of the team list, labelled
     // "New team" beside a button reading "Create team" — a row that was not a
     // team, inside a list of teams, saying its own name twice.
-    <Panel title={t("users.teamsTitle")} titleAction={<NewTeamAction />}>
+    <Panel
+      title={t("users.teamsTitle")}
+      titleAction={canAdminister ? <NewTeamAction /> : undefined}
+    >
       <PanelBody>
-        <p className="settings-panel-sub">{t("users.teamsSub")}</p>
+        <p className="settings-panel-sub">
+          {t("users.teamsSub")}
+          {me.isSuccess && !canAdminister && ` ${t("users.teamsAdminOnly")}`}
+        </p>
         {/* A refused archive belongs to the card, not to the row: the roster
             below is refetched on success, so the only thing left to say is that
             the write did not land. Callout's `danger` tone is what the rest of
@@ -244,6 +257,7 @@ export function TeamsCard() {
                     team={team}
                     archiving={archive.isPending}
                     onArchive={() => archive.mutate(team.id)}
+                    canAdminister={canAdminister}
                   />
                 ))}
               </SettingList>
@@ -270,10 +284,12 @@ function TeamRow({
   team,
   archiving,
   onArchive,
+  canAdminister,
 }: Readonly<{
   team: Team;
   archiving: boolean;
   onArchive: () => void;
+  canAdminister: boolean;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -296,19 +312,21 @@ function TeamRow({
         </span>
       }
       action={
-        <Button
-          small
-          variant="ghost"
-          iconOnly
-          aria-label={t("users.archiveTeam", { name: team.name })}
-          disabled={archiving}
-          onClick={onArchive}
-        >
-          <Trash2 aria-hidden />
-        </Button>
+        canAdminister ? (
+          <Button
+            small
+            variant="ghost"
+            iconOnly
+            aria-label={t("users.archiveTeam", { name: team.name })}
+            disabled={archiving}
+            onClick={onArchive}
+          >
+            <Trash2 aria-hidden />
+          </Button>
+        ) : undefined
       }
     >
-      <TeamMembers team={team} />
+      <TeamMembers team={team} canAdminister={canAdminister} />
     </Disclosure>
   );
 }
@@ -320,11 +338,31 @@ function TeamRow({
 // a filter over a list this screen has already loaded. A second endpoint would
 // be a second answer to "who is in this team", and the two would disagree the
 // first time one of them was cached.
-function TeamMembers({ team }: Readonly<{ team: Team }>) {
+//
+// `canAdminister` withholds the whole membership list rather than merely
+// disabling its checkboxes: an ops seat that may read this roster still gets
+// no `team_ids` on any entry in it (see the query gate below), so a list
+// built from that read would show nobody as a member of anything — a false
+// statement about the team, not an honest withholding. Both the write
+// affordance and the read it would need are the admin's, stated once at the
+// card level (`TeamsCard`'s sub line) rather than as a control that looks
+// pressable and 403s.
+function TeamMembers({
+  team,
+  canAdminister,
+}: Readonly<{ team: Team; canAdminister: boolean }>) {
   const t = useT();
   const qc = useQueryClient();
-  const users = useRoster("user", true);
-  const usersPartial = useRosterPartial("user", true);
+  // Membership is admin-only DATA, not only an admin-only write: the roster
+  // handler sends `team_ids` at all only when the caller is an admin
+  // (`WithRoles: isAdmin`, backend/internal/modules/identity/handlers_roster.go)
+  // — every entry a non-admin reads back carries none. A read-only list built
+  // from that response would show nobody as a member of anything, which is a
+  // false statement about the team rather than an honest withholding, so the
+  // read is skipped rather than attempted (design-system/README.md's
+  // "Absent, disabled, or withheld", permission-denial row).
+  const users = useRoster("user", canAdminister);
+  const usersPartial = useRosterPartial("user", canAdminister);
   // Both writes are the same endpoint under two methods, so they are one
   // mutation with the membership as a variable — never a closure over the row
   // being drawn, which react-query re-arms a render late.
@@ -349,6 +387,11 @@ function TeamMembers({ team }: Readonly<{ team: Team }>) {
       qc.invalidateQueries({ queryKey: ["teams"] });
     },
   });
+
+  if (!canAdminister) {
+    return <p className="t-small">{t("users.teamMembersAdminOnly")}</p>;
+  }
+
   return (
     <QueryGate query={users}>
       {(list) => {
@@ -378,24 +421,21 @@ function TeamMembers({ team }: Readonly<{ team: Team }>) {
                 <legend className="t-caption">
                   {t("users.teamMembersLabel")}
                 </legend>
-                {people.map((person) => {
-                  const member = (person.team_ids ?? []).includes(team.id);
-                  return (
-                    <Checkbox
-                      key={person.id}
-                      className="t-body"
-                      label={person.display_name}
-                      checked={member}
-                      disabled={setMember.isPending}
-                      onChange={(event) =>
-                        setMember.mutate({
-                          userId: person.id,
-                          member: event.target.checked,
-                        })
-                      }
-                    />
-                  );
-                })}
+                {people.map((person) => (
+                  <Checkbox
+                    key={person.id}
+                    className="t-body"
+                    label={person.display_name}
+                    checked={(person.team_ids ?? []).includes(team.id)}
+                    disabled={setMember.isPending}
+                    onChange={(event) =>
+                      setMember.mutate({
+                        userId: person.id,
+                        member: event.target.checked,
+                      })
+                    }
+                  />
+                ))}
               </fieldset>
             )}
             {/* The editor claims to list who may be added, so a walk that

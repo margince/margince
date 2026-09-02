@@ -87,14 +87,34 @@ func TestASaveRecordsItsWithdrawalsEvenWhenAGrantIsRefused(t *testing.T) {
 		{"purpose_key":"doi_newsletter","state":"granted"},
 		{"purpose_key":"newsletter","state":"withdrawn"}]}`)
 
-	if rec.Code == http.StatusOK {
-		t.Errorf("status = %d — a grant for an archived subject must still be refused", rec.Code)
+	// 200 with the refusal NAMED, not a 4xx: the withdrawal beside it did
+	// land, and answering "failed" for a save that recorded the suppression
+	// would tell somebody who asked to be left alone that they had not been.
+	if rec.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200 with the refusal reported", rec.Code)
 	}
 	if got := consentStateOf(t, e, e.newsletter); got != string(StateWithdrawn) {
 		t.Errorf("newsletter = %q, want withdrawn — the refused grant swallowed the withdrawal beside it", got)
 	}
 	if got := consentStateOf(t, e, e.doiNews); got == string(StateGranted) {
 		t.Error("the grant landed for an archived subject")
+	}
+	// And the save SAYS which choice it could not take, rather than leaving
+	// the page to diff two lists to find out.
+	var body struct {
+		Refused []struct {
+			PurposeKey string `json:"purpose_key"`
+			Reason     string `json:"reason"`
+		} `json:"refused"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode save response: %v", err)
+	}
+	if len(body.Refused) != 1 || body.Refused[0].PurposeKey != "doi_newsletter" {
+		t.Errorf("refused = %+v, want the doi_newsletter grant named", body.Refused)
+	}
+	if len(body.Refused) == 1 && body.Refused[0].Reason != ReasonCannotGrant {
+		t.Errorf("reason = %q, want %q", body.Refused[0].Reason, ReasonCannotGrant)
 	}
 }
 

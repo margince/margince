@@ -57,20 +57,34 @@ MIGRATIONS_DIR="backend/migrations"
 # "<version> <name>" per migration, keyed on `.up.sql` so the down file does not
 # double every row.
 
-# migrations_in_tree NAMESPACE — what the working tree declares.
+# migrations_in_tree NAMESPACE — what the working tree declares. A namespace
+# named only by $BASE_REF (this branch emptied or removed it, taking the
+# now-empty directory with it) has no path here to `find`, and under
+# set -eo pipefail its nonzero exit would abort the whole gate with no FAIL
+# printed — the "|| true" reads that as zero migrations, which is what it is.
 migrations_in_tree() {
   local ns="$1"
-  find "$MIGRATIONS_DIR/$ns" -maxdepth 1 -name '*.up.sql' -exec basename {} .up.sql \; 2>/dev/null |
+  { find "$MIGRATIONS_DIR/$ns" -maxdepth 1 -name '*.up.sql' -exec basename {} .up.sql \; 2>/dev/null || true; } |
     sed 's/^\([^_]*\)_\(.*\)$/\1 \2/' | sort
 }
 
-# migrations_at_base NAMESPACE — the same, read out of the base ref rather than
-# the worktree. `git ls-tree` and not `git diff`: what matters is every version
-# the base ALREADY carries, including the ones this branch never touched.
-migrations_at_base() {
-  local ns="$1"
-  git ls-tree --name-only "$BASE_REF" "$MIGRATIONS_DIR/$ns/" 2>/dev/null |
-    grep '\.up\.sql$' | xargs -n1 basename 2>/dev/null | sed 's/\.up\.sql$//' |
+# migrations_at REF NAMESPACE — the same, read out of a ref rather than the
+# worktree. `git ls-tree` and not `git diff`: what matters is every version
+# the ref ALREADY carries, including the ones this branch never touched. A
+# namespace this branch introduces has none, so `grep` here legitimately
+# matches nothing — its exit 1 is not an error, and under set -eo pipefail an
+# unguarded grep would otherwise abort the whole gate with no FAIL printed the
+# first time a PR adds a namespace, which the header above says is supported.
+# `sed 's#.*/##'`, not `xargs basename`: GNU xargs runs its command once with
+# ZERO arguments on empty input unless told not to, and `basename` with no
+# operand exits 1, which xargs then reports as its own exit 123 — invisible on
+# a Mac, where the default is the other way, and set -e turns that 123 into
+# the same silent whole-gate abort as the two hazards above. sed on empty
+# input just produces no output.
+migrations_at() {
+  local ref="$1" ns="$2"
+  git ls-tree --name-only "$ref" "$MIGRATIONS_DIR/$ns/" 2>/dev/null |
+    { grep '\.up\.sql$' || true; } | sed 's#.*/##; s/\.up\.sql$//' |
     sed 's/^\([^_]*\)_\(.*\)$/\1 \2/' | sort
 }
 
@@ -84,6 +98,22 @@ if ! git rev-parse --verify -q "$BASE_REF" >/dev/null; then
   fi
   echo "skip check-migration-versions: base ref '$BASE_REF' not found (nothing to compare against)"
   exit 0
+fi
+
+# The FORK point scopes exactly one check below. Versions this branch ADDS are
+# judged against $BASE_REF's tip, because that is what a deployed database has
+# applied and what a colliding sibling PR has already merged into. But a version
+# on the tip that this branch's history NEVER contained is not one this branch
+# renamed or removed — it landed after the fork, the merge keeps it, and
+# reporting it as vanished forced every open branch through a rebase and a full
+# gate re-run each time any migration merged, however unrelated. So the
+# vanished-version check asks about versions present at BOTH the tip and the
+# fork point. With no merge base to be had (detached fixtures, odd checkouts)
+# the fork falls back to the tip, which is the stricter reading this gate
+# always applied.
+FORK_REF="$(git merge-base HEAD "$BASE_REF" 2>/dev/null || true)"
+if [ -z "$FORK_REF" ]; then
+  FORK_REF="$BASE_REF"
 fi
 
 failed=0
@@ -179,15 +209,33 @@ fail() {
   failed=1
 }
 
-for dir in "$MIGRATIONS_DIR"/*/; do
-  [ -d "$dir" ] || continue
-  ns="$(basename "$dir")"
-  # A namespace is a directory holding migrations, not merely a directory:
-  # `testdata/` sits beside core/ and custom/ and is neither.
-  compgen -G "$dir*.up.sql" >/dev/null || continue
-  checked=$((checked + 1))
+# Namespaces come from the union of the tree and $BASE_REF, not the tree
+# alone. A tree-only walk finds a namespace by its CURRENT `.up.sql` files, so
+# a branch that empties or deletes one entirely drops it from that walk before
+# the vanished-version check below ever runs against it — the same silent
+# divergence this gate exists to report, just for every version in the
+# namespace at once instead of one.
+# || true: a branch that empties every namespace can take $MIGRATIONS_DIR
+# itself with it (git prunes a directory once nothing under it survives), and
+# `find` on a path that is not there exits nonzero — which set -e would
+# otherwise turn into a silent abort instead of the FAIL this case exists to
+# print. No namespace in the tree is exactly what should be read here.
+tree_namespaces="$(find "$MIGRATIONS_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null || true)"
+# sed, not xargs basename: same empty-input hazard as migrations_at_base above.
+base_namespaces="$(git ls-tree --name-only -d "$BASE_REF" "$MIGRATIONS_DIR/" 2>/dev/null | sed 's#.*/##')"
+all_namespaces="$(printf '%s\n%s\n' "$tree_namespaces" "$base_namespaces" | sort -u)"
 
+for ns in $all_namespaces; do
   tree_rows="$(migrations_in_tree "$ns")"
+  base_rows="$(migrations_at "$BASE_REF" "$ns")"
+  fork_rows="$(migrations_at "$FORK_REF" "$ns")"
+
+  # A namespace is a directory holding migrations, not merely a directory:
+  # `testdata/` sits beside core/ and custom/ and is neither, on either side.
+  if [ -z "$tree_rows" ] && [ -z "$base_rows" ]; then
+    continue
+  fi
+  checked=$((checked + 1))
 
   # A duplicate inside one tree fails the loader at runtime; naming it here
   # gives the same answer without booting Postgres, and keeps this gate honest
@@ -202,7 +250,6 @@ for dir in "$MIGRATIONS_DIR"/*/; do
     continue
   fi
 
-  base_rows="$(migrations_at_base "$ns")"
   if [ -z "$base_rows" ]; then
     continue # a namespace this branch introduces has nothing to sort after
   fi
@@ -213,6 +260,38 @@ for dir in "$MIGRATIONS_DIR"/*/; do
   ns_reset=0
   if reset_admitted "$ns" "$tree_rows" "$base_rows"; then
     ns_reset=1
+  fi
+
+  # A version the base already carries that this branch's tree no longer
+  # does. The row loop below only ever asks what THIS branch adds — it
+  # cannot notice one going missing, because a version dropped from the tree
+  # never appears in tree_rows for the loop to walk. A deployed database's
+  # ledger does not forget an applied version because the file that produced
+  # it was renamed or deleted; a fresh install run against the renamed tree
+  # then never applies it under its old name, and the two installations
+  # diverge exactly as silently as the collision above — the difference is
+  # which install is missing the row, not whether one is. Renaming a shipped
+  # migration is this to the ledger whether or not its SQL also changed.
+  #
+  # SET membership, not a line-for-line merge. $base_rows can carry one
+  # version TWICE — that is the outage this gate exists to report, and the row
+  # loop below deliberately admits the repair that keeps one claimant and
+  # renumbers the other. `comm` without dedup consumes that repair's survivor
+  # against the base's first occurrence and then has nothing left to match its
+  # second, so it reports the very migration the repair kept as vanished.
+  # Sorting each side down to its distinct versions asks "does this version
+  # still exist", which is the question, instead of "how many times".
+  #
+  # Intersected with the FORK point's versions first: a version on the tip
+  # that this branch's history never contained landed after the fork, so its
+  # absence from the tree is staleness, not a rename — see FORK_REF above.
+  vanished="$(comm -23 <(echo "$base_rows" | cut -d' ' -f1 | sort -u) <(echo "$tree_rows" | cut -d' ' -f1 | sort -u) |
+    comm -12 - <(echo "$fork_rows" | cut -d' ' -f1 | sort -u))"
+  if [ -n "$vanished" ]; then
+    for v in $vanished; do
+      vname="$(echo "$base_rows" | awk -v v="$v" '$1==v {print $2}' | head -n1)"
+      fail "$ns/$v ('$vname') is on $BASE_REF but this branch no longer has it — a migration a deployed database may already have applied cannot be renamed or removed; add a new one instead of renumbering it. MIGRATION_VERSIONS_BASELINE_RESET=1 will not admit this on its own: the namespace must also end with FEWER migrations than $BASE_REF has, which a rename alone never does — see reset_admitted"
+    done
   fi
 
   while read -r version name; do

@@ -92,7 +92,7 @@ func (stageChangeCreateTask) Match(_ context.Context, ev workflow.Event) (bool, 
 // task effects handlers plan — named once so the string doesn't drift.
 const fieldKind = "kind"
 
-func (w stageChangeCreateTask) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
+func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
 	dueInDays, err := DueInDays(ev.Params, 2)
 	if err != nil {
 		return workflow.Effect{}, err
@@ -100,8 +100,9 @@ func (w stageChangeCreateTask) Plan(_ context.Context, ev workflow.Event) (workf
 	// The fired entity IS the deal (this handler triggers only on
 	// deal.stage_changed), so taskCreateEffect's string(ev.Entity.Type)
 	// resolves to "deal" — the same value this map hardcoded before the
-	// shared builder existed.
-	return taskCreateEffect(ev, "Plan the next step after the stage change",
+	// shared builder existed. The deal's owner is who the next step belongs
+	// to; without them the task reaches nobody's own queue.
+	return ownedTaskEffect(ctx, w.ex, ev, "Plan the next step after the stage change",
 		ev.OccurredAt.AddDate(0, 0, dueInDays))
 }
 
@@ -150,12 +151,23 @@ func (routeLeadCreateTask) Match(_ context.Context, _ workflow.Event) (bool, err
 	return true, nil
 }
 
-func (w routeLeadCreateTask) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
+// Plan mints the follow-up ASSIGNED to whoever answers for the lead.
+//
+// The owner is read off the lead through the same provider stage_change_notify
+// reads its deal through, rather than imported from the people module: this
+// module reaches no sibling, and the record is already in front of it.
+//
+// A lead nobody owns yet mints an unassigned task, which is the honest answer —
+// it lands in the unassigned queue for somebody to pick up. Owner routing is a
+// separate workflow on the same event with no ordering guarantee between them,
+// so the two orders differ in WHERE the task first appears and never in whether
+// it appears at all.
+func (w routeLeadCreateTask) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
 	dueInDays, err := DueInDays(ev.Params, defaultRouteLeadDueInDays)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	return taskCreateEffect(ev, "Follow up with the new lead",
+	return ownedTaskEffect(ctx, w.ex, ev, "Follow up with the new lead",
 		ev.OccurredAt.AddDate(0, 0, dueInDays))
 }
 

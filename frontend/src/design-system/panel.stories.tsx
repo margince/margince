@@ -269,10 +269,26 @@ export const InteractiveRows: Story = {
             Q4 — renewals
           </button>
         </PanelRow>
-        <PanelRow>Attainment to date — 68%</PanelRow>
+        <PanelRow>Renewal date — in 68 days</PanelRow>
         <PanelRow>Set by Lars Ohlsen on 4 March</PanelRow>
         <PanelRow>Weighted against the open pipeline</PanelRow>
       </>
+    ),
+  },
+};
+
+// A panel inside a dialog. The dialog's own title is the h2 these sit under, so
+// the panel takes an h3 and the outline reads as one nesting rather than two
+// unrelated top-level headings.
+export const TitleInsideADialog: Story = {
+  args: {
+    title: "Goal for this meeting",
+    titleLevel: 3,
+    tone: "accent",
+    children: (
+      <PanelBody>
+        Agree the pilot scope so the retrofit quote can be issued this month.
+      </PanelBody>
     ),
   },
 };

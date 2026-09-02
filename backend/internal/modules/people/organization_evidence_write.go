@@ -36,14 +36,23 @@ type evidenceWrite[T any] struct {
 	value     *string
 	ifVersion *int64
 	// readBefore locates the row and returns the machine's claim in full, which
-	// becomes the audit before-image.
-	readBefore func(context.Context, pgx.Tx) (evidenceRow, error)
+	// becomes the audit before-image. The bool says the row did not exist and
+	// this write minted it: there is then no prior state, and the audit records
+	// a creation rather than an update against an image nobody ever wrote.
+	readBefore func(context.Context, pgx.Tx) (evidenceRow, bool, error)
 	// canonical moves the corrected value out of the sidecar and onto the
 	// record it describes. Nil for a claim that lives only in the sidecar and
 	// so has nothing to keep in step.
 	canonical func(context.Context, pgx.Tx) error
-	// readAfter re-reads the written row as its wire shape.
+	// readAfter re-reads the written row as its wire shape. Nil for a removal,
+	// which has no row left to read.
 	readAfter func(context.Context, pgx.Tx) (T, error)
+	// remove deletes the row instead of patching it, for the one verb that says
+	// "this is not a fact about this company at all" — which a correction
+	// cannot say, since it can only change what the claim states. The audit
+	// before-image is the whole removed claim, so what was taken away stays
+	// answerable.
+	remove bool
 }
 
 // writeEvidence is the one way a human correction or confirmation reaches an
@@ -86,7 +95,7 @@ func writeEvidence[T any](
 		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
 			return fmt.Errorf("read transaction time: %w", err)
 		}
-		before, err := w.readBefore(ctx, tx)
+		before, created, err := w.readBefore(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -109,9 +118,16 @@ func writeEvidence[T any](
 		}
 		p.Set(auditKeyCapturedBy, before.CapturedBy, capturedBy)
 
+		// The patch runs even for a removal, and it is what enforces the
+		// caller's version precondition and takes the row lock — so a stale
+		// If-Match refuses the delete exactly as it refuses a correction,
+		// rather than the delete needing its own copy of that rule.
 		if err := p.ApplyGuardedIn(ctx, tx, w.table, before.ID,
 			w.ifVersion, w.archived); err != nil {
 			return err
+		}
+		if w.remove {
+			return removeEvidenceRow(ctx, tx, orgID, w, before)
 		}
 		if w.canonical != nil {
 			if err := w.canonical(ctx, tx); err != nil {
@@ -119,8 +135,23 @@ func writeEvidence[T any](
 			}
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "update", w.table,
-			before.ID, before.auditImage(), p.After())
+		// A row this write minted has no before-image, and calling it an update
+		// against the empty row we just inserted would put a state nobody ever
+		// wrote into the audit trail — the one record that answers "what did it
+		// say before I changed it". AuditEvent is the door for a write with no
+		// prior state; Audit refuses an update carrying no before-image.
+		//
+		// Spelled inline rather than behind a helper: the audit and the emit
+		// below are one obligation, and a helper holding only the audit half
+		// puts them in separate functions where nothing local shows they travel
+		// together — which is exactly what the write-shape gate reads.
+		var auditID ids.UUID
+		if created {
+			auditID, err = storekit.AuditEvent(ctx, tx, "create", w.table, before.ID, p.After())
+		} else {
+			auditID, err = storekit.Audit(ctx, tx, "update", w.table,
+				before.ID, before.auditImage(), p.After())
+		}
 		if err != nil {
 			return fmt.Errorf("audit %s write: %w", w.table, err)
 		}
@@ -135,4 +166,35 @@ func writeEvidence[T any](
 		return err
 	})
 	return out, err
+}
+
+// removeEvidenceRow deletes one sidecar row, after the guarded patch above has
+// already taken the row lock and enforced any version precondition. What is
+// left to it is the delete itself and the two records it owes: one audit row
+// holding the whole removed claim as its before-image, and one event.
+//
+// `delete` is the honest audit action here because the row really is gone —
+// the bytes are not kept under a flag — which is what the action's own
+// migration reserves it for.
+func removeEvidenceRow[T any](
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
+	w evidenceWrite[T], before evidenceRow,
+) error {
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM `+pgx.Identifier{w.table}.Sanitize()+` WHERE id = $1`,
+		before.ID); err != nil {
+		return fmt.Errorf("delete %s row: %w", w.table, err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, "delete", w.table,
+		before.ID, before.auditImage(), nil)
+	if err != nil {
+		return fmt.Errorf("audit %s removal: %w", w.table, err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, orgID.UUID,
+		crmcontracts.PublicEventOrganizationUpdated{
+			ChangedFields: map[string]any{w.changedKey: nil},
+		}); err != nil {
+		return fmt.Errorf("emit organization.updated: %w", err)
+	}
+	return nil
 }

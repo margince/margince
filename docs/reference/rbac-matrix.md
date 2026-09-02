@@ -34,16 +34,19 @@ CRU- is create, read and update but never delete, and ---- is no access at all.
 **Row scope is a second, independent question,** and it belongs to the role
 rather than to a cell, so it is listed once per role below. The letters say what
 a role may do to a *kind* of record; row scope says *which* records of that kind
-it may touch in the first place:
+it may WRITE:
 
 - **own** — only records the user owns.
-- **team** — records the user owns, records owned by a teammate, and records
-  that have no owner.
+- **team** — records the user owns and records owned by a teammate, resolved
+  through live team membership.
 - **all** — every record in the workspace.
 
-Both questions have to pass. A rep holding CRU- on deals still only reaches
-their own team's deals; a read-only auditor holding R--- reaches every deal in
-the workspace but changes none of them.
+Both questions have to pass, and they do not bind equally. Row scope narrows
+WRITES; a customer record — person, organization, lead, deal, project — is read
+by every seat that holds its read grant, whatever their scope. So a rep holding
+CRU- on deals reads the whole workspace's deals and may update only the ones
+their scope reaches, while a read-only auditor holding R--- reads them all and
+changes none.
 
 ## The six roles a workspace starts with
 
@@ -51,7 +54,7 @@ the workspace but changes none of them.
 |---|---|---|
 | `admin` | Admin | all |
 | `management` | Management | all |
-| `manager` | Team Lead | own |
+| `manager` | Team Lead | team |
 | `rep` | User | own |
 | `read_only` | Read-only | all |
 | `ops` | Ops / Integrations | all |
@@ -79,6 +82,7 @@ the workspace but changes none of them.
 | `import_run` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `installation_settings` | -RU- | -R-- | -R-- | -R-- | -R-- | -RU- |
 | `integrations` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `introduction` | CRU- | CRU- | CRU- | CRU- | -R-- | CRU- |
 | `knowledge_corpus` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `knowledge_document` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `lead` | CRUD | CRUD | CRUD | CRUD | -R-- | CRUD |
@@ -93,7 +97,6 @@ the workspace but changes none of them.
 | `pipeline` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `product` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `project` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
-| `quota` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `relationship` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `retention_policy` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `saved_view` | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD |
@@ -101,6 +104,7 @@ the workspace but changes none of them.
 | `tag` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `voice_profile` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `webhook_subscription` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `weekly_plan` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 
 ## What this page does not cover
 

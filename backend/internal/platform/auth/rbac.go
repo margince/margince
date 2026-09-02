@@ -267,6 +267,54 @@ const ruleDealRoomSession = "deal_room_session"
 
 const roleAdmin = "admin"
 
+// coachingRoles are the seats that may raise a coaching notice for somebody
+// else: the two leadership seats and the Team Lead.
+//
+// A role list rather than an object grant, for the reason RequireAdmin is one:
+// what is being authorized is speaking to a colleague, which is not a CRUD verb
+// on a record kind and cannot be spelled in the object grid. `rep` is absent
+// deliberately — a rep on a team would otherwise coach their teammates, and
+// coaching is a thing a lead does.
+//
+// The keys are spelled here rather than read from the module that seeds them
+// because platform sits below modules in the DAG, exactly as roleAdmin above
+// is. TestTheCoachingRolesAreSeededRoles holds the two spellings together.
+//
+// Matching on the KEY is matching on the seeded role, because `role.key` is
+// UNIQUE: an operator cannot author a custom role keyed `manager` beside the
+// Team Lead — the insert fails. So a principal carrying one of these keys holds
+// the seeded seat it names, which is the same ground RequireAdmin stands on.
+var coachingRoles = []string{roleAdmin, "management", "manager"}
+
+// RequireCoach admits a seat that may raise a coaching notice.
+//
+// The COMPANION check is the membership one at the call site: this says whether
+// the caller coaches at all, and the teammate question says whom. Both are
+// needed — a Team Lead may coach, but not somebody on another lead's team.
+//
+// A system principal is refused rather than admitted, which is the opposite of
+// RequireAdmin. A system flow raising a notice uses its own kinds through the
+// notifier seam; one arriving here would be a background pass writing in a
+// person's voice.
+func RequireCoach(ctx context.Context) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	if err := refuseBuyer(p, "coaching a colleague"); err != nil {
+		return err
+	}
+	if p.Type != principal.PrincipalHuman {
+		return fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied)
+	}
+	for _, role := range coachingRoles {
+		if slices.Contains(p.Permissions.RoleKeys, role) {
+			return nil
+		}
+	}
+	return fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied)
+}
+
 // RequireAdmin admits only a principal carrying the workspace "admin" role.
 // Object grants can't express installation-wide administration, so admin
 // endpoints gate on the role directly. A system principal (internal callers)

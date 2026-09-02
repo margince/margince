@@ -104,7 +104,24 @@ func (p *OfflineProvider) Descriptor() provider.Descriptor {
 			Cost:     map[provider.Pool]int{"email": 2},
 			Excludes: []provider.Category{"mobile"},
 		}},
-		Identifiers:  []string{"LinkedIn profile URL", "first and last name with company name or domain"},
+		Identifiers: []string{"LinkedIn profile URL", "first and last name with company name or domain"},
+		// The same two rules the real adapter declares, and the same as the
+		// Identifiers sentence above. A fake that accepted subjects the vendor
+		// rejects would let every dev stack and every test pass over the case
+		// this guard exists for.
+		MatchRules: []provider.MatchRule{
+			{AllOf: []provider.IdentifierField{provider.IdentifierLinkedInURL}},
+			{
+				AllOf: []provider.IdentifierField{
+					provider.IdentifierFirstName,
+					provider.IdentifierLastName,
+				},
+				AnyOf: []provider.IdentifierField{
+					provider.IdentifierCompanyName,
+					provider.IdentifierCompanyDomain,
+				},
+			},
+		},
 		EgressHost:   "api.surfe.com",
 		Verification: "credit-balance read",
 		TermsLinks:   []provider.Link{{Label: "Terms", URL: "https://surfe.com/terms"}},
@@ -190,8 +207,11 @@ func (p *OfflineProvider) Submit(ctx context.Context, cred provider.Credential, 
 	// unreachable through the real pipeline — the fake could produce it in a
 	// unit test and never where it mattered.
 	handle := "offline-" + req.CorrelationID
-	if scenarioFor(req.Identifiers) == scenarioNoMatch {
+	switch scenarioFor(req.Identifiers) {
+	case scenarioNoMatch:
 		handle = "offline-nomatch-" + req.CorrelationID
+	case scenarioNoMobile:
+		handle = "offline-nomobile-" + req.CorrelationID
 	}
 	return provider.Submission{
 		Outcome:       provider.OutcomeAccepted,
@@ -218,7 +238,36 @@ func (p *OfflineProvider) Poll(ctx context.Context, cred provider.Credential, jo
 	if strings.Contains(jobID, "nomatch") {
 		return provider.PollStatus{Outcome: provider.OutcomeNoMatch, SafeStatusCode: "no_match"}, nil
 	}
-	return provider.PollStatus{Outcome: provider.OutcomeCompleted, Result: offlineResult(p.now().UTC())}, nil
+	result := offlineResult(p.now().UTC())
+	if strings.Contains(jobID, "nomobile") {
+		result = withoutMobile(result)
+	}
+	return provider.PollStatus{Outcome: provider.OutcomeCompleted, Result: result}, nil
+}
+
+// withoutMobile is the answer a vendor gives for somebody it can place but has
+// no number for: every other category, and SILENCE about the mobile pool.
+//
+// Silence, not a zero. The real adapter builds its spend by walking what came
+// back (surfe/normalize.go), so a pool it found nothing for is simply absent —
+// and an absent pool is what the settlement has to read as "owed nothing"
+// under per-successful-result billing. A fake reporting an explicit 0 would
+// take the same decision through a different door and prove nothing about the
+// one production uses.
+func withoutMobile(r *provider.Result) *provider.Result {
+	claims := make([]provider.Claim, 0, len(r.Claims))
+	for _, c := range r.Claims {
+		if c.Key != provider.ClaimMobilePhones {
+			claims = append(claims, c)
+		}
+	}
+	spend := map[provider.Pool]int{}
+	for pool, n := range r.PoolSpend {
+		if pool != "mobile" {
+			spend[pool] = n
+		}
+	}
+	return &provider.Result{Claims: claims, PoolSpend: spend}
 }
 
 // scenario names the failure the fake should produce for a subject.
@@ -227,6 +276,12 @@ type scenario int
 const (
 	scenarioSuccess scenario = iota
 	scenarioNoMatch
+	// The PARTIAL answer, which is the ordinary one on a real vendor: the
+	// subject is found and most categories come back, but the mobile pool is
+	// silent because nobody has a number for them. It is not a no-match — the
+	// run completed and the other categories are owed — so the whole-run
+	// release never fires and only the per-pool rule can decide the mobile.
+	scenarioNoMobile
 	scenarioInvalidCredentials
 	scenarioInsufficientCredits
 	scenarioRateLimited
@@ -251,6 +306,8 @@ func scenarioFor(id provider.PersonIdentifiers) scenario {
 		return scenarioProviderError
 	case "ambiguous":
 		return scenarioAmbiguous
+	case "nomobile":
+		return scenarioNoMobile
 	}
 	return scenarioSuccess
 }

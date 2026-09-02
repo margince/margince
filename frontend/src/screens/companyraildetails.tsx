@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
+import { ifMatch, requireVersion } from "../api/version";
+import { useCanWriteRecord } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { Disclosure } from "../design-system/atoms";
+import { EvidenceMark } from "../design-system/evidencemark";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import {
@@ -16,6 +22,9 @@ import {
   useCompanyReadOnlyReason,
 } from "./companyheader";
 import { SIZE_BAND_OPTIONS } from "./companylookups";
+import { VatMark } from "./companyvatmark";
+import { derivedSource } from "./evidencesource";
+import { profileFieldsKey, useOrgProfileFields } from "./evidenceverdict";
 
 // The rail's own Details grid (companyrail.tsx's DetailsGrid), split into
 // this file so the rail file stays under the 500-line ceiling: one panel
@@ -24,6 +33,11 @@ import { SIZE_BAND_OPTIONS } from "./companylookups";
 
 type Organization = components["schemas"]["Organization"];
 type OrganizationDomain = NonNullable<Organization["domains"]>[number];
+type ProfileField = components["schemas"]["CompanyProfileField"];
+// The path parameter's own closed vocabulary, taken from the generated contract
+// rather than respelled: a field name this endpoint does not accept is then a
+// compile error here rather than a 422 the reader meets.
+type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];
 // Not `keyof Address`: the wire type carries a `[key: string]: unknown` catch-all
 // alongside its six named parts (schema.d.ts's own escape hatch for a future
 // field), which collapses `keyof` down to bare `string` and loses every part's
@@ -57,11 +71,12 @@ const DESCRIPTION_MAX_LENGTH = 500;
  * Writability gates the VERBS only, never the values: an archived or
  * overlay-mirrored account still shows every field, it simply shows them
  * without the edit affordance (InlineText/InlineChoice's own
- * `canEdit={false}` path). Derived internally from `useCan("organization",
- * "update")` and `useCompanyReadOnlyReason` — the same RBAC grant and the
- * same archived/overlay reasoning the header's own inline controls already
- * gate on — rather than threaded down as a prop, so a caller cannot render
- * this grid writable on a record it should not be able to write.
+ * `canEdit={false}` path). Derived internally from
+ * `useCanWriteRecord("organization", …)` and `useCompanyReadOnlyReason` — the
+ * grant, the seat ceiling, the record's own `writable`, and the same
+ * archived/overlay reasoning the header's inline controls gate on — rather
+ * than threaded down as a prop, so a caller cannot render this grid writable
+ * on a record it should not be able to write.
  *
  * Every field here edits in place, including lifecycle, domain and address —
  * none of the three is scalar the way legal name or industry is, so each
@@ -410,13 +425,174 @@ function DescriptionRow({
   );
 }
 
+// The two legal-identity fields that live only in the evidence sidecar: the
+// VAT/tax identifier and the address the company is REGISTERED at.
+//
+// Neither has a column on `organization`, so neither can ride the rows above:
+// they are written through the profile-field correction path instead. That
+// difference is invisible to a reader and should stay so — a rep stating the
+// company's VAT number is doing the same thing as stating its legal name, and
+// the two rows sit together because they are the same kind of fact.
+//
+// `registered_address` is NOT the postal address in the disclosure below. That
+// one is six columns describing where the company OPERATES; this one is the
+// single line a register prints. Collapsing them was never intended, so the
+// labels have to keep them apart.
+const SIDECAR_FIELDS = [
+  {
+    field: "register_vat",
+    labelKey: "co.profileField.register_vat",
+    placeholderKey: "field.addRegisterVat",
+  },
+  {
+    field: "registered_address",
+    labelKey: "co.profileField.registered_address",
+    placeholderKey: "field.addRegisteredAddress",
+  },
+] as const satisfies readonly {
+  field: ProfileFieldKey;
+  labelKey: MessageKey;
+  placeholderKey: MessageKey;
+}[];
+
+// One sidecar field's row. The value comes from the profile-fields read rather
+// than from `organization`, which carries no sidecar claim.
+// Exported because the Profile tab writes the SAME sidecar fields through the
+// same PATCH — one writer for a profile-field value, mounted twice, so the rail
+// and the tab can never disagree about what they last wrote or which
+// precondition they sent. `multiline` is the tab's case: the narrative fields
+// (what they sell, who they sell to) are paragraphs, and a paragraph in a
+// single-line input is a field a reader cannot read back while typing it.
+export function SidecarFieldRow({
+  orgId,
+  fields,
+  fieldsLoaded,
+  field,
+  labelKey,
+  label: labelText,
+  placeholderKey,
+  canEdit,
+  readOnlyReason,
+  multiline,
+}: Readonly<{
+  orgId: string;
+  fields: readonly ProfileField[];
+  // Whether `fields` is an ANSWER or merely the empty list a pending or failed
+  // read stands in with. The two are not the same claim: an answered read
+  // saying a field has no row means the write creates one, while an unanswered
+  // read saying the same thing means nobody knows — and sending no If-Match on
+  // that guess overwrites a value the reader never saw. Editing waits for the
+  // answer.
+  fieldsLoaded: boolean;
+  field: ProfileFieldKey;
+  // Two ways to name the row, because the two callers know the name
+  // differently: the rail states its two fields literally, and the Profile tab
+  // reads eleven of them out of the one vocabulary map that the backend gate
+  // holds. Exactly one is required, which the callers' own types enforce.
+  labelKey?: MessageKey;
+  label?: string;
+  placeholderKey: MessageKey;
+  canEdit: boolean;
+  readOnlyReason: string | undefined;
+  multiline?: boolean;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const label = labelText ?? (labelKey ? t(labelKey) : field);
+  const current = fields.find((one) => one.field === field);
+  const save = async (next: string) => {
+    const { error } = await api.PATCH(
+      "/organizations/{id}/profile-fields/{field}",
+      {
+        params: {
+          path: { id: orgId, field },
+          // A field nobody has stated yet has no row and so no version to pin:
+          // the write CREATES it, and there is no earlier state to lose. Once
+          // one exists the precondition is what stops two people correcting the
+          // same claim and the second silently replacing the first.
+          ...(current ? ifMatch(requireVersion(current.version)) : {}),
+        },
+        body: { value: next.trim() },
+      },
+    );
+    if (error) {
+      throwProblem(error);
+    }
+    // The record read and the profile-fields read both now describe the write
+    // that just landed, and the 360 summarises it.
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: profileFieldsKey(orgId) }),
+      queryClient.invalidateQueries({ queryKey: ["organization", orgId] }),
+      queryClient.invalidateQueries({ queryKey: ["organization360", orgId] }),
+    ]);
+  };
+  // A value a machine read keeps its dotted underline and its receipt. The mark
+  // wraps the RESTING value only — while the reader is typing, the claim under
+  // edit is theirs, and an underline saying "a crawl found this" over their own
+  // draft would be false. Absent for a value a person typed: derivedSource
+  // returns nothing for a human row, and a mark with nothing behind it teaches
+  // the reader to stop opening them.
+  const source = current
+    ? derivedSource(current, locale, recordZone)
+    : undefined;
+  return (
+    <FieldRow label={label}>
+      {/* Editing and provenance are two controls, not one: EvidenceMark makes
+          its value the button that opens the receipt, and InlineText makes it
+          the button that starts an edit. One element cannot be both, so the
+          value stays editable and the receipt sits beside it — the same shape
+          the VAT verdict already uses on this grid. A human-typed value has no
+          receipt and shows no mark. */}
+      <InlineText
+        label={label}
+        value={current?.value ?? ""}
+        placeholder={t(placeholderKey)}
+        multiline={multiline}
+        canEdit={canEdit && fieldsLoaded}
+        readOnlyReason={readOnlyReason}
+        onEditingChange={setEditing}
+        onSave={save}
+      />
+      {/* Only while the stored value is what is on screen. Mid-edit the text
+          belongs to the reader, and a receipt saying "a crawl read this" beside
+          their own draft attributes their words to a machine — indefinitely, if
+          the save then fails and the draft stays. */}
+      {source && current && !editing && (
+        <EvidenceMark value={t("evidence.mark")} source={source} />
+      )}
+      {/* The register's verdict beside the number it answers for. Only once a
+          number exists: a mark on an empty field would say the register had
+          declined to recognise something nobody has stated. */}
+      {field === "register_vat" && current?.value && (
+        <VatMark orgId={orgId} stated={current.value} />
+      )}
+    </FieldRow>
+  );
+}
+
 function DetailsGridBody({
   organization,
 }: Readonly<{ organization: Organization }>) {
   const t = useT();
-  const canUpdate = useCan("organization", "update");
+  // useCanWriteRecord, not useCan: the grant alone offers a control whose save
+  // the seat middleware refuses before RBAC is even consulted, and offers it on
+  // a record the row scope will not let this reader write. The Profile tab
+  // derives the same answer for its own rows, so the two halves of one page
+  // cannot disagree about whether the reader may edit it.
+  const canUpdate = useCanWriteRecord("organization", organization);
   const readOnlyReason = useCompanyReadOnlyReason(organization);
   const patch = useCompanyFieldPatch(organization);
+  // The same read the Overview's own profile-field card uses, so a correction
+  // made here settles that card too rather than leaving the two surfaces
+  // disagreeing about what the record says.
+  const sidecarQuery = useOrgProfileFields(organization.id);
+  // A read that has not answered yet leaves both rows empty rather than absent:
+  // the grid's rule is that every known field draws a row, and a row that
+  // appears once its value arrives would make the panel jump under the reader.
+  const sidecarFields = sidecarQuery.data ?? [];
   const row: DetailsRowProps = {
     organization,
     canEdit: canUpdate && !readOnlyReason,
@@ -448,6 +624,20 @@ function DetailsGridBody({
           values still share one left edge down the whole panel. */}
       <FieldGrid>
         <LegalNameRow {...row} />
+        {/* Beside the legal name, not with the postal address below: a VAT
+            number and a registry address are identity facts about the legal
+            entity, and the address disclosure is where the company operates. */}
+        {SIDECAR_FIELDS.map((sidecar) => (
+          <SidecarFieldRow
+            key={sidecar.field}
+            orgId={organization.id}
+            fields={sidecarFields}
+            fieldsLoaded={sidecarQuery.isSuccess}
+            canEdit={row.canEdit}
+            readOnlyReason={readOnlyReason}
+            {...sidecar}
+          />
+        ))}
         <OwnerRow organization={organization} />
         <LifecycleRow organization={organization} />
         <DomainRow {...row} />

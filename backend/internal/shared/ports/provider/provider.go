@@ -130,6 +130,14 @@ type Descriptor struct {
 	// Identifiers names exactly what may leave the installation for this
 	// provider. It is disclosure copy AND the egress contract.
 	Identifiers []string
+	// MatchRules is the same fact as Identifiers in a form admission can
+	// apply: the combinations this provider can find somebody BY. A subject
+	// satisfying none of them is skipped as no_identifiers instead of being
+	// sent, because the vendor rejects such a request and the platform can
+	// only read that rejection as a provider fault.
+	//
+	// Empty means the adapter declares no rule, and every subject is sent.
+	MatchRules []MatchRule
 	// EgressHost is the single allowlisted host this adapter may reach.
 	EgressHost string
 	// Verification names the cheapest read used to validate a credential at
@@ -323,82 +331,6 @@ type Adapter interface {
 	Poll(ctx context.Context, cred Credential, providerJobID string) (PollStatus, error)
 }
 
-// Trigger is what caused a run to be queued (PI-DDL-2).
-type Trigger string
-
-// The closed set of things that queue a run. Every one but TriggerManual is
-// Automatic, and an automatic run buys only the categories that cost nothing.
-const (
-	TriggerAutomaticCreate Trigger = "automatic_create"
-	TriggerAutomaticImport Trigger = "automatic_import"
-	// TriggerAutomaticBackfill is the catch-up sweep reaching a contact no run
-	// has covered — one that existed before the provider was connected, or
-	// that arrived while the posture was off. Automatic, so it buys only what
-	// costs nothing.
-	TriggerAutomaticBackfill Trigger = "automatic_backfill"
-	TriggerScheduledRefresh  Trigger = "scheduled_refresh"
-	// TriggerManual is a human asking explicitly. It is never fenced by the
-	// duplicate or freshness checks: the person looking at the record knows
-	// something the timestamps do not.
-	TriggerManual Trigger = "manual"
-)
-
-// Automatic reports whether this trigger is subject to the fences that only
-// apply to work nobody asked for directly.
-func (t Trigger) Automatic() bool { return t != TriggerManual }
-
-// RunState is the closed run-state machine (PI-STATE-2).
-type RunState string
-
-const (
-	RunQueued     RunState = "queued"
-	RunSubmitting RunState = "submitting"
-	RunInProgress RunState = "in_progress"
-
-	RunCompleted RunState = "completed"
-	RunNoMatch   RunState = "no_match"
-	RunSkipped   RunState = "skipped"
-	// RunSubmissionUnknown is terminal and never retried, and it still
-	// occupies the live-run index: a run that may have been paid for keeps
-	// blocking an identical retry until a human resolves it.
-	RunSubmissionUnknown RunState = "submission_unknown"
-	RunFailed            RunState = "failed"
-	RunCancelled         RunState = "cancelled"
-)
-
-// Terminal reports whether the run has left the machine.
-func (s RunState) Terminal() bool {
-	switch s {
-	case RunQueued, RunSubmitting, RunInProgress:
-		return false
-	default:
-		return true
-	}
-}
-
-// SkipReason says why a skipped run sent nothing (PI-DDL-2). Each is a
-// distinct product fact: a customer must never be told their budget stopped
-// something when nothing was wrong.
-type SkipReason string
-
-const (
-	SkipBudgetExhausted           SkipReason = "budget_exhausted"
-	SkipLowBalance                SkipReason = "low_balance"
-	SkipSuppressed                SkipReason = "suppressed"
-	SkipNotEligible               SkipReason = "not_eligible"
-	SkipDuplicateSubjectCandidate SkipReason = "duplicate_subject_candidate"
-	SkipRateLimited               SkipReason = "rate_limited"
-	// SkipAlreadyFresh means a completed run is newer than the refresh
-	// window, so an automatic trigger declined to buy the same data twice.
-	SkipAlreadyFresh SkipReason = "already_fresh"
-	// SkipNoIdentifiers means the subject carries nothing the provider can
-	// match on — no profile link, and no name with a company. Declining is
-	// cheaper than spending a call that can only answer "no match", and it is
-	// a different fact from not_eligible: nothing forbids this purchase, there
-	// is simply nothing to ask with. A human pressing the button may still try.
-	SkipNoIdentifiers SkipReason = "no_identifiers"
-)
-
 // Reservation is one pool's hold for one run.
 type Reservation struct {
 	Pool     Pool
@@ -421,15 +353,20 @@ type Snapshot struct {
 
 // Run is the wire-facing view of a run.
 type Run struct {
-	Snapshot            Snapshot
-	ID                  string
-	SubjectKind         string
-	PersonID            string
-	Provider            string
-	Trigger             Trigger
-	State               RunState
-	SkipReason          SkipReason
-	ClaimsUnwritten     bool
+	Snapshot        Snapshot
+	ID              string
+	SubjectKind     string
+	PersonID        string
+	Provider        string
+	Trigger         Trigger
+	State           RunState
+	SkipReason      SkipReason
+	ClaimsUnwritten bool
+	// Applied says the run's answers reached the subject's own record, which
+	// is not the same fact as completed: a paid, complete run whose values are
+	// still only beside the record leaves the page looking empty, and a client
+	// that stopped watching at completed would show it that way.
+	Applied             bool
 	ConnectionVersion   int64
 	RequestedCategories []Category
 	Reservations        []Reservation

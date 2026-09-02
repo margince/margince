@@ -204,7 +204,7 @@ describe("HomeScreen — the context rail", () => {
       ),
     ).toBeTruthy();
     await user.click(screen.getByText("Duplicates to review"));
-    expect(window.location.hash).toBe("#/today");
+    expect(window.location.hash).toBe("#/worklist");
   });
 
   // /digest is a specified operation an installation may not implement yet, so

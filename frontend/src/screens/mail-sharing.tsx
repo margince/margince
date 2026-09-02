@@ -40,6 +40,11 @@ export function MailSharingCard() {
   const queryClient = useQueryClient();
   // null = no unsaved change; the switch renders the stored posture.
   const [pending, setPending] = useState<boolean | null>(null);
+  // The two settings on this card are saved apart. They point in OPPOSITE
+  // directions — one withholds mail from colleagues, the other permits a seat
+  // to hand it over on arrival — so a single Save button committing both at
+  // once would let a reader flip one while meaning the other.
+  const [pendingShared, setPendingShared] = useState<boolean | null>(null);
   const save = useMutation({
     mutationFn: async (mailSharing: boolean) => {
       const { data, error } = await api.PATCH("/capture/settings", {
@@ -57,6 +62,23 @@ export function MailSharingCard() {
     },
   });
 
+  const saveShared = useMutation({
+    mutationFn: async (allowed: boolean) => {
+      const { data, error } = await api.PATCH("/capture/settings", {
+        body: { shared_posture_allowed: allowed },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["capture-settings"], data);
+      setPendingShared(null);
+      toast.show(t("settings.saved"));
+    },
+  });
+
   return (
     <Panel title={t("mailSharing.title")}>
       <PanelBody>
@@ -65,6 +87,11 @@ export function MailSharingCard() {
           {(settings) => {
             const shown = pending ?? settings.mail_sharing;
             const dirty = pending !== null && pending !== settings.mail_sharing;
+            const sharedShown =
+              pendingShared ?? settings.shared_posture_allowed;
+            const sharedDirty =
+              pendingShared !== null &&
+              pendingShared !== settings.shared_posture_allowed;
             return (
               <>
                 <SettingList>
@@ -94,7 +121,57 @@ export function MailSharingCard() {
                       />
                     )}
                   />
+                  {/* Whether a seat may ask for `shared` at all. The only
+                      capture setting whose default WITHHOLDS, so it is the one
+                      row on this card where ON is the permissive answer — the
+                      warning below fires on true rather than on false. */}
+                  <SettingRow
+                    label={t("mailSharing.sharedPosture.label")}
+                    description={t("mailSharing.sharedPosture.help")}
+                    control={(control) => (
+                      <Switch
+                        describedBy={control["aria-describedby"]}
+                        testId="shared-posture-allowed-toggle"
+                        label={t("mailSharing.sharedPosture.label")}
+                        labelHidden
+                        reason={
+                          canManage ? undefined : t("captureSettings.adminOnly")
+                        }
+                        checked={sharedShown}
+                        disabled={!canManage || saveShared.isPending}
+                        onChange={(next) => setPendingShared(next)}
+                      />
+                    )}
+                  />
                 </SettingList>
+                {(sharedShown || sharedDirty || saveShared.isError) && (
+                  <div className="settings-panel-commit">
+                    {sharedShown && (
+                      <Callout tone="warn">
+                        {t("mailSharing.sharedPosture.warning")}
+                      </Callout>
+                    )}
+                    {saveShared.isError && (
+                      <Callout tone="danger" live="alert">
+                        {problemMessageOf(saveShared.error, t)}
+                      </Callout>
+                    )}
+                    {sharedDirty && (
+                      <Button
+                        small
+                        variant="primary"
+                        disabled={saveShared.isPending}
+                        onClick={() => {
+                          if (pendingShared !== null) {
+                            saveShared.mutate(pendingShared);
+                          }
+                        }}
+                      >
+                        {t("mailSharing.save")}
+                      </Button>
+                    )}
+                  </div>
+                )}
                 {/* The cost of the posture and the verb that commits it belong
                     to the CARD, not to the row: an unsaved flip is a state of
                     the whole card, and a callout squeezed into a row's right

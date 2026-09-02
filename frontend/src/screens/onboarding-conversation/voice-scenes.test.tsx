@@ -121,7 +121,6 @@ function collectScene(overrides: {
 }) {
   return withLocale(
     <VoiceCollectScene
-      eyebrow="Step 3 of 5: Voice"
       summary={overrides.summary ?? null}
       manifest={[]}
       fileRef={overrides.fileRef ?? createRef<HTMLInputElement>()}
@@ -252,7 +251,6 @@ describe("the collect scene's corpus floor meter", () => {
     rerender(
       <LocaleProvider initial="en">
         <VoiceCollectScene
-          eyebrow="Step 3 of 5: Voice"
           summary={summaryOf(VOICE_MIN_WORDS)}
           manifest={[]}
           fileRef={createRef<HTMLInputElement>()}
@@ -375,7 +373,6 @@ describe("VoiceResultScene", () => {
     });
     withLocale(
       <VoiceResultScene
-        eyebrow="Voice"
         loading={false}
         version={version}
         onContinue={() => undefined}
@@ -396,7 +393,6 @@ describe("VoiceResultScene", () => {
     });
     withLocale(
       <VoiceResultScene
-        eyebrow="Voice"
         loading={false}
         version={version}
         onContinue={() => undefined}

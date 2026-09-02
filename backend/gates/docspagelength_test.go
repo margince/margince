@@ -196,21 +196,67 @@ var documentedTrees = []string{"docs", "user-guide"}
 // tree so a new page is covered the moment it lands.
 func handWrittenDocsPages(t *testing.T) []string {
 	t.Helper()
+	// TRACKED pages, not whatever the working tree carries. A page somebody is
+	// drafting, or one a parallel session left behind, is not documentation
+	// yet — and failing the build on it makes every local run untrustworthy,
+	// which is worse than the budget going unenforced for one uncommitted
+	// file. CI reads the committed tree, so a page over budget is caught at
+	// the moment it becomes one of these pages.
+	// ONE filter, in the walk. It has to be there — a page read before it is
+	// filtered can stop the build on its contents — and a second copy here
+	// would be a filter that cannot disagree with the first only for as long
+	// as nobody edits either.
+	tracked := gitTracked(t, docsTreeRoot)
 	var pages []string
 	for _, tree := range documentedTrees {
-		pages = append(pages, handWrittenPagesUnder(t, tree)...)
+		pages = append(pages, handWrittenPagesUnder(t, tracked, tree)...)
 	}
 	sort.Strings(pages)
 	return pages
 }
 
-func handWrittenPagesUnder(t *testing.T, tree string) []string {
+func handWrittenPagesUnder(t *testing.T, tracked map[string]bool, tree string) []string {
+	t.Helper()
+	return handWrittenPagesRootedAt(t, docsTreeRoot, tracked, tree)
+}
+
+// handWrittenPagesRootedAt is the walk itself, over any root.
+//
+// The root is a parameter so a test can drive this over a repository built for
+// the purpose. The branch that matters most here — the one that keeps an
+// untracked draft from being READ — cannot be exercised against the committed
+// tree, because the committed tree holds no untracked files: the real-tree gate
+// passes for that reason rather than because the branch works, and an edit
+// moving the filter back after isGeneratedDoc would go green.
+func handWrittenPagesRootedAt(t *testing.T, treeRoot string, tracked map[string]bool, tree string) []string {
 	t.Helper()
 	var pages []string
+	docsTreeRoot := treeRoot
 	root := filepath.Join(docsTreeRoot, tree)
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		// NOTHING UNTRACKED IS READ AT ALL, which is a step earlier than the
+		// tracked filter below and has to be.
+		//
+		// A file this gate reads before filtering is a file whose contents can
+		// stop the build: isGeneratedDoc scans the page, and a draft with one
+		// very long line fatals the scanner. Filtering afterwards leaves every
+		// local run hostage to what a working tree happens to hold, which is
+		// the complaint this change started from.
+		//
+		// Directories are still descended, because a tracked page can live
+		// under an untracked directory only if git tracks it — and then git
+		// names it here. The symlink refusal below is about the REPOSITORY: a
+		// link somebody committed hides a subtree from the budget, and one
+		// nobody committed hides nothing.
+		rel, relErr := filepath.Rel(docsTreeRoot, path)
+		if relErr != nil {
+			return relErr
+		}
+		if !d.IsDir() && !tracked[filepath.ToSlash(rel)] {
+			return nil
 		}
 		// filepath.WalkDir does not follow symlinks, so a symlinked directory
 		// under docs/ would be skipped and its pages never counted — the gate
@@ -228,10 +274,6 @@ func handWrittenPagesUnder(t *testing.T, tree string) []string {
 		}
 		if isGeneratedDoc(t, path) {
 			return nil
-		}
-		rel, relErr := filepath.Rel(docsTreeRoot, path)
-		if relErr != nil {
-			return relErr
 		}
 		pages = append(pages, filepath.ToSlash(rel))
 		return nil
@@ -338,5 +380,37 @@ func TestTheDocsBudgetGateSeesAGeneratedPageAsGenerated(t *testing.T) {
 			t.Errorf("%s: generated=%v, want %v — %s", name, got, tc.want,
 				fmt.Sprintf("the marker is read from the first five lines, case-insensitively"))
 		}
+	}
+}
+
+// AN UNTRACKED PAGE IS NOT READ, which is a step earlier than not being judged.
+//
+// The distinction is the whole complaint this file answers: a page the walk
+// READS can stop the build on its contents, whatever the budget then decides
+// about it. isGeneratedDoc scans the first lines, and a draft with one line past
+// the scanner's buffer fatals it.
+//
+// Driven over a repository built for the purpose. The committed tree holds no
+// untracked files, so the real-tree gate passes whether this branch works or
+// not — an edit moving the filter back after isGeneratedDoc would break nothing
+// there and be found by whoever next ran an install locally.
+//
+// Here it is found immediately, and LOUDLY: the draft's line is past the
+// scanner's buffer, so a walk that reads it fatals rather than merely counting
+// one page too many. That is the same failure the reports described, reproduced
+// on demand instead of waited for.
+func TestAnUntrackedDraftIsNeitherReadNorJudged(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	_, write := initRepo(t, root, map[string]string{"how-to/committed.md": "# committed\n"})
+	// The draft: present, not committed, and carrying a line no scanner will
+	// read. Over the budget as well, so it would fail on length even if it
+	// survived being read.
+	write("how-to/a-draft.md", strings.Repeat("x", 2<<20)+"\n")
+
+	pages := handWrittenPagesRootedAt(t, root, gitTracked(t, root), "how-to")
+	if len(pages) != 1 || pages[0] != "how-to/committed.md" {
+		t.Fatalf("pages = %v, want only the committed one — a draft nobody committed is not "+
+			"documentation yet, and reading it at all is what lets its contents stop the build", pages)
 	}
 }

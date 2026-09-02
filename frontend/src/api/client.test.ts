@@ -4,6 +4,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api, REQUEST_TIMEOUT_MS, RequestTimeoutError } from "./client";
+import { modelCallsInFlight } from "./model-inflight";
 
 // The spec for the client's deadline. The failure it exists for is the one
 // nothing above can see: a request that opens and never answers looks exactly
@@ -172,5 +173,132 @@ describe("a gateway that gave up on the app behind it", () => {
     const { error } = await api.GET("/me");
 
     expect(error).not.toMatchObject({ code: "gateway_unavailable" });
+  });
+});
+
+// What the chrome learns from a request while it is still open.
+//
+// The failure this covers is entirely invisible: the count is read by the rail,
+// so a route that stopped being counted looks like an agent that did nothing,
+// which is exactly what the surface would report if the agent HAD done nothing.
+describe("the api client's model-call count", () => {
+  it("counts a route whose handler calls a model and waits", async () => {
+    const seen: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        seen.push(modelCallsInFlight());
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    await api.POST("/people/{id}/draft-email", {
+      params: { path: { id: "01a0-4cd2" } },
+      body: {},
+    });
+
+    expect(seen).toEqual([1]);
+    expect(modelCallsInFlight()).toBe(0);
+  });
+
+  // The draft is not the only route a person presses and then waits on. This
+  // one is here because the list read three routes while the contract had
+  // nine, and a route missing from it fails the only way that cannot be seen:
+  // the chrome reports an agent at rest, which is exactly what it would report
+  // if the agent were.
+  it("counts a model route that is not the draft", async () => {
+    const seen: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        seen.push(modelCallsInFlight());
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    await api.POST("/knowledge/corpora/{id}/ask", {
+      params: { path: { id: "01a0-4cd2" } },
+      body: { question: "what did we promise them" },
+    });
+
+    expect(seen).toEqual([1]);
+    expect(modelCallsInFlight()).toBe(0);
+  });
+
+  // A refused draft is the agent no longer working just as surely as a
+  // delivered one. Counted down on every ending, or the orb would stay lit for
+  // the rest of the session on one 422.
+  it("stops counting a model route that was refused", async () => {
+    // Seen rising as well as settling: a route that was never counted also
+    // ends at zero, and that is the invisible failure this file exists for.
+    const seen: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        seen.push(modelCallsInFlight());
+        return new Response(JSON.stringify({ code: "validation_error" }), {
+          status: 422,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }),
+    );
+
+    await api.POST("/people/{id}/draft-email", {
+      params: { path: { id: "01a0-4cd2" } },
+      body: {},
+    });
+
+    expect(seen).toEqual([1]);
+    expect(modelCallsInFlight()).toBe(0);
+  });
+
+  // The dossier and the growth-fit reading are READ at the same paths they are
+  // asked for. A panel loading the last reading is the reader's own click, and
+  // counting it lit the orb for a fetch the agent had nothing to do with.
+  it("does not count a read at a model route's path", async () => {
+    const seen: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        seen.push(modelCallsInFlight());
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    await api.GET("/organizations/{id}/dossier", {
+      params: { path: { id: "01a0-4cd2" } },
+    });
+
+    expect(seen).toEqual([0]);
+  });
+
+  // An ordinary read is the reader's own click, not the agent's work. The rail
+  // once derived the agent's state from the browser's fetches, and the result
+  // was a Core that reported a list loading in the agent's own vocabulary.
+  it("does not count an ordinary read", async () => {
+    const seen: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        seen.push(modelCallsInFlight());
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    await api.GET("/me");
+
+    expect(seen).toEqual([0]);
   });
 });

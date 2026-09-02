@@ -4,6 +4,7 @@ import {
   displayOn,
   initialDraft,
   type PurposeView,
+  rowIsOn,
   toChoices,
 } from "./preferences.logic";
 
@@ -13,6 +14,10 @@ const purposes: PurposeView[] = [
     label: "Deal & service messages",
     state: "granted",
     locked: true,
+    // A locked purpose cannot be offered a grant from this surface, which is
+    // what can_opt_in says; the choice is what the recipient decided.
+    choice: "opted_in",
+    can_opt_in: false,
     grant_needs_confirmation: false,
   },
   {
@@ -20,6 +25,8 @@ const purposes: PurposeView[] = [
     label: "Product updates",
     state: "granted",
     locked: false,
+    choice: "opted_in",
+    can_opt_in: true,
     grant_needs_confirmation: false,
   },
   {
@@ -27,6 +34,8 @@ const purposes: PurposeView[] = [
     label: "Events",
     state: "withdrawn",
     locked: false,
+    choice: "opted_out",
+    can_opt_in: true,
     grant_needs_confirmation: false,
   },
   {
@@ -34,6 +43,10 @@ const purposes: PurposeView[] = [
     label: "Surveys",
     state: "unknown",
     locked: false,
+    // "unknown" reads differently either side of the consent line, which is
+    // why the server derives `choice` at all: nobody has objected here.
+    choice: "no_objection",
+    can_opt_in: true,
     grant_needs_confirmation: false,
   },
 ];
@@ -47,6 +60,10 @@ const doiPurposes: PurposeView[] = [
     label: "Newsletter",
     state: "withdrawn",
     locked: false,
+    choice: "opted_out",
+    // A purpose needing a confirmation round-trip cannot be granted from
+    // here either, for the same reason a locked one cannot.
+    can_opt_in: false,
     grant_needs_confirmation: true,
   },
   {
@@ -54,16 +71,48 @@ const doiPurposes: PurposeView[] = [
     label: "Already subscribed",
     state: "granted",
     locked: false,
+    choice: "opted_in",
+    can_opt_in: false,
     grant_needs_confirmation: true,
   },
 ];
 
 describe("display state", () => {
   // Default-deny: no record and a withdrawal both mean "we may not send".
-  it("reads only an explicit grant as subscribed", () => {
-    expect(displayOn("granted")).toBe(true);
-    expect(displayOn("withdrawn")).toBe(false);
-    expect(displayOn("unknown")).toBe(false);
+  // The rule the raw state cannot express. `state: unknown` is off for a
+  // lane somebody must opt INTO and ON for one they may object to, so the
+  // page reads the server's derived choice — reading `state` told a
+  // recipient they were "not subscribed" to ordinary replies, and drew an
+  // always-on row as switched off.
+  it("reads the recipient's decision, not the raw record", () => {
+    const at = (choice: PurposeView["choice"]): PurposeView => ({
+      key: "k",
+      label: "L",
+      state: "unknown",
+      locked: false,
+      grant_needs_confirmation: false,
+      can_opt_in: true,
+      choice,
+    });
+    expect(displayOn(at("opted_in"))).toBe(true);
+    expect(displayOn(at("no_objection"))).toBe(true);
+    expect(displayOn(at("opted_out"))).toBe(false);
+  });
+
+  // A locked row carries an "always on" badge and a disabled control, so
+  // any other value contradicts the badge beside it.
+  it("shows a locked purpose as on whatever the record says", () => {
+    const locked: PurposeView = {
+      key: "transactional",
+      label: "T",
+      state: "unknown",
+      locked: true,
+      grant_needs_confirmation: false,
+      can_opt_in: false,
+      choice: "no_objection",
+    };
+    expect(rowIsOn(locked, {})).toBe(true);
+    expect(rowIsOn(locked, { transactional: false })).toBe(true);
   });
 });
 
@@ -74,7 +123,9 @@ describe("draft diffing", () => {
       transactional: true,
       marketing_email: true,
       events: false,
-      research: false,
+      // no_objection: on, because nobody has objected to it. Reading the
+      // raw "unknown" here is what showed a live lane as switched off.
+      research: true,
     });
     expect(dirtyKeys(purposes, draft)).toEqual([]);
   });

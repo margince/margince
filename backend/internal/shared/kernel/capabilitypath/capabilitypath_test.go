@@ -47,12 +47,20 @@ func TestRedactHidesTheCredentialAndKeepsTheRoute(t *testing.T) {
 			"/v1/public/preferences/",
 		},
 		{
-			// The booking slug is a public identifier the host hands out, not
-			// a credential. Redacting it would cost the log the one thing
-			// naming which booking page was hit and buy nothing.
-			"a public booking slug is deliberately kept",
+			// The booking slug is the only admission check on a route that
+			// creates a person, records a consent grant and books a meeting.
+			// The host publishing the URL is not the host publishing it to a
+			// log aggregator.
+			"a booking slug admits a write, so it goes too",
 			"/v1/public/booking/acme-discovery-call",
-			"/v1/public/booking/acme-discovery-call",
+			"/v1/public/booking/[redacted]",
+		},
+		{
+			// The availability read hangs off the same slug, and the verb
+			// after it is what makes the line worth keeping.
+			"the availability verb survives the slug",
+			"/v1/public/booking/acme-discovery-call/availability",
+			"/v1/public/booking/[redacted]/availability",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

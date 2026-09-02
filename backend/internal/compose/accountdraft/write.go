@@ -14,10 +14,13 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -37,8 +40,7 @@ type Completer interface {
 // human's signature.
 const draftSystem = `You draft the first email of a new conversation, for a salesperson to send under their own name, from a JSON summary of one account in their CRM.
 Return ONLY a JSON object: {"subject":"...","body":"...","reasoning":[{"kind":"intent|recipient|relationship|deal|commitment|conversation|dossier","label":"...","entity_type":"deal|activity|person|organization|fact","entity_id":"..."}]}.
-Write the body as plain text. No markdown, no HTML, no bullet characters.
-Open by name using the recipient's first name exactly as given; never invent or shorten it.
+Open by name using the name the shared greeting rule selects, exactly as given; never invent, shorten or complete it.
 Do NOT write a sign-off or a sender name. The composer adds the sender's own; a name you guessed would go out over the wrong signature.
 Say one thing and ask for one thing. Three short paragraphs at most.
 Where the shared rules let you either write around a missing detail or ask for it, prefer writing around it here: this message opens with an ask of its own, and a second question dilutes it.
@@ -49,10 +51,19 @@ Each reasoning entry names ONE input you actually used, in the reader's words, s
 If the summary gives you nothing but the recipient, write a short honest opener and return an empty reasoning array. Do not invent a reason.`
 
 // draftSystemFor assembles this call's system turn: what this surface is for,
-// the rules every drafting surface shares, and THIS call's data boundary (see
-// promptfence.Fence.Rule).
-func draftSystemFor(fence promptfence.Fence) string {
-	return draftSystem + "\n\n" + draftrules.Shared + "\n" + fence.Rule("account summary")
+// the rules every drafting surface shares, THIS call's data boundary (see
+// promptfence.Fence.Rule), and — when the sender has a voice profile — what
+// that profile is allowed to govern.
+//
+// The voice rule is conditional because the block it describes is: a system
+// turn telling the model to obey a profile that never arrives in the user turn
+// is an instruction pointing at nothing.
+func draftSystemFor(fence promptfence.Fence, voiced bool) string {
+	system := draftSystem + "\n\n" + draftrules.Shared
+	if voiced {
+		system += "\n\n" + draftvoice.SystemRule
+	}
+	return system + "\n" + fence.Rule("account summary")
 }
 
 // draftSchema is the response shape the validated lane enforces.
@@ -96,13 +107,13 @@ type modelReason struct {
 // is the deployment saying this role runs no model, and the deterministic
 // floor is the answer.
 func Write(
-	ctx context.Context, lane Completer, in Input,
+	ctx context.Context, lane Completer, in Input, voice draftvoice.Context,
 ) (Draft, crmcontracts.WrittenBy, error) {
 	floor := Deterministic(in)
 	if lane == nil {
 		return floor, crmcontracts.Deterministic, nil
 	}
-	written, err := writeChecked(ctx, lane, in)
+	written, err := writeChecked(ctx, lane, in, voice)
 	if err != nil {
 		// A model that is down, over budget or answering nonsense must not cost
 		// the rep their draft: the floor is a real message they can edit, and
@@ -119,22 +130,42 @@ func Write(
 // writeChecked drafts through the shared correct-and-retry loop, so this
 // surface cannot drift from the other two about what a rejected phrase is or
 // how many chances the model gets to fix one.
-func writeChecked(ctx context.Context, lane Completer, in Input) (Draft, error) {
-	return draftcore.CorrectOnce(ctx, in.Envelope.Lang(), in.Envelope.Band(),
+func writeChecked(ctx context.Context, lane Completer, in Input, voice draftvoice.Context) (Draft, error) {
+	draft, err := draftcore.CorrectOnce(ctx, in.Envelope.Lang(), in.Envelope.Band(),
 		func(ctx context.Context, correction string) (Draft, error) {
-			return writeWithModel(ctx, lane, in, correction)
+			return writeWithModel(ctx, lane, in, voice, correction)
 		},
-		func(d Draft) (string, []string) { return d.Body, reasonLabels(d.Reasoning) },
-		func(d Draft) (string, bool) { return d.Subject, in.Threaded() },
+		draftText, draftSubject(in),
 		// No observer: this package holds no logger, and a retry that does not
 		// help still returns a real draft. The reply surface, which has one,
 		// reports it.
 		nil,
 	)
+	if err != nil {
+		return Draft{}, err
+	}
+	return applyVoiceFloor(ctx, lane, in, voice, draft)
 }
 
-func writeWithModel(ctx context.Context, lane Completer, in Input, correction string) (Draft, error) {
-	req, err := groundedRequest(in)
+// draftText and draftSubject say which parts of a draft the phrasing rules
+// read. Both passes that check a draft take them from here rather than each
+// spelling the accessors inline: the voice floor's whole job is comparing one
+// draft against another, and a comparison whose two sides read different fields
+// measures nothing.
+func draftText(d Draft) (string, []string) { return d.Body, reasonLabels(d.Reasoning) }
+
+func draftSubject(in Input) func(Draft) (string, bool) {
+	return func(d Draft) (string, bool) { return d.Subject, in.Threaded() }
+}
+
+// phrasingFindings is what the shared phrasing rules say is wrong with a draft.
+func phrasingFindings(in Input, draft Draft) []draftcheck.Finding {
+	return draftcore.Findings(draft, in.Envelope.Lang(), in.Envelope.Band(),
+		draftText, draftSubject(in))
+}
+
+func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, correction string) (Draft, error) {
+	req, err := buildRequest(in, voice)
 	if err != nil {
 		return Draft{}, err
 	}
@@ -151,26 +182,33 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, correction st
 	return ParseDraft(res.Text, in)
 }
 
-// groundedRequest builds the model call: the system prompt naming this call's
+// buildRequest builds the model call: the system prompt naming this call's
 // boundary, and the account summary INSIDE it.
 //
 // The caller's intent is the one input outside the fence, and it is outside
 // because the caller typed it: fencing a person's own instruction would tell
 // the model to treat the reader as an attacker.
 //
-//promptvoice:exempt the reply is an email the salesperson sends under their OWN name. Margince's personality inside a customer-facing draft would be Margince signing somebody else's mail; compose/draftrules carries the user's own voice instead.
-func groundedRequest(in Input) (model.Request, error) {
+// The sender's voice profile, when they have one, rides the user turn under
+// this call's own fence — it is corpus text, so it is data and never
+// instruction.
+//
+//promptvoice:exempt this is an email the salesperson sends under their OWN name, so it carries THEIR voice (draftvoice) rather than Margince's personality — Margince's voice inside a customer-facing draft would be Margince signing somebody else's mail.
+func buildRequest(in Input, voice draftvoice.Context) (model.Request, error) {
 	fence := promptfence.New()
 	payload, err := json.Marshal(fencedInput(in))
 	if err != nil {
 		return model.Request{}, fmt.Errorf("marshal account draft input: %w", err)
 	}
 	content := fence.Wrap(string(payload))
+	if block := voice.Block(fence); block != "" {
+		content += "\n\n" + block
+	}
 	if in.Intent != "" {
 		content += "\n\nThe salesperson asks for: " + in.Intent
 	}
 	return model.Request{
-		System:   draftSystemFor(fence),
+		System:   draftSystemFor(fence, voice.OK),
 		Messages: []model.Message{{Role: "user", Content: content}},
 		// Thinking headroom. A reasoning model spends output tokens on internal
 		// thinking BEFORE its answer, and that thinking counts against the cap —
@@ -205,7 +243,18 @@ func ParseDraft(raw string, in Input) (Draft, error) {
 		return Draft{}, fmt.Errorf("account draft response: %w", err)
 	}
 	subject := strings.TrimSpace(out.Subject)
-	body := strings.TrimSpace(out.Body)
+	// Plain text, as the contract says a body is. A model asked for prose
+	// answers with `<br>` between paragraphs often enough that it is the
+	// shape of the answer; the reply surface reads it the same way, so the
+	// same model cannot format correctly on one surface and not the other.
+	// The greeting break is restored here rather than trusted to the prompt:
+	// the same request returns the run-on and the two-line form about equally
+	// often, and the composer renders exactly the breaks it is handed.
+	// Both names, because the register decides which one opens the message:
+	// the familiar greeting takes the first name and the formal one the
+	// surname, and the repair must recognise whichever the model wrote.
+	body := strings.TrimSpace(draftfloor.SplitGreetingLine(
+		ai.PlainText(out.Body), in.Recipient.FirstName, in.Recipient.LastName))
 	if subject == "" || body == "" {
 		return Draft{}, fmt.Errorf("account draft response: empty subject or body")
 	}
@@ -394,7 +443,12 @@ var (
 // SystemPromptFor is the assembled system turn, for the compose-level parity
 // gate that asserts every drafting surface writes under the same shared rules.
 // Exported for that assertion alone: the surface itself calls draftSystemFor.
-func SystemPromptFor(fence promptfence.Fence) string { return draftSystemFor(fence) }
+func SystemPromptFor(fence promptfence.Fence) string { return draftSystemFor(fence, false) }
+
+// VoicedSystemPromptFor is the system turn a draft written under a sender's
+// voice profile carries. The parity gate reads BOTH: a surface with two system
+// turns has two chances to drop the shared rules.
+func VoicedSystemPromptFor(fence promptfence.Fence) string { return draftSystemFor(fence, true) }
 
 // reasonLabels is the provenance a draft shows the rep, for the checks that
 // judge it. The labels alone: an entity id is a citation the filter already
@@ -407,7 +461,10 @@ func reasonLabels(reasons []Reason) []string {
 	return out
 }
 
-// GroundedRequest is the request this site sends, for the compose-level gate
-// that asserts every drafting surface carries thinking headroom. Exported for
-// that assertion alone; the site itself calls groundedRequest.
-func GroundedRequest(in Input) (model.Request, error) { return groundedRequest(in) }
+// GroundedRequest is the request this site sends, for the compose-level gates
+// that assert every drafting surface carries thinking headroom and that a
+// loaded voice profile reaches the model's user turn. Exported for those
+// assertions alone; the site itself calls buildRequest.
+func GroundedRequest(in Input, voice draftvoice.Context) (model.Request, error) {
+	return buildRequest(in, voice)
+}
