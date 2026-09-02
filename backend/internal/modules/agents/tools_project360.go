@@ -104,7 +104,7 @@ func chargeProject360(ctx context.Context, r Project360Result) {
 	}
 	if r.Commitments != nil {
 		for _, c := range r.Commitments.Items {
-			noteEvidence(ctx, datasource.EntityActivity, c.TaskID)
+			noteCommitmentEvidence(ctx, c)
 		}
 	}
 	if r.Activities != nil {

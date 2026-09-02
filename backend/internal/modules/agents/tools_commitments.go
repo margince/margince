@@ -49,15 +49,43 @@ type CommitmentAbout struct {
 	Name string `json:"name,omitempty"`
 }
 
-// OpenCommitment is one outstanding promise as the seam read it.
+// OpenCommitment is one outstanding promise as the seam read it, from either
+// of the two places a promise gets written down.
+//
+// EXACTLY ONE OF TaskID AND ClaimID. A promise somebody typed is a task row; a
+// promise an extractor read out of a conversation is a claim row, and the two
+// are unlinked — nothing writes conversation_claim.task_activity_id — so one
+// promise recorded both ways arrives here as two. That is the honest answer
+// until the link is written; guessing which pairs mean one promise would be
+// this surface inventing a fact.
 type OpenCommitment struct {
-	TaskID       ids.UUID
+	// Source is `task` or `conversation`, and says which of the two ids below
+	// is set.
+	Source string
+	// TaskID is the task activity, for a task-sourced promise.
+	TaskID *ids.UUID
+	// ClaimID is the extracted commitment, and SourceActivityID is the message
+	// it was read from — which is what a reader opens to check it.
+	ClaimID          *ids.UUID
+	SourceActivityID *ids.UUID
+	// Quote is the sentence the promise was made in. Claims only: a task
+	// carries what somebody retyped and has nothing to quote.
+	Quote        string
 	Subject      string
 	DueAt        *time.Time
 	AssigneeID   *ids.UUID
 	AssigneeName string
 	About        []CommitmentAbout
 }
+
+// The two places a promise is recorded, as this surface names them.
+const (
+	// CommitmentFromTask is a promise somebody typed as a task.
+	CommitmentFromTask = "task"
+	// CommitmentFromConversation is a promise an extractor read out of a
+	// captured conversation and nobody typed.
+	CommitmentFromConversation = "conversation"
+)
 
 // CommitmentSweep is ONE reading of the open-promise set: the rows, the
 // instant they are judged against, and whether the sweep stopped at its
@@ -165,8 +193,9 @@ func (t reviewCommitments) Handle(ctx context.Context, in json.RawMessage) (json
 	noteDerivedContent(ctx)
 	items := make([]CommitmentItem, 0, len(sweep.Commitments))
 	for _, c := range sweep.Commitments {
-		noteEvidence(ctx, datasource.EntityActivity, c.TaskID)
-		items = append(items, c.wire(sweep.AsOf))
+		item := c.wire(sweep.AsOf)
+		noteCommitmentEvidence(ctx, item)
+		items = append(items, item)
 	}
 	if sweep.Truncated {
 		noteWarning(ctx, warningSweepTruncated, commitmentsTruncatedMessage)
@@ -191,7 +220,9 @@ func requireCommitmentLimit(limit int) error {
 // state it is in as of the sweep's own instant.
 func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 	item := CommitmentItem{
-		TaskID: c.TaskID, Subject: c.Subject, DueAt: c.DueAt,
+		TaskID: c.TaskID, ClaimID: c.ClaimID, Source: c.Source,
+		SourceActivityID: c.SourceActivityID,
+		Quote:            c.Quote, Subject: c.Subject, DueAt: c.DueAt,
 		State: commitmentState(c.DueAt, asOf),
 		// Never null: a model handed null reads it as "unknown" where an empty
 		// array says "this promise names no record".
@@ -229,4 +260,19 @@ func commitmentState(dueAt *time.Time, asOf time.Time) string {
 // whether it is past it at all.
 func daysOverdue(dueAt *time.Time, asOf time.Time) (int, bool) {
 	return deadline.DaysPast(dueAt, asOf)
+}
+
+// noteCommitmentEvidence records the row a promise was read from, whichever
+// kind it is.
+//
+// Both point at an activity: a task IS an activity row, and a claim quotes the
+// message it was extracted from. So the caller's evidence trail lands on
+// something they can open either way, which is what the trail is for.
+func noteCommitmentEvidence(ctx context.Context, item CommitmentItem) {
+	switch {
+	case item.TaskID != nil:
+		noteEvidence(ctx, datasource.EntityActivity, *item.TaskID)
+	case item.SourceActivityID != nil:
+		noteEvidence(ctx, datasource.EntityActivity, *item.SourceActivityID)
+	}
 }
