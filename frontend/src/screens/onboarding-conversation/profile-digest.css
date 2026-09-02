@@ -14,11 +14,6 @@
 .pdigest-eyebrow {
   margin: 0;
   color: var(--textMeta);
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .pdigest-count {

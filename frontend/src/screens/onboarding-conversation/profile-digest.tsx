@@ -73,7 +73,7 @@ export function ProfileDigest({
 
   return (
     <aside className="pdigest">
-      <p className="pdigest-eyebrow">{t("ob.digest.where")}</p>
+      <p className="pdigest-eyebrow t-eyebrow">{t("ob.digest.where")}</p>
       <p className="pdigest-count">
         {t("ob.digest.written", {
           n: formatNumber(written, locale),
@@ -96,7 +96,7 @@ export function ProfileDigest({
       </div>
       {cites.length === 0 ? null : (
         <div className="pdigest-sources">
-          <p className="pdigest-eyebrow">{t("ob.digest.sources")}</p>
+          <p className="pdigest-eyebrow t-eyebrow">{t("ob.digest.sources")}</p>
           <ol>
             {cites.map((cite) => (
               <li key={cite.url}>

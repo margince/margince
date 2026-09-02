@@ -220,7 +220,7 @@ function DeckCardFace({
   return (
     <div className="rdeck-card" data-required={card.required}>
       <div className="rdeck-head">
-        <span className="rdeck-tag" data-required={card.required}>
+        <span className="rdeck-tag t-eyebrow" data-required={card.required}>
           {t(card.required ? "ob.deck.needed" : "ob.deck.optional")}
         </span>
         <span className="rdeck-count">

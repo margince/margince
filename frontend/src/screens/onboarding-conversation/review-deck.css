@@ -78,9 +78,6 @@
   border-radius: var(--r-full);
   background: var(--aiLight);
   color: var(--aiText);
-  font-size: var(--fs-eyebrow);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 .rdeck-tag[data-required="true"] {
   background: var(--dangerBg);
