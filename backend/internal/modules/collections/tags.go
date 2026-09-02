@@ -12,9 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -474,33 +472,4 @@ func (s *Store) NewTag(ctx context.Context, name, color string) (TagSummary, err
 		return TagSummary{}, err
 	}
 	return tagSummary(row), nil
-}
-
-func wireTag(t tagRow) crmcontracts.Tag {
-	var color *crmcontracts.TagColor
-	if t.Color != nil {
-		c := crmcontracts.TagColor(*t.Color)
-		color = &c
-	}
-	version := t.Version
-	return crmcontracts.Tag{
-		Id:          openapi_types.UUID(t.ID.UUID),
-		Name:        t.Name,
-		Color:       color,
-		Description: t.Description,
-		Version:     &version,
-		CreatedAt:   &t.CreatedAt,
-		UpdatedAt:   &t.UpdatedAt,
-		ArchivedAt:  t.ArchivedAt,
-	}
-}
-
-func wireTaggable(tg taggableRow) crmcontracts.Taggable {
-	return crmcontracts.Taggable{
-		Id:         openapi_types.UUID(tg.ID),
-		TagId:      openapi_types.UUID(tg.TagID.UUID),
-		EntityType: crmcontracts.TaggableEntityType(tg.EntityType),
-		EntityId:   openapi_types.UUID(tg.EntityID),
-		CreatedAt:  &tg.CreatedAt,
-	}
 }

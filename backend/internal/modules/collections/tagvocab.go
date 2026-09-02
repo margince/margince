@@ -61,8 +61,6 @@ const (
 	typeDeal         = "deal"
 )
 
-var advertisedTagTypes = []string{typePerson, typeOrganization, typeDeal}
-
 // GetTag reads one tag and how much of the workspace carries it.
 //
 // The counts are the reader's own: an admin deciding whether to retire a word
@@ -99,16 +97,17 @@ func (s *Store) GetTag(ctx context.Context, id ids.TagID) (tagRow, TagUsage, err
 // screen one they cannot reconcile with the list behind it.
 func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 	var out TagUsage
+	// The entity_type a tagging carries and the table it points at are the same
+	// word for all three, which is why one name serves as both below.
 	for _, c := range []struct {
 		entityType string
-		table      string
 		into       *int
 	}{
-		{typePerson, "person", &out.People},
-		{typeOrganization, "organization", &out.Companies},
-		{typeDeal, "deal", &out.Deals},
+		{typePerson, &out.People},
+		{typeOrganization, &out.Companies},
+		{typeDeal, &out.Deals},
 	} {
-		n, err := countVisibleTagged(ctx, tx, id, c.entityType, c.table)
+		n, err := countVisibleTagged(ctx, tx, id, c.entityType)
 		if err != nil {
 			return TagUsage{}, err
 		}
@@ -119,13 +118,13 @@ func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 
 // countVisibleTagged counts one type's tagged records under that type's own
 // row-scope predicate.
-func countVisibleTagged(ctx context.Context, tx pgx.Tx, id ids.TagID, entityType, table string) (int, error) {
+func countVisibleTagged(ctx context.Context, tx pgx.Tx, id ids.TagID, entityType string) (int, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	tagPos, typePos := arg(id), arg(entityType)
-	scope, err := auth.ScopeClauseFor(ctx, table, "r", arg)
+	scope, err := auth.ScopeClauseFor(ctx, entityType, "r", arg)
 	if err != nil {
-		return 0, fmt.Errorf("collections: scoping %s tag usage: %w", table, err)
+		return 0, fmt.Errorf("collections: scoping %s tag usage: %w", entityType, err)
 	}
 	if scope == "" {
 		// An unbounded caller sees every row, and the empty clause is how the
@@ -139,9 +138,9 @@ func countVisibleTagged(ctx context.Context, tx pgx.Tx, id ids.TagID, entityType
 		  JOIN %s r ON r.id = tg.entity_id
 		 WHERE tg.tag_id = $%d AND tg.entity_type = $%d
 		   AND r.archived_at IS NULL
-		   AND (%s)`, pgx.Identifier{table}.Sanitize(), tagPos, typePos, scope)
+		   AND (%s)`, pgx.Identifier{entityType}.Sanitize(), tagPos, typePos, scope)
 	if err := tx.QueryRow(ctx, query, args...).Scan(&n); err != nil {
-		return 0, fmt.Errorf("collections: counting %s tag usage: %w", table, err)
+		return 0, fmt.Errorf("collections: counting %s tag usage: %w", entityType, err)
 	}
 	return n, nil
 }
@@ -318,7 +317,7 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID) (MergeR
 		// admin describe a state that never existed. Ordering by id is what
 		// stops two merges of the same pair deadlocking on each other.
 		first, second := source, target
-		if second.UUID.String() < first.UUID.String() {
+		if second.String() < first.String() {
 			first, second = second, first
 		}
 		for _, id := range []ids.TagID{first, second} {

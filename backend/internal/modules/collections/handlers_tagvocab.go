@@ -134,3 +134,36 @@ func wireTagDetail(t tagRow, usage TagUsage) crmcontracts.TagDetail {
 		},
 	}
 }
+
+// The wire mappers for the tag surface, moved here from tags.go when that
+// file reached its line ceiling: a mapper is transport, and this is the
+// transport file.
+
+func wireTag(t tagRow) crmcontracts.Tag {
+	var color *crmcontracts.TagColor
+	if t.Color != nil {
+		c := crmcontracts.TagColor(*t.Color)
+		color = &c
+	}
+	version := t.Version
+	return crmcontracts.Tag{
+		Id:          openapi_types.UUID(t.ID.UUID),
+		Name:        t.Name,
+		Color:       color,
+		Description: t.Description,
+		Version:     &version,
+		CreatedAt:   &t.CreatedAt,
+		UpdatedAt:   &t.UpdatedAt,
+		ArchivedAt:  t.ArchivedAt,
+	}
+}
+
+func wireTaggable(tg taggableRow) crmcontracts.Taggable {
+	return crmcontracts.Taggable{
+		Id:         openapi_types.UUID(tg.ID),
+		TagId:      openapi_types.UUID(tg.TagID.UUID),
+		EntityType: crmcontracts.TaggableEntityType(tg.EntityType),
+		EntityId:   openapi_types.UUID(tg.EntityID),
+		CreatedAt:  &tg.CreatedAt,
+	}
+}
