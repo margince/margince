@@ -294,9 +294,14 @@ function DealsCreateVerb({
 // not compare, the stable sort keeps the server's own order — the one every
 // other deal surface shows — past the attention split.
 function rankedDeals(rows: readonly Deal[]): Deal[] {
+  // Only PRICED deals vote on comparability: an unpriced deal's currency is
+  // not a figure anybody ranks, and letting it into the set would stop two
+  // priced same-currency deals from ranking on a deal with nothing to rank.
   const currencies = new Set(
     rows.flatMap((deal) =>
-      deal.amount?.currency ? [deal.amount.currency] : [],
+      deal.amount?.amount_minor != null && deal.amount.currency
+        ? [deal.amount.currency]
+        : [],
     ),
   );
   const amountsComparable =

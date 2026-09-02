@@ -734,6 +734,62 @@ describe("CompanyRail", () => {
     ]);
   });
 
+  it("lets priced deals rank when the only other currency sits on an unpriced deal", () => {
+    stub();
+    renderRail({
+      view: view({
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Berlin expansion",
+              status: "open",
+              stage_name: "Discovery",
+              amount: { amount_minor: 100_000, currency: "EUR" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-2",
+              // A currency with no figure behind it: nothing to rank, so it
+              // must not stop the two priced EUR deals from ranking.
+              name: "US exploratory",
+              status: "open",
+              stage_name: "Discovery",
+              amount: { amount_minor: null, currency: "USD" },
+              stalled: false,
+            },
+            {
+              deal_id: "d-3",
+              name: "Fleet renewal",
+              status: "open",
+              stage_name: "Negotiation",
+              amount: { amount_minor: 480_000, currency: "EUR" },
+              stalled: false,
+            },
+          ],
+          page: emptyPage,
+          won_lifetime: { amount_minor: 0, currency: null },
+          lost_count: 0,
+        },
+      }),
+    });
+    const dealsPanel = screen
+      .getByText("Active deals")
+      .closest("section, .panel");
+    if (!(dealsPanel instanceof HTMLElement)) {
+      throw new Error("the deals panel has no wrapper");
+    }
+    const names = within(dealsPanel)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    // The larger EUR figure leads; the unpriced deal ranks after the priced.
+    expect(names).toEqual([
+      "Fleet renewal",
+      "Berlin expansion",
+      "US exploratory",
+    ]);
+  });
+
   it("shows only the top RAIL_ROW_LIMIT contacts while the header names the full count", () => {
     stub();
     renderRail({
