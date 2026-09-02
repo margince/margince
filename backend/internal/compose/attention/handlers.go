@@ -98,7 +98,16 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 		}
 		owner = ids.UUID(*params.Owner)
 	}
-	out, err := h.svc.Worklist(r.Context(), scope, filter, owner, limit)
+	// Passed through as the caller sent it, unchecked here on purpose. What a
+	// token means is a question about the scope and owner this read RESOLVES to,
+	// which happens in the service beside the resolution itself. Fingerprinting
+	// the request's words instead would refuse a caller who spelled out the
+	// default on page two of a walk they had started without it.
+	token := ""
+	if params.Cursor != nil {
+		token = *params.Cursor
+	}
+	out, err := h.svc.Worklist(r.Context(), scope, filter, owner, limit, token)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

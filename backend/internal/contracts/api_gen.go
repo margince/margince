@@ -29883,6 +29883,21 @@ type Worklist struct {
 	// Filter The narrowing this read applied.
 	Filter *WorklistFilter `json:"filter,omitempty"`
 
+	// NextCursor Send this back as `cursor` to continue past the last row of this page. See that
+	// parameter for what a walk does and does not guarantee.
+	//
+	// ABSENT MEANS THE WALK IS OVER — there is nothing behind this page. It is
+	// deliberately not minted on a final page: a cursor there invites one more request
+	// that can only answer empty, and a client walking until the cursor disappears
+	// would never stop.
+	//
+	// Absent is therefore a claim, not a silence, and it is the one this field must
+	// never make wrongly. `reach` and `counts` answer a different question — how deep
+	// each SOURCE was read, which is a bound on work rather than the end of a page —
+	// so a walk that has ended can still sit above sources that were cut short, and
+	// both statements are true at once.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
 	// Queue Everything actionable, best-first. The order is the product of this endpoint.
 	Queue []WorklistItem `json:"queue"`
 
@@ -34975,6 +34990,37 @@ type GetWorklistParams struct {
 
 	// Limit How many ranked items to return.
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Where to continue a walk, from a prior response's `next_cursor`. Omitted starts at
+	// the top, which is what every reader opening their day wants.
+	//
+	// NOT the shared keyset cursor the CRUD lists use, and the difference is why this
+	// endpoint declares its own. Those walk rows a database already ordered, so their
+	// token carries a sort key and the next page is a WHERE clause. This queue has no
+	// such column: it assembles from a dozen lanes and ranks them by a comparator
+	// reading facts no table holds — whether a wait is crowded, what a deal is worth in
+	// base currency, which band a row landed in. So this token names the last row it
+	// handed you, and the next page re-assembles the day, re-ranks it, and continues
+	// after that row.
+	//
+	// It encodes the `scope`, `filter` and `owner` it was minted under. Sending it
+	// alongside different ones returns `422 code: cursor_param_mismatch` rather than
+	// continuing into a different question — page two of your own tasks silently
+	// becoming the team's deals is what that prevents, and nothing in the response would
+	// have said so. `limit` is deliberately NOT fingerprinted: it decides how many rows
+	// a page carries, not which rows exist, so changing it mid-walk is legitimate.
+	//
+	// A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	//
+	// WHAT A WALK GUARANTEES, and what it does not. This is live work, so the day moves
+	// between pages: a rep answers a message, a deal closes, a colleague takes a task.
+	// The walk guarantees a row is not silently repeated, and that it terminates. It
+	// does not promise a stable snapshot, and should not — a page showing rows already
+	// dealt with would be worse than one that skipped them. If the row a cursor names is
+	// gone by the time the next page is asked for, the walk ENDS: restarting from the
+	// top would hand a client paging to exhaustion the same first page forever, each
+	// pass looking like ordinary progress.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Owner Whose queue to answer, when it is somebody else's. A manager reading a team
 	// exception is told which rep it belongs to, and the next question is always
@@ -72538,6 +72584,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}

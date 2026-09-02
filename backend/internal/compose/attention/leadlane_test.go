@@ -76,7 +76,7 @@ func TestABreachedLeadRanksAboveOneMerelyAtRisk(t *testing.T) {
 		},
 	}})
 
-	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25)
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestWithNoFirstResponseTargetTheLaneClaimsNothing(t *testing.T) {
 		{ID: ids.NewV7(), Name: "a lead", State: "breached", DeadlineAt: readInstant.Add(-time.Hour)},
 	}})
 
-	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25)
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestAnUnassignedLeadNamesThatItAnswersToNobody(t *testing.T) {
 		{ID: ids.NewV7(), Name: "nobody's", DeadlineAt: readInstant.Add(-time.Hour), State: "breached"},
 	}})
 
-	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25)
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestANamedOwnersQueueKeepsTheirOwedLeads(t *testing.T) {
 		},
 	}})
 
-	day, err := svc.Worklist(leadReader(), "", "", rep, 25)
+	day, err := svc.Worklist(leadReader(), "", "", rep, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestANamedOwnersQueueKeepsTheirOwedLeads(t *testing.T) {
 func TestAnUntrackedLanePublishesNoReachRow(t *testing.T) {
 	svc := leadLaneService(&stubLeads{tracked: false})
 
-	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25)
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)
 	}

@@ -57,7 +57,7 @@ const worklistMaxPage = 100
 // classified and then dropped, so the summary's figures describe the same day
 // whichever filter is applied.
 func (s *Service) Worklist(
-	ctx context.Context, scope, filter string, owner ids.UUID, limit int,
+	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
 ) (crmcontracts.Worklist, error) {
 	// Resolved BEFORE the day is read: a reader asking for a scope they do not
 	// hold gets a refusal rather than a page assembled and then narrowed, and
@@ -68,6 +68,18 @@ func (s *Service) Worklist(
 	}
 	// Same rule, same moment: whose queue this is, refused rather than narrowed.
 	namedOwner, err := s.resolveOwner(ctx, owner)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	// Checked against the RESOLVED scope and owner, not the words the request
+	// used. `scope` omitted and `scope=mine` are the same question, and a
+	// fingerprint over the raw request would refuse a caller who spelled the
+	// default out on page two of a walk they started without it.
+	//
+	// Refused BEFORE the day is read: a token minted for another question is the
+	// caller's mistake, and assembling a page to then discard it spends a dozen
+	// lane reads on an answer nobody receives.
+	cursor, err := decodeCursor(token, resolved, filter, namedOwner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -120,7 +132,7 @@ func (s *Service) Worklist(
 	// left the second half seeing no named owner: it fell through to "mine" and
 	// returned the READER's own day under the named person's heading, which is
 	// the one way this page can be wrong that its reader cannot detect.
-	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads)
+	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads, cursor)
 	if waitingErr != nil {
 		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
 	}
@@ -182,7 +194,7 @@ type waitingRead struct {
 
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
-	waiting waitingRead, leads leadRead,
+	waiting waitingRead, leads leadRead, cursor worklistCursor,
 ) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
@@ -300,7 +312,12 @@ func (s *Service) worklistFrom(
 	// then slicing left the last returned row comparing itself against a row the
 	// caller never received, and the summary describing a queue longer than the
 	// one on screen.
-	shown := page(rows, limit)
+	//
+	// The resume happens inside the same cut, between the sort and the slice: the
+	// candidate order does not depend on `limit` — crowding is marked above, over
+	// the whole narrowed set — so page two weighs exactly what page one weighed
+	// and continues it rather than re-deciding it.
+	shown, more := pageFrom(rows, limit, cursor)
 	ordered := rankAll(shown)
 	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{
@@ -326,6 +343,18 @@ func (s *Service) worklistFrom(
 	if filter != "" {
 		narrowed := crmcontracts.WorklistFilter(filter)
 		out.Filter = &narrowed
+	}
+	// The token for the row this page stopped on, minted ONLY when there is more
+	// behind it. A cursor on a final page invites one more request that can only
+	// answer empty, and a client walking until the cursor disappears would never
+	// stop.
+	//
+	// Fingerprinted with `s.taskOwner`, the same resolved owner the two
+	// narrowing passes above read. Taking it from the request instead would let
+	// the token and the rows it continues disagree about whose queue this is.
+	if more && len(shown) > 0 {
+		token := encodeCursor(shown[len(shown)-1], scope, filter, s.taskOwner)
+		out.NextCursor = &token
 	}
 	return out
 }
@@ -394,18 +423,24 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	return bounded
 }
 
-// page cuts the candidates to what one read carries.
+// pageFrom cuts the candidates to what one read carries, starting after the row
+// a cursor names, and says whether anything is left behind it.
 //
 // It runs BEFORE the ranking is drawn, so the comparison each row publishes is
 // against a row the caller actually received. The cut itself is by score, so
 // this sorts first and then slices — taking the best `limit`, never the first
 // `limit` the producers happened to return.
-func page(rows []ranked, limit int) []ranked {
+//
+// The sort happens before the resume, not after, and the order matters: the
+// cursor names a position in the RANKING, so the set has to be in ranked order
+// before the anchor means anything.
+func pageFrom(rows []ranked, limit int, cursor worklistCursor) (shown []ranked, more bool) {
 	sort.SliceStable(rows, func(i, j int) bool { return less(rows[i], rows[j]) })
+	rows = resume(rows, cursor)
 	if len(rows) > limit {
-		return rows[:limit]
+		return rows[:limit], true
 	}
-	return rows
+	return rows, false
 }
 
 func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranked {

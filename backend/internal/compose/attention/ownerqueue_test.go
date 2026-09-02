@@ -71,7 +71,7 @@ func TestANamedOwnersQueueCarriesTheirWaitingCustomersAndNotTheReadersOwn(t *tes
 	}
 	svc.teammates = teammatesSaying(true)
 
-	day, err := svc.Worklist(managerReading(), "", "", theRep, 25)
+	day, err := svc.Worklist(managerReading(), "", "", theRep, 25, "")
 	if err != nil {
 		t.Fatalf("opening the named owner's queue: %v", err)
 	}
