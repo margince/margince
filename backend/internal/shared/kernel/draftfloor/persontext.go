@@ -121,10 +121,7 @@ func partOfAWord(text string, i int) bool {
 	// "Lena", and a draft that buries the reader's name inside another word
 	// passed the check that exists to catch exactly that.
 	r, _ := utf8.DecodeRuneInString(text[i:])
-	if r == utf8.RuneError {
-		return false
-	}
-	return unicode.IsLetter(r) || unicode.IsDigit(r)
+	return wordRune(r)
 }
 
 // wordBefore reports whether the rune ENDING at i is a letter or digit, which
@@ -135,10 +132,21 @@ func wordBefore(text string, i int) bool {
 		return false
 	}
 	r, _ := utf8.DecodeLastRuneInString(text[:i])
+	return wordRune(r)
+}
+
+// wordRune says whether a rune continues a written word.
+//
+// Marks count. "Lena" followed by U+0308 renders as "Lenä", which is a
+// different name than the one asked for — reading the mark as a boundary let
+// the check report that a draft named somebody it did not. RuneError is not a
+// word character: text that is not valid UTF-8 has no rune at that edge to
+// judge, and guessing there would decide a name on a broken sequence.
+func wordRune(r rune) bool {
 	if r == utf8.RuneError {
 		return false
 	}
-	return unicode.IsLetter(r) || unicode.IsDigit(r)
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsMark(r)
 }
 
 // AIDisclosure is the Art. 50 authorship line, in the draft's own language.

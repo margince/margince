@@ -173,3 +173,21 @@ func TestABrokenSequenceAtTheEdgeIsNotAWordCharacter(t *testing.T) {
 		}
 	}
 }
+
+// A combining mark extends the written word, so a name followed by one is a
+// different name. "Lena" plus U+0308 renders "Lenä", and reading the mark as a
+// boundary reported that a draft named Lena when it named somebody else.
+func TestACombiningMarkExtendsTheWord(t *testing.T) {
+	t.Parallel()
+	for name, text := range map[string]string{
+		"mark after the name":  "Lenä schrieb gestern",
+		"mark before the name": "̈Lena schrieb gestern",
+	} {
+		if NamesPerson(text, "Lena") {
+			t.Errorf("%s: %q was read as naming %q", name, text, "Lena")
+		}
+	}
+	if !NamesPerson("Grüße Lena, kurz zum Angebot", "Lena") {
+		t.Error("a name beside ordinary punctuation was refused")
+	}
+}
