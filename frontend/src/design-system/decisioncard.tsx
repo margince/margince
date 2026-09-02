@@ -698,6 +698,19 @@ function readPayload(
   };
 }
 
+// cardName is what this card is ABOUT, in the order a reader wants it: the
+// drafted subject where there is one, then the record's own name.
+//
+// Spelled once because two places ask it — the headline, and the article's
+// accessible name — and a card whose heading and whose aria-labelledby
+// disagreed would be a card screen readers announce as something else.
+function cardName(
+  approval: DecisionApproval,
+  draft: DecisionDraft,
+): string | null {
+  return draft.subject ?? approval.target_label ?? null;
+}
+
 // The chips line, then the headline and the sentence explaining it.
 //
 // The headline is the drafted SUBJECT where there is one, because that is the
@@ -732,7 +745,7 @@ function DecisionHead({
   provenance?: Provenance;
   confidence?: ConfidenceLevel;
 }>) {
-  const named = draft.subject ?? approval.target_label ?? null;
+  const named = cardName(approval, draft);
   const headline = named ?? approval.summary ?? null;
   return (
     <>
@@ -807,7 +820,10 @@ export function DecisionCard({
   const headingId = useId();
   const payload = readPayload(approval, layout, display);
   const lapsed = !decided && decisionLapsed(approval, now);
-  const named = payload.draft.subject ?? approval.summary ?? null;
+  // The SAME question the headline asks, so the article's accessible name and
+  // the line a sighted reader sees cannot come apart: a card named only by its
+  // target_label rendered a headline and pointed aria-labelledby at nothing.
+  const named = cardName(approval, payload.draft) ?? approval.summary ?? null;
 
   return (
     <article
