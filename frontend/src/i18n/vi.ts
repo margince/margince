@@ -274,6 +274,8 @@ export const vi = {
     "Công ty này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào.",
   "record.notYoursToChange":
     "Công ty này thuộc về người khác. Hãy đề nghị chủ sở hữu chia sẻ nếu bạn cần thay đổi.",
+  "record.logActivityRefused":
+    "Bạn không có quyền ghi nhận hoạt động cho hồ sơ này.",
   "record.share": "Chia sẻ",
   "record.moreActions": "Thêm thao tác",
   "record.fullHistory": "Lịch sử đầy đủ",
@@ -5758,7 +5760,7 @@ export const vi = {
   "users.teamMembersAdminOnly": "Chỉ quản trị viên mới xem được thành viên.",
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
-    "Nhóm có tên để bạn chia sẻ bản ghi. Chỉ thuộc một nhóm thì chưa có quyền gì thêm — khách hàng, liên hệ, lead và deal ở đây ai cũng đọc được.",
+    "Nhóm có tên để bạn chia sẻ bản ghi. Chỉ thuộc một nhóm thì hầu hết vai trò vẫn chưa có quyền gì thêm — ngoại lệ là Trưởng nhóm: thêm họ vào một nhóm sẽ cho họ đọc và xử lý bản ghi của nhóm đó mà không cần thiết lập chia sẻ.",
   "users.teamsAdminOnly": "Chỉ quản trị viên mới có thể quản lý nhóm.",
   "users.deactivated": "Đã vô hiệu hóa {name}",
   "users.reactivated": "Đã kích hoạt lại {name}",
@@ -6781,8 +6783,6 @@ export const vi = {
   "person.action.meetings": "Xem lịch hẹn",
   "person.action.addTask": "Thêm việc",
   "person.action.research": "Nghiên cứu",
-  "person.action.logRefused":
-    "Bạn không có quyền ghi nhận hoạt động cho hồ sơ này.",
 
   "person.strip.lastInbound": "Nhận gần nhất",
   "person.strip.lastOutbound": "Gửi gần nhất",

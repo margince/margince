@@ -717,6 +717,58 @@ describe("logging an activity", () => {
     ).toBeTruthy();
   });
 
+  // "Add task" issues the same POST /activities as "Log activity", so it is
+  // refused by the same grant — sharing the one sentence rather than
+  // printing it twice.
+  it("also refuses Add task without the create grant, over the same sentence", async () => {
+    mount("overview", view, [], {}, { person: ["read", "update"] });
+
+    const header = await recordHeader();
+    const addTask = within(header).getByRole("button", { name: "Add task" });
+    const logActivity = within(header).getByRole("button", {
+      name: /Log activity/,
+    });
+    expect(addTask).toHaveProperty("disabled", true);
+    expect(
+      within(header).getAllByText(
+        "You do not have permission to log activities on this record.",
+      ),
+    ).toHaveLength(1);
+    expect(addTask.getAttribute("aria-describedby")).toBe(
+      logActivity.getAttribute("aria-describedby"),
+    );
+  });
+
+  // The button names a verb, opens the same form Log activity does — started
+  // on the task kind — and files the task against THIS person, rather than
+  // navigating to the Worklist, which has no way to add one.
+  it("adds a task on this person from the header, instead of leaving for the Worklist", async () => {
+    const user = userEvent.setup();
+    const posted: unknown[] = [];
+    mount("overview", view, [], {
+      "POST /activities": (body) => {
+        posted.push(body);
+        return jsonResponse({}, 201);
+      },
+    });
+
+    const header = await recordHeader();
+    await user.click(within(header).getByRole("button", { name: "Add task" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add task" });
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Subject" }),
+      "Send the renewal quote",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      kind: "task",
+      subject: "Send the renewal quote",
+      links: [{ entity_type: "person", entity_id: "p-1" }],
+    });
+  });
+
   it("logs a meeting on this person from the moment card's action", async () => {
     const user = userEvent.setup();
     const posted: unknown[] = [];
@@ -744,6 +796,54 @@ describe("logging an activity", () => {
       kind: "meeting",
       subject: "Coffee at the fair",
       meeting_status: "held",
+      links: [{ entity_type: "person", entity_id: "p-1" }],
+    });
+  });
+
+  // The `task` surface PersonMomentDestination documents ("the task sheet")
+  // used to fall through runAction's default and do nothing — the same
+  // capability-the-API-serves-and-no-screen-offers shape as the header's own
+  // Add task bug, in the same file's action loop.
+  const taskMoment: Person360["moment"] = {
+    claim_key: "moment:overdue_promise",
+    evidence_fingerprint: "fp-task",
+    rule: "overdue_promise",
+    headline: "Something is due",
+    why_now: "The next step needs a task to track it.",
+    confidence: "observed_fact",
+    evidence: [],
+    recommended_action: {
+      kind: "complete_task",
+      label: "File a task",
+      state: "available",
+      destination: { surface: "task" },
+    },
+  };
+
+  it("adds a task from the moment card's own 'task' surface", async () => {
+    const user = userEvent.setup();
+    const posted: unknown[] = [];
+    mount("overview", { ...view, moment: taskMoment }, [], {
+      "POST /activities": (body) => {
+        posted.push(body);
+        return jsonResponse({}, 201);
+      },
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "File a task" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Add task" });
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Subject" }),
+      "Chase the signed order",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      kind: "task",
+      subject: "Chase the signed order",
       links: [{ entity_type: "person", entity_id: "p-1" }],
     });
   });

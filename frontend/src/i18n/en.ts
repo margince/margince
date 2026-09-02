@@ -289,6 +289,8 @@ export const en = {
     "This company is archived. Restore it to change anything on it.",
   "record.notYoursToChange":
     "This company belongs to someone else. Ask its owner to share it with you if you need to make changes.",
+  "record.logActivityRefused":
+    "You do not have permission to log activities on this record.",
   "record.share": "Share",
   "record.moreActions": "More actions",
   "record.fullHistory": "Full history",
@@ -5863,7 +5865,7 @@ export const en = {
   "users.teamNobodyToAdd": "No users to add yet.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
-    "Named groups you can share records with. Being in a team grants no access on its own — customers, contacts, leads and deals are readable by everyone here.",
+    "Named groups you can share records with. Membership alone still grants no access for most roles — the exception is Team Lead: adding one to a team gives them that team's records to read and work, without a share being arranged.",
   "users.teamsAdminOnly": "Managing teams is available to admins only.",
   "users.deactivated": "{name} deactivated",
   "users.reactivated": "{name} reactivated",
@@ -6903,8 +6905,6 @@ export const en = {
   "person.action.meetings": "See meetings",
   "person.action.addTask": "Add task",
   "person.action.research": "Research",
-  "person.action.logRefused":
-    "You do not have permission to log activities on this record.",
 
   "person.strip.lastInbound": "Last inbound",
   "person.strip.lastOutbound": "Last outbound",

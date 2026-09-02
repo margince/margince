@@ -244,21 +244,22 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 }
 
 // dispatchedByThePersonPage is the set of destination surfaces the person page
-// actually opens — the `switch` in frontend/src/screens/personpage.tsx.
+// actually opens — the `switch` in frontend/src/screens/personpage.tsx's
+// runPersonMomentAction.
 //
 // The contract admits more surfaces than the page handles, and the ones it does
-// not handle fall to a `default` that deliberately does nothing. So a
-// contract-valid destination is not the bar: an action pointing at `task` is
-// enabled, pressed, and inert, which is the dead-button defect this test was
-// written for. This list is the bar, and it is a hand-kept mirror of that
-// switch — a surface added there belongs here, and until it is, offering it
-// fails rather than shipping another quiet nothing.
+// not handle fall to a `default` that deliberately does nothing rather than
+// offering a button that is enabled, pressed, and inert. So a contract-valid
+// destination is not the bar: this list is, and it is a hand-kept mirror of
+// that switch — a surface added there belongs here, and until it is, offering
+// it fails rather than shipping another quiet nothing.
 var dispatchedByThePersonPage = map[crmcontracts.PersonMomentDestinationSurface]bool{
 	crmcontracts.PersonMomentDestinationSurfaceComposer:     true,
 	crmcontracts.PersonMomentDestinationSurfaceResearch:     true,
 	crmcontracts.PersonMomentDestinationSurfaceMeetingBrief: true,
 	crmcontracts.PersonMomentDestinationSurfaceRecord:       true,
 	crmcontracts.PersonMomentDestinationSurfaceActivityLog:  true,
+	crmcontracts.PersonMomentDestinationSurfaceTask:         true,
 }
 
 // assertActionsAreHonest holds the rule for one moment: available means
@@ -418,7 +419,7 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 	}
 
 	reader := quiet
-	withholdLogActivity((as(map[string]principal.ObjectGrant{"person": {Read: true}})), &reader)
+	withholdActivityWrites((as(map[string]principal.ObjectGrant{"person": {Read: true}})), &reader)
 	if reader.RecommendedAction.State != crmcontracts.PersonMomentActionStateBlocked {
 		t.Errorf("state = %q for a caller without activity.create, want blocked", reader.RecommendedAction.State)
 	}
@@ -430,7 +431,40 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 	}
 
 	writer := quiet
-	withholdLogActivity((as(map[string]principal.ObjectGrant{"person": {Read: true}, "activity": {Create: true}})), &writer)
+	withholdActivityWrites((as(map[string]principal.ObjectGrant{"person": {Read: true}, "activity": {Create: true}})), &writer)
+	if writer.RecommendedAction.State != crmcontracts.PersonMomentActionStateAvailable || writer.RecommendedAction.Destination == nil {
+		t.Errorf("a caller holding activity.create got %q with destination %v, want the action untouched", writer.RecommendedAction.State, writer.RecommendedAction.Destination)
+	}
+}
+
+// complete_task writes the same POST /activities as log_activity, through the
+// same store and the same activity.create grant — no ladder rung offers it
+// today, but the contract admits it, and withholdActivityWrites must hold the
+// door for it before a rung does.
+func TestCompleteTaskIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
+	dest := crmcontracts.PersonMomentDestination{
+		Surface: crmcontracts.PersonMomentDestinationSurfaceTask,
+	}
+	task := crmcontracts.PersonMoment{
+		Rule: crmcontracts.PersonMomentRuleOverduePromise,
+		RecommendedAction: crmcontracts.PersonMomentAction{
+			Kind:        crmcontracts.PersonMomentActionKindCompleteTask,
+			State:       crmcontracts.PersonMomentActionStateAvailable,
+			Destination: &dest,
+		},
+	}
+
+	reader := task
+	withholdActivityWrites((as(map[string]principal.ObjectGrant{"person": {Read: true}})), &reader)
+	if reader.RecommendedAction.State != crmcontracts.PersonMomentActionStateBlocked {
+		t.Errorf("state = %q for a caller without activity.create, want blocked", reader.RecommendedAction.State)
+	}
+	if reader.RecommendedAction.Destination != nil {
+		t.Error("a withheld action still names a destination, which the client would treat as reachable")
+	}
+
+	writer := task
+	withholdActivityWrites((as(map[string]principal.ObjectGrant{"person": {Read: true}, "activity": {Create: true}})), &writer)
 	if writer.RecommendedAction.State != crmcontracts.PersonMomentActionStateAvailable || writer.RecommendedAction.Destination == nil {
 		t.Errorf("a caller holding activity.create got %q with destination %v, want the action untouched", writer.RecommendedAction.State, writer.RecommendedAction.Destination)
 	}
