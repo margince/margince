@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
+	"github.com/margince/margince/backend/internal/compose/draftreply"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -175,14 +176,12 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvo
 		// nothing about the request's shape.
 		req.Messages[len(req.Messages)-1].Content += correction
 	}
-	// The reading goes down to the lane so a reply this function would refuse
-	// is re-asked WITH the refusal, instead of degrading to the floor with the
-	// model never told what was wrong. It is ParseDraft itself rather than a
-	// schema check beside it: a lane that accepted anything less would spend
-	// the re-ask on a question this parse does not ask.
-	res, err := draftcore.CompleteChecked(ctx, lane, req, func(text string) error {
-		_, refused := ParseDraft(text, in)
-		return refused
+	// draftreply.Ask re-asks through the SAME parse the answer path runs, so a
+	// reply this site would refuse goes back to the model with the reason
+	// rather than degrading silently to the floor.
+	res, err := draftreply.Ask(ctx, lane, req, func(text string) error {
+		_, parseErr := ParseDraft(text, in)
+		return parseErr
 	})
 	if err != nil {
 		return Draft{}, err
