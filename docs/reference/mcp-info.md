@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 61 |
 | Resources | 9 |
-| Tool catalog | 173.6 KB |
+| Tool catalog | 173.7 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 45308 |
+| Approx. wire tokens | 45334 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 83.5 KB | 48% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 40.2 KB | 23% | Yes, every step |
-| Input schemas | 36.9 KB | 21% | Yes, every step |
+| Input schemas | 37.0 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.9 KB | 7% | Partly |
-| **Description + input schema** | **77.1 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **77.2 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -89,7 +89,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 1.9 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
-| [`list_records`](#list_records) | List records | yes |  | 3.1 KB |
+| [`list_records`](#list_records) | List records | yes |  | 3.2 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.8 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
@@ -5177,7 +5177,7 @@ Enumerate the people, organizations, deals, leads or projects that meet exact co
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other) deal — organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
       "type": "object"
     },
     "limit": {

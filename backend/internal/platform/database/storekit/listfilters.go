@@ -24,6 +24,7 @@ import (
 	"maps"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -92,6 +93,35 @@ func FilterID[K ids.EntityKind, I any](set func(*I, *ids.ID[K])) FilterBinding[I
 			return operandShape("a uuid, in the 8-4-4-4-12 hex form")
 		}
 		set(in, &id)
+		return nil
+	}
+}
+
+// FilterIDList binds a comma-separated list of reference operands.
+//
+// A saved view stores each filter as ONE string, so a filter naming several
+// records has to fit in one — which is why this is a list in a string rather
+// than a repeated key. The wire's own query parameter repeats instead; the
+// transport joins before it reaches here, so both doors arrive in one shape.
+//
+// An empty entry is skipped rather than parsed: a trailing comma is how a
+// hand-edited view or a UI that joined an empty slot spells "nothing more",
+// and refusing it would break a view over a typo nobody can see.
+func FilterIDList[K ids.EntityKind, I any](set func(*I, []ids.UUID)) FilterBinding[I] {
+	return func(in *I, value string) error {
+		var out []ids.UUID
+		for _, raw := range strings.Split(value, ",") {
+			raw = strings.TrimSpace(raw)
+			if raw == "" {
+				continue
+			}
+			id, err := ids.ParseAs[K](raw)
+			if err != nil {
+				return operandShape("a comma-separated list of uuids, each in the 8-4-4-4-12 hex form")
+			}
+			out = append(out, id.UUID)
+		}
+		set(in, out)
 		return nil
 	}
 }

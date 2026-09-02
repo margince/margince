@@ -32,6 +32,10 @@ const orgNameColumn = "display_name"
 // ListOrganizationsInput carries the organization list's contract
 // parameters.
 type ListOrganizationsInput struct {
+	// TagIDs narrows to the accounts carrying these tags, combined by TagMode.
+	// The predicate is storekit's, shared with the person and deal lists.
+	TagIDs  []ids.UUID
+	TagMode storekit.TagMode
 	// IncludeAnchor admits the installation's own company (ADR-0082/A127).
 	IncludeAnchor bool
 	Cursor        *string
@@ -166,9 +170,7 @@ func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput
 			if in.Classification != nil {
 				where = append(where, storekit.SQLf("classification = $%d", arg(*in.Classification)))
 			}
-			if clause := organizationDomainClause(in.Domain, in.IncludeArchived, arg); clause != "" {
-				where = append(where, clause)
-			}
+			where = appendOrgLinkClauses(ctx, where, in, arg)
 			// A value outside the enum is a client mistake, not a selection
 			// that happens to match nothing: answering 200 with an empty page
 			// tells the reader this account list is empty when the question
@@ -222,6 +224,11 @@ func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput
 			if err := attachOrgRelationshipTypes(ctx, tx, orgs); err != nil {
 				return err
 			}
+			if err := storekit.AttachRowTags(ctx, tx, organizationEntity, orgs,
+				func(o crmcontracts.Organization) ids.UUID { return ids.UUID(o.Id) },
+				func(o *crmcontracts.Organization, tags []storekit.RowTag) { o.Tags = wireRowTags(tags) }); err != nil {
+				return err
+			}
 			return attachOrgCounts(ctx, tx, orgs)
 		},
 		cursorKey: func(last crmcontracts.Organization) (time.Time, ids.UUID) {
@@ -253,4 +260,22 @@ func scanOrganizationPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *s
 		return nil, nil, err
 	}
 	return orgs, cursorKeys, nil
+}
+
+// appendOrgLinkClauses adds the narrowings that reach ANOTHER table — a
+// domain row and a tagging — rather than a column on organization. They are
+// grouped because they share that shape, and because the list they sit in has
+// a size ceiling that a third one would push through.
+func appendOrgLinkClauses(
+	ctx context.Context, where []string, in ListOrganizationsInput, arg func(any) int,
+) []string {
+	if clause := organizationDomainClause(in.Domain, in.IncludeArchived, arg); clause != "" {
+		where = append(where, clause)
+	}
+	if clause := storekit.TagFilterClause(
+		ctx, organizationEntity, "organization.id", in.TagIDs, in.TagMode, arg,
+	); clause != "" {
+		where = append(where, clause)
+	}
+	return where
 }

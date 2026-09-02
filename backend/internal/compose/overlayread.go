@@ -57,7 +57,8 @@ const (
 	paramOrganizationID = "organization_id"
 	paramStatus         = "status"
 	paramKind           = "kind"
-	paramTag            = "tag"
+	paramTag            = "tag_id"
+	paramTagMode        = "tag_mode"
 	// paramCapturedByKind is refused in overlay mode rather than ignored:
 	// captured_by is OUR provenance column, stamped from the principal that
 	// wrote the row. Mirror rows are the incumbent's records, created in the
@@ -216,7 +217,11 @@ func (s Server) ListPeople(w http.ResponseWriter, r *http.Request, params crmcon
 			{paramOwnerID, params.OwnerId != nil},
 			{paramOwnerTeamID, params.OwnerTeamId != nil},
 			{paramUnassigned, params.Unassigned != nil && *params.Unassigned},
-			{paramTag, params.Tag != nil},
+			{paramTag, params.TagId != nil && len(*params.TagId) > 0},
+			// The MODE too, not only the ids: an overlay that dropped it would
+			// answer `any` for a caller who asked `none`, which is the whole
+			// mirrored set wearing the shape of a filtered one.
+			{paramTagMode, params.TagMode != nil},
 			// Employment is OUR edge: the mirror holds the incumbent's own
 			// contact-to-company links, under their ids, so a margince
 			// organization id names nothing there.
@@ -245,6 +250,8 @@ func (s Server) ListOrganizations(w http.ResponseWriter, r *http.Request, params
 			{paramOwnerID, params.OwnerId != nil},
 			{paramOwnerTeamID, params.OwnerTeamId != nil},
 			{paramUnassigned, params.Unassigned != nil && *params.Unassigned},
+			{paramTag, params.TagId != nil && len(*params.TagId) > 0},
+			{paramTagMode, params.TagMode != nil},
 			// Firmographics we hold and the mirror does not: refused rather
 			// than forwarded, or the answer is the unfiltered list wearing a
 			// filtered list's shape.
@@ -283,6 +290,8 @@ func (s Server) ListDeals(w http.ResponseWriter, r *http.Request, params crmcont
 	overlayList(s, w, r, datasource.EntityDeal,
 		func() { s.dealsHandlers.ListDeals(w, r, params) },
 		[]overlayParam{
+			{paramTag, params.TagId != nil && len(*params.TagId) > 0},
+			{paramTagMode, params.TagMode != nil},
 			{paramSort, params.Sort != nil},
 			{paramPipelineID, params.PipelineId != nil},
 			{paramStageID, params.StageId != nil},

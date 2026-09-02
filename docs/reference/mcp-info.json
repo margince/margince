@@ -10,16 +10,16 @@
   "totals": {
     "tools": 61,
     "resources": 9,
-    "tool_catalog_bytes": 177719,
+    "tool_catalog_bytes": 177825,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 45308,
+    "approx_wire_tokens_total": 45334,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 41211,
-      "input_schema_bytes": 37786,
+      "input_schema_bytes": 37892,
       "output_schema_bytes": 85535,
-      "description_plus_input_schema_bytes": 78997
+      "description_plus_input_schema_bytes": 79103
     }
   },
   "tools": {
@@ -4620,7 +4620,7 @@
               "additionalProperties": {
                 "type": "string"
               },
-              "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other) deal — organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+              "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
               "type": "object"
             },
             "limit": {

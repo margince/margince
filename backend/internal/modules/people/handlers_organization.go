@@ -49,7 +49,14 @@ func (h Handlers) ListOrganizations(w http.ResponseWriter, r *http.Request, para
 		Lifecycle:        enumArg(params.Lifecycle),
 		RelationshipType: enumArg(params.RelationshipType),
 		Domain:           params.Domain,
+		TagIDs:           uuidArgs(params.TagId),
 	}
+	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
+	if err != nil {
+		httperr.Write(w, r, httperr.Validation("tag_mode", "invalid", err.Error()))
+		return
+	}
+	in.TagMode = mode
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned

@@ -164,6 +164,10 @@ var personBindings = EntityBinding{
 		{WireSlot: "created_at", CanonicalKey: "created_at", Incumbent: []string{"createdate"}, Disposition: DispositionMapped},
 		{WireSlot: "updated_at", CanonicalKey: "last_synced_at", Incumbent: []string{"lastmodifieddate"}, Disposition: DispositionMapped},
 
+		{
+			WireSlot: "tags", Disposition: DispositionUnmappable,
+			Reason: "A tag is THIS workspace's governed vocabulary — coined, renamed and retired by its own admins, and applied to records here. An incumbent's own labels are a different vocabulary under different governance, so mapping one onto the other would present somebody else's words as this workspace's, and a rename here would have nothing to rename there.",
+		},
 		{WireSlot: "social", Disposition: DispositionDeferred, IssueURL: "https://github.com/margince/margince/issues/985"},
 		{
 			WireSlot: "archived_at", Disposition: DispositionUnmappable,
@@ -201,6 +205,10 @@ var organizationBindings = EntityBinding{
 	Entity: "organization",
 	Armed:  true,
 	Bindings: append([]FieldBinding{
+		{
+			WireSlot: "tags", Disposition: DispositionUnmappable,
+			Reason: "A tag is THIS workspace's governed vocabulary — coined, renamed and retired by its own admins, and applied to records here. An incumbent's own labels are a different vocabulary under different governance, so mapping one onto the other would present somebody else's words as this workspace's, and a rename here would have nothing to rename there.",
+		},
 		{
 			WireSlot: "writable", Disposition: DispositionNativeOnly,
 			Reason: "Whether THIS caller may change the row, answered by this installation's own write gate from its ownership, teams and record grants. An incumbent CRM's permission model is not those, so a mirrored value would be a different question's answer wearing this field's name.",

@@ -6,11 +6,29 @@ package deals
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// uuidArgs widens a repeated uuid query parameter to the store's own shape.
+// An absent parameter and an empty list are the same thing: no filter.
+//
+// A twin of the people module's own — a module never imports a sibling, and a
+// four-line widening is not worth a platform seam of its own.
+func uuidArgs(in *[]openapi_types.UUID) []ids.UUID {
+	if in == nil {
+		return nil
+	}
+	out := make([]ids.UUID, 0, len(*in))
+	for _, v := range *in {
+		out = append(out, ids.UUID(v))
+	}
+	return out
+}
 
 func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmcontracts.ListDealsParams) {
 	in := ListDealsInput{
@@ -19,7 +37,14 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
 		Sort:            params.Sort,
 		CustomFilters:   httperr.CustomFieldFilters(r),
+		TagIDs:          uuidArgs(params.TagId),
 	}
+	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
+	if err != nil {
+		httperr.Write(w, r, httperr.Validation("tag_mode", "invalid", err.Error()))
+		return
+	}
+	in.TagMode = mode
 	in.PipelineID = idArg[ids.PipelineKind](params.PipelineId)
 	in.StageID = idArg[ids.StageKind](params.StageId)
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)

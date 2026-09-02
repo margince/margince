@@ -113,7 +113,10 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 	// itself (an activity is a link, not a thing links hang off).
 	var branch *searchBranch
 	for i := range searchBranches {
-		if searchBranches[i].entity == anchorType && !searchBranches[i].activityWalk {
+		// textOnly too: a word is not a thing links hang off, so a tag can
+		// never be a graph anchor even when a caller names one.
+		if searchBranches[i].entity == anchorType &&
+			!searchBranches[i].activityWalk && !searchBranches[i].textOnly {
 			branch = &searchBranches[i]
 		}
 	}
