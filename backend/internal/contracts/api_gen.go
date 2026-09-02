@@ -1837,6 +1837,51 @@ func (e AutomationRunTier) Valid() bool {
 	}
 }
 
+// Defines values for AvailableModelLane.
+const (
+	AvailableModelLaneChat       AvailableModelLane = "chat"
+	AvailableModelLaneEmbeddings AvailableModelLane = "embeddings"
+)
+
+// Valid indicates whether the value is a known member of the AvailableModelLane enum.
+func (e AvailableModelLane) Valid() bool {
+	switch e {
+	case AvailableModelLaneChat:
+		return true
+	case AvailableModelLaneEmbeddings:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AvailableModelListUnavailable.
+const (
+	NoEndpoint     AvailableModelListUnavailable = "no_endpoint"
+	NoKey          AvailableModelListUnavailable = "no_key"
+	NotPublished   AvailableModelListUnavailable = "not_published"
+	ProfileForbids AvailableModelListUnavailable = "profile_forbids"
+	Unreachable    AvailableModelListUnavailable = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the AvailableModelListUnavailable enum.
+func (e AvailableModelListUnavailable) Valid() bool {
+	switch e {
+	case NoEndpoint:
+		return true
+	case NoKey:
+		return true
+	case NotPublished:
+		return true
+	case ProfileForbids:
+		return true
+	case Unreachable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BackfillPreviewEstimateQuality.
 const (
 	BackfillPreviewEstimateQualityHeuristic BackfillPreviewEstimateQuality = "heuristic"
@@ -9843,16 +9888,16 @@ func (e SetActivityDispositionRequestDisposition) Valid() bool {
 
 // Defines values for SetAiModelRateRequestLane.
 const (
-	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
-	SetAiModelRateRequestLaneEmbeddings SetAiModelRateRequestLane = "embeddings"
+	Chat       SetAiModelRateRequestLane = "chat"
+	Embeddings SetAiModelRateRequestLane = "embeddings"
 )
 
 // Valid indicates whether the value is a known member of the SetAiModelRateRequestLane enum.
 func (e SetAiModelRateRequestLane) Valid() bool {
 	switch e {
-	case SetAiModelRateRequestLaneChat:
+	case Chat:
 		return true
-	case SetAiModelRateRequestLaneEmbeddings:
+	case Embeddings:
 		return true
 	default:
 		return false
@@ -11770,6 +11815,75 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyPlanStatus.
+const (
+	WeeklyPlanStatusClosed WeeklyPlanStatus = "closed"
+	WeeklyPlanStatusOpen   WeeklyPlanStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanStatus enum.
+func (e WeeklyPlanStatus) Valid() bool {
+	switch e {
+	case WeeklyPlanStatusClosed:
+		return true
+	case WeeklyPlanStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanCommitmentState.
+const (
+	WeeklyPlanCommitmentStateDone    WeeklyPlanCommitmentState = "done"
+	WeeklyPlanCommitmentStateDropped WeeklyPlanCommitmentState = "dropped"
+	WeeklyPlanCommitmentStateMissed  WeeklyPlanCommitmentState = "missed"
+	WeeklyPlanCommitmentStateOpen    WeeklyPlanCommitmentState = "open"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanCommitmentState enum.
+func (e WeeklyPlanCommitmentState) Valid() bool {
+	switch e {
+	case WeeklyPlanCommitmentStateDone:
+		return true
+	case WeeklyPlanCommitmentStateDropped:
+		return true
+	case WeeklyPlanCommitmentStateMissed:
+		return true
+	case WeeklyPlanCommitmentStateOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyPlanLinkType.
+const (
+	WeeklyPlanLinkTypeDeal         WeeklyPlanLinkType = "deal"
+	WeeklyPlanLinkTypeLead         WeeklyPlanLinkType = "lead"
+	WeeklyPlanLinkTypeOrganization WeeklyPlanLinkType = "organization"
+	WeeklyPlanLinkTypePerson       WeeklyPlanLinkType = "person"
+	WeeklyPlanLinkTypeProject      WeeklyPlanLinkType = "project"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyPlanLinkType enum.
+func (e WeeklyPlanLinkType) Valid() bool {
+	switch e {
+	case WeeklyPlanLinkTypeDeal:
+		return true
+	case WeeklyPlanLinkTypeLead:
+		return true
+	case WeeklyPlanLinkTypeOrganization:
+		return true
+	case WeeklyPlanLinkTypePerson:
+		return true
+	case WeeklyPlanLinkTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WeeklyReviewDealOutcome.
 const (
 	WeeklyReviewDealOutcomeLost  WeeklyReviewDealOutcome = "lost"
@@ -12317,6 +12431,7 @@ const (
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
 	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
+	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the WorklistReachSource enum.
@@ -12361,6 +12476,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceSyncHealth:
 		return true
 	case WorklistReachSourceTask:
+		return true
+	case WorklistReachSourceUndelivered:
 		return true
 	default:
 		return false
@@ -14031,22 +14148,43 @@ func (e ListSignalsParamsKind) Valid() bool {
 
 // Defines values for ListSignalsParamsResolutionState.
 const (
-	Dropped       ListSignalsParamsResolutionState = "dropped"
-	LowConfidence ListSignalsParamsResolutionState = "low_confidence"
-	Resolved      ListSignalsParamsResolutionState = "resolved"
-	Unresolved    ListSignalsParamsResolutionState = "unresolved"
+	ListSignalsParamsResolutionStateDropped       ListSignalsParamsResolutionState = "dropped"
+	ListSignalsParamsResolutionStateLowConfidence ListSignalsParamsResolutionState = "low_confidence"
+	ListSignalsParamsResolutionStateResolved      ListSignalsParamsResolutionState = "resolved"
+	ListSignalsParamsResolutionStateUnresolved    ListSignalsParamsResolutionState = "unresolved"
 )
 
 // Valid indicates whether the value is a known member of the ListSignalsParamsResolutionState enum.
 func (e ListSignalsParamsResolutionState) Valid() bool {
 	switch e {
-	case Dropped:
+	case ListSignalsParamsResolutionStateDropped:
 		return true
-	case LowConfidence:
+	case ListSignalsParamsResolutionStateLowConfidence:
 		return true
-	case Resolved:
+	case ListSignalsParamsResolutionStateResolved:
 		return true
-	case Unresolved:
+	case ListSignalsParamsResolutionStateUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
+const (
+	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+)
+
+// Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
+func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
+	switch e {
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
+		return true
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
+		return true
+	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
 		return true
 	default:
 		return false
@@ -16160,6 +16298,36 @@ type AutonomySettings struct {
 	Data []KindAutonomy `json:"data"`
 }
 
+// AvailableModel One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+type AvailableModel struct {
+	// DisplayName The vendor's own human label, absent where it publishes none.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// Id The string a binding names, exactly as the vendor spells it.
+	Id string `json:"id"`
+
+	// Lane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+	Lane *AvailableModelLane `json:"lane,omitempty"`
+}
+
+// AvailableModelLane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+type AvailableModelLane string
+
+// AvailableModelList One vendor's own answer about what it serves.
+// An empty `models` with NO `unavailable` is a vendor that answered and serves nothing — a local runner with no model pulled onto it is the ordinary case. It is a different state from a vendor that could not be asked, which always sets `unavailable`, and a client that folded the two would tell a reader to paste a key they already have.
+type AvailableModelList struct {
+	Models []AvailableModel `json:"models"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
+}
+
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+type AvailableModelListUnavailable string
+
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
 type BackfillPreview struct {
 	ComputedAt time.Time `json:"computed_at"`
@@ -17169,6 +17337,14 @@ type CompanyProfile struct {
 
 	// LegalName The registered legal entity, when it differs from display_name.
 	LegalName *string `json:"legal_name,omitempty"`
+
+	// LogoUrl Where to fetch the installation's own company logo — the same `getOrganizationLogo`
+	// path `Organization.logo_url` carries for that record, cookie-authenticated and
+	// same-origin. The mark is whichever one the company is wearing: the one a website
+	// read resolved from its own site, or the one a person uploaded through
+	// `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
+	// is never an error: a client draws the deterministic monogram then.
+	LogoUrl *string `json:"logo_url,omitempty"`
 
 	// MinimumComplete True when display_name, offer_summary and icp are confirmed.
 	MinimumComplete *bool `json:"minimum_complete,omitempty"`
@@ -18904,7 +19080,7 @@ type Deal struct {
 	FxRateToBase *string            `json:"fx_rate_to_base,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
-	// LastActivityAt Drives the deterministic stalled flag.
+	// LastActivityAt Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LostReason Required when status=lost.
@@ -22288,6 +22464,15 @@ type MyAgentGrants struct {
 	Data []MyAgentGrant `json:"data"`
 }
 
+// NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
+type NewWeeklyPlanCommitment struct {
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+	Label string              `json:"label"`
+
+	// LinkedRecord Both halves or neither — a type with no id names nothing.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
+}
+
 // Notice One durable line addressed to one person, as the raising call returns it.
 type Notice struct {
 	// Body The coach's note. Absent when none was given.
@@ -22741,7 +22926,8 @@ type Organization struct {
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
 	IsAnchor *bool `json:"is_anchor,omitempty"`
 
-	// LastActivityAt When something last happened with this account — the newest `occurred_at` of an activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first linked activity. Sortable (DM-VOCAB-2).
+	// LastActivityAt When something last happened with this account — the newest `occurred_at` of a WORKSPACE-AUDIENCE activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	LegalName      *string    `json:"legal_name,omitempty"`
 
@@ -25854,7 +26040,7 @@ type Project struct {
 	// Key The short handle a human writes in a subject line. Letter-led and bounded so it can never be a bare number, which would match dates, amounts and order numbers. Unique among LIVE projects; archiving frees it.
 	Key *string `json:"key,omitempty"`
 
-	// LastActivityAt Maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly.
+	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// MaskedFields The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
@@ -26028,7 +26214,7 @@ type Project360Rollups struct {
 	// ActivityCount Every live activity filed under the project.
 	ActivityCount int `json:"activity_count"`
 
-	// LastActivityAt The newest activity filed under the project; null when nothing is filed yet.
+	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
 	LastActivityAt *time.Time `json:"last_activity_at"`
 
 	// OpenCommitments Open tasks filed under the project, whole lifecycle.
@@ -29322,6 +29508,70 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
+// WeeklyReview beside it.
+type WeeklyPlan struct {
+	Commitments []WeeklyPlanCommitment `json:"commitments"`
+	Id          openapi_types.UUID     `json:"id"`
+
+	// LocalWeekStart The Monday of the week planned, in the installation reporting timezone.
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Status `closed` once the weekly job has settled the week and frozen its outcome into the
+	// review. A closed plan stops accepting edits, which is what keeps the review's
+	// counts true.
+	Status WeeklyPlanStatus `json:"status"`
+}
+
+// WeeklyPlanStatus `closed` once the weekly job has settled the week and frozen its outcome into the
+// review. A closed plan stops accepting edits, which is what keeps the review's
+// counts true.
+type WeeklyPlanStatus string
+
+// WeeklyPlanCommitment One thing a rep said they would do this week.
+type WeeklyPlanCommitment struct {
+	CompletedAt *time.Time          `json:"completed_at,omitempty"`
+	DueOn       *openapi_types.Date `json:"due_on,omitempty"`
+
+	// HelpRequested What the rep needs from their lead, absent when they have asked nothing.
+	HelpRequested *string            `json:"help_requested,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	Label         string             `json:"label"`
+
+	// LinkedRecord The record this is about, when it names one. Carried as a type and an id and
+	// NEVER resolved here — the client asks the record's own endpoint, so a record the
+	// reader may not see simply does not resolve, and a deleted one stops resolving
+	// without erasing the commitment that named it.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
+
+	// ManagerResponse What the lead answered, absent until they have.
+	ManagerResponse *string             `json:"manager_response,omitempty"`
+	ManagerUserId   *openapi_types.UUID `json:"manager_user_id,omitempty"`
+
+	// Position The order the rep put them in.
+	Position    int        `json:"position"`
+	RespondedAt *time.Time `json:"responded_at,omitempty"`
+
+	// State `missed` is written by the week's close over a commitment left open; a rep
+	// settles their own as done or dropped. Dropped counts as neither owed nor kept:
+	// deciding a thing is not worth doing is not failing to do it.
+	State WeeklyPlanCommitmentState `json:"state"`
+}
+
+// WeeklyPlanCommitmentState `missed` is written by the week's close over a commitment left open; a rep
+// settles their own as done or dropped. Dropped counts as neither owed nor kept:
+// deciding a thing is not worth doing is not failing to do it.
+type WeeklyPlanCommitmentState string
+
+// WeeklyPlanLink defines model for WeeklyPlanLink.
+type WeeklyPlanLink struct {
+	Id   openapi_types.UUID `json:"id"`
+	Type WeeklyPlanLinkType `json:"type"`
+}
+
+// WeeklyPlanLinkType defines model for WeeklyPlanLink.Type.
+type WeeklyPlanLinkType string
+
 // WeeklyReview One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
 // which is why they are stored rather than recomputed.
 type WeeklyReview struct {
@@ -29381,7 +29631,16 @@ type WeeklyReviewCounts struct {
 
 	// BriefItemsDismissed And dismissed.
 	BriefItemsDismissed int `json:"brief_items_dismissed"`
-	DealsLost           int `json:"deals_lost"`
+
+	// CommitmentsDue Commitments the rep stood by in the week's plan. A dropped commitment is in
+	// neither this nor `commitments_kept`: deciding on Wednesday that a thing is not
+	// worth doing is not failing to do it, and counting it against a rep teaches them
+	// to leave dead commitments open rather than say so.
+	CommitmentsDue int `json:"commitments_due"`
+
+	// CommitmentsKept And how many were done.
+	CommitmentsKept int `json:"commitments_kept"`
+	DealsLost       int `json:"deals_lost"`
 
 	// DealsMoved Deals that changed stage, excluding those that closed.
 	DealsMoved int `json:"deals_moved"`
@@ -30196,6 +30455,10 @@ type ListActivitiesParams struct {
 
 	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
+
+	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+	// Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified. `false` asks for nothing and is accepted in either mode.
+	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
 }
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
@@ -30440,6 +30703,12 @@ type ResetDataJSONBody struct {
 type ListAiModelRatesParams struct {
 	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
 	ModelId  *string `form:"model_id,omitempty" json:"model_id,omitempty"`
+}
+
+// ListAvailableModelsParams defines parameters for ListAvailableModels.
+type ListAvailableModelsParams struct {
+	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default.
+	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
 }
 
 // ListAiCallsParams defines parameters for ListAiCalls.
@@ -30825,6 +31094,11 @@ type DecideCommissionEntryParams struct {
 type GetCompanyContextParams struct {
 	// Scopes Comma-separated context scopes. Omit for the bounded default set.
 	Scopes *string `form:"scopes,omitempty" json:"scopes,omitempty"`
+}
+
+// UploadCompanyLogoMultipartBody defines parameters for UploadCompanyLogo.
+type UploadCompanyLogoMultipartBody struct {
+	File openapi_types.File `json:"file"`
 }
 
 // StartCompanySiteReadParams defines parameters for StartCompanySiteRead.
@@ -34515,6 +34789,24 @@ type ListWebhookDeliveriesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// AskForWeeklyPlanHelpJSONBody defines parameters for AskForWeeklyPlanHelp.
+type AskForWeeklyPlanHelpJSONBody struct {
+	HelpRequested string `json:"help_requested"`
+}
+
+// AnswerWeeklyPlanCommitmentJSONBody defines parameters for AnswerWeeklyPlanCommitment.
+type AnswerWeeklyPlanCommitmentJSONBody struct {
+	ManagerResponse string `json:"manager_response"`
+}
+
+// SetWeeklyPlanCommitmentStateJSONBody defines parameters for SetWeeklyPlanCommitmentState.
+type SetWeeklyPlanCommitmentStateJSONBody struct {
+	State SetWeeklyPlanCommitmentStateJSONBodyState `json:"state"`
+}
+
+// SetWeeklyPlanCommitmentStateJSONBodyState defines parameters for SetWeeklyPlanCommitmentState.
+type SetWeeklyPlanCommitmentStateJSONBodyState string
+
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
@@ -34737,6 +35029,9 @@ type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
 
 // PutCompanyJSONRequestBody defines body for PutCompany for application/json ContentType.
 type PutCompanyJSONRequestBody = CompanyProfileInput
+
+// UploadCompanyLogoMultipartRequestBody defines body for UploadCompanyLogo for multipart/form-data ContentType.
+type UploadCompanyLogoMultipartRequestBody UploadCompanyLogoMultipartBody
 
 // StartCompanySiteReadJSONRequestBody defines body for StartCompanySiteRead for application/json ContentType.
 type StartCompanySiteReadJSONRequestBody = StartCompanySiteReadRequest
@@ -35241,6 +35536,18 @@ type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
 
 // UpdateWebhookSubscriptionJSONRequestBody defines body for UpdateWebhookSubscription for application/json ContentType.
 type UpdateWebhookSubscriptionJSONRequestBody = UpdateWebhookSubscriptionRequest
+
+// AddWeeklyPlanCommitmentJSONRequestBody defines body for AddWeeklyPlanCommitment for application/json ContentType.
+type AddWeeklyPlanCommitmentJSONRequestBody = NewWeeklyPlanCommitment
+
+// AskForWeeklyPlanHelpJSONRequestBody defines body for AskForWeeklyPlanHelp for application/json ContentType.
+type AskForWeeklyPlanHelpJSONRequestBody AskForWeeklyPlanHelpJSONBody
+
+// AnswerWeeklyPlanCommitmentJSONRequestBody defines body for AnswerWeeklyPlanCommitment for application/json ContentType.
+type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBody
+
+// SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
+type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
 
 // Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
 // element and whether it was found
@@ -42993,6 +43300,9 @@ type ServerInterface interface {
 	// Enqueue an async model-cost refresh (stages 🟡 proposals).
 	// (POST /ai-model-rates/propose-refresh)
 	ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request)
+	// What one vendor says it serves today (admin/ops).
+	// (GET /ai/available-models/{provider})
+	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -43287,6 +43597,12 @@ type ServerInterface interface {
 	// Get the effective server-side company-context rollout capability.
 	// (GET /company/context/capabilities)
 	GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request)
+	// Take the installation's own company mark off the record.
+	// (DELETE /company/logo)
+	DeleteCompanyLogo(w http.ResponseWriter, r *http.Request)
+	// Replace the installation's own company mark with an uploaded image.
+	// (POST /company/logo)
+	UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
 	// Start an optional progressive website read before the anchor company exists.
 	// (POST /company/site-reads)
 	StartCompanySiteRead(w http.ResponseWriter, r *http.Request, params StartCompanySiteReadParams)
@@ -44538,6 +44854,27 @@ type ServerInterface interface {
 	// Rotate a subscription's signing secret (returns the new secret once).
 	// (POST /webhook-subscriptions/{id}/rotate-secret)
 	RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id Id)
+	// Write one thing onto this week's plan.
+	// (POST /weekly-plans/commitments)
+	AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request)
+	// Say what you need from your lead on one commitment.
+	// (PUT /weekly-plans/commitments/{id}/help)
+	AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Answer a teammate's request for help.
+	// (PUT /weekly-plans/commitments/{id}/response)
+	AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Mark one commitment done, reopen it, or drop it.
+	// (PUT /weekly-plans/commitments/{id}/state)
+	SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The caller's plan for this week — what they said they would do.
+	// (GET /weekly-plans/current)
+	GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// Open a plan for this week.
+	// (POST /weekly-plans/current)
+	StartWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// A teammate's plan for this week, for their lead.
+	// (GET /weekly-plans/{owner_id}/current)
+	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID)
 	// The weeks the acting rep has a review for, newest first.
 	// (GET /weekly-reviews)
 	ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
@@ -44715,6 +45052,12 @@ func (_ Unimplemented) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 // Enqueue an async model-cost refresh (stages 🟡 proposals).
 // (POST /ai-model-rates/propose-refresh)
 func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What one vendor says it serves today (admin/ops).
+// (GET /ai/available-models/{provider})
+func (_ Unimplemented) ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -45303,6 +45646,18 @@ func (_ Unimplemented) GetCompanyContext(w http.ResponseWriter, r *http.Request,
 // Get the effective server-side company-context rollout capability.
 // (GET /company/context/capabilities)
 func (_ Unimplemented) GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take the installation's own company mark off the record.
+// (DELETE /company/logo)
+func (_ Unimplemented) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the installation's own company mark with an uploaded image.
+// (POST /company/logo)
+func (_ Unimplemented) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47808,6 +48163,48 @@ func (_ Unimplemented) RotateWebhookSecret(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Write one thing onto this week's plan.
+// (POST /weekly-plans/commitments)
+func (_ Unimplemented) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what you need from your lead on one commitment.
+// (PUT /weekly-plans/commitments/{id}/help)
+func (_ Unimplemented) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a teammate's request for help.
+// (PUT /weekly-plans/commitments/{id}/response)
+func (_ Unimplemented) AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark one commitment done, reopen it, or drop it.
+// (PUT /weekly-plans/commitments/{id}/state)
+func (_ Unimplemented) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's plan for this week — what they said they would do.
+// (GET /weekly-plans/current)
+func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open a plan for this week.
+// (POST /weekly-plans/current)
+func (_ Unimplemented) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A teammate's plan for this week, for their lead.
+// (GET /weekly-plans/{owner_id}/current)
+func (_ Unimplemented) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The weeks the acting rep has a review for, newest first.
 // (GET /weekly-reviews)
 func (_ Unimplemented) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
@@ -48036,6 +48433,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "occurred_before"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "occurred_before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "waiting_reply" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "waiting_reply", r.URL.Query(), &params.WaitingReply, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "waiting_reply"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "waiting_reply", Err: err})
 		}
 		return
 	}
@@ -49170,6 +49580,54 @@ func (siw *ServerInterfaceWrapper) ProposeAiModelRateRefresh(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ProposeAiModelRateRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAvailableModels operation middleware
+func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAvailableModelsParams
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAvailableModels(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -52415,6 +52873,46 @@ func (siw *ServerInterfaceWrapper) GetCompanyContextCapabilities(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCompanyContextCapabilities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCompanyLogo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadCompanyLogo(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71538,6 +72036,208 @@ func (siw *ServerInterfaceWrapper) RotateWebhookSecret(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// AddWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddWeeklyPlanCommitment(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AskForWeeklyPlanHelp operation middleware
+func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AskForWeeklyPlanHelp(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerWeeklyPlanCommitment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetWeeklyPlanCommitmentState operation middleware
+func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetWeeklyPlanCommitmentState(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCurrentWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCurrentWeeklyPlan(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartWeeklyPlan(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTeammateWeeklyPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeammateWeeklyPlan(w, r, ownerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListWeeklyReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 
@@ -71898,6 +72598,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai-model-rates/propose-refresh", wrapper.ProposeAiModelRateRefresh)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)
 	})
 	r.Group(func(r chi.Router) {
@@ -72190,6 +72893,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/company/context/capabilities", wrapper.GetCompanyContextCapabilities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/company/logo", wrapper.DeleteCompanyLogo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/company/logo", wrapper.UploadCompanyLogo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads", wrapper.StartCompanySiteRead)
@@ -73441,6 +74150,27 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/webhook-subscriptions/{id}/rotate-secret", wrapper.RotateWebhookSecret)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/weekly-plans/commitments", wrapper.AddWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/help", wrapper.AskForWeeklyPlanHelp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/response", wrapper.AnswerWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/state", wrapper.SetWeeklyPlanCommitmentState)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-plans/current", wrapper.GetCurrentWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/weekly-plans/current", wrapper.StartWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-plans/{owner_id}/current", wrapper.GetTeammateWeeklyPlan)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-reviews", wrapper.ListWeeklyReviews)

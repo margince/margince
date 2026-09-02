@@ -661,8 +661,11 @@ describe("ComposeModal", () => {
     expect(screen.getByRole("button", { name: "Send" })).toBeTruthy();
   });
 
-  it("keeps Send disabled until To, subject, body, and purpose are set", async () => {
-    stubRoutes();
+  // Send stays live with fields outstanding, and answers the press by naming
+  // them. Grey, it refused and said nothing about what for, which left the
+  // reader comparing the form against a control that would not talk to them.
+  it("names every field it is waiting for, and sends nothing", async () => {
+    const sent = stubRoutes();
     render(
       <ComposeModal
         activityId="act-1"
@@ -674,13 +677,28 @@ describe("ComposeModal", () => {
     );
     await screen.findByRole("combobox");
 
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send.hasAttribute("disabled")).toBe(false);
+
+    // Nothing is said before the reader has asked to send: a form reporting
+    // what is missing while they are still typing is scolding them.
+    expect(screen.queryByText("Give this email a subject.")).toBeNull();
+
+    await userEvent.click(send);
+
+    expect(screen.getByText("Add at least one recipient.")).toBeTruthy();
+    expect(screen.getByText("Give this email a subject.")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
-    ).toBe(true);
+      screen.getByText("Write the message before sending it."),
+    ).toBeTruthy();
+    expect(screen.getByText("Choose what this message is for.")).toBeTruthy();
+    expect(
+      sent.filter((call) => call.key.startsWith("POST /activities")),
+    ).toHaveLength(0);
+
+    // And they stop being said as the fields are answered.
     await fillSendableForm();
-    expect(
-      screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
-    ).toBe(false);
+    expect(screen.queryByText("Give this email a subject.")).toBeNull();
   });
 
   it("sends the edited email with no approval token or idempotency key", async () => {
@@ -2280,7 +2298,7 @@ describe("what the composer says it is answering", () => {
     updated_at: "2026-08-02T09:00:00Z",
   };
 
-  it("names the record's latest message, and drafts against it", async () => {
+  it("offers the record's conversations, and drafts against the one picked", async () => {
     const sent = stubRoutes({
       "GET /activities": () =>
         jsonResponse({
@@ -2303,9 +2321,12 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    // The conversation being continued is on screen BEFORE the reader commits
-    // to anything.
-    expect(await screen.findByText(/Rechnung GR-2026-0207/)).toBeTruthy();
+    // The conversations are OFFERED, not chosen for the reader: pressing a
+    // button that says "write an email" used to anchor the message to whatever
+    // came last, addressed to somebody they had not picked.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
+    );
 
     await userEvent.click(
       screen.getByRole("button", { name: "Draft with AI" }),
@@ -2369,17 +2390,23 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    // Before the draft the line still answers the first question: WHAT.
-    await screen.findByText(/Rechnung GR-2026-0207/);
+    // The conversation is picked, then drafted against.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
+    );
     expect(screen.queryByText(/dietmar@valantic.test/)).toBeNull();
 
     await userEvent.click(
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    // And then WHO, in the same sentence the reader is already reading.
+    // And WHO, in the field that will actually carry it — asked for as the
+    // chip's own control, because the address also appears in the quoted head
+    // of the message the pane is showing.
     expect(
-      await screen.findByText(/dietmar@valantic.test.*Rechnung GR-2026-0207/),
+      await screen.findByRole("button", {
+        name: "Remove dietmar@valantic.test",
+      }),
     ).toBeTruthy();
   });
 
@@ -2459,7 +2486,9 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await screen.findByText(/Rechnung GR-2026-0207/);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
+    );
     await userEvent.click(
       screen.getByRole("button", { name: "Draft with AI" }),
     );
@@ -2470,7 +2499,7 @@ describe("what the composer says it is answering", () => {
     );
 
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Send$/ }));
 
     await waitFor(() => {
       // The reply path, not POST /emails — which would file under the body's
@@ -2511,9 +2540,13 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    // It falls back to the account path, which asks the reader to name a
-    // recipient — the honest state, rather than a dead end.
+    // Not offered as a way in: its subject comes back null and the draft
+    // endpoint gates on content, so choosing it would dead-end the composer.
+    // The reader gets the account path, which asks them to name a recipient.
     expect(await screen.findByText(/starts a new thread/i)).toBeTruthy();
+    expect(
+      screen.queryByRole("region", { name: /continue a conversation/i }),
+    ).toBeNull();
   });
 
   // A caller that named the message has already shown it — the page behind the
@@ -2534,5 +2567,188 @@ describe("what the composer says it is answering", () => {
 
     await screen.findByRole("combobox");
     expect(screen.queryByText(/Replying to|starts a new thread/i)).toBeNull();
+  });
+});
+
+// The conversation a reply is answering, in the drawer beside it.
+//
+// The composer used to keep the centred box for a reply on the grounds that the
+// message was "on the page behind" — which the box was covering. These pin the
+// shape it takes and what it draws in the second column.
+describe("the composer's conversation pane", () => {
+  const threaded: Activity = {
+    ...activity202,
+    thread_key: "<t-1@mail>",
+    body: "The signed order is attached.",
+    direction: "inbound",
+  };
+  const sibling: Activity = {
+    ...threaded,
+    id: "act-0",
+    subject: "Q3 order",
+    body: "Sending the order over today.",
+    direction: "outbound",
+    occurred_at: "2026-06-28T00:00:00Z",
+  };
+
+  it("takes the drawer on an account whose mail it is answering", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(threaded),
+      "GET /activities": () =>
+        jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The sibling message arrives in the pane, which is what widens the
+    // drawer — so wait for the conversation, then read the shape.
+    expect(
+      await screen.findByText("Sending the order over today."),
+    ).toBeTruthy();
+    // The drawer, not the centred box: an account's mail keeps the record
+    // beside it whether it opens a conversation or answers one.
+    expect(document.querySelector(".modal-drawer")).not.toBeNull();
+    expect(document.querySelector(".modal-drawer-split")).not.toBeNull();
+  });
+
+  it("draws a message it may not read as a held place, not a gap", async () => {
+    // A thread can run through an audience this reader is not in. Dropping the
+    // row would make the conversation look continuous when it is not, and the
+    // reply would be written into a silence the writer cannot see.
+    const withheld: Activity = {
+      ...sibling,
+      id: "act-2",
+      subject: null,
+      body: null,
+      content_state: "withheld",
+    };
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(threaded),
+      "GET /activities": () =>
+        jsonResponse({ data: [threaded, withheld], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Waited for by its rows: the pane holds its place with a pending body
+    // while the thread read is out, so the region existing does not yet mean
+    // the messages are drawn.
+    const pane = await screen.findByRole("region", {
+      name: /this conversation/i,
+    });
+    await waitFor(() => expect(pane.querySelectorAll("li")).toHaveLength(2));
+  });
+
+  it("anchors nothing until the reader picks a conversation", async () => {
+    // The heading used to have to apologise for a thread the composer chose on
+    // the reader's behalf. Nothing is chosen now, so there is nothing to
+    // explain: the conversations are offered and the reader takes one.
+    stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
+      // Choosing a conversation reads its newest message, the way a Reply on
+      // the History tab does.
+      "GET /activities/act-1": () => jsonResponse(threaded),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Waited for by its rows, not the region: the offer column holds its
+    // place with a pending body while the lookup is out, so the region
+    // existing does not yet mean there is anything to pick.
+    const choice = await screen.findByRole("button", { name: /Re: Q3/ });
+    expect(
+      screen.getByRole("region", { name: /continue a conversation/i }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("region", { name: /^this conversation$/i }),
+    ).toBeNull();
+
+    // Taking one turns the column into that conversation, with a way back.
+    await userEvent.click(choice);
+    expect(
+      await screen.findByRole("region", { name: /this conversation/i }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Choose another" })).toBeTruthy();
+  });
+
+  it("draws no conversation beside a reply to a note", async () => {
+    // A timeline row offers Reply on a note as readily as on a mail. One filed
+    // note under the heading "this conversation" claims to be an exchange.
+    const note: Activity = { ...threaded, kind: "note" };
+    const second: Activity = { ...sibling, kind: "note" };
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(note),
+      "GET /activities": () =>
+        jsonResponse({ data: [note, second], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The composer has read the anchor and its siblings — so the pane's
+    // absence is a decision, not a list that had not arrived yet.
+    await waitFor(() =>
+      expect(
+        sent.filter((call) => call.key === "GET /activities"),
+      ).not.toHaveLength(0),
+    );
+    await screen.findByRole("combobox");
+    expect(
+      screen.queryByRole("region", { name: /this conversation/i }),
+    ).toBeNull();
+  });
+
+  it("shows a mail with no thread as the one message it is", async () => {
+    // Capture assigns a thread key only where a provider reported a
+    // conversation. A mail without one is a conversation of exactly one
+    // message, and asking the server for every activity that has no thread is
+    // the wrong question.
+    const loose: Activity = { ...threaded, thread_key: null };
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(loose),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText("The signed order is attached."),
+    ).toBeTruthy();
+    expect(sent.filter((call) => call.key === "GET /activities")).toHaveLength(
+      0,
+    );
   });
 });

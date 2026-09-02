@@ -46,6 +46,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
+	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/shared/ports/persondata"
 )
 
@@ -89,6 +90,7 @@ type (
 	financeHandlers        = finance.Handlers
 	aiActivityHandlers     = aiactivity.Handlers
 	noticesHandlers        = notices.Handlers
+	weeklyPlanHandlers     = weeklyplan.Handlers
 	introductionHandlers   = introductions.Handlers
 )
 

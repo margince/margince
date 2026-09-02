@@ -131,6 +131,10 @@ func (stubs) ProposeAiModelRateRefresh(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "ProposeAiModelRateRefresh")
 }
 
+func (stubs) ListAvailableModels(w nethttp.ResponseWriter, r *nethttp.Request, provider string, params crmcontracts.ListAvailableModelsParams) {
+	httperr.NotImplemented(w, r, "ListAvailableModels")
+}
+
 func (stubs) ListAiCalls(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAiCallsParams) {
 	httperr.NotImplemented(w, r, "ListAiCalls")
 }
@@ -521,6 +525,14 @@ func (stubs) GetCompanyContext(w nethttp.ResponseWriter, r *nethttp.Request, par
 
 func (stubs) GetCompanyContextCapabilities(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCompanyContextCapabilities")
+}
+
+func (stubs) DeleteCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeleteCompanyLogo")
+}
+
+func (stubs) UploadCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UploadCompanyLogo")
 }
 
 func (stubs) StartCompanySiteRead(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.StartCompanySiteReadParams) {
@@ -2189,6 +2201,34 @@ func (stubs) ReplayWebhookDelivery(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) RotateWebhookSecret(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RotateWebhookSecret")
+}
+
+func (stubs) AddWeeklyPlanCommitment(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AddWeeklyPlanCommitment")
+}
+
+func (stubs) AskForWeeklyPlanHelp(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AskForWeeklyPlanHelp")
+}
+
+func (stubs) AnswerWeeklyPlanCommitment(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AnswerWeeklyPlanCommitment")
+}
+
+func (stubs) SetWeeklyPlanCommitmentState(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "SetWeeklyPlanCommitmentState")
+}
+
+func (stubs) GetCurrentWeeklyPlan(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetCurrentWeeklyPlan")
+}
+
+func (stubs) StartWeeklyPlan(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "StartWeeklyPlan")
+}
+
+func (stubs) GetTeammateWeeklyPlan(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetTeammateWeeklyPlan")
 }
 
 func (stubs) ListWeeklyReviews(w nethttp.ResponseWriter, r *nethttp.Request) {

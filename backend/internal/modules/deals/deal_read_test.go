@@ -93,7 +93,10 @@ func TestAppendDealFiltersPartnerAttribution(t *testing.T) {
 // composition ListDeals runs) binds AFTER the filter args it follows.
 func TestAppendDealFiltersPartnerBeforeCursorKeepsPlaceholderOrder(t *testing.T) {
 	partnerOrg := ids.New[ids.OrganizationKind]()
-	cursor := storekit.EncodeCursor(time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC), ids.NewV7())
+	cursor, err := storekit.EncodeCursor(time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC), ids.NewV7())
+	if err != nil {
+		t.Fatalf("minting the cursor: %v", err)
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	got, err := appendDealFilters(systemFilterCtx(), nil, ListDealsInput{PartnerOrgID: &partnerOrg}, arg)

@@ -130,7 +130,11 @@ func (s *VoiceStore) ListDeltas(ctx context.Context, profileID ids.UUID, cursor 
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		page.NextCursor = storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		if err != nil {
+			return VoiceProfileDeltaPage{}, err
+		}
+		page.NextCursor = next
 		page.HasMore = true
 	}
 	return page, nil

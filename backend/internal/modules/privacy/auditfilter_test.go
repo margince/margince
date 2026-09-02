@@ -197,7 +197,15 @@ func sampleFor(name string, fieldType reflect.Type) (reflect.Value, bool) {
 // REFUSAL rather than a narrowing, which is what the cursor's own case below
 // is about — so the census would be asserting the wrong thing with one.
 func sampleCursor() string {
-	return storekit.EncodeCursor(time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), ids.NewV7())
+	// The instant is a fixed, in-range one, so the mint cannot refuse it — and
+	// if it ever did, the fixture would be the thing that is wrong. Panicking
+	// says that where returning an empty token would quietly turn this census
+	// into the vacuous version it exists to avoid.
+	token, err := storekit.EncodeCursor(time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), ids.NewV7())
+	if err != nil {
+		panic("privacy: the sample cursor will not mint: " + err.Error()) //craft:ignore panic-in-domain test fixture
+	}
+	return token
 }
 
 // TestTheCursorIsTheOneFilterThatCanBeRefused — every other field narrows or

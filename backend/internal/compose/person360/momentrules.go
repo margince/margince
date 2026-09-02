@@ -22,7 +22,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -214,34 +213,6 @@ func bookMeeting() crmcontracts.PersonMomentAction {
 		State:         crmcontracts.PersonMomentActionStateBlocked,
 		BlockedReason: &reason,
 	}
-}
-
-// latestOverdueCommitment finds the promise of OURS that has been late longest.
-//
-// Oldest rather than newest: the one that has been waiting longest is the one
-// with the most damage already done, and the one a reader would be most
-// embarrassed to discover from the other side.
-func latestOverdueCommitment(now time.Time, page *crmcontracts.Person360) (crmcontracts.ConversationClaim, bool) {
-	if page.Claims == nil {
-		return crmcontracts.ConversationClaim{}, false
-	}
-	var latest *crmcontracts.ConversationClaim
-	for i := range *page.Claims {
-		claim := &(*page.Claims)[i]
-		if claim.Kind != crmcontracts.CommitmentOurs || claim.Status != crmcontracts.ConversationClaimStatusOpen {
-			continue
-		}
-		if !deadline.Passed(claim.DueAt, now) {
-			continue
-		}
-		if latest == nil || claim.DueAt.After(*latest.DueAt) {
-			latest = claim
-		}
-	}
-	if latest == nil {
-		return crmcontracts.ConversationClaim{}, false
-	}
-	return *latest, true
 }
 
 // inboundEvidence names the actual message where the page is showing it, and

@@ -281,6 +281,8 @@ const narratedWeek: WeeklyReview = {
     leads_breached: 2,
     meetings_held: 5,
     meetings_with_next_step: 3,
+    commitments_due: 4,
+    commitments_kept: 3,
   },
   // The week before, so the strip can show what CHANGED. A story without it
   // renders the no-prior case, which is a real state but not the ordinary one.
@@ -302,6 +304,8 @@ const narratedWeek: WeeklyReview = {
       leads_breached: 4,
       meetings_held: 5,
       meetings_with_next_step: 1,
+      commitments_due: 4,
+      commitments_kept: 3,
     },
   },
   deals: [

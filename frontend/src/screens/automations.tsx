@@ -632,6 +632,7 @@ export function AutomationRow({
             .join(" ")}
         </span>
         <span className="auto-row-fill" />
+        <AutomationTierBadge tier={entry?.tier} />
         <AutomationStatus
           automation={automation}
           canEdit={canEdit}
@@ -866,6 +867,27 @@ export function AutomationsAdmin() {
         )}
       </PanelBody>
     </Panel>
+  );
+}
+
+// What the autonomy dot MEANS, in words.
+//
+// The colour is the glance and this is the reading: a mark is what a screen
+// reader cannot see and a colour-blind reader may not distinguish, and the
+// difference it carries here is whether the rule acts on the workspace by itself
+// or waits for a person. Its own component because the row it sits in is already
+// at the complexity ceiling, and a branch about one badge is not what a reader
+// of that row is there for.
+function AutomationTierBadge({ tier }: Readonly<{ tier?: string }>) {
+  const t = useT();
+  if (!tier) {
+    return null;
+  }
+  const runs = tier === "auto_execute";
+  return (
+    <Badge tone={runs ? "success" : "warn"} quiet>
+      {runs ? t("auto.tier.runs") : t("auto.tier.approval")}
+    </Badge>
   );
 }
 

@@ -150,11 +150,11 @@ func (s *ListSort) CursorKeySuffix() string {
 // tuple, extended under a non-default sort with the sort field, its
 // direction, and the last row's key (nil = the row sits in the NULL
 // tail) so the next page can only continue the SAME ordering.
-func (s *ListSort) EncodePageCursor(sortKey *string, createdAt time.Time, id ids.UUID) string {
+func (s *ListSort) EncodePageCursor(sortKey *string, createdAt time.Time, id ids.UUID) (string, error) {
 	if s == nil {
 		return EncodeCursor(createdAt, id)
 	}
-	return mintCursorToken(Cursor{CreatedAt: createdAt, ID: id, SortField: s.name, SortDesc: s.desc, SortKey: sortKey})
+	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id, SortField: s.name, SortDesc: s.desc, SortKey: sortKey})
 }
 
 // KeysetClause renders the WHERE fragment that continues the page after

@@ -185,6 +185,8 @@ export const en = {
   "shell.aside.show": "Show the context panel",
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "{company} home, powered by Margince",
+  "shell.poweredBy": "Powered by Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
@@ -2344,6 +2346,7 @@ export const en = {
   "home.weekly.sincePrior": "{delta} vs last week",
   "home.weekly.leadsAnswered": "Leads answered in time",
   "home.weekly.ofRouted": "{answered} of {routed}",
+  "home.weekly.promisesKept": "Promises kept",
   "home.weekly.meetingsHeld": "Meetings with a next step",
   "home.weekly.ofMeetings": "{withStep} of {held}",
   "home.weekly.carriedOver": "Carried over",
@@ -2895,6 +2898,13 @@ export const en = {
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send this email?",
+  "compose.threadHeading": "This conversation",
+  "compose.continueHeading": "Continue a conversation?",
+  "compose.threadLeave": "Choose another",
+  "compose.messageCount_one": "{count} message",
+  "compose.messageCount_other": "{count} messages",
+  "compose.threadContinuing": "The last exchange, which this will continue",
+  "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "You are sending this email now. This is an outbound, irreversible action.",
   // A moment picked in the field above turns this dialog into a different
@@ -2942,6 +2952,9 @@ export const en = {
   "compose.relinkThreadHint":
     "Every message in this thread you can edit moves with it, in one step.",
   "compose.emptyRecipients": "Add at least one recipient.",
+  "compose.missingSubject": "Give this email a subject.",
+  "compose.missingBody": "Write the message before sending it.",
+  "compose.missingPurpose": "Choose what this message is for.",
   "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 
@@ -5119,6 +5132,11 @@ export const en = {
   "dealmail.sub.fresh": "Write to the people on this deal.",
   "dealmail.reply": "Draft the reply",
   "dealmail.send": "Send an email",
+  "recordmail.title": "Email",
+  "recordmail.sub.reply": "An answer is owed.",
+  "recordmail.sub.fresh": "Write to this record's contacts.",
+  "recordmail.reply": "Draft the reply",
+  "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
   "deal360.readFull": "Read the full briefing",
   "deal360.createTask": "Add this task",
@@ -5187,7 +5205,10 @@ export const en = {
   "prefs.undoExplicit":
     "Re-subscribing is an explicit opt-in — we won't silently turn it back on. Save below to record your consent, or discard.",
 
-  "auto.sub": "a closed catalog — pick a type, set its parameters, enable it",
+  "auto.tier.runs": "runs",
+  "auto.tier.approval": "approval",
+  "auto.sub":
+    'A rule marked "runs" acts on its own. One marked "approval" stages into the approval inbox.',
   "auto.readOnly":
     "Read-only view — you do not have permission to change automations.",
   "auto.catalog": "Starter library",
@@ -5928,6 +5949,18 @@ export const en = {
   "settings.companyTrust":
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
+  "settings.companyMark": "Company mark",
+  "settings.companyMarkPresent":
+    "Shown wherever this company appears, including the top of the sidebar.",
+  "settings.companyMarkNone":
+    "No mark yet, so the initials stand in. A website read fills this in, or add one here.",
+  "settings.companyMarkAdd": "Add a mark",
+  "settings.companyMarkReplace": "Replace",
+  "settings.companyMarkRemove": "Remove",
+  "settings.companyMarkPick": "Company mark",
+  "settings.companyMarkHint":
+    "PNG, JPEG, GIF, WebP, ICO or SVG. It is squared and resized on upload, and a mark you choose stays until you remove it.",
+  "settings.companyMarkEmpty": "Drop an image here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",
@@ -6274,11 +6307,58 @@ export const en = {
   "firstRun.ai.embedModel": "Embedding model",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
+  "aiSettings.sub": "Where this installation's text goes, and what it costs.",
+  "aiSettings.tabs": "Which part of the AI settings is open",
+  "aiSettings.tab.routing": "Routing",
+  "aiSettings.tab.providers": "Providers",
+  "aiSettings.tab.automations": "Automations",
+  "aiSettings.tab.usage": "Usage",
+  "aiSettings.tab.logs": "Logs",
+  "aiSettings.withheld": "Not yours to see",
+  "aiSettings.unread": "Could not be read",
+  "aiSettings.pending": "Reading…",
+  "aiSettings.spend.label": "Spend this month",
+  "aiSettings.spend.value": "{spent} of {budget} tokens",
+  "aiSettings.spend.estimated": "≈ {amount} estimated",
+  "aiSettings.providers.label": "Providers",
+  "aiSettings.providers.value": "{count} keyed",
+  "aiSettings.providers.missing": "{count} bound with no key",
+  "aiSettings.providers.lastCall": "last call {elapsed}",
+  "aiSettings.discardTitle": "Leave the routing edits behind?",
+  "aiSettings.discardBody":
+    "The bindings you changed have not been saved. Leaving this tab discards them.",
+  "aiSettings.discard": "Discard",
+  "elapsed.justNow": "just now",
+  "elapsed.minutes": "{minutes} min ago",
+  "elapsed.hours": "{hours} h ago",
+  "elapsed.days": "{days} d ago",
+  "aiRouting.lane.local_small": "Bulk classifying, on your own hardware",
+  "aiRouting.lane.cheap_cloud": "Everyday work — enrichment, summaries, triage",
+  "aiRouting.lane.premium": "Anything a customer will read",
+  "aiRouting.lane.frontier": "The hardest reasoning, used sparingly",
+  "aiRouting.lane.local_large": "Heavier work that must not leave your hosts",
+  "aiRouting.lane.embeddings": "Search and retrieval across your records",
+  "aiRouting.lanes.title": "Routing lanes",
+  "aiRouting.lanes.sub":
+    "Cheapest first. A task picks a lane; the lane picks the model.",
+  "aiRouting.priceSheet": "Price sheet",
+  "aiRouting.provider.label": "Provider",
+  "aiRouting.change": "Change",
+  "aiRouting.done": "Done",
+  "aiRouting.noKey": "no key",
+  "aiRouting.unpriced": "unpriced",
+  "aiRouting.effect":
+    "Saved bindings reach every process within a minute, without a restart.",
   "aiProviderKeys.title": "Model provider keys",
   "aiProviderKeys.sub":
     "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",
-  "aiProviderKeys.configured": "Key stored",
-  "aiProviderKeys.absent": "No key",
+  "aiProviderKeys.keyless": "no key needed",
+  "aiProviderKeys.field": "API key",
+  "aiProviderKeys.save": "Save key",
+  "aiProviderKeys.adminOnly":
+    "Only an admin or ops can change a provider credential.",
+  "aiProviderKeys.configured": "configured",
+  "aiProviderKeys.absent": "not set",
   "aiProviderKeys.configuredHint":
     "Sealed in the key vault. It cannot be read back — paste a new one to replace it. It may also arrive as {envVar}.",
   "aiProviderKeys.absentHint":
@@ -6296,10 +6376,15 @@ export const en = {
   "aiRouting.withheld":
     "Only an operator who may change the model binding can see which models this installation uses.",
   "aiRouting.title": "Model routing",
+  "aiRouting.sheetAsOf":
+    "Model lists are the price sheet as of {date}. Any newer id your provider serves works too — type it.",
+  "aiRouting.sheetUnknown":
+    "Model lists come from the price sheet, which is not yours to read. Any id your provider serves works — type it.",
   "aiRouting.sub":
     "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",
   "aiRouting.unbound":
     "This installation has no models bound, so its AI features are off. A deployment declares its first binding under seeds.ai_routing in margince.yaml.",
+  "aiRouting.profile.card": "Deployment profile",
   "aiRouting.profile.label": "Location",
   "aiRouting.profile.help":
     "Where inference runs. Sovereign means zero egress: only models on your own hosts, refused at save time rather than at the first call.",
@@ -6309,11 +6394,20 @@ export const en = {
   "aiRouting.dimensions.label": "Vector width",
   "aiRouting.dimensions.help":
     "Leave blank for the provider's default. A value outside 1 to 2000 is refused.",
-  "aiRouting.embeddings.label": "Embeddings",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "The vendor's host root, with no version segment. The adapter adds /v1. Required for openai_compatible, which has no default of its own.",
+  "aiRouting.models.noKey":
+    "Showing the price sheet only — this vendor holds no key, so it cannot be asked what it serves. Any id it serves still works: type it.",
+  "aiRouting.models.noEndpoint":
+    "Showing the price sheet only — fill in the host above and this vendor can be asked what it serves. Any id it serves still works: type it.",
+  "aiRouting.models.profileForbids":
+    "Showing the price sheet only — this deployment profile does not permit reaching this vendor.",
+  "aiRouting.models.notPublished":
+    "Showing the price sheet only — this vendor publishes no model list.",
+  "aiRouting.models.unreachable":
+    "Showing the price sheet only — this vendor did not answer. Any id it serves still works: type it.",
   "aiRouting.model.label": "Model",
   "aiRouting.model.help":
     "The models listed are the ones this installation can price, per million tokens in → out. Any other id your provider serves works too — type it.",

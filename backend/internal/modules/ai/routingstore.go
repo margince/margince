@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -27,11 +28,53 @@ type RoutingStore struct {
 	// providers and never their credentials, so the two meet only where a
 	// binding is turned into something that can serve.
 	keys config.Lookup
+	// vault resolves a sealed BYOK key, for the one read that has to CALL a
+	// vendor rather than describe it. Optional: an installation with no vault
+	// keeps its credentials in the environment, which is where every
+	// installation had them before the vault existed, and `keys` still answers.
+	vault keyvault.Vault
 }
 
 // NewRoutingStore builds the store over the settings catalog.
 func NewRoutingStore(s *settings.Store, keys config.Lookup) *RoutingStore {
 	return &RoutingStore{settings: s, keys: keys}
+}
+
+// WithVault returns a store that can resolve a sealed credential.
+//
+// A separate constructor rather than a fourth argument on NewRoutingStore: the
+// vault is needed by exactly one method, every other caller of this store has
+// no vault to give, and widening the constructor would make all of them say so.
+func (s *RoutingStore) WithVault(vault keyvault.Vault) *RoutingStore {
+	next := *s
+	next.vault = vault
+	return &next
+}
+
+// resolvedKeys is the credential lookup a vendor call uses: the vault's sealed
+// keys for this request's workspace, falling back to the environment for a
+// vendor that has none sealed yet.
+//
+// Per request, because the workspace is the request's. A store-wide lookup
+// would either be one tenant's credentials serving another's call, or the
+// environment only — and the environment is exactly what an installation that
+// pasted its key into the UI does not have.
+func (s *RoutingStore) resolvedKeys(ctx context.Context) config.Lookup {
+	if s.vault == nil {
+		return s.keys
+	}
+	workspace, err := credentialWorkspace(ctx)
+	if err != nil {
+		return s.keys
+	}
+	refs, err := settings.Get(ctx, s.settings, ProviderKeys)
+	if err != nil {
+		// The environment still answers. A settings read that fails is not a
+		// reason to report every vendor as unkeyed — that would tell a reader
+		// their credentials are gone when what failed was one query.
+		return s.keys
+	}
+	return SealedKeys(ctx, s.vault, workspace, refs, s.keys)
 }
 
 // Get reads the stored binding. An installation that has bound nothing reads as

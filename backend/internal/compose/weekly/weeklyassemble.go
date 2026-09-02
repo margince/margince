@@ -114,6 +114,19 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 		if review.Money, err = countWeekMoney(ctx, tx, userID, start, end); err != nil {
 			return err
 		}
+		// The plan's outcome, settled once and then frozen alongside the rest.
+		//
+		// Settled BEFORE the counts are written, so the review records what the
+		// week actually came to rather than what was still open when the job
+		// happened to run. CloseWeek is idempotent, so the dispatcher's extra
+		// ticks inside a week do not re-settle a commitment the rep completed
+		// after the first pass.
+		if e.plan != nil {
+			c := &review.Counts
+			if c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now); err != nil {
+				return err
+			}
+		}
 		if review.Deals, err = readWeekDeals(ctx, tx, userID, start, end); err != nil {
 			return err
 		}

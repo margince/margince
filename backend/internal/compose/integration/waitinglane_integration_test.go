@@ -15,10 +15,12 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -32,9 +34,13 @@ var waitingInstant = time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC)
 // message seeded without one is a rep's private correspondence and correctly
 // never appears — every case in this file that is about something else has to
 // clear that bar first or it would pass for the wrong reason.
-func seedWaitingMessage(t *testing.T, e *Env, thread, direction, subject string, at time.Time) {
+//
+// Returns the activity id so a caller can link it to a further record — the
+// entity-filter tests below file the same message under a second person or
+// deal on top of the one seeded here.
+func seedWaitingMessage(t *testing.T, e *Env, thread, direction, subject string, at time.Time) ids.UUID {
 	t.Helper()
-	seedWaitingMessageLinked(t, e, thread, direction, subject, at, seedWaitingPerson(t, e))
+	return seedWaitingMessageLinked(t, e, thread, direction, subject, at, seedWaitingPerson(t, e))
 }
 
 // seedWaitingPerson creates one person for a message to be filed under.
@@ -55,7 +61,7 @@ func seedWaitingPerson(t *testing.T, e *Env) ids.UUID {
 // -mail case is built.
 func seedWaitingMessageLinked(
 	t *testing.T, e *Env, thread, direction, subject string, at time.Time, person ids.UUID,
-) {
+) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	owner := OwnerConn(t)
@@ -68,13 +74,14 @@ func seedWaitingMessageLinked(
 		t.Fatalf("seeding a %s message: %v", direction, err)
 	}
 	if person.IsZero() {
-		return
+		return id
 	}
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO activity_link (activity_id, entity_type, person_id)
 		VALUES ($1, 'person', $2)`, id, person); err != nil {
 		t.Fatalf("filing the message under a person: %v", err)
 	}
+	return id
 }
 
 // An unanswered message reaches the reader. The ADMISSION case, first: a lane
@@ -304,4 +311,115 @@ func containsSubject(rows []activities.WaitingReply, subject string) bool {
 		}
 	}
 	return false
+}
+
+// The record page's own read: GET /activities?waiting_reply=true, scoped to
+// one entity. It shares WaitingReplies' thread walk (waitingReplyExistsClause
+// embeds waitingRepliesSQL as a subquery) rather than a second copy of it, so
+// these are proofs of the SAME engine narrowed to a record, not of a
+// parallel one.
+
+// The entity filter and the wait narrow to an intersection: only the message
+// that is BOTH linked to this person AND still unanswered comes back — not
+// every unanswered thread in the workspace, and not every message on this
+// person.
+func TestWaitingReplyListFilterFindsTheEntitysUnansweredThread(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	admin := e.Admin()
+
+	dana := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	someoneElse := e.SeedPerson(t, "Someone Else", &e.Rep1)
+	theirs := seedWaitingMessage(t, e, "thread-entity-mine", "inbound", "Re: contract", waitingInstant.Add(-3*24*time.Hour))
+	LinkActivity(t, owner, theirs, "person", dana)
+	notTheirs := seedWaitingMessage(t, e, "thread-entity-other", "inbound", "Re: unrelated", waitingInstant.Add(-3*24*time.Hour))
+	LinkActivity(t, owner, notTheirs, "person", someoneElse)
+
+	asOf := waitingInstant
+	et := "person"
+	got, _, err := e.Activities.ListActivities(admin, activities.ListActivitiesInput{
+		EntityType: &et, EntityID: &dana, WaitingReplyAsOf: &asOf,
+	})
+	if err != nil {
+		t.Fatalf("listing waiting replies for the entity: %v", err)
+	}
+	if len(got) != 1 || ids.UUID(got[0].Id) != theirs {
+		t.Fatalf("waiting_reply on person %v = %v, want the one unanswered message linked to them", dana, got)
+	}
+}
+
+// An answered thread contributes nothing to the entity's waiting list either
+// — the same rule WaitingReplies enforces workspace-wide.
+func TestWaitingReplyListFilterOmitsAnAnsweredThread(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	admin := e.Admin()
+
+	dana := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	inbound := seedWaitingMessage(t, e, "thread-entity-answered", "inbound", "Re: timing", waitingInstant.Add(-10*24*time.Hour))
+	LinkActivity(t, owner, inbound, "person", dana)
+	outbound := seedWaitingMessage(t, e, "thread-entity-answered", "outbound", "Re: timing", waitingInstant.Add(-9*24*time.Hour))
+	LinkActivity(t, owner, outbound, "person", dana)
+
+	asOf := waitingInstant
+	et := "person"
+	got, _, err := e.Activities.ListActivities(admin, activities.ListActivitiesInput{
+		EntityType: &et, EntityID: &dana, WaitingReplyAsOf: &asOf,
+	})
+	if err != nil {
+		t.Fatalf("listing waiting replies for the entity: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("waiting_reply on an answered thread = %v, want none", got)
+	}
+}
+
+// The row-scope gate applies to the filtered read exactly as it does to the
+// unfiltered one: a message reachable only through a colleague's
+// capture-private contact does not surface just because the caller asked
+// waiting_reply=true instead of the plain list.
+func TestWaitingReplyListFilterDropsRowsOutOfCallersScope(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+
+	theirPrivate := e.SeedPerson(t, "Their Private Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "person", theirPrivate, e.Rep3)
+	// Zero person: no auto-link, so the ONLY sales link this message carries
+	// is the one below — otherwise the message would still be admitted
+	// through a public link and this would test nothing.
+	hidden := seedWaitingMessageLinked(t, e, "thread-entity-private", "inbound", "Re: private deal",
+		waitingInstant.Add(-3*24*time.Hour), ids.UUID{})
+	LinkActivity(t, owner, hidden, "person", theirPrivate)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLinkRepPerms)
+	asOf := waitingInstant
+	got, _, err := e.Activities.ListActivities(rep, activities.ListActivitiesInput{WaitingReplyAsOf: &asOf})
+	if err != nil {
+		t.Fatalf("listing waiting replies workspace-wide: %v", err)
+	}
+	for _, a := range got {
+		if ids.UUID(a.Id) == hidden {
+			t.Fatalf("waiting_reply surfaced a message reachable only through a contact %v cannot read", theirPrivate)
+		}
+	}
+}
+
+// Filtering by an out-of-scope entity refuses the same way the plain list
+// already does — waiting_reply changes what the list narrows to, not the
+// existence-hiding gate that runs before any SQL is built.
+func TestWaitingReplyListFilterRefusesAnOutOfScopeEntity(t *testing.T) {
+	e := Setup(t)
+
+	theirPrivate := e.SeedPerson(t, "Their Private Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "person", theirPrivate, e.Rep3)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLinkRepPerms)
+	asOf := waitingInstant
+	et := "person"
+	_, _, err := e.Activities.ListActivities(rep, activities.ListActivitiesInput{
+		EntityType: &et, EntityID: &theirPrivate, WaitingReplyAsOf: &asOf,
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("waiting_reply on an out-of-scope entity = %v, want ErrNotFound", err)
+	}
 }

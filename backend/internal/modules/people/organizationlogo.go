@@ -113,7 +113,7 @@ func (s *Store) SetOrganizationLogo(ctx context.Context, id ids.OrganizationID, 
 		}
 		written = true
 		supersededKey = supersededObject(previous, objectKey)
-		return recordLogoWrite(ctx, tx, id, previousOrigin, originURL, by)
+		return recordLogoWrite(ctx, tx, id, resolvedLogoWrite(previousOrigin, originURL, by))
 	})
 	if err != nil {
 		return false, nil, err
@@ -247,24 +247,29 @@ func (s *Store) DiscardSiteReadLogo(ctx context.Context, readID ids.UUID) (*stri
 	return discarded, nil
 }
 
-// bindSiteReadLogo gives the company a confirmation creates the mark its own
-// website read already resolved — the step that makes the anchor's face arrive
-// on the same terms as every other company's (A55). It runs inside the
-// confirmation's transaction, so the company and its logo commit together.
+// bindSiteReadLogo gives the company the mark its own website read resolved —
+// the step that makes the anchor's face arrive on the same terms as every other
+// company's (A55). It runs inside the confirmation's transaction, so the
+// company and its logo commit together.
 //
-// Fill-empty, like every site-read field the confirmation applies: a mark the
-// record already wears — a person's own, or one an earlier read landed — stays,
-// and the parked object is not adopted. Adoption MOVES the dossier's reference
-// onto the record; a decline hands that reference back to the caller as a key
-// to collect, in the same transaction that declined, so the row and the report
-// can never disagree about who holds those bytes.
+// One thing outranks it, and only one: a mark a PERSON chose. Everything else
+// the read resolves lands, including over a mark an earlier read landed, because
+// the same read can be run again against a company that already exists — and a
+// re-read asked for precisely to pick up a new logo that then declined to write
+// it would be a verb that reports success and does nothing.
 //
-// It answers the unadopted key, never a deleted object: this module owns no
-// object store, so reclaiming is something it can only ever REPORT.
+// Adoption MOVES the dossier's reference onto the record; a decline hands that
+// reference back to the caller as a key to collect, in the same transaction that
+// declined, so the row and the report can never disagree about who holds those
+// bytes. An adoption that supersedes an older mark hands THAT key back for the
+// same reason.
+//
+// It answers the key, never a deleted object: this module owns no object store,
+// so reclaiming is something it can only ever REPORT.
 func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids.OrganizationID, reclaim bool) (*string, error) {
 	// unadopted names what the confirmation leaves behind for its caller. It
 	// stays nil on every path that leaves nothing: no mark was parked, or the
-	// anchor took the one that was.
+	// anchor took the one that was and wore none before it.
 	var unadopted *string
 	var objectKey, originURL *string
 	if err := tx.QueryRow(ctx,
@@ -285,16 +290,26 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids
 	if held {
 		return releaseParkedSiteReadLogo(ctx, tx, readID, reclaim)
 	}
-	var previousOrigin *string
+	// Not fill-empty. A confirmation is not only the step that CREATES the
+	// company: the same read can be run again against a company that already
+	// exists, to pick up what its website says now, and a re-read whose whole
+	// point is a fresher mark that then declined to write it would leave the
+	// company wearing the picture its site stopped using. What must not be
+	// overwritten is a mark a PERSON chose, and that is the guard above.
+	//
+	// The record's own previous object comes back with it, because adopting a
+	// new mark is what makes the old one unreferenced — and the caller is the
+	// only side that can collect bytes.
+	var previousKey, previousOrigin *string
 	err = tx.QueryRow(ctx, `
 		UPDATE organization SET logo_object_key = $2, logo_origin = $3
-		WHERE id = $1 AND archived_at IS NULL AND logo_object_key IS NULL
-		RETURNING (SELECT o.logo_origin FROM organization o WHERE o.id = $1)`,
-		orgID, *objectKey, *originURL).Scan(&previousOrigin)
+		WHERE id = $1 AND archived_at IS NULL
+		RETURNING (SELECT o.logo_object_key FROM organization o WHERE o.id = $1),
+		          (SELECT o.logo_origin FROM organization o WHERE o.id = $1)`,
+		orgID, *objectKey, *originURL).Scan(&previousKey, &previousOrigin)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// The record already wears a mark, or was archived under this
-		// confirmation: the same decline as a human-held field, and the same
-		// parked object left over.
+		// Archived under this confirmation: nothing to wear a mark, and the
+		// same parked object left over.
 		return releaseParkedSiteReadLogo(ctx, tx, readID, reclaim)
 	}
 	if err != nil {
@@ -315,10 +330,14 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids
 	// draft: provenance is written once and never re-derived, and a machine mark
 	// recorded under a person's name would make the human-precedence guard
 	// refuse every later resolve for a logo nobody chose.
-	if err := recordLogoWrite(ctx, tx, orgID, previousOrigin, *originURL, companySiteReadCapturedBy); err != nil {
+	if err := recordLogoWrite(ctx, tx, orgID,
+		resolvedLogoWrite(previousOrigin, *originURL, companySiteReadCapturedBy)); err != nil {
 		return nil, err
 	}
-	return unadopted, nil
+	// What this confirmation left unreferenced: the mark the record wore before
+	// it, if it wore one. On the confirmation that CREATES the company there is
+	// none, which is why this stays nil for every onboarding read.
+	return supersededObject(previousKey, *objectKey), nil
 }
 
 // releaseParkedSiteReadLogo drops the reference a confirmation declined to
@@ -388,16 +407,24 @@ func (s *Store) LogoHeldByHuman(ctx context.Context, id ids.OrganizationID) (boo
 	return held, err
 }
 
-// logoHeldByHuman reports whether a person set this organization's logo. It
-// reads the same field_provenance layer the provenance display reads, so
-// "a human owns this field" has one answer in the product, not two.
+// logoHeldByHuman reports whether a person's own mark is on this organization
+// right now. It reads the same field_provenance layer the provenance display
+// reads, so "a human owns this field" has one answer in the product, not two.
+//
+// What holds a read off is a mark a person chose, not the fact that a person
+// once touched the field: someone who REMOVES a logo has asked for the record
+// to have none, and leaving their removal standing as a hold would mean the
+// company could never be given a face again by any later read. So the row's own
+// state is part of the question — an empty field is held by nobody.
 func logoHeldByHuman(ctx context.Context, tx pgx.Tx, id ids.OrganizationID) (bool, error) {
 	var human bool
 	err := tx.QueryRow(ctx, `
-		SELECT captured_by LIKE 'human:%'
-		FROM field_provenance
-		WHERE object_type = 'organization' AND object_id = $1 AND field_name = $2
-		ORDER BY captured_at DESC, id DESC
+		SELECT p.captured_by LIKE 'human:%'
+		FROM field_provenance p
+		WHERE p.object_type = 'organization' AND p.object_id = $1 AND p.field_name = $2
+		  AND EXISTS (SELECT 1 FROM organization o
+		               WHERE o.id = $1 AND o.logo_object_key IS NOT NULL)
+		ORDER BY p.captured_at DESC, p.id DESC
 		LIMIT 1`, id, logoFieldName).Scan(&human)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil // no logo provenance yet — nobody holds the field

@@ -72,19 +72,28 @@ func decodeStart(token string) (keysetStart, error) {
 // stopped on rather than a flag, because a page that returned nothing decidable
 // still has to hand back a token — otherwise a caller is told there is more and
 // given no way to reach it.
-func capPage(out []row, limit int, scanned *row) ([]row, storekit.Page) {
+func capPage(out []row, limit int, scanned *row) ([]row, storekit.Page, error) {
 	if len(out) > limit {
 		out = out[:limit]
-		return out, pageAfter(out[limit-1])
+		page, err := pageAfter(out[limit-1])
+		return out, page, err
 	}
 	if scanned != nil {
-		return out, pageAfter(*scanned)
+		page, err := pageAfter(*scanned)
+		return out, page, err
 	}
-	return out, storekit.Page{}
+	return out, storekit.Page{}, nil
 }
 
 // pageAfter is the page a caller continues with: has_more, and the keyset token
 // the next request resumes from.
-func pageAfter(last row) storekit.Page {
-	return storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(last.CreatedAt, last.ID.UUID)}
+//
+// It answers an error because the token can fail to mint, and the flag beside it
+// would then promise a page the caller has no way to ask for.
+func pageAfter(last row) (storekit.Page, error) {
+	next, err := storekit.EncodeCursor(last.CreatedAt, last.ID.UUID)
+	if err != nil {
+		return storekit.Page{}, err
+	}
+	return storekit.Page{HasMore: true, NextCursor: next}, nil
 }

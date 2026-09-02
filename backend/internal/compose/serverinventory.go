@@ -153,6 +153,9 @@ type Server struct {
 	// The notices transport: one verb (mark read); the content reaches the
 	// reader on the Worklist's notices lane.
 	noticesHandlers
+	// The week ahead: the rep's own plan, and the one write their lead has on
+	// it. The week just gone is weeklyHandlers, which shares no table with it.
+	weeklyPlanHandlers
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers

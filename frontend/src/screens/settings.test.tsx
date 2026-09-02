@@ -194,8 +194,15 @@ describe("SettingsScreen RBAC surfaces", () => {
         });
       }),
     );
+    const user = userEvent.setup();
     render(<SettingsScreen route={settingsAddress("ai")} />);
-    // The model prices this grant authors are on screen, so the tab rendered...
+    // The page header answers first, before any tab is chosen: BOTH readings —
+    // the month's spend and which vendors are keyed — say they are not this
+    // seat's rather than showing a blank figure it could read as zero.
+    expect(await screen.findAllByText("Not yours to see")).toHaveLength(2);
+
+    // The model prices this grant authors are on screen...
+    await user.click(screen.getByRole("button", { name: "Usage" }));
     await waitFor(() =>
       expect(screen.getByText("AI model costs")).toBeTruthy(),
     );
@@ -210,7 +217,9 @@ describe("SettingsScreen RBAC surfaces", () => {
         /only an operator can see what the AI runtime spent/i,
       ),
     ).toBeTruthy();
-    expect(screen.getByText("AI call trace")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Logs" }));
+    expect(await screen.findByText("AI call trace")).toBeTruthy();
     expect(
       screen.getByText(/only an operator can read the per-call trace/i),
     ).toBeTruthy();
@@ -365,15 +374,20 @@ describe("SettingsScreen restructured entries", () => {
         screen.getByRole("link", { name: "AI" }).getAttribute("aria-current"),
       ).toBe("page"),
     );
-    // The surface they came for.
+    // The surface they came for, one tab along.
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Automations" }),
+    );
     expect(
       await screen.findByRole("heading", { name: "Automations" }),
     ).toBeTruthy();
     // The spend card follows the automation WRITE grant, so this seat is not
     // handed the operator's bill — but it is told that, rather than left to read
     // an absent card as "nothing was spent".
+    await user.click(screen.getByRole("button", { name: "Usage" }));
     expect(
-      screen.getByRole("heading", { name: "AI usage & budget" }),
+      await screen.findByRole("heading", { name: "AI usage & budget" }),
     ).toBeTruthy();
     expect(
       screen.getByText(/only an operator can see what the AI runtime spent/i),
