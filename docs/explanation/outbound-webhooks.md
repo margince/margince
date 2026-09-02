@@ -58,7 +58,7 @@ capability a process opts into by holding the deployment key.
 ## 1. The subscription — the config surface
 
 A `webhook_subscription` is integration config, not record data: managing it is governed by the
-`webhook_subscription` RBAC object (admin/ops-owned config posture, like quotas), and every entry point
+`webhook_subscription` RBAC object (admin/ops-owned config posture, like custom fields), and every entry point
 in `store.go` gates on it (`auth.Require` on create/read/update/delete). The store is the classic
 **Handlers→Store** CRUD spine — the store owns the transactional write shape and the RBAC gate.
 

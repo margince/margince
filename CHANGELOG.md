@@ -9,6 +9,18 @@ numbers appear here when releases start.
 
 ## [Unreleased]
 
+### Removed
+
+- **The human-set sales quota is gone.** A quota was a revenue target a manager
+  typed, and everything the product said downstream of it — attainment, the pace
+  band — was that one number's arithmetic, so a target nobody had entered read as
+  an absence rather than as a question with no denominator. The Reports screen now
+  holds the three deal reports and nothing else. The `quota` table is dropped and
+  the `quota` RBAC object is stripped from every role document in the same
+  migration. Operational agent budgets are untouched: the per-agent volume meter,
+  the AI provider spend budget and the incumbent rate allowance are safety limits,
+  not sales targets, and keep working exactly as before.
+
 ### Changed
 
 - **Home's test suite is under the 1000-line ceiling again.** It crossed while

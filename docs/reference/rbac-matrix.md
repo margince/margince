@@ -97,7 +97,6 @@ changes none.
 | `pipeline` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `product` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `project` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
-| `quota` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `relationship` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `retention_policy` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `saved_view` | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD |

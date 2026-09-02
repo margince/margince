@@ -55,7 +55,6 @@ const (
 	recordTypePerson              agentRecordType = "person"
 	recordTypeProduct             agentRecordType = "product"
 	recordTypeProject             agentRecordType = "project"
-	recordTypeQuota               agentRecordType = "quota"
 	recordTypeRecordGrant         agentRecordType = "record_grant"
 	recordTypeRelationship        agentRecordType = "relationship"
 	recordTypeSavedView           agentRecordType = "saved_view"
@@ -141,7 +140,6 @@ var agentPolicies = map[string]agentPolicy{
 	"DELETE /v1/projects/{id}/stakeholders/{person_id}":                  {Op: "removeProjectStakeholder", Access: "tool", Tool: "update_record", RecordType: "project", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/provider-connections/{provider}":                         {Op: "disconnectProvider", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/provider-connections/{provider}/data":                    {Op: "deleteProviderData", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"DELETE /v1/quotas/{id}":                                             {Op: "archiveQuota", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/record-grants/{id}":                                      {Op: "revokeRecordGrant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/relationships/{id}":                                      {Op: "archiveRelationship", Access: "tool", Tool: "archive_record", RecordType: "relationship", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/retention-policies/{id}":                                 {Op: "deleteRetentionPolicy", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -283,9 +281,6 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/projects/{id}":                                              {Op: "getProject", Access: "tool", Tool: "read_record", RecordType: "project", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/projects/{id}/360":                                          {Op: "getProject360", Access: "tool", Tool: "read_project_360", RecordType: "project", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/provider-connections":                                       {Op: "listProviderConnections", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/quotas":                                                     {Op: "listQuotas", Access: "tool", Tool: "search_records", RecordType: "quota", Tier: "auto_execute", Scope: "read"},
-	"GET /v1/quotas/{id}":                                                {Op: "getQuota", Access: "tool", Tool: "read_record", RecordType: "quota", Tier: "auto_execute", Scope: "read"},
-	"GET /v1/quotas/{id}/attainment":                                     {Op: "getQuotaAttainment", Access: "tool", Tool: "read_record", RecordType: "quota", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/record-grants":                                              {Op: "listRecordGrants", Access: "tool", Tool: "search_records", RecordType: "record_grant", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/records/{entity_type}/{id}/context":                         {Op: "getRecordContext", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/records/{entity_type}/{id}/history":                         {Op: "getRecordHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -348,7 +343,6 @@ var agentPolicies = map[string]agentPolicy{
 	"PATCH /v1/products/{id}":                                            {Op: "updateProduct", Access: "tool", Tool: "update_record", RecordType: "product", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/projects/{id}":                                            {Op: "updateProject", Access: "tool", Tool: "update_record", RecordType: "project", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/provider-connections/{provider}":                          {Op: "updateProviderConnection", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"PATCH /v1/quotas/{id}":                                              {Op: "updateQuota", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/relationships/{id}":                                       {Op: "updateRelationship", Access: "tool", Tool: "update_record", RecordType: "relationship", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/retention-policies/{id}":                                  {Op: "updateRetentionPolicy", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/retention/settings":                                       {Op: "updateRetentionSettings", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -527,7 +521,6 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/public/rooms/sign-out":                                     {Op: "signOutBuyerRoom", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/rooms/threads":                                      {Op: "openBuyerRoomThread", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/rooms/threads/{threadId}/comments":                  {Op: "replyBuyerRoomThread", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/quotas":                                                    {Op: "createQuota", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/record-grants":                                             {Op: "createRecordGrant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/records/{entity_type}/{id}/history/{audit_id}/restore":     {Op: "restoreRecordChange", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/records/{record_type}/{id}/claim":                          {Op: "claimRecord", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
