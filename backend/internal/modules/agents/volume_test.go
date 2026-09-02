@@ -9,7 +9,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -23,21 +23,21 @@ import (
 // COUNTER, because most of what is worth asserting here is that a call was
 // charged against the right one.
 type countingCharger struct {
-	charged map[agentquota.Counter]int
-	times   map[agentquota.Counter]int
+	charged map[agentvolume.Counter]int
+	times   map[agentvolume.Counter]int
 	err     error
 	// errOn narrows a failing meter to ONE counter. Redis being down fails
 	// every charge, and a test about the answer-stage asymmetry needs the
 	// call-ceiling charge — which runs first and refuses before the handler —
 	// to succeed, or it proves the wrong refusal.
-	errOn agentquota.Counter
+	errOn agentvolume.Counter
 }
 
 func newCountingCharger() *countingCharger {
-	return &countingCharger{charged: map[agentquota.Counter]int{}, times: map[agentquota.Counter]int{}}
+	return &countingCharger{charged: map[agentvolume.Counter]int{}, times: map[agentvolume.Counter]int{}}
 }
 
-func (c *countingCharger) Consume(_ context.Context, counter agentquota.Counter, n int) error {
+func (c *countingCharger) Consume(_ context.Context, counter agentvolume.Counter, n int) error {
 	c.times[counter]++
 	c.charged[counter] += n
 	if c.err != nil && (c.errOn == "" || c.errOn == counter) {
@@ -47,7 +47,7 @@ func (c *countingCharger) Consume(_ context.Context, counter agentquota.Counter,
 }
 
 // reads is what the counter every pre-existing spec here is about was charged.
-func (c *countingCharger) reads() int { return c.charged[agentquota.Reads] }
+func (c *countingCharger) reads() int { return c.charged[agentvolume.Reads] }
 
 // servingTool hands back the records it was built with, through the ONE place
 // a datasource.Record becomes tool output — so it exercises the charge point
@@ -89,7 +89,7 @@ func chargingRegistry(t *testing.T, tool mcp.Tool, opts ...chargeTestOption) (*R
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	r := NewRegistry(cfg.approvals, auth.NewGate(fullSeatAuthority{}), WithQuotaCharger(cfg.charger))
+	r := NewRegistry(cfg.approvals, auth.NewGate(fullSeatAuthority{}), WithVolumeCharger(cfg.charger))
 	if cfg.noCharger {
 		r = NewRegistry(cfg.approvals, auth.NewGate(fullSeatAuthority{}))
 	}
@@ -119,7 +119,7 @@ func withChargerError(err error) chargeTestOption {
 }
 
 // withChargerErrorOn makes exactly one counter unrecordable.
-func withChargerErrorOn(counter agentquota.Counter, err error) chargeTestOption {
+func withChargerErrorOn(counter agentvolume.Counter, err error) chargeTestOption {
 	return func(c *chargeTest) { c.charger.err, c.charger.errOn = err, counter }
 }
 
@@ -196,8 +196,8 @@ func TestAFailedAnswerChargesNothing(t *testing.T) {
 		t.Fatal("the failing handler reported success")
 	}
 
-	if charger.times[agentquota.Reads] != 0 {
-		t.Errorf("a failed answer charged the read bound %d times", charger.times[agentquota.Reads])
+	if charger.times[agentvolume.Reads] != 0 {
+		t.Errorf("a failed answer charged the read bound %d times", charger.times[agentvolume.Reads])
 	}
 }
 
@@ -211,8 +211,8 @@ func TestAnAnswerWithNoRecordsChargesNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if charger.times[agentquota.Reads] != 0 {
-		t.Errorf("a record-free answer charged the read bound %d times", charger.times[agentquota.Reads])
+	if charger.times[agentvolume.Reads] != 0 {
+		t.Errorf("a record-free answer charged the read bound %d times", charger.times[agentvolume.Reads])
 	}
 }
 
@@ -311,7 +311,7 @@ func TestAWriteIsServedEvenWhenItsChargeCannotBeRecorded(t *testing.T) {
 		// The ANSWER-stage charge is the one that fails here: by then the send
 		// has happened. A meter that failed the call-ceiling charge too would
 		// refuse before the handler ran, which is the opposite property.
-		withChargerErrorOn(agentquota.Reads, errors.New("redis is unreachable")))
+		withChargerErrorOn(agentvolume.Reads, errors.New("redis is unreachable")))
 
 	out, err := r.Invoke(ctx, "send_email", json.RawMessage(`{}`))
 	if err != nil {
@@ -322,7 +322,7 @@ func TestAWriteIsServedEvenWhenItsChargeCannotBeRecorded(t *testing.T) {
 	}
 }
 
-// Every admitted call spends the ceiling every other quota sits under, and it
+// Every admitted call spends the ceiling every other counter sits under, and it
 // spends exactly one however many records the answer carried. Charging it per
 // record would make MCP-SESS-CALLS a second read bound with a different number.
 func TestEveryAdmittedCallSpendsOneOfTheCallCeiling(t *testing.T) {
@@ -332,19 +332,19 @@ func TestEveryAdmittedCallSpendsOneOfTheCallCeiling(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := charger.charged[agentquota.Calls]; got != 1 {
+	if got := charger.charged[agentvolume.Calls]; got != 1 {
 		t.Errorf("one call answering 20 records spent %d of the call ceiling, want 1", got)
 	}
 }
 
 // A call the meter cannot COUNT does not run. This is the one charge point at
 // which nothing has happened yet, which is exactly what lets it refuse — and
-// the ceiling it defends is the one every other quota sits under, so leaving it
+// the ceiling it defends is the one every other counter sits under, so leaving it
 // uncounted while Redis blinks would let a flood through the gap.
 func TestACallThatCannotBeCountedIsNotRun(t *testing.T) {
 	tool := &servingTool{spec: readToolSpec("search_records"), records: 5}
 	r, charger, ctx := chargingRegistry(t, tool,
-		withChargerErrorOn(agentquota.Calls, errors.New("redis is unreachable")))
+		withChargerErrorOn(agentvolume.Calls, errors.New("redis is unreachable")))
 
 	out, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
 
@@ -354,7 +354,7 @@ func TestACallThatCannotBeCountedIsNotRun(t *testing.T) {
 	if out != nil {
 		t.Error("the answer was served anyway")
 	}
-	if charger.times[agentquota.Reads] != 0 {
+	if charger.times[agentvolume.Reads] != 0 {
 		t.Error("the handler ran: records were charged for a call that was never counted")
 	}
 }
@@ -368,10 +368,10 @@ func TestTheActIsChargedAgainstTheCounterItsKindNames(t *testing.T) {
 		name    string
 		scope   principal.Scope
 		egress  bool
-		counter agentquota.Counter
+		counter agentvolume.Counter
 	}{
-		{"update_record", principal.ScopeWrite, false, agentquota.Writes},
-		{"send_email", principal.ScopeSend, true, agentquota.Egress},
+		{"update_record", principal.ScopeWrite, false, agentvolume.Writes},
+		{"send_email", principal.ScopeSend, true, agentvolume.Egress},
 	}
 	for _, c := range cases {
 		spec := readToolSpec(c.name)
@@ -386,10 +386,10 @@ func TestTheActIsChargedAgainstTheCounterItsKindNames(t *testing.T) {
 			t.Errorf("%s spent %d of %s, want 1", c.name, got, c.counter)
 		}
 		// And nothing of the OTHER act counter: a send that also spent the write
-		// quota would exhaust the loose bound while the tight one guarded nothing.
-		other := agentquota.Writes
-		if c.counter == agentquota.Writes {
-			other = agentquota.Egress
+		// volume budget would exhaust the loose bound while the tight one guarded nothing.
+		other := agentvolume.Writes
+		if c.counter == agentvolume.Writes {
+			other = agentvolume.Egress
 		}
 		if got := charger.charged[other]; got != 0 {
 			t.Errorf("%s also spent %d of %s", c.name, got, other)
@@ -410,8 +410,8 @@ func TestAReadOnlyToolIsChargedForItsRecordsAndNotAlsoForTheAct(t *testing.T) {
 	if charger.reads() != 4 {
 		t.Errorf("a 4-record read charged %d", charger.reads())
 	}
-	if charger.times[agentquota.Reads] != 1 {
-		t.Errorf("a read-only answer touched the read counter %d times, want one", charger.times[agentquota.Reads])
+	if charger.times[agentvolume.Reads] != 1 {
+		t.Errorf("a read-only answer touched the read counter %d times, want one", charger.times[agentvolume.Reads])
 	}
 }
 
@@ -429,15 +429,15 @@ func TestTheRestDoorChargesTheSameCountersTheMCPDoorDoes(t *testing.T) {
 	}
 	r.ChargeEffect(ctx, spec)
 
-	if got := charger.charged[agentquota.Calls]; got != 1 {
+	if got := charger.charged[agentvolume.Calls]; got != 1 {
 		t.Errorf("a REST call spent %d of the call ceiling, want 1", got)
 	}
-	if got := charger.charged[agentquota.Writes]; got != 1 {
+	if got := charger.charged[agentvolume.Writes]; got != 1 {
 		t.Errorf("a REST mutation spent %d of the write quota, want 1", got)
 	}
 	// And no records: a mutation's own read-back is not this call's to count,
 	// and the REST read path is charged separately and per record.
-	if got := charger.charged[agentquota.Reads]; got != 0 {
+	if got := charger.charged[agentvolume.Reads]; got != 0 {
 		t.Errorf("a REST mutation spent %d records", got)
 	}
 }
@@ -448,7 +448,7 @@ func TestARestCallThatCannotBeCountedIsRefused(t *testing.T) {
 	spec := readToolSpec("update_record")
 	spec.RequiredScope = principal.ScopeWrite
 	r, _, ctx := chargingRegistry(t, &servingTool{spec: spec}, withScope(principal.ScopeWrite),
-		withChargerErrorOn(agentquota.Calls, errors.New("redis is unreachable")))
+		withChargerErrorOn(agentvolume.Calls, errors.New("redis is unreachable")))
 
 	if err := r.ChargeAdmittedCall(ctx, spec); !errors.Is(err, apperrors.ErrBudgetExceeded) {
 		t.Fatalf("an uncountable REST call → %v, want ErrBudgetExceeded", err)
@@ -466,7 +466,7 @@ func TestARestEffectThatCannotBeCountedIsStillDone(t *testing.T) {
 
 	r.ChargeEffect(ctx, spec) // no error to return, and must not panic
 
-	if got := charger.times[agentquota.Egress]; got != 1 {
+	if got := charger.times[agentvolume.Egress]; got != 1 {
 		t.Errorf("the egress charge was attempted %d times", got)
 	}
 }
@@ -542,7 +542,7 @@ func TestOneToolCallSpendsOneOfTheCallCeiling(t *testing.T) {
 				t.Fatalf("the call answered %v, want %v — this case is not the arm it names", err, tc.wantErr)
 			}
 
-			if got := charger.charged[agentquota.Calls]; got != tc.wantCalls {
+			if got := charger.charged[agentvolume.Calls]; got != tc.wantCalls {
 				t.Errorf("the call ceiling was charged %d, want %d", got, tc.wantCalls)
 			}
 		})

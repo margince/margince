@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package agentquota
+package agentvolume
 
 import (
 	"context"
@@ -286,7 +286,7 @@ func TestASubSecondWindowBucketsRatherThanDividingByZero(t *testing.T) {
 
 // An agent whose counter cannot be NAMED is refused, not admitted. A call with
 // no workspace bound is the live shape of this: the gate's MCP path rejects it
-// before the quota, but the REST path has no such check, so a meter that
+// before the volume budget, but the REST path has no such check, so a meter that
 // admitted it would hand out a free pass on a wiring fault.
 func TestAnAgentWithNoWorkspaceIsRefusedRatherThanUnmetered(t *testing.T) {
 	meter := Unmetered() // even an unmetered composition must not be the reason

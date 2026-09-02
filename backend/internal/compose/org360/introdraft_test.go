@@ -241,3 +241,24 @@ func TestARecordValueCannotOpenAParagraphInTheTemplate(t *testing.T) {
 		t.Fatalf("the value was dropped rather than folded:\n%s", body)
 	}
 }
+
+// The checker refuses a draft that does not name the colleague, so the prompt
+// has to ask for it. It did not, and "no pleasantries stacked on the front"
+// read to a model as "no greeting": every draft came back naming the contact
+// and nobody else, was refused, and the reader got the template instead. The
+// model lane for this site was dead on a live path with nothing red anywhere.
+//
+// This is the mirror of TestAModelDraftThatNamesNobodyIsRefused: that one holds
+// the checker, this one holds the instruction the checker's rule depends on.
+func TestTheIntroPromptAsksForTheNamesTheCheckerRequires(t *testing.T) {
+	t.Parallel()
+	for _, required := range []string{
+		"Address the colleague by name: open with their first name",
+		"name the person you want to meet in full",
+		`Write a short subject line in the "subject" field, naming the person you want to meet`,
+	} {
+		if !strings.Contains(introSystem, required) {
+			t.Fatalf("the prompt never asks the model to %q, but parseIntroDraft refuses a draft that omits it", required)
+		}
+	}
+}

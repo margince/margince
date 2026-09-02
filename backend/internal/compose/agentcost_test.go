@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -100,7 +100,7 @@ func TestACallWithNoWorkspaceHasNoShare(t *testing.T) {
 // the line that matters is which counter it names: charging model tokens
 // against reads would refuse an agent for spending its own budget.
 func TestATokenSpendIsChargedAgainstTheCostCounter(t *testing.T) {
-	meter := agentquota.Unmetered()
+	meter := agentvolume.Unmetered()
 
 	if err := (AgentTokenSpend{Meter: meter}).SpendAgentTokens(context.Background(), 500); err != nil {
 		t.Fatalf("charging an unmetered composition failed: %v", err)

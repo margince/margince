@@ -40,7 +40,12 @@ import {
   useNavWalk,
 } from "./navlevel";
 import { PageAsideProvider, PageAsideRegion } from "./pageaside";
-import { PAGE_SUB_KEYS, resolveTitle, sectionHead } from "./pagemeta";
+import {
+  PAGE_SUB_KEYS,
+  resolveTitle,
+  SELF_HEADED_SCREENS,
+  sectionHead,
+} from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
@@ -636,12 +641,21 @@ export function PageTitle({
   // yielding to a surface that will not name itself either.
   const unitNamesPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
+  // A screen that heads ITSELF. Home greets the reader by name in its own h1,
+  // so the shell printing "Start" above it named the page twice at heading
+  // level — a document outline with two top-level headings, which is exactly
+  // what the branches above exist to prevent for records and units.
+  //
+  // A set rather than a second boolean: the next screen that grows its own
+  // heading joins a list instead of adding a clause, and the list is the one
+  // place to read which screens do this.
+  const selfHeaded = SELF_HEADED_SCREENS.has(route.screen);
   // Read only on the branch that prints an h1: a surface that names itself gets
   // no subtitle from here either, or the page would carry a description of a
   // heading it is not showing.
   const subKey = PAGE_SUB_KEYS[route.screen];
 
-  if (recordNamesPage || unitNamesPage) {
+  if (recordNamesPage || unitNamesPage || selfHeaded) {
     return null;
   }
 

@@ -23,6 +23,18 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **The operational agent budgets stop being called quotas.** One word named two
+  unrelated things until the sales quota was retired: the revenue target a
+  manager typed, and the volume ceiling that stops an agent reading, writing or
+  spending without bound. The second is a safety limit and is unchanged in
+  behaviour, threshold and refusal — only its name moves. The Go package,
+  types and files are renamed, and two stored values move with them:
+  the approval kind `quota_release` becomes `volume_release` and the AI failure
+  code `provider_quota` becomes `provider_budget`, both migrated in place. The
+  contract already tells a reader to treat an unrecognized failure code as
+  "some failure", so a client that has not been updated degrades to the honest
+  general answer rather than breaking.
+
 - **Home's test suite is under the 1000-line ceiling again.** It crossed while
   Home gained its weekly-review section, and the split had one honest shape: the
   harness both halves need — the recording fetch stub, the render wrapper and

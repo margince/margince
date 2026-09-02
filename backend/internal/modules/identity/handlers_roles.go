@@ -45,7 +45,7 @@ func (h Handlers) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request, key
 		return
 	}
 	// The If-Match version is read off the header rather than the generated
-	// params struct, which is the house spelling (quotas, people, deals):
+	// params struct, which is the house spelling (people, deals):
 	// httperr.IfMatchVersion is where "a bare integer, not a quoted ETag" and
 	// the malformed-header refusal are decided once.
 	ifVersion, ok := httperr.IfMatchVersion(w, r)

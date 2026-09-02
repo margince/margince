@@ -146,7 +146,7 @@ describe("the offer to put an approved change back", () => {
     render(
       <ApprovalRow
         approval={closeDateApproval({
-          kind: "quota_release",
+          kind: "volume_release",
           target_entity_type: null,
           target_entity_id: null,
         })}

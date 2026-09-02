@@ -233,8 +233,8 @@ func TestAgentReleaseSpendsTheCapsTheReleaseSpends(t *testing.T) {
 		{"send releases the held draft", agent(principal.ScopeWrite, principal.ScopeSend), "held_draft", true, true},
 		{"a write passport can still cancel one", agent(principal.ScopeWrite), "held_draft", false, true},
 		{"a held scheduled send is the same rule", agent(principal.ScopeWrite), KindScheduledSendHeld, true, false},
-		{"no passport answers its own step-up", agent(principal.ScopeWrite, principal.ScopeSend), KindQuotaRelease, true, false},
-		{"not even to decline it", agent(principal.ScopeWrite), KindQuotaRelease, false, false},
+		{"no passport answers its own step-up", agent(principal.ScopeWrite, principal.ScopeSend), KindVolumeRelease, true, false},
+		{"not even to decline it", agent(principal.ScopeWrite), KindVolumeRelease, false, false},
 		{"a human is bounded by their seat, not by caps", principal.Principal{
 			Type: principal.PrincipalHuman, UserID: ids.NewV7(),
 		}, "held_draft", true, true},

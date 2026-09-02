@@ -44,7 +44,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -424,10 +424,10 @@ func (r *Registry) ensureReplayVisible(ctx context.Context, evidence []EvidenceR
 // caller a document it can ask for again, while serving it would leak an
 // uncountable read once per retry for the life of the window.
 func (r *Registry) chargeReplay(ctx context.Context, spec mcp.ToolSpec, records int) error {
-	if r.quota == nil || records <= 0 {
+	if r.volume == nil || records <= 0 {
 		return nil
 	}
-	if err := r.quota.Consume(ctx, agentquota.Reads, records); err != nil {
+	if err := r.volume.Consume(ctx, agentvolume.Reads, records); err != nil {
 		slog.ErrorContext(ctx, "recording a replayed result against the read bound failed",
 			"tool", spec.Name, "records", records, "err", err)
 		return fmt.Errorf(

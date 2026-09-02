@@ -353,7 +353,7 @@ func (e *MissingFxRateError) MessageFault() (code, message string) {
 // rate means. One of them would be corrected.
 //
 // Handed over as a function rather than as this store, so the caller takes a
-// seam and not a module (the shape quotas' BaseCurrencyFunc already uses).
+// seam and not a module (the shape counters' BaseCurrencyFunc already uses).
 func (s *Store) FreezeRateAt(ctx context.Context, tx pgx.Tx, currency string, asOf time.Time) (string, time.Time, error) {
 	base, err := s.installation.BaseCurrency(ctx, tx)
 	if err != nil {

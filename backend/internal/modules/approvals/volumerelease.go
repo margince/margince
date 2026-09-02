@@ -21,33 +21,33 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// KindQuotaRelease is the staged kind a step-up asks under. Exported because the
+// KindVolumeRelease is the staged kind a step-up asks under. Exported because the
 // tool surface stages it and the composition root's fitness tests hold it to the
 // same obligations every other kind carries.
-const KindQuotaRelease = "quota_release"
+const KindVolumeRelease = "volume_release"
 
-// QuotaReleaser applies a confirm-and-continue release to the meter.
+// VolumeReleaser applies a confirm-and-continue release to the meter.
 //
 // It is a seam rather than the concrete meter because the meter holds a Redis
 // client, and this module owns rows: a service constructed for a role that
 // serves no agents composes none, and its releases are then a loud absence
 // rather than a silent no-op.
-type QuotaReleaser interface {
-	Release(ctx context.Context, ws, passport ids.UUID, c agentquota.Counter, bucket int64) (bool, error)
+type VolumeReleaser interface {
+	Release(ctx context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64) (bool, error)
 }
 
-// WithQuotaReleaser installs the meter an approved step-up widens.
-func (s *Service) WithQuotaReleaser(r QuotaReleaser) *Service {
+// WithVolumeReleaser installs the meter an approved step-up widens.
+func (s *Service) WithVolumeReleaser(r VolumeReleaser) *Service {
 	s.quota = r
 	return s
 }
 
-// applyQuotaRelease widens the window an approved step-up asked about.
+// applyVolumeRelease widens the window an approved step-up asked about.
 //
 // EVERY INPUT COMES FROM THE STORED ROW, and that is what makes it safe. The
 // passport is the one the staging stamped from the authenticated agent
@@ -62,7 +62,7 @@ func (s *Service) WithQuotaReleaser(r QuotaReleaser) *Service {
 // human answering after the window rolled, and by then the agent is no longer
 // refused: there is nothing to widen because there is nothing to release it
 // from. The decision still stands as the record that they said yes.
-func (s *Service) applyQuotaRelease(ctx context.Context, a row) error {
+func (s *Service) applyVolumeRelease(ctx context.Context, a row) error {
 	if s.quota == nil {
 		return errors.New("crmapprovals: this composition has no quota meter, so a step-up cannot be released")
 	}
@@ -77,7 +77,7 @@ func (s *Service) applyQuotaRelease(ctx context.Context, a row) error {
 	if !ok {
 		return errors.New("crmapprovals: no workspace bound to context")
 	}
-	proposal, err := agentquota.DecodeReleaseProposal(a.ProposedChange)
+	proposal, err := agentvolume.DecodeReleaseProposal(a.ProposedChange)
 	if err != nil {
 		return err
 	}

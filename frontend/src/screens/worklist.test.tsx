@@ -42,14 +42,14 @@ function stub(day: Worklist, approval?: unknown) {
   );
 }
 
-function renderWorklist(locale: Locale = "en") {
+function renderWorklist(locale: Locale = "en", opensOn?: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
-        <WorklistScreen />
+        <WorklistScreen opensOn={opensOn} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -976,5 +976,62 @@ describe("what the selected row is about", () => {
     await waitFor(() => {
       expect(container.querySelectorAll("aside")).toHaveLength(0);
     });
+  });
+});
+
+// What `#/worklist/<segment>` opens on.
+//
+// The address is the other half of the team board's row: a board that writes a
+// hash nothing reads is a row that goes nowhere. These assert the REQUEST, not
+// the rendering, because whose day the page is showing is a question about
+// which day it asked the server for.
+describe("the address opens a queue", () => {
+  function requestedUrls(): string[] {
+    const mock = globalThis.fetch as unknown as {
+      mock: { calls: readonly (readonly unknown[])[] };
+    };
+    return mock.mock.calls
+      .map(([input]) =>
+        String(input instanceof Request ? input.url : (input as string)),
+      )
+      .filter((url) => url.includes("/worklist"));
+  }
+
+  it("asks for a named colleague's day when the segment is a user id", async () => {
+    stub(day({ scope_options: ["mine", "team"] }));
+    renderWorklist("en", "11111111-1111-4111-8111-111111111111");
+
+    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
+    expect(
+      requestedUrls().some((url) =>
+        url.includes("owner=11111111-1111-4111-8111-111111111111"),
+      ),
+    ).toBe(true);
+  });
+
+  // The scope word is not an owner. Passing it as one would ask the server for
+  // a person whose id is the string "unassigned", which is a 403 or a 404 where
+  // the reader asked a perfectly ordinary question.
+  it("asks for the unowned pile when the segment is the scope word", async () => {
+    stub(day({ scope: "unassigned", scope_options: ["mine", "team"] }));
+    renderWorklist("en", "unassigned");
+
+    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
+    expect(
+      requestedUrls().some((url) => url.includes("scope=unassigned")),
+    ).toBe(true);
+    expect(requestedUrls().some((url) => url.includes("owner="))).toBe(false);
+  });
+
+  // No segment is the reader's own day, which is what every seat sees.
+  it("asks for the reader's own day when the address names nothing", async () => {
+    stub(day());
+    renderWorklist();
+
+    await waitFor(() => expect(requestedUrls().length).toBeGreaterThan(0));
+    expect(requestedUrls().some((url) => url.includes("owner="))).toBe(false);
+    expect(requestedUrls().some((url) => url.includes("scope=mine"))).toBe(
+      true,
+    );
   });
 });

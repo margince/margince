@@ -8,7 +8,7 @@ package integration
 // The MCP-SESS-READS bound on the REST door, over the REAL HTTP stack with a
 // real passport.
 //
-// The shared app harness composes agentquota.Unmetered() — it serves no Redis,
+// The shared app harness composes agentvolume.Unmetered() — it serves no Redis,
 // and a meter that cannot reach its counter fails closed, which would refuse
 // every agent read in suites testing something else. That is the right default
 // for those suites and the wrong one for this property, so this file builds its
@@ -27,7 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,10 +35,10 @@ import (
 
 // boundedApp is the app under a live read bound, plus the meter itself so a
 // test can put the window into whatever state it is about.
-func boundedApp(t *testing.T, slug string, limit int) (*apptest.AppEnv, *agentquota.Meter) {
+func boundedApp(t *testing.T, slug string, limit int) (*apptest.AppEnv, *agentvolume.Meter) {
 	t.Helper()
-	meter := agentquota.New(budgettest.Client(t), agentquota.Limits{Reads: limit}, time.Hour)
-	e := apptest.SetupAppWithOptions(t, compose.WithAgentQuota(meter))
+	meter := agentvolume.New(budgettest.Client(t), agentvolume.Limits{Reads: limit}, time.Hour)
+	e := apptest.SetupAppWithOptions(t, compose.WithAgentVolume(meter))
 	apptest.BootstrapWorkspaceSession(t, e, "Read Bound", slug+"@fable.test", "Admin")
 	return e, meter
 }
@@ -58,17 +58,17 @@ func asPassport(t *testing.T, e *apptest.AppEnv, passport ids.UUID) context.Cont
 }
 
 // spendWindow charges the meter against one passport, as the MCP door would.
-func spendWindow(t *testing.T, e *apptest.AppEnv, meter *agentquota.Meter, passport ids.UUID, records int) {
+func spendWindow(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, passport ids.UUID, records int) {
 	t.Helper()
-	if err := meter.Consume(asPassport(t, e, passport), agentquota.Reads, records); err != nil {
+	if err := meter.Consume(asPassport(t, e, passport), agentvolume.Reads, records); err != nil {
 		t.Fatalf("spending the window: %v", err)
 	}
 }
 
 // readsCharged is what the window has actually observed against one passport.
-func readsCharged(t *testing.T, e *apptest.AppEnv, meter *agentquota.Meter, passport ids.UUID) int {
+func readsCharged(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, passport ids.UUID) int {
 	t.Helper()
-	return meter.Read(asPassport(t, e, passport), agentquota.Reads).Observed
+	return meter.Read(asPassport(t, e, passport), agentvolume.Reads).Observed
 }
 
 // A passport that has spent its window is refused on the REST door too. Before
@@ -87,7 +87,7 @@ func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
 
 	spendWindow(t, e, meter, passport, 100)
 
-	// The QUOTA response specifically: a 403 or a 500 would also fail an
+	// The VOLUME-BUDGET response specifically: a 403 or a 500 would also fail an
 	// is-not-200 check while meaning something entirely different.
 	var problem struct {
 		Code string `json:"code"`
@@ -165,7 +165,7 @@ func TestARestSingleRecordReadChargesOne(t *testing.T) {
 // THE DERIVED OBLIGATION, and the reason this file grew: every counter the
 // admission gate can REFUSE on has a charge point on the SAME door.
 //
-// platform/auth refuses on Calls and on agentquota.CounterFor(spec) — which is
+// platform/auth refuses on Calls and on agentvolume.CounterFor(spec) — which is
 // Reads, Writes or Egress — so the REST door owes all four. Stated as one rule
 // it catches a half at a time: the mutating half was closed by C2 and the read
 // half sat open for a release, because nothing asserted the pair.
@@ -187,14 +187,14 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 	seedPeople(t, e, 2)
 	ctx := asPassport(t, e, passport)
 
-	advance := func(during func()) map[agentquota.Counter]int {
-		counters := []agentquota.Counter{agentquota.Reads, agentquota.Writes, agentquota.Calls}
-		was := map[agentquota.Counter]int{}
+	advance := func(during func()) map[agentvolume.Counter]int {
+		counters := []agentvolume.Counter{agentvolume.Reads, agentvolume.Writes, agentvolume.Calls}
+		was := map[agentvolume.Counter]int{}
 		for _, c := range counters {
 			was[c] = meter.Read(ctx, c).Observed
 		}
 		during()
-		moved := map[agentquota.Counter]int{}
+		moved := map[agentvolume.Counter]int{}
 		for _, c := range counters {
 			moved[c] = meter.Read(ctx, c).Observed - was[c]
 		}
@@ -215,13 +215,13 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 	})
 
 	for _, owed := range []struct {
-		counter agentquota.Counter
+		counter agentvolume.Counter
 		moved   int
 		door    string
 	}{
-		{agentquota.Reads, onRead[agentquota.Reads], "a GET hands over records"},
-		{agentquota.Writes, onWrite[agentquota.Writes], "a POST mutates"},
-		{agentquota.Calls, onWrite[agentquota.Calls], "every admitted call sits under the ceiling"},
+		{agentvolume.Reads, onRead[agentvolume.Reads], "a GET hands over records"},
+		{agentvolume.Writes, onWrite[agentvolume.Writes], "a POST mutates"},
+		{agentvolume.Calls, onWrite[agentvolume.Calls], "every admitted call sits under the ceiling"},
 	} {
 		if !owed.counter.Governed() {
 			continue

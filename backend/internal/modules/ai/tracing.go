@@ -136,7 +136,7 @@ func (r *Router) serveCacheHit(ctx context.Context, b *binding, trace *Call, tas
 // without a sentinel could only match the message text, which is a second copy
 // of it.
 //
-// A quota refusal never carries it: that walk STOPS at the refusing rung rather
+// A volume budget refusal never carries it: that walk STOPS at the refusing rung rather
 // than reaching the end, so reporting an exhausted ladder would name rungs
 // nobody called.
 var ErrAllTiersFailed = errors.New("ai: every bound tier failed")

@@ -41,7 +41,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		badArgs     *BadArgsError
 		unknownTool *UnknownToolError
 		steppedUp   *StepUpStagedError
-		overQuota   *auth.QuotaExceededError
+		overQuota   *auth.VolumeExceededError
 	)
 	switch {
 	case errors.As(err, &steppedUp):

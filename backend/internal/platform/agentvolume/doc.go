@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package agentquota is the per-Passport volume accounting the MCP session used
+// Package agentvolume is the per-Passport volume accounting the MCP session used
 // to stand in for (api-rate-limits-and-abuse §2.2/§2.4, byo-agent-and-mcp
 // MCP-SESS-* and BYO-STEP-*, ADR-0092 §6): how much one agent has read,
 // written, sent and spent inside one window, and what happens when it passes a
 // threshold.
 //
-// WHY IT IS PER PASSPORT AND NOT PER SESSION. The spec names these quotas after
+// WHY IT IS PER PASSPORT AND NOT PER SESSION. The spec names these counters after
 // a session, and until ADR-0092 the in-process session registry was what
 // implicitly bounded volume — a bound that pinned an agent to one api replica
 // and did not exist at all on the REST half of the same credential (ADR-0055
@@ -40,4 +40,4 @@
 // It lives in the platform tier and owns no domain: both doors onto the governed
 // surface charge it — the MCP tool dispatcher and the ADR-0055 REST agent gate —
 // and neither may import the other.
-package agentquota
+package agentvolume

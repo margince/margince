@@ -24,7 +24,7 @@ package gates
 //
 // WHAT THIS CANNOT SEE, stated so the next reader does not trust it further
 // than it goes: the SQL spellings of the same rule, in
-// organization_open_pipeline_rollup and in quotas' targetInBase. Those read
+// organization_open_pipeline_rollup. Those read
 // currency_minor_digits, the database mirror of the Go digit table, and their
 // agreement with Go is held where it can be: the minor-unit parity test and the
 // one-account-one-number test, both in the integration lane against a live

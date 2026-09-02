@@ -19,6 +19,7 @@ import { FocusCard, focusOf } from "./worklist.focus";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
+  UNASSIGNED,
   useWorklist,
   type Worklist,
   type WorklistFilter,
@@ -331,16 +332,32 @@ function PageZonesWhenPaned({
 }
 
 // The Worklist screen.
-export function WorklistScreen() {
+export function WorklistScreen({
+  opensOn,
+}: Readonly<{
+  // What the address asked for, from `#/worklist/<segment>`: a user id opens
+  // that person's queue, and the literal "unassigned" opens the unowned pile.
+  // Both are doors a team board row needs — a row that could only reach this
+  // page would ask the reader to pick the same thing a second time.
+  //
+  // It SEEDS the dials and nothing more. They stay state afterwards and the
+  // address does not follow them, for the reason the dials give below: an
+  // address carrying one of four would describe a fraction of what is on screen.
+  opensOn?: string;
+}> = {}) {
   const t = useT();
   // The dials are state rather than a stored preference: a scope is a question
   // about right now, and a remembered one would answer a different question
   // than the reader asked on their next visit.
-  const [scope, setScope] = useState<WorklistScope>("mine");
+  const [scope, setScope] = useState<WorklistScope>(
+    opensOn === UNASSIGNED ? UNASSIGNED : "mine",
+  );
   const [filter, setFilter] = useState<WorklistFilter>("all");
   // Whose queue, when it is not the reader's own. Empty means their own day,
   // which is what every seat sees and the only thing most seats may ask for.
-  const [owner, setOwner] = useState("");
+  const [owner, setOwner] = useState(
+    opensOn && opensOn !== UNASSIGNED ? opensOn : "",
+  );
   // Which row the context pane is about. Local state, not the address: the
   // page's other dials are state too, and putting one of the four in the URL
   // would make the address describe a fraction of what the reader is looking
