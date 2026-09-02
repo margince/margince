@@ -162,7 +162,11 @@ export const TheLiveListUnavailable: Story = {
         { step: "google_app", configured: false },
       ]),
       "GET /ai/available-models/openrouter": () =>
-        jsonResponse({ provider: "openrouter", models: [], unavailable: "unreachable" }),
+        jsonResponse({
+          provider: "openrouter",
+          models: [],
+          unavailable: "unreachable",
+        }),
     });
     return (
       <StoryProviders>

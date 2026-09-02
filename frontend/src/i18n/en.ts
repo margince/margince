@@ -3776,7 +3776,7 @@ export const en = {
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
-  "ob.s4.provImap": "Any inbox (IMAP)",
+  "ob.s4.provImap": "Any other mailbox (IMAP/SMTP)",
   "ob.s4.microsoftBtn": "Allow access to my Microsoft",
   "ob.s4.microsoftHint":
     "Read-only mail access. You can disconnect any time from Settings.",
@@ -4419,7 +4419,7 @@ export const en = {
   "ob.conv.connect.linkedinAuth": "Profile link, read only",
   "ob.conv.connect.scopeGoogle": "OAuth, read and send scopes",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
-  "ob.conv.connect.scopeImap": "Any other provider, app password",
+  "ob.conv.connect.scopeImap": "Mail address and password",
   "ob.conv.connect.connectCta": "connect →",
   "ob.conv.connect.connectedCta": "connected",
   "ob.conv.connect.blockedCard":
@@ -4427,6 +4427,12 @@ export const en = {
   "ob.conv.connect.guaranteesToggle": "What connecting actually does",
   "ob.conv.connect.dialogHeadlineAccess": "{name} access needed",
   "ob.conv.connect.dialogHeadlineImap": "Connect your mail host",
+  "ob.conv.connect.appMissingCard":
+    "Your organization has not registered its {name} app yet.",
+  "ob.conv.connect.appUnusableCard":
+    "Your organization's {name} app cannot be opened right now. It needs an admin, not a new app.",
+  "ob.conv.connect.unsupportedCard": "This installation does not serve {name}.",
+  "ob.conv.connect.appSetupLink": "Set it up in Settings",
   "ob.conv.connect.dialogIntro":
     "{brings}. I read it once to build your contacts and history, then keep it in sync.",
   "ob.conv.connect.dialogClose": "Close",

@@ -3,6 +3,7 @@ import { Check, Circle } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { Button, Disclosure } from "../../design-system/atoms";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
@@ -100,10 +101,36 @@ const ROSTER_PROVIDER: Readonly<Record<MailProvider, string>> = {
  *  disabled with nothing on the surface explaining why. */
 type ConnectedMailRoster = Readonly<{
   providers: ReadonlySet<string>;
+  /** Why a provider could not be connected right now, keyed by the roster's
+   *  own provider name. Absent for a provider the server called ready, and
+   *  absent for the whole map on a build whose server does not report it yet,
+   *  which reads the same as it always did: every card offered. */
+  blockers: ReadonlyMap<string, ConnectBlocker>;
   verified: boolean;
   failed: boolean;
   retry: () => void;
 }>;
+
+/** One provider's answer from the roster read, decided by the same predicate
+ *  the connect endpoint uses, so a card cannot offer what a click would be
+ *  refused. */
+export type ProviderAvailability =
+  components["schemas"]["CaptureProviderAvailability"];
+
+/** The reasons that refuse a connect, derived from the contract rather than
+ *  respelled: `ready` is the fourth answer and never reaches the map below. */
+type ConnectBlocker = Exclude<ProviderAvailability["reason"], "ready">;
+
+// What a blocked card says, and whether Settings is where it gets fixed. A
+// deployment that does not serve a provider at all is nobody's setting, so it
+// offers no link that would lead to an empty form.
+const BLOCKER_COPY: Readonly<
+  Record<ConnectBlocker, { body: MessageKey; settings: boolean }>
+> = {
+  app_missing: { body: "ob.conv.connect.appMissingCard", settings: true },
+  app_unusable: { body: "ob.conv.connect.appUnusableCard", settings: true },
+  unsupported: { body: "ob.conv.connect.unsupportedCard", settings: false },
+};
 
 /**
  * Which mailboxes are already live, read fresh here rather than assumed from
@@ -125,8 +152,15 @@ function useConnectedMailProviders(): ConnectedMailRoster {
     },
   });
   const connected = roster.data?.data.filter((c) => c.status === "connected");
+  const blockers = new Map<string, ConnectBlocker>();
+  for (const entry of roster.data?.providers ?? []) {
+    if (entry.reason !== "ready") {
+      blockers.set(entry.provider, entry.reason);
+    }
+  }
   return {
     providers: new Set((connected ?? []).map((c) => c.provider)),
+    blockers,
     verified: roster.isSuccess && !roster.isFetching,
     failed: roster.isError,
     retry: () => void roster.refetch(),
@@ -231,25 +265,22 @@ export function ConnectScene({
 
       <div className="ob-connect-grid">
         {MAIL_PROVIDERS.map((key) => {
-          const copy = PROVIDER_COPY[key];
-          const connected = mailRoster.providers.has(ROSTER_PROVIDER[key]);
-          const blocked = !connected && anyMailConnected;
+          const card = mailCardState(key, mailRoster, anyMailConnected);
           return (
             <ConnectorCard
               key={key}
               markKey={PROVIDER_MARKS[key]}
-              name={t(copy.name)}
-              brings={
-                blocked ? t("ob.conv.connect.blockedCard") : t(copy.brings)
-              }
-              auth={t(copy.auth)}
-              state={connected ? "connected" : blocked ? "blocked" : "idle"}
+              name={t(PROVIDER_COPY[key].name)}
+              brings={t(card.brings, { name: t(PROVIDER_COPY[key].name) })}
+              auth={t(PROVIDER_COPY[key].auth)}
+              settingsLink={card.settingsLink}
+              state={card.state}
               // A card the roster hasn't verified yet is neither "connected"
               // nor "blocked" — it still reads and speaks as idle — but it
               // must not be clickable: opening it could connect a second
               // mailbox the still-loading (or failed) fetch just hasn't
               // reported yet.
-              disabled={connected || blocked || !mailRoster.verified}
+              disabled={card.state !== "idle" || !mailRoster.verified}
               onOpen={() => onPick(key)}
             />
           );
@@ -423,7 +454,49 @@ function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
   );
 }
 
-type CardState = "idle" | "connected" | "blocked";
+/**
+ * What one mailbox card is, given the roster. Three refusals in a fixed order,
+ * because they are not equally useful to the reader: an already-connected
+ * mailbox is the whole answer, a mailbox chosen elsewhere makes every other
+ * card moot, and only then does a provider this installation cannot run get to
+ * explain itself. Telling somebody to register a second vendor's OAuth app
+ * when they have already connected their mail would be true and useless.
+ */
+function mailCardState(
+  key: MailProvider,
+  roster: ConnectedMailRoster,
+  anyMailConnected: boolean,
+): { state: CardState; brings: MessageKey; settingsLink: boolean } {
+  if (roster.providers.has(ROSTER_PROVIDER[key])) {
+    return {
+      state: "connected",
+      brings: PROVIDER_COPY[key].brings,
+      settingsLink: false,
+    };
+  }
+  if (anyMailConnected) {
+    return {
+      state: "blocked",
+      brings: "ob.conv.connect.blockedCard",
+      settingsLink: false,
+    };
+  }
+  const blocker = roster.blockers.get(ROSTER_PROVIDER[key]);
+  if (blocker) {
+    return {
+      state: "unavailable",
+      brings: BLOCKER_COPY[blocker].body,
+      settingsLink: BLOCKER_COPY[blocker].settings,
+    };
+  }
+  return {
+    state: "idle",
+    brings: PROVIDER_COPY[key].brings,
+    settingsLink: false,
+  };
+}
+
+type CardState = "idle" | "connected" | "blocked" | "unavailable";
 
 /**
  * One provider tile: a mark, the name, one line of what it gives, and a
@@ -433,11 +506,15 @@ type CardState = "idle" | "connected" | "blocked";
  * find out.
  *
  * `disabled` is the caller's own call, separate from `state`: a "connected"
- * or "blocked" tile is always disabled (there is no further action here —
+ * or "blocked" tile is always disabled (there is no further action here,
  * disconnecting a mailbox is Settings' job, and a blocked tile names the
  * mailbox already chosen instead of inviting a second one), but an "idle"
  * tile can ALSO be disabled while its own connected/blocked status is not yet
  * verified, without that unverified moment being mislabelled as blocked.
+ *
+ * An "unavailable" tile is not a button at all. Nothing here can be operated
+ * until somebody registers the organization's app, and the one thing a reader
+ * can do about it is a link, which HTML does not allow inside a button.
  */
 function ConnectorCard({
   markKey,
@@ -447,6 +524,7 @@ function ConnectorCard({
   state,
   disabled,
   onOpen,
+  settingsLink = false,
 }: Readonly<{
   markKey: string;
   name: string;
@@ -455,16 +533,14 @@ function ConnectorCard({
   state: CardState;
   disabled: boolean;
   onOpen: () => void;
+  /** Whether an "unavailable" tile offers the way out. A provider this
+   *  deployment does not serve at all has no setting to reach, and a link to
+   *  an empty form is worse than no link. */
+  settingsLink?: boolean;
 }>) {
   const t = useT();
-  return (
-    <button
-      type="button"
-      className="ob-connect-card"
-      data-state={state}
-      disabled={disabled}
-      onClick={onOpen}
-    >
+  const face = (
+    <>
       <span className="ob-connect-card-head">
         <span className="ob-connect-mark">
           <ProviderMark providerKey={markKey} />
@@ -479,14 +555,43 @@ function ConnectorCard({
       <small>{brings}</small>
       <span className="ob-connect-card-foot">
         <span className="ob-connect-card-auth">{auth}</span>
-        {state !== "blocked" && (
-          <span className="ob-connect-card-cta">
-            {state === "connected"
-              ? t("ob.conv.connect.connectedCta")
-              : t("ob.conv.connect.connectCta")}
-          </span>
-        )}
+        {state === "unavailable"
+          ? settingsLink && (
+              <a
+                className="ob-connect-card-setup"
+                href="#/settings/admin/general"
+              >
+                {t("ob.conv.connect.appSetupLink")}
+              </a>
+            )
+          : state !== "blocked" && (
+              <span className="ob-connect-card-cta">
+                {state === "connected"
+                  ? t("ob.conv.connect.connectedCta")
+                  : t("ob.conv.connect.connectCta")}
+              </span>
+            )}
       </span>
+    </>
+  );
+
+  if (state === "unavailable") {
+    return (
+      <div className="ob-connect-card" data-state={state}>
+        {face}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="ob-connect-card"
+      data-state={state}
+      disabled={disabled}
+      onClick={onOpen}
+    >
+      {face}
     </button>
   );
 }

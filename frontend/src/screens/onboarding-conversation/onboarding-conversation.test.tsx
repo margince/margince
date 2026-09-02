@@ -495,7 +495,8 @@ describe("the conversational company act", () => {
     };
     for (const _ of Object.keys(values)) {
       const label = document.querySelector(".rdeck-question")?.textContent;
-      const value = label !== null && label !== undefined ? values[label] : undefined;
+      const value =
+        label !== null && label !== undefined ? values[label] : undefined;
       expect(value).toBeDefined();
       fireEvent.change(screen.getByRole("textbox", { name: label ?? "" }), {
         target: { value: value ?? "" },
@@ -881,7 +882,9 @@ describe("the conversational company act", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Robotics/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(
-      await screen.findByRole("heading", { name: "It will not guess at these." }),
+      await screen.findByRole("heading", {
+        name: "It will not guess at these.",
+      }),
     ).toBeTruthy();
     expect(
       screen.queryByRole("heading", {

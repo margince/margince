@@ -3708,7 +3708,7 @@ export const vi = {
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
-  "ob.s4.provImap": "Hộp thư bất kỳ (IMAP)",
+  "ob.s4.provImap": "Hộp thư khác (IMAP/SMTP)",
   "ob.s4.microsoftBtn": "Cho phép truy cập Microsoft của tôi",
   "ob.s4.microsoftHint":
     "Chỉ đọc email. Bạn ngắt kết nối lúc nào cũng được trong Cài đặt.",
@@ -4333,7 +4333,7 @@ export const vi = {
   "ob.conv.connect.linkedinAuth": "Đường dẫn hồ sơ, chỉ đọc",
   "ob.conv.connect.scopeGoogle": "OAuth, phạm vi đọc và gửi",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
-  "ob.conv.connect.scopeImap": "Nhà cung cấp khác bất kỳ, mật khẩu ứng dụng",
+  "ob.conv.connect.scopeImap": "Địa chỉ email và mật khẩu",
   "ob.conv.connect.connectCta": "kết nối →",
   "ob.conv.connect.connectedCta": "đã kết nối",
   "ob.conv.connect.blockedCard":
@@ -4341,6 +4341,12 @@ export const vi = {
   "ob.conv.connect.guaranteesToggle": "Kết nối thì thực sự làm gì",
   "ob.conv.connect.dialogHeadlineAccess": "Cần quyền truy cập {name}",
   "ob.conv.connect.dialogHeadlineImap": "Kết nối máy chủ thư của bạn",
+  "ob.conv.connect.appMissingCard":
+    "Tổ chức của bạn chưa đăng ký ứng dụng {name}.",
+  "ob.conv.connect.appUnusableCard":
+    "Ứng dụng {name} của tổ chức bạn hiện không mở được. Cần một quản trị viên, không phải một ứng dụng mới.",
+  "ob.conv.connect.unsupportedCard": "Bản cài đặt này không hỗ trợ {name}.",
+  "ob.conv.connect.appSetupLink": "Thiết lập trong Cài đặt",
   "ob.conv.connect.dialogIntro":
     "{brings}. Tôi đọc một lần để dựng contact và lịch sử của bạn, rồi giữ đồng bộ về sau.",
   "ob.conv.connect.dialogClose": "Đóng",

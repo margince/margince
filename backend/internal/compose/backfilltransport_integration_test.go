@@ -255,7 +255,7 @@ func TestBackfillPreviewDegradesOnEstimatorFault(t *testing.T) {
 
 	var out crmcontracts.BackfillPreview
 	code, _ := b.do(b.human, t, func(w http.ResponseWriter, r *http.Request) {
-		h.PreviewConnectorBackfill(w, r, crmcontracts.Gmail)
+		h.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
 	}, `{"window":"6m"}`, &out)
 
 	if code != http.StatusOK {
@@ -363,14 +363,16 @@ func assertUnwiredAndAnonymousOpsAreRefused(t *testing.T, b *backfillWireEnv) {
 		unwired := backfillHandlers{}
 		for name, invoke := range map[string]func(http.ResponseWriter, *http.Request){
 			"preview": func(w http.ResponseWriter, r *http.Request) {
-				unwired.PreviewConnectorBackfill(w, r, crmcontracts.Gmail)
+				unwired.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
 			},
-			"start": func(w http.ResponseWriter, r *http.Request) { unwired.StartConnectorBackfill(w, r, crmcontracts.Gmail) },
+			"start": func(w http.ResponseWriter, r *http.Request) {
+				unwired.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+			},
 			"status": func(w http.ResponseWriter, r *http.Request) {
-				unwired.GetConnectorBackfillStatus(w, r, crmcontracts.Gmail)
+				unwired.GetConnectorBackfillStatus(w, r, crmcontracts.CaptureProviderGmail)
 			},
 			"cancel": func(w http.ResponseWriter, r *http.Request) {
-				unwired.CancelConnectorBackfill(w, r, crmcontracts.Gmail)
+				unwired.CancelConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
 			},
 			"digest": func(w http.ResponseWriter, r *http.Request) {
 				unwired.GetMorningDigest(w, r, crmcontracts.GetMorningDigestParams{})
@@ -385,8 +387,8 @@ func assertUnwiredAndAnonymousOpsAreRefused(t *testing.T, b *backfillWireEnv) {
 	t.Run("every op is a signed-in human action", func(t *testing.T) {
 		anon := principal.WithWorkspaceID(context.Background(), b.env.WS)
 		for name, invoke := range map[string]func(http.ResponseWriter, *http.Request){
-			"preview": b.previewBackfill(crmcontracts.Gmail), "start": b.startBackfill(crmcontracts.Gmail),
-			"status": b.backfillStatus(crmcontracts.Gmail), "cancel": b.cancelBackfill(crmcontracts.Gmail),
+			"preview": b.previewBackfill(crmcontracts.CaptureProviderGmail), "start": b.startBackfill(crmcontracts.CaptureProviderGmail),
+			"status": b.backfillStatus(crmcontracts.CaptureProviderGmail), "cancel": b.cancelBackfill(crmcontracts.CaptureProviderGmail),
 		} {
 			code, pcode := b.do(anon, t, invoke, `{"window":"6m"}`, nil)
 			if code != http.StatusUnauthorized || pcode != "unauthorized" {
@@ -399,10 +401,10 @@ func assertUnwiredAndAnonymousOpsAreRefused(t *testing.T, b *backfillWireEnv) {
 func assertPreviewValidatesItsWindowAndPricesHonestly(t *testing.T, b *backfillWireEnv) {
 	t.Helper()
 	t.Run("preview refuses malformed and out-of-set windows", func(t *testing.T) {
-		if code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.Gmail), `{`, nil); code != http.StatusUnprocessableEntity || pcode != "window_required" {
+		if code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.CaptureProviderGmail), `{`, nil); code != http.StatusUnprocessableEntity || pcode != "window_required" {
 			t.Fatalf("malformed body = %d/%s, want 422/window_required", code, pcode)
 		}
-		if code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.Gmail), `{"window":"9m"}`, nil); code != http.StatusUnprocessableEntity || pcode != "window_invalid" {
+		if code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.CaptureProviderGmail), `{"window":"9m"}`, nil); code != http.StatusUnprocessableEntity || pcode != "window_invalid" {
 			t.Fatalf("9m window = %d/%s, want 422/window_invalid", code, pcode)
 		}
 	})
@@ -416,7 +418,7 @@ func assertPreviewValidatesItsWindowAndPricesHonestly(t *testing.T, b *backfillW
 		for _, months := range capture.BackfillWindowMonths() {
 			window := fmt.Sprintf("%dm", months)
 			var out crmcontracts.BackfillPreview
-			code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.Gmail),
+			code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.CaptureProviderGmail),
 				fmt.Sprintf(`{"window":%q}`, window), &out)
 			if code != http.StatusOK {
 				t.Errorf("%s preview = %d/%s, want 200 — the picker offers it", window, code, pcode)
@@ -432,7 +434,7 @@ func assertPreviewValidatesItsWindowAndPricesHonestly(t *testing.T, b *backfillW
 
 	t.Run("preview 'none' is an honest zero — no scan, no spend", func(t *testing.T) {
 		var out crmcontracts.BackfillPreview
-		if code, _ := b.do(b.human, t, b.previewBackfill(crmcontracts.Gmail), `{"window":"none"}`, &out); code != http.StatusOK {
+		if code, _ := b.do(b.human, t, b.previewBackfill(crmcontracts.CaptureProviderGmail), `{"window":"none"}`, &out); code != http.StatusOK {
 			t.Fatalf("none preview = %d, want 200", code)
 		}
 		if out.EstimatedMessages != 0 || string(out.Window) != "none" {
@@ -442,7 +444,7 @@ func assertPreviewValidatesItsWindowAndPricesHonestly(t *testing.T, b *backfillW
 
 	t.Run("preview carries the estimate and suppresses an unpriced cost honestly", func(t *testing.T) {
 		var out crmcontracts.BackfillPreview
-		if code, _ := b.do(b.human, t, b.previewBackfill(crmcontracts.Gmail), `{"window":"6m"}`, &out); code != http.StatusOK {
+		if code, _ := b.do(b.human, t, b.previewBackfill(crmcontracts.CaptureProviderGmail), `{"window":"6m"}`, &out); code != http.StatusOK {
 			t.Fatalf("preview = %d, want 200", code)
 		}
 		if out.EstimatedMessages != 25 {
@@ -471,8 +473,8 @@ func assertOpsRefuseProvidersTheyCannotBackfill(t *testing.T, b *backfillWireEnv
 	t.Helper()
 	t.Run("a provider without a connection is a 404 on every op", func(t *testing.T) {
 		for name, invoke := range map[string]func(http.ResponseWriter, *http.Request){
-			"preview": b.previewBackfill(crmcontracts.Gcal), "start": b.startBackfill(crmcontracts.Gcal),
-			"status": b.backfillStatus(crmcontracts.Gcal), "cancel": b.cancelBackfill(crmcontracts.Gcal),
+			"preview": b.previewBackfill(crmcontracts.CaptureProviderGcal), "start": b.startBackfill(crmcontracts.CaptureProviderGcal),
+			"status": b.backfillStatus(crmcontracts.CaptureProviderGcal), "cancel": b.cancelBackfill(crmcontracts.CaptureProviderGcal),
 		} {
 			code, pcode := b.do(b.human, t, invoke, `{"window":"6m"}`, nil)
 			if code != http.StatusNotFound || pcode != "connection_not_found" {
@@ -482,7 +484,7 @@ func assertOpsRefuseProvidersTheyCannotBackfill(t *testing.T, b *backfillWireEnv
 	})
 
 	t.Run("a connector that cannot page backward is refused as unsupported", func(t *testing.T) {
-		code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.Graph), `{"window":"6m"}`, nil)
+		code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.CaptureProviderGraph), `{"window":"6m"}`, nil)
 		if code != http.StatusUnprocessableEntity || pcode != "connector_unsupported" {
 			t.Fatalf("non-Backfiller preview = %d/%s, want 422/connector_unsupported", code, pcode)
 		}
@@ -491,7 +493,7 @@ func assertOpsRefuseProvidersTheyCannotBackfill(t *testing.T, b *backfillWireEnv
 	t.Run("a provider outage on preview is the 502, never a fake estimate", func(t *testing.T) {
 		b.gmail.estimateErr = errors.New("google is down")
 		defer func() { b.gmail.estimateErr = nil }()
-		code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.Gmail), `{"window":"6m"}`, nil)
+		code, pcode := b.do(b.human, t, b.previewBackfill(crmcontracts.CaptureProviderGmail), `{"window":"6m"}`, nil)
 		if code != http.StatusBadGateway || pcode != "provider_unreachable" {
 			t.Fatalf("outage preview = %d/%s, want 502/provider_unreachable", code, pcode)
 		}
@@ -503,10 +505,10 @@ func assertOpsRefuseProvidersTheyCannotBackfill(t *testing.T, b *backfillWireEnv
 func startTheRunAndAssertItIsQueued(t *testing.T, b *backfillWireEnv) string {
 	t.Helper()
 	t.Run("start validates its window like preview", func(t *testing.T) {
-		if code, pcode := b.do(b.human, t, b.startBackfill(crmcontracts.Gmail), `{`, nil); code != http.StatusUnprocessableEntity || pcode != "window_required" {
+		if code, pcode := b.do(b.human, t, b.startBackfill(crmcontracts.CaptureProviderGmail), `{`, nil); code != http.StatusUnprocessableEntity || pcode != "window_required" {
 			t.Fatalf("malformed start = %d/%s, want 422/window_required", code, pcode)
 		}
-		if code, pcode := b.do(b.human, t, b.startBackfill(crmcontracts.Gmail), `{"window":"none"}`, nil); code != http.StatusUnprocessableEntity || pcode != "window_invalid" {
+		if code, pcode := b.do(b.human, t, b.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"none"}`, nil); code != http.StatusUnprocessableEntity || pcode != "window_invalid" {
 			t.Fatalf("start 'none' = %d/%s, want 422/window_invalid ('none' is not starting)", code, pcode)
 		}
 	})
@@ -514,7 +516,7 @@ func startTheRunAndAssertItIsQueued(t *testing.T, b *backfillWireEnv) string {
 	var runID string
 	t.Run("start records the run, enqueues the pager, and answers 202", func(t *testing.T) {
 		var out crmcontracts.BackfillStatus
-		code, _ := b.do(b.human, t, b.startBackfill(crmcontracts.Gmail), `{"window":"6m"}`, &out)
+		code, _ := b.do(b.human, t, b.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"6m"}`, &out)
 		if code != http.StatusAccepted {
 			t.Fatalf("start = %d, want 202", code)
 		}
@@ -531,7 +533,7 @@ func startTheRunAndAssertItIsQueued(t *testing.T, b *backfillWireEnv) string {
 	})
 
 	t.Run("a second start while running is the 409", func(t *testing.T) {
-		code, pcode := b.do(b.human, t, b.startBackfill(crmcontracts.Gmail), `{"window":"6m"}`, nil)
+		code, pcode := b.do(b.human, t, b.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"6m"}`, nil)
 		if code != http.StatusConflict || pcode != "backfill_running" {
 			t.Fatalf("second start = %d/%s, want 409/backfill_running", code, pcode)
 		}
@@ -539,7 +541,7 @@ func startTheRunAndAssertItIsQueued(t *testing.T, b *backfillWireEnv) string {
 
 	t.Run("status is the single-row activation read", func(t *testing.T) {
 		var out crmcontracts.BackfillStatus
-		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.Gmail), "", &out); code != http.StatusOK {
+		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.CaptureProviderGmail), "", &out); code != http.StatusOK {
 			t.Fatalf("status = %d, want 200", code)
 		}
 		if out.State != crmcontracts.BackfillStatusStateQueued || out.Counts == nil {
@@ -569,7 +571,7 @@ func assertThePagerWalksTheRunToDone(t *testing.T, b *backfillWireEnv, worker *c
 		// River would — re-invoke until it stops snoozing (the run terminated).
 		driveBackfillToTerminal(t, worker, CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: runID})
 		var out crmcontracts.BackfillStatus
-		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.Gmail), "", &out); code != http.StatusOK {
+		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.CaptureProviderGmail), "", &out); code != http.StatusOK {
 			t.Fatalf("status = %d, want 200", code)
 		}
 		if out.State != crmcontracts.BackfillStatusStateDone {
@@ -584,7 +586,7 @@ func assertThePagerWalksTheRunToDone(t *testing.T, b *backfillWireEnv, worker *c
 func assertNarrowingAWindowIsRefused(t *testing.T, b *backfillWireEnv) {
 	t.Helper()
 	t.Run("windows only widen — narrowing is the 409", func(t *testing.T) {
-		code, pcode := b.do(b.human, t, b.startBackfill(crmcontracts.Gmail), `{"window":"3m"}`, nil)
+		code, pcode := b.do(b.human, t, b.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"3m"}`, nil)
 		if code != http.StatusConflict || pcode != "window_narrowing" {
 			t.Fatalf("narrowing start = %d/%s, want 409/window_narrowing", code, pcode)
 		}
@@ -597,7 +599,7 @@ func assertAFailedPageFinishesTheRunInError(t *testing.T, b *backfillWireEnv, wo
 		b.gmail.pageErr = errors.New("mailbox went away")
 		defer func() { b.gmail.pageErr = nil }()
 		var out crmcontracts.BackfillStatus
-		if code, _ := b.do(b.human, t, b.startBackfill(crmcontracts.Gmail), `{"window":"12m"}`, &out); code != http.StatusAccepted {
+		if code, _ := b.do(b.human, t, b.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"12m"}`, &out); code != http.StatusAccepted {
 			t.Fatalf("widened start = %d, want 202", code)
 		}
 		// A page fault is recorded on the row, not retried by River.
@@ -607,7 +609,7 @@ func assertAFailedPageFinishesTheRunInError(t *testing.T, b *backfillWireEnv, wo
 			t.Fatalf("Work must absorb a page fault (the row owns retry), got %v", err)
 		}
 		var after crmcontracts.BackfillStatus
-		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.Gmail), "", &after); code != http.StatusOK {
+		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.CaptureProviderGmail), "", &after); code != http.StatusOK {
 			t.Fatalf("status = %d, want 200", code)
 		}
 		if after.State != crmcontracts.BackfillStatusStateError || after.LastErrorClass == nil {
@@ -620,17 +622,17 @@ func assertCancelStopsALiveRun(t *testing.T, b *backfillWireEnv) {
 	t.Helper()
 	t.Run("cancel stops a live run and keeps what was captured", func(t *testing.T) {
 		var started crmcontracts.BackfillStatus
-		if code, _ := b.do(b.human, t, b.startBackfill(crmcontracts.Gmail), `{"window":"12m"}`, &started); code != http.StatusAccepted {
+		if code, _ := b.do(b.human, t, b.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"12m"}`, &started); code != http.StatusAccepted {
 			t.Fatalf("start = %d, want 202", code)
 		}
 		var out crmcontracts.BackfillStatus
-		if code, _ := b.do(b.human, t, b.cancelBackfill(crmcontracts.Gmail), "", &out); code != http.StatusAccepted {
+		if code, _ := b.do(b.human, t, b.cancelBackfill(crmcontracts.CaptureProviderGmail), "", &out); code != http.StatusAccepted {
 			t.Fatalf("cancel = %d, want 202", code)
 		}
 		if out.State != crmcontracts.BackfillStatusStateCancelled {
 			t.Fatalf("cancelled run state = %s, want cancelled", out.State)
 		}
-		if code, pcode := b.do(b.human, t, b.cancelBackfill(crmcontracts.Gmail), "", nil); code != http.StatusConflict || pcode != "not_running" {
+		if code, pcode := b.do(b.human, t, b.cancelBackfill(crmcontracts.CaptureProviderGmail), "", nil); code != http.StatusConflict || pcode != "not_running" {
 			t.Fatalf("cancel with nothing live = %d/%s, want 409/not_running", code, pcode)
 		}
 	})
@@ -647,8 +649,8 @@ func assertAcceptedAnswersDeclareJSON(t *testing.T, b *backfillWireEnv) {
 			invoke func(http.ResponseWriter, *http.Request)
 			body   string
 		}{
-			{"start", b.startBackfill(crmcontracts.Gmail), `{"window":"12m"}`},
-			{"cancel", b.cancelBackfill(crmcontracts.Gmail), ""},
+			{"start", b.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"12m"}`},
+			{"cancel", b.cancelBackfill(crmcontracts.CaptureProviderGmail), ""},
 		} {
 			req := httptest.NewRequest(http.MethodPost, "/v1/backfill-op", bytes.NewReader([]byte(op.body))).WithContext(b.human)
 			rec := httptest.NewRecorder()

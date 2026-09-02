@@ -2209,6 +2209,51 @@ func (e CaptureOwnerIdentitySource) Valid() bool {
 	}
 }
 
+// Defines values for CaptureProviderAvailabilityProvider.
+const (
+	CaptureProviderAvailabilityProviderGmail CaptureProviderAvailabilityProvider = "gmail"
+	CaptureProviderAvailabilityProviderGraph CaptureProviderAvailabilityProvider = "graph"
+	CaptureProviderAvailabilityProviderImap  CaptureProviderAvailabilityProvider = "imap"
+)
+
+// Valid indicates whether the value is a known member of the CaptureProviderAvailabilityProvider enum.
+func (e CaptureProviderAvailabilityProvider) Valid() bool {
+	switch e {
+	case CaptureProviderAvailabilityProviderGmail:
+		return true
+	case CaptureProviderAvailabilityProviderGraph:
+		return true
+	case CaptureProviderAvailabilityProviderImap:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureProviderAvailabilityReason.
+const (
+	CaptureProviderAvailabilityReasonAppMissing  CaptureProviderAvailabilityReason = "app_missing"
+	CaptureProviderAvailabilityReasonAppUnusable CaptureProviderAvailabilityReason = "app_unusable"
+	CaptureProviderAvailabilityReasonReady       CaptureProviderAvailabilityReason = "ready"
+	CaptureProviderAvailabilityReasonUnsupported CaptureProviderAvailabilityReason = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the CaptureProviderAvailabilityReason enum.
+func (e CaptureProviderAvailabilityReason) Valid() bool {
+	switch e {
+	case CaptureProviderAvailabilityReasonAppMissing:
+		return true
+	case CaptureProviderAvailabilityReasonAppUnusable:
+		return true
+	case CaptureProviderAvailabilityReasonReady:
+		return true
+	case CaptureProviderAvailabilityReasonUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureSenderDecisionDecision.
 const (
 	CaptureSenderDecisionDecisionBusiness CaptureSenderDecisionDecision = "business"
@@ -8670,16 +8715,16 @@ func (e PersonResearchClaimConfidence) Valid() bool {
 
 // Defines values for PersonResearchRunState.
 const (
-	NotConnected PersonResearchRunState = "not_connected"
-	Ready        PersonResearchRunState = "ready"
+	PersonResearchRunStateNotConnected PersonResearchRunState = "not_connected"
+	PersonResearchRunStateReady        PersonResearchRunState = "ready"
 )
 
 // Valid indicates whether the value is a known member of the PersonResearchRunState enum.
 func (e PersonResearchRunState) Valid() bool {
 	switch e {
-	case NotConnected:
+	case PersonResearchRunStateNotConnected:
 		return true
-	case Ready:
+	case PersonResearchRunStateReady:
 		return true
 	default:
 		return false
@@ -12549,25 +12594,25 @@ func (e WrittenBy) Valid() bool {
 
 // Defines values for CaptureProvider.
 const (
-	Gcal     CaptureProvider = "gcal"
-	Gmail    CaptureProvider = "gmail"
-	Graph    CaptureProvider = "graph"
-	Graphcal CaptureProvider = "graphcal"
-	Imap     CaptureProvider = "imap"
+	CaptureProviderGcal     CaptureProvider = "gcal"
+	CaptureProviderGmail    CaptureProvider = "gmail"
+	CaptureProviderGraph    CaptureProvider = "graph"
+	CaptureProviderGraphcal CaptureProvider = "graphcal"
+	CaptureProviderImap     CaptureProvider = "imap"
 )
 
 // Valid indicates whether the value is a known member of the CaptureProvider enum.
 func (e CaptureProvider) Valid() bool {
 	switch e {
-	case Gcal:
+	case CaptureProviderGcal:
 		return true
-	case Gmail:
+	case CaptureProviderGmail:
 		return true
-	case Graph:
+	case CaptureProviderGraph:
 		return true
-	case Graphcal:
+	case CaptureProviderGraphcal:
 		return true
-	case Imap:
+	case CaptureProviderImap:
 		return true
 	default:
 		return false
@@ -16569,6 +16614,10 @@ type CaptureConnectionStatus string
 type CaptureConnectionListResponse struct {
 	Data []CaptureConnection `json:"data"`
 
+	// Providers Whether a connect started right now would proceed, per provider a person can choose
+	// between, so the connect screen can say so before the click rather than after a 501.
+	Providers *[]CaptureProviderAvailability `json:"providers,omitempty"`
+
 	// PublicOrigin The address this installation puts in outgoing links, and whether it answered when last asked.
 	// Reported so an operator can SEE the value rather than discover it from a recipient; the boot and
 	// send guards are what actually refuse an unusable one. A probe from inside the deployment says this
@@ -16661,6 +16710,30 @@ type CaptureOwnerIdentityListResponse struct {
 // provider attests; nothing writes it yet, because reading a provider's send-as list needs a
 // scope the connection grant does not request.
 type CaptureOwnerIdentitySource string
+
+// CaptureProviderAvailability Whether a connect started right now would proceed, decided by the same predicate the connect
+// endpoint itself uses so the two cannot disagree. Reported for the mail providers a person can
+// choose between (gmail, graph, imap); the paired calendar connectors (gcal, graphcal) are
+// created by a mail grant rather than picked, so they are absent.
+type CaptureProviderAvailability struct {
+	// Provider The mail provider a person picks between.
+	Provider CaptureProviderAvailabilityProvider `json:"provider"`
+
+	// Reason `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
+	// app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
+	// is a different fix from registering one. `unsupported`: this deployment does not serve the
+	// provider at all.
+	Reason CaptureProviderAvailabilityReason `json:"reason"`
+}
+
+// CaptureProviderAvailabilityProvider The mail provider a person picks between.
+type CaptureProviderAvailabilityProvider string
+
+// CaptureProviderAvailabilityReason `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
+// app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
+// is a different fix from registering one. `unsupported`: this deployment does not serve the
+// provider at all.
+type CaptureProviderAvailabilityReason string
 
 // CapturePurgeOutcome What a purge destroyed, or what a preview says it would. The four counts are disjoint and
 // together they are every message the rule matched, so a reader can tell "nothing matched"

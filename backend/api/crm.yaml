@@ -20058,6 +20058,30 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/CaptureConnection' } }
         public_origin: { $ref: '#/components/schemas/PublicOriginStatus' }
+        providers:
+          type: array
+          items: { $ref: '#/components/schemas/CaptureProviderAvailability' }
+          description: |
+            Whether a connect started right now would proceed, per provider a person can choose
+            between, so the connect screen can say so before the click rather than after a 501.
+    CaptureProviderAvailability:
+      type: object
+      description: |
+        Whether a connect started right now would proceed, decided by the same predicate the connect
+        endpoint itself uses so the two cannot disagree. Reported for the mail providers a person can
+        choose between (gmail, graph, imap); the paired calendar connectors (gcal, graphcal) are
+        created by a mail grant rather than picked, so they are absent.
+      required: [provider, reason]
+      properties:
+        provider: { type: string, enum: [gmail, graph, imap], description: The mail provider a person picks between. }
+        reason:
+          type: string
+          enum: [ready, app_missing, app_unusable, unsupported]
+          description: |
+            `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
+            app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
+            is a different fix from registering one. `unsupported`: this deployment does not serve the
+            provider at all.
     PublicOriginStatus:
       type: object
       description: |

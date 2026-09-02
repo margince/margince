@@ -13461,6 +13461,32 @@ export interface components {
         CaptureConnectionListResponse: {
             data: components["schemas"]["CaptureConnection"][];
             public_origin?: components["schemas"]["PublicOriginStatus"];
+            /**
+             * @description Whether a connect started right now would proceed, per provider a person can choose
+             *     between, so the connect screen can say so before the click rather than after a 501.
+             */
+            providers?: components["schemas"]["CaptureProviderAvailability"][];
+        };
+        /**
+         * @description Whether a connect started right now would proceed, decided by the same predicate the connect
+         *     endpoint itself uses so the two cannot disagree. Reported for the mail providers a person can
+         *     choose between (gmail, graph, imap); the paired calendar connectors (gcal, graphcal) are
+         *     created by a mail grant rather than picked, so they are absent.
+         */
+        CaptureProviderAvailability: {
+            /**
+             * @description The mail provider a person picks between.
+             * @enum {string}
+             */
+            provider: "gmail" | "graph" | "imap";
+            /**
+             * @description `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
+             *     app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
+             *     is a different fix from registering one. `unsupported`: this deployment does not serve the
+             *     provider at all.
+             * @enum {string}
+             */
+            reason: "ready" | "app_missing" | "app_unusable" | "unsupported";
         };
         /**
          * @description The address this installation puts in outgoing links, and whether it answered when last asked.

@@ -9,6 +9,7 @@ import {
   StoryProviders,
 } from "../story-utils";
 import { ConnectAct } from "./connect-act";
+import type { ProviderAvailability } from "./connect-scene";
 import { initialConversationState } from "./conversation-machine";
 import type {
   ConversationPhase,
@@ -41,15 +42,24 @@ function state(
   };
 }
 
+// Every provider connectable, which is what an installation that finished its
+// own setup looks like. A story that needs a blocked one says so.
+const ALL_READY: ProviderAvailability[] = [
+  { provider: "gmail", reason: "ready" },
+  { provider: "graph", reason: "ready" },
+  { provider: "imap", reason: "ready" },
+];
+
 function act(
   conversation: ConversationState,
   route: { outcome?: string; returningProvider?: string } = {},
   locale?: "de",
+  providers: ProviderAvailability[] = ALL_READY,
 ) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({ channel_connection: ["read", "create"] }),
-      "GET /connectors": () => jsonResponse({ data: [] }),
+      "GET /connectors": () => jsonResponse({ data: [], providers }),
     });
     return (
       <StoryProviders locale={locale}>
@@ -129,6 +139,46 @@ export const StaleReturn: Story = {
 /** Connected, and the act is done. */
 export const Done: Story = {
   render: act(state("cn.done", { linkedinStatus: "connected" })),
+};
+
+/**
+ * No Microsoft app registered for this organization. The card cannot be opened
+ * because the connect behind it would be refused, so it says what is missing
+ * and where it is fixed rather than leaving the reader to find that out by
+ * clicking. Google and IMAP are unaffected, which is the point: this is one
+ * vendor's configuration, not a broken screen.
+ */
+export const MicrosoftAppMissing: Story = {
+  render: act(state("cn.consent"), {}, undefined, [
+    { provider: "gmail", reason: "ready" },
+    { provider: "graph", reason: "app_missing" },
+    { provider: "imap", reason: "ready" },
+  ]),
+};
+
+/**
+ * A Microsoft app IS registered and its secret will not open. A different
+ * sentence from the one above, and deliberately so: telling this operator that
+ * no app exists sends them to register a second one.
+ */
+export const MicrosoftAppUnusable: Story = {
+  render: act(state("cn.consent"), {}, undefined, [
+    { provider: "gmail", reason: "ready" },
+    { provider: "graph", reason: "app_unusable" },
+    { provider: "imap", reason: "ready" },
+  ]),
+};
+
+/**
+ * A deployment that does not serve Microsoft at all. Nobody's setting, so the
+ * card offers no link to a form that would have nothing in it.
+ */
+export const MicrosoftUnsupported: Story = {
+  render: act(state("cn.consent"), {}, undefined, [
+    { provider: "gmail", reason: "ready" },
+    { provider: "graph", reason: "unsupported" },
+    { provider: "imap", reason: "ready" },
+  ]),
 };
 
 /** At 390px the two offers stack, and the one that gates has to stay legibly

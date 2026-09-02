@@ -117,6 +117,77 @@ it("offers Microsoft as a live card and opens its dialog", async () => {
   ).toBeTruthy();
 });
 
+// The roster says which providers this installation can actually start a
+// connect for, decided by the same predicate the connect endpoint uses. A card
+// that opened anyway would send the reader through a dialog to a 501 they can
+// do nothing about, so an unconnectable provider stops being a button and says
+// what is missing instead.
+it("does not offer a provider whose OAuth app is not registered", async () => {
+  stubWithSession({
+    "GET /connectors": () =>
+      jsonResponse({
+        data: [],
+        providers: [
+          { provider: "gmail", reason: "ready" },
+          { provider: "graph", reason: "app_missing" },
+          { provider: "imap", reason: "ready" },
+        ],
+      }),
+  });
+  renderConnectAct();
+
+  // Google is untouched: this is one vendor's configuration, not a broken
+  // screen, and a reader with a Google mailbox must still get through.
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: /Google/ })).not.toBeDisabled(),
+  );
+  expect(screen.queryByRole("button", { name: /Microsoft/ })).toBeNull();
+  expect(
+    screen.getByText(/has not registered its Microsoft app yet/),
+  ).toBeTruthy();
+  // The one thing the reader can do about it, reachable from here.
+  expect(
+    screen.getByRole("link", { name: "Set it up in Settings" }),
+  ).toBeTruthy();
+});
+
+// A stored app whose secret will not open is a DIFFERENT fix from no app at
+// all: telling this operator that none exists sends them to register a second
+// one they already have.
+it("separates an unusable app from a missing one", async () => {
+  stubWithSession({
+    "GET /connectors": () =>
+      jsonResponse({
+        data: [],
+        providers: [{ provider: "graph", reason: "app_unusable" }],
+      }),
+  });
+  renderConnectAct();
+
+  expect(
+    await screen.findByText(/Microsoft app cannot be opened right now/),
+  ).toBeTruthy();
+  expect(screen.queryByText(/has not registered/)).toBeNull();
+});
+
+// Nothing in Settings fixes a deployment that does not serve the provider at
+// all, so the card offers no link to a form that would have nothing in it.
+it("offers no settings link for a provider this deployment does not serve", async () => {
+  stubWithSession({
+    "GET /connectors": () =>
+      jsonResponse({
+        data: [],
+        providers: [{ provider: "graph", reason: "unsupported" }],
+      }),
+  });
+  renderConnectAct();
+
+  expect(await screen.findByText(/does not serve Microsoft/)).toBeTruthy();
+  expect(
+    screen.queryByRole("link", { name: "Set it up in Settings" }),
+  ).toBeNull();
+});
+
 // A card left clickable while the roster is unread would let a reader connect
 // a second mailbox before the fetch ever reports the first — the scene's own
 // "pick one" rule depends on the roster actually being verified first.
@@ -134,7 +205,7 @@ it("withholds every mail provider card until the roster load settles", async () 
   });
   renderConnectAct();
 
-  for (const name of [/Google/, /Microsoft/, /Any inbox/]) {
+  for (const name of [/Google/, /Microsoft/, /Any other mailbox/]) {
     expect(screen.getByRole("button", { name })).toBeDisabled();
   }
 
@@ -157,7 +228,9 @@ it("withholds every mail provider card when the roster fetch fails", async () =>
     expect(screen.getByRole("button", { name: /Google/ })).toBeDisabled(),
   );
   expect(screen.getByRole("button", { name: /Microsoft/ })).toBeDisabled();
-  expect(screen.getByRole("button", { name: /Any inbox/ })).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: /Any other mailbox/ }),
+  ).toBeDisabled();
 });
 
 // The mark is what tells a genuine return apart from a stale or bookmarked
@@ -553,7 +626,9 @@ describe("the IMAP dialog", () => {
   it("carries only the real contract's fields — no invented SMTP host, port or TLS toggle", async () => {
     stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
     renderConnectAct();
-    await userEvent.click(screen.getByRole("button", { name: /Any inbox/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /Any other mailbox/ }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     expect(screen.getByLabelText("IMAP host")).toBeTruthy();
@@ -576,7 +651,9 @@ describe("the IMAP dialog", () => {
   it("closes on 'Not now' without touching the required-step skip", async () => {
     stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
     const { dispatch, persist } = renderConnectAct();
-    await userEvent.click(screen.getByRole("button", { name: /Any inbox/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /Any other mailbox/ }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Not now" }));
 
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -637,7 +714,9 @@ describe("dismissal during an in-flight connect request", () => {
         }),
     });
     renderConnectAct();
-    await userEvent.click(screen.getByRole("button", { name: /Any inbox/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /Any other mailbox/ }),
+    );
     await userEvent.type(screen.getByLabelText("Email"), "me@example.com");
     await userEvent.type(screen.getByLabelText("App password"), "secret");
     await userEvent.click(
@@ -742,7 +821,9 @@ it("keeps mail provider cards disabled during a roster refetch, not just its fir
     expect(screen.getByRole("button", { name: /Google/ })).not.toBeDisabled(),
   );
 
-  await userEvent.click(screen.getByRole("button", { name: /Any inbox/ }));
+  await userEvent.click(
+    screen.getByRole("button", { name: /Any other mailbox/ }),
+  );
   await userEvent.type(screen.getByLabelText("Email"), "me@example.com");
   await userEvent.type(screen.getByLabelText("App password"), "secret");
   await userEvent.click(

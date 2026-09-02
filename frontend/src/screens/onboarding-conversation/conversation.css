@@ -1539,6 +1539,29 @@
   background: var(--accentLight);
 }
 
+/* The one state where the dashed treatment above is the honest one: this
+   provider cannot be connected until somebody registers the organization's
+   app, which is a different thing from a choice that happens to be settled.
+   It is not a button either, so it carries no :disabled to inherit from. */
+.ob-connect-card[data-state="unavailable"] {
+  border-style: dashed;
+  background: var(--bgPage);
+  cursor: default;
+}
+
+.ob-connect-card[data-state="unavailable"] .ob-connect-mark {
+  opacity: 0.55;
+}
+
+/* The way out of the state, in the CTA's slot and its voice: the reader who
+   can fix this is one link away from where it is fixed. */
+.ob-connect-card-setup {
+  color: var(--accentText);
+  font-family: var(--f-body);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+}
+
 .ob-connect-card-head {
   display: flex;
   align-items: center;

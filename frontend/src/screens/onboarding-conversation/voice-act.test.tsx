@@ -530,9 +530,13 @@ describe("the conversational voice act", () => {
         }),
       ).toBeTruthy();
       expect(
-        await screen.findByText(/Here is your voice, in your own words\./, undefined, {
-          timeout: 4000,
-        }),
+        await screen.findByText(
+          /Here is your voice, in your own words\./,
+          undefined,
+          {
+            timeout: 4000,
+          },
+        ),
       ).toBeTruthy();
       expect(
         await screen.findByText(/needs your review before it goes live/),
@@ -563,9 +567,13 @@ describe("the conversational voice act", () => {
       );
 
       expect(
-        await screen.findByText(en["ob.conv.voice.continueFailedStatus"], undefined, {
-          timeout: 4000,
-        }),
+        await screen.findByText(
+          en["ob.conv.voice.continueFailedStatus"],
+          undefined,
+          {
+            timeout: 4000,
+          },
+        ),
       ).toBeTruthy();
 
       await userEvent.click(
@@ -573,9 +581,13 @@ describe("the conversational voice act", () => {
       );
 
       expect(
-        await screen.findByText(/Here is your voice, in your own words\./, undefined, {
-          timeout: 4000,
-        }),
+        await screen.findByText(
+          /Here is your voice, in your own words\./,
+          undefined,
+          {
+            timeout: 4000,
+          },
+        ),
       ).toBeTruthy();
       expect(requestsTo(calls, "/builds", "POST").length).toBe(2);
     },

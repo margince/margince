@@ -3744,7 +3744,7 @@ export const de = {
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
-  "ob.s4.provImap": "Beliebiges Postfach (IMAP)",
+  "ob.s4.provImap": "Anderes Postfach (IMAP/SMTP)",
   "ob.s4.microsoftBtn": "Zugriff auf mein Microsoft erlauben",
   "ob.s4.microsoftHint":
     "Nur-Lese-Zugriff auf E-Mails. Du kannst die Verbindung jederzeit in den Einstellungen trennen.",
@@ -4373,7 +4373,7 @@ export const de = {
   "ob.conv.connect.linkedinAuth": "Profillink, nur lesend",
   "ob.conv.connect.scopeGoogle": "OAuth, Lese- und Sendeberechtigung",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
-  "ob.conv.connect.scopeImap": "Jeder andere Anbieter, App-Passwort",
+  "ob.conv.connect.scopeImap": "E-Mail-Adresse und Passwort",
   "ob.conv.connect.connectCta": "verbinden →",
   "ob.conv.connect.connectedCta": "verbunden",
   "ob.conv.connect.blockedCard":
@@ -4381,6 +4381,13 @@ export const de = {
   "ob.conv.connect.guaranteesToggle": "Was Verbinden tatsächlich bedeutet",
   "ob.conv.connect.dialogHeadlineAccess": "Zugriff auf {name} nötig",
   "ob.conv.connect.dialogHeadlineImap": "Verbinde deinen Mail-Host",
+  "ob.conv.connect.appMissingCard":
+    "Deine Organisation hat ihre {name}-App noch nicht registriert.",
+  "ob.conv.connect.appUnusableCard":
+    "Die {name}-App deiner Organisation lässt sich gerade nicht öffnen. Sie braucht einen Admin, keine neue App.",
+  "ob.conv.connect.unsupportedCard":
+    "Diese Installation bietet {name} nicht an.",
+  "ob.conv.connect.appSetupLink": "In den Einstellungen einrichten",
   "ob.conv.connect.dialogIntro":
     "{brings}. Ich lese es einmal, um deine Kontakte und Historie aufzubauen, und halte es danach synchron.",
   "ob.conv.connect.dialogClose": "Schließen",

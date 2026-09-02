@@ -319,7 +319,7 @@ func TestAStoredAppInstallationRefusesConnectRatherThanSigningBlankCredentials(t
 		t.Fatal("the transport must mount on the deployment's own prerequisites: the app can arrive at runtime")
 	}
 	for _, provider := range []crmcontracts.CaptureProvider{
-		crmcontracts.Gmail, crmcontracts.Gcal,
+		crmcontracts.CaptureProviderGmail, crmcontracts.CaptureProviderGcal,
 	} {
 		t.Run(string(provider), func(t *testing.T) {
 			rec := httptest.NewRecorder()

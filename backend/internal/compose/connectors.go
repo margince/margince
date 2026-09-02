@@ -129,14 +129,6 @@ func connectorCallbackURL(apiBaseURL, publicBaseURL, provider string) string {
 	return strings.TrimRight(base, "/") + "/v1/connectors/" + provider + "/callback"
 }
 
-// oauthApp is one composed OAuth provider seen through the shared
-// connect/callback flow: the consent-URL builder and the code-for-credential
-// exchange, so the flow itself stays provider-agnostic.
-type oauthApp struct {
-	authCodeURL  func(state, redirectURI string) string
-	authenticate func(ctx context.Context, code, redirectURI string) (connector.Auth, error)
-}
-
 func (h connectorHandlers) ListConnectors(w http.ResponseWriter, r *http.Request) {
 	if h.registry == nil {
 		httperr.NotImplemented(w, r, "ListConnectors")
@@ -164,6 +156,7 @@ func (h connectorHandlers) ListConnectors(w http.ResponseWriter, r *http.Request
 			Detail:    &status.Detail,
 		}
 	}
+	resp.Providers = h.providerAvailability(r.Context())
 	httperr.WriteJSON(w, http.StatusOK, resp)
 }
 
@@ -190,8 +183,8 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		})
 		return
 	}
-	app, ok, err := h.oauthApp(r.Context(), string(provider))
-	if err != nil {
+	avail := h.connectability(r.Context(), string(provider))
+	if avail.err != nil {
 		// A stored app that will not resolve is a different answer from one that
 		// was never configured: the installation HAS an app and cannot open its
 		// secret, and reporting 501 would send an operator to create a second.
@@ -199,15 +192,16 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		// Classified rather than handed to httperr.Write raw — these are plain
 		// errors it does not recognise, so the caller would get a bare 500 with
 		// less to act on than the 501 this branch exists to avoid.
-		writeConnectorAppFailure(w, r, err)
+		writeConnectorAppFailure(w, r, avail.err)
 		return
 	}
-	if h.registry == nil || !ok {
+	if avail.reason != connectReady {
 		// This installation has not configured an OAuth app for the provider —
 		// its surface keeps the declared 501.
 		httperr.NotImplemented(w, r, "ConnectConnector")
 		return
 	}
+	app := avail.app
 	actor, ok := principal.Actor(r.Context())
 	ws, hasWS := principal.WorkspaceID(r.Context())
 	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {

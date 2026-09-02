@@ -84,7 +84,11 @@ export type VendorCatalogue = Readonly<{
  * another company's uptime, so a failed transport is the same Unavailable
  * state the server already answers a vendor it could not reach with.
  */
-function availableModelsQueryOptions(provider: string, tier: string, top?: number) {
+function availableModelsQueryOptions(
+  provider: string,
+  tier: string,
+  top?: number,
+) {
   return {
     queryKey: ["ai-available-models", provider, tier, top ?? null],
     staleTime: 5 * 60 * 1000,
