@@ -12,6 +12,7 @@ package deals
 // have a test.
 
 import (
+	"errors"
 	"math"
 	"math/big"
 	"testing"
@@ -144,5 +145,35 @@ func TestConvertToBaseRefusesRatherThanWrapping(t *testing.T) {
 	// And the boundary the other way: a product that exactly fits is answered.
 	if got, err := ConvertToBase(math.MaxInt64, numericRate(1, 0), "EUR", "EUR"); err != nil || got != math.MaxInt64 {
 		t.Errorf("the largest representable product = %d, %v; want it answered, not refused", got, err)
+	}
+}
+
+// The two refusals are TELLABLE APART, because one caller must treat them
+// differently and for a while could not.
+//
+// PriceAll skips an out-of-range amount and counts it as unpriced — one deal a
+// partial figure does not cover. It must NOT do that for a corrupt stored rate:
+// that fault makes every amount in the currency unconvertible until an operator
+// fixes the row, and skipping it row by row reports a short total as a whole
+// one, silently, for as long as the bad row survives.
+//
+// Both came back as a bare errors.New, so the only thing separating them was
+// the message text, which nothing compared.
+func TestTheTwoConversionRefusalsAreDistinguishable(t *testing.T) {
+	_, rateErr := ConvertToBase(100, pgtype.Numeric{NaN: true, Valid: true}, "EUR", "EUR")
+	if !errors.Is(rateErr, ErrRateNotFinite) {
+		t.Errorf("a NaN rate answered %v, want ErrRateNotFinite — a caller cannot tell an estate "+
+			"fault from one implausible amount", rateErr)
+	}
+	if errors.Is(rateErr, ErrAmountOutOfRange) {
+		t.Error("a NaN rate reads as an out-of-range amount, so PriceAll would skip it and report a short total")
+	}
+
+	_, rangeErr := ConvertToBase(math.MaxInt64, numericRate(1, 2), "EUR", "EUR")
+	if !errors.Is(rangeErr, ErrAmountOutOfRange) {
+		t.Errorf("an overflowing amount answered %v, want ErrAmountOutOfRange", rangeErr)
+	}
+	if errors.Is(rangeErr, ErrRateNotFinite) {
+		t.Error("an overflowing amount reads as a corrupt rate, so one big deal would fail a whole read")
 	}
 }

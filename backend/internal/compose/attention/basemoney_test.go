@@ -240,3 +240,37 @@ func TestAFailedConversionFailsThePricing(t *testing.T) {
 		t.Fatal("a broken rate read priced the day anyway")
 	}
 }
+
+// A day whose at-risk deals all lack a currency has NOTHING to convert, and
+// that is not the same as having no conversion.
+//
+// The bound seam finds no convertible amount and asks the estate nothing. If
+// that answered the same zero dayMoney an UNBOUND seam answers, the ordering
+// would fall back to raw minor units and rank a yen integer against a euro one
+// — under a seam that was bound precisely to stop it. The deals are unpriced;
+// the day is still converted.
+func TestADayOfUnitlessDealsIsConvertedWithNothingPriced(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		AtRisk: lane(
+			item("big-integer", "deal_at_risk", withDeal(5_000_000)),
+			item("small-integer", "deal_at_risk", withDeal(100_000)),
+		),
+	}
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{}}
+
+	out := pricedWorklist(t, fx, day)
+
+	// No money verdict may be stated over a figure nothing converted.
+	for _, row := range out.Queue {
+		for _, because := range row.Because {
+			if because.Kind == "material" || because.Kind == "below_material" {
+				t.Fatalf("%q states %q over an amount with no currency", row.Id, because.Kind)
+			}
+		}
+	}
+	// And no threshold, because there was no comparable figure to take one from.
+	if out.Summary.MaterialThresholdMinor != nil {
+		t.Fatalf("a bar of %d was taken from amounts in no currency", *out.Summary.MaterialThresholdMinor)
+	}
+}

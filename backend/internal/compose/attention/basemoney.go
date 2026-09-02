@@ -52,26 +52,42 @@ type BaseMoney interface {
 // the seam existed, kept so an assembly without the binding degrades to a
 // smaller promise rather than a wrong one.
 type dayMoney struct {
-	// base is the currency every priced figure is stated in; empty when no
-	// conversion ran.
+	// ran says the day went through the FX seam. It is a FACT ABOUT THE SEAM,
+	// not about the answer, and it is a field rather than something derived
+	// from base for one case: a bound seam with nothing convertible to ask
+	// about — every at-risk deal priced in no currency — asks the estate
+	// nothing and learns no base. Inferring "unconverted" from that empty base
+	// sent the ordering back to raw minor units under a seam that was bound
+	// precisely to stop it, and stated a material verdict over an amount whose
+	// units nobody knows.
+	ran bool
+	// base is the currency every priced figure is stated in. Empty when no
+	// conversion ran, and ALSO empty when one ran with nothing to convert —
+	// which is why ran is what the readers below ask.
 	base string
 	// byItem is each priced lane item's expected revenue in the base currency,
-	// keyed by the item's id. An at-risk item absent here, under a non-empty
-	// base, is one the estate could not price.
+	// keyed by the item's id. An at-risk item absent here, on a day that ran,
+	// is one the estate could not price.
 	byItem map[string]int64
 }
 
 // converted reports whether figures went through the base currency at all —
 // the difference between "these numbers share units" and "these numbers are
 // whatever each deal happened to say".
-func (m dayMoney) converted() bool { return m.base != "" }
+func (m dayMoney) converted() bool { return m.ran }
 
 // value states an expected-revenue figure in the units it is genuinely in:
 // the base currency once conversion ran, the deal's own before that. Either
 // way the number and its units travel together — a figure without units
 // reaches the reader as a bare verdict with the amount silently dropped.
 func (m dayMoney) value(minor int64, deal *crmcontracts.AttentionDealFacts) *crmcontracts.WorklistValue {
-	if !m.converted() {
+	// No base to name means no converted figure to state, whether or not the
+	// seam ran: a day that ran with nothing convertible learns no base, and a
+	// currency of "" reaches the client as a figure it refuses to format.
+	// Reachable only if a caller states a verdict over an unpriced deal, which
+	// nothing does — and this is the guard rather than the assumption, because
+	// the assumption is what put a material verdict on a unitless amount.
+	if !m.converted() || m.base == "" {
 		return moneyOf(minor, deal)
 	}
 	value := minor
@@ -122,13 +138,17 @@ func (s *Service) priceTheDay(ctx context.Context, day crmcontracts.Attention) (
 		amounts = append(amounts, CurrencyAmount{Minor: *item.Deal.AmountMinor, Currency: *item.Deal.Currency})
 	}
 	if len(amounts) == 0 {
-		return dayMoney{}, nil
+		// The seam is bound and there was nothing to ask it. That is a day
+		// that RAN with nothing priced, not a day with no conversion: every
+		// at-risk deal is unpriced, and none of them may be compared as a raw
+		// integer.
+		return dayMoney{ran: true}, nil
 	}
 	converted, base, err := s.fx.ToBase(ctx, day.AsOf, amounts)
 	if err != nil {
 		return dayMoney{}, err
 	}
-	money := dayMoney{base: base, byItem: make(map[string]int64, len(converted))}
+	money := dayMoney{ran: true, base: base, byItem: make(map[string]int64, len(converted))}
 	for i, figure := range converted {
 		if figure != nil {
 			money.byItem[items[i]] = *figure

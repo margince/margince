@@ -116,6 +116,24 @@ func oneRate() pgtype.Numeric {
 	return pgtype.Numeric{Int: big.NewInt(1), Exp: 0, Valid: true}
 }
 
+// The two ways a conversion refuses, as sentinels rather than as one opaque
+// error, because a caller must be able to tell them apart and one of them
+// silently was not.
+//
+// ErrAmountOutOfRange is about ONE amount: this deal's converted value does not
+// fit money's range. A surface reporting a partial figure skips that row and
+// counts it.
+//
+// ErrRateNotFinite is about the ESTATE: a stored fx_rate row holds NaN or an
+// infinity, so every amount in that currency is unconvertible and will stay so
+// until an operator corrects the row. Skipping it row by row would report a
+// short total as a whole one, quietly, for as long as the bad row survives —
+// which is the shape of defect this whole file exists to remove.
+var (
+	ErrRateNotFinite    = errors.New("stored FX rate is not a finite number; correct the fx_rate row before retrying")
+	ErrAmountOutOfRange = errors.New("converted amount exceeds the representable money range in the base currency")
+)
+
 // PricedAmount is what one amount came to in the base currency, and at which
 // day's rate. Both or neither: an amount the estate cannot price answers
 // Priced false, and the two fields together are the only honest way to state a
@@ -160,13 +178,20 @@ func PriceAll(
 			continue
 		}
 		converted, err := ConvertToBase(amount.Minor, rate.Rate, amount.Currency, rates.Base())
-		if err != nil {
+		switch {
+		case errors.Is(err, ErrAmountOutOfRange):
 			// UNPRICED, not refused — a decision rather than a swallow. An
 			// amount whose converted value does not fit money's range is one
 			// row the surface cannot state, and a caller reports that with its
 			// own count of what the figure covers. One implausible amount must
 			// not take a whole page offline.
 			continue
+		case err != nil:
+			// Anything else is a fault about the ESTATE rather than about this
+			// amount — a corrupt stored rate makes every amount in that
+			// currency unconvertible — so it travels to the caller instead of
+			// being counted as one unpriced row.
+			return nil, err
 		}
 		out[i] = PricedAmount{Minor: converted, RateOn: rate.On, Priced: true}
 	}
@@ -206,7 +231,7 @@ type CurrencyAmount struct {
 // otherwise put a silently wrong number in a money total.
 func ConvertToBase(amountMinor int64, rate pgtype.Numeric, from, base string) (int64, error) {
 	if !rate.Valid || rate.NaN || rate.InfinityModifier != pgtype.Finite {
-		return 0, errors.New("stored FX rate is not a finite number; correct the fx_rate row before retrying")
+		return 0, ErrRateNotFinite
 	}
 	// numerator/denominator is amountMinor × rate × 10^base ÷ 10^from, kept as
 	// one fraction so the single rounding at the end is the only one.
@@ -221,7 +246,7 @@ func ConvertToBase(amountMinor int64, rate pgtype.Numeric, from, base string) (i
 	denominator.Mul(denominator, Pow10(int64(values.MinorUnitDigits(from))))
 	product := DivRoundHalfAwayFromZero(numerator, denominator)
 	if !product.IsInt64() {
-		return 0, errors.New("converted amount exceeds the representable money range in the base currency")
+		return 0, ErrAmountOutOfRange
 	}
 	return product.Int64(), nil
 }

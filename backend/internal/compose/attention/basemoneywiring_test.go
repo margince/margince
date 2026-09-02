@@ -42,18 +42,26 @@ func riskyDeal(name string, amount CurrencyAmount, owner ids.UUID) RiskyDeal {
 // The seam reaches the ordering through the ENDPOINT, not only through the
 // projection a unit test can call directly.
 //
-// The yen deal is worth about €30,000 and the euro deal €4,000, while their
-// raw integers say the opposite ordering by a factor of twelve. Unwired, the
-// page ranks the integers.
+// The two readings must DISAGREE, or the assertion proves nothing.
+//
+// ¥9,000,000 is nine million yen, worth €54,000. The euro deal is 8,000,000
+// minor units, €80,000. Converted, the euro deal leads. As bare integers
+// 9,000,000 beats 8,000,000, so raw ranking leads with the yen deal.
+//
+// The first version of this fixture had the yen deal winning both readings, and
+// it passed with the conversion stripped out — a test that agrees with the
+// defect it is named for. Mutation-checked now: replacing expectedRevenue's
+// converted answer with the raw amount fails this.
 func TestTheEndpointRanksOnConvertedFigures(t *testing.T) {
+	nineMillionYen := CurrencyAmount{Minor: 9_000_000, Currency: "JPY"}
 	svc := worklistOverDeals(
 		stubFX{base: "EUR", answers: map[CurrencyAmount]int64{
-			fiveMillionYen: 3_000_000,
-			eur(400_000):   400_000,
+			nineMillionYen: 5_400_000, // ¥9,000,000 at 0.006 is €54,000
+			eur(8_000_000): 8_000_000, // €80,000
 		}},
 		[]RiskyDeal{
-			riskyDeal("yen", fiveMillionYen, ids.UUID{}),
-			riskyDeal("euro", eur(400_000), ids.UUID{}),
+			riskyDeal("yen", nineMillionYen, ids.UUID{}),
+			riskyDeal("euro", eur(8_000_000), ids.UUID{}),
 		})
 
 	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25)
@@ -64,8 +72,9 @@ func TestTheEndpointRanksOnConvertedFigures(t *testing.T) {
 	if len(day.Queue) != 2 {
 		t.Fatalf("the queue carries %d rows, wanted the two deals", len(day.Queue))
 	}
-	if day.Queue[0].Title == nil || *day.Queue[0].Title != "yen" {
-		t.Fatalf("the queue leads with %v, wanted the yen deal — it is worth €30,000 against €4,000", day.Queue[0].Title)
+	if day.Queue[0].Title == nil || *day.Queue[0].Title != "euro" {
+		t.Fatalf("the queue leads with %v, wanted the euro deal: €80,000 against the yen deal's €54,000. "+
+			"Leading with the yen deal is the raw-integer ranking, 9000000 against 8000000", day.Queue[0].Title)
 	}
 	if day.Summary.BaseCurrency == nil || *day.Summary.BaseCurrency != "EUR" {
 		t.Fatalf("the summary names %v, wanted EUR", day.Summary.BaseCurrency)
