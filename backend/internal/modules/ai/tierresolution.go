@@ -23,6 +23,29 @@ func LeadingTier(task Task) Tier {
 	return ladder[0]
 }
 
+// FirstBoundTier is the rung a deployment actually serves a task on: the first
+// rung of its ladder that the deployment BINDS, with the binding found there.
+//
+// First bound, not simply first, because that is what production does. The
+// router filters a task's ladder to the rungs it has a client for and serves the
+// leading survivor (attemptLadder) — so a deployment that leaves premium unbound
+// still serves a premium-led task on cheap_cloud. A caller that read ladder[0]
+// would name a model the router never reaches, and then report on a deployment
+// nobody is running.
+//
+// A tier present in the map with no provider or no model is NOT bound: the
+// router builds no client from it, and neither may a caller reasoning about what
+// answers.
+func FirstBoundTier(routing RoutingConfig, task Task) (ProviderConfig, Tier, bool) {
+	for _, tier := range taskLadders[task] {
+		binding, bound := routing.Tiers[tier]
+		if bound && binding.Provider != "" && binding.Model != "" {
+			return binding, tier, true
+		}
+	}
+	return ProviderConfig{}, "", false
+}
+
 // ServableTiers returns the tiers that can end up serving a task: its ladder,
 // plus the transitive closure of degradeTo over those rungs.
 //

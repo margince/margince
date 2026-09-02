@@ -19,28 +19,20 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// resolveBinding is the model a routed run certifies a task against: the first
-// rung of its ladder that the deployment actually BINDS.
+// resolveBinding is the model a routed run certifies a task against: the rung
+// the deployment would actually serve it on.
 //
-// First bound, not simply first, because that is what production does. The
-// router filters a task's ladder to the rungs with a client and serves the
-// leading survivor (ai.attemptLadder) — so a deployment that leaves premium
-// unbound still serves a premium-led task on cheap_cloud, and a certification
-// lane that read only ladder[0] would refuse to measure a task its own
-// deployment runs every day. One invariant, spelled on both sides: production
-// picks the first bound rung, so certification certifies the first bound rung.
+// The rule itself lives in ai.FirstBoundTier, because this lane is no longer its
+// only reader — the settings card resolves the same question against the stored
+// binding, and two copies of "which rung answers" would drift into a card and a
+// report disagreeing about the same deployment.
 //
-// The rungs BELOW it are reachable too, under budget pressure
-// (ai.ServableTiers walks that closure) and want their own runs — a sweep, not a
-// pooled record that could not say which model answered.
+// What is local to certification is what follows from it: the rungs BELOW the
+// one measured are reachable too, under budget pressure (ai.ServableTiers walks
+// that closure) and want their own runs — a sweep, not a pooled record that
+// could not say which model answered.
 func resolveBinding(routing ai.RoutingConfig, task ai.Task) (ai.ProviderConfig, ai.Tier, bool) {
-	for _, tier := range ai.TaskLadder(task) {
-		binding, bound := routing.Tiers[tier]
-		if bound && binding.Provider != "" && binding.Model != "" {
-			return binding, tier, true
-		}
-	}
-	return ai.ProviderConfig{}, "", false
+	return ai.FirstBoundTier(routing, task)
 }
 
 // validateRoutedBindings refuses a routed run that could not produce a
