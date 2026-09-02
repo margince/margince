@@ -412,13 +412,7 @@ func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
 		t.Run(entityType, func(t *testing.T) {
 			e := setupAuditBoundary(t)
 			id := ids.NewV7()
-			if _, err := e.owner.Exec(context.Background(),
-				`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, after, occurred_at)
-				 VALUES ($1, 'human', 'user:'||$2::text, 'create', $3, $4,
-				         '{"filename":"sara-subject-passport.pdf","subject":"Sara Subject contract"}'::jsonb, $5)`,
-				ids.NewV7(), e.user, entityType, id, boundaryEarlier); err != nil {
-				t.Fatalf("seeding the %s image: %v", entityType, err)
-			}
+			e.collateralImage(t, entityType, id)
 			if _, err := e.owner.Exec(context.Background(),
 				`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
 				 VALUES ($1, 'human', 'user:'||$2::text, 'erase', $3, $4, $5)`,
@@ -431,21 +425,11 @@ func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ListAuditLog: %v", err)
 			}
-			// The create row must be THERE and withheld. Checking absence alone
-			// would pass on an empty page, or on a page holding only the
-			// tombstone — which carries no image to leak.
-			var found bool
-			for _, entry := range page.Entries {
-				if entry.Action != "create" {
-					continue
-				}
-				found = true
-				if strings.Contains(string(entry.After), "Sara Subject") {
-					t.Errorf("an erased %s still names the subject: %s", entityType, entry.After)
-				}
-			}
-			if !found {
-				t.Fatalf("the %s's create row is absent from the page, so this proved nothing", entityType)
+			// The create row must be THERE and withheld, which is what
+			// namesTheSubject insists on: absence alone would pass on an empty
+			// page, or on one holding only the tombstone.
+			if namesTheSubject(t, page) {
+				t.Errorf("an erased %s still names the subject", entityType)
 			}
 		})
 	}
@@ -466,31 +450,44 @@ func TestAnAttachmentWithNoRowLeftIsWithheldRatherThanReleased(t *testing.T) {
 	e := setupAuditBoundary(t)
 	entityType := "attachment"
 	id := ids.NewV7()
-	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, after, occurred_at)
-		 VALUES ($1, 'human', 'user:'||$2::text, 'create', $3, $4,
-		         '{"filename":"sara-subject-passport.pdf","subject":"Sara Subject contract"}'::jsonb, $5)`,
-		ids.NewV7(), e.user, entityType, id, boundaryEarlier); err != nil {
-		t.Fatalf("seeding the attachment image: %v", err)
-	}
+	e.collateralImage(t, entityType, id)
 
 	limit := 50
 	page, err := ListAuditLog(e.ctx, e.db, AuditFilter{EntityType: &entityType, EntityID: &id, Limit: &limit})
 	if err != nil {
 		t.Fatalf("ListAuditLog: %v", err)
 	}
-	var found bool
+	if namesTheSubject(t, page) {
+		t.Error("an attachment whose row is gone still names the subject — a boundary that opens " +
+			"when it cannot tell is not a boundary")
+	}
+}
+
+// collateralImage seeds a create row over one of the collateral types, carrying
+// the image both boundary cases are about withholding. A helper rather than a
+// block in each test, so a change to the fixture reaches both readings of it.
+func (e *auditBoundaryEnv) collateralImage(t *testing.T, entityType string, id ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, after, occurred_at)
+		 VALUES ($1, 'human', 'user:'||$2::text, 'create', $3, $4,
+		         '{"filename":"sara-subject-passport.pdf","subject":"Sara Subject contract"}'::jsonb, $5)`,
+		ids.NewV7(), e.user, entityType, id, boundaryEarlier); err != nil {
+		t.Fatalf("seeding the %s image: %v", entityType, err)
+	}
+}
+
+// namesTheSubject reports whether the create row on the page still carries the
+// subject's name, failing the test if there is no create row to judge — absence
+// would otherwise pass on an empty page, or on one holding only a tombstone.
+func namesTheSubject(t *testing.T, page AuditPage) bool {
+	t.Helper()
 	for _, entry := range page.Entries {
 		if entry.Action != "create" {
 			continue
 		}
-		found = true
-		if strings.Contains(string(entry.After), "Sara Subject") {
-			t.Errorf("an attachment whose row is gone still names the subject: %s — a boundary "+
-				"that opens when it cannot tell is not a boundary", entry.After)
-		}
+		return strings.Contains(string(entry.After), "Sara Subject")
 	}
-	if !found {
-		t.Fatal("the create row is absent from the page, so this proved nothing")
-	}
+	t.Fatal("the create row is absent from the page, so this proved nothing")
+	return false
 }
