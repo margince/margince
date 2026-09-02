@@ -117,7 +117,6 @@ type Server struct {
 	orgRollupHandlers
 	strengthHandlers
 	customfieldsHandlers
-	quotasHandlers
 	attachmentExtractionHandlers
 	overlayHandlers
 	embedReindexHandlers

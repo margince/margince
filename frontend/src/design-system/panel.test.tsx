@@ -21,7 +21,7 @@ function panelCss(): string {
 // target.
 describe("PanelRow separates the hairline from the press", () => {
   it("draws an inert row by default", () => {
-    const { container } = render(<PanelRow>Attainment to date</PanelRow>);
+    const { container } = render(<PanelRow>Renewal date</PanelRow>);
     const row = container.querySelector(".panel-row");
     expect(row).not.toBeNull();
     expect(row?.classList.contains("panel-row-interactive")).toBe(false);
@@ -44,13 +44,13 @@ describe("PanelRow separates the hairline from the press", () => {
   // layout, and the two spellings have to coexist on one element.
   it("keeps the caller's class beside the variant", () => {
     const { container } = render(
-      <PanelRow interactive className="quota-row-on">
+      <PanelRow interactive className="panel-row-on">
         Q3
       </PanelRow>,
     );
     const row = container.querySelector(".panel-row");
     expect(row?.classList.contains("panel-row-interactive")).toBe(true);
-    expect(row?.classList.contains("quota-row-on")).toBe(true);
+    expect(row?.classList.contains("panel-row-on")).toBe(true);
   });
 });
 

@@ -33,7 +33,7 @@ workspace. Its `permissions` JSONB holds two things:
 
 - **`objects`** — a per-object-type grant of `{create, read, update, delete}` over the 29 core
   objects (`person`, `organization`, `deal`, `lead`, `activity`, `pipeline`, `list`, `custom_field`,
-  `quota`, …). The closed set is `policy.coreObjects`, published cell-by-cell in
+  `offer_template`, …). The closed set is `policy.coreObjects`, published cell-by-cell in
   [reference/rbac-matrix.md](../reference/rbac-matrix.md).
 - **`row_scope`** — `own` | `team` | `all` (see below).
 
@@ -47,7 +47,7 @@ same values by a test and so cannot drift from them. The shape:
 |---|---|---|
 | `admin` | Full CRUD on everything (config included). | `all` |
 | `ops` | Same CRUD reach as admin — the operations counterpart. | `all` |
-| `manager` | CRUD on records; **read-only** on most config (pipeline, automation, custom_field, quota); **no access at all** to the admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `team` |
+| `manager` | CRUD on records; **read-only** on most config (pipeline, automation, custom_field); **no access at all** to the admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `team` |
 | `rep` | Create/read/update records (delete only where it's routine, e.g. disqualify a lead); **read-only** on config. | `own` |
 | `read_only` | Reads every record kind and every config surface a rep can see; writes nothing except its own saved views. The four admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`) are closed to it entirely — not even read. | `all` |
 
@@ -60,7 +60,7 @@ Two things surprise people:
 - **`manager` is `row_scope: team`, and it is the only seeded role that is.** A Team Lead writes
   their teammates' records as well as their own, resolved through live team membership. The seat
   above it, `management`, is the same object grid at `all` — the sales leader over every row.
-- **Config objects (pipeline, custom_field, automation, quota) are read-only below admin/ops.** This
+- **Config objects (pipeline, custom_field, automation) are read-only below admin/ops.** This
   is why a `rep` gets `pipeline.read: permission denied`-adjacent behaviour only when they have **no
   role at all** — with the `rep` role they *can* read pipelines; they just can't edit them.
 

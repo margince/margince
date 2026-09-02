@@ -205,12 +205,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
       "relationship": {
         "create": true,
         "delete": true,
@@ -467,12 +461,6 @@
         "delete": true,
         "read": true,
         "update": true
-      },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
       },
       "relationship": {
         "create": true,
@@ -731,12 +719,6 @@
         "read": true,
         "update": true
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": true,
         "delete": true,
@@ -989,12 +971,6 @@
         "update": true
       },
       "project": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "quota": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1257,12 +1233,6 @@
         "read": true,
         "update": false
       },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "relationship": {
         "create": false,
         "delete": false,
@@ -1519,12 +1489,6 @@
         "delete": false,
         "read": true,
         "update": true
-      },
-      "quota": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
       },
       "relationship": {
         "create": true,

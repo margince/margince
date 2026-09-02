@@ -2313,8 +2313,6 @@ public.idx_project_org CREATE INDEX idx_project_org ON public.project USING btre
 public.idx_project_org_open CREATE INDEX idx_project_org_open ON public.project USING btree (organization_id) WHERE ((phase <> 'closed'::text) AND (archived_at IS NULL))
 public.idx_project_owner CREATE INDEX idx_project_owner ON public.project USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_project_search CREATE INDEX idx_project_search ON public.project USING gin (search_tsv)
-public.idx_quota_owner CREATE INDEX idx_quota_owner ON public.quota USING btree (owner_id) WHERE (owner_id IS NOT NULL)
-public.idx_quota_team CREATE INDEX idx_quota_team ON public.quota USING btree (team_id) WHERE (team_id IS NOT NULL)
 public.idx_record_grant_record CREATE INDEX idx_record_grant_record ON public.record_grant USING btree (record_type, record_id)
 public.idx_record_grant_subject CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id)
 public.idx_rel_company_projects CREATE INDEX idx_rel_company_projects ON public.relationship USING btree (organization_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
@@ -3986,27 +3984,6 @@ public.provider_run_reservation.reserved_at timestamp with time zone NOT NULL ge
 public.provider_run_reservation.reserved_credits integer NOT NULL gen=- def=-
 public.provider_run_reservation.run_id uuid NOT NULL gen=- def=-
 public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservation_pkey ON public.provider_run_reservation USING btree (run_id, pool)
-public.quota acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.quota.archived_at timestamp with time zone gen=- def=-
-public.quota.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.quota.currency character(3) NOT NULL gen=- def=-
-public.quota.id uuid NOT NULL gen=- def=uuidv7()
-public.quota.owner_id uuid gen=- def=-
-public.quota.period_end date NOT NULL gen=- def=-
-public.quota.period_start date NOT NULL gen=- def=-
-public.quota.quota_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
-public.quota.quota_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.quota.quota_owner_xor_team CHECK (((owner_id IS NOT NULL) <> (team_id IS NOT NULL)))
-public.quota.quota_period_valid CHECK ((period_end >= period_start))
-public.quota.quota_pkey PRIMARY KEY (id)
-public.quota.quota_target_nonneg CHECK ((target_minor >= 0))
-public.quota.quota_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE SET NULL (team_id)
-public.quota.target_minor bigint NOT NULL gen=- def=-
-public.quota.team_id uuid gen=- def=-
-public.quota.trg_quota_updated CREATE TRIGGER trg_quota_updated BEFORE UPDATE ON public.quota FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.quota.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.quota.version bigint NOT NULL gen=- def=1
-public.quota_pkey CREATE UNIQUE INDEX quota_pkey ON public.quota USING btree (id)
 public.raw_capture acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.raw_capture.id uuid NOT NULL gen=- def=uuidv7()
 public.raw_capture.payload jsonb NOT NULL gen=- def=-

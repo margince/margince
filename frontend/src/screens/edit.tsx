@@ -24,7 +24,7 @@ import {
 // The agent rail's WROTE head for an edit, keyed by `recordKey` (agentrail-
 // copy.ts). Only the four record kinds a salesperson edits by hand carry
 // one; every other screen this hook also serves (products, offer templates,
-// quotas, relationships, webhooks, pipeline stages...) gets none.
+// relationships, webhooks, pipeline stages...) gets none.
 const EDIT_MUTATION_HEAD: Readonly<Partial<Record<string, string>>> = {
   organization: "company-edit",
   person: "contact-edit",
@@ -253,8 +253,8 @@ export function EditRecordModal({
   // Starts false, not `open`: a modal mounted already open still has to seed.
   const [seededOpen, setSeededOpen] = useState(false);
   // WHICH record the values above belong to. A screen can swap the record
-  // under an open dialog without remounting it — the quota rail does — and
-  // then the form is showing one record's values while the caller's write
+  // under an open dialog without remounting it, and then the form is
+  // showing one record's values while the caller's write
   // addresses another. Re-seeding on identity is not the same trade as
   // re-seeding on every render: keeping what the person typed is only worth
   // anything while it is about the record they are still editing.

@@ -51,7 +51,7 @@ body {
   caret-color: var(--accent);
   /* Native controls that have an accent of their own: checkbox and radio ticks,
      range thumbs, progress fills. This replaces the same declaration repeated in
-     three screens — see quotas.css and onboarding-facts.css, now redundant. */
+     three screens — see onboarding-facts.css, now redundant. */
   accent-color: var(--accent);
   /* Thumb, then track. The track is TRANSPARENT rather than --bgPage on purpose:
      a scroller is not always on the page surface — the rail is a dark green field

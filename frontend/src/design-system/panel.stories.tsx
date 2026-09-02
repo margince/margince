@@ -269,7 +269,7 @@ export const InteractiveRows: Story = {
             Q4 — renewals
           </button>
         </PanelRow>
-        <PanelRow>Attainment to date — 68%</PanelRow>
+        <PanelRow>Renewal date — in 68 days</PanelRow>
         <PanelRow>Set by Lars Ohlsen on 4 March</PanelRow>
         <PanelRow>Weighted against the open pipeline</PanelRow>
       </>
