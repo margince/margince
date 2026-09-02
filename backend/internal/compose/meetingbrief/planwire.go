@@ -28,6 +28,9 @@ import (
 func wirePlan(plan Plan, in Input) crmcontracts.MeetingPlan {
 	known := knownRecords(in)
 	out := crmcontracts.MeetingPlan{
+		// Overwritten by the caller with what actually wrote this plan. The
+		// floor is the honest default: a plan nobody told us about is one the
+		// deterministic builders produced.
 		GeneratedBy: crmcontracts.Deterministic,
 		MeetingType: crmcontracts.MeetingPlanType{
 			Value:      plan.Type.Value,

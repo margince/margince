@@ -46,7 +46,7 @@ const (
 	TaskSiteFactExtract Task = "site_fact_extract"
 	// TaskSiteTriage is what a mail domain's own site says it IS, before any organization is created from it: a company, one person's site, or a mailbox vendor selling addresses to the public. Runs on the SEED PAGE ALONE and leads with a fast tier because its whole job is to stop the crawl early — a personal page answered here costs one page instead of twelve. The provider class is the live.fr trap: that site belongs to a real company (Microsoft's) which is emphatically not the sender's employer.
 	TaskSiteTriage Task = "site_triage"
-	// TaskSummarize is Three sites on the company view, all grounded prose over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because org_ask is served from the same handlers. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision.
+	// TaskSummarize is Four grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because org_ask is served from the same handlers. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what people actually wrote.
 	TaskSummarize Task = "summarize"
 	// TaskTranscript is Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands.
 	TaskTranscript Task = "transcript"
@@ -83,7 +83,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "385031726a0019947ea909b2214b924d19d3422b7c1e11030cad60e7b3a687c9"
+const TaskContractHash = "d0714ca31e67fdd581716c87a045df804b41638e365b94f3e35df57169b3a7fc"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -331,6 +331,7 @@ var taskSites = map[Task][]Site{
 		{Name: "org_brief", Kind: "one_shot"},
 		{Name: "org_ask", Kind: "one_shot"},
 		{Name: "org_dossier", Kind: "one_shot"},
+		{Name: "meeting_plan", Kind: "one_shot"},
 	},
 	TaskTranscriptPropose: {
 		{Name: "next_steps", Kind: "one_shot"},
