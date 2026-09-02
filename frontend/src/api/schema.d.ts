@@ -5893,30 +5893,50 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Destroy the mail one of your own rules matched.
+         * Destroy the mail one exclusion rule matched.
          * @description An exclusion stops FUTURE mail. This destroys what already arrived: the message text, the
          *     provider original, the attachments and their blobs, the embeddings, the delivery copies and
          *     everything derived from them. It is not reversible and there is no undo — the preview exists
          *     so the counts are seen before that is true.
          *
-         *     Only mail your own connection brought in. A message a colleague also imported keeps their
-         *     copy: your import of it is released, theirs stands, and the message stays on their timeline.
-         *     A message the law still requires keeping survives both and is reported as skipped — a
-         *     statutory hold, or commercial correspondence inside its retention window. An owner told
-         *     their mail is gone must not find it still there.
+         *     How far it reaches follows the rule's own scope. For YOUR OWN rule: only mail your own
+         *     connection brought in. A message a colleague also imported keeps their copy — your import
+         *     of it is released, theirs stands, and the message stays on their timeline.
+         *
+         *     For a WORKSPACE rule: every captured message the rule matches, across every seat. The
+         *     message is destroyed for everybody, so every seat's claim on it goes with it — nobody is
+         *     left holding a stub on their timeline for mail they were told is gone.
+         *
+         *     A workspace purge needs the ADMIN role. Being able to WRITE a workspace rule is not
+         *     enough: that grant is held by ops seats too, and destroying every colleague's matching
+         *     mail is the workspace's own act.
+         *
+         *     It also matches the way ingress matches — a message the rule caught through a To or Cc
+         *     line is destroyed, not only one whose sender matched. A COLLEAGUE on that line does not
+         *     count: they are not the counterparty a rule is about, and admitting them would let a rule
+         *     naming your own mail domain match nearly everything.
+         *
+         *     Either arm needs a seat that may change things. A read seat is licensed to look, not to
+         *     destroy.
+         *
+         *     Either way, a message the law still requires keeping survives and is reported as skipped —
+         *     a statutory hold, or commercial correspondence inside its retention window. Somebody told
+         *     their mail is gone must not find it still there. And either way, only mail a connection
+         *     actually captured: an activity somebody logged by hand was never governed by a capture
+         *     rule and is left alone.
          *
          *     An erasure request that has been EXECUTED leaves such a hold and is therefore covered. One
          *     still open is not: nothing marks the messages it will be about until somebody acts on it,
          *     so a purge can destroy correspondence a pending request was going to assemble.
          *
-         *     Contacts go too, but only the ones your mail is the sole reason this CRM knows them: a
-         *     person with an address outside the rule, a deal against their name, or mail another
-         *     colleague also imported is somebody the workspace knows independently, and destroying that
-         *     record would take away work somebody did. Those that do go are anonymised rather than
-         *     deleted, so a colleague's records that reference them do not break.
-         *
-         *     Your own rules only. A workspace rule belongs to the workspace, and destroying every
-         *     colleague's matching mail is not one person's act.
+         *     Contacts go too on your own rule, but only the ones your mail is the sole reason this CRM
+         *     knows them. A person with an address outside the rule, a deal against their name, or mail
+         *     another colleague also imported is somebody the workspace knows independently, and
+         *     destroying that record would take away work somebody did. Those that do go are anonymised
+         *     rather than deleted, so a colleague's records that reference them do not break. A workspace purge
+         *     anonymises nobody: a contact every seat can see is by definition known for more reasons
+         *     than the mail one rule matched, and erasing people workspace-wide is what a data-subject
+         *     request is for.
          */
         post: operations["purgeCaptureExclusion"];
         delete?: never;
