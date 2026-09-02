@@ -124,6 +124,47 @@ func TestATagWriteOnAnArchivedRecordIsRefused(t *testing.T) {
 	}
 }
 
+// An ownerless record (a connector-imported contact nobody has claimed) reads
+// as workspace-shared, but ensureWriteAuthority's own doc says unowned is
+// nobody's to write below RowScopeAll — the same rule PATCH already enforces
+// on this row. This is the one real behavior change the fix carries: before
+// it, EnsureLinkTarget's pure visibility probe let ANY bounded seat tag an
+// ownerless row; now nobody below RowScopeAll can, matching every other
+// mutation on the same table.
+func TestATagWriteOnAnOwnerlessRecordIsRefusedBelowRowScopeAll(t *testing.T) {
+	e := integration.Setup(t)
+	tags := collectionsmod.NewStore(e.DB())
+
+	unowned := e.SeedPerson(t, "Unclaimed", nil)
+	tag, err := tags.NewTag(e.Admin(), "Ownerless Target", "")
+	if err != nil {
+		t.Fatalf("seeding the tag: %v", err)
+	}
+	tagID := ids.From[ids.TagKind](tag.TagID)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	if _, err := e.People.GetPerson(rep, integration.PersonIDOf(unowned), storekit.LiveOnly); err != nil {
+		t.Fatalf("reading an unowned contact: %v, want success — read-all covers ownerless rows too", err)
+	}
+
+	if _, err := tags.ApplyTag(rep, tagID, "person", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a bounded seat applying a tag to an unowned record → %v, want ErrPermissionDenied", err)
+	}
+	if err := tags.EnsureTaggable(rep, "person", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("EnsureTaggable on an unowned record → %v, want ErrPermissionDenied", err)
+	}
+
+	// The allow arm: an unbounded actor (RowScopeAll) still may, so this is a
+	// row-scope narrowing and not the table having quietly become untaggable
+	// for everyone.
+	if _, err := tags.ApplyTag(e.Admin(), tagID, "person", unowned); err != nil {
+		t.Errorf("an unbounded actor applying a tag to an unowned record: %v, want success", err)
+	}
+	if err := tags.RemoveTag(e.Admin(), tagID, "person", unowned); err != nil {
+		t.Errorf("an unbounded actor removing a tag from an unowned record: %v, want success", err)
+	}
+}
+
 // EnsureTaggable is the same invariant, asked one step earlier — the
 // apply-by-name path's own pre-flight before it resolves a tag name, so a
 // failed apply leaves no live word behind. It must refuse exactly what the
@@ -154,6 +195,7 @@ func TestTheImportersTagWriteRefusesAForeignOwnedRecordToo(t *testing.T) {
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
+	own := e.SeedPerson(t, "Own", &e.Rep1)
 	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
 	tag, err := tags.NewTag(e.Admin(), "Imported", "")
 	if err != nil {
@@ -173,6 +215,12 @@ func TestTheImportersTagWriteRefusesAForeignOwnedRecordToo(t *testing.T) {
 		}
 	}()
 
+	// The paired allow arm: this same transactional door lets the seat tag a
+	// record it owns. Without this, a regression that denied every
+	// ApplyTagTx call — own record included — would pass just as happily.
+	if _, err := tags.ApplyTagTx(rep, tx, tagID, "person", own); err != nil {
+		t.Errorf("the importer's apply on this seat's own contact: %v, want success", err)
+	}
 	if _, err := tags.ApplyTagTx(rep, tx, tagID, "person", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the importer's apply on a record this seat may only read → %v, want ErrPermissionDenied", err)
 	}
