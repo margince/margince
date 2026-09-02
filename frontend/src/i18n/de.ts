@@ -4118,6 +4118,8 @@ export const de = {
     "Der Anbieter hat die Verbindung abgelehnt. Bestätige alle angefragten Berechtigungen und versuche es dann erneut.",
   "connectors.oauthMisconfigured":
     "Diese Installation kann die Verbindung noch nicht abschließen — die API des Anbieters ist dafür nicht aktiviert. Ein Administrator muss sie aktivieren; das Server-Log nennt die betroffene API.",
+  "connectors.oauthBadClient":
+    "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Administrator sollte Client-ID und Secret unter Einstellungen → Allgemein prüfen; ein erneuter Verbindungsversuch behebt es nicht von selbst.",
   "connectors.dismissOutcome": "Schließen",
 
   // Das "Verbindung hinzufügen"-Element (Task 1): ein Button in der Kopfzeile

@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -117,6 +118,20 @@ func (a *onboardingCompanyAssistant) message(w http.ResponseWriter, r *http.Requ
 
 	answer, clarify, actAction, err := a.converse(r.Context(), req, act, message, history, conversation, research, read, comparisons, runID)
 	if err != nil {
+		// A model this installation cannot reach is a DEPENDENCY that is down,
+		// not a fault in the request — and httperr.Write has no sentinel for it,
+		// so it would fall through to an opaque 500 whose body names nothing.
+		//
+		// It names the way through instead. Every required field can be typed by
+		// hand, so a model outage does not actually block onboarding: it blocks
+		// the assistant. Someone who is told only "internal error" has no way to
+		// know that, and the wizard is the first thing they ever see.
+		if modelUnreachable(err) {
+			httperr.ServiceUnavailable(w, r,
+				"the assistant is unavailable — check the model binding under Settings → AI. "+
+					"You can enter the company details yourself in the meantime; nothing here needs the assistant")
+			return
+		}
 		httperr.Write(w, r, err)
 		return
 	}
@@ -393,4 +408,15 @@ func (h onboardingStateHandlers) MessageOnboardingCompany(w http.ResponseWriter,
 		return
 	}
 	h.assistant.message(w, r)
+}
+
+// modelUnreachable reports whether err is the model lane failing rather than
+// this request being wrong.
+//
+// Matched on ai.ErrAllTiersFailed, the aggregate the router raises once the
+// walk has reached the end of the bound rungs: the one place that distinction
+// is already made, and a sentinel rather than the message text, which would be
+// a second copy of it.
+func modelUnreachable(err error) bool {
+	return errors.Is(err, ai.ErrAllTiersFailed)
 }

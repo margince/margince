@@ -58,8 +58,28 @@ const (
 	outcomeDenied        = "denied"
 	outcomeRejected      = "rejected"
 	outcomeMisconfigured = "misconfigured"
-	outcomeError         = "error"
+	// outcomeBadClient is the provider refusing this deployment's OAuth client
+	// — a wrong id or secret. Its own outcome rather than misconfigured's,
+	// because the remedies are different SCREENS: one is the vendor's console,
+	// this one is the app card in Settings. It is also the only one of the two
+	// a Microsoft installation can reach, so folding them left every Entra
+	// credential mistake reading as an unenabled API that does not exist.
+	outcomeBadClient = "bad_client"
+	outcomeError     = "error"
 )
+
+// noConnectorAppDetail is what a 501 says when the route WORKS and this
+// installation has not given it an app.
+//
+// 501 covers both "nobody built this" and "not configured here", and the
+// generic stub text only describes the first — so an operator reading it goes
+// looking for a newer build instead of for the screen that fixes it in a
+// minute. A Settings-supplied installation passes through this state on its way
+// in, which makes it a normal step rather than a gap in the product.
+func noConnectorAppDetail(provider string) string {
+	return "no " + provider + " OAuth app is configured for this installation — " +
+		"add one under Settings → General, or supply it in the environment"
+}
 
 // disabledProviderAPI reports whether the failure is a provider API that was
 // never enabled for this deployment. The reason vocabulary is Google's, so the
@@ -75,16 +95,21 @@ func disabledProviderAPI(provider string, err error) bool {
 
 // connectFailureOutcome picks the landing outcome for a failed consent
 // completion, so what the human reads matches what they can actually do about
-// it. Two distinct deployment faults land on misconfigured — a provider API that
-// was never enabled, and an OAuth client the provider refused to authenticate
-// (a wrong client id/secret, which is provider-independent) — because a human
-// re-consenting clears neither. Anything we cannot attribute to the provider
-// stays the generic error: an honest "we don't know yet", never a guess at whose
-// fault it is.
+// it. Anything we cannot attribute to the provider stays the generic error: an
+// honest "we don't know yet", never a guess at whose fault it is.
+//
+// The two DEPLOYMENT faults are separate answers, in the same order
+// logConnectFailure raises them: a provider API nobody enabled is fixed in the
+// vendor's console, and a refused OAuth client is fixed on the app card in
+// Settings. They were one answer once, and the log has always told them apart
+// — which meant a screen naming the wrong remedy while the line beside it named
+// the right one.
 func connectFailureOutcome(provider string, err error) string {
 	switch {
-	case disabledProviderAPI(provider, err), oauthflow.Misconfigured(err):
+	case disabledProviderAPI(provider, err):
 		return outcomeMisconfigured
+	case oauthflow.Misconfigured(err):
+		return outcomeBadClient
 	case errors.Is(err, connector.ErrAuthRejected):
 		return outcomeRejected
 	default:

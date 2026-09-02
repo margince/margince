@@ -4147,6 +4147,8 @@ export const en = {
     "The provider declined the connection. Make sure you accept every permission it asks for, then try connecting again.",
   "connectors.oauthMisconfigured":
     "This deployment can't complete that connection yet — the provider's API isn't enabled for it. An administrator needs to enable it; the server log names which API.",
+  "connectors.oauthBadClient":
+    "The provider refused this installation's app credentials. An administrator should check the client ID and secret under Settings → General; re-connecting will not clear it on its own.",
   "connectors.dismissOutcome": "Dismiss",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header

@@ -4079,6 +4079,8 @@ export const vi = {
     "Nhà cung cấp từ chối kết nối. Hãy chấp nhận mọi quyền mà nhà cung cấp yêu cầu, rồi thử kết nối lại.",
   "connectors.oauthMisconfigured":
     "Bản triển khai này chưa hoàn tất được kết nối đó — API của nhà cung cấp chưa được bật cho bản này. Cần quản trị viên bật lên; nhật ký máy chủ nêu rõ API nào.",
+  "connectors.oauthBadClient":
+    "Nhà cung cấp đã từ chối thông tin xác thực ứng dụng của bản triển khai này. Quản trị viên cần kiểm tra Client ID và secret trong Cài đặt → Chung; kết nối lại sẽ không tự khắc phục.",
   "connectors.dismissOutcome": "Bỏ qua",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header

@@ -41,6 +41,21 @@ func NotImplemented(w http.ResponseWriter, r *http.Request, op string) {
 	})
 }
 
+// NotImplementedBecause is NotImplemented for a route that IS implemented and
+// cannot serve this installation yet.
+//
+// Same status, different sentence. 501 covers both "nobody built this" and
+// "this deployment has not configured it", and only the first is what the
+// generic text describes — so the second one needs to say what is missing, or
+// it sends an operator to look for a build that would not help.
+func NotImplementedBecause(w http.ResponseWriter, r *http.Request, detail string) {
+	writeProblem(w, problem{
+		Status: http.StatusNotImplemented,
+		Code:   "not_implemented",
+		Detail: detail,
+	})
+}
+
 // Validation is the 422 shape with per-field errors.
 func Validation(field, code, message string) *DetailedError {
 	return &DetailedError{
