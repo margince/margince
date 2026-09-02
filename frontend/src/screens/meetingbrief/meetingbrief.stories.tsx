@@ -3,10 +3,12 @@ import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
 import { PersonMeetingBrief } from "./drawer";
 import {
   briefEmpty,
+  briefManager,
   briefModel,
   briefOmitted,
   briefReady,
   briefScoped,
+  briefWithPlan,
   meetingFacts,
   preparedFor,
 } from "./fixtures";
@@ -107,6 +109,38 @@ export const Scoped: Story = {
 // A meeting filed under none, with projects to choose from.
 export const Unscoped: Story = {
   render: () => drawer(() => jsonResponse(briefReady), { projects: PROJECTS }),
+};
+
+// The deterministic preparation plan, added above the sections rather than in
+// place of them: an `outline` plan is not yet worth leading with, and the cited
+// summary a reader already had stays in front of them.
+export const WithPlan: Story = {
+  render: () => drawer(() => jsonResponse(briefWithPlan)),
+};
+
+export const WithPlanDark: Story = {
+  render: () => drawer(() => jsonResponse(briefWithPlan)),
+  globals: { theme: "dark" },
+};
+
+export const WithPlanPhone: Story = {
+  render: () => drawer(() => jsonResponse(briefWithPlan)),
+  globals: { viewport: { value: "mobile1" } },
+};
+
+// What a lead sees: the same brief, with one layer on top.
+export const ManagerCoaching: Story = {
+  render: () => drawer(() => jsonResponse(briefManager)),
+};
+
+export const ManagerCoachingDark: Story = {
+  render: () => drawer(() => jsonResponse(briefManager)),
+  globals: { theme: "dark" },
+};
+
+export const ManagerCoachingPhone: Story = {
+  render: () => drawer(() => jsonResponse(briefManager)),
+  globals: { viewport: { value: "mobile1" } },
 };
 
 export const Dark: Story = {

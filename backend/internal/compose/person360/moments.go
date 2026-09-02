@@ -55,7 +55,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "person-moment-ladder-v2"
+const ruleVersion = "person-moment-ladder-v3"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -188,8 +188,7 @@ func deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Person3
 var momentLadder = []func(context.Context, time.Time, *crmcontracts.Person360) (crmcontracts.PersonMoment, bool){
 	meetingPrepMoment,      // 1. a meeting within 72 hours
 	reEngagedMoment,        // 2. new inbound after a material quiet period
-	overduePromiseMoment,   // 4. an open commitment of ours is overdue
-	overdueTaskMoment,      // 4b. an open task of ours whose date has passed
+	overduePromiseMoment,   // 4. a promise of ours is past its date, from mail or the task list
 	goneQuietMoment,        // 5. outbound unanswered past the configured rule
 	openPromiseMoment,      // 5b. an open task we owe them, undated or ahead
 	roleChangeMoment,       // 6. a new deal role or material relationship change
@@ -205,7 +204,6 @@ var momentLadderNames = []string{
 	"meeting_prep",
 	"re_engaged",
 	"overdue_promise",
-	"overdue_task",
 	"gone_quiet",
 	"open_promise",
 	"role_change",
@@ -305,46 +303,6 @@ func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Person
 			Destination: &crmcontracts.PersonMomentDestination{
 				Surface: crmcontracts.PersonMomentDestinationSurfaceComposer,
 				Prefill: prefill(map[string]string{prefillIntent: "reply"}),
-			},
-		},
-	}, true
-}
-
-// overduePromiseMoment: WE said we would do something and the date has passed.
-//
-// Ours outranks theirs on purpose. A promise we owe is entirely within the
-// reader's control, and it is the one they would be most embarrassed to
-// discover from the other side.
-func overduePromiseMoment(_ context.Context, now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
-	claim, ok := oldestOverdueCommitment(now, page)
-	if !ok {
-		return crmcontracts.PersonMoment{}, false
-	}
-	overdue := elapsed.Days(*claim.DueAt, now)
-	evidence := []crmcontracts.PersonMomentEvidence{{
-		Type:       crmcontracts.PersonMomentEvidenceTypeActivity,
-		Id:         &claim.SourceActivityId,
-		Label:      claim.Body,
-		Snippet:    &claim.SourceQuote,
-		ObservedAt: claim.DueAt,
-	}}
-	return crmcontracts.PersonMoment{
-		ClaimKey:            "moment:overdue_promise",
-		Rule:                crmcontracts.PersonMomentRuleOverduePromise,
-		RuleVersion:         ptr(ruleVersion),
-		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
-		WhyNow:              fmt.Sprintf("Promised for a date that passed %d days ago.", overdue),
-		Confidence:          crmcontracts.PersonMomentConfidenceObservedFact,
-		Evidence:            evidence,
-		FreshnessAt:         claim.DueAt,
-		RecommendedAction: crmcontracts.PersonMomentAction{
-			Kind:  crmcontracts.PersonMomentActionKindDraftReply,
-			Label: "Send it now",
-			State: crmcontracts.PersonMomentActionStateWillConfirm,
-			Destination: &crmcontracts.PersonMomentDestination{
-				Surface: crmcontracts.PersonMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": claim.Body}),
 			},
 		},
 	}, true

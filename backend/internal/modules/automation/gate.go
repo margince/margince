@@ -34,6 +34,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// reasonOwnerGone is what both gates say when the owner's authority no longer
+// resolves. One spelling, because the two answer different questions about the
+// same person and a reader comparing two run rows should not have to work out
+// whether two wordings mean the same thing.
+const reasonOwnerGone = "the automation's owner no longer has access"
+
 // gateDecision is the pure, DB-free verdict checkOwnerPermission renders.
 // The zero value means "proceed" — runOne turns a blocked verdict into a
 // durable run row (recordBlocked) and lets a non-nil error (a transient
@@ -74,7 +80,7 @@ func checkOwnerPermission(ctx context.Context, resolver authz.Resolver, ev workf
 		if errors.Is(err, apperrors.ErrNotFound) {
 			// Same honest-hard-case as EffectiveRBAC below: a gone/archived/
 			// suspended owner is a real denial, never an outage.
-			return gateDecision{blocked: true, reason: "the automation's owner no longer has access"}, nil
+			return gateDecision{blocked: true, reason: reasonOwnerGone}, nil
 		}
 		return gateDecision{}, fmt.Errorf("automation: resolving the owner's live seat: %w", err)
 	}
@@ -89,7 +95,7 @@ func checkOwnerPermission(ctx context.Context, resolver authz.Resolver, ev workf
 			// archived, or suspended — never to an empty-but-valid
 			// authority (shared/ports/authz's Resolver doc). That is a
 			// real denial, not an outage.
-			return gateDecision{blocked: true, reason: "the automation's owner no longer has access"}, nil
+			return gateDecision{blocked: true, reason: reasonOwnerGone}, nil
 		}
 		return gateDecision{}, fmt.Errorf("automation: resolving the owner's live authority: %w", err)
 	}

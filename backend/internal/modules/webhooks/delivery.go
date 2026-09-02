@@ -126,7 +126,8 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 			visible = append(visible, c.id)
 		}
 	}
-	targets, err := d.store.enqueueForSubscriptions(wsCtx, visible, env.Type, env.EventID, body)
+	targets, err := d.store.enqueueForSubscriptions(wsCtx, visible, env.Type, env.EventID, body,
+		env.Entity.Type, env.Entity.ID)
 	if err != nil {
 		return fmt.Errorf("webhooks: enqueue for %s: %w", env.Type, err)
 	}
@@ -147,12 +148,45 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 // (BYO-EVT-4). It is the gate at ENQUEUE time: a subscription's fan-out is
 // authorized against the owner's grants as they stand when the event
 // arrives, so a revocation that lands before the event stops delivery.
-// (A delivery, once enqueued, carries its frozen payload through retry and
-// replay without re-checking — those re-send an already-authorized
-// delivery to the owner's own endpoint, not a fresh fan-out.) A
-// deactivated/absent owner (ErrNotFound) sees nothing.
+// A re-attempt asks the same question again through stillVisible below: the
+// payload is frozen, but the answer to "may this owner see this record" is not,
+// and a delivery parked for an hour can come due after the record was narrowed.
+// A deactivated/absent owner (ErrNotFound) sees nothing.
 func (d *Deliverer) ownerCanSee(ctx context.Context, env kevents.Envelope, ownerID ids.UUID) (bool, error) {
-	if env.Entity.Type == "" || env.Entity.ID.IsZero() {
+	return d.canSee(ctx, env.Type, env.Entity.Type, env.Entity.ID, ownerID)
+}
+
+// stillVisible re-asks the enqueue question for a delivery that is about to be
+// re-attempted, from the columns the row carries rather than from an envelope
+// nobody kept.
+//
+// A row written before entity_type existed carries no subject, and an
+// unidentifiable subject cannot be checked against anybody's audience. That is
+// refused, not sent: the whole point of this gate is that a delivery whose
+// authorization cannot be confirmed is not authorized.
+func (d *Deliverer) stillVisible(ctx context.Context, t attemptTarget) (bool, string, error) {
+	if t.entityType == "" || t.entityID.IsZero() {
+		return false, "this delivery predates the subject columns, so its visibility cannot be re-checked", nil
+	}
+	ok, err := d.canSee(ctx, t.eventType, t.entityType, t.entityID, t.ownerID)
+	if err != nil {
+		return false, "", err
+	}
+	if !ok {
+		return false, "the subscription owner can no longer see the record this delivery carries", nil
+	}
+	return true, "", nil
+}
+
+// canSee is the one spelling of "may this owner read this record", asked at
+// enqueue and again at every re-attempt. Two copies of it would be two answers
+// to one question, and the retry's copy is the one nobody would notice drifting
+// — every fan-out test in the tree exercises the enqueue path, so a drifted
+// retry copy keeps passing.
+//
+// Held by: TestOnlyCanSeeAsksTheVisibilityQuestion (canseewriters_test.go)
+func (d *Deliverer) canSee(ctx context.Context, eventType, entityType string, entityID, ownerID ids.UUID) (bool, error) {
+	if entityType == "" || entityID.IsZero() {
 		// An entity-less event names no subject to scope by; such types are
 		// excluded from the subscribable catalog (validateEventTypes), so a
 		// subscription can never match one — defensive.
@@ -179,7 +213,7 @@ func (d *Deliverer) ownerCanSee(ctx context.Context, env kevents.Envelope, owner
 		TeamIDs:     rbac.TeamIDs,
 		Permissions: rbac.Permissions,
 	})
-	return d.store.entityVisibleTo(ownerCtx, env.Type, env.Entity.Type, env.Entity.ID)
+	return d.store.entityVisibleTo(ownerCtx, eventType, entityType, entityID)
 }
 
 // SweepOnce runs ONE workspace's due-retry pass: it claims a bounded batch
@@ -206,9 +240,38 @@ func (d *Deliverer) SweepOnce(ctx context.Context) error {
 			d.log.Warn("webhooks: loading due delivery", "delivery", deliveryID, "err", err)
 			continue
 		}
+		if !d.attemptStillAuthorized(ctx, t) {
+			continue
+		}
 		d.deliverOnce(ctx, t)
 	}
 	return nil
+}
+
+// attemptStillAuthorized re-checks one delivery's visibility and parks it when
+// the answer has changed, reporting whether the caller should go on to attempt
+// it.
+//
+// A resolver or query failure is NOT a revocation: it is an outage, and parking
+// the delivery terminally on one would discard a legitimate delivery that
+// nothing is wrong with. Those are logged and the delivery is left parked for
+// the next sweep, which is what a transient failure deserves — the row keeps its
+// retrying status and its backoff.
+func (d *Deliverer) attemptStillAuthorized(ctx context.Context, t attemptTarget) bool {
+	ok, reason, err := d.stillVisible(ctx, t)
+	if err != nil {
+		d.log.Error("webhooks: re-checking delivery visibility",
+			"delivery", t.deliveryID, "subscription", t.subID, "err", err)
+		return false
+	}
+	if ok {
+		return true
+	}
+	if err := d.store.markVisibilityRevoked(ctx, t.deliveryID, reason); err != nil {
+		d.log.Error("webhooks: parking a delivery whose subject left the owner's sight",
+			"delivery", t.deliveryID, "subscription", t.subID, "err", err)
+	}
+	return false
 }
 
 // Replay re-attempts a parked (or any) delivery on demand (B-E10.13c). It
@@ -227,6 +290,14 @@ func (d *Deliverer) Replay(ctx context.Context, subID, deliveryID ids.UUID) (Del
 	t, err := d.store.loadTarget(ctx, deliveryID)
 	if err != nil {
 		return Delivery{}, err
+	}
+	// Before resetForReplay, not after: the reset clears last_error and hands
+	// the delivery a fresh attempt budget, so a revoked row checked afterwards
+	// would be parked with its reason already destroyed. A replay is the more
+	// dangerous of the two paths — an operator triggers it deliberately, long
+	// after the enqueue decided anything.
+	if !d.attemptStillAuthorized(ctx, t) {
+		return d.store.getDelivery(ctx, deliveryID)
 	}
 	if err := d.store.resetForReplay(ctx, deliveryID); err != nil {
 		return Delivery{}, err

@@ -966,6 +966,7 @@ public.capture_connection.sync_cursor jsonb gen=- def=-
 public.capture_connection.uq_capture_connection_ws_id UNIQUE (id)
 public.capture_connection.user_id uuid NOT NULL gen=- def=-
 public.capture_connection.watch_expires_at timestamp with time zone gen=- def=-
+public.capture_connection.watch_ref text gen=- def=-
 public.capture_connection_unique CREATE UNIQUE INDEX capture_connection_unique ON public.capture_connection USING btree (user_id, provider)
 public.capture_counterparty_hold acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_counterparty_hold.capture_counterparty_hold_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
@@ -4859,6 +4860,8 @@ public.webhook_delivery.attempts integer NOT NULL gen=- def=0
 public.webhook_delivery.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.webhook_delivery.dead_lettered_at timestamp with time zone gen=- def=-
 public.webhook_delivery.delivered_at timestamp with time zone gen=- def=-
+public.webhook_delivery.entity_id uuid gen=- def=-
+public.webhook_delivery.entity_type text gen=- def=-
 public.webhook_delivery.event_id uuid NOT NULL gen=- def=-
 public.webhook_delivery.event_type text NOT NULL gen=- def=-
 public.webhook_delivery.id uuid NOT NULL gen=- def=uuidv7()
@@ -4872,7 +4875,7 @@ public.webhook_delivery.trg_webhook_delivery_updated CREATE TRIGGER trg_webhook_
 public.webhook_delivery.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.webhook_delivery.webhook_delivery_dedupe_key UNIQUE (subscription_id, event_id)
 public.webhook_delivery.webhook_delivery_pkey PRIMARY KEY (id)
-public.webhook_delivery.webhook_delivery_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'delivered'::text, 'retrying'::text, 'dead_lettered'::text])))
+public.webhook_delivery.webhook_delivery_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'delivered'::text, 'retrying'::text, 'dead_lettered'::text, 'visibility_revoked'::text])))
 public.webhook_delivery.webhook_delivery_subscription_fkey FOREIGN KEY (subscription_id) REFERENCES webhook_subscription(id) ON DELETE CASCADE
 public.webhook_delivery_dedupe_key CREATE UNIQUE INDEX webhook_delivery_dedupe_key ON public.webhook_delivery USING btree (subscription_id, event_id)
 public.webhook_delivery_pkey CREATE UNIQUE INDEX webhook_delivery_pkey ON public.webhook_delivery USING btree (id)
@@ -4896,6 +4899,7 @@ public.webhook_subscription.webhook_subscription_target_url_check CHECK ((target
 public.webhook_subscription_pkey CREATE UNIQUE INDEX webhook_subscription_pkey ON public.webhook_subscription USING btree (id)
 public.weekly_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review.as_of timestamp with time zone NOT NULL gen=- def=-
+public.weekly_review.base_currency text gen=- def=-
 public.weekly_review.brief_items_acted integer NOT NULL gen=- def=0
 public.weekly_review.brief_items_dismissed integer NOT NULL gen=- def=0
 public.weekly_review.deals_lost integer NOT NULL gen=- def=0
@@ -4903,11 +4907,20 @@ public.weekly_review.deals_moved integer NOT NULL gen=- def=0
 public.weekly_review.deals_won integer NOT NULL gen=- def=0
 public.weekly_review.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.weekly_review.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_review.leads_answered_in_target integer NOT NULL gen=- def=0
+public.weekly_review.leads_breached integer NOT NULL gen=- def=0
+public.weekly_review.leads_routed integer NOT NULL gen=- def=0
 public.weekly_review.local_week_start date NOT NULL gen=- def=-
 public.weekly_review.mail_attempted_at timestamp with time zone gen=- def=-
 public.weekly_review.mail_error text gen=- def=-
+public.weekly_review.meetings_held integer NOT NULL gen=- def=0
+public.weekly_review.meetings_with_next_step integer NOT NULL gen=- def=0
 public.weekly_review.narrated_at timestamp with time zone gen=- def=-
 public.weekly_review.narrative text gen=- def=-
+public.weekly_review.pipeline_created_minor bigint gen=- def=-
+public.weekly_review.pipeline_lost_minor bigint gen=- def=-
+public.weekly_review.pipeline_won_minor bigint gen=- def=-
+public.weekly_review.prior_review_id uuid gen=- def=-
 public.weekly_review.proposals_accepted integer NOT NULL gen=- def=0
 public.weekly_review.proposals_rejected integer NOT NULL gen=- def=0
 public.weekly_review.tasks_carried_over integer NOT NULL gen=- def=0
@@ -4916,11 +4929,16 @@ public.weekly_review.tasks_due integer NOT NULL gen=- def=0
 public.weekly_review.uq_weekly_review_user_week UNIQUE (user_id, local_week_start)
 public.weekly_review.user_id uuid NOT NULL gen=- def=-
 public.weekly_review.weekly_review_counts_are_tallies CHECK (((tasks_due >= 0) AND (tasks_done >= 0) AND (tasks_carried_over >= 0) AND (deals_moved >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (proposals_accepted >= 0) AND (proposals_rejected >= 0) AND (brief_items_acted >= 0) AND (brief_items_dismissed >= 0)))
+public.weekly_review.weekly_review_currency_check CHECK (((base_currency IS NULL) OR (base_currency ~ '^[A-Z]{3}$'::text)))
 public.weekly_review.weekly_review_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))
 public.weekly_review.weekly_review_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL)))
+public.weekly_review.weekly_review_money_names_its_currency CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL))))
 public.weekly_review.weekly_review_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))
 public.weekly_review.weekly_review_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (narrated_at IS NOT NULL)))
+public.weekly_review.weekly_review_new_counts_are_tallies CHECK (((leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0))))
+public.weekly_review.weekly_review_next_steps_were_meetings CHECK ((meetings_with_next_step <= meetings_held))
 public.weekly_review.weekly_review_pkey PRIMARY KEY (id)
+public.weekly_review.weekly_review_prior_fkey FOREIGN KEY (prior_review_id) REFERENCES weekly_review(id) ON DELETE SET NULL
 public.weekly_review.weekly_review_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.weekly_review_deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review_deal.amount_minor_at_close bigint gen=- def=-

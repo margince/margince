@@ -456,9 +456,21 @@ describe("which meeting the brief drawer asks about", () => {
     },
   };
 
-  it("requests the brief for the meeting the reader picked", async () => {
-    const asked: string[] = [];
-    installFetchStub({
+  // Which meeting the drawer asked the server about, recorded per test. The
+  // routes are shared because four tests below all turn on the SAME question —
+  // was the brief fetched, and for which meeting — and a second copy of them
+  // would let one drift into stubbing a meeting the others do not have.
+  function briefRoutes(asked: string[]): RouteMap {
+    const brief = (id: string) => () => {
+      asked.push(id);
+      return jsonResponse({
+        activity_id: id,
+        generated_at: "2026-08-13T09:00:00Z",
+        generated_by: "deterministic",
+        sections: [],
+      });
+    };
+    return {
       "GET /me": meRoute({ person: ["read", "update"], activity: ["read"] }),
       "GET /people/p-1/360": () => jsonResponse(withMeetings),
       "GET /people/p-1/brief": () =>
@@ -470,25 +482,14 @@ describe("which meeting the brief drawer asks about", () => {
       "GET /people/p-1/consent/guard": () =>
         jsonResponse({ person_id: "p-1", entries: [] }),
       "GET /channel-providers": () => jsonResponse({ data: [] }),
-      "GET /activities/a-held/meeting-brief": () => {
-        asked.push("a-held");
-        return jsonResponse({
-          activity_id: "a-held",
-          generated_at: "2026-08-13T09:00:00Z",
-          generated_by: "deterministic",
-          sections: [],
-        });
-      },
-      "GET /activities/a-booked/meeting-brief": () => {
-        asked.push("a-booked");
-        return jsonResponse({
-          activity_id: "a-booked",
-          generated_at: "2026-08-13T09:00:00Z",
-          generated_by: "deterministic",
-          sections: [],
-        });
-      },
-    });
+      "GET /activities/a-held/meeting-brief": brief("a-held"),
+      "GET /activities/a-booked/meeting-brief": brief("a-booked"),
+    };
+  }
+
+  it("requests the brief for the meeting the reader picked", async () => {
+    const asked: string[] = [];
+    installFetchStub(briefRoutes(asked));
     render(
       <StoryProviders>
         <PersonPageV2 id="p-1" tab="meetings" />
@@ -502,6 +503,68 @@ describe("which meeting the brief drawer asks about", () => {
 
     await waitFor(() => expect(asked.length).toBe(1));
     expect(asked).toEqual(["a-held"]);
+  });
+
+  // The brief is the one drawer another SCREEN sends a reader to, so it is the
+  // one with an address. Held in useState alone it could only ever be opened by
+  // pressing a button on this page, which is not what a "prepare the meeting"
+  // link on the worklist means.
+  it("opens the brief the address names, with nothing pressed", async () => {
+    const asked: string[] = [];
+    installFetchStub(briefRoutes(asked));
+    window.location.hash = "#/contacts/p-1/meetings?prep=a-held";
+    render(
+      <StoryProviders>
+        <PersonPageV2 id="p-1" tab="meetings" />
+      </StoryProviders>,
+    );
+
+    await waitFor(() => expect(asked).toEqual(["a-held"]));
+  });
+
+  // The reason it is derived from the address rather than seeded from it: a
+  // drawer in useState stays open when the reader navigates back out of it,
+  // because nothing tells it the address changed. Back is how a reader closes
+  // a thing they arrived at by link, and it has to work.
+  it("closes the brief when the address stops naming it", async () => {
+    const asked: string[] = [];
+    installFetchStub(briefRoutes(asked));
+    window.location.hash = "#/contacts/p-1/meetings?prep=a-held";
+    render(
+      <StoryProviders>
+        <PersonPageV2 id="p-1" tab="meetings" />
+      </StoryProviders>,
+    );
+    await waitFor(() => expect(asked).toEqual(["a-held"]));
+
+    window.location.hash = "#/contacts/p-1/meetings";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+    // The BRIEF's dialog by its own label, not "a dialog": the page carries
+    // other modals, and querying for any of them would pass on a page where
+    // the brief never closed and something else happened to be shut.
+    await waitFor(() =>
+      expect(
+        document.querySelector('[aria-labelledby="person-meeting-title"]'),
+      ).toBeNull(),
+    );
+  });
+
+  // A link somebody edited by hand, or one whose meeting has since been
+  // deleted. The page renders; it does not throw and it does not open an empty
+  // drawer that asks the server about nothing.
+  it("renders normally when the address names no meeting", async () => {
+    const asked: string[] = [];
+    installFetchStub(briefRoutes(asked));
+    window.location.hash = "#/contacts/p-1/meetings?prep=";
+    render(
+      <StoryProviders>
+        <PersonPageV2 id="p-1" tab="meetings" />
+      </StoryProviders>,
+    );
+
+    await screen.findAllByRole("button", { name: "Brief me" });
+    expect(asked).toEqual([]);
   });
 });
 

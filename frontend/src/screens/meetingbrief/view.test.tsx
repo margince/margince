@@ -4,9 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StoryProviders } from "../story-utils";
 import {
+  briefManager,
   briefModel,
   briefOmitted,
   briefReady,
+  briefWithPlan,
   meetingFacts,
   preparedFor,
 } from "./fixtures";
@@ -130,6 +132,164 @@ describe("the prepared brief", () => {
         /do not have access to Deal Rooms/,
       ),
     ).toBeTruthy();
+  });
+});
+
+describe("the preparation plan", () => {
+  it("adds the plan above the sections rather than in place of them", () => {
+    mount({ kind: "ready", brief: briefWithPlan });
+    // The plan leads.
+    const headings = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((h) => h.textContent);
+    expect(headings[0]).toBe("The outcome to earn");
+    // And the sections a reader already had are still on the page, not buried:
+    // an outline plan that hid the risks would be a regression.
+    expect(headings).toContain("Risks and watch-outs");
+    expect(headings).toContain("Goal for this meeting");
+  });
+
+  it("renders nothing of the plan when the brief carries none", () => {
+    mount({ kind: "ready", brief: briefReady });
+    expect(screen.queryByText("The outcome to earn")).toBeNull();
+    expect(screen.queryByText("Close the meeting")).toBeNull();
+  });
+
+  it("states the three ways to close, in order", () => {
+    mount({ kind: "ready", brief: briefWithPlan });
+    const legs = screen
+      .getAllByRole("heading", { level: 4 })
+      .map((h) => h.textContent);
+    expect(legs).toEqual(
+      expect.arrayContaining(["Minimum advance", "Best advance", "Fallback"]),
+    );
+  });
+
+  it("draws one warn callout, not two", () => {
+    const withRisk = {
+      ...briefWithPlan,
+      plan: {
+        ...(briefWithPlan.plan as NonNullable<typeof briefWithPlan.plan>),
+        top_risk: {
+          text: {
+            text: "The rollout plan we promised is late.",
+            nature: "assessment" as const,
+            evidence: [
+              {
+                entity_type: "activity" as const,
+                entity_id: "3f7c1a90-0000-4000-8000-00000000a001",
+              },
+            ],
+          },
+          response_plan: {
+            say: "Own the delay and name a date.",
+            show: "What is ready today.",
+            avoid: "A date nobody agreed to.",
+          },
+        },
+      },
+    };
+    const { container } = render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: withRisk }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+        />
+      </StoryProviders>,
+    );
+    // The plan's risk carries a response; the sections' list does not. Showing
+    // both would put two warnings on one screen, which is how a reader learns
+    // to skip warnings.
+    expect(container.querySelectorAll(".callout-warn")).toHaveLength(1);
+    expect(screen.getByText("Own the delay and name a date.")).toBeTruthy();
+  });
+
+  it("shows what the record does not say", () => {
+    mount({ kind: "ready", brief: briefWithPlan });
+    expect(
+      screen.getByText("Who else has to agree before this can go ahead?"),
+    ).toBeTruthy();
+  });
+
+  it("keeps the indigo lead for a model and the accent for a composition", () => {
+    const { container } = render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: briefWithPlan }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+        />
+      </StoryProviders>,
+    );
+    // The plan says a composition wrote it, so the objective must not wear the
+    // band that means Margince did.
+    expect(container.querySelector(".panel-ai")).toBeNull();
+  });
+});
+
+describe("the coaching layer", () => {
+  it("is absent for the rep whose meeting it is", () => {
+    mount({ kind: "ready", brief: briefWithPlan });
+    expect(screen.queryByText("Coach the rep on one thing")).toBeNull();
+  });
+
+  it("leads the page for a lead, and says which view this is", () => {
+    mount({ kind: "ready", brief: briefManager });
+    const headings = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((h) => h.textContent);
+    expect(headings[0]).toBe("Coach the rep on one thing");
+    expect(screen.getByText("Manager view")).toBeTruthy();
+  });
+
+  it("shows the lead the same facts as the rep, plus the coaching", () => {
+    // The invariant the server holds structurally: the two briefs differ by one
+    // object. If this surface ever renders a lead something the rep's own page
+    // does not carry, that difference came from here rather than from the API.
+    const repView = render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: briefWithPlan }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+        />
+      </StoryProviders>,
+    );
+    const repHeadings = new Set(
+      Array.from(repView.container.querySelectorAll("h3")).map(
+        (h) => h.textContent,
+      ),
+    );
+    cleanup();
+
+    const leadView = render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: briefManager }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+        />
+      </StoryProviders>,
+    );
+    const leadHeadings = new Set(
+      Array.from(leadView.container.querySelectorAll("h3")).map(
+        (h) => h.textContent,
+      ),
+    );
+    for (const heading of repHeadings) {
+      expect(leadHeadings.has(heading)).toBe(true);
+    }
+  });
+
+  it("gives the lead the branches the rep's own plan carries", () => {
+    mount({ kind: "ready", brief: briefManager });
+    expect(screen.getByText("How this meeting can go")).toBeTruthy();
+    expect(screen.getByText("It becomes a price negotiation")).toBeTruthy();
   });
 });
 

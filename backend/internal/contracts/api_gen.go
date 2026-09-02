@@ -6172,6 +6172,117 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingPlanReadiness.
+const (
+	MeetingPlanReadinessOutline  MeetingPlanReadiness = "outline"
+	MeetingPlanReadinessPrepared MeetingPlanReadiness = "prepared"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanReadiness enum.
+func (e MeetingPlanReadiness) Valid() bool {
+	switch e {
+	case MeetingPlanReadinessOutline:
+		return true
+	case MeetingPlanReadinessPrepared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanTier.
+const (
+	MeetingPlanTierHigh   MeetingPlanTier = "high"
+	MeetingPlanTierLow    MeetingPlanTier = "low"
+	MeetingPlanTierMedium MeetingPlanTier = "medium"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanTier enum.
+func (e MeetingPlanTier) Valid() bool {
+	switch e {
+	case MeetingPlanTierHigh:
+		return true
+	case MeetingPlanTierLow:
+		return true
+	case MeetingPlanTierMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanTypeValue.
+const (
+	MeetingPlanTypeCommercial        MeetingPlanTypeValue = "commercial"
+	MeetingPlanTypeDecision          MeetingPlanTypeValue = "decision"
+	MeetingPlanTypeDelivery          MeetingPlanTypeValue = "delivery"
+	MeetingPlanTypeDemo              MeetingPlanTypeValue = "demo"
+	MeetingPlanTypeFirstDiscovery    MeetingPlanTypeValue = "first_discovery"
+	MeetingPlanTypeFollowupDiscovery MeetingPlanTypeValue = "followup_discovery"
+	MeetingPlanTypeRelationship      MeetingPlanTypeValue = "relationship"
+	MeetingPlanTypeRenewalRisk       MeetingPlanTypeValue = "renewal_risk"
+	MeetingPlanTypeUnknown           MeetingPlanTypeValue = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanTypeValue enum.
+func (e MeetingPlanTypeValue) Valid() bool {
+	switch e {
+	case MeetingPlanTypeCommercial:
+		return true
+	case MeetingPlanTypeDecision:
+		return true
+	case MeetingPlanTypeDelivery:
+		return true
+	case MeetingPlanTypeDemo:
+		return true
+	case MeetingPlanTypeFirstDiscovery:
+		return true
+	case MeetingPlanTypeFollowupDiscovery:
+		return true
+	case MeetingPlanTypeRelationship:
+		return true
+	case MeetingPlanTypeRenewalRisk:
+		return true
+	case MeetingPlanTypeUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanUnknownKind.
+const (
+	MeetingPlanUnknownAttendeesNotVisible      MeetingPlanUnknownKind = "attendees_not_visible"
+	MeetingPlanUnknownDecisionRouteNotCaptured MeetingPlanUnknownKind = "decision_route_not_captured"
+	MeetingPlanUnknownIntentNotCaptured        MeetingPlanUnknownKind = "intent_not_captured"
+	MeetingPlanUnknownNoCommitmentsCaptured    MeetingPlanUnknownKind = "no_commitments_captured"
+	MeetingPlanUnknownNoHistory                MeetingPlanUnknownKind = "no_history"
+	MeetingPlanUnknownNoOpenDeal               MeetingPlanUnknownKind = "no_open_deal"
+	MeetingPlanUnknownNoPriorMeeting           MeetingPlanUnknownKind = "no_prior_meeting"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanUnknownKind enum.
+func (e MeetingPlanUnknownKind) Valid() bool {
+	switch e {
+	case MeetingPlanUnknownAttendeesNotVisible:
+		return true
+	case MeetingPlanUnknownDecisionRouteNotCaptured:
+		return true
+	case MeetingPlanUnknownIntentNotCaptured:
+		return true
+	case MeetingPlanUnknownNoCommitmentsCaptured:
+		return true
+	case MeetingPlanUnknownNoHistory:
+		return true
+	case MeetingPlanUnknownNoOpenDeal:
+		return true
+	case MeetingPlanUnknownNoPriorMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefItemState.
 const (
 	MorningBriefItemStateActed     MorningBriefItemState = "acted"
@@ -8296,7 +8407,6 @@ const (
 	PersonMomentRuleNothingNeeded    PersonMomentRule = "nothing_needed"
 	PersonMomentRuleOpenPromise      PersonMomentRule = "open_promise"
 	PersonMomentRuleOverduePromise   PersonMomentRule = "overdue_promise"
-	PersonMomentRuleOverdueTask      PersonMomentRule = "overdue_task"
 	PersonMomentRulePublicSignal     PersonMomentRule = "public_signal"
 	PersonMomentRuleReEngaged        PersonMomentRule = "re_engaged"
 	PersonMomentRuleRoleChange       PersonMomentRule = "role_change"
@@ -8319,8 +8429,6 @@ func (e PersonMomentRule) Valid() bool {
 	case PersonMomentRuleOpenPromise:
 		return true
 	case PersonMomentRuleOverduePromise:
-		return true
-	case PersonMomentRuleOverdueTask:
 		return true
 	case PersonMomentRulePublicSignal:
 		return true
@@ -11619,10 +11727,11 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
-	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
-	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
-	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusDeadLettered      WebhookDeliveryStatus = "dead_lettered"
+	WebhookDeliveryStatusDelivered         WebhookDeliveryStatus = "delivered"
+	WebhookDeliveryStatusPending           WebhookDeliveryStatus = "pending"
+	WebhookDeliveryStatusRetrying          WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusVisibilityRevoked WebhookDeliveryStatus = "visibility_revoked"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
@@ -11635,6 +11744,8 @@ func (e WebhookDeliveryStatus) Valid() bool {
 	case WebhookDeliveryStatusPending:
 		return true
 	case WebhookDeliveryStatusRetrying:
+		return true
+	case WebhookDeliveryStatusVisibilityRevoked:
 		return true
 	default:
 		return false
@@ -21634,6 +21745,20 @@ type MeetingBrief struct {
 	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
 	Omitted *[]MeetingBriefOmission `json:"omitted,omitempty"`
 
+	// Plan The preparation plan: what to DO in the room, as against `sections`, which is what is
+	// KNOWN about it.
+	//
+	// Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+	// reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+	// UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+	// generated from the ABSENCE of a record, never from a writer leaving a field out, which
+	// is the difference between "nobody captured the decision route" and "the model forgot to
+	// mention it".
+	//
+	// Assessments and recommendations cite records the caller can open, or they are dropped
+	// whole — the same grounding rule every sentence in `sections` runs.
+	Plan *MeetingPlan `json:"plan,omitempty"`
+
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
 	// guessing. Present only when the request named a `project_id`.
@@ -21700,6 +21825,210 @@ type MeetingBriefSection struct {
 // `talking_points` — each tied to a specific captured statement.
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
+
+// MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
+// KNOWN about it.
+//
+// Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+// reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+// UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+// generated from the ABSENCE of a record, never from a writer leaving a field out, which
+// is the difference between "nobody captured the decision route" and "the model forgot to
+// mention it".
+//
+// Assessments and recommendations cite records the caller can open, or they are dropped
+// whole — the same grounding rule every sentence in `sections` runs.
+type MeetingPlan struct {
+	// AccountArc The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it.
+	AccountArc []MeetingPlanArcMoment `json:"account_arc"`
+
+	// Advance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
+	Advance MeetingPlanAdvance `json:"advance"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// LikelyAsks What the other side is likely to ask, each an assessment with the record behind it.
+	LikelyAsks []MeetingPlanAsk `json:"likely_asks"`
+
+	// ManagerCoaching The coaching layer, for a lead reading a teammate's meeting.
+	//
+	// It adds a READING of how this meeting could go wrong for this rep. It adds no account
+	// fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+	// and this is attached over it — so a lead and their rep are looking at the same meeting,
+	// and the lead is looking at one more thing.
+	//
+	// Who gets it is decided by the server, never asked for by a client. The rule is the
+	// same one that governs raising a coaching notice: a seat that may coach at all, and a
+	// live team shared with somebody in the room.
+	ManagerCoaching *MeetingPlanCoaching `json:"manager_coaching,omitempty"`
+	MeetingType     MeetingPlanType      `json:"meeting_type"`
+
+	// Objective The outcome to earn, and the reminder not to force it.
+	Objective *MeetingPlanObjective      `json:"objective,omitempty"`
+	Opening   *OrganizationBriefSentence `json:"opening,omitempty"`
+
+	// Questions What to ask them, ranked. Three is a plan a rep can hold; the cap is five.
+	Questions []MeetingPlanQuestion `json:"questions"`
+
+	// Readiness How much of a preparation this plan actually is, so a surface can decide whether to lead
+	// with it.
+	//
+	// `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+	// for. Useful, but not yet the thing a rep walks in holding.
+	// `prepared` — it also carries the risk with its response, at least two likely asks and at
+	// least three questions. A client leads with the plan at `prepared` and keeps the cited
+	// summary in front at `outline`, so a half-built plan never displaces what already worked.
+	Readiness MeetingPlanReadiness  `json:"readiness"`
+	Scenarios []MeetingPlanScenario `json:"scenarios"`
+
+	// TopRisk The one thing that can change this conversation, and what to do when it does.
+	TopRisk *MeetingPlanRisk `json:"top_risk,omitempty"`
+
+	// Unknowns What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked.
+	Unknowns []MeetingPlanUnknown `json:"unknowns"`
+}
+
+// MeetingPlanAdvance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
+type MeetingPlanAdvance struct {
+	Best     OrganizationBriefSentence `json:"best"`
+	Fallback OrganizationBriefSentence `json:"fallback"`
+	Minimum  OrganizationBriefSentence `json:"minimum"`
+}
+
+// MeetingPlanArcMoment One stretch of the relationship that still bears on today. A moment, not a message: it spans the conversations it was built from, and cites them.
+type MeetingPlanArcMoment struct {
+	From    time.Time                 `json:"from"`
+	Summary OrganizationBriefSentence `json:"summary"`
+	Title   string                    `json:"title"`
+	To      time.Time                 `json:"to"`
+}
+
+// MeetingPlanAsk defines model for MeetingPlanAsk.
+type MeetingPlanAsk struct {
+	Basis OrganizationBriefSentence `json:"basis"`
+
+	// Prepare How to answer it.
+	Prepare string `json:"prepare"`
+
+	// Question What they are likely to ask, in their own words where the record has them.
+	Question string `json:"question"`
+
+	// Relevance A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+	Relevance MeetingPlanTier `json:"relevance"`
+}
+
+// MeetingPlanCoaching The coaching layer, for a lead reading a teammate's meeting.
+//
+// It adds a READING of how this meeting could go wrong for this rep. It adds no account
+// fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+// and this is attached over it — so a lead and their rep are looking at the same meeting,
+// and the lead is looking at one more thing.
+//
+// Who gets it is decided by the server, never asked for by a client. The rule is the
+// same one that governs raising a coaching notice: a seat that may coach at all, and a
+// live team shared with somebody in the room.
+type MeetingPlanCoaching struct {
+	// FailureMode How this meeting most plausibly goes wrong for this rep, given this account.
+	FailureMode string `json:"failure_mode"`
+
+	// Focus The ONE thing to coach on. A list of five is a list nobody coaches from.
+	Focus string `json:"focus"`
+
+	// InterveneIf The narrow condition under which a lead should step in. Narrow on purpose: a lead who takes over a rep's meeting has coached nobody.
+	InterveneIf string `json:"intervene_if"`
+
+	// ListenFor What a good version of this conversation sounds like.
+	ListenFor string `json:"listen_for"`
+
+	// Paths The ways this meeting can go, for a lead to rehearse against.
+	Paths []MeetingPlanCoachingPath `json:"paths"`
+
+	// WatchFor The move that says it is going wrong.
+	WatchFor string `json:"watch_for"`
+}
+
+// MeetingPlanCoachingPath defines model for MeetingPlanCoachingPath.
+type MeetingPlanCoachingPath struct {
+	Label string `json:"label"`
+	Play  string `json:"play"`
+}
+
+// MeetingPlanObjective The outcome to earn, and the reminder not to force it.
+type MeetingPlanObjective struct {
+	// Caveat The one-line "do not force this" reminder. Fixed product copy keyed to the meeting type, not read from the records, which is why it carries no evidence of its own.
+	Caveat   string                    `json:"caveat"`
+	Sentence OrganizationBriefSentence `json:"sentence"`
+}
+
+// MeetingPlanQuestion One question to ask, with why it matters here and what the answer sounds like. Evidence is required: a question no record motivated is a question that would read the same on any account, which is the failure this whole shape exists to prevent.
+type MeetingPlanQuestion struct {
+	Ask       string                      `json:"ask"`
+	Evidence  []OrganizationBriefEvidence `json:"evidence"`
+	ListenFor string                      `json:"listen_for"`
+	Why       string                      `json:"why"`
+}
+
+// MeetingPlanReadiness How much of a preparation this plan actually is, so a surface can decide whether to lead
+// with it.
+//
+// `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+// for. Useful, but not yet the thing a rep walks in holding.
+// `prepared` — it also carries the risk with its response, at least two likely asks and at
+// least three questions. A client leads with the plan at `prepared` and keeps the cited
+// summary in front at `outline`, so a half-built plan never displaces what already worked.
+type MeetingPlanReadiness string
+
+// MeetingPlanResponse What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+type MeetingPlanResponse struct {
+	Avoid string `json:"avoid"`
+	Say   string `json:"say"`
+	Show  string `json:"show"`
+}
+
+// MeetingPlanRisk The one thing that can change this conversation, and what to do when it does.
+type MeetingPlanRisk struct {
+	// ResponsePlan What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+	ResponsePlan MeetingPlanResponse       `json:"response_plan"`
+	Text         OrganizationBriefSentence `json:"text"`
+}
+
+// MeetingPlanScenario What the meeting may turn into, and what to do if it does.
+type MeetingPlanScenario struct {
+	Evidence []OrganizationBriefEvidence `json:"evidence"`
+	Label    string                      `json:"label"`
+	Play     string                      `json:"play"`
+}
+
+// MeetingPlanTier A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+type MeetingPlanTier string
+
+// MeetingPlanType defines model for MeetingPlanType.
+type MeetingPlanType struct {
+	// Confidence A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+	Confidence MeetingPlanTier `json:"confidence"`
+
+	// Value What kind of meeting this is, which decides what a good plan for it looks like. `unknown` is a first-class answer rather than a failure: it means the records do not say what this meeting is for, and the plan then opens by asking rather than by guessing.
+	Value MeetingPlanTypeValue `json:"value"`
+}
+
+// MeetingPlanTypeValue What kind of meeting this is, which decides what a good plan for it looks like. `unknown` is a first-class answer rather than a failure: it means the records do not say what this meeting is for, and the plan then opens by asking rather than by guessing.
+type MeetingPlanTypeValue string
+
+// MeetingPlanUnknown defines model for MeetingPlanUnknown.
+type MeetingPlanUnknown struct {
+	// Kind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
+	Kind MeetingPlanUnknownKind `json:"kind"`
+
+	// Question The question to ask in the room that would close this gap.
+	Question string `json:"question"`
+}
+
+// MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
+type MeetingPlanUnknownKind string
 
 // Money Money as integer minor-units + ISO-4217 currency. Never a float.
 type Money struct {
@@ -27833,6 +28162,58 @@ type Team struct {
 	UpdatedAt    *time.Time          `json:"updated_at,omitempty"`
 }
 
+// TeamBoard Who on the team is carrying what. One row per live teammate, plus the work that
+// reached nobody.
+type TeamBoard struct {
+	// AsOf The instant every count below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Members The live human seats sharing a live team with the caller, the caller included,
+	// ordered by display name. Never empty: a caller on no team is their own single
+	// row, because "only you" and "nobody" are different answers and the second reads
+	// as an outage.
+	Members []TeamBoardMember `json:"members"`
+
+	// Truncated True when a count was read to its work bound, so the real figure may be higher
+	// than what is shown. The waiting-customer read scans a bounded number of threads
+	// across the whole installation, so a busy installation reports a floor — and says
+	// so here rather than presenting a floor as a total.
+	Truncated bool `json:"truncated"`
+
+	// Unassigned Three counts of work somebody owes, all read under the CALLER's visibility rather
+	// than the teammate's — so this is how much of their load the reader can see.
+	Unassigned TeamBoardCounts `json:"unassigned"`
+}
+
+// TeamBoardCounts Three counts of work somebody owes, all read under the CALLER's visibility rather
+// than the teammate's — so this is how much of their load the reader can see.
+type TeamBoardCounts struct {
+	// AtRisk Open deals gone quiet or already past their expected close date.
+	AtRisk int `json:"at_risk"`
+
+	// Overdue Open tasks whose due moment has already passed.
+	Overdue int `json:"overdue"`
+
+	// Waiting Customers who wrote and have had no reply, attributed by the record the thread is
+	// filed under: deal, then lead, then person, then organization, first owner found.
+	// The same eligibility the ranked queue applies, so the board and the day agree.
+	Waiting int `json:"waiting"`
+}
+
+// TeamBoardMember One teammate and the work they are answerable for.
+type TeamBoardMember struct {
+	// Counts Three counts of work somebody owes, all read under the CALLER's visibility rather
+	// than the teammate's — so this is how much of their load the reader can see.
+	Counts TeamBoardCounts `json:"counts"`
+
+	// DisplayName The teammate, as the roster names them.
+	DisplayName string `json:"display_name"`
+
+	// UserId Whose row this is. It is what `GET /worklist?owner=` takes, which is the
+	// drill-down the board routes to.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // TeamListResponse defines model for TeamListResponse.
 type TeamListResponse struct {
 	Data []Team   `json:"data"`
@@ -28972,6 +29353,25 @@ type WeeklyReview struct {
 	// It adds nothing: every fact it may state is already in the counts and the lines
 	// beside it, which is what makes the whole lane safe to lose.
 	Narrative *string `json:"narrative,omitempty"`
+
+	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
+	// applied when the review was written.
+	//
+	// ABSENT when the week held a deal that could not be converted — an open deal freezes no
+	// rate, so a currency with no usable rate makes the whole figure unanswerable. A total
+	// covering three of four deals would be a confident number that is quietly short, and
+	// nothing is ever converted at an invented rate of 1. Absent is also the answer when the
+	// installation names no base currency.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// Prior The same rep's previous review, so a reader can see what CHANGED rather than only what
+	// happened. Absent for their first week.
+	//
+	// The counts of a frozen earlier row, not a stored delta: two frozen rows and one
+	// subtraction cannot disagree, and a stored delta could. It is their most recent earlier
+	// review rather than "last week" — a rep with a gap has a previous week that is not seven
+	// days back.
+	Prior *WeeklyReviewPrior `json:"prior,omitempty"`
 }
 
 // WeeklyReviewCounts defines model for WeeklyReviewCounts.
@@ -28986,6 +29386,26 @@ type WeeklyReviewCounts struct {
 	// DealsMoved Deals that changed stage, excluding those that closed.
 	DealsMoved int `json:"deals_moved"`
 	DealsWon   int `json:"deals_won"`
+
+	// LeadsAnsweredInTarget Of those, the ones answered before the first-response target ran out. Read from the
+	// stamps the SLA writer maintained at the time, never recomputed from today's policy —
+	// a week is judged by the target that applied to it.
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+
+	// LeadsBreached And the ones whose target ran out.
+	LeadsBreached int `json:"leads_breached"`
+
+	// LeadsRouted Inbound leads routed to this rep during the week.
+	LeadsRouted int `json:"leads_routed"`
+
+	// MeetingsHeld Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+	// week can be judged by, and counting it would credit a conversation that never occurred.
+	MeetingsHeld int `json:"meetings_held"`
+
+	// MeetingsWithNextStep Of those, the ones that left a task behind against a record the meeting was also filed
+	// under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
+	// is the pattern this figure exists to make visible.
+	MeetingsWithNextStep int `json:"meetings_with_next_step"`
 
 	// ProposalsAccepted Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
 	// `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
@@ -29032,6 +29452,34 @@ type WeeklyReviewDealOutcome string
 type WeeklyReviewIndex struct {
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
+}
+
+// WeeklyReviewPipeline Money the week added to and took out of the pipeline, in one currency.
+type WeeklyReviewPipeline struct {
+	// CreatedMinor Value of the deals opened in the week, converted at the latest rate on or before the
+	// week's end and frozen here.
+	CreatedMinor int64 `json:"created_minor"`
+
+	// Currency The currency the three figures are in, stored beside them: the installation's base
+	// currency is an operator-mutable setting, and re-reading it later would re-label old
+	// reviews with a currency their numbers were never in.
+	Currency string `json:"currency"`
+
+	// LostMinor The same, for deals lost.
+	LostMinor int64 `json:"lost_minor"`
+
+	// WonMinor Value of the deals won in the week, at each deal's own close-time rate — the honest
+	// figure for money that has already moved.
+	WonMinor int64 `json:"won_minor"`
+}
+
+// WeeklyReviewPrior The week before this one, for comparison.
+type WeeklyReviewPrior struct {
+	Counts         WeeklyReviewCounts `json:"counts"`
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Pipeline Absent under the same rule as the current week's.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
 }
 
 // Worklist The rep's day, ranked. One list rather than fourteen lanes, because a reader
@@ -34088,8 +34536,15 @@ type GetWorklistParams struct {
 	// it at any tier: nothing in it belongs to a colleague, which is what unassigned
 	// means. It exists because `mine` is exact — a task with no assignee is no
 	// longer folded into every reader's own queue, so it needs a queue of its own or
-	// the product would have stopped mentioning it. Tasks only: a message has no
-	// assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
+	// the product would have stopped mentioning it.
+	//
+	// It carries unanswered mail too, and that is the case it matters most for. A
+	// message has no assignee, so its owner is the owner of the record it is filed
+	// under — deal, then lead, then person, then organization, first owner found. A
+	// thread no owned record attributes to anybody is the customer nobody is looking
+	// at, which is exactly what this queue is opened to find. Such a message stays
+	// reachable from `mine` as well, on the ground that an unowned customer writing
+	// in is everybody's until somebody takes them.
 	//
 	// WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
 	// going quiet, meetings and duplicate pairs are read under the caller's row
@@ -44092,6 +44547,9 @@ type ServerInterface interface {
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
+	// One row per teammate — who is carrying what, so a lead can see where to help.
+	// (GET /worklist/team)
+	GetTeamBoard(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -47365,6 +47823,12 @@ func (_ Unimplemented) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Requ
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One row per teammate — who is carrying what, so a lead can see where to help.
+// (GET /worklist/team)
+func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71217,6 +71681,28 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetTeamBoard operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamBoard(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -72964,6 +73450,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)
 	})
 
 	return r

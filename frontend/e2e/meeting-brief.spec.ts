@@ -189,6 +189,105 @@ test("AC-meeting-brief-8: a failed read offers the reason and a retry", async ({
   ).toBeVisible();
 });
 
+test.describe("with a preparation plan", () => {
+  test("AC-meeting-brief-12: the outcome to earn leads, and the sections stay", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "plan" });
+    const objective = await boxOf(page, ".panel-accent");
+    const close = await boxOf(page, ".mb-advance");
+    expect(objective.y).toBeLessThan(close.y);
+    // An outline plan ADDS to the brief. The watch-out a reader already had
+    // must still be on the page, not buried behind it.
+    await expect(page.locator(".callout-warn")).toBeVisible();
+  });
+
+  test("AC-meeting-brief-13: the three ways to close sit side by side", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "plan" });
+    const legs = await page.locator(".mb-advance > *").all();
+    expect(legs).toHaveLength(3);
+    const boxes = await Promise.all(legs.map((leg) => leg.boundingBox()));
+    const [first, second, third] = boxes.map(
+      (box) => box as NonNullable<typeof box>,
+    );
+    // Same row: a close plan read as three stacked paragraphs is a list, and
+    // the point of the three is that a reader compares them at a glance.
+    expect(Math.abs(first.y - second.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(second.y - third.y)).toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe("for a lead reading a teammate's meeting", () => {
+  test("AC-meeting-brief-15: the coaching leads, and the rep's own brief is under it", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "manager" });
+    const coach = await boxOf(page, ".panel-accent");
+    const advance = await boxOf(page, ".mb-advance");
+    expect(coach.y).toBeLessThan(advance.y);
+    await expect(
+      page.getByRole("heading", { name: copy("person.meeting.coach.title") }),
+    ).toBeVisible();
+    // It says which view this is: a lead who cannot tell they are reading the
+    // manager view cannot tell what their rep is seeing.
+    await expect(
+      page.getByText(copy("person.meeting.coach.eyebrow")),
+    ).toBeVisible();
+  });
+
+  test("AC-meeting-brief-16: the lead sees every section the rep sees", async ({
+    page,
+  }) => {
+    // Its own page per read. Reopening the drawer over a page that already had
+    // one leaves the first drawer's controls mid-transition, and the animation
+    // guard is right to refuse to measure a box that is still moving.
+    const headingsFor = async (variant: MockApiOptions["meetingBrief"]) => {
+      const own = await page.context().newPage();
+      await own.emulateMedia({ reducedMotion: "reduce" });
+      await mockApi(own, { meetingBrief: variant });
+      await own.goto("/#/contacts/p-anna/meetings");
+      await own
+        .getByRole("button", { name: copy("person.meeting.brief") })
+        .click();
+      await expect(own.locator(DRAWER)).toBeVisible();
+      const headings = await own
+        .locator(".modal-drawer-wide h3")
+        .allTextContents();
+      await own.close();
+      return headings;
+    };
+    const repHeadings = await headingsFor("plan");
+    const leadHeadings = await headingsFor("manager");
+    for (const heading of repHeadings) {
+      expect(leadHeadings, `the lead is missing "${heading}"`).toContain(
+        heading,
+      );
+    }
+  });
+
+  test("AC-meeting-brief-17: a rep sees no coaching on their own meeting", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "plan" });
+    await expect(
+      page.getByText(copy("person.meeting.coach.title")),
+    ).toHaveCount(0);
+  });
+
+  test("AC-meeting-brief-18: the manager view has no accessibility violations", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "manager" });
+    expect(await pageOverflow(page)).toEqual([]);
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -202,6 +301,20 @@ test.describe("on a phone", () => {
     // from the sheet's edge reads as a rendering fault.
     const head = await boxOf(page, ".drawer-head");
     expect(head.x).toBe(drawer.x);
+    expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  test("AC-meeting-brief-14: the close plan stacks on a phone", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "plan" });
+    const legs = await page.locator(".mb-advance > *").all();
+    const boxes = await Promise.all(legs.map((leg) => leg.boundingBox()));
+    const ys = boxes.map((box) => (box as NonNullable<typeof box>).y);
+    // Strictly increasing: three columns in 390px would be 110px each, which is
+    // a column of broken words rather than a plan.
+    expect(ys[1]).toBeGreaterThan(ys[0]);
+    expect(ys[2]).toBeGreaterThan(ys[1]);
     expect(await pageOverflow(page)).toEqual([]);
   });
 

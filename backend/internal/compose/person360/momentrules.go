@@ -216,16 +216,16 @@ func bookMeeting() crmcontracts.PersonMomentAction {
 	}
 }
 
-// oldestOverdueCommitment finds the promise of OURS that has been late longest.
+// latestOverdueCommitment finds the promise of OURS that has been late longest.
 //
 // Oldest rather than newest: the one that has been waiting longest is the one
 // with the most damage already done, and the one a reader would be most
 // embarrassed to discover from the other side.
-func oldestOverdueCommitment(now time.Time, page *crmcontracts.Person360) (crmcontracts.ConversationClaim, bool) {
+func latestOverdueCommitment(now time.Time, page *crmcontracts.Person360) (crmcontracts.ConversationClaim, bool) {
 	if page.Claims == nil {
 		return crmcontracts.ConversationClaim{}, false
 	}
-	var oldest *crmcontracts.ConversationClaim
+	var latest *crmcontracts.ConversationClaim
 	for i := range *page.Claims {
 		claim := &(*page.Claims)[i]
 		if claim.Kind != crmcontracts.CommitmentOurs || claim.Status != crmcontracts.ConversationClaimStatusOpen {
@@ -234,14 +234,14 @@ func oldestOverdueCommitment(now time.Time, page *crmcontracts.Person360) (crmco
 		if !deadline.Passed(claim.DueAt, now) {
 			continue
 		}
-		if oldest == nil || claim.DueAt.Before(*oldest.DueAt) {
-			oldest = claim
+		if latest == nil || claim.DueAt.After(*latest.DueAt) {
+			latest = claim
 		}
 	}
-	if oldest == nil {
+	if latest == nil {
 		return crmcontracts.ConversationClaim{}, false
 	}
-	return *oldest, true
+	return *latest, true
 }
 
 // inboundEvidence names the actual message where the page is showing it, and

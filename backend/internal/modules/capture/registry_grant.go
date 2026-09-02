@@ -298,6 +298,17 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              -- direction.
 		              signature_enrich_enabled = CASE WHEN $7 THEN NULL
 		                                              ELSE capture_connection.signature_enrich_enabled END,
+		              -- A rebind points this row at a DIFFERENT mailbox, and a
+		              -- watch handle names a subscription in the mailbox it was
+		              -- made against. Kept, it would send the next renewal to
+		              -- extend the previous mailbox's subscription — which the
+		              -- app is entitled to do, so it would succeed — leaving the
+		              -- new mailbox with no push at all and nothing failing to
+		              -- say so. The deadline goes with it: a stored deadline for
+		              -- a subscription this row no longer owns keeps the renewal
+		              -- scan away until it lapses.
+		              watch_ref = CASE WHEN $7 THEN NULL ELSE capture_connection.watch_ref END,
+		              watch_expires_at = CASE WHEN $7 THEN NULL ELSE capture_connection.watch_expires_at END,
 		              account_bound_at = CASE WHEN $7 THEN now() ELSE capture_connection.account_bound_at END
 		RETURNING id`,
 		in.provider, in.userID, in.scopes, string(in.ref), in.accountLabel, in.providerScopes, rebound).Scan(&id); err != nil {

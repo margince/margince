@@ -300,6 +300,11 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		waitingDays: days,
 		waitingRank: ordering,
 		occurredAt:  waiting.Since,
+		// Who owes the reply, so the scope filters can judge this row the way
+		// they judge a deal-bearing one. A wait carries no deal on the wire, and
+		// without this it is a row the filters cannot place: a named owner's
+		// queue dropped every one of them.
+		owner: waiting.OwnerID,
 	}
 }
 

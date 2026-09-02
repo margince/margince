@@ -11,7 +11,17 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import { CoachPanel, MeetingPaths } from "./coaching";
 import { BriefHeader, type MeetingFacts, type PreparedFor } from "./header";
+import {
+  AccountArc,
+  AdvancePanel,
+  LikelyAsks,
+  ObjectivePanel,
+  Scenarios,
+  TopRisk,
+  Unknowns,
+} from "./plan";
 import {
   Background,
   BodyPanels,
@@ -59,6 +69,7 @@ export function MeetingBriefView({
   onClose,
   scopeSlot,
   formatWhen,
+  formatDay,
 }: Readonly<{
   state: BriefViewState;
   meeting?: MeetingFacts;
@@ -70,6 +81,7 @@ export function MeetingBriefView({
   // knows what the reader chose.
   scopeSlot?: ReactNode;
   formatWhen?: (utcIso: string) => string;
+  formatDay?: (utcIso: string) => string;
 }>) {
   const t = useT();
   const brief = state.kind === "ready" ? state.brief : undefined;
@@ -109,9 +121,54 @@ export function MeetingBriefView({
             {brief && (
               <div className="mb-stack">
                 <GlanceLine brief={brief} onOpenRecord={onOpenRecord} />
+                {/* The plan leads when the server says it is a preparation.
+                    An `outline` is added ABOVE the sections rather than in
+                    place of them: a half-built plan that hid the risks and
+                    talking points a reader already had would be a regression
+                    wearing new panels. */}
+                {brief.plan?.manager_coaching && (
+                  <>
+                    <CoachPanel
+                      coaching={brief.plan.manager_coaching}
+                      writtenByModel={brief.plan.generated_by === "model"}
+                    />
+                    <MeetingPaths coaching={brief.plan.manager_coaching} />
+                  </>
+                )}
+                {brief.plan && (
+                  <>
+                    <ObjectivePanel
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                    />
+                    <TopRisk plan={brief.plan} onOpenRecord={onOpenRecord} />
+                    <LikelyAsks plan={brief.plan} onOpenRecord={onOpenRecord} />
+                    <Scenarios plan={brief.plan} />
+                    <AccountArc
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                      formatDay={formatDay ?? ((iso) => iso.slice(0, 10))}
+                    />
+                  </>
+                )}
                 <GoalPanel brief={brief} onOpenRecord={onOpenRecord} />
-                <RiskCallout brief={brief} onOpenRecord={onOpenRecord} />
+                {/* The sections' risk list, unless the plan carried the one
+                    risk that matters with what to do about it — two warn
+                    callouts on one surface is no warning at all, and the
+                    plan's is the one a reader can act on. */}
+                {!brief.plan?.top_risk && (
+                  <RiskCallout brief={brief} onOpenRecord={onOpenRecord} />
+                )}
                 <BodyPanels brief={brief} onOpenRecord={onOpenRecord} />
+                {brief.plan && (
+                  <>
+                    <AdvancePanel
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                    />
+                    <Unknowns plan={brief.plan} />
+                  </>
+                )}
                 <Background brief={brief} onOpenRecord={onOpenRecord} />
               </div>
             )}

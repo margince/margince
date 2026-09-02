@@ -70,12 +70,14 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 		grantedBy     ids.UserID
 		credentialRef *string
 		authBytes     []byte
+		watchRef      *string
+		generation    int64
 	)
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT provider, user_id, credential_ref, auth FROM capture_connection
+			SELECT provider, user_id, credential_ref, auth, watch_ref, generation FROM capture_connection
 			WHERE id = $1 AND status = 'connected'`, connectionID).
-			Scan(&name, &grantedBy, &credentialRef, &authBytes)
+			Scan(&name, &grantedBy, &credentialRef, &authBytes, &watchRef, &generation)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("capture: connection %s: %w", connectionID, apperrors.ErrNotFound)
@@ -99,15 +101,46 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 	if err != nil {
 		return err
 	}
-	res, err := watcher.Watch(runCtx, auth, topic)
+	// BY THE HANDLE, where there is one and the connector renews that way.
+	//
+	// Watch has to make sure a subscription exists, and a provider that issues
+	// handles cannot answer that without first finding the one it made — a
+	// paged listing, once per mailbox, every cycle. RenewWatch asks the question
+	// a renewal actually has: extend THIS one.
+	//
+	// The fallback is not a degraded path, it is the first registration and
+	// every connection made before a handle was stored. It is also the recovery
+	// path, which is where a listing belongs.
+	res, err := renewOrRegisterWatch(runCtx, c, watcher, auth, topic, watchRef)
 	if err != nil {
 		return err
 	}
+	// FENCED ON THE GENERATION THE READ SAW. The connector call above is a round
+	// trip, and a rebind can commit inside it — pointing the row at a different
+	// mailbox and clearing the handle on the way past. Unfenced, this write puts
+	// the OLD mailbox's subscription back, which is the reset undone by a
+	// renewal that was already in flight when it happened. A rebind bumps the
+	// generation, so a stale renewal matches nothing and writes nothing; the
+	// scan picks the row up again on its own with no handle to renew by, and
+	// registers.
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			UPDATE capture_connection SET watch_expires_at = $2
-			WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`,
-			connectionID, res.ExpiresAt)
+			UPDATE capture_connection SET watch_expires_at = $2, watch_ref = NULLIF($3, '')
+			WHERE id = $1 AND status = 'connected' AND archived_at IS NULL AND generation = $4`,
+			connectionID, res.ExpiresAt, res.Ref, generation)
 		return err
 	})
+}
+
+// renewOrRegisterWatch extends the subscription this connection already holds,
+// or registers one when it holds none.
+func renewOrRegisterWatch(
+	ctx context.Context, c connector.Connector, watcher connector.Watcher,
+	auth connector.Auth, topic string, ref *string,
+) (connector.WatchResult, error) {
+	renewer, renews := c.(connector.WatchRenewer)
+	if !renews || ref == nil || *ref == "" {
+		return watcher.Watch(ctx, auth, topic)
+	}
+	return renewer.RenewWatch(ctx, auth, topic, *ref)
 }

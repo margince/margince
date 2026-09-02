@@ -159,3 +159,103 @@ export const briefScoped: MeetingBrief = {
     key: "RETRO",
   },
 };
+
+// A brief carrying the deterministic preparation plan.
+//
+// `outline` rather than `prepared`: this plan has an objective, an arc and an
+// advance but no risk with a response and no ranked questions, which is exactly
+// what a deployment with no model lane produces. The drawer must add it ABOVE
+// the sections rather than in place of them, and this fixture is what proves it.
+export const briefWithPlan: MeetingBrief = {
+  ...briefReady,
+  plan: {
+    generated_by: "deterministic",
+    readiness: "outline",
+    meeting_type: { value: "commercial", confidence: "high" },
+    objective: {
+      sentence: {
+        text: "Leave with Anna's answer on: the depot-by-depot rollout plan.",
+        nature: "recommendation",
+        evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+      },
+      caveat: "Do not concede on price before the value is agreed.",
+    },
+    opening: {
+      text: "Open on what has changed since you last spoke, before proposing anything.",
+      nature: "recommendation",
+      evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+    },
+    likely_asks: [],
+    questions: [],
+    scenarios: [],
+    account_arc: [
+      {
+        from: "2026-04-02T09:00:00Z",
+        to: "2026-04-19T09:00:00Z",
+        title: "Depot survey",
+        summary: {
+          text: "2 Apr–19 Apr: 6 conversations, on Depot survey.",
+          evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+        },
+      },
+    ],
+    advance: {
+      minimum: {
+        text: "The remaining gap between our number and theirs, stated.",
+        nature: "recommendation",
+        evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+      },
+      best: {
+        text: "Agreed terms and a signature date.",
+        nature: "recommendation",
+        evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+      },
+      fallback: {
+        text: "What has to be true for them to sign, and by when.",
+        nature: "recommendation",
+        evidence: [{ entity_type: "activity", entity_id: ACTIVITY }],
+      },
+    },
+    unknowns: [
+      {
+        kind: "decision_route_not_captured",
+        question: "Who else has to agree before this can go ahead?",
+      },
+    ],
+  },
+};
+
+// The same brief a lead sees.
+//
+// Built by ADDING one object to the rep's, never by writing a second plan: the
+// server builds the base coaching-blind and attaches the layer over it, and a
+// fixture assembled the other way would let this surface's tests pass while
+// production showed a lead different facts.
+export const briefManager: MeetingBrief = {
+  ...briefWithPlan,
+  plan: {
+    ...(briefWithPlan.plan as NonNullable<MeetingBrief["plan"]>),
+    manager_coaching: {
+      focus:
+        "Whether the rep leaves with the outcome the plan names, or settles for a pleasant conversation.",
+      failure_mode:
+        "Defending the history instead of owning it and naming a date.",
+      listen_for:
+        "A quantified consequence in their words, and who owns it today.",
+      watch_for:
+        "The rep answering before asking. Count the questions they get to.",
+      intervene_if:
+        "A date, a price or a resource is promised that nobody on our side has agreed.",
+      paths: [
+        {
+          label: "It becomes a price negotiation",
+          play: "Anchor on the outcome agreed, not the list.",
+        },
+        {
+          label: "A new stakeholder appears",
+          play: "Stop selling and qualify them.",
+        },
+      ],
+    },
+  },
+};

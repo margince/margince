@@ -225,6 +225,26 @@ export function formatNumber(value: number, locale: Locale): string {
 }
 
 /**
+ * A CHANGE rather than a quantity: "+3", "-2", "±0".
+ *
+ * The sign is the whole point, so it is always shown — a bare "3" beside last
+ * week's figure leaves a reader to work out which direction it moved, and half
+ * of them will guess. Intl's `signDisplay: "always"` renders the plus and the
+ * locale's own minus sign, which is not the ASCII hyphen in every locale.
+ *
+ * Zero prints as "±0" rather than "+0": a week that stayed exactly level is a
+ * real answer, and dressing it as an increase is a small lie repeated weekly.
+ */
+export function formatSignedNumber(value: number, locale: Locale): string {
+  if (value === 0) {
+    return "±0";
+  }
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    signDisplay: "always",
+  }).format(value);
+}
+
+/**
  * A number that NAMES something rather than measuring it — a version, a
  * revision, an invoice number, a record's own number.
  *
