@@ -5,14 +5,26 @@ package meetingbrief
 
 // The coaching layer, for a lead reading a teammate's meeting.
 //
-// TWO PROPERTIES HOLD THIS TOGETHER, and they are the whole design.
+// WHAT THIS LAYER IS, stated exactly, because the loose version of it is wrong.
 //
-// It adds a READING and never a fact. The base plan is built once, blind to who
-// is reading it, and coaching is attached over that finished plan — so a lead
-// and their rep are looking at the same meeting, and the lead sees one more
-// thing. Generating a second plan for the lead would let the two drift, and a
-// lead coaching from facts their rep cannot see is coaching about a different
-// meeting.
+// Coaching introduces NO NEW READ. The brief a lead gets is the brief that lead
+// would have got anyway — assembled under their own grants, their own row scope
+// and their own baseline — with one more object attached to it. Nothing here
+// widens what they may see, and nothing here is generated from a second, richer
+// assembly.
+//
+// It is NOT true that a lead and their rep see the same brief. The whole
+// surface is caller-scoped on purpose: `readLastSpoke` keys "since you last
+// spoke" on the reader's own id, the history is filtered through the reader's
+// activity scope, and a team-scoped lead reaches rows an own-scoped rep does
+// not. Two people reading one meeting get two briefs, and that was true before
+// this file existed. Claiming otherwise would be claiming this layer flattens a
+// difference it does not touch.
+//
+// What IS held: coaching is attached over the finished plan rather than
+// generated beside it, so the lead's coaching is a reading of the lead's own
+// brief. A second assembly for the lead would let the two drift apart — the
+// coaching would start describing a meeting the plan under it did not.
 //
 // Who gets it is the SERVER's decision. No client asks for it, because a client
 // that could ask could ask on anybody's behalf. The rule is the one the tree
@@ -74,10 +86,16 @@ func (s *Service) coachingProjected(ctx context.Context, seats []ids.UUID) (bool
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		// RequireCoach admits only a human, so this is unreachable through the
-		// gate above. Refusing rather than guessing: a coaching decision with
-		// no identity behind it is one nobody can account for.
-		return false, nil
+		// A principal that cleared RequireCoach and carries no seated identity
+		// is malformed: the role keys came from somewhere, and the user id
+		// should have come from the same place. It FAILS rather than reading as
+		// "not coached", because a broken authenticated identity that answers
+		// like an ordinary rep is one nobody ever looks into.
+		//
+		// notices.RaiseCoachNotice refuses the same shape for the same reason.
+		return false, fmt.Errorf(
+			"meeting brief: a principal cleared the coaching gate with no seated user: %w",
+			apperrors.ErrPermissionDenied)
 	}
 	for _, seat := range seats {
 		if seat == ids.UUID(actor.UserID) {
@@ -99,13 +117,15 @@ func (s *Service) coachingProjected(ctx context.Context, seats []ids.UUID) (bool
 
 // coachingFor reads the finished plan and says how this meeting could go wrong.
 //
-// It takes the plan rather than the Input on purpose: everything it says is a
-// reading of what the rep is already being told, so there is no path by which
-// it could introduce a fact the rep's own brief does not carry.
-func coachingFor(plan Plan, in Input) *Coaching {
+// The PLAN, and nothing else. It used to take the Input beside it and read one
+// field off it, which is one field more than it needs and one more than it can
+// justify: everything coaching says is a reading of what this reader is already
+// being told, so the thing it reads should be exactly that. A coaching layer
+// with its own source could say something the brief under it does not support.
+func coachingFor(plan Plan) *Coaching {
 	coaching := &Coaching{
 		Focus:       coachingFocus(plan),
-		FailureMode: coachingFailureMode(plan, in),
+		FailureMode: coachingFailureMode(plan),
 		ListenFor:   "A quantified consequence in their words, and who owns it today.",
 		WatchFor:    coachingWatchFor(plan),
 		InterveneIf: "A date, a price or a resource is promised that nobody on our side has agreed.",
@@ -139,7 +159,7 @@ func coachingFocus(plan Plan) string {
 
 // coachingFailureMode names the likeliest way THIS meeting goes wrong, read off
 // what the plan already found.
-func coachingFailureMode(plan Plan, in Input) string {
+func coachingFailureMode(plan Plan) string {
 	switch {
 	case plan.TopRisk != nil:
 		return "Defending the history instead of owning it and naming a date."
@@ -147,7 +167,7 @@ func coachingFailureMode(plan Plan, in Input) string {
 		return "Answering the asks one by one and never getting to a question of their own."
 	case plan.Type.Value == crmcontracts.MeetingPlanTypeUnknown:
 		return "Assuming what the meeting is for, and finding out at the end that it was not."
-	case len(in.Commitments) == 0:
+	case len(plan.Arc) == 0:
 		return "Filling the silence with product rather than asking what is actually going on."
 	default:
 		return "Proving coverage too early, before the problem is agreed."

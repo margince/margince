@@ -87,8 +87,65 @@ func TestALeadReadingATeammatesMeetingIsCoached(t *testing.T) {
 	}
 }
 
-// THE honesty rule. The lead sees one more thing, not different things.
-func TestTheLeadAndTheRepReadTheSameMeeting(t *testing.T) {
+// Coaching introduces no new READ: the same reader, coached and uncoached, gets
+// the same brief plus one object.
+//
+// This is deliberately NOT "a lead and their rep see the same brief". They do
+// not, and the surface is built that way: readLastSpoke keys the baseline on
+// the reader's own id, the history runs through the reader's own scope, and a
+// team-scoped lead reaches rows an own-scoped rep does not. A test asserting
+// the wider claim passed only because the fixture handed both readers identical
+// permissions and no reader-specific history — it agreed with itself.
+//
+// So this holds the claim that IS this file's to make, by reading twice as one
+// person: once with the coaching seam wired and once without.
+func TestCoachingAddsAnObjectAndChangesNothingElse(t *testing.T) {
+	e := Setup(t)
+	meeting := coachingRoom(t, e, e.Rep2)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, coachPerms())
+
+	coached, err := meetingBriefService(e).Get(ctx, meeting)
+	if err != nil {
+		t.Fatalf("the coached read: %v", err)
+	}
+	plain, err := meetingBriefServiceWithoutTeammates(e).Get(ctx, meeting)
+	if err != nil {
+		t.Fatalf("the uncoached read: %v", err)
+	}
+	if coached.Plan == nil || plain.Plan == nil {
+		t.Fatal("a read came back with no plan")
+	}
+	if coached.Plan.ManagerCoaching == nil {
+		t.Fatal("the coached read was not coached, so this proves nothing")
+	}
+	if plain.Plan.ManagerCoaching != nil {
+		t.Fatal("the uncoached read was coached")
+	}
+
+	// Everything but the coaching, compared by walking the struct — a field
+	// added later is covered without anyone remembering to add it here.
+	coachedPlan, plainPlan := *coached.Plan, *plain.Plan
+	coachedPlan.ManagerCoaching, plainPlan.ManagerCoaching = nil, nil
+	shape := reflect.TypeOf(coachedPlan)
+	left, right := reflect.ValueOf(coachedPlan), reflect.ValueOf(plainPlan)
+	for i := range shape.NumField() {
+		if !reflect.DeepEqual(left.Field(i).Interface(), right.Field(i).Interface()) {
+			t.Errorf("wiring coaching changed %s; it must attach an object and read nothing new",
+				shape.Field(i).Name)
+		}
+	}
+	if !reflect.DeepEqual(coached.Sections, plain.Sections) {
+		t.Error("wiring coaching changed the sections")
+	}
+	if !reflect.DeepEqual(coached.Omitted, plain.Omitted) {
+		t.Error("wiring coaching changed what was withheld")
+	}
+}
+
+// A lead and their rep are BOTH served, and only the lead is coached. What
+// differs between their briefs beyond that is the caller-scoping every read on
+// this surface already has, which this deliberately does not assert.
+func TestOnlyTheLeadIsCoachedOnTheSameMeeting(t *testing.T) {
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	service := meetingBriefService(e)
@@ -105,26 +162,10 @@ func TestTheLeadAndTheRepReadTheSameMeeting(t *testing.T) {
 		t.Fatal("a read came back with no plan")
 	}
 	if lead.Plan.ManagerCoaching == nil {
-		t.Fatal("the lead was not coached, so this proves nothing about the facts")
+		t.Error("the lead was not coached")
 	}
 	if rep.Plan.ManagerCoaching != nil {
 		t.Error("the rep was coached on their own meeting")
-	}
-
-	// Every field EXCEPT the coaching, compared by walking the struct — a
-	// field added later is covered without anyone remembering to add it here.
-	leadPlan, repPlan := *lead.Plan, *rep.Plan
-	leadPlan.ManagerCoaching, repPlan.ManagerCoaching = nil, nil
-	shape := reflect.TypeOf(leadPlan)
-	leadValue, repValue := reflect.ValueOf(leadPlan), reflect.ValueOf(repPlan)
-	for i := range shape.NumField() {
-		name := shape.Field(i).Name
-		if !reflect.DeepEqual(leadValue.Field(i).Interface(), repValue.Field(i).Interface()) {
-			t.Errorf("the lead and the rep disagree about %s; coaching must add a reading, never a fact", name)
-		}
-	}
-	if !reflect.DeepEqual(lead.Sections, rep.Sections) {
-		t.Error("the lead and the rep were shown different sections")
 	}
 }
 

@@ -95,12 +95,21 @@ a brief and a brief is what they may have. A membership check that BREAKS does
 fail the read, because a broken check answering "no coaching" is
 indistinguishable from a correct denial.
 
-**Coaching adds a reading, never a fact.** The base plan is built once, blind to
-who is reading it, and the layer is attached over the finished plan — so a lead
-and their rep are looking at the same meeting and the lead is looking at one
-more thing. `TestTheLeadAndTheRepReadTheSameMeeting` walks the plan struct
-reflectively and compares every field but the coaching, so a field added later
-is covered without anyone remembering to add it there.
+**Coaching introduces no new read.** The brief a lead gets is the brief that
+lead would have got anyway — under their own grants, their own row scope and
+their own baseline — with one more object attached.
+`TestCoachingAddsAnObjectAndChangesNothingElse` reads twice as ONE person, once
+with the membership seam wired and once without, and walks the plan struct
+reflectively to compare every field but the coaching.
+
+It is **not** true that a lead and their rep see the same brief, and nothing here
+tries to make it true. This surface is caller-scoped throughout: `readLastSpoke`
+keys "since you last spoke" on the reader's own id, the history runs through the
+reader's own activity scope, and a team-scoped lead reaches rows an own-scoped
+rep does not. Two people reading one meeting get two briefs, which was true
+before coaching existed. What coaching adds is a reading of the reader's OWN
+brief — attached over the finished plan rather than generated beside it, so the
+coaching cannot start describing a meeting the plan under it does not support.
 
 ## How the evidence is read
 

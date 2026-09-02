@@ -219,6 +219,10 @@ scoped to a team, but the grants still come from the role.)
    drift. Membership resolves through `team_membership` and live teams only; the parent hierarchy
    is not walked, matching row scope.
 
+   Neither surface WIDENS what the asker may read. The coaching layer on a meeting brief attaches
+   to the brief that lead would have got anyway — a lead and their rep still see two differently
+   scoped briefs of one meeting, because every read here is caller-scoped.
+
 ## A user with no role sees nothing
 
 `role_assignment` links a user to a role. **A user with zero role assignments has zero object

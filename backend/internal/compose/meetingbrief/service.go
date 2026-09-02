@@ -165,7 +165,7 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		return crmcontracts.MeetingBrief{}, nil, err
 	}
 	if coached {
-		plan.ManagerCoaching = wireCoaching(coachingFor(written.plan, in))
+		plan.ManagerCoaching = wireCoaching(coachingFor(written.plan))
 	}
 	var filed *ids.UUID
 	if in.Project != nil {
