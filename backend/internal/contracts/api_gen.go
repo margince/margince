@@ -12362,6 +12362,7 @@ const (
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
 	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
+	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the WorklistReachSource enum.
@@ -12406,6 +12407,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceSyncHealth:
 		return true
 	case WorklistReachSourceTask:
+		return true
+	case WorklistReachSourceUndelivered:
 		return true
 	default:
 		return false
@@ -17244,6 +17247,14 @@ type CompanyProfile struct {
 
 	// LegalName The registered legal entity, when it differs from display_name.
 	LegalName *string `json:"legal_name,omitempty"`
+
+	// LogoUrl Where to fetch the installation's own company logo — the same `getOrganizationLogo`
+	// path `Organization.logo_url` carries for that record, cookie-authenticated and
+	// same-origin. The mark is whichever one the company is wearing: the one a website
+	// read resolved from its own site, or the one a person uploaded through
+	// `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
+	// is never an error: a client draws the deterministic monogram then.
+	LogoUrl *string `json:"logo_url,omitempty"`
 
 	// MinimumComplete True when display_name, offer_summary and icp are confirmed.
 	MinimumComplete *bool `json:"minimum_complete,omitempty"`
@@ -30912,6 +30923,11 @@ type GetCompanyContextParams struct {
 	Scopes *string `form:"scopes,omitempty" json:"scopes,omitempty"`
 }
 
+// UploadCompanyLogoMultipartBody defines parameters for UploadCompanyLogo.
+type UploadCompanyLogoMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // StartCompanySiteReadParams defines parameters for StartCompanySiteRead.
 type StartCompanySiteReadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -34822,6 +34838,9 @@ type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
 
 // PutCompanyJSONRequestBody defines body for PutCompany for application/json ContentType.
 type PutCompanyJSONRequestBody = CompanyProfileInput
+
+// UploadCompanyLogoMultipartRequestBody defines body for UploadCompanyLogo for multipart/form-data ContentType.
+type UploadCompanyLogoMultipartRequestBody UploadCompanyLogoMultipartBody
 
 // StartCompanySiteReadJSONRequestBody defines body for StartCompanySiteRead for application/json ContentType.
 type StartCompanySiteReadJSONRequestBody = StartCompanySiteReadRequest
@@ -43375,6 +43394,12 @@ type ServerInterface interface {
 	// Get the effective server-side company-context rollout capability.
 	// (GET /company/context/capabilities)
 	GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request)
+	// Take the installation's own company mark off the record.
+	// (DELETE /company/logo)
+	DeleteCompanyLogo(w http.ResponseWriter, r *http.Request)
+	// Replace the installation's own company mark with an uploaded image.
+	// (POST /company/logo)
+	UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
 	// Start an optional progressive website read before the anchor company exists.
 	// (POST /company/site-reads)
 	StartCompanySiteRead(w http.ResponseWriter, r *http.Request, params StartCompanySiteReadParams)
@@ -45397,6 +45422,18 @@ func (_ Unimplemented) GetCompanyContext(w http.ResponseWriter, r *http.Request,
 // Get the effective server-side company-context rollout capability.
 // (GET /company/context/capabilities)
 func (_ Unimplemented) GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take the installation's own company mark off the record.
+// (DELETE /company/logo)
+func (_ Unimplemented) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the installation's own company mark with an uploaded image.
+// (POST /company/logo)
+func (_ Unimplemented) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52570,6 +52607,46 @@ func (siw *ServerInterfaceWrapper) GetCompanyContextCapabilities(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCompanyContextCapabilities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCompanyLogo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadCompanyLogo(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -72348,6 +72425,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/company/context/capabilities", wrapper.GetCompanyContextCapabilities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/company/logo", wrapper.DeleteCompanyLogo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/company/logo", wrapper.UploadCompanyLogo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads", wrapper.StartCompanySiteRead)

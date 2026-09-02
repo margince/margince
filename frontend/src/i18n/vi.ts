@@ -184,6 +184,8 @@ export const vi = {
   "shell.aside.show": "Hiện cột ngữ cảnh",
   "shell.skipToContent": "Bỏ qua tới nội dung",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "Trang chủ {company}, vận hành bởi Margince",
+  "shell.poweredBy": "Vận hành bởi Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Tìm kiếm mọi thứ…",
   "shell.breadcrumbAria": "Đường dẫn",
@@ -5840,6 +5842,18 @@ export const vi = {
   "settings.companyTrust":
     "Chỉ tri thức đã xác nhận — văn bản website không bao giờ trở thành chỉ dẫn.",
   "settings.companyConfirmed": "nhận định đã xác nhận",
+  "settings.companyMark": "Biểu trưng công ty",
+  "settings.companyMarkPresent":
+    "Hiện ở mọi nơi công ty này xuất hiện, kể cả đầu thanh bên.",
+  "settings.companyMarkNone":
+    "Chưa có biểu trưng nên chữ viết tắt đứng thay. Một lượt đọc website sẽ điền vào, hoặc bạn thêm ở đây.",
+  "settings.companyMarkAdd": "Thêm biểu trưng",
+  "settings.companyMarkReplace": "Thay",
+  "settings.companyMarkRemove": "Gỡ",
+  "settings.companyMarkPick": "Biểu trưng công ty",
+  "settings.companyMarkHint":
+    "PNG, JPEG, GIF, WebP, ICO hoặc SVG. Ảnh được cắt vuông và thu nhỏ khi tải lên; biểu trưng bạn chọn giữ nguyên cho tới khi bạn gỡ.",
+  "settings.companyMarkEmpty": "Kéo ảnh vào đây, hoặc chọn tệp",
   "settings.companyWebsite": "Website công khai của công ty",
   "settings.companyWebsiteHint":
     "Website công khai mà mỗi lần đọc website đều bắt đầu từ đó.",

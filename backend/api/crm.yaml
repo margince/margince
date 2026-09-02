@@ -8550,6 +8550,85 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /company/logo:
+    post:
+      tags: [Organizations]
+      operationId: uploadCompanyLogo
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      # A person choosing their own company's face. The agent path to this field is the
+      # website read, which resolves a mark from the site rather than being handed one.
+      x-agent-access: human-only
+      summary: Replace the installation's own company mark with an uploaded image.
+      description: |
+        Multipart upload. The image is re-encoded to the same square PNG a resolved mark is
+        normalized to, so what is served from `logo_url` is always this origin's own bytes
+        and never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
+        anything that will not decode is refused as 415.
+
+        The upload is a HUMAN write and takes precedence: while it stands, a website read
+        resolving a different mark leaves it alone. `DELETE` gives the field back — the
+        record returns to its monogram and the next read may resolve a mark again.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: The company, carrying the `logo_url` the upload now answers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyProfile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No company saved yet — there is no record to give a mark to.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415':
+          description: The upload is not an image this server can decode and re-encode.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Organizations]
+      operationId: deleteCompanyLogo
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Take the installation's own company mark off the record.
+      description: |
+        The record goes back to its deterministic monogram and the stored object is
+        collected. It also gives the field back: a person's mark is what holds a website
+        read off, so a company with no mark can be given one by the next read.
+
+        Removing a mark the installation never had is not an error — the outcome the
+        caller asked for is the outcome they get.
+      responses:
+        '200':
+          description: The company, with no `logo_url`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyProfile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No company saved yet.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /company/context/capabilities:
     get:
       tags: [Organizations, AI]
@@ -30731,6 +30810,16 @@ components:
         organization_id: { type: string, format: uuid, description: The anchor organization this profile belongs to. }
         display_name: { type: string, minLength: 1, description: What the company is called day to day. }
         website: { type: [string, 'null'], description: 'The company''s own domain (acme.com) — stored as its primary domain, the same handle a read-back resolves organizations by. A full URL is accepted on write and reduced to its domain.' }
+        logo_url:
+          type: [string, 'null']
+          readOnly: true
+          description: |
+            Where to fetch the installation's own company logo — the same `getOrganizationLogo`
+            path `Organization.logo_url` carries for that record, cookie-authenticated and
+            same-origin. The mark is whichever one the company is wearing: the one a website
+            read resolved from its own site, or the one a person uploaded through
+            `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
+            is never an error: a client draws the deterministic monogram then.
         legal_name: { type: [string, 'null'], description: 'The registered legal entity, when it differs from display_name.' }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
@@ -34660,7 +34749,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice, introduction_request, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer

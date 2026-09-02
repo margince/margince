@@ -178,6 +178,8 @@ export const de = {
   "shell.aside.show": "Kontextspalte einblenden",
   "shell.skipToContent": "Zum Inhalt springen",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "{company} Startseite, betrieben mit Margince",
+  "shell.poweredBy": "Betrieben mit Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Alles durchsuchen…",
   "shell.breadcrumbAria": "Navigationspfad",
@@ -5897,6 +5899,18 @@ export const de = {
   "settings.companyTrust":
     "Nur bestätigtes Wissen — Website-Texte werden nie zu Anweisungen.",
   "settings.companyConfirmed": "bestätigte Aussagen",
+  "settings.companyMark": "Firmenzeichen",
+  "settings.companyMarkPresent":
+    "Wird überall dort gezeigt, wo diese Firma auftaucht, auch oben in der Seitenleiste.",
+  "settings.companyMarkNone":
+    "Noch kein Zeichen, deshalb stehen die Initialen dafür. Ein Website-Auslesen füllt das, oder Sie laden hier eines hoch.",
+  "settings.companyMarkAdd": "Zeichen hinzufügen",
+  "settings.companyMarkReplace": "Ersetzen",
+  "settings.companyMarkRemove": "Entfernen",
+  "settings.companyMarkPick": "Firmenzeichen",
+  "settings.companyMarkHint":
+    "PNG, JPEG, GIF, WebP, ICO oder SVG. Beim Hochladen wird es quadratisch zugeschnitten und verkleinert; ein selbst gewähltes Zeichen bleibt, bis Sie es entfernen.",
+  "settings.companyMarkEmpty": "Bild hierher ziehen oder Datei auswählen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
   "settings.companyWebsiteHint":
     "Die öffentliche Website, von der jede Website-Lesung ausgeht.",

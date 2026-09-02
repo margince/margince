@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Menu, X } from "lucide-react";
 import {
   type KeyboardEvent,
@@ -10,10 +9,10 @@ import {
   useRef,
   useState,
 } from "react";
-import type { components } from "../api/schema";
-import { Button, Modal } from "../design-system/atoms";
+import { Avatar, Button, Modal } from "../design-system/atoms";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
+import { useCompany } from "../screens/onboarding";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settings";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
@@ -48,8 +47,6 @@ import { useScrollMemory } from "./scrollmemory";
 import { TopBar } from "./topbar";
 import { usePhoneViewport } from "./viewport";
 import "./shell.css";
-
-type CompanyProfile = components["schemas"]["CompanyProfile"];
 
 // The app shell: one sidebar against the left edge of the viewport, and the
 // content beside it. Collapsed the sidebar is the canonical 64px rail WDS-NAV-1
@@ -98,23 +95,56 @@ function writeStored(key: string, value: string): void {
 function BrandBlock() {
   const t = useT();
   // The installation's own organization (A107/ADR-0061: one installation, one
-  // organization). Read from the cache the onboarding gate already filled
-  // rather than observing ["company"] again: a second observer on that entry
-  // re-triggers the gate's fetch and walks the app back through its splash.
-  // The gate guarantees the profile is present before the shell mounts.
-  // Absent, the block shows the product name only — a company name is never
-  // invented to fill the line.
-  const installation =
-    useQueryClient().getQueryData<CompanyProfile | null>(["company"])
-      ?.display_name || undefined;
+  // organization), OBSERVED on the entry the onboarding gate already filled.
+  // A disabled observer: it never fetches, so it cannot re-trigger the gate's
+  // read and walk the app back through its splash, but it does re-render when
+  // the company card writes a new mark into the entry — a plain cache peek
+  // left the rail wearing the old face until something else re-rendered it.
+  const installation = useCompany(false).data ?? undefined;
+  // Whose product this is, above whose product it runs on. The reader works
+  // for the company named here and not for us, so the company is the heading
+  // and the product is the line under it.
+  //
+  // Absent profile — the shell mounted before onboarding described anybody —
+  // the block falls back to the product's own mark and name. A company name is
+  // never invented to fill the line.
+  if (!installation) {
+    return (
+      <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
+        <span className="ws-chip">
+          <Logomark />
+        </span>
+        <span className="ws-name">
+          <b>{t("shell.logoAria")}</b>
+        </span>
+      </a>
+    );
+  }
   return (
-    <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
-      <span className="ws-chip">
-        <Logomark />
+    <a
+      className="ws"
+      href="#/home"
+      aria-label={t("shell.companyLogoAria", {
+        company: installation.display_name,
+      })}
+    >
+      {/* The mark the onboarding website read resolved from the company's own
+          site, in the slot the product's mark holds otherwise — one slot, so the
+          brand block does not move when onboarding finishes and so the rail's
+          own rules about the mark have one thing to name. Avatar draws its
+          deterministic monogram underneath, and a company whose site declared no
+          icon has a face rather than a gap. */}
+      <span className="ws-chip ws-chip-company">
+        <Avatar
+          identity={installation.organization_id}
+          name={installation.display_name}
+          src={installation.logo_url}
+          shape="organization"
+        />
       </span>
       <span className="ws-name">
-        <b>{t("shell.logoAria")}</b>
-        {installation && <span className="ws-org">{installation}</span>}
+        <b>{installation.display_name}</b>
+        <span className="ws-org">{t("shell.poweredBy")}</span>
       </span>
     </a>
   );

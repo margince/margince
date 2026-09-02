@@ -527,6 +527,14 @@ func (stubs) GetCompanyContextCapabilities(w nethttp.ResponseWriter, r *nethttp.
 	httperr.NotImplemented(w, r, "GetCompanyContextCapabilities")
 }
 
+func (stubs) DeleteCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeleteCompanyLogo")
+}
+
+func (stubs) UploadCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UploadCompanyLogo")
+}
+
 func (stubs) StartCompanySiteRead(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.StartCompanySiteReadParams) {
 	httperr.NotImplemented(w, r, "StartCompanySiteRead")
 }

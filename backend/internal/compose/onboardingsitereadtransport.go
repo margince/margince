@@ -154,7 +154,7 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 	// transaction that failed behind one would leave the anchor — or the dossier
 	// — pointing at bytes nothing can serve. The committed row no longer names
 	// these, and no record ever did.
-	deleteUnreferencedLogo(r.Context(), e.blob, e.logger(), ids.UUID(readID), unadoptedLogo)
+	deleteUnreferencedLogo(r.Context(), e.blob, e.logger(), "read "+ids.UUID(readID).String(), unadoptedLogo)
 	httperr.WriteJSON(w, http.StatusOK, toContractCompany(company))
 }
 

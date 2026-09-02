@@ -185,6 +185,8 @@ export const en = {
   "shell.aside.show": "Show the context panel",
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
+  "shell.companyLogoAria": "{company} home, powered by Margince",
+  "shell.poweredBy": "Powered by Margince",
   "shell.alpha": "Alpha",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
@@ -5946,6 +5948,18 @@ export const en = {
   "settings.companyTrust":
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
+  "settings.companyMark": "Company mark",
+  "settings.companyMarkPresent":
+    "Shown wherever this company appears, including the top of the sidebar.",
+  "settings.companyMarkNone":
+    "No mark yet, so the initials stand in. A website read fills this in, or add one here.",
+  "settings.companyMarkAdd": "Add a mark",
+  "settings.companyMarkReplace": "Replace",
+  "settings.companyMarkRemove": "Remove",
+  "settings.companyMarkPick": "Company mark",
+  "settings.companyMarkHint":
+    "PNG, JPEG, GIF, WebP, ICO or SVG. It is squared and resized on upload, and a mark you choose stays until you remove it.",
+  "settings.companyMarkEmpty": "Drop an image here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",
