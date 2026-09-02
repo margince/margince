@@ -252,6 +252,13 @@ type reportOutcome struct {
 	// from "masked, none excluded".
 	ExcludedByPermission *int
 	GeneratedAt          time.Time
+	// The reading's frame, resolved in the same transaction that ran it. A
+	// number without them is not wrong so much as unplaceable: the reader
+	// cannot tell which zone cut the day, which currency the money is in, or
+	// where the financial year opens.
+	Timezone             string
+	BaseCurrency         string
+	FiscalYearStartMonth int
 }
 
 type reportEngine struct {
@@ -289,7 +296,7 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 		return reportOutcome{}, err
 	}
 
-	rows, excluded, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, selects, columns)
+	rows, excluded, frame, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, selects, columns)
 	if err != nil {
 		return reportOutcome{}, err
 	}
@@ -309,6 +316,10 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 		Columns:     columns,
 		Rows:        rows,
 		GeneratedAt: time.Now().UTC(),
+
+		Timezone:             frame.Timezone,
+		BaseCurrency:         frame.BaseCurrency,
+		FiscalYearStartMonth: frame.FiscalYearStartMonth,
 	}, nil
 }
 
@@ -362,13 +373,21 @@ func aggregateSelect(spec reportSpec, agg reportAggregate) (name, sel string, er
 	}
 	switch agg.Fn {
 	case aggFnCount:
-		return name, fmt.Sprintf("count(*) AS %s", quoteIdent(name)), nil
+		alias, err := quoteIdent(name)
+		if err != nil {
+			return "", "", err
+		}
+		return name, fmt.Sprintf("count(*) AS %s", alias), nil
 	case aggFnSum, aggFnAvg, aggFnMin, aggFnMax:
 		expr, ok := spec.measures[agg.Field]
 		if !ok {
 			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
 		}
-		return name, fmt.Sprintf("%s(%s) AS %s", agg.Fn, expr, quoteIdent(name)), nil
+		alias, err := quoteIdent(name)
+		if err != nil {
+			return "", "", err
+		}
+		return name, fmt.Sprintf("%s(%s) AS %s", agg.Fn, expr, alias), nil
 	default:
 		return "", "", &FieldNotAllowedError{Field: "fn=" + agg.Fn}
 	}

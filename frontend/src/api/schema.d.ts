@@ -5273,7 +5273,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                /** @description Report key (prebuilt) or a saved-report id. */
+                /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
                 report: string;
             };
             cookie?: never;
@@ -5298,7 +5298,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                /** @description Report key (prebuilt) or a saved-report id. */
+                /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
                 report: string;
             };
             cookie?: never;
@@ -22473,18 +22473,24 @@ export interface components {
             group_by?: string[];
             aggregates?: {
                 /** @enum {string} */
-                fn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
+                fn: "count" | "sum" | "avg" | "min" | "max";
                 field?: string | null;
                 as?: string | null;
             }[];
-            /**
-             * Format: date
-             * @description Snapshot / historical reporting via deal_stage_history.
-             */
-            as_of_date?: string | null;
         };
         ReportResult: {
             report: string;
+            /**
+             * Format: date-time
+             * @description The instant this result was computed. A report is a reading taken at a time, and without it two screens showing different numbers look like a bug rather than two moments.
+             */
+            as_of: string;
+            /** @description The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone. */
+            timezone: string;
+            /** @description The ISO-4217 currency every money column is expressed in. */
+            base_currency: string;
+            /** @description The month the installation's financial year opens, so a quarter in this result can be placed without assuming it starts in January. */
+            fiscal_year_start_month: number;
             /** @description The validated query plan that was executed (shown before/after run). */
             plan: {
                 [key: string]: unknown;
@@ -36849,7 +36855,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Report key (prebuilt) or a saved-report id. */
+                /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
                 report: string;
             };
             cookie?: never;
@@ -36893,7 +36899,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Report key (prebuilt) or a saved-report id. */
+                /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
                 report: string;
             };
             cookie?: never;

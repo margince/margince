@@ -8094,7 +8094,7 @@ paths:
         in: path
         required: true
         schema: { type: string }
-        description: Report key (prebuilt) or a saved-report id.
+        description: A prebuilt report key. Saved reports are not served; a UUID here is refused.
         examples:
           prebuilt: { value: open-deals-per-company }
     post:
@@ -8151,7 +8151,7 @@ paths:
         in: path
         required: true
         schema: { type: string }
-        description: Report key (prebuilt) or a saved-report id.
+        description: A prebuilt report key. Saved reports are not served; a UUID here is refused.
     get:
       tags: [Reports]
       operationId: explainReport
@@ -30924,16 +30924,38 @@ components:
             type: object
             required: [fn]
             properties:
-              fn: { type: string, enum: [count, count_distinct, sum, avg, min, max] }
+              fn: { type: string, enum: [count, sum, avg, min, max] }
               field: { type: [string, 'null'] }
               as: { type: [string, 'null'] }
-        as_of_date: { type: [string, 'null'], format: date, description: Snapshot / historical reporting via deal_stage_history. }
 
     ReportResult:
       type: object
-      required: [report, plan, columns, rows]
+      required: [report, plan, columns, rows, as_of, timezone, base_currency, fiscal_year_start_month]
       properties:
         report: { type: string }
+        as_of:
+          type: string
+          format: date-time
+          description: >-
+            The instant this result was computed. A report is a reading taken at
+            a time, and without it two screens showing different numbers look
+            like a bug rather than two moments.
+        timezone:
+          type: string
+          description: >-
+            The installation's reporting zone, as an IANA name. Day and period
+            boundaries in this result are cut in it, never in UTC and never in
+            the reader's own zone.
+        base_currency:
+          type: string
+          description: The ISO-4217 currency every money column is expressed in.
+        fiscal_year_start_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: >-
+            The month the installation's financial year opens, so a quarter in
+            this result can be placed without assuming it starts in January.
         plan:
           type: object
           additionalProperties: true

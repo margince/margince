@@ -37,10 +37,31 @@ const reportRowLimit = 1000
 // fetchRows assembles the WHERE side (validated filters + the caller's
 // row-scope clause), runs the plan inside the workspace-bound
 // transaction, and shapes each row for the wire.
-func (e *reportEngine) fetchRows(ctx context.Context, report string, spec reportSpec, req reportRequest, groupBy, selects, columns []string) ([]map[string]any, *int, error) {
+// reportFrame is what a number needs to be placed: which zone cut the day,
+// which currency the money is in, and where the financial year opens. Read in
+// the SAME transaction as the rows, so a settings change mid-flight cannot
+// hand back a total computed under one frame and labelled with another.
+type reportFrame struct {
+	Timezone             string
+	BaseCurrency         string
+	FiscalYearStartMonth int
+}
+
+func (e *reportEngine) fetchRows(ctx context.Context, report string, spec reportSpec, req reportRequest, groupBy, selects, columns []string) ([]map[string]any, *int, reportFrame, error) {
 	var rows []map[string]any
 	var excluded *int
+	var frame reportFrame
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		var err error
+		if frame.Timezone, err = identity.TimezoneOf(ctx, tx); err != nil {
+			return err
+		}
+		if frame.BaseCurrency, err = identity.BaseCurrencyOf(ctx, tx); err != nil {
+			return err
+		}
+		if frame.FiscalYearStartMonth, err = identity.FiscalYearStartMonthOf(ctx, tx); err != nil {
+			return err
+		}
 		if err := requireFilterScopes(ctx, tx, spec, req.Filters); err != nil {
 			return err
 		}
@@ -79,9 +100,9 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		return err
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, reportFrame{}, err
 	}
-	return rows, excluded, nil
+	return rows, excluded, frame, nil
 }
 
 // buildReportWhere assembles the WHERE side — the spec's base predicate,
@@ -240,13 +261,19 @@ func wireValue(v any) any {
 	return v
 }
 
-// quoteIdent admits caller-chosen aggregate aliases into the SQL text
-// safely: strict identifier shape or the plan is rejected.
-func quoteIdent(name string) string {
+// quoteIdent admits caller-chosen aggregate aliases into the SQL text safely:
+// strict identifier shape, or the plan is rejected.
+//
+// It returns an error rather than a fallback name. An earlier version answered
+// a bad alias with the literal "result", which is silent when one alias is
+// wrong and actively wrong when two are: both collapse to the same column, the
+// row map keeps whichever the driver scanned last, and the caller receives one
+// measure's number under another measure's name with nothing raised anywhere.
+func quoteIdent(name string) (string, error) {
 	if !identShape.MatchString(name) {
-		return "result"
+		return "", &FieldNotAllowedError{Field: name, Slot: slotAggregates}
 	}
-	return name
+	return name, nil
 }
 
 var identShape = regexp.MustCompile(`^[a-z][a-z0-9_]{0,62}$`)

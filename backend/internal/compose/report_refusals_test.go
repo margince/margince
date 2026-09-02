@@ -154,3 +154,44 @@ func (emptyRows) RawValues() [][]byte {
 }
 
 var _ pgx.Rows = emptyRows{}
+
+// TestAMalformedAliasIsRefusedRatherThanRenamed holds the fix for a silent
+// wrong answer.
+//
+// quoteIdent used to answer a bad alias with the literal "result". With one bad
+// alias that is merely a rename nobody asked for. With TWO, both aggregates
+// select into the same column name, the row map keeps whichever the driver
+// scanned last, and the caller is handed one measure's number under the other
+// measure's name — no error raised, at any layer.
+func TestAMalformedAliasIsRefusedRatherThanRenamed(t *testing.T) {
+	spec := prebuiltReports["deals-by-stage"]
+
+	for _, alias := range []string{
+		"total count", // a space
+		"1st",         // leading digit
+		"count;DROP",  // punctuation
+		"Total",       // uppercase, outside the identifier shape
+	} {
+		_, _, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: alias})
+		if err == nil {
+			t.Errorf("alias %q was accepted — a name outside the identifier shape must "+
+				"be refused, never silently replaced, or two bad aliases collapse into "+
+				"one column and a caller reads the wrong measure", alias)
+		}
+	}
+
+	// An omitted alias is not a malformed one: it defaults to the function name,
+	// which is well-formed and is the documented behaviour of this argument.
+	if _, _, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount}); err != nil {
+		t.Errorf("an omitted alias was refused (%v) — it defaults to the function "+
+			"name and must still be served", err)
+	}
+
+	// The admitting case. Without it a quoteIdent that refused EVERY alias
+	// would pass the loop above, and free-form aliases are the documented
+	// behaviour of this argument.
+	if _, _, err := aggregateSelect(spec, reportAggregate{Fn: aggFnCount, As: "my_own_label"}); err != nil {
+		t.Errorf("a well-formed alias was refused (%v) — the check is now rejecting "+
+			"the names it exists to admit", err)
+	}
+}

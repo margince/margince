@@ -9552,12 +9552,11 @@ func (e RowTagColor) Valid() bool {
 
 // Defines values for RunReportRequestAggregatesFn.
 const (
-	RunReportRequestAggregatesFnAvg           RunReportRequestAggregatesFn = "avg"
-	RunReportRequestAggregatesFnCount         RunReportRequestAggregatesFn = "count"
-	RunReportRequestAggregatesFnCountDistinct RunReportRequestAggregatesFn = "count_distinct"
-	RunReportRequestAggregatesFnMax           RunReportRequestAggregatesFn = "max"
-	RunReportRequestAggregatesFnMin           RunReportRequestAggregatesFn = "min"
-	RunReportRequestAggregatesFnSum           RunReportRequestAggregatesFn = "sum"
+	RunReportRequestAggregatesFnAvg   RunReportRequestAggregatesFn = "avg"
+	RunReportRequestAggregatesFnCount RunReportRequestAggregatesFn = "count"
+	RunReportRequestAggregatesFnMax   RunReportRequestAggregatesFn = "max"
+	RunReportRequestAggregatesFnMin   RunReportRequestAggregatesFn = "min"
+	RunReportRequestAggregatesFnSum   RunReportRequestAggregatesFn = "sum"
 )
 
 // Valid indicates whether the value is a known member of the RunReportRequestAggregatesFn enum.
@@ -9566,8 +9565,6 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 	case RunReportRequestAggregatesFnAvg:
 		return true
 	case RunReportRequestAggregatesFnCount:
-		return true
-	case RunReportRequestAggregatesFnCountDistinct:
 		return true
 	case RunReportRequestAggregatesFnMax:
 		return true
@@ -27341,13 +27338,21 @@ type ReportDerivation struct {
 
 // ReportResult defines model for ReportResult.
 type ReportResult struct {
-	Columns []string `json:"columns"`
+	// AsOf The instant this result was computed. A report is a reading taken at a time, and without it two screens showing different numbers look like a bug rather than two moments.
+	AsOf time.Time `json:"as_of"`
+
+	// BaseCurrency The ISO-4217 currency every money column is expressed in.
+	BaseCurrency string   `json:"base_currency"`
+	Columns      []string `json:"columns"`
 
 	// DerivationUrl Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell.
 	DerivationUrl *string `json:"derivation_url,omitempty"`
 
 	// ExcludedByPermission Visible rows a field mask withheld from this run — excluded from every aggregate and from the drill-through alike, so the numbers stay reconcilable. Null when no mask applied; 0 means masked but nothing excluded.
-	ExcludedByPermission *int       `json:"excluded_by_permission,omitempty"`
+	ExcludedByPermission *int `json:"excluded_by_permission,omitempty"`
+
+	// FiscalYearStartMonth The month the installation's financial year opens, so a quarter in this result can be placed without assuming it starts in January.
+	FiscalYearStartMonth int        `json:"fiscal_year_start_month"`
 	GeneratedAt          *time.Time `json:"generated_at,omitempty"`
 
 	// Plan The validated query plan that was executed (shown before/after run).
@@ -27355,8 +27360,11 @@ type ReportResult struct {
 	Report string                 `json:"report"`
 
 	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
-	Rows      []map[string]interface{} `json:"rows"`
-	TotalRows *int                     `json:"total_rows,omitempty"`
+	Rows []map[string]interface{} `json:"rows"`
+
+	// Timezone The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone.
+	Timezone  string `json:"timezone"`
+	TotalRows *int   `json:"total_rows,omitempty"`
 }
 
 // RequestAccessResponse defines model for RequestAccessResponse.
@@ -27570,9 +27578,6 @@ type RunReportRequest struct {
 		Field *string                      `json:"field,omitempty"`
 		Fn    RunReportRequestAggregatesFn `json:"fn"`
 	} `json:"aggregates,omitempty"`
-
-	// AsOfDate Snapshot / historical reporting via deal_stage_history.
-	AsOfDate *openapi_types.Date `json:"as_of_date,omitempty"`
 
 	// Filters Typed predicates (period, status, owner, ...) — keys must be in the report vocabulary.
 	Filters *map[string]interface{} `json:"filters,omitempty"`
