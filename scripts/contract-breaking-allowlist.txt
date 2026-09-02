@@ -28,3 +28,4 @@ a35057f55a688d0b19b9e0e295f54bafa5193517 5b2fdab6f36d98ba92f83b152962152b47cd611
 5d27bdf8d88f1313480daca24b8e2229f6e05ea8 2a7d64e559a8435ac313169829f7c9c2d89e88d6 ratified-one-oauth-app-resource-per-vendor-microsoft-joins-google
 8d76c31f65ec76a683156160d689191425b20858 e0c11716048a939f1f1187d6992754335300ac41 ratified-v1-lists-leave-the-product-tags-are-the-one-grouping
 e0c11716048a939f1f1187d6992754335300ac41 ce200199d82e76fca7c07e5781a7af1a963b4963 ratified-the-human-set-sales-quota-is-retired
+e0c11716048a939f1f1187d6992754335300ac41 87d8a0bc37bcbd565b4c9d7e47be5b4799b72609 ratified-v1-tag-colour-is-a-closed-palette-and-a-name-is-bounded
