@@ -575,12 +575,19 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
+	# The certification snapshot the settings card reads. Generated rather than
+	# computed at request time: deciding whether a record still describes what
+	# this build sends means driving every scenario's own request builder, which
+	# is developer-lane work and not something an HTTP handler does per page load.
+	# It reads only committed trees (records, corpus, census) and spends nothing.
+	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/reportcmd -format=json \
+		-out internal/compose/aicert/snapshot/certification.json
 
 drift: gen ## Fail when any generated file drifted from the contract
 	# gen regenerates the committed per-unit manifests too (via composition);
 	# without them here a stale or hand-edited extensions/<name>/manifest.generated.json
 	# would be silently healed by the mutating gen step instead of failing.
-	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json 'internal/modules/knowledge/handbook/*.md'
+	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json 'internal/modules/knowledge/handbook/*.md' internal/compose/aicert/snapshot/certification.json
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.
