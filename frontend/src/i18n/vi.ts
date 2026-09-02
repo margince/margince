@@ -2510,6 +2510,7 @@ export const vi = {
   "home.glance.eveningAnon": "Chào buổi tối.",
   "home.glance.night": "Vẫn đang làm việc, {name}.",
   "home.glance.nightAnon": "Vẫn đang làm việc.",
+  "home.glance.introWeekly": "Đây là tuần bạn vừa khép lại.",
   "home.glance.intro": "Đây là ngày của bạn.",
   "home.glance.decisionsClear": "Không có gì đang chờ bạn.",
   "home.glance.decisions_one": "quyết định đang chờ bạn.",

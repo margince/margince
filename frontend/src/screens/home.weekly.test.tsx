@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
@@ -281,5 +281,55 @@ describe("HomeScreen — the week against the one before", () => {
 
     const marker = en["home.weekly.sincePrior"].replace("{delta}", "").trim();
     expect(strip.textContent).not.toContain(marker);
+  });
+
+  // ── Five outcomes, and the workings under them ──
+
+  // The strip is read ACROSS as one comparison, so its width is the claim. At
+  // ten slots it folded into two ranks at 1280 and stopped being one reading —
+  // which is what #3709 reported.
+  it("draws five slots, not the ten the week has figures for", async () => {
+    const strip = await mount(withPrior);
+
+    expect(strip.querySelectorAll(".stat-card")).toHaveLength(5);
+  });
+
+  // The five are the week's OUTCOMES: what was promised and kept, what closed,
+  // how fast new business was answered, whether meetings led anywhere, and what
+  // did not get finished.
+  it("gives the strip the week's outcomes", async () => {
+    const strip = await mount(withPrior);
+
+    for (const key of [
+      "home.weekly.promisesKept",
+      "home.weekly.dealsWon",
+      "home.weekly.leadsAnswered",
+      "home.weekly.meetingsHeld",
+      "home.weekly.carriedOver",
+    ] as const) {
+      expect(within(strip).getByText(en[key])).toBeTruthy();
+    }
+  });
+
+  // Narrowing the strip must not LOSE the other five. They are still the week's
+  // figures and a reader who wants them has to be able to find them — a strip
+  // that got shorter by dropping readings would be a worse answer than the row
+  // that folded.
+  it("keeps the other five figures, under the strip", async () => {
+    const strip = await mount(withPrior);
+
+    for (const key of [
+      "home.weekly.promised",
+      "home.weekly.dealsMoved",
+      "home.weekly.dealsLost",
+      "home.weekly.decided",
+      "home.weekly.queueWorked",
+    ] as const) {
+      const reading = screen.getByText(en[key]);
+      expect(reading).toBeTruthy();
+      // Under the strip, not in it: in a slot they would be back to competing
+      // with the outcomes for the one comparison the row makes.
+      expect(strip.contains(reading)).toBe(false);
+    }
   });
 });

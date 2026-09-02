@@ -60,3 +60,12 @@
   margin: 0;
   font-weight: 500;
 }
+
+/* The verb under the words it adds to, spaced off them so it reads as an
+   action rather than as one more chip in the strip. */
+.tagspanel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
