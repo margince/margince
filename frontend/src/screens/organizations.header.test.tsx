@@ -42,11 +42,14 @@ function render(ui: ReactNode) {
   );
 }
 
-async function openRecordMenu(testId: string): Promise<HTMLElement> {
+async function openRecordMenu(
+  user: ReturnType<typeof userEvent.setup>,
+  testId: string,
+): Promise<HTMLElement> {
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "More actions" })).toBeTruthy(),
   );
-  await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+  await user.click(screen.getByRole("button", { name: "More actions" }));
   await waitFor(() => expect(screen.getByTestId(testId)).toBeTruthy());
   return screen.getByTestId(testId);
 }
@@ -60,6 +63,7 @@ async function openRecordMenu(testId: string): Promise<HTMLElement> {
 // OTHER refusal cause, on a record that is not archived at all.
 describe("CompanyScreen — a live record that is not the viewer's to change", () => {
   it("names why edit/merge/archive/share are refused, from an id the page actually renders", async () => {
+    const user = userEvent.setup();
     const notMine = { ...org, owner_id: "u-someone-else", writable: false };
     stubFetch(async (url) => {
       if (url.includes("/me")) {
@@ -73,7 +77,7 @@ describe("CompanyScreen — a live record that is not the viewer's to change", (
     render(<CompanyScreen id="o-1" />);
 
     const refused = [
-      await openRecordMenu("edit-record"),
+      await openRecordMenu(user, "edit-record"),
       screen.getByTestId("archive-record"),
       screen.getByTestId("share-record"),
     ];

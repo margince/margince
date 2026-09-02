@@ -91,6 +91,30 @@ function stubGrants(allow: GrantSpec) {
   );
 }
 
+// /me hangs, so `useCanWrite` reads `undefined` on the frames before it
+// answers — for CompanyPrimaryActions' own pending-grant test, which asserts
+// nothing claims a refusal `/me` has not decided yet.
+function stubMeInFlight(): Array<(response: Response) => void> {
+  const answer: Array<(response: Response) => void> = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((request: Request) => {
+      if (new URL(request.url).pathname.endsWith("/me")) {
+        return new Promise<Response>((resolve) => {
+          answer.push(resolve);
+        });
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ data: [], page: { has_more: false, next_cursor: null } }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    }),
+  );
+  return answer;
+}
+
 // /me answers, /users does not — the header on the first frames of a page load,
 // held still. Nothing waits on a clock: the resolvers are collected so a test
 // can let the roster answer when it wants to assert the settled reading.
@@ -341,6 +365,32 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const task = await screen.findByRole("button", { name: "Add task" });
     expect(log.hasAttribute("disabled")).toBe(false);
     expect(task.hasAttribute("disabled")).toBe(false);
+  });
+
+  // A guard that has not answered yet refuses nothing: while /me is still in
+  // flight, useCanWrite reads false the same way it would for a caller
+  // without the grant — so without this, both buttons would flash the
+  // "You do not have permission" sentence on every page load, before the
+  // verdict is even in.
+  it("stays quiet — disabled, no claimed refusal — while the grant is still in flight", async () => {
+    stubMeInFlight();
+    renderInApp(
+      <CompanyPrimaryActions
+        org={ORG}
+        composerOpen={false}
+        onComposerOpen={() => undefined}
+      />,
+    );
+
+    const log = await screen.findByRole("button", { name: "Log activity" });
+    const task = await screen.findByRole("button", { name: "Add task" });
+    expect(log.hasAttribute("disabled")).toBe(true);
+    expect(task.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.queryByText(
+        "You do not have permission to log activities on this record.",
+      ),
+    ).toBeNull();
   });
 });
 

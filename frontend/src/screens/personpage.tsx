@@ -27,7 +27,7 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { linkedinUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, useSorMode } from "./common";
+import { throwProblem, useMe, useSorMode } from "./common";
 import { ComposeModal } from "./compose";
 import { ConsentSection } from "./consent";
 import { LogActivityAction } from "./logactivity";
@@ -809,12 +809,18 @@ function PersonActions({
   // POST, and a read seat is refused before RBAC is consulted. The buttons
   // stay on the page and say why they will not press, so a reader can tell
   // "not mine to do" from "this build has no such button".
+  const me = useMe();
   const canLog = useCanWrite("activity", "create");
   // Named once and pointed at by both buttons — Button's own contract for a
   // surface where several controls are refused by ONE fact: printing the
   // sentence beside each button says it as many times as there are buttons.
   const logRefusedId = useId();
-  const logRefused = canLog ? undefined : logRefusedId;
+  // A guard that has not answered yet refuses nothing: claiming a refusal
+  // `/me` has not decided is worse than a control that is briefly quiet —
+  // the same rule writeRefusal states for the identical shape, above.
+  const logGrantKnown = me.data !== undefined;
+  const logRefused = logGrantKnown && !canLog ? logRefusedId : undefined;
+  const logPending = !logGrantKnown;
   // The transports the composer would offer, read here so the button NAMES
   // what pressing it does. The same reachability the drawer resolves: a label
   // computed from anything else is a promise the composer then breaks.
@@ -874,7 +880,7 @@ function PersonActions({
               Files the task against THIS record — the same form Log activity
               opens, started on its task kind, rather than a navigation to the
               Worklist, which has no way to add one. */}
-          <Button reasonId={logRefused} onClick={onAddTask}>
+          <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
             <CheckSquare size={15} aria-hidden="true" />{" "}
             {t("person.action.addTask")}
           </Button>
@@ -882,7 +888,11 @@ function PersonActions({
               reads. This is the standing way in; the moment card offers the
               same form when its rung decides logging is the thing to do
               next. */}
-          <Button reasonId={logRefused} onClick={onLogActivity}>
+          <Button
+            disabled={logPending}
+            reasonId={logRefused}
+            onClick={onLogActivity}
+          >
             <FileText size={15} aria-hidden="true" /> {t("log.title")}
           </Button>
         </>
