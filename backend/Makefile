@@ -293,6 +293,19 @@ ifeq ($(TRACE),1)
 override TRACE := $(CURDIR)/../.tmp/aicert
 endif
 
+# RESUME names a directory for the resume journal — every scored run appended as
+# it is scored, so a run cut short by a dropped connection is restarted without
+# paying for the runs it already made. A journaled run is replayed only on the
+# same bindings, profile, corpus and scenario stamp, and only within six hours.
+# ON by default for the same reasons TRACE is, plus one of its own: the run you
+# most need it for is the long one nobody thought to enable it before.
+# `RESUME=<dir>` picks a directory; `RESUME=` (empty) turns it off, which is how
+# a run is forced to measure everything fresh.
+RESUME ?= 1
+ifeq ($(RESUME),1)
+override RESUME := $(CURDIR)/../.tmp/aicert/resume
+endif
+
 # AICERT_TIMEOUT is the whole-run backstop, not the per-call guard — a single
 # call is already bounded by ai.requestTimeout (300s). It has to hold the FULL
 # corpus (216 calls over 14 tasks) at the pace of the slowest binding an
@@ -318,7 +331,7 @@ AICERT_TIMEOUT ?= 90m
 # itself a task and leads at premium, so a config binding claude-haiku-4.5 there
 # makes the grader collide with every premium-led candidate — the run checks that
 # for every resolved task up front rather than failing mid-corpus after paying.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. JUDGE=prov:model always required. BYOK key auto-loaded from .env.local. TASK=x RUNS=3 BASE_URL=... PROFILE=eu_hosted (ignored under ROUTING) AICERT_TIMEOUT=90m
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. JUDGE=prov:model always required. BYOK key auto-loaded from .env.local. TASK=x RUNS=3 BASE_URL=... PROFILE=eu_hosted (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
@@ -326,7 +339,7 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 	  MARGINCE_AICERT_JUDGE_MODEL=$(if $(JUDGE),$(JUDGE),$(MARGINCE_AICERT_JUDGE_MODEL)) \
 	  MARGINCE_AICERT_JUDGE_BASE_URL=$(if $(JUDGE_BASE_URL),$(JUDGE_BASE_URL),$(MARGINCE_AICERT_JUDGE_BASE_URL)) \
 	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
-	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE=$(TRACE) \
+	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" \
 	  $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/aicert/ -run TestE2ECertify -v -count=1 -timeout $(AICERT_TIMEOUT)
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.

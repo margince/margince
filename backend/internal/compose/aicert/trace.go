@@ -15,11 +15,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
-	"sync"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -37,6 +34,13 @@ type tracedCall struct {
 	Role     string `json:"role"` // candidate | judge
 	Scenario string `json:"scenario"`
 	Run      int    `json:"run"`
+	// Attempt is which drive of this run the call belongs to. A run whose
+	// router exhausted every bound tier is driven again (driveRun), and the
+	// discarded attempt has usually already written its candidate calls here —
+	// so without this two blocks would sit under one run number, and a reader
+	// would take the abandoned attempt's request for the one that was scored.
+	// The same distinction Call draws inside one drive, one level up.
+	Attempt int `json:"attempt"`
 	// Call is this call's 1-based position within the run. A run is not one
 	// call — a site retries, falls back, or turns a loop, and the judge is
 	// asked twice on a parse failure — so without it a reader cannot tell the
@@ -58,9 +62,7 @@ type tracedCall struct {
 // run. A nil *payloadTrace is the disabled state — every method is a no-op
 // on it — so the runner threads one value whether tracing is on or off.
 type payloadTrace struct {
-	mu   sync.Mutex
-	w    io.WriteCloser
-	enc  *json.Encoder
+	sink *jsonlSink
 	Path string // absolute, printed to stdout when the trace opens
 }
 
@@ -70,36 +72,21 @@ type payloadTrace struct {
 // dir (tracing off ⇒ a nil *payloadTrace whose methods no-op); dir here is
 // always a real directory to write into.
 func openPayloadTrace(dir string, stamp string) (*payloadTrace, error) {
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return nil, fmt.Errorf("aicert: trace dir %s: %w", dir, err)
-	}
-	path := filepath.Join(dir, "aicert-trace-"+stamp+".jsonl")
-	f, err := os.Create(path) // #nosec G304 -- path is the operator-named trace dir (MARGINCE_AICERT_TRACE) + a fixed filename; a dev/CI lane, no request input
+	// Truncating, not appending: the filename carries the run's own timestamp,
+	// so a trace never meets a previous run's lines to begin with.
+	sink, err := openJSONLSink(dir, "aicert-trace-"+stamp+".jsonl", "payload trace",
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
-		return nil, fmt.Errorf("aicert: create trace %s: %w", path, err)
+		return nil, err
 	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		// A resolvable path failing to absolutize is a real filesystem
-		// fault, not a caller input — fail the run rather than print a
-		// path the tuning loop cannot trust.
-		//craft:ignore swallowed-errors close-then-report on the error path
-		_ = f.Close()
-		return nil, fmt.Errorf("aicert: absolute trace path for %s: %w", path, err)
-	}
-	if _, err := fmt.Fprintf(os.Stdout, "aicert: payload trace → %s\n", abs); err != nil {
-		//craft:ignore swallowed-errors close-then-report on the error path
-		_ = f.Close()
-		return nil, fmt.Errorf("aicert: announce trace path %s: %w", abs, err)
-	}
-	return &payloadTrace{w: f, enc: json.NewEncoder(f), Path: abs}, nil
+	return &payloadTrace{sink: sink, Path: sink.Path}, nil
 }
 
 // record appends one call's payloads to the trace. A call whose terminal
 // attempt carries no Payload (capture off, or an error/cache-hit path that
 // captures nothing) is skipped rather than written as a hollow line — the
 // trace shows only calls it can actually explain.
-func (t *payloadTrace) record(role string, task ai.Task, sc Scenario, run, call int, c ai.Call) error {
+func (t *payloadTrace) record(role string, task ai.Task, sc Scenario, run, attempt, call int, c ai.Call) error {
 	if t == nil || c.Payload == nil {
 		return nil
 	}
@@ -108,6 +95,7 @@ func (t *payloadTrace) record(role string, task ai.Task, sc Scenario, run, call 
 		Role:            role,
 		Scenario:        sc.Name,
 		Run:             run,
+		Attempt:         attempt,
 		Call:            call,
 		Tier:            string(c.Tier),
 		Provider:        c.Provider,
@@ -120,10 +108,8 @@ func (t *payloadTrace) record(role string, task ai.Task, sc Scenario, run, call 
 		RequestPayload:  c.Payload.Request,
 		ResponsePayload: c.Payload.Response,
 	}
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if err := t.enc.Encode(line); err != nil {
-		return fmt.Errorf("aicert: write trace line (%s %s): %w", task, role, err)
+	if err := encodeLine(t.sink, line); err != nil {
+		return fmt.Errorf("aicert: trace line (%s %s): %w", task, role, err)
 	}
 	return nil
 }
@@ -139,11 +125,11 @@ func (t *payloadTrace) record(role string, task ai.Task, sc Scenario, run, call 
 // Every call, not the last one: the trace exists so an author can read exactly
 // what each model saw and said, and the reply a site served often comes from
 // the second or third request it sent.
-func traceCalls(ctx context.Context, t *payloadTrace, role string, task ai.Task, sc Scenario, run int, calls []ai.Call, log *slog.Logger) {
+func traceCalls(ctx context.Context, t *payloadTrace, role string, task ai.Task, sc Scenario, run, attempt int, calls []ai.Call, log *slog.Logger) {
 	for i, c := range calls {
-		if err := t.record(role, task, sc, run, i+1, c); err != nil {
+		if err := t.record(role, task, sc, run, attempt, i+1, c); err != nil {
 			log.WarnContext(ctx, "aicert: payload trace write failed — run continues",
-				"task", string(task), "scenario", sc.Name, "role", role, "run", run, "call", i+1, "err", err)
+				"task", string(task), "scenario", sc.Name, "role", role, "run", run, "attempt", attempt, "call", i+1, "err", err)
 		}
 	}
 }
@@ -154,7 +140,5 @@ func (t *payloadTrace) close() error {
 	if t == nil {
 		return nil
 	}
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.w.Close()
+	return t.sink.close()
 }

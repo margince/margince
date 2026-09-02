@@ -27,23 +27,26 @@ const (
 // run can produce exactly the answer the scenario asked for and still fail its
 // latency cap, and one that reports "accepted" for that run would be counting
 // something that never happened.
+// The json tags are the resume journal's on-disk shape (resume.go): a run
+// survives a killed process as one of these, and is replayed into the same
+// Record arithmetic a live one feeds.
 type RunResult struct {
-	Output    string
-	Outcome   string
-	LatencyMS int64
+	Output    string `json:"output"`
+	Outcome   string `json:"outcome"`
+	LatencyMS int64  `json:"latency_ms"`
 	// TokensIn/TokensOut/CachedTokens/CacheWriteTokens are the terminal
 	// attempt's own four token buckets, carried through unsummed (ai.Call's
 	// contract: TokensIn is cache-inclusive, CachedTokens/CacheWriteTokens
 	// are the itemized subsets already counted inside it) so buildRecord can
 	// price the run against ai.PriceCall's per-bucket rate arithmetic
 	// instead of a pre-collapsed total.
-	TokensIn         int
-	TokensOut        int
-	CachedTokens     int
-	CacheWriteTokens int
-	Degraded         bool
-	HardPass         bool
-	Score            int
+	TokensIn         int  `json:"tokens_in"`
+	TokensOut        int  `json:"tokens_out"`
+	CachedTokens     int  `json:"cached_tokens"`
+	CacheWriteTokens int  `json:"cache_write_tokens"`
+	Degraded         bool `json:"degraded"`
+	HardPass         bool `json:"hard_pass"`
+	Score            int  `json:"score"`
 }
 
 // Verdict folds N runs of one scenario into a certification outcome per
