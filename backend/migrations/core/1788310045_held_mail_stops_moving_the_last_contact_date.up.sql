@@ -19,7 +19,16 @@
 -- an internal count.
 
 -- Bounded: CREATE OR REPLACE FUNCTION takes an exclusive lock on the function,
--- and the triggers below take one on activity, which every capture writes.
+-- and the trigger swap below takes one on activity, which every capture writes.
+--
+-- lock_timeout bounds only the WAIT to acquire those locks, never how long this
+-- transaction then holds them, and the migration runner keeps each file in one
+-- transaction — so the activity lock is held until the recompute at the bottom
+-- finishes. Two things keep that window short rather than proportional to the
+-- installation: the recompute touches only rows whose value actually moves (an
+-- installation with no held mail writes nothing at all), and every helper it
+-- calls is index-served through activity_link. It is still a write pause on
+-- capture, and this is where a deploy runbook would read that it exists.
 SET LOCAL lock_timeout = '3s';
 
 -- Replacing a baseline function in a later migration, which has precedent twice
@@ -111,10 +120,44 @@ CREATE TRIGGER activity_project_last_activity
 	   OR old.audience IS DISTINCT FROM new.audience)
 	EXECUTE FUNCTION trg_activity_project_last_activity();
 
--- Every stored value was computed by the old helpers, so every one of them may
--- name a held message. Recomputed through the same helpers the triggers use, so
--- there is one definition of the value rather than a migration's own copy.
-UPDATE deal SET last_activity_at = last_activity_of_deal(id);
-UPDATE organization SET last_activity_at = last_activity_of_organization(id);
-UPDATE person SET last_activity_at = last_activity_of_person(id);
-UPDATE project SET last_activity_at = last_activity_of_project(id);
+-- Recomputed through move_last_activity, not a raw UPDATE.
+--
+-- That is not a style preference. set_updated_at_bump_version() fires on all
+-- four tables and suppresses itself only while margince.last_activity_move is
+-- on, which move_last_activity sets and a bare UPDATE does not. Writing the
+-- column directly would stamp updated_at and bump version on every deal,
+-- organization, person and project in the installation — invalidating every
+-- outstanding If-Match a client holds and telling every "what changed
+-- recently" reader that the whole database was edited at deploy time.
+--
+-- Only rows whose derived value actually moves are touched, so an installation
+-- with no held mail writes nothing at all.
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT id FROM deal
+     WHERE last_activity_at IS DISTINCT FROM last_activity_of_deal(id)
+  LOOP
+    PERFORM move_last_activity('deal'::regclass, r.id);
+  END LOOP;
+  FOR r IN
+    SELECT id FROM organization
+     WHERE last_activity_at IS DISTINCT FROM last_activity_of_organization(id)
+  LOOP
+    PERFORM move_last_activity('organization'::regclass, r.id);
+  END LOOP;
+  FOR r IN
+    SELECT id FROM person
+     WHERE last_activity_at IS DISTINCT FROM last_activity_of_person(id)
+  LOOP
+    PERFORM move_last_activity('person'::regclass, r.id);
+  END LOOP;
+  FOR r IN
+    SELECT id FROM project
+     WHERE last_activity_at IS DISTINCT FROM last_activity_of_project(id)
+  LOOP
+    PERFORM move_last_activity('project'::regclass, r.id);
+  END LOOP;
+END $$;

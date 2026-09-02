@@ -6,8 +6,9 @@
 -- longer produce them, and the next unrelated edit to any row would move its
 -- date for no reason a reader could see.
 
--- Bounded: CREATE OR REPLACE FUNCTION takes an exclusive lock on the function,
--- and the triggers below take one on activity, which every capture writes.
+-- Bounded, with the same caveat the up migration states: lock_timeout bounds the
+-- wait, not the hold, and the recompute at the bottom runs inside the same
+-- transaction as the trigger swap.
 SET LOCAL lock_timeout = '3s';
 
 -- The baseline bodies, restored verbatim.
@@ -84,9 +85,44 @@ CREATE TRIGGER activity_project_last_activity
 	   OR old.archived_at IS DISTINCT FROM new.archived_at)
 	EXECUTE FUNCTION trg_activity_project_last_activity();
 
--- Recomputed through the same helpers the triggers use, so there is one
--- definition of the value rather than this file's own copy.
-UPDATE deal SET last_activity_at = last_activity_of_deal(id);
-UPDATE organization SET last_activity_at = last_activity_of_organization(id);
-UPDATE person SET last_activity_at = last_activity_of_person(id);
-UPDATE project SET last_activity_at = last_activity_of_project(id);
+-- Recomputed through move_last_activity, not a raw UPDATE.
+--
+-- That is not a style preference. set_updated_at_bump_version() fires on all
+-- four tables and suppresses itself only while margince.last_activity_move is
+-- on, which move_last_activity sets and a bare UPDATE does not. Writing the
+-- column directly would stamp updated_at and bump version on every deal,
+-- organization, person and project in the installation — invalidating every
+-- outstanding If-Match a client holds and telling every "what changed
+-- recently" reader that the whole database was edited at deploy time.
+--
+-- Only rows whose derived value actually moves are touched, so an installation
+-- with no held mail writes nothing at all.
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT id FROM deal
+     WHERE last_activity_at IS DISTINCT FROM last_activity_of_deal(id)
+  LOOP
+    PERFORM move_last_activity('deal'::regclass, r.id);
+  END LOOP;
+  FOR r IN
+    SELECT id FROM organization
+     WHERE last_activity_at IS DISTINCT FROM last_activity_of_organization(id)
+  LOOP
+    PERFORM move_last_activity('organization'::regclass, r.id);
+  END LOOP;
+  FOR r IN
+    SELECT id FROM person
+     WHERE last_activity_at IS DISTINCT FROM last_activity_of_person(id)
+  LOOP
+    PERFORM move_last_activity('person'::regclass, r.id);
+  END LOOP;
+  FOR r IN
+    SELECT id FROM project
+     WHERE last_activity_at IS DISTINCT FROM last_activity_of_project(id)
+  LOOP
+    PERFORM move_last_activity('project'::regclass, r.id);
+  END LOOP;
+END $$;

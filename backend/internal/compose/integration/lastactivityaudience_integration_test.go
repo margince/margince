@@ -133,10 +133,16 @@ func TestLastActivityAudience_WideningTheMessageMovesTheClockForward(t *testing.
 }
 
 func TestLastActivityAudience_AMessageBornHeldNeverMovesTheClock(t *testing.T) {
-	// The trigger arm the narrow-then-check case cannot reach. Captured mail is
-	// born with its audience already set (capture/birthdecision.go), so nothing
-	// ever UPDATEs the audience column for it — the value has to be right at
-	// INSERT, through the link trigger rather than the activity one.
+	// The LINK trigger's arm, which the narrow-then-check case cannot reach.
+	// Captured mail is born with its audience already decided
+	// (capture/birthdecision.go), so nothing ever UPDATEs the audience column
+	// for it — the value has to be right when the LINK appears, through
+	// trg_activity_link_last_activity rather than the activity trigger.
+	//
+	// So the audience is set while the activity has no links at all, and the
+	// link is inserted afterwards. Setting it after a link existed would fire
+	// the activity trigger and move the clock back for the wrong reason,
+	// leaving this test green against a link trigger that did nothing.
 	e := Setup(t)
 	person := e.SeedPerson(t, "Born Held Contact", nil)
 	personID := ids.From[ids.PersonKind](person)
@@ -144,16 +150,74 @@ func TestLastActivityAudience_AMessageBornHeldNeverMovesTheClock(t *testing.T) {
 	older := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	newest := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 	e.logAt(t, older, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
-	born := e.logAt(t, newest, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
-	// Narrowed at the row before its link exists is not reproducible through the
-	// public writers, so the audience is set directly and the LINK is then
-	// re-driven — which is the order capture writes in, and the arm that proves
-	// the helper filters rather than the activity trigger happening to fire.
-	e.WsExec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, born)
-	e.WsExec(t, `UPDATE activity_link SET person_id = person_id WHERE activity_id = $1`, born)
+
+	// Unlinked, so no clock has heard of it yet.
+	born := ids.NewV7()
+	e.WsExec(t, `
+		INSERT INTO activity (id, kind, subject, audience, occurred_at, source, captured_by)
+		VALUES ($1, 'note', 'born held', 'participants', $2, 'manual', 'human:test')`,
+		born, newest)
+	if got := e.personClock(t, personID); got == nil || !got.Equal(older) {
+		t.Fatalf("clock = %v before the link exists, want %v — the fixture is not isolating "+
+			"the link trigger", got, older)
+	}
+
+	e.WsExec(t, `
+		INSERT INTO activity_link (activity_id, entity_type, person_id)
+		VALUES ($1, 'person', $2)`, born, person)
 
 	if got := e.personClock(t, personID); got == nil || !got.Equal(older) {
-		t.Errorf("clock = %v for a message born held, want %v", got, older)
+		t.Errorf("clock = %v after linking a message that was born held, want %v: the link "+
+			"trigger counted an activity nobody but its participants may read", got, older)
+	}
+}
+
+func TestLastActivityAudience_AClockMoveIsNotAnEdit(t *testing.T) {
+	// A narrowing moves four stored dates, and moving one must not look like
+	// somebody edited the record. set_updated_at_bump_version() fires on all
+	// four tables and suppresses itself only while margince.last_activity_move
+	// is on — which move_last_activity sets and a bare UPDATE does not. A
+	// recompute written as a plain UPDATE would bump version on every deal,
+	// organization, person and project in the installation, invalidating every
+	// If-Match a client holds.
+	//
+	// Its sibling next door asserts the same property for an ordinary clock
+	// move; this is the audience-driven one, which reaches the same movers by a
+	// different route.
+	e := Setup(t)
+	person := e.SeedPerson(t, "Version Clock Contact", nil)
+	personID := ids.From[ids.PersonKind](person)
+
+	older := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
+	newest := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
+	e.logAt(t, older, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
+	held := e.logAt(t, newest, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
+
+	before, err := e.People.GetPerson(e.Admin(), personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.Version == nil {
+		t.Fatal("a created person carries a version")
+	}
+
+	if _, err := e.Activities.SetAudience(e.Admin(), ids.From[ids.ActivityKind](held),
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		t.Fatalf("narrowing: %v", err)
+	}
+
+	after, err := e.People.GetPerson(e.Admin(), personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.LastActivityAt == nil || !after.LastActivityAt.Equal(older) {
+		t.Fatalf("clock = %v, want %v — the narrowing did not move it, so this proved nothing",
+			after.LastActivityAt, older)
+	}
+	if after.Version == nil || *after.Version != *before.Version {
+		t.Errorf("person.version = %v after a clock move, want %v unchanged: a client holding "+
+			"the old version would be refused an edit it is entitled to make",
+			after.Version, *before.Version)
 	}
 }
 
