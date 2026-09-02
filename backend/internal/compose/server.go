@@ -155,12 +155,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// live custom-field catalog before ever building SQL around it — the
 		// same edge dealsH wires above.
 		automationHandlers: automation.NewHandlers(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
-		// WithCatalogue wires the public OpenRouter model-catalogue read
-		// unconditionally: it needs no tenant credential, so there is no
-		// "no provider connected" configuration to honor here.
-		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).
-			WithCatalogue(ai.NewModelCatalogue(systemClock{})),
-		reportHandlers: reportHandlers{engine: newReportEngine(pool)},
+		voiceHandlers:      ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)),
+		reportHandlers:     reportHandlers{engine: newReportEngine(pool)},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
 		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),

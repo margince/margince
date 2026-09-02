@@ -359,20 +359,23 @@ describe("dismissing a clarify in the company act", () => {
       screen.getByRole("button", { name: "Skip this - I will set it myself" }),
     );
 
-    // The dismissal is noted, the gate opens, nothing was written.
-    const accept = (await screen.findByRole("button", {
-      name: /Continue/,
+    // The dismissal is noted and the deck's confirm button re-arms — the
+    // required fields are all grounded and no decision is left open, so
+    // nothing else stands between the reader and confirming.
+    const confirm = (await screen.findByRole("button", {
+      name: "Confirm the profile",
     })) as HTMLButtonElement;
-    expect(accept.disabled).toBe(false);
-    expect(
-      await screen.findByText(/Your review is ready on the right\./),
-    ).toBeTruthy();
-    expect(screen.getByText(/You skipped: Registered legal name/)).toBeTruthy();
+    expect(confirm.disabled).toBe(false);
 
-    await userEvent.click(accept);
+    await userEvent.click(confirm);
     const body = await confirmBody(calls);
     expect(body.resolutions).toEqual([]);
-    expect(await screen.findByText(/Company profile confirmed/)).toBeTruthy();
+    // The confirm moved the machine on to the voice act — the one thing on
+    // screen that proves the write actually landed, since the transcript
+    // that used to narrate "Company profile confirmed" is gone.
+    expect(
+      await screen.findByRole("heading", { name: "Teach me how you write." }),
+    ).toBeTruthy();
   });
 
   it("labels a human_conflict dismissal as keeping the value and sends keep_current", async () => {
@@ -389,11 +392,11 @@ describe("dismissing a clarify in the company act", () => {
       await screen.findByRole("button", { name: "Keep my value" }),
     );
 
-    const accept = (await screen.findByRole("button", {
-      name: /Continue/,
+    const confirm = (await screen.findByRole("button", {
+      name: "Confirm the profile",
     })) as HTMLButtonElement;
-    expect(accept.disabled).toBe(false);
-    await userEvent.click(accept);
+    expect(confirm.disabled).toBe(false);
+    await userEvent.click(confirm);
 
     const body = await confirmBody(calls);
     expect(body.resolutions).toEqual([

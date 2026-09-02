@@ -4232,10 +4232,6 @@ export const en = {
   "ob.s4.notNow": "Not now",
 
   "ob.conv.threadLabel": "Onboarding conversation",
-  "ob.conv.welcome":
-    "Hi, I am Margince. I set up your CRM from what already exists, and I show a source for everything.",
-  "ob.conv.welcomeMember":
-    "Hi, I am Margince. Your team is already set up. Two short steps and you are in.",
   "ob.conv.read.started": "Reading {host} now. I will tell you what I find.",
   "ob.conv.read.pages": "Pages read so far: {pages}.",
   "ob.conv.read.learnedField": "Learned {field}: {value}",
@@ -4258,8 +4254,6 @@ export const en = {
   "ob.conv.voice.speakerQuestion":
     "This transcript has several speakers. Which one is you? Only your own words count.",
   "ob.conv.voice.speakerOptionDetail": "words: {words} · turns: {turns}",
-  "ob.conv.voice.guideSpeaker":
-    "A speaker choice is waiting on the right — pick which one is you.",
   "ob.conv.voice.speakerFoot": "Your choice applies to this file only.",
   "ob.conv.voice.speakerContinue": "Use this speaker",
   "ob.conv.voice.continueSkippedStatus":
@@ -4268,8 +4262,6 @@ export const en = {
     "Your material is safe — retry now, or continue and pick this up later.",
   "ob.conv.voice.continueDeferredStatus":
     "No action needed here — continue, and it finishes on its own.",
-  "ob.conv.voice.collectAsk":
-    "Send me things you wrote. Call transcripts work best; plain documents work too.",
   "ob.conv.voice.composer": "Paste the text you wrote here",
   "ob.conv.voice.dropHint":
     "You can also drop files anywhere in this conversation.",
@@ -4293,10 +4285,6 @@ export const en = {
   "ob.conv.voice.pasteAdd": "Yes, add it to my corpus.",
   "ob.conv.voice.pasteDiscard": "No, discard it.",
   "ob.conv.voice.pasteSource": "Pasted text",
-  "ob.conv.voice.buildFloor":
-    "Own words so far: {words}. I need at least {min} before I can build.",
-  "ob.conv.voice.buildNudge":
-    "I have enough to build. More helps: 4,000 words or more sharpen your voice noticeably.",
   "ob.conv.voice.buildChip": "Build my voice profile",
   "ob.conv.voice.retryBuild": "Try the build again",
   "ob.conv.voice.buildPollFailed":
@@ -4332,8 +4320,6 @@ export const en = {
     "The build did not finish. Your texts are kept and you can retry anytime.",
   "ob.conv.recap":
     "Here is what your CRM knows now, with a source for every item.",
-  "ob.conv.consent":
-    "Last step: what may I capture, and for which purpose? Nothing is on by default.",
   "ob.conv.done": "Setup complete. Your CRM is ready.",
   "ob.conv.clarify.question": "{question}",
   "ob.conv.clarify.optionDetail": "{detail}",
@@ -4404,14 +4390,12 @@ export const en = {
   "ob.conv.triage.peopleEmpty": "No people found on your site.",
   "ob.conv.triage.factsLabel": "Facts",
   "ob.conv.triage.factsCount": "{count} found",
-  "ob.rail.spend": "Tokens this setup",
   "ob.rail.tokensUnit": "tok",
   "ob.conv.scene.step": "Step {n} of {m} · {label}",
   "ob.conv.scene.detour": "A quick detour",
   "ob.conv.scene.decisionSub":
     "Your site names several legal entities. The one you pick goes on every quote and invoice.",
   "ob.conv.scene.continue": "Continue",
-  "ob.conv.scene.candidates": "{count} candidates",
   "ob.conv.connect.sceneTitle": "Connect your accounts.",
   "ob.conv.connect.sceneSub":
     "I build your contacts, companies and history from what is already in your inbox.",
@@ -4423,10 +4407,15 @@ export const en = {
     "Optional but worth it. Turns who you know into accounts and watches them for triggers.",
   "ob.conv.connect.required": "required",
   "ob.conv.connect.recommended": "recommended",
-  "ob.conv.connect.gmailBrings": "Mail, contacts and calendar from Google",
-  "ob.conv.connect.microsoftBrings":
-    "Mail, contacts and calendar over the Graph API",
-  "ob.conv.connect.imapBrings": "Any other mail host, with an app password",
+  // Neither grant carries calendar or contacts — those are their own,
+  // separate consent (Settings → Calendar) — and neither carries sign-in:
+  // both connect the SAME two things here, mail read and send, so the two
+  // lines say the same thing rather than inventing a difference that is not
+  // in the grant.
+  "ob.conv.connect.gmailBrings": "Mail read and sent via Google",
+  "ob.conv.connect.microsoftBrings": "Mail read and sent via Microsoft",
+  "ob.conv.connect.imapBrings":
+    "Mail from any host, with your email address and password",
   "ob.conv.connect.linkedinAuth": "Profile link, read only",
   "ob.conv.connect.scopeGoogle": "OAuth, read and send scopes",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
@@ -4436,8 +4425,6 @@ export const en = {
   "ob.conv.connect.blockedCard":
     "You already picked a mailbox. Disconnect it in Settings to switch.",
   "ob.conv.connect.guaranteesToggle": "What connecting actually does",
-  "ob.conv.connect.railPromise":
-    "We only read, and nothing sends without your approval.",
   "ob.conv.connect.dialogHeadlineAccess": "{name} access needed",
   "ob.conv.connect.dialogHeadlineImap": "Connect your mail host",
   "ob.conv.connect.dialogIntro":
@@ -4491,26 +4478,6 @@ export const en = {
   "ob.conv.scene.hideEvidence": "hide evidence",
   "ob.conv.scene.whyThis": "What I read",
   "ob.conv.scene.foundOn": "Found on",
-  "ob.conv.guide.decision":
-    "I need one decision from you: {question} It is on the right, with the evidence for each option.",
-  "ob.conv.guide.reviewBlocked_one":
-    "Your review is ready on the right. {count} field blocks confirm.",
-  "ob.conv.guide.reviewBlocked_other":
-    "Your review is ready on the right. {count} fields block confirm.",
-  "ob.conv.guide.reviewAdvisory_one":
-    "Your review is ready on the right. Nothing blocks you; {count} thing is worth a look.",
-  "ob.conv.guide.reviewAdvisory_other":
-    "Your review is ready on the right. Nothing blocks you; {count} things are worth a look.",
-  "ob.conv.guide.reviewClean":
-    "Your review is ready on the right. It looks clean, check what you want and confirm when ready.",
-  "ob.conv.guide.attentionHeading": "These need your input",
-  "ob.conv.guide.attentionGroup.blocking": "Needed before you can continue",
-  "ob.conv.guide.attentionGroup.decisions": "Needs a decision",
-  "ob.conv.guide.attentionGroup.advisory": "Worth a look",
-  "ob.conv.guide.attentionStatus.blocks": "needed to continue",
-  "ob.conv.guide.attentionStatus.empty": "still empty",
-  "ob.conv.guide.attentionStatus.decision": "needs a decision",
-  "ob.conv.guide.attentionStatus.check": "worth a check",
   "ob.conv.activity.steps": "{count} steps",
   "ob.conv.showField": "Show me",
   "ob.conv.review.editDirectly": "Edit fields directly",
@@ -4533,14 +4500,6 @@ export const en = {
   "ob.conv.results.artifactTitle": "Setup recap",
   "ob.conv.results.artifactBody":
     "What your CRM starts with. Nothing here claims more than what actually happened.",
-  "ob.conv.results.company":
-    "Company profile confirmed for {name}. Everything stored carries its source.",
-  "ob.conv.results.companyUnsaved":
-    "Your company details are not saved yet. You can complete them later in Settings.",
-  "ob.conv.results.voiceBuilt":
-    "Your voice profile is built. Drafts will sound like you.",
-  "ob.conv.results.voiceSkipped":
-    "No voice profile yet. Drafts use a neutral starter voice, and you can build yours later in Settings.",
   "ob.conv.recap.back": "Welcome back. Here is where we stand.",
   "ob.conv.recap.company": "Your company profile for {name} is confirmed.",
   "ob.conv.recap.companyUnsaved":
@@ -4559,8 +4518,6 @@ export const en = {
     "Welcome back. My earlier read of {host} did not finish. Give me a website again, or tell me directly.",
   "ob.conv.recap.readDeferred":
     "Welcome back. My read of {host} is paused for now. Give me a website again, or tell me directly.",
-  "ob.conv.connect.pick":
-    "Pick a provider to see exactly what connecting does, or skip and connect later in Settings.",
   "ob.conv.connect.skip": "Skip connecting for now",
   "ob.conv.linkedin.cardBody":
     "Turns your network into accounts and contacts, and flags it when a connection changes jobs.",
@@ -4646,7 +4603,6 @@ export const en = {
   "ob.scan.phaseDeferred": "Paused for now",
   "ob.scan.pagesRead": "{pages} pages read",
   "ob.scan.pagesSkipped": "{count} skipped",
-  "ob.scan.factsSoFar": "{count} facts so far",
   "ob.scan.stillReading": "still reading",
   "ob.scan.pageStripLabel": "Pages read so far",
   "ob.scan.logLabel": "The pages I am walking, newest first",
@@ -7694,7 +7650,6 @@ export const en = {
   "worklist.batch.unnamedCause": "Something",
 
   "ob.conv.scene.settleEyebrow": "It stopped on something only you can settle",
-  "ob.conv.review.boardTitle": "What I understand about your company.",
   "ob.conv.review.boardSub":
     "Every line says where it came from. Nothing is written until you confirm.",
   "ob.conv.manual.boardTitle": "Fill it in yourself.",
@@ -7706,6 +7661,11 @@ export const en = {
   "ob.core.error": "core · stopped",
   "ob.scan.tallyPages": "pages read",
   "ob.scan.tallyFacts": "facts found",
+  "ob.scan.tallyUncertain": "it will not guess at",
+  // The ticker's page-level finding: a fact field's own name (already the
+  // reader's language via factFieldLabelKey) and the value the page gave up.
+  // Punctuation only, nothing here for a locale to translate.
+  "ob.scan.tickerFact": "{field}: {value}",
   "ob.digest.where": "Where this lands",
   "ob.digest.written": "{n} of {m} lines written",
   "ob.digest.sources": "Read from",
@@ -7720,6 +7680,7 @@ export const en = {
   "ob.deck.next": "Next",
   "ob.deck.leaveOut": "Leave it out",
   "ob.deck.readWhole": "Read the whole profile",
+  "ob.deck.backToOpen": "Back to the open ones",
   "ob.deck.confirm": "Confirm the profile",
   "ob.deck.clear": "Nothing left to settle. {count} facts are on the record.",
   "ob.deck.eyebrow": "Everything else went in on evidence",
@@ -7727,9 +7688,7 @@ export const en = {
   "ob.stage.flow": "Setup",
   "ob.stop.read": "Read the site",
   "firstRun.ai.eyebrow": "Nothing here can think yet",
-  "firstRun.google.eyebrow": "It thinks. It cannot reach anyone yet",
   "firstRun.step.model": "The model",
-  "firstRun.step.platform": "Your platform",
   "firstRun.ai.rankedHint":
     "Also listing the ten highest-scoring models OpenRouter serves right now, ranked by {rankedBy}, with the vendor's own prices.",
   "firstRun.ai.rankedUnavailable":
@@ -7756,48 +7715,8 @@ export const en = {
   "firstRun.ignite.draft": "draft in a voice you taught it",
   "firstRun.ignite.act": "send anything, or change a record, unless you say so",
   "firstRun.ignite.carryOn": "Carry on",
-  "firstRun.platform.title": "What does your organization run on?",
-  "firstRun.platform.sub":
-    "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
-  "firstRun.platform.legend": "The platform this organization runs on",
-  "firstRun.platform.google": "Google Workspace",
-  "firstRun.platform.googleWhat":
-    "Mail, calendar and sign-in through one Google app you own.",
-  "firstRun.platform.microsoft": "Microsoft 365",
-  "firstRun.platform.microsoftWhat":
-    "Mail and calendar through Microsoft Graph. Sign-in is email and password.",
-  "firstRun.platform.other": "Neither",
-  "firstRun.platform.otherWhat":
-    "Each mailbox connects over IMAP. Sign-in is email and password.",
-  "firstRun.platform.microsoftOperator":
-    "Nothing to fill in here. Microsoft’s app is set up by whoever runs the server, before it starts.",
-  "firstRun.platform.otherOperator":
-    "Nothing to fill in here. Each mailbox is set up under Settings → Integrations.",
-  "firstRun.platform.stillNeedsGoogle":
-    "First run still asks for a Google app whatever you answer, so this path cannot finish yet. Paste one below to get past it.",
   "firstRun.ai.foot":
     "Nothing is sent to your vendor until you press Continue.",
-  "firstRun.google.foot":
-    "Saving this app connects mail and calendar. Google sign-in needs one more step from whoever runs the server.",
-  "firstRun.google.helpSignIn":
-    "For Google sign-in, whoever runs the server also exports the same pair as MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restarts it. Sign-in reads them at startup, not from what is saved here.",
-  "firstRun.google.helpToggle": "Where do I get these?",
-  "firstRun.google.helpStep1":
-    "In the Google Cloud console, open a project and go to APIs & Services → Credentials → Create credentials → OAuth client ID, and choose Web application.",
-  "firstRun.google.helpStep2":
-    "Enable the Gmail API, and put both the gmail.readonly and gmail.send scopes on the consent screen. They ride one consent on purpose: Google will not add a scope to a refresh token it already issued, so asking for send later means connecting the mailbox twice.",
-  "firstRun.google.helpStep3":
-    "Add an authorized redirect URI for each thing you will use. Mail is the only one you need; add Calendar if you want calendar too, and the sign-in one if people will sign in to Margince with their Google account.",
-  "firstRun.google.helpRedirectMail": "Mail",
-  "firstRun.google.helpRedirectCalendar": "Calendar",
-  "firstRun.google.helpRedirectSignIn": "Google sign-in",
-  "firstRun.google.helpStep4":
-    "Copy the client ID and client secret Google shows you into the two fields below. The secret is sent once and sealed in the key vault; it is never readable again, here or anywhere.",
-  "firstRun.google.helpConsole": "Google Cloud credentials console",
-  "firstRun.google.helpRedirectHost":
-    "{host} is wherever this installation's API answers, which is the address in the server's own MARGINCE_API_BASE_URL or MARGINCE_PUBLIC_BASE_URL. In a local dev stack that is http://localhost:8080.",
-  "firstRun.google.helpDocs":
-    "The full prerequisites, Microsoft and IMAP included: docs/how-to/connect-a-mailbox.md",
 } as const;
 
 export type MessageKey = keyof typeof en;

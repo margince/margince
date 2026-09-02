@@ -46,7 +46,6 @@
   border-radius: var(--r-full);
   background: var(--accentLight);
   color: var(--accentText);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   animation: ob-ig-appear var(--ig-beat) var(--ease-out) 150ms both;
 }
@@ -55,7 +54,6 @@
    says stays true, and a line that vanishes reads as a step undone. */
 .ob-ig-beat {
   margin: 0;
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   color: var(--aiText);
   animation: ob-ig-appear var(--ig-beat) var(--ease-out) 1500ms both;

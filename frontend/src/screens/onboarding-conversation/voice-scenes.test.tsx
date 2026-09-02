@@ -379,8 +379,12 @@ describe("VoiceResultScene", () => {
       />,
     );
 
+    // "Read the sample first." moved up to the room's own sub-heading
+    // (voice-act.tsx's boardHeading, ob.conv.voice.resultSub) once the scene
+    // stopped repeating the stage's own question inside itself — the scene's
+    // OWN pointer to the sample is the eyebrow that labels its card.
     expect(
-      screen.getByText("Read the sample first.", { exact: false }),
+      screen.getByText(en["ob.conv.voice.sampleEyebrow"]),
     ).toBeInTheDocument();
     expect(screen.getByText("The plan holds.")).toBeInTheDocument();
   });
@@ -399,10 +403,14 @@ describe("VoiceResultScene", () => {
       />,
     );
 
-    expect(screen.queryByText(en["ob.conv.voice.resultSub"])).toBeNull();
+    // No sample card at all — its eyebrow is the scene's own pointer to a
+    // sample, and there is none to point at. (The prose naming why —
+    // ob.conv.voice.resultSubNoSample — is the room's sub-heading now, set
+    // by voice-act.tsx's boardHeading, not by this scene.)
     expect(screen.queryByText(en["ob.conv.voice.sampleEyebrow"])).toBeNull();
+    expect(document.querySelector(".ob-voice-sample")).toBeNull();
     expect(
-      screen.getByText(en["ob.conv.voice.resultSubNoSample"]),
+      document.querySelector(".ob-voice-board-single"),
     ).toBeInTheDocument();
   });
 });

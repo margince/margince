@@ -79,7 +79,7 @@
 
 /* The footnote, set the way an encyclopedia sets one. */
 .pdigest-ref {
-  margin-inline-start: 2px;
+  margin-inline-start: var(--space-1);
   color: var(--aiText);
   font-size: var(--fs-eyebrow);
 }

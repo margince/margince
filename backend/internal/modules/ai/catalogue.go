@@ -3,13 +3,17 @@
 
 package ai
 
-// The AI model catalogue read (GET /ai-model-catalogue): a public vendor's
-// own list of served models, ranked by a published benchmark and priced for
-// a screen that PROPOSES a rate rather than records one. It sits in first
-// run, so it must never block onboarding on another company's uptime: any
-// failure degrades to Unavailable at HTTP 200, never an error status, and a
-// successful read is cached in-process for 15 minutes so a busy screen does
+// The OpenRouter read behind `/ai/available-models/openrouter`: a public
+// vendor's own list of served models, optionally ranked by a published
+// benchmark and priced for a screen that PROPOSES a rate rather than records
+// one. It sits in first run, so it must never block onboarding on another
+// company's uptime: any failure degrades to Unavailable, never an error, and
+// a successful read is cached in-process for 15 minutes so a busy screen does
 // not re-ask the vendor on every render.
+//
+// Every other vendor answers the same route through SelectBrain and a stored
+// binding; OpenRouter alone is asked unauthenticated and unbound, because its
+// public list is also the only one carrying a benchmark score and a price.
 
 import (
 	"context"
@@ -20,18 +24,14 @@ import (
 	"sync"
 	"time"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
 const (
-	// catalogueRankedBy names the measure the order came from, verbatim on
-	// the wire: a screen prints it beside the list so "top" carries a reason.
+	// catalogueRankedBy names the measure a ranked list's order came from,
+	// verbatim on the wire: a screen prints it beside the list so "top" carries
+	// a reason.
 	catalogueRankedBy = "Artificial Analysis intelligence index"
-	// catalogueTop bounds how many priced, ranked models the screen is shown.
-	catalogueTop = 10
 	// catalogueCacheTTL bounds how long a successful read is trusted before
 	// the next request re-asks the vendor.
 	catalogueCacheTTL = 15 * time.Minute
@@ -43,7 +43,7 @@ const (
 	// blocks attached, comfortably under this.
 	catalogueMaxResponseBytes = 8 << 20
 	// openRouterProvider is the one vendor this read serves, matching the
-	// contract's own enum value.
+	// contract's own path-param value.
 	openRouterProvider = "openrouter"
 	// openRouterModelsURL is OpenRouter's public, unauthenticated model list.
 	openRouterModelsURL = "https://openrouter.ai/api/v1/models"
@@ -65,100 +65,85 @@ type catalogueFetcher interface {
 	Fetch(ctx context.Context) ([]byte, error)
 }
 
-// ModelCatalogue serves the ranked, priced vendor catalogue behind a
-// mutex-guarded, TTL cache keyed by provider. Only a successful read is
-// ever cached; a failure is retried on the very next request rather than
-// pinned for 15 minutes.
+// ModelCatalogue serves OpenRouter's published list behind a mutex-guarded,
+// TTL cache. The full vendor payload is what is cached; each request derives
+// its own ranked-or-full view from it, so a `top` that differs from a prior
+// caller's is never served a stale shape.
 type ModelCatalogue struct {
 	fetcher catalogueFetcher
 	clock   Clock
 
-	mu    sync.Mutex
-	cache map[string]crmcontracts.AiModelCatalogueResponse
+	mu        sync.Mutex
+	cached    []openRouterModel
+	fetchedAt time.Time
 }
 
 // NewModelCatalogue wires the production catalogue over OpenRouter's public
 // read. clock is compose's real wall clock in production and a fake in tests.
 func NewModelCatalogue(clock Clock) *ModelCatalogue {
-	return &ModelCatalogue{
-		fetcher: openRouterFetcher{},
-		clock:   clock,
-		cache:   map[string]crmcontracts.AiModelCatalogueResponse{},
-	}
+	return &ModelCatalogue{fetcher: openRouterFetcher{}, clock: clock}
 }
 
-// WithCatalogue wires the model catalogue read. Absent it the route answers
-// Unavailable rather than panicking, the same posture as WithProviderKeys.
-func (h Handlers) WithCatalogue(catalogue *ModelCatalogue) Handlers {
-	h.catalogue = catalogue
-	return h
+// WithCatalogue wires the OpenRouter read into the store. Absent it, the
+// store answers openrouter as not_published rather than panicking, the same
+// posture as an adapter that does not exist.
+func (s *RoutingStore) WithCatalogue(catalogue *ModelCatalogue) *RoutingStore {
+	next := *s
+	next.catalogue = catalogue
+	return &next
 }
 
-// ListAiModelCatalogue implements (GET /ai-model-catalogue).
-func (h Handlers) ListAiModelCatalogue(w http.ResponseWriter, r *http.Request, params crmcontracts.ListAiModelCatalogueParams) {
-	if err := auth.RequireHuman(r.Context()); err != nil {
-		httperr.Write(w, r, err)
-		return
+// List serves OpenRouter's catalogue from cache when fresh, else re-reads the
+// vendor. It never returns an error: any failure resolves to the honest
+// Unavailable response, logged as a warning for an operator to notice without
+// ever blocking the caller on it.
+//
+// top > 0 asks for the best `top` models by the vendor's published benchmark,
+// which is the only measure this adapter can honour (`ranked_by` is set on
+// the result). top == 0 answers the vendor's full list in the vendor's own
+// order: priced where the vendor prices it, and unranked.
+func (c *ModelCatalogue) List(ctx context.Context, top int) AvailableModels {
+	models, err := c.fresh(ctx)
+	if err != nil {
+		slog.WarnContext(ctx, "ai model catalogue unusable; serving unavailable",
+			"provider", openRouterProvider, "error", err)
+		return AvailableModels{Provider: openRouterProvider, Unavailable: AvailabilityUnreachable}
 	}
-	if !params.Provider.Valid() {
-		httperr.Write(w, r, httperr.Validation("provider", "catalogue_provider_unknown",
-			"provider must be a vendor whose catalogue this installation can read"))
-		return
+	if top > 0 {
+		entries, rankedBy := rankedAvailableModels(models, top)
+		return AvailableModels{Provider: openRouterProvider, Models: entries, RankedBy: rankedBy}
 	}
-	if h.catalogue == nil {
-		httperr.WriteJSON(w, http.StatusOK, unavailableCatalogue())
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, h.catalogue.List(r.Context(), string(params.Provider)))
+	return AvailableModels{Provider: openRouterProvider, Models: fullAvailableModels(models)}
 }
 
-// List serves the given provider's catalogue from cache when fresh, else
-// re-reads the vendor. It never returns an error: any failure resolves to
-// the honest Unavailable response, logged as a warning for an operator to
-// notice without ever blocking the caller on it.
-func (c *ModelCatalogue) List(ctx context.Context, provider string) crmcontracts.AiModelCatalogueResponse {
-	// The fetcher reads OpenRouter and only OpenRouter, so a provider it does
-	// not serve must stop HERE. The contract's enum admits one vendor today,
-	// which is exactly why this is worth writing: widening that enum without
-	// giving the new vendor a fetcher would otherwise hand its name back with
-	// OpenRouter's models under it, and a wrong catalogue reads as a right one.
-	if provider != openRouterProvider {
-		slog.WarnContext(ctx, "ai model catalogue asked for a vendor with no reader; serving unavailable",
-			"provider", provider)
-		return unavailableCatalogue()
-	}
+// fresh returns the cached vendor payload when the TTL still covers it, else
+// re-reads and re-parses OpenRouter. Only a successful read is ever cached; a
+// failure is retried on the very next request rather than pinned for 15
+// minutes.
+func (c *ModelCatalogue) fresh(ctx context.Context) ([]openRouterModel, error) {
 	c.mu.Lock()
-	cached, ok := c.cache[provider]
+	cached, fetchedAt := c.cached, c.fetchedAt
 	c.mu.Unlock()
-	if ok && cached.FetchedAt != nil && c.clock.Now().Sub(*cached.FetchedAt) < catalogueCacheTTL {
-		return cached
+	if cached != nil && c.clock.Now().Sub(fetchedAt) < catalogueCacheTTL {
+		return cached, nil
 	}
 
 	body, err := c.fetcher.Fetch(ctx)
 	if err != nil {
-		slog.WarnContext(ctx, "ai model catalogue fetch failed; serving unavailable",
-			"provider", provider, "error", err)
-		return unavailableCatalogue()
+		return nil, fmt.Errorf("ai model catalogue: openrouter unreachable: %w", err)
 	}
-	resp, err := parseOpenRouterCatalogue(body, c.clock.Now())
-	if err != nil || len(resp.Data) == 0 {
-		slog.WarnContext(ctx, "ai model catalogue response unusable; serving unavailable",
-			"provider", provider, "error", err)
-		return unavailableCatalogue()
+	models, err := parseOpenRouterCatalogue(body)
+	if err != nil {
+		return nil, err
+	}
+	if len(models) == 0 {
+		return nil, fmt.Errorf("ai model catalogue: openrouter answered with no models")
 	}
 
 	c.mu.Lock()
-	c.cache[provider] = resp
+	c.cached, c.fetchedAt = models, c.clock.Now()
 	c.mu.Unlock()
-	return resp
-}
-
-func unavailableCatalogue() crmcontracts.AiModelCatalogueResponse {
-	return crmcontracts.AiModelCatalogueResponse{
-		Data:        []crmcontracts.AiModelCatalogueEntry{},
-		RankedBy:    catalogueRankedBy,
-		Unavailable: true,
-	}
+	return models, nil
 }
 
 // openRouterFetcher is the production catalogueFetcher: a plain,

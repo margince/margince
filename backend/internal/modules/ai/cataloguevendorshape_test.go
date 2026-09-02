@@ -27,7 +27,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestTheRankingSurvivesTheVendorsOwnPayload(t *testing.T) {
@@ -36,7 +35,7 @@ func TestTheRankingSurvivesTheVendorsOwnPayload(t *testing.T) {
 		t.Fatalf("read vendor fixture: %v", err)
 	}
 
-	got, err := parseOpenRouterCatalogue(body, time.Unix(0, 0).UTC())
+	models, err := parseOpenRouterCatalogue(body)
 	if err != nil {
 		t.Fatalf("parse vendor payload: %v", err)
 	}
@@ -44,11 +43,13 @@ func TestTheRankingSurvivesTheVendorsOwnPayload(t *testing.T) {
 	// The cap, and the thing that actually breaks: a fixture holding well over
 	// ten scored models must still yield ten. Any filter that is too strict
 	// shows up here as a short list rather than as an error.
-	if len(got.Data) != catalogueTop {
-		t.Fatalf("ranked %d models from the vendor's own payload, want %d", len(got.Data), catalogueTop)
+	const top = 10
+	got, rankedBy := rankedAvailableModels(models, top)
+	if len(got) != top {
+		t.Fatalf("ranked %d models from the vendor's own payload, want %d", len(got), top)
 	}
-	if got.Unavailable {
-		t.Fatal("a payload that parsed reported the vendor as unavailable")
+	if rankedBy == "" {
+		t.Fatal("a payload that parsed reported no ranking measure")
 	}
 
 	var unscored map[string]bool
@@ -57,26 +58,26 @@ func TestTheRankingSurvivesTheVendorsOwnPayload(t *testing.T) {
 	}
 
 	previous := 0.0
-	for i, entry := range got.Data {
-		if strings.Contains(entry.ModelId, ":") {
-			t.Errorf("entry %d is a billing-lane alias (%s); the id offered has to be bindable", i, entry.ModelId)
+	for i, entry := range got {
+		if strings.Contains(entry.ID, ":") {
+			t.Errorf("entry %d is a billing-lane alias (%s); the id offered has to be bindable", i, entry.ID)
 		}
-		if unscored[entry.ModelId] {
-			t.Errorf("entry %d (%s) carries no benchmark score, so nothing ranked it", i, entry.ModelId)
+		if unscored[entry.ID] {
+			t.Errorf("entry %d (%s) carries no benchmark score, so nothing ranked it", i, entry.ID)
 		}
-		if entry.InputPerMtok == "" || entry.OutputPerMtok == "" {
-			t.Errorf("entry %d (%s) reached the wire with a blank price", i, entry.ModelId)
+		if entry.InputPerMtok == nil || *entry.InputPerMtok == "" || entry.OutputPerMtok == nil || *entry.OutputPerMtok == "" {
+			t.Errorf("entry %d (%s) reached the wire with a blank price", i, entry.ID)
 		}
 		if entry.RankScore == nil {
-			t.Fatalf("entry %d (%s) carries no score, so the list cannot say why it is here", i, entry.ModelId)
+			t.Fatalf("entry %d (%s) carries no score, so the list cannot say why it is here", i, entry.ID)
 		}
 		score, convErr := strconv.ParseFloat(*entry.RankScore, 64)
 		if convErr != nil {
-			t.Fatalf("entry %d (%s) has an unreadable score %q", i, entry.ModelId, *entry.RankScore)
+			t.Fatalf("entry %d (%s) has an unreadable score %q", i, entry.ID, *entry.RankScore)
 		}
 		if i > 0 && score > previous {
 			t.Errorf("entry %d (%s) scores %v, above the entry before it (%v): the order is not the ranking",
-				i, entry.ModelId, score, previous)
+				i, entry.ID, score, previous)
 		}
 		previous = score
 	}

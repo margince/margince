@@ -33,6 +33,9 @@ type ModelRate = components["schemas"]["AiModelRate"];
 /** One vendor's answer about what it serves, as the wire carries it. */
 export type AvailableModels = components["schemas"]["AvailableModelList"];
 
+/** One model in that answer — priced and ranked only where the vendor states it. */
+export type VendorModel = AvailableModels["models"][number];
+
 /** The lane a field binds: what a tier picker asks for, what the embed row does. */
 export type ModelLane = ModelRate["lane"];
 
@@ -59,9 +62,6 @@ export function useAiModelCatalogue() {
   });
 }
 
-/** One model the vendor serves right now, at the vendor's own asking price. */
-type VendorModel = components["schemas"]["AiModelCatalogueEntry"];
-
 /**
  * The vendor's live catalogue as a caller holds it. `rankedBy` travels with the
  * models because a screen that prints a top ten has to be able to say what
@@ -74,11 +74,41 @@ export type VendorCatalogue = Readonly<{
   unavailable: boolean;
 }>;
 
-const VENDOR_UNREACHABLE: VendorCatalogue = {
-  models: [],
-  rankedBy: "",
-  unavailable: true,
-};
+/**
+ * The shared read behind BOTH "what does this vendor serve" hooks:
+ * `/ai/available-models/{provider}` answers a routing form's full pick list
+ * and a first-run shortlist alike, `top` being the only thing that tells them
+ * apart. One queryFn, so the two never drift into two answers for one vendor.
+ *
+ * IT NEVER THROWS. First run and the routing form must not be blocked by
+ * another company's uptime, so a failed transport is the same Unavailable
+ * state the server already answers a vendor it could not reach with.
+ */
+function availableModelsQueryOptions(provider: string, tier: string, top?: number) {
+  return {
+    queryKey: ["ai-available-models", provider, tier, top ?? null],
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    queryFn: async (): Promise<AvailableModels> => {
+      try {
+        const { data, error } = await api.GET(
+          "/ai/available-models/{provider}",
+          { params: { path: { provider }, query: { tier, top } } },
+        );
+        // A 200 is not by itself an answer: an intermediary can return one with
+        // a body this cannot read, and a list that is missing rather than empty
+        // would reach `select`/the render as undefined and take the screen
+        // down. An unreadable body is the same thing as an unreachable vendor.
+        if (error || !data || !Array.isArray(data.models)) {
+          return { provider, models: [], unavailable: "unreachable" };
+        }
+        return data;
+      } catch {
+        return { provider, models: [], unavailable: "unreachable" };
+      }
+    },
+  } as const;
+}
 
 /**
  * What the vendor is serving TODAY, which the price sheet cannot know.
@@ -90,42 +120,22 @@ const VENDOR_UNREACHABLE: VendorCatalogue = {
  * question, for the ONE vendor whose catalogue is public and unauthenticated,
  * and it is asked only once that vendor has been chosen.
  *
- * IT NEVER THROWS, for the same reason the sheet read does not. First run must
- * not be blocked by another company's uptime, so an unreachable vendor is an
- * empty list that says it is empty, and the field falls back to the sheet.
+ * `top: 10` is the only thing that makes this a different request from
+ * `useAvailableModels`'s: a first run wants ten names to try, not four hundred.
  */
 export function useVendorCatalogue(provider: "openrouter" | undefined) {
   return useQuery({
-    queryKey: ["ai-model-catalogue", provider],
+    ...availableModelsQueryOptions(provider ?? "", "", 10),
     // Nothing is asked until a vendor with a public catalogue is chosen. The
     // admin is about to hand that vendor their key and their text, so reading
     // its catalogue is not an escalation, but reading it before they have
     // chosen would be this installation talking to a vendor it may never use.
     enabled: provider !== undefined,
-    // The server caches this for the same span. A vendor's catalogue does not
-    // turn over while somebody is filling in one form.
-    staleTime: 15 * 60 * 1000,
-    retry: false,
-    queryFn: async (): Promise<VendorCatalogue> => {
-      if (provider === undefined) {
-        return VENDOR_UNREACHABLE;
-      }
-      const { data, error } = await api.GET("/ai-model-catalogue", {
-        params: { query: { provider } },
-      });
-      // A 200 is not by itself an answer: an intermediary can return one with a
-      // body this cannot read, and a list that is missing rather than empty
-      // would reach the render as undefined and take the screen down. An
-      // unreadable body is the same thing as an unreachable vendor.
-      if (error || !data || !Array.isArray(data.data)) {
-        return VENDOR_UNREACHABLE;
-      }
-      return {
-        models: data.data,
-        rankedBy: data.ranked_by ?? "",
-        unavailable: data.unavailable !== false,
-      };
-    },
+    select: (data): VendorCatalogue => ({
+      models: data.models,
+      rankedBy: data.ranked_by ?? "",
+      unavailable: data.unavailable !== undefined,
+    }),
   });
 }
 
@@ -140,7 +150,7 @@ export function vendorModel(
   catalogue: VendorCatalogue | undefined,
   modelId: string,
 ): VendorModel | undefined {
-  return catalogue?.models.find((m) => m.model_id === modelId);
+  return catalogue?.models.find((m) => m.id === modelId);
 }
 
 /**
@@ -227,22 +237,26 @@ export function vendorSuggestions(
       .map((r) => r.model_id),
   );
   return (vendor?.models ?? [])
-    .filter((m) => !onSheet.has(m.model_id))
-    .map((m) => ({ value: m.model_id, hint: vendorHint(m, locale) }));
+    .filter((m) => !onSheet.has(m.id))
+    .map((m) => ({ value: m.id, hint: vendorHint(m, locale) }));
 }
 
 function vendorHint(model: VendorModel, locale: Locale): string | undefined {
-  // Same guard as the sheet's hint, for the same reason: a hint is decoration,
-  // and a price that will not read must leave the model offered without one
-  // rather than printing NaN or throwing inside a render.
+  const { input_per_mtok: input, output_per_mtok: output } = model;
+  // Absent is absent, not a decoration to invent — the same guard as the
+  // sheet's hint, widened for a price that may not be there at all: a hint is
+  // decoration, and a model priced on only one side (or neither) offers the
+  // field without one rather than printing NaN or half a number.
   if (
-    unreadablePrice(model.input_per_mtok) ||
-    unreadablePrice(model.output_per_mtok)
+    input === undefined ||
+    output === undefined ||
+    unreadablePrice(input) ||
+    unreadablePrice(output)
   ) {
     return undefined;
   }
-  const shown = formatUsdPerMTok(model.input_per_mtok, locale);
-  return `${shown} → ${formatUsdPerMTok(model.output_per_mtok, locale)}`;
+  const shown = formatUsdPerMTok(input, locale);
+  return `${shown} → ${formatUsdPerMTok(output, locale)}`;
 }
 
 /**
@@ -267,34 +281,13 @@ export function useAvailableModels(
   tier: string,
   enabled: boolean,
 ) {
+  // The lane is part of the key, not just the request: two lanes on one vendor
+  // may be reached at two hosts, so their answers are two different lists and
+  // must not share a cache entry. No `top`: a routing form binds an id its
+  // reader already knows, so it wants the vendor's whole list, not a shortlist.
   return useQuery({
+    ...availableModelsQueryOptions(provider, tier),
     enabled: enabled && provider !== "",
-    // The lane is part of the key, not just the request: two lanes on one vendor
-    // may be reached at two hosts, so their answers are two different lists and
-    // must not share a cache entry.
-    queryKey: ["ai-available-models", provider, tier],
-    // A vendor's catalog does not change while somebody fills in a form, and
-    // the call costs a round-trip on the operator's own credential.
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-    queryFn: async (): Promise<AvailableModels> => {
-      // Caught, not just checked. `api.GET` REJECTS when the transport fails —
-      // offline, a dropped connection, a proxy closing the socket — and that
-      // path never reaches the `error` field below, so without this the hook
-      // rejects and the field loses the stated reason it was built to keep.
-      try {
-        const { data, error } = await api.GET(
-          "/ai/available-models/{provider}",
-          { params: { path: { provider }, query: { tier } } },
-        );
-        if (error || !data) {
-          return { provider, models: [], unavailable: "unreachable" };
-        }
-        return data;
-      } catch {
-        return { provider, models: [], unavailable: "unreachable" };
-      }
-    },
   });
 }
 

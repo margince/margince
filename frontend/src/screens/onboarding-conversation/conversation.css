@@ -269,88 +269,10 @@
   gap: var(--space-3);
 }
 
-.ob-conv-attention-heading {
-  margin: 0;
-  color: var(--textPrimary);
-  font: var(--fw-semibold) var(--fs-sm) / var(--lh-normal) var(--f-display);
-}
-
 .ob-conv-attention-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-}
-
-/* The short line naming a tier — "needed before you can continue" versus
- * "worth a look" — so the shape of the work is legible before any single
- * row is read, and a row's own text can stay just the field name. */
-.ob-conv-attention-group-label {
-  margin: 0;
-  color: var(--textSecondary);
-  font: var(--fw-semibold) var(--fs-eyebrow) / var(--lh-normal) var(--f-body);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-}
-
-.ob-conv-attention-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ob-conv-attention-list button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-  color: var(--textPrimary);
-  cursor: pointer;
-  font: var(--fw-medium) var(--fs-sm) / var(--lh-normal) var(--f-body);
-  text-align: start;
-}
-
-.ob-conv-attention-list button:hover {
-  border-color: var(--accent);
-}
-
-/* Colour is a hint, not the only carrier — a screen reader gets the same
- * distinction through each button's own (visually hidden) status word and
- * the group label it sits under, never through the dot alone. Danger red is
- * reserved for the ONE tier that actually stops confirm; that group simply
- * does not render when nothing blocks, so nothing in the list reads as red
- * unless something genuinely is. */
-.ob-conv-attention-list button::before {
-  content: "";
-  inline-size: 6px;
-  block-size: 6px;
-  flex: none;
-  border-radius: 50%;
-}
-
-.ob-conv-attention-list button[data-kind="blocks"]::before {
-  background: var(--danger);
-}
-
-.ob-conv-attention-list button[data-kind="decision"]::before {
-  background: var(--accent);
-}
-
-/* The advisory pair: an optional field with no value yet, or one with a
- * weak-confidence value worth a second look — neither stops the human, and
- * both recede next to the blocking tier's red. */
-.ob-conv-attention-list button[data-kind="empty"]::before {
-  background: var(--textMuted);
-}
-
-.ob-conv-attention-list button[data-kind="check"]::before {
-  background: var(--warn);
 }
 
 .ob-conv-attention-field {
@@ -595,27 +517,6 @@
   padding-block-start: var(--space-4);
 }
 
-.ob-scene-eyebrow {
-  margin: 0;
-  color: var(--accentText);
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-}
-
-/* The header block below owns the distance to the headline above; a margin
-   here would fight it, and the pair used to sit almost on one baseline
-   because this one pulled the sub back up into the headline. */
-.ob-scene-sub {
-  margin: 0;
-  max-width: 38rem;
-  color: var(--textSecondary);
-  font-size: var(--fs-body);
-  line-height: var(--lh-normal);
-}
-
 /* A decision as the scene: headline, candidate cards, one confirm. A
    choice list reads best at prose width even when the pane is wider. */
 .ob-decision {
@@ -733,12 +634,9 @@
   gap: var(--space-4);
 }
 
-/* Eyebrow, headline and sub are one block, and the scenes assemble it
-   differently — the decision and voice scenes hang a count beside it, the
-   connect scene does not — so its internal rhythm is set once here rather
-   than three times over. */
-.ob-decision-head > div,
-.ob-scene > div:has(> .ob-scene-eyebrow) {
+/* Eyebrow, headline and sub are one block, so its internal rhythm is set
+   once here rather than every scene declaring it again. */
+.ob-decision-head > div {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -747,20 +645,8 @@
 /* A headline is not a peer of the rows beneath it: the block claims more than
    the scene's own child gap, so the eye reads a title and then content rather
    than a list of equal parts. */
-.ob-decision-head,
-.ob-scene > div:has(> .ob-scene-eyebrow) {
+.ob-decision-head {
   margin-block-end: var(--space-4);
-}
-
-.ob-decision-count {
-  flex: none;
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--warnBorder);
-  border-radius: var(--r-full);
-  background: var(--warnBg);
-  color: var(--warn);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
 }
 
 /* The native radio stays for keyboard and AT; the disc is what shows. */
@@ -3294,8 +3180,7 @@
 
 /* Keyboard focus on option chips and chip rows reads the same accent-token
  * ring as the atom inputs, not the browser's off-palette native outline. */
-.ob-conv-option:focus-visible,
-.ob-conv-attention-list button:focus-visible {
+.ob-conv-option:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
   box-shadow: var(--focus-glow);

@@ -83,8 +83,8 @@ const VENDOR = {
   unavailable: false,
   models: [
     {
-      model_id: "anthropic/claude-opus-5",
-      name: "Anthropic: Claude Opus 5",
+      id: "anthropic/claude-opus-5",
+      display_name: "Anthropic: Claude Opus 5",
       input_per_mtok: "5",
       output_per_mtok: "25",
       rank_score: "63.1",
@@ -122,7 +122,7 @@ export const RecordedOutranksProposed: Story = {
     catalogue: SHEET,
     vendor: {
       ...VENDOR,
-      models: [{ ...VENDOR.models[0], model_id: "gemini-2.5-flash" }],
+      models: [{ ...VENDOR.models[0], id: "gemini-2.5-flash" }],
     },
     provider: "gemini",
     chatModel: "gemini-2.5-flash",

@@ -3,11 +3,12 @@
 
 package ai
 
-// The OpenRouter response shape, and the ranking this module derives from
-// it: keep only models a public benchmark actually scored, sort by that
-// score, collapse a model's billing-lane aliases (":batch", ":free"...)
-// onto the one bindable id, and price the survivors in the contract's own
-// USD-per-MTok decimal strings.
+// The OpenRouter response shape, and the two views this module derives from
+// it: the FULL vendor list, in the vendor's own order and priced where the
+// vendor prices it, and the RANKED view — keep only models a public benchmark
+// actually scored, sort by that score, collapse a model's billing-lane
+// aliases (":batch", ":free"...) onto the one bindable id, and cap at the
+// caller's `top`.
 
 import (
 	"encoding/json"
@@ -16,10 +17,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // openRouterCatalogue is the vendor's own envelope: one entry per model.
@@ -42,34 +42,49 @@ type openRouterModel struct {
 	} `json:"benchmarks"`
 }
 
-// parseOpenRouterCatalogue turns a vendor response body into the wire
-// response: ranked, deduped, priced, capped at catalogueTop. fetchedAt is
-// the clock sample taken right before the request, carried through so a
-// later cache hit reports when the vendor was actually read.
-func parseOpenRouterCatalogue(body []byte, fetchedAt time.Time) (crmcontracts.AiModelCatalogueResponse, error) {
+// parseOpenRouterCatalogue turns a vendor response body into the vendor's own
+// model list, in the vendor's own order. No ranking, dedup or pricing is done
+// here — that is for the caller's chosen view (rankedAvailableModels or
+// fullAvailableModels) to apply, since which one applies depends on the
+// request's `top` rather than on the read itself.
+func parseOpenRouterCatalogue(body []byte) ([]openRouterModel, error) {
 	var vendor openRouterCatalogue
 	if err := json.Unmarshal(body, &vendor); err != nil {
-		return crmcontracts.AiModelCatalogueResponse{}, fmt.Errorf("ai model catalogue: unparseable openrouter response: %w", err)
+		return nil, fmt.Errorf("ai model catalogue: unparseable openrouter response: %w", err)
 	}
+	return vendor.Data, nil
+}
 
-	entries := make([]crmcontracts.AiModelCatalogueEntry, 0, catalogueTop)
-	for _, m := range rankOpenRouterModels(vendor.Data) {
-		entry, priced := toCatalogueEntry(m)
+// rankedAvailableModels keeps only benchmarked models, ranks them by score
+// descending, collapses each model's billing-lane aliases onto its one
+// bindable id, prices the survivors and caps the result at `top`. A model
+// whose price will not parse is dropped rather than shown broken or free:
+// better a shorter list than a wrong number.
+func rankedAvailableModels(models []openRouterModel, top int) ([]AvailableModel, string) {
+	entries := make([]AvailableModel, 0, top)
+	for _, m := range rankOpenRouterModels(models) {
+		entry, priced := toRankedModel(m)
 		if !priced {
-			// A model whose price will not parse is dropped rather than shown
-			// broken or free: better a shorter list than a wrong number.
 			continue
 		}
 		entries = append(entries, entry)
-		if len(entries) == catalogueTop {
+		if len(entries) == top {
 			break
 		}
 	}
+	return entries, catalogueRankedBy
+}
 
-	fetched := fetchedAt
-	return crmcontracts.AiModelCatalogueResponse{
-		Data: entries, RankedBy: catalogueRankedBy, Unavailable: false, FetchedAt: &fetched,
-	}, nil
+// fullAvailableModels answers every model the vendor listed, in the vendor's
+// own order and with no ranking applied. A model whose price will not parse
+// is still shown, with the price fields simply absent: "the vendor's whole
+// list" means every id it named, not only the ones this adapter could price.
+func fullAvailableModels(models []openRouterModel) []AvailableModel {
+	entries := make([]AvailableModel, 0, len(models))
+	for _, m := range models {
+		entries = append(entries, toFullModel(m))
+	}
+	return entries
 }
 
 // rankOpenRouterModels keeps only benchmarked models, sorts them by score
@@ -117,27 +132,44 @@ func isBareModelID(id string) bool {
 	return baseModelID(id) == id
 }
 
-// toCatalogueEntry converts one vendor model into the wire entry, reporting
-// false when either price will not parse (the entry must then be dropped,
-// never rendered with a broken or zero price).
-func toCatalogueEntry(m openRouterModel) (crmcontracts.AiModelCatalogueEntry, bool) {
+// toRankedModel converts one vendor model into the wire entry for a ranked
+// view, reporting false when either price will not parse — the entry must
+// then be dropped, never rendered with a broken or zero price.
+func toRankedModel(m openRouterModel) (AvailableModel, bool) {
 	inputPerMtok, ok := tokenPriceToUsdPerMTok(m.Pricing.Prompt)
 	if !ok {
-		return crmcontracts.AiModelCatalogueEntry{}, false
+		return AvailableModel{}, false
 	}
 	outputPerMtok, ok := tokenPriceToUsdPerMTok(m.Pricing.Completion)
 	if !ok {
-		return crmcontracts.AiModelCatalogueEntry{}, false
+		return AvailableModel{}, false
 	}
 	score := strconv.FormatFloat(*m.Benchmarks.ArtificialAnalysis.IntelligenceIndex, 'f', 1, 64)
-	return crmcontracts.AiModelCatalogueEntry{
+	return AvailableModel{
+		Info:          model.Info{ID: m.ID, DisplayName: m.Name},
 		ContextLength: m.ContextLength,
-		InputPerMtok:  inputPerMtok,
-		ModelId:       m.ID,
-		Name:          m.Name,
-		OutputPerMtok: outputPerMtok,
+		InputPerMtok:  &inputPerMtok,
+		OutputPerMtok: &outputPerMtok,
 		RankScore:     &score,
 	}, true
+}
+
+// toFullModel converts one vendor model into the wire entry for the full,
+// unranked view. Unlike toRankedModel, an unparseable price is left absent
+// rather than dropping the whole entry: this view answers "everything the
+// vendor named", and a price is only one of the facts about it.
+func toFullModel(m openRouterModel) AvailableModel {
+	out := AvailableModel{
+		Info:          model.Info{ID: m.ID, DisplayName: m.Name},
+		ContextLength: m.ContextLength,
+	}
+	if v, ok := tokenPriceToUsdPerMTok(m.Pricing.Prompt); ok {
+		out.InputPerMtok = &v
+	}
+	if v, ok := tokenPriceToUsdPerMTok(m.Pricing.Completion); ok {
+		out.OutputPerMtok = &v
+	}
+	return out
 }
 
 // tokenPriceToUsdPerMTok converts a vendor's USD-per-single-token decimal

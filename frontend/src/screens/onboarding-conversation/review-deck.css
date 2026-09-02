@@ -87,9 +87,11 @@
   color: var(--danger);
 }
 
+/* "1 of 4" is a counted position in the deck, not an identifier a reader
+   compares character by character, so it reads in the deck's own prose
+   family rather than mono. */
 .rdeck-count {
   color: var(--textMeta);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
 
@@ -144,7 +146,7 @@
 
 .rdeck-source {
   align-self: flex-start;
-  padding: 3px var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgElevated);

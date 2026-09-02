@@ -35,7 +35,7 @@ func TestAvailableModelsAsksTheBoundAdapter(t *testing.T) {
 		t.Fatalf("storing the binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake", "")
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake", "", 0)
 	if err != nil {
 		t.Fatalf("listing: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
 		t.Fatalf("storing the sovereign binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic", "")
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic", "", 0)
 	if err != nil {
 		t.Fatalf("a refused vendor is a state, not an error: %v", err)
 	}
@@ -70,12 +70,38 @@ func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
 
 	// And a LOCAL vendor is still askable under the same profile — the refusal
 	// is about egress, not about the surface being switched off.
-	local, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake", "")
+	local, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake", "", 0)
 	if err != nil {
 		t.Fatalf("listing a local vendor: %v", err)
 	}
 	if local.Unavailable == ai.AvailabilityProfileForbids {
 		t.Fatal("sovereign forbade a local vendor")
+	}
+}
+
+// OpenRouter is cloud egress like any other broker, but it is reached with NO
+// stored binding at all — its read skips SelectBrain entirely and asks the
+// vendor unauthenticated. The profile check has to run before that shortcut
+// gets a chance to bypass it, or a sovereign installation would read a public
+// vendor's list regardless of its own posture: the profile refuses an
+// unbound vendor exactly as it refuses a bound one, and this proves it does
+// so BEFORE any network call, the same way the bound case above does.
+func TestSovereignRefusesOpenRouterToo(t *testing.T) {
+	e := SetupSearch(t)
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	if _, err := store.Replace(e.adminRoutingCtx(), sovereignRouting(t)); err != nil {
+		t.Fatalf("storing the sovereign binding: %v", err)
+	}
+
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "openrouter", "", 0)
+	if err != nil {
+		t.Fatalf("a refused vendor is a state, not an error: %v", err)
+	}
+	if got.Unavailable != ai.AvailabilityProfileForbids {
+		t.Fatalf("sovereign must forbid openrouter, got %q", got.Unavailable)
+	}
+	if len(got.Models) != 0 {
+		t.Fatalf("a forbidden vendor must carry no models: %+v", got.Models)
 	}
 }
 
@@ -89,7 +115,7 @@ func TestACloudVendorWithNoKeyReportsItRatherThanFailing(t *testing.T) {
 		t.Fatalf("storing the binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic", "")
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic", "", 0)
 	if err != nil {
 		t.Fatalf("an unkeyed vendor is a state, not an error: %v", err)
 	}
@@ -114,7 +140,7 @@ func TestAvailableModelsNeedsTheRoutingReadGrant(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	if _, err := store.ListAvailableModels(ctx, "fake", ""); err == nil {
+	if _, err := store.ListAvailableModels(ctx, "fake", "", 0); err == nil {
 		t.Fatal("a seat without ai_routing:read was served the vendor list")
 	} else if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("want a permission denial, got %v", err)

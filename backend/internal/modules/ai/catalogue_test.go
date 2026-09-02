@@ -5,21 +5,17 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
-
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // happyCatalogueBody carries: a scored model and its higher-scoring-tied
 // batch alias (dedupe must keep the bare id), a model with no benchmark at
-// all (must be excluded), a scored model whose prompt price is scientific
-// notation (must be dropped, not rendered broken), and a second real model.
+// all (must be excluded from the ranked view, but kept in the full one), a
+// scored model whose prompt price is scientific notation (must be dropped
+// from the ranked view, kept priceless in the full one), and a second real
+// model.
 const happyCatalogueBody = `{"data":[
 	{"id":"anthropic/claude-opus-5","name":"Claude Opus 5","context_length":200000,
 	 "pricing":{"prompt":"0.00000015","completion":"0.00000075"},
@@ -61,72 +57,96 @@ type fixedClock struct{ now time.Time }
 func (c *fixedClock) Now() time.Time { return c.now }
 
 func newTestCatalogue(fetcher *fakeCatalogueFetcher, clock *fixedClock) *ModelCatalogue {
-	return &ModelCatalogue{
-		fetcher: fetcher, clock: clock,
-		cache: map[string]crmcontracts.AiModelCatalogueResponse{},
-	}
-}
-
-func humanCtx() context.Context {
-	return principal.WithActor(context.Background(), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:test",
-	})
+	return &ModelCatalogue{fetcher: fetcher, clock: clock}
 }
 
 func TestModelCatalogueListRanksDedupesAndPrices(t *testing.T) {
 	fetcher := &fakeCatalogueFetcher{body: []byte(happyCatalogueBody)}
 	clock := &fixedClock{now: time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)}
-	resp := newTestCatalogue(fetcher, clock).List(context.Background(), "openrouter")
+	resp := newTestCatalogue(fetcher, clock).List(context.Background(), 10)
 
-	if resp.Unavailable {
-		t.Fatalf("got Unavailable, want a served catalogue")
+	if resp.Unavailable != AvailabilityOK {
+		t.Fatalf("got Unavailable %q, want a served catalogue", resp.Unavailable)
 	}
-	if len(resp.Data) != 2 {
-		t.Fatalf("got %d entries, want 2 (no-benchmark and bad-price excluded): %+v", len(resp.Data), resp.Data)
+	if len(resp.Models) != 2 {
+		t.Fatalf("got %d entries, want 2 (no-benchmark and bad-price excluded): %+v", len(resp.Models), resp.Models)
 	}
-	first := resp.Data[0]
-	if first.ModelId != "anthropic/claude-opus-5" {
-		t.Errorf("first entry id = %q, want the bare id kept over its :batch alias", first.ModelId)
+	first := resp.Models[0]
+	if first.ID != "anthropic/claude-opus-5" {
+		t.Errorf("first entry id = %q, want the bare id kept over its :batch alias", first.ID)
 	}
-	if first.InputPerMtok != "0.15" || first.OutputPerMtok != "0.75" {
-		t.Errorf("first entry prices = %s/%s, want 0.15/0.75", first.InputPerMtok, first.OutputPerMtok)
+	if first.InputPerMtok == nil || *first.InputPerMtok != "0.15" ||
+		first.OutputPerMtok == nil || *first.OutputPerMtok != "0.75" {
+		t.Errorf("first entry prices = %v/%v, want 0.15/0.75", first.InputPerMtok, first.OutputPerMtok)
 	}
 	if first.RankScore == nil || *first.RankScore != "63.1" {
 		t.Errorf("first entry rank score = %v, want 63.1", first.RankScore)
 	}
-	second := resp.Data[1]
-	if second.ModelId != "vendor/second" || second.InputPerMtok != "1" || second.OutputPerMtok != "2" {
+	second := resp.Models[1]
+	if second.ID != "vendor/second" || second.InputPerMtok == nil || *second.InputPerMtok != "1" ||
+		second.OutputPerMtok == nil || *second.OutputPerMtok != "2" {
 		t.Errorf("second entry = %+v, want vendor/second priced 1/2", second)
 	}
 	if resp.RankedBy != catalogueRankedBy {
 		t.Errorf("ranked_by = %q, want %q", resp.RankedBy, catalogueRankedBy)
 	}
-	if resp.FetchedAt == nil || !resp.FetchedAt.Equal(clock.now) {
-		t.Errorf("fetched_at = %v, want %v", resp.FetchedAt, clock.now)
+}
+
+// Omitting `top` answers the vendor's whole list, unranked: the no-benchmark
+// and bad-price models excluded above must both be present here, the second
+// with no price rather than dropped.
+func TestModelCatalogueListServesTheFullListWithNoTop(t *testing.T) {
+	fetcher := &fakeCatalogueFetcher{body: []byte(happyCatalogueBody)}
+	resp := newTestCatalogue(fetcher, &fixedClock{}).List(context.Background(), 0)
+
+	if resp.Unavailable != AvailabilityOK {
+		t.Fatalf("got Unavailable %q, want a served catalogue", resp.Unavailable)
+	}
+	if len(resp.Models) != 5 {
+		t.Fatalf("got %d entries, want all 5 the vendor listed: %+v", len(resp.Models), resp.Models)
+	}
+	if resp.RankedBy != "" {
+		t.Errorf("ranked_by = %q, want empty: an unranked list must not claim a measure", resp.RankedBy)
+	}
+	var badPrice AvailableModel
+	found := false
+	for _, m := range resp.Models {
+		if m.ID == "vendor/bad-price" {
+			badPrice, found = m, true
+		}
+	}
+	if !found {
+		t.Fatal("vendor/bad-price is missing from the full list; it must only be excluded from a ranked one")
+	}
+	if badPrice.InputPerMtok != nil {
+		t.Errorf("vendor/bad-price carries a price %v, want absent: its prompt price does not parse", *badPrice.InputPerMtok)
+	}
+	if badPrice.RankScore != nil {
+		t.Errorf("vendor/bad-price carries a rank score on an unranked list")
 	}
 }
 
 func TestModelCatalogueListFailsOpenOnNon200(t *testing.T) {
 	fetcher := &fakeCatalogueFetcher{err: errors.New("openrouter answered 500")}
-	resp := newTestCatalogue(fetcher, &fixedClock{}).List(context.Background(), "openrouter")
-	if !resp.Unavailable || len(resp.Data) != 0 {
-		t.Fatalf("got %+v, want Unavailable with an empty list", resp)
+	resp := newTestCatalogue(fetcher, &fixedClock{}).List(context.Background(), 10)
+	if resp.Unavailable != AvailabilityUnreachable || len(resp.Models) != 0 {
+		t.Fatalf("got %+v, want Unavailable(unreachable) with an empty list", resp)
 	}
 }
 
 func TestModelCatalogueListFailsOpenOnTimeout(t *testing.T) {
 	fetcher := &fakeCatalogueFetcher{err: context.DeadlineExceeded}
-	resp := newTestCatalogue(fetcher, &fixedClock{}).List(context.Background(), "openrouter")
-	if !resp.Unavailable || len(resp.Data) != 0 {
-		t.Fatalf("got %+v, want Unavailable with an empty list", resp)
+	resp := newTestCatalogue(fetcher, &fixedClock{}).List(context.Background(), 10)
+	if resp.Unavailable != AvailabilityUnreachable || len(resp.Models) != 0 {
+		t.Fatalf("got %+v, want Unavailable(unreachable) with an empty list", resp)
 	}
 }
 
 func TestModelCatalogueListFailsOpenOnUnparseableBody(t *testing.T) {
 	fetcher := &fakeCatalogueFetcher{body: []byte("not json")}
-	resp := newTestCatalogue(fetcher, &fixedClock{}).List(context.Background(), "openrouter")
-	if !resp.Unavailable || len(resp.Data) != 0 {
-		t.Fatalf("got %+v, want Unavailable with an empty list", resp)
+	resp := newTestCatalogue(fetcher, &fixedClock{}).List(context.Background(), 10)
+	if resp.Unavailable != AvailabilityUnreachable || len(resp.Models) != 0 {
+		t.Fatalf("got %+v, want Unavailable(unreachable) with an empty list", resp)
 	}
 }
 
@@ -135,17 +155,30 @@ func TestModelCatalogueListServesTheCacheWithinTTL(t *testing.T) {
 	clock := &fixedClock{now: time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)}
 	catalogue := newTestCatalogue(fetcher, clock)
 
-	catalogue.List(context.Background(), "openrouter")
+	catalogue.List(context.Background(), 10)
 	clock.now = clock.now.Add(14 * time.Minute)
-	catalogue.List(context.Background(), "openrouter")
+	catalogue.List(context.Background(), 10)
 	if fetcher.calls != 1 {
 		t.Fatalf("fetcher called %d times within the TTL, want 1", fetcher.calls)
 	}
 
 	clock.now = clock.now.Add(2 * time.Minute) // 16 minutes since the first read
-	catalogue.List(context.Background(), "openrouter")
+	catalogue.List(context.Background(), 10)
 	if fetcher.calls != 2 {
 		t.Fatalf("fetcher called %d times after the TTL elapsed, want 2", fetcher.calls)
+	}
+}
+
+// A cached vendor payload serves BOTH a ranked and a full request without a
+// second fetch: the cache holds the parse, not a capped view of it.
+func TestModelCatalogueListServesEitherViewFromOneCachedFetch(t *testing.T) {
+	fetcher := &fakeCatalogueFetcher{body: []byte(happyCatalogueBody)}
+	catalogue := newTestCatalogue(fetcher, &fixedClock{})
+
+	catalogue.List(context.Background(), 10)
+	catalogue.List(context.Background(), 0)
+	if fetcher.calls != 1 {
+		t.Fatalf("fetcher called %d times for two views inside the TTL, want 1", fetcher.calls)
 	}
 }
 
@@ -153,66 +186,9 @@ func TestModelCatalogueListNeverCachesAFailure(t *testing.T) {
 	fetcher := &fakeCatalogueFetcher{err: errors.New("openrouter answered 503")}
 	catalogue := newTestCatalogue(fetcher, &fixedClock{})
 
-	catalogue.List(context.Background(), "openrouter")
-	catalogue.List(context.Background(), "openrouter")
+	catalogue.List(context.Background(), 10)
+	catalogue.List(context.Background(), 10)
 	if fetcher.calls != 2 {
 		t.Fatalf("fetcher called %d times across two failures, want 2 (a failure must never be cached)", fetcher.calls)
-	}
-}
-
-func TestListAiModelCatalogueRefusesAnAgentPrincipal(t *testing.T) {
-	fetcher := &fakeCatalogueFetcher{body: []byte(happyCatalogueBody)}
-	h := Handlers{}.WithCatalogue(newTestCatalogue(fetcher, &fixedClock{}))
-
-	request := httptest.NewRequest(http.MethodGet, "/v1/ai-model-catalogue?provider=openrouter", nil)
-	request = request.WithContext(principal.WithActor(request.Context(), principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:test",
-	}))
-	recorder := httptest.NewRecorder()
-	h.ListAiModelCatalogue(recorder, request, crmcontracts.ListAiModelCatalogueParams{Provider: crmcontracts.Openrouter})
-
-	if recorder.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want 403", recorder.Code)
-	}
-	if fetcher.calls != 0 {
-		t.Errorf("fetcher called %d times, want 0: a refused principal must never reach the vendor", fetcher.calls)
-	}
-}
-
-func TestListAiModelCatalogueServesUnavailableWithNoCatalogueWired(t *testing.T) {
-	h := Handlers{}
-	request := httptest.NewRequest(http.MethodGet, "/v1/ai-model-catalogue?provider=openrouter", nil).WithContext(humanCtx())
-	recorder := httptest.NewRecorder()
-	h.ListAiModelCatalogue(recorder, request, crmcontracts.ListAiModelCatalogueParams{Provider: crmcontracts.Openrouter})
-
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 even with no catalogue source composed", recorder.Code)
-	}
-	var body crmcontracts.AiModelCatalogueResponse
-	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
-		t.Fatalf("decoding response: %v", err)
-	}
-	if !body.Unavailable || body.Data == nil || len(body.Data) != 0 {
-		t.Fatalf("got %+v, want Unavailable with an empty (non-null) list", body)
-	}
-}
-
-func TestListAiModelCatalogueServesTheRankedList(t *testing.T) {
-	fetcher := &fakeCatalogueFetcher{body: []byte(happyCatalogueBody)}
-	h := Handlers{}.WithCatalogue(newTestCatalogue(fetcher, &fixedClock{}))
-
-	request := httptest.NewRequest(http.MethodGet, "/v1/ai-model-catalogue?provider=openrouter", nil).WithContext(humanCtx())
-	recorder := httptest.NewRecorder()
-	h.ListAiModelCatalogue(recorder, request, crmcontracts.ListAiModelCatalogueParams{Provider: crmcontracts.Openrouter})
-
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200: %s", recorder.Code, recorder.Body.String())
-	}
-	var body crmcontracts.AiModelCatalogueResponse
-	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
-		t.Fatalf("decoding response: %v", err)
-	}
-	if body.Unavailable || len(body.Data) != 2 {
-		t.Fatalf("got %+v, want a served, two-entry catalogue", body)
 	}
 }

@@ -4200,10 +4200,6 @@ export const de = {
   "ob.s4.notNow": "Nicht jetzt",
 
   "ob.conv.threadLabel": "Einrichtungsgespräch",
-  "ob.conv.welcome":
-    "Hallo, ich bin Margince. Ich baue dein CRM aus dem, was schon da ist, und zeige jede Quelle.",
-  "ob.conv.welcomeMember":
-    "Hallo, ich bin Margince. Dein Team ist schon eingerichtet. Zwei kurze Schritte, dann bist du drin.",
   "ob.conv.read.started": "Ich lese jetzt {host}. Ich sage dir, was ich finde.",
   "ob.conv.read.pages": "Bisher gelesene Seiten: {pages}.",
   "ob.conv.read.learnedField": "{field} gelernt: {value}",
@@ -4226,8 +4222,6 @@ export const de = {
   "ob.conv.voice.speakerQuestion":
     "Dieses Transkript hat mehrere Sprecher. Wer davon bist du? Nur deine eigenen Worte zählen.",
   "ob.conv.voice.speakerOptionDetail": "Wörter: {words} · Beiträge: {turns}",
-  "ob.conv.voice.guideSpeaker":
-    "Rechts wartet eine Sprecherwahl — wähle, welche Person du bist.",
   "ob.conv.voice.speakerFoot": "Deine Wahl gilt nur für diese Datei.",
   "ob.conv.voice.speakerContinue": "Diese Person bin ich",
   "ob.conv.voice.continueSkippedStatus":
@@ -4236,8 +4230,6 @@ export const de = {
     "Deine Materialien sind sicher — versuch es erneut oder mach weiter und komm später zurück.",
   "ob.conv.voice.continueDeferredStatus":
     "Hier ist nichts zu tun — mach weiter, der Rest läuft von selbst.",
-  "ob.conv.voice.collectAsk":
-    "Schick mir eigene Texte. Gesprächs-Transkripte sind am besten, Dokumente gehen auch.",
   "ob.conv.voice.composer": "Füge hier deinen Text ein",
   "ob.conv.voice.dropHint":
     "Du kannst Dateien auch überall in dieses Gespräch ziehen.",
@@ -4262,10 +4254,6 @@ export const de = {
   "ob.conv.voice.pasteAdd": "Ja, in meinen Korpus.",
   "ob.conv.voice.pasteDiscard": "Nein, verwerfen.",
   "ob.conv.voice.pasteSource": "Eingefügter Text",
-  "ob.conv.voice.buildFloor":
-    "Eigene Wörter bisher: {words}. Ich brauche mindestens {min}, bevor ich bauen kann.",
-  "ob.conv.voice.buildNudge":
-    "Ich habe genug zum Bauen. Ab 4.000 Wörtern wird deine Stimme deutlich schärfer.",
   "ob.conv.voice.buildChip": "Mein Stimmprofil bauen",
   "ob.conv.voice.retryBuild": "Aufbau erneut versuchen",
   "ob.conv.voice.buildPollFailed":
@@ -4302,8 +4290,6 @@ export const de = {
     "Der Aufbau wurde nicht fertig. Deine Texte bleiben erhalten, du kannst es jederzeit erneut versuchen.",
   "ob.conv.recap":
     "Das weiß dein CRM jetzt, mit einer Quelle zu jedem Eintrag.",
-  "ob.conv.consent":
-    "Letzter Schritt: Was darf ich erfassen, und zu welchem Zweck? Nichts ist standardmäßig aktiv.",
   "ob.conv.done": "Einrichtung abgeschlossen. Dein CRM ist bereit.",
   "ob.conv.clarify.question": "{question}",
   "ob.conv.clarify.optionDetail": "{detail}",
@@ -4363,14 +4349,12 @@ export const de = {
   "ob.conv.triage.peopleEmpty": "Keine Personen auf deiner Website gefunden.",
   "ob.conv.triage.factsLabel": "Fakten",
   "ob.conv.triage.factsCount": "{count} gefunden",
-  "ob.rail.spend": "Tokens für dieses Setup",
   "ob.rail.tokensUnit": "Tok.",
   "ob.conv.scene.step": "Schritt {n} von {m} · {label}",
   "ob.conv.scene.detour": "Ein kurzer Umweg",
   "ob.conv.scene.decisionSub":
     "Deine Website nennt mehrere Gesellschaften. Die gewählte steht auf jeder Rechnung.",
   "ob.conv.scene.continue": "Weiter",
-  "ob.conv.scene.candidates": "{count} Kandidaten",
   "ob.conv.connect.sceneTitle": "Verbinde deine Konten.",
   "ob.conv.connect.sceneSub":
     "Ich baue Kontakte, Firmen und Historie aus dem, was schon im Postfach liegt.",
@@ -4382,10 +4366,10 @@ export const de = {
     "Optional, aber lohnend. Macht aus Bekannten Accounts und beobachtet sie auf Trigger.",
   "ob.conv.connect.required": "erforderlich",
   "ob.conv.connect.recommended": "empfohlen",
-  "ob.conv.connect.gmailBrings": "Mail, Kontakte und Kalender von Google",
-  "ob.conv.connect.microsoftBrings":
-    "Mail, Kontakte und Kalender über die Graph-API",
-  "ob.conv.connect.imapBrings": "Jeder andere Mail-Host, mit App-Passwort",
+  "ob.conv.connect.gmailBrings": "Mail über Google gelesen und gesendet",
+  "ob.conv.connect.microsoftBrings": "Mail über Microsoft gelesen und gesendet",
+  "ob.conv.connect.imapBrings":
+    "Mail von jedem Host, mit E-Mail-Adresse und Passwort",
   "ob.conv.connect.linkedinAuth": "Profillink, nur lesend",
   "ob.conv.connect.scopeGoogle": "OAuth, Lese- und Sendeberechtigung",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
@@ -4395,8 +4379,6 @@ export const de = {
   "ob.conv.connect.blockedCard":
     "Du hast schon ein Postfach gewählt. Trenne es in den Einstellungen, um zu wechseln.",
   "ob.conv.connect.guaranteesToggle": "Was Verbinden tatsächlich bedeutet",
-  "ob.conv.connect.railPromise":
-    "Wir lesen nur, und nichts wird ohne deine Freigabe gesendet.",
   "ob.conv.connect.dialogHeadlineAccess": "Zugriff auf {name} nötig",
   "ob.conv.connect.dialogHeadlineImap": "Verbinde deinen Mail-Host",
   "ob.conv.connect.dialogIntro":
@@ -4452,26 +4434,6 @@ export const de = {
   "ob.conv.scene.hideEvidence": "Beleg ausblenden",
   "ob.conv.scene.whyThis": "Was ich gelesen habe",
   "ob.conv.scene.foundOn": "Gefunden auf",
-  "ob.conv.guide.decision":
-    "Ich brauche eine Entscheidung von dir: {question} Sie steht rechts, mit den Belegen zu jeder Option.",
-  "ob.conv.guide.reviewBlocked_one":
-    "Deine Prüfung ist rechts bereit. {count} Feld blockiert die Übernahme.",
-  "ob.conv.guide.reviewBlocked_other":
-    "Deine Prüfung ist rechts bereit. {count} Felder blockieren die Übernahme.",
-  "ob.conv.guide.reviewAdvisory_one":
-    "Deine Prüfung ist rechts bereit. Nichts blockiert dich; {count} Punkt ist einen Blick wert.",
-  "ob.conv.guide.reviewAdvisory_other":
-    "Deine Prüfung ist rechts bereit. Nichts blockiert dich; {count} Punkte sind einen Blick wert.",
-  "ob.conv.guide.reviewClean":
-    "Deine Prüfung ist rechts bereit. Sie sieht sauber aus, prüfe was du willst und übernimm, wenn du bereit bist.",
-  "ob.conv.guide.attentionHeading": "Diese brauchen deine Eingabe",
-  "ob.conv.guide.attentionGroup.blocking": "Nötig, um fortzufahren",
-  "ob.conv.guide.attentionGroup.decisions": "Braucht eine Entscheidung",
-  "ob.conv.guide.attentionGroup.advisory": "Einen Blick wert",
-  "ob.conv.guide.attentionStatus.blocks": "nötig zum Fortfahren",
-  "ob.conv.guide.attentionStatus.empty": "noch leer",
-  "ob.conv.guide.attentionStatus.decision": "braucht eine Entscheidung",
-  "ob.conv.guide.attentionStatus.check": "einen Blick wert",
   "ob.conv.activity.steps": "{count} Schritte",
   "ob.conv.showField": "Zeig mir",
   "ob.conv.review.editDirectly": "Felder direkt bearbeiten",
@@ -4494,14 +4456,6 @@ export const de = {
   "ob.conv.results.artifactTitle": "Einrichtung im Überblick",
   "ob.conv.results.artifactBody":
     "Womit dein CRM startet. Hier steht nichts, das nicht wirklich passiert ist.",
-  "ob.conv.results.company":
-    "Firmenprofil für {name} bestätigt. Alles Gespeicherte trägt seine Quelle.",
-  "ob.conv.results.companyUnsaved":
-    "Deine Firmendaten sind noch nicht gespeichert. Du kannst sie später in den Einstellungen vervollständigen.",
-  "ob.conv.results.voiceBuilt":
-    "Dein Stimmprofil ist gebaut. Entwürfe klingen nach dir.",
-  "ob.conv.results.voiceSkipped":
-    "Noch kein Stimmprofil. Entwürfe nutzen eine neutrale Startstimme; deins kannst du später in den Einstellungen bauen.",
   "ob.conv.recap.back": "Willkommen zurück. Hier stehen wir.",
   "ob.conv.recap.company": "Dein Firmenprofil für {name} ist bestätigt.",
   "ob.conv.recap.companyUnsaved":
@@ -4520,8 +4474,6 @@ export const de = {
     "Willkommen zurück. Mein früherer Lesevorgang von {host} wurde nicht fertig. Nenn mir wieder eine Website oder erzähl es mir direkt.",
   "ob.conv.recap.readDeferred":
     "Willkommen zurück. Mein Lesevorgang von {host} pausiert gerade. Nenn mir wieder eine Website oder erzähl es mir direkt.",
-  "ob.conv.connect.pick":
-    "Wähle einen Anbieter, um genau zu sehen, was das Verbinden tut. Oder überspringe es und verbinde später in den Einstellungen.",
   "ob.conv.linkedin.cardBody":
     "Macht aus deinem Netzwerk Firmen und Kontakte, und meldet, wenn jemand aus deinem Netzwerk den Job wechselt.",
   "ob.conv.linkedin.limitsToggle": "Was Margince sehen kann und was nicht",
@@ -4609,7 +4561,6 @@ export const de = {
   "ob.scan.phaseDeferred": "Vorerst pausiert",
   "ob.scan.pagesRead": "{pages} Seiten gelesen",
   "ob.scan.pagesSkipped": "{count} übersprungen",
-  "ob.scan.factsSoFar": "{count} Fakten bisher",
   "ob.scan.stillReading": "lese noch",
   "ob.scan.pageStripLabel": "Bisher gelesene Seiten",
   "ob.scan.logLabel": "Die Seiten, die ich gerade durchgehe, neueste zuerst",
@@ -7635,7 +7586,6 @@ export const de = {
 
   "ob.conv.scene.settleEyebrow":
     "Hier hängt es an etwas, das nur du entscheiden kannst",
-  "ob.conv.review.boardTitle": "Was ich über dein Unternehmen verstehe.",
   "ob.conv.review.boardSub":
     "Jede Zeile nennt ihre Quelle. Geschrieben wird erst, wenn du bestätigst.",
   "ob.conv.manual.boardTitle": "Trag es selbst ein.",
@@ -7647,6 +7597,8 @@ export const de = {
   "ob.core.error": "core · gestoppt",
   "ob.scan.tallyPages": "Seiten gelesen",
   "ob.scan.tallyFacts": "Fakten gefunden",
+  "ob.scan.tallyUncertain": "unsicher, kein Rateversuch",
+  "ob.scan.tickerFact": "{field}: {value}",
   "ob.digest.where": "Wo das landet",
   "ob.digest.written": "{n} von {m} Zeilen geschrieben",
   "ob.digest.sources": "Gelesen auf",
@@ -7661,6 +7613,7 @@ export const de = {
   "ob.deck.next": "Weiter",
   "ob.deck.leaveOut": "Weglassen",
   "ob.deck.readWhole": "Das ganze Profil lesen",
+  "ob.deck.backToOpen": "Zurück zu den offenen Punkten",
   "ob.deck.confirm": "Profil bestätigen",
   "ob.deck.clear": "Nichts mehr zu klären. {count} Fakten stehen im Profil.",
   "ob.deck.eyebrow": "Alles andere kam belegt herein",
@@ -7684,46 +7637,8 @@ export const de = {
   "firstRun.ignite.act":
     "etwas senden oder einen Datensatz ändern, solange Sie es nicht sagen",
   "firstRun.ignite.carryOn": "Weiter",
-  "firstRun.platform.title": "Womit arbeitet Ihre Organisation?",
-  "firstRun.platform.sub":
-    "Eine Antwort entscheidet, wie Mail zu Margince kommt und wie sich Leute anmelden. Später unter Einstellungen änderbar.",
-  "firstRun.platform.legend": "Die Plattform dieser Organisation",
-  "firstRun.platform.google": "Google Workspace",
-  "firstRun.platform.googleWhat":
-    "Mail, Kalender und Anmeldung über eine eigene Google-App.",
-  "firstRun.platform.microsoft": "Microsoft 365",
-  "firstRun.platform.microsoftWhat":
-    "Mail und Kalender über Microsoft Graph. Anmeldung per E-Mail und Passwort.",
-  "firstRun.platform.other": "Keins von beiden",
-  "firstRun.platform.otherWhat":
-    "Jedes Postfach verbindet sich per IMAP. Anmeldung per E-Mail und Passwort.",
-  "firstRun.platform.microsoftOperator":
-    "Hier ist nichts einzutragen. Die Microsoft-App richtet ein, wer den Server betreibt, vor dem Start.",
-  "firstRun.platform.otherOperator":
-    "Hier ist nichts einzutragen. Jedes Postfach wird unter Einstellungen → Integrationen eingerichtet.",
-  "firstRun.platform.stillNeedsGoogle":
-    "Der Erststart fragt unabhängig von dieser Antwort weiterhin nach einer Google-App, dieser Weg lässt sich also noch nicht abschließen. Fügen Sie unten eine ein, um weiterzukommen.",
-  "firstRun.google.helpToggle": "Woher bekomme ich das?",
-  "firstRun.google.helpStep1":
-    "In der Google Cloud Console ein Projekt öffnen und zu APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID gehen, dann Webanwendung wählen.",
-  "firstRun.google.helpStep2":
-    "Die Gmail API aktivieren und beide Bereiche gmail.readonly und gmail.send auf den Zustimmungsbildschirm setzen. Sie gehören absichtlich in eine Zustimmung: Google ergänzt einen Bereich nicht nachträglich an einem bereits ausgegebenen Refresh-Token, ein späteres Senden-Recht bedeutet also, das Postfach zweimal zu verbinden.",
-  "firstRun.google.helpStep3":
-    "Für alles, was genutzt wird, eine autorisierte Weiterleitungs-URI hinterlegen. Nötig ist nur Mail; Kalender nur bei Kalendernutzung, und die Anmelde-URI nur, wenn sich Leute mit ihrem Google-Konto bei Margince anmelden sollen.",
-  "firstRun.google.helpRedirectMail": "Mail",
-  "firstRun.google.helpRedirectCalendar": "Kalender",
-  "firstRun.google.helpRedirectSignIn": "Google-Anmeldung",
-  "firstRun.google.helpStep4":
-    "Client-ID und Client-Secret aus Google in die beiden Felder unten kopieren. Das Secret wird einmal gesendet und im Schlüsseltresor versiegelt; es ist danach nirgends mehr lesbar.",
-  "firstRun.google.helpConsole": "Google Cloud Console für Anmeldedaten",
-  "firstRun.google.helpRedirectHost":
-    "{host} ist die Adresse, unter der die API dieser Installation antwortet, also der Wert aus MARGINCE_API_BASE_URL beziehungsweise MARGINCE_PUBLIC_BASE_URL des Servers. In einem lokalen Dev-Stack ist das http://localhost:8080.",
-  "firstRun.google.helpDocs":
-    "Alle Voraussetzungen, Microsoft und IMAP eingeschlossen: docs/how-to/connect-a-mailbox.md",
   "firstRun.step.model": "Das Modell",
-  "firstRun.step.platform": "Ihre Plattform",
   "firstRun.ai.eyebrow": "Hier kann noch nichts denken",
-  "firstRun.google.eyebrow": "Es denkt. Erreichen kann es noch niemanden",
   "aiRates.chatLane": "Womit es denkt",
   "aiRates.embedLane": "Womit es sich erinnert",
   "aiRates.perMTokInOut": "pro Million Token, rein → raus",
@@ -7736,8 +7651,4 @@ export const de = {
   "aiRates.proposedDetail":
     "Gerade beim Anbieter gelesen, nicht aus deiner Preisliste. Beim Binden landet er in deinem Freigabe-Eingang, damit Verbrauch und Kosten ihn nach deiner Bestätigung bepreisen können.",
   "firstRun.ai.foot": "Vor dem Klick auf Weiter geht nichts an Ihren Anbieter.",
-  "firstRun.google.foot":
-    "Das Speichern verbindet Mail und Kalender. Die Google-Anmeldung braucht noch einen Schritt von dem, der den Server betreibt.",
-  "firstRun.google.helpSignIn":
-    "Für die Google-Anmeldung exportiert wer den Server betreibt dasselbe Paar als MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu. Die Anmeldung liest sie beim Start, nicht aus dem hier Gespeicherten.",
 } as const satisfies Record<MessageKey, string>;

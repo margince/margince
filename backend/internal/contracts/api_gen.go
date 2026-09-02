@@ -12802,21 +12802,6 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 	}
 }
 
-// Defines values for ListAiModelCatalogueParamsProvider.
-const (
-	Openrouter ListAiModelCatalogueParamsProvider = "openrouter"
-)
-
-// Valid indicates whether the value is a known member of the ListAiModelCatalogueParamsProvider enum.
-func (e ListAiModelCatalogueParamsProvider) Valid() bool {
-	switch e {
-	case Openrouter:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListApprovalsParamsStatus.
 const (
 	ListApprovalsParamsStatusApproved ListApprovalsParamsStatus = "approved"
@@ -14815,43 +14800,6 @@ type AiHealth struct {
 	WindowHours int `json:"window_hours"`
 }
 
-// AiModelCatalogueEntry One model a vendor serves right now, at the vendor's own asking price. A PROPOSAL rather
-// than a rate: it carries no effective date because nothing dated it, and the two prices are
-// in the same USD-per-1M-tokens decimal strings as `AiModelRate` so one screen can put a
-// proposed price and a recorded one side by side without converting between them.
-type AiModelCatalogueEntry struct {
-	// ContextLength Omitted where the vendor does not publish one.
-	ContextLength *int   `json:"context_length,omitempty"`
-	InputPerMtok  string `json:"input_per_mtok"`
-
-	// ModelId The id to bind, spelled the vendor's way.
-	ModelId string `json:"model_id"`
-
-	// Name What the vendor calls it, for a reader who does not think in ids.
-	Name          string `json:"name"`
-	OutputPerMtok string `json:"output_per_mtok"`
-
-	// RankScore This model's score under `ranked_by`, so a screen can show WHY a model is in the list
-	// rather than asking a reader to trust the order. A decimal string for the same reason
-	// the prices are: a score is displayed, never arithmetic.
-	RankScore *string `json:"rank_score,omitempty"`
-}
-
-// AiModelCatalogueResponse defines model for AiModelCatalogueResponse.
-type AiModelCatalogueResponse struct {
-	Data []AiModelCatalogueEntry `json:"data"`
-
-	// FetchedAt When the vendor was last read. Absent when unavailable.
-	FetchedAt *time.Time `json:"fetched_at,omitempty"`
-
-	// RankedBy The measure the order came from, in words a screen can print. "Top" is meaningless
-	// without it, and the vendor's own list arrives in no useful order at all.
-	RankedBy string `json:"ranked_by"`
-
-	// Unavailable True when the vendor could not be read. `data` is then empty and the caller falls back to the price sheet.
-	Unavailable bool `json:"unavailable"`
-}
-
 // AiModelRate One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
 type AiModelRate struct {
 	CacheReadPerMtok  string             `json:"cache_read_per_mtok"`
@@ -16215,16 +16163,30 @@ type AutonomySettings struct {
 	Data []KindAutonomy `json:"data"`
 }
 
-// AvailableModel One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+// AvailableModel One model a vendor says it serves.
+// Everything past `id` is OPTIONAL and stated only where that vendor states it: the vendors disagree about what they publish, and a caller that assumed a field was there would read a silence as a value. Absent is absent, never a default.
+// The price fields are the VENDOR'S OWN asking price, and they are not what a call is costed against. `/ai-model-rates` is that record: it is effective-dated and this installation has agreed to it, where these are a number the vendor printed today and nobody has confirmed. A screen may put the two side by side, and must say which is which. A model this installation cannot price is still bindable and reports UNPRICED.
 type AvailableModel struct {
+	// ContextLength Absent where the vendor publishes none.
+	ContextLength *int `json:"context_length,omitempty"`
+
 	// DisplayName The vendor's own human label, absent where it publishes none.
 	DisplayName *string `json:"display_name,omitempty"`
 
 	// Id The string a binding names, exactly as the vendor spells it.
 	Id string `json:"id"`
 
+	// InputPerMtok The vendor's asking price per million input tokens, in the same USD decimal strings as `AiModelRate` so a screen can show a vendor's price beside a recorded one without converting between them. Absent where the vendor publishes no price.
+	InputPerMtok *string `json:"input_per_mtok,omitempty"`
+
 	// Lane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
 	Lane *AvailableModelLane `json:"lane,omitempty"`
+
+	// OutputPerMtok The same, per million output tokens.
+	OutputPerMtok *string `json:"output_per_mtok,omitempty"`
+
+	// RankScore This model's score under the list's `ranked_by`, so a screen can show WHY a model is in a shortened list rather than asking a reader to trust the order. A decimal string for the same reason the prices are: it is displayed, never arithmetic. Absent where the vendor publishes no such measure, which is also when the list cannot be ranked.
+	RankScore *string `json:"rank_score,omitempty"`
 }
 
 // AvailableModelLane What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
@@ -16237,6 +16199,9 @@ type AvailableModelList struct {
 
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`
+
+	// RankedBy The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten.
+	RankedBy *string `json:"ranked_by,omitempty"`
 
 	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
 	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
@@ -30569,18 +30534,6 @@ type ResetDataJSONBody struct {
 	Confirmation string `json:"confirmation"`
 }
 
-// ListAiModelCatalogueParams defines parameters for ListAiModelCatalogue.
-type ListAiModelCatalogueParams struct {
-	// Provider The vendor to ask. Only a vendor whose catalogue is PUBLIC and unauthenticated can be
-	// listed here, because this read runs before any key is sealed; that is OpenRouter alone
-	// today. A native vendor's catalogue needs the operator's own key and belongs on a
-	// different route, not behind a widened enum here.
-	Provider ListAiModelCatalogueParamsProvider `form:"provider" json:"provider"`
-}
-
-// ListAiModelCatalogueParamsProvider defines parameters for ListAiModelCatalogue.
-type ListAiModelCatalogueParamsProvider string
-
 // ListAiModelRatesParams defines parameters for ListAiModelRates.
 type ListAiModelRatesParams struct {
 	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
@@ -30591,6 +30544,10 @@ type ListAiModelRatesParams struct {
 type ListAvailableModelsParams struct {
 	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default.
 	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
+
+	// Top Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
+	// Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
+	Top *int `form:"top,omitempty" json:"top,omitempty"`
 }
 
 // ListAiCallsParams defines parameters for ListAiCalls.
@@ -43129,9 +43086,6 @@ type ServerInterface interface {
 	// The governed tool surface (registry metadata) for the operator UI.
 	// (GET /agent-tools)
 	ListAgentTools(w http.ResponseWriter, r *http.Request)
-	// What a vendor serves right now, ranked, at the vendor's own asking price.
-	// (GET /ai-model-catalogue)
-	ListAiModelCatalogue(w http.ResponseWriter, r *http.Request, params ListAiModelCatalogueParams)
 	// List current AI model prices (latest per model), or one model's history.
 	// (GET /ai-model-rates)
 	ListAiModelRates(w http.ResponseWriter, r *http.Request, params ListAiModelRatesParams)
@@ -44851,12 +44805,6 @@ func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
 // The governed tool surface (registry metadata) for the operator UI.
 // (GET /agent-tools)
 func (_ Unimplemented) ListAgentTools(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// What a vendor serves right now, ranked, at the vendor's own asking price.
-// (GET /ai-model-catalogue)
-func (_ Unimplemented) ListAiModelCatalogue(w http.ResponseWriter, r *http.Request, params ListAiModelCatalogueParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -49272,45 +49220,6 @@ func (siw *ServerInterfaceWrapper) ListAgentTools(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// ListAiModelCatalogue operation middleware
-func (siw *ServerInterfaceWrapper) ListAiModelCatalogue(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListAiModelCatalogueParams
-
-	// ------------- Required query parameter "provider" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListAiModelCatalogue(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListAiModelRates operation middleware
 func (siw *ServerInterfaceWrapper) ListAiModelRates(w http.ResponseWriter, r *http.Request) {
 
@@ -49436,6 +49345,19 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "top" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "top", r.URL.Query(), &params.Top, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "top"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "top", Err: err})
 		}
 		return
 	}
@@ -71959,9 +71881,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent-tools", wrapper.ListAgentTools)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/ai-model-catalogue", wrapper.ListAiModelCatalogue)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai-model-rates", wrapper.ListAiModelRates)

@@ -4162,10 +4162,6 @@ export const vi = {
   "ob.s4.notNow": "Để sau",
 
   "ob.conv.threadLabel": "Cuộc trò chuyện onboarding",
-  "ob.conv.welcome":
-    "Chào bạn, tôi là Margince. Tôi dựng CRM từ những gì đã có, và luôn kèm nguồn.",
-  "ob.conv.welcomeMember":
-    "Chào bạn, tôi là Margince. Đội của bạn đã được thiết lập sẵn. Hai bước ngắn nữa là bạn vào được.",
   "ob.conv.read.started": "Đang đọc {host}. Tìm được gì tôi sẽ báo bạn.",
   "ob.conv.read.pages": "Số trang đã đọc: {pages}.",
   "ob.conv.read.learnedField": "Đã biết {field}: {value}",
@@ -4187,8 +4183,6 @@ export const vi = {
   "ob.conv.voice.speakerQuestion":
     "Bản ghi này có nhiều người nói. Người nào là bạn? Chỉ lời của chính bạn mới được tính.",
   "ob.conv.voice.speakerOptionDetail": "số từ: {words} · lượt nói: {turns}",
-  "ob.conv.voice.guideSpeaker":
-    "Bên phải đang chờ bạn chọn người nói — hãy chọn người nào là bạn.",
   "ob.conv.voice.speakerFoot": "Lựa chọn này chỉ áp dụng cho tệp này.",
   "ob.conv.voice.speakerContinue": "Dùng người nói này",
   "ob.conv.voice.continueSkippedStatus":
@@ -4197,8 +4191,6 @@ export const vi = {
     "Tư liệu của bạn vẫn an toàn — thử lại ngay, hoặc đi tiếp rồi quay lại sau.",
   "ob.conv.voice.continueDeferredStatus":
     "Ở đây không cần làm gì — cứ đi tiếp, phần còn lại sẽ tự xong.",
-  "ob.conv.voice.collectAsk":
-    "Gửi tôi những gì bạn viết. Bản ghi cuộc gọi là tốt nhất, tài liệu thường cũng được.",
   "ob.conv.voice.composer": "Dán đoạn văn bản bạn viết vào đây",
   "ob.conv.voice.dropHint":
     "Bạn cũng có thể thả tệp vào bất cứ đâu trong cuộc trò chuyện này.",
@@ -4222,10 +4214,6 @@ export const vi = {
   "ob.conv.voice.pasteAdd": "Có, thêm vào kho văn bản của tôi.",
   "ob.conv.voice.pasteDiscard": "Không, bỏ đi.",
   "ob.conv.voice.pasteSource": "Văn bản đã dán",
-  "ob.conv.voice.buildFloor":
-    "Số từ của chính bạn đến giờ: {words}. Tôi cần ít nhất {min} từ mới dựng được.",
-  "ob.conv.voice.buildNudge":
-    "Tôi đã đủ để dựng. Từ 4.000 từ trở lên, giọng văn của bạn sẽ sắc nét hơn hẳn.",
   "ob.conv.voice.buildChip": "Dựng hồ sơ giọng văn của tôi",
   "ob.conv.voice.retryBuild": "Dựng lại lần nữa",
   "ob.conv.voice.buildPollFailed":
@@ -4262,8 +4250,6 @@ export const vi = {
     "Lần dựng chưa xong. Văn bản của bạn vẫn được giữ và bạn thử lại lúc nào cũng được.",
   "ob.conv.recap":
     "Đây là những gì CRM của bạn biết lúc này, mỗi mục đều kèm nguồn.",
-  "ob.conv.consent":
-    "Bước cuối: tôi được thu thập gì, và cho mục đích nào? Mặc định không bật gì cả.",
   "ob.conv.done": "Thiết lập xong. CRM của bạn đã sẵn sàng.",
   "ob.conv.clarify.question": "{question}",
   "ob.conv.clarify.optionDetail": "{detail}",
@@ -4323,14 +4309,12 @@ export const vi = {
     "Không tìm thấy người nào trên website của bạn.",
   "ob.conv.triage.factsLabel": "Dữ kiện",
   "ob.conv.triage.factsCount": "tìm được {count}",
-  "ob.rail.spend": "Token cho thiết lập này",
   "ob.rail.tokensUnit": "tok",
   "ob.conv.scene.step": "Bước {n} / {m} · {label}",
   "ob.conv.scene.detour": "Rẽ ngang một chút",
   "ob.conv.scene.decisionSub":
     "Website của bạn nêu nhiều pháp nhân. Pháp nhân bạn chọn sẽ in trên mọi hoá đơn.",
   "ob.conv.scene.continue": "Tiếp tục",
-  "ob.conv.scene.candidates": "{count} phương án",
   "ob.conv.connect.sceneTitle": "Kết nối các tài khoản của bạn.",
   "ob.conv.connect.sceneSub":
     "Tôi dựng contact, công ty và lịch sử từ những gì đã có trong hộp thư.",
@@ -4342,10 +4326,10 @@ export const vi = {
     "Không bắt buộc nhưng đáng làm. Biến những người bạn quen thành tài khoản và theo dõi để bắt tín hiệu.",
   "ob.conv.connect.required": "bắt buộc",
   "ob.conv.connect.recommended": "nên có",
-  "ob.conv.connect.gmailBrings": "Email, danh bạ và lịch từ Google",
-  "ob.conv.connect.microsoftBrings": "Email, danh bạ và lịch qua Graph API",
+  "ob.conv.connect.gmailBrings": "Email được đọc và gửi qua Google",
+  "ob.conv.connect.microsoftBrings": "Email được đọc và gửi qua Microsoft",
   "ob.conv.connect.imapBrings":
-    "Máy chủ thư bất kỳ khác, dùng mật khẩu ứng dụng",
+    "Email từ máy chủ bất kỳ, bằng địa chỉ email và mật khẩu",
   "ob.conv.connect.linkedinAuth": "Đường dẫn hồ sơ, chỉ đọc",
   "ob.conv.connect.scopeGoogle": "OAuth, phạm vi đọc và gửi",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
@@ -4355,8 +4339,6 @@ export const vi = {
   "ob.conv.connect.blockedCard":
     "Bạn đã chọn một hộp thư rồi. Hãy ngắt kết nối trong Cài đặt nếu muốn đổi.",
   "ob.conv.connect.guaranteesToggle": "Kết nối thì thực sự làm gì",
-  "ob.conv.connect.railPromise":
-    "Chúng tôi chỉ đọc, và không gửi gì nếu bạn chưa duyệt.",
   "ob.conv.connect.dialogHeadlineAccess": "Cần quyền truy cập {name}",
   "ob.conv.connect.dialogHeadlineImap": "Kết nối máy chủ thư của bạn",
   "ob.conv.connect.dialogIntro":
@@ -4410,26 +4392,6 @@ export const vi = {
   "ob.conv.scene.hideEvidence": "ẩn bằng chứng",
   "ob.conv.scene.whyThis": "Tôi đã đọc được gì",
   "ob.conv.scene.foundOn": "Tìm thấy tại",
-  "ob.conv.guide.decision":
-    "Tôi cần bạn quyết định một việc: {question} Nội dung nằm bên phải, kèm bằng chứng cho từng phương án.",
-  "ob.conv.guide.reviewBlocked_one":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Còn {count} trường chặn việc xác nhận.",
-  "ob.conv.guide.reviewBlocked_other":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Còn {count} trường chặn việc xác nhận.",
-  "ob.conv.guide.reviewAdvisory_one":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Không có gì chặn bạn; có {count} chỗ nên xem lại.",
-  "ob.conv.guide.reviewAdvisory_other":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Không có gì chặn bạn; có {count} chỗ nên xem lại.",
-  "ob.conv.guide.reviewClean":
-    "Phần rà soát của bạn đã sẵn sàng ở bên phải. Trông ổn cả, bạn xem lại tuỳ ý rồi xác nhận khi sẵn sàng.",
-  "ob.conv.guide.attentionHeading": "Những mục này cần bạn xử lý",
-  "ob.conv.guide.attentionGroup.blocking": "Cần có trước khi tiếp tục",
-  "ob.conv.guide.attentionGroup.decisions": "Cần một quyết định",
-  "ob.conv.guide.attentionGroup.advisory": "Nên xem lại",
-  "ob.conv.guide.attentionStatus.blocks": "cần có để tiếp tục",
-  "ob.conv.guide.attentionStatus.empty": "vẫn trống",
-  "ob.conv.guide.attentionStatus.decision": "cần một quyết định",
-  "ob.conv.guide.attentionStatus.check": "nên xem lại",
   "ob.conv.activity.steps": "{count} bước",
   "ob.conv.showField": "Cho tôi xem",
   "ob.conv.review.editDirectly": "Sửa trực tiếp từng trường",
@@ -4452,14 +4414,6 @@ export const vi = {
   "ob.conv.results.artifactTitle": "Tóm tắt thiết lập",
   "ob.conv.results.artifactBody":
     "Những gì CRM của bạn khởi đầu. Ở đây không có gì nói quá so với thực tế đã xảy ra.",
-  "ob.conv.results.company":
-    "Đã xác nhận hồ sơ công ty cho {name}. Mọi thứ được lưu đều kèm nguồn.",
-  "ob.conv.results.companyUnsaved":
-    "Thông tin công ty của bạn chưa được lưu. Bạn có thể hoàn tất sau trong Cài đặt.",
-  "ob.conv.results.voiceBuilt":
-    "Hồ sơ giọng văn của bạn đã dựng xong. Bản nháp sẽ nghe ra giọng bạn.",
-  "ob.conv.results.voiceSkipped":
-    "Chưa có hồ sơ giọng văn. Bản nháp dùng giọng khởi đầu trung tính, và bạn có thể dựng giọng của mình sau trong Cài đặt.",
   "ob.conv.recap.back": "Chào bạn quay lại. Đây là tình hình hiện tại.",
   "ob.conv.recap.company": "Hồ sơ công ty {name} của bạn đã được xác nhận.",
   "ob.conv.recap.companyUnsaved":
@@ -4478,8 +4432,6 @@ export const vi = {
     "Chào bạn quay lại. Lượt đọc {host} trước đó chưa xong. Hãy đưa tôi một website lần nữa, hoặc kể trực tiếp cho tôi.",
   "ob.conv.recap.readDeferred":
     "Chào bạn quay lại. Lượt đọc {host} của tôi đang tạm dừng. Hãy đưa tôi một website lần nữa, hoặc kể trực tiếp cho tôi.",
-  "ob.conv.connect.pick":
-    "Hãy chọn một nhà cung cấp để xem chính xác việc kết nối làm gì, hoặc bỏ qua và kết nối sau trong Cài đặt.",
   "ob.conv.connect.skip": "Tạm bỏ qua việc kết nối",
   "ob.conv.linkedin.cardBody":
     "Biến mạng lưới quan hệ của bạn thành tài khoản và contact, và báo khi một người quen đổi việc.",
@@ -4564,7 +4516,6 @@ export const vi = {
   "ob.scan.phaseDeferred": "Đang tạm dừng",
   "ob.scan.pagesRead": "đã đọc {pages} trang",
   "ob.scan.pagesSkipped": "bỏ qua {count}",
-  "ob.scan.factsSoFar": "{count} dữ kiện đến giờ",
   "ob.scan.stillReading": "vẫn đang đọc",
   "ob.scan.pageStripLabel": "Các trang đã đọc đến giờ",
   "ob.scan.logLabel": "Các trang tôi đang đi qua, mới nhất trước",
@@ -7545,7 +7496,6 @@ export const vi = {
   "worklist.batch.unnamedCause": "Một tác vụ",
 
   "ob.conv.scene.settleEyebrow": "Có một điểm chỉ bạn mới quyết được",
-  "ob.conv.review.boardTitle": "Những gì tôi hiểu về công ty của bạn.",
   "ob.conv.review.boardSub":
     "Mỗi dòng đều nêu nguồn. Chưa ghi gì cho đến khi bạn xác nhận.",
   "ob.conv.manual.boardTitle": "Tự điền vào.",
@@ -7557,6 +7507,8 @@ export const vi = {
   "ob.core.error": "core · đã dừng",
   "ob.scan.tallyPages": "trang đã đọc",
   "ob.scan.tallyFacts": "dữ kiện tìm được",
+  "ob.scan.tallyUncertain": "điều nó sẽ không đoán",
+  "ob.scan.tickerFact": "{field}: {value}",
   "ob.digest.where": "Chỗ này sẽ vào đâu",
   "ob.digest.written": "Đã ghi {n} / {m} dòng",
   "ob.digest.sources": "Đọc từ",
@@ -7571,6 +7523,7 @@ export const vi = {
   "ob.deck.next": "Tiếp tục",
   "ob.deck.leaveOut": "Bỏ qua",
   "ob.deck.readWhole": "Đọc toàn bộ hồ sơ",
+  "ob.deck.backToOpen": "Quay lại các mục còn mở",
   "ob.deck.confirm": "Xác nhận hồ sơ",
   "ob.deck.clear": "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
   "ob.deck.eyebrow": "Mọi thứ còn lại đã vào kèm nguồn",
@@ -7593,47 +7546,8 @@ export const vi = {
   "firstRun.ignite.act":
     "gửi bất cứ gì, hay sửa một bản ghi, nếu bạn không cho phép",
   "firstRun.ignite.carryOn": "Tiếp tục",
-  "firstRun.platform.title": "Tổ chức của bạn đang chạy trên nền tảng nào?",
-  "firstRun.platform.sub":
-    "Một câu trả lời quyết định cách thư đến Margince và cách mọi người đăng nhập. Có thể đổi sau ở Cài đặt.",
-  "firstRun.platform.legend": "Nền tảng của tổ chức này",
-  "firstRun.platform.google": "Google Workspace",
-  "firstRun.platform.googleWhat":
-    "Thư, lịch và đăng nhập qua một app Google của chính bạn.",
-  "firstRun.platform.microsoft": "Microsoft 365",
-  "firstRun.platform.microsoftWhat":
-    "Thư và lịch qua Microsoft Graph. Đăng nhập bằng email và mật khẩu.",
-  "firstRun.platform.other": "Không dùng cả hai",
-  "firstRun.platform.otherWhat":
-    "Mỗi hộp thư kết nối qua IMAP. Đăng nhập bằng email và mật khẩu.",
-  "firstRun.platform.microsoftOperator":
-    "Không có gì để nhập ở đây. App Microsoft do người vận hành server thiết lập, trước khi khởi động.",
-  "firstRun.platform.otherOperator":
-    "Không có gì để nhập ở đây. Mỗi hộp thư được thiết lập ở Cài đặt → Tích hợp.",
-  "firstRun.platform.stillNeedsGoogle":
-    "Lần chạy đầu vẫn hỏi một app Google bất kể bạn chọn gì, nên hướng này chưa hoàn tất được. Dán một app bên dưới để đi tiếp.",
-  "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
-  "firstRun.google.helpStep1":
-    "Trong Google Cloud console, mở một project rồi vào APIs & Services → Credentials → Create credentials → OAuth client ID, và chọn Web application.",
-  "firstRun.google.helpStep2":
-    "Bật Gmail API và đưa cả hai scope gmail.readonly và gmail.send lên màn hình đồng ý. Chúng đi cùng một lần đồng ý là có chủ ý: Google không thêm scope vào refresh token đã cấp, nên xin quyền gửi sau này đồng nghĩa với việc kết nối hộp thư hai lần.",
-  "firstRun.google.helpStep3":
-    "Thêm một authorized redirect URI cho từng thứ sẽ dùng. Chỉ Mail là bắt buộc; thêm Calendar nếu cần lịch, và thêm URI đăng nhập nếu mọi người sẽ đăng nhập Margince bằng tài khoản Google.",
-  "firstRun.google.helpRedirectMail": "Mail",
-  "firstRun.google.helpRedirectCalendar": "Lịch",
-  "firstRun.google.helpRedirectSignIn": "Đăng nhập Google",
-  "firstRun.google.helpStep4":
-    "Chép client ID và client secret mà Google hiển thị vào hai ô bên dưới. Secret chỉ được gửi một lần và niêm phong trong key vault; sau đó không đọc lại được ở bất kỳ đâu.",
-  "firstRun.google.helpConsole": "Google Cloud credentials console",
-  "firstRun.google.helpRedirectHost":
-    "{host} là địa chỉ mà API của bản cài này trả lời, tức giá trị MARGINCE_API_BASE_URL hoặc MARGINCE_PUBLIC_BASE_URL của server. Trong dev stack cục bộ, đó là http://localhost:8080.",
-  "firstRun.google.helpDocs":
-    "Toàn bộ điều kiện tiên quyết, gồm cả Microsoft và IMAP: docs/how-to/connect-a-mailbox.md",
   "firstRun.step.model": "Mô hình",
-  "firstRun.step.platform": "Nền tảng của bạn",
   "firstRun.ai.eyebrow": "Ở đây chưa có gì suy nghĩ được",
-  "firstRun.google.eyebrow":
-    "Nó suy nghĩ được. Nhưng chưa liên lạc được với ai",
   "aiRates.chatLane": "Dùng để suy luận",
   "aiRates.embedLane": "Dùng để ghi nhớ",
   "aiRates.perMTokInOut": "trên mỗi triệu token, vào → ra",
@@ -7647,8 +7561,4 @@ export const vi = {
     "Vừa đọc từ nhà cung cấp, không phải từ bảng giá của bạn. Khi bạn gán mô hình này, giá sẽ vào hộp phê duyệt để mức dùng và chi phí tính được sau khi bạn xác nhận.",
   "firstRun.ai.foot":
     "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
-  "firstRun.google.foot":
-    "Lưu app này sẽ kết nối thư và lịch. Đăng nhập bằng Google cần thêm một bước từ người vận hành server.",
-  "firstRun.google.helpSignIn":
-    "Để đăng nhập bằng Google, người vận hành server cũng export đúng cặp đó thành MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại. Phần đăng nhập đọc chúng lúc khởi động, không đọc từ những gì lưu ở đây.",
 } as const satisfies Record<MessageKey, string>;

@@ -10648,50 +10648,6 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
-  /ai-model-catalogue:
-    get:
-      tags: [Rates]
-      operationId: listAiModelCatalogue
-      summary: What a vendor serves right now, ranked, at the vendor's own asking price.
-      description: |
-        Admin/ops-only. Reads the vendor's public catalogue live and returns its highest-ranked
-        models by a published third-party measure, named in `ranked_by` so a screen can say what
-        "top" MEANS rather than asserting a bare "top ten" nobody can check.
-
-        THE PRICES ARE THE VENDOR'S, not this installation's. Nothing here has been through the
-        confirm-first path that writes `ai_model_rate`, so a caller renders these as proposed and
-        lets a sheet row win wherever one exists. One colour, one meaning: a number a machine
-        fetched is not a number this installation has agreed to.
-
-        IT FAILS OPEN. A vendor that is slow, down, or serving a shape this cannot read yields
-        `unavailable: true` and no rows rather than an error status, because first run must never
-        be blocked by somebody else's uptime. `unavailable` is what keeps that honest: an empty
-        list on its own cannot tell "the vendor is unreachable" from "the vendor serves nothing",
-        and a screen that cannot tell them apart says the wrong thing in one of the two cases.
-
-        Human session only (x-agent-access: human-only).
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
-      x-agent-access: human-only
-      parameters:
-        - name: provider
-          in: query
-          required: true
-          description: |
-            The vendor to ask. Only a vendor whose catalogue is PUBLIC and unauthenticated can be
-            listed here, because this read runs before any key is sealed; that is OpenRouter alone
-            today. A native vendor's catalogue needs the operator's own key and belongs on a
-            different route, not behind a widened enum here.
-          schema: { type: string, enum: [openrouter] }
-      responses:
-        '200':
-          description: The vendor's ranked catalogue, or an honest statement that it could not be read.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/AiModelCatalogueResponse' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-
-# =============================================================================
   /ai/available-models/{provider}:
     parameters:
       - name: provider
@@ -10709,6 +10665,19 @@ paths:
           vendor at two — a broker on one lane and a self-hosted gateway on another, which the
           routing validator permits. Omitted, or naming a lane bound to some other vendor, the host
           falls back to any binding on this vendor and then to the adapter's own default.
+      - name: top
+        in: query
+        required: false
+        schema: { type: integer, minimum: 1, maximum: 100 }
+        description: >-
+          Return only the best N under the vendor's own published measure, and name that measure in
+          `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing
+          form binds an id its reader already knows, while a first run puts a shortlist in front of
+          somebody who has never seen these names, and four hundred rows is not a shortlist.
+
+          Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that
+          publishes no such measure cannot honour this: it answers with the full list and no
+          `ranked_by`, rather than inventing an order and calling it a ranking.
     get:
       tags: [AI]
       operationId: listAvailableModels
@@ -19404,40 +19373,6 @@ components:
         providers:
           type: array
           items: { $ref: '#/components/schemas/AiProviderKeyStatus' }
-    AiModelCatalogueEntry:
-      type: object
-      description: |
-        One model a vendor serves right now, at the vendor's own asking price. A PROPOSAL rather
-        than a rate: it carries no effective date because nothing dated it, and the two prices are
-        in the same USD-per-1M-tokens decimal strings as `AiModelRate` so one screen can put a
-        proposed price and a recorded one side by side without converting between them.
-      required: [model_id, name, input_per_mtok, output_per_mtok]
-      properties:
-        model_id: { type: string, description: "The id to bind, spelled the vendor's way." }
-        name: { type: string, description: "What the vendor calls it, for a reader who does not think in ids." }
-        context_length: { type: integer, description: "Omitted where the vendor does not publish one." }
-        input_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
-        output_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
-        rank_score:
-          type: string
-          description: |
-            This model's score under `ranked_by`, so a screen can show WHY a model is in the list
-            rather than asking a reader to trust the order. A decimal string for the same reason
-            the prices are: a score is displayed, never arithmetic.
-    AiModelCatalogueResponse:
-      type: object
-      required: [data, ranked_by, unavailable]
-      properties:
-        ranked_by:
-          type: string
-          description: |
-            The measure the order came from, in words a screen can print. "Top" is meaningless
-            without it, and the vendor's own list arrives in no useful order at all.
-        unavailable:
-          type: boolean
-          description: "True when the vendor could not be read. `data` is then empty and the caller falls back to the price sheet."
-        fetched_at: { type: string, format: date-time, description: "When the vendor was last read. Absent when unavailable." }
-        data: { type: array, items: { $ref: '#/components/schemas/AiModelCatalogueEntry' } }
     AvailableModelList:
       type: object
       additionalProperties: false
@@ -19456,6 +19391,13 @@ components:
         models:
           type: array
           items: { $ref: '#/components/schemas/AvailableModel' }
+        ranked_by:
+          type: string
+          description: >-
+            The measure the order came from, in words a screen can print, and absent when the list
+            is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw
+            list arrives in no useful order at all: a first-time admin choosing among four hundred
+            ids needs to be told what made ten of them the ten.
         unavailable:
           type: string
           enum: [no_key, profile_forbids, not_published, unreachable, no_endpoint]
@@ -19472,8 +19414,17 @@ components:
       additionalProperties: false
       required: [id]
       description: >-
-        One model a vendor says it serves. Three fields and no fourth: the vendors disagree about
-        everything else they publish, and a field only some of them fill is one a caller cannot rely on.
+        One model a vendor says it serves.
+
+        Everything past `id` is OPTIONAL and stated only where that vendor states it: the vendors
+        disagree about what they publish, and a caller that assumed a field was there would read a
+        silence as a value. Absent is absent, never a default.
+
+        The price fields are the VENDOR'S OWN asking price, and they are not what a call is costed
+        against. `/ai-model-rates` is that record: it is effective-dated and this installation has
+        agreed to it, where these are a number the vendor printed today and nobody has confirmed.
+        A screen may put the two side by side, and must say which is which. A model this
+        installation cannot price is still bindable and reports UNPRICED.
       properties:
         id:
           type: string
@@ -19487,6 +19438,27 @@ components:
           description: >-
             What the vendor says the model is FOR, absent where it does not say. Absent means
             UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+        context_length:
+          type: integer
+          description: Absent where the vendor publishes none.
+        input_per_mtok:
+          type: string
+          pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$'
+          description: >-
+            The vendor's asking price per million input tokens, in the same USD decimal strings as
+            `AiModelRate` so a screen can show a vendor's price beside a recorded one without
+            converting between them. Absent where the vendor publishes no price.
+        output_per_mtok:
+          type: string
+          pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$'
+          description: The same, per million output tokens.
+        rank_score:
+          type: string
+          description: >-
+            This model's score under the list's `ranked_by`, so a screen can show WHY a model is in
+            a shortened list rather than asking a reader to trust the order. A decimal string for
+            the same reason the prices are: it is displayed, never arithmetic. Absent where the
+            vendor publishes no such measure, which is also when the list cannot be ranked.
     AiProviderKeyStatus:
       type: object
       additionalProperties: false

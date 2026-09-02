@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../api/schema";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { formatUsdPerMTok } from "../format/format";
@@ -10,10 +9,9 @@ import {
   type ModelCatalogue,
   type ModelLane,
   type VendorCatalogue,
+  type VendorModel,
   vendorModel,
 } from "./ai-models";
-
-type VendorModel = components["schemas"]["AiModelCatalogueEntry"];
 
 /**
  * What the models this installation is about to bind will cost, said out loud.
@@ -91,15 +89,18 @@ function proposedPrice(
   model: VendorModel | undefined,
   locale: Locale,
 ): string | undefined {
+  const inputPrice = model?.input_per_mtok;
+  const outputPrice = model?.output_per_mtok;
   if (
-    model === undefined ||
-    unreadable(model.input_per_mtok) ||
-    unreadable(model.output_per_mtok)
+    inputPrice === undefined ||
+    outputPrice === undefined ||
+    unreadable(inputPrice) ||
+    unreadable(outputPrice)
   ) {
     return undefined;
   }
-  const input = formatUsdPerMTok(model.input_per_mtok, locale);
-  return `${input} → ${formatUsdPerMTok(model.output_per_mtok, locale)}`;
+  const input = formatUsdPerMTok(inputPrice, locale);
+  return `${input} → ${formatUsdPerMTok(outputPrice, locale)}`;
 }
 
 /**

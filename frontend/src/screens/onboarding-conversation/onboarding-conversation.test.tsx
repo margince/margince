@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -299,10 +300,13 @@ async function submitWebsite() {
   await userEvent.type(composer, "gradion.com{Enter}");
 }
 
-function confirmCardElement(): HTMLElement {
-  const card = document.querySelector(".ob-conv-confirm");
-  expect(card).not.toBeNull();
-  return card as HTMLElement;
+// The review's default face is the deck, one card at a time, with the whole
+// record beside it as prose (ProfileDigest) — this is where every field's
+// CURRENT value reads, regardless of which card the deck happens to be on.
+function digestElement(): HTMLElement {
+  const digest = document.querySelector(".pdigest");
+  expect(digest).not.toBeNull();
+  return digest as HTMLElement;
 }
 
 function requestsTo(calls: Request[], path: string, method: string) {
@@ -322,35 +326,6 @@ afterEach(() => {
 });
 
 describe("the conversational company act", () => {
-  it("folds poll-delta narration into an activity group, and a clean read reaches the confirm card with no terminal bubble", async () => {
-    stubApi();
-    render(<OnboardingScreen />);
-
-    await submitWebsite();
-
-    expect(await screen.findByText(/Reading gradion\.com now/)).toBeTruthy();
-    // Progress is what the machine did, not a message: it folds to one line
-    // (the latest step and a count) and the full trail opens on demand.
-    const fold = await screen.findByRole("button", { name: /steps/ });
-    await userEvent.click(fold);
-    expect(
-      screen.getByText(/Learned Registered legal name: Gradion GmbH/),
-    ).toBeTruthy();
-    // The latest step doubles as the fold's summary line, so the text can
-    // legitimately appear twice: once folded, once in the opened trail.
-    expect(
-      screen.getAllByText(
-        /Learned Ideal customer profile|Learned Ideal customer/,
-      ).length,
-    ).toBeGreaterThan(0);
-    // The read concluded silently: no outcome bubble sits between the fold
-    // and the confirm card that follows it.
-    expect(
-      await screen.findByRole("button", { name: /Continue/ }),
-    ).toBeTruthy();
-    expect(screen.queryByText(/I could not read/)).toBeNull();
-  });
-
   it("asks the proposal's open question and answering posts the authorizing selected_option", async () => {
     const entityClarify = {
       id: "clarify:legal_name:2",
@@ -430,13 +405,11 @@ describe("the conversational company act", () => {
 
     // Only the selection-authorized change lands in the review; the model's
     // extra proposal never auto-applies.
-    await screen.findByText(/Here is everything I found/);
-    const card = confirmCardElement();
-    // "Gradion Holding GmbH" now also names the identity card's jump link to
-    // this same field.
+    await screen.findByRole("heading", { name: "It will not guess at these." });
+    const digest = digestElement();
     await waitFor(() => {
       expect(
-        within(card).getAllByText("Gradion Holding GmbH").length,
+        within(digest).getAllByText("Gradion Holding GmbH").length,
       ).toBeGreaterThan(0);
     });
     expect(
@@ -462,23 +435,22 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
 
+    // The deck's cards are the blocking fields first, in `reviewFields()`
+    // order — REQUIRED FIRST is the deck's own rule (review-deck.tsx), so
+    // reading the first three cards' own questions names exactly the same
+    // blocking trio the nav used to list all at once.
     const accept = (await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     })) as HTMLButtonElement;
     expect(accept.disabled).toBe(true);
-    // The nav's own to-do list is the surface that names the blocking
-    // fields (the bottom bar only states the count); it renders each one
-    // from the same `remaining_required_fields` this stub sets. Reading the
-    // blocking rows specifically, not any text match, keeps this from also
-    // catching a section's own jump-link name.
-    const nav = await screen.findByRole("navigation", {
-      name: "Jump to a section",
-    });
-    const blockingLabels = [
-      ...nav.querySelectorAll(".ob-triage-nav-item[data-blocking='true'] span"),
-    ]
-      .filter((span) => !span.classList.contains("sr-only"))
-      .map((span) => span.textContent);
+    const blockingLabels: string[] = [];
+    for (const _ of [0, 1, 2]) {
+      await screen.findByRole("button", { name: "Next" });
+      blockingLabels.push(
+        document.querySelector(".rdeck-question")?.textContent ?? "",
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    }
     expect(blockingLabels).toEqual([
       "Company name",
       "What do you sell?",
@@ -486,114 +458,7 @@ describe("the conversational company act", () => {
     ]);
   });
 
-  it("lists every outstanding row the board itself counts in the rail, and a click jumps to and focuses the exact row", async () => {
-    const thinRead = {
-      ...readyRead,
-      profile_fields: [
-        grounded("legal_name", "Gradion GmbH", "© 2026 Gradion GmbH"),
-      ],
-    } satisfies CompanySiteRead;
-    stubApi({
-      read: thinRead,
-      proposal: {
-        ...proposalFor(thinRead),
-        remaining_required_fields: ["display_name", "offer_summary", "icp"],
-      },
-    });
-    render(<OnboardingScreen />);
-
-    await submitWebsite();
-    await screen.findByRole("button", { name: /Continue/ });
-
-    // The rail — never the surface — carries this list; it is read from the
-    // SAME rowFor/isWork pair the board's own section nav counts with, so it
-    // names every empty row (not only the ones the confirm gate blocks on),
-    // not just the required trio.
-    const rail = document.querySelector(".mw-thread");
-    expect(rail).not.toBeNull();
-    within(rail as HTMLElement).getByRole("heading", {
-      name: "These need your input",
-    });
-    const attention = (rail as HTMLElement).querySelector(
-      ".ob-conv-attention",
-    ) as HTMLElement;
-    expect(attention).not.toBeNull();
-    const items = within(attention).getAllByRole("button");
-    // Every field but legal_name is empty: 19 fields minus the one grounded.
-    expect(items).toHaveLength(18);
-
-    await userEvent.click(items[0]);
-    const row = document.getElementById("ob-triage-row-display_name");
-    expect(row).not.toBeNull();
-    // The jump lands in the field's own control, not merely on the row that
-    // contains it: a click on a to-do means "let me fill this in", and
-    // display_name's row is already expanded (it is a required, empty
-    // field, open by default), so its input exists right away.
-    expect(document.activeElement?.tagName).toBe("INPUT");
-    expect((row as HTMLElement).contains(document.activeElement)).toBe(true);
-  });
-
-  it("says '1 field blocks confirm', not '1 fields block confirm', when only one required field is empty", async () => {
-    // Every field but icp grounded, so icp is the ONLY row that blocks
-    // confirm — the rest being filled means there is no advisory work to
-    // fold in either.
-    const almostReadyRead = {
-      ...readyRead,
-      profile_fields: [
-        grounded("legal_name", "Gradion GmbH", "© 2026 Gradion GmbH"),
-        grounded("display_name", "Gradion", "Gradion"),
-        grounded(
-          "offer_summary",
-          "Revenue software for manufacturers",
-          "We build revenue software",
-        ),
-        grounded("registered_address", "Berlin, Germany", "Berlin, Germany"),
-        grounded("register_vat", "DE123456789", "DE123456789"),
-        grounded("industry", "Robotics", "We build robots"),
-        grounded("history", "Founded 2019", "Founded 2019"),
-        grounded("value_proposition", "Faster onboarding", "Faster onboarding"),
-        grounded("usp", "AI-native from day one", "AI-native from day one"),
-        grounded(
-          "buying_center",
-          "Ops and RevOps leads",
-          "Ops and RevOps leads",
-        ),
-        grounded(
-          "customer_pains",
-          "Manual onboarding takes weeks",
-          "Manual onboarding takes weeks",
-        ),
-        grounded("desired_outcomes", "Faster ramp", "Faster ramp"),
-        grounded(
-          "buying_intents",
-          "Evaluating CRM replacements",
-          "Evaluating CRM replacements",
-        ),
-        grounded("common_objections", "Migration risk", "Migration risk"),
-        grounded("sales_motion", "Sales-assisted", "Sales-assisted"),
-      ],
-    } satisfies CompanySiteRead;
-    stubApi({
-      read: almostReadyRead,
-      proposal: {
-        ...proposalFor(almostReadyRead),
-        remaining_required_fields: ["icp"],
-      },
-    });
-    render(<OnboardingScreen />);
-
-    await submitWebsite();
-    await screen.findByRole("button", { name: /Continue/ });
-
-    expect(
-      screen.getByText(
-        "Your review is ready on the right. 1 field blocks confirm.",
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText(/1 fields block confirm/)).toBeNull();
-  });
-
-  it("lets a human fill a missing required field right in the thread, enabling Continue", async () => {
+  it("lets a human fill a missing required field right on the deck, enabling Continue", async () => {
     const thinRead = {
       ...readyRead,
       profile_fields: [
@@ -612,26 +477,30 @@ describe("the conversational company act", () => {
     await submitWebsite();
 
     const accept = (await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     })) as HTMLButtonElement;
     expect(accept.disabled).toBe(true);
 
-    // By role, not by label text alone: the triage map's jump squares carry
-    // the same field name in their accessible names, and the fill affordance
-    // under test is the text control.
-    const card = confirmCardElement();
-    await userEvent.type(
-      within(card).getByRole("textbox", { name: /Company name/ }),
-      "Gradion",
-    );
-    await userEvent.type(
-      within(card).getByRole("textbox", { name: /What do you sell\?/ }),
-      "Revenue software for manufacturers",
-    );
-    await userEvent.type(
-      within(card).getByRole("textbox", { name: /Ideal customer/ }),
-      "Mid-market manufacturers",
-    );
+    // The deck's own control carries the question as its accessible name.
+    // Filling a card retires it from the blocking list right away (its
+    // field is no longer empty), which reshuffles the deck under the
+    // reader mid-fill — so each fill reads whichever card is CURRENTLY
+    // first, rather than assuming a fixed position for each field, and sets
+    // its value in one atomic change rather than a keystroke at a time
+    // (which would type into a card the reshuffle had already retired).
+    const values: Readonly<Record<string, string>> = {
+      "Company name": "Gradion",
+      "What do you sell?": "Revenue software for manufacturers",
+      "Ideal customer": "Mid-market manufacturers",
+    };
+    for (const _ of Object.keys(values)) {
+      const label = document.querySelector(".rdeck-question")?.textContent;
+      const value = label !== null && label !== undefined ? values[label] : undefined;
+      expect(value).toBeDefined();
+      fireEvent.change(screen.getByRole("textbox", { name: label ?? "" }), {
+        target: { value: value ?? "" },
+      });
+    }
 
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -645,7 +514,7 @@ describe("the conversational company act", () => {
     await submitWebsite();
 
     const accept = (await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -665,8 +534,10 @@ describe("the conversational company act", () => {
     expect((body.profile as Record<string, unknown>).website).toBe(
       "https://gradion.com",
     );
-    expect(await screen.findByText(/Company profile confirmed/)).toBeTruthy();
-    // The machine advanced straight into the voice act's collect scene.
+    // The machine advanced straight into the voice act's collect scene —
+    // the one thing on screen that proves the write actually landed, since
+    // the transcript that used to narrate "Company profile confirmed" is
+    // gone.
     expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
   });
 
@@ -691,7 +562,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -735,7 +606,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -745,8 +616,9 @@ describe("the conversational company act", () => {
     // The confirmation this click was blocked from making had, in fact,
     // already landed (a duplicate submit, or another tab) — the reader is
     // moved on exactly as a fresh success would, not invited to press
-    // Continue again for a state that can never succeed that way.
-    expect(await screen.findByText(/Company profile confirmed/)).toBeTruthy();
+    // Confirm again for a state that can never succeed that way. The voice
+    // act's own heading is the proof: nothing on screen narrates the
+    // confirmation any more.
     expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
     expect(screen.queryByText(/already confirmed/)).toBeNull();
   });
@@ -764,7 +636,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -773,7 +645,9 @@ describe("the conversational company act", () => {
 
     expect(await screen.findByText(/no draft to confirm yet/)).toBeTruthy();
     expect(screen.queryByText(/read not ready/)).toBeNull();
-    expect(screen.queryByText(/Company profile confirmed/)).toBeNull();
+    // Nothing moved the reader on: this refusal has no route forward but a
+    // re-check, so the machine is still sitting in the company act.
+    expect(screen.queryByText(/Teach me how you write\./)).toBeNull();
   });
 
   it("lets the workbench frame introduce itself once, not once per act", async () => {
@@ -782,7 +656,7 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
     const accept = (await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     })) as HTMLButtonElement;
     await waitFor(() => {
       expect(accept.disabled).toBe(false);
@@ -828,18 +702,14 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
 
-    // The act never stalls: one honest turn about the fallback, then a
-    // review card built from the site-read snapshot itself — the read's own
-    // terminal stays silent, exactly as it does when the proposal succeeds.
+    // The act never stalls: the review still lands, built from the
+    // site-read snapshot itself rather than the failed proposal.
     expect(
-      await screen.findByText(/I could not load the prepared mapping/),
-    ).toBeTruthy();
-    expect(
-      await screen.findByRole("button", { name: /Continue/ }),
+      await screen.findByRole("button", { name: "Confirm the profile" }),
     ).toBeTruthy();
     // "Gradion GmbH" names both the identity summary and its own row.
     expect(
-      within(confirmCardElement()).getAllByText("Gradion GmbH").length,
+      within(digestElement()).getAllByText("Gradion GmbH").length,
     ).toBeGreaterThan(0);
   });
 
@@ -882,20 +752,23 @@ describe("the conversational company act", () => {
 
     await submitWebsite();
 
-    await screen.findByText(/Here is everything I found/);
-    const card = confirmCardElement();
-    // "Gradion GmbH" names both the identity summary at the top of the card
-    // and its own settled row further down.
-    expect(within(card).getAllByText("Gradion GmbH").length).toBeGreaterThan(0);
-    expect(within(card).queryByText("Umbrella Holding AG")).toBeNull();
+    await screen.findByRole("heading", { name: "It will not guess at these." });
+    const digest = digestElement();
+    // "Gradion GmbH" names both the identity summary at the top of the
+    // digest and its own settled line further down.
+    expect(within(digest).getAllByText("Gradion GmbH").length).toBeGreaterThan(
+      0,
+    );
+    expect(within(digest).queryByText("Umbrella Holding AG")).toBeNull();
   });
 
-  // The rail's one hard rule: every reply is a chip or a jump, never typed
-  // prose. Checked in both post-gate phases the rail can be in — a live
-  // decision (the surface owns the candidate list) and the review (the
-  // surface owns the field edits) — so removing the composer from one and
-  // missing a sibling free-text control in the other cannot slip through.
-  it("offers no free-text control anywhere in the rail, in either post-gate phase", async () => {
+  // There is no rail to keep a composer off any more — OnboardingStage is
+  // one room, not a board beside a conversation thread — so what survives is
+  // the deeper claim: every reply the human can give is a chip, a radio, or
+  // a jump, never a message they type and send. Checked in both post-gate
+  // phases: a live decision (the candidate list) and the review (the field
+  // edits).
+  it("offers no free-text composer anywhere on the surface, in either post-gate phase", async () => {
     const entityClarify = {
       id: "clarify:legal_name:2",
       question: "Which legal entity is this installation for?",
@@ -920,22 +793,17 @@ describe("the conversational company act", () => {
       name: /Which legal entity is this installation for\?/,
     });
 
-    const railDuringDecision = document.querySelector(".mw-thread");
-    expect(railDuringDecision).not.toBeNull();
-    expect(
-      within(railDuringDecision as HTMLElement).queryAllByRole("textbox"),
-    ).toHaveLength(0);
+    // The decision scene answers with a radio and a Continue, never a
+    // message composed and sent.
     expect(document.querySelector(".mw-composer")).toBeNull();
+    expect(screen.queryAllByRole("textbox")).toHaveLength(0);
 
     await userEvent.click(screen.getByRole("radio", { name: /Gradion GmbH/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByText(/Here is everything I found/);
+    await screen.findByRole("heading", { name: "It will not guess at these." });
 
-    const railDuringReview = document.querySelector(".mw-thread");
-    expect(railDuringReview).not.toBeNull();
-    expect(
-      within(railDuringReview as HTMLElement).queryAllByRole("textbox"),
-    ).toHaveLength(0);
+    // The review's own textboxes are the deck's field controls — an answer
+    // to a specific, asked question — never a free-text composer beside it.
     expect(document.querySelector(".mw-composer")).toBeNull();
   });
 
@@ -1007,33 +875,18 @@ describe("the conversational company act", () => {
         name: /Which industry best describes you\?/,
       }),
     ).toBeTruthy();
-    expect(screen.queryByText(/Here is everything I found/)).toBeNull();
-    expect(
-      screen.getByText(
-        "I need one decision from you: Which industry best describes you? It is on the right, with the evidence for each option.",
-      ),
-    ).toBeTruthy();
 
     // Answering it, too, finally reaches the review — with both decisions
-    // settled. The read only ever grounded 5 of the 19 fields (the fixture's
-    // usual four plus the industry this clarify just filled), and all three
-    // REQUIRED_FIELDS are among those five, so nothing left blocks confirm —
-    // the other 14 rows are advisory only, and the rail says so plainly
-    // rather than calling them an obstacle.
+    // settled and no live decision left to strand the reader on.
     await userEvent.click(screen.getByRole("radio", { name: /Robotics/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByText(/Here is everything I found/);
     expect(
-      screen.getByText(
-        "Your review is ready on the right. Nothing blocks you; 14 things are worth a look.",
-      ),
+      await screen.findByRole("heading", { name: "It will not guess at these." }),
     ).toBeTruthy();
-    const rail = document.querySelector(".mw-thread");
-    expect(rail).not.toBeNull();
     expect(
-      within(rail as HTMLElement).getByRole("heading", {
-        name: "These need your input",
+      screen.queryByRole("heading", {
+        name: /Which industry best describes you\?/,
       }),
-    ).toBeTruthy();
+    ).toBeNull();
   });
 });

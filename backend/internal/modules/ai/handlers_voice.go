@@ -46,10 +46,6 @@ type Handlers struct {
 	// starts honest-unconfigured; the API composition root replaces it from
 	// the same routing decision that builds the model path.
 	publicProfile PublicProfile
-	// catalogue serves the vendor model catalogue read (WithCatalogue wires
-	// it). Nil on a role that composed none, which is why the route answers
-	// Unavailable rather than panicking, the same posture as providerKeys above.
-	catalogue *ModelCatalogue
 }
 
 // NewHandlers wires the module's stores onto one pool; budget is the

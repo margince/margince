@@ -17,9 +17,11 @@ import {
   OnboardingStage,
   STAGE_CORE_ID,
 } from "../design-system/onboarding-stage";
+import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { factFieldLabelKey } from "./factview";
 import { normalizeUrl, skipReasonText } from "./onboarding";
 import { CORE_LABELS } from "./onboarding-core-label";
 import "./onboarding-gate.css";
@@ -46,6 +48,7 @@ type GateScan = Readonly<{
   locale: Locale;
 }>;
 type CompanySiteReadPage = components["schemas"]["CompanySiteReadPage"];
+type CompanySiteReadFact = components["schemas"]["CompanySiteReadFact"];
 type AiRunSummary = components["schemas"]["AiRunSummary"];
 
 type Translate = ReturnType<typeof useT>;
@@ -88,8 +91,11 @@ export function OnboardingGate({
   notice,
   configuredModel,
   scan,
+  readBroken,
+  uncertainCount,
   onSubmit,
   onManual,
+  onRetryRead,
 }: Readonly<{
   name?: string;
   running: boolean;
@@ -101,8 +107,29 @@ export function OnboardingGate({
    * state where the column has a read but not the host it is reading.
    */
   scan?: GateScan;
+  /**
+   * The read the reader is waiting on could not be fetched, and there is no
+   * `scan` to fall back on: a resumed session whose OWN first poll fails
+   * before any snapshot has ever landed narrates nothing `notice` can find
+   * (the thread only carries what a running session watched happen), so
+   * without this the column keeps `running` true forever over a plain form —
+   * indistinguishable from a screen with nothing on it. `notice` still wins
+   * where it has something to say.
+   */
+  readBroken?: boolean;
+  /**
+   * How many fields the read will hand to the confirm deck rather than settle
+   * itself — the exact count `deckCards` builds one card per. This screen has
+   * no query of its own that could derive it (PROP-DRIVEN, see the file
+   * header), and the caller only has a real answer once the review proposal
+   * exists, which is most of the way through a read. Absent, not zero, for
+   * every render before that: a zero here would read as "nothing to decide"
+   * when the honest fact is "not counted yet".
+   */
+  uncertainCount?: number;
   onSubmit: (host: string) => void;
   onManual: () => void;
+  onRetryRead?: () => void;
 }>) {
   const t = useT();
   const [website, setWebsite] = useState("");
@@ -118,7 +145,25 @@ export function OnboardingGate({
           read={scan.read}
           locale={scan.locale}
           configuredModel={configuredModel}
+          uncertainCount={uncertainCount}
         />
+      </GateColumn>
+    );
+  }
+
+  if (readBroken && notice === undefined) {
+    return (
+      <GateColumn name={named}>
+        <SurfaceState
+          state="failed"
+          // Read by the `empty` arm alone, which a failed read never reaches:
+          // what there is none of is not a question a broken poll has an
+          // answer to.
+          emptyLabel={t("common.empty")}
+          detail={{ onRetry: onRetryRead }}
+        >
+          {null}
+        </SurfaceState>
       </GateColumn>
     );
   }
@@ -492,11 +537,15 @@ export function ReadTheatre({
   host,
   locale,
   configuredModel,
+  uncertainCount,
 }: Readonly<{
   read: CompanySiteRead;
   host: string;
   locale: Locale;
   configuredModel: string;
+  /** See `OnboardingGate`'s own prop of the same name for what this counts
+   * and why it is absent rather than zero for most of a read. */
+  uncertainCount?: number;
 }>) {
   return (
     <GateColumn scan={{ read, host, locale }}>
@@ -504,6 +553,7 @@ export function ReadTheatre({
         read={read}
         locale={locale}
         configuredModel={configuredModel}
+        uncertainCount={uncertainCount}
       />
     </GateColumn>
   );
@@ -516,10 +566,12 @@ function TheatreTail({
   read,
   locale,
   configuredModel,
+  uncertainCount,
 }: Readonly<{
   read: CompanySiteRead;
   locale: Locale;
   configuredModel: string;
+  uncertainCount?: number;
 }>) {
   const t = useT();
   const settled = SETTLED.has(read.status);
@@ -588,7 +640,12 @@ function TheatreTail({
             aria-label={t("ob.scan.logLabel")}
           >
             {latestPage === null ? null : (
-              <ScanTickerEntry key={latestPage.url} page={latestPage} t={t} />
+              <ScanTickerEntry
+                key={latestPage.url}
+                page={latestPage}
+                facts={read.facts}
+                t={t}
+              />
             )}
           </ul>
         </div>
@@ -613,6 +670,19 @@ function TheatreTail({
               <CountUp value={read.facts.length} locale={locale} />
             </dd>
           </div>
+          {/* Absent, not zero, until `uncertainCount` says otherwise — see its
+              own doc comment on `OnboardingGate`. A bar of two live counters
+              and one that silently sits at 0 for most of the read would read
+              as "nothing to decide yet", which is not a fact this screen has
+              at that point. */}
+          {uncertainCount !== undefined && (
+            <div>
+              <dt>{t("ob.scan.tallyUncertain")}</dt>
+              <dd>
+                <CountUp value={uncertainCount} locale={locale} />
+              </dd>
+            </div>
+          )}
         </dl>
 
         <p className="ob-scan-counts">
@@ -707,24 +777,69 @@ function useLatestArrivedPage(
 // page — never on the reader expanding an old one.
 function ScanTickerEntry({
   page,
+  facts,
   t,
-}: Readonly<{ page: CompanySiteReadPage; t: Translate }>) {
+}: Readonly<{
+  page: CompanySiteReadPage;
+  facts: readonly CompanySiteReadFact[];
+  t: Translate;
+}>) {
   const [expanded, setExpanded] = useState(false);
-  const reason = pageStatusWord(t, page);
+  const note = tickerNoteFor(page, facts, t);
   return (
     <li className="ob-scan-ticker-entry" data-page-status={page.status}>
       <span className="ob-scan-ticker-path">{sourcePath(page.url) ?? "/"}</span>
-      <button
-        type="button"
-        className="ob-scan-ticker-kind"
-        aria-expanded={expanded}
-        aria-label={reason}
-        onClick={() => setExpanded((current) => !current)}
-      >
-        {reason}
-      </button>
+      {/* No button, no reason, when there is nothing honest to say yet: a
+          freshly fetched page with no fact grounded to it is not "fetched" —
+          that word describes the request, not what the page gave up, and
+          printing it here would be filler standing in for a finding this
+          screen does not have. */}
+      {note !== null && (
+        <button
+          type="button"
+          className="ob-scan-ticker-kind"
+          aria-expanded={expanded}
+          aria-label={note}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {note}
+        </button>
+      )}
     </li>
   );
+}
+
+/**
+ * What the ticker says the page gave up, or null for "nothing to say yet".
+ *
+ * A skipped or failed page has a real reason and no fact ever will, so its
+ * status word IS the honest note. A fetched page instead looks for the
+ * fact whose `evidence_url` names it — the same grounding link the deck and
+ * the record page trust — and takes the one this read is most confident of
+ * when more than one landed on the same page. No match is a real, current
+ * state (the extraction has not reached this page's content yet, or found
+ * nothing worth a field on it) and stays null rather than falling back to a
+ * word that would only restate the page's own status.
+ */
+function tickerNoteFor(
+  page: CompanySiteReadPage,
+  facts: readonly CompanySiteReadFact[],
+  t: Translate,
+): string | null {
+  if (page.status !== "fetched") {
+    return pageStatusWord(t, page);
+  }
+  const found = facts
+    .filter((fact) => fact.evidence_url === page.url)
+    .sort((a, b) => b.confidence - a.confidence)
+    .at(0);
+  if (found === undefined) {
+    return null;
+  }
+  return t("ob.scan.tickerFact", {
+    field: t(factFieldLabelKey(found.field)),
+    value: found.value,
+  });
 }
 
 // The page a crawled URL is, as the site's own path. Parsed with a pattern

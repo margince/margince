@@ -168,7 +168,11 @@ func (h aiRoutingHandlers) ListAvailableModels(
 	if params.Tier != nil {
 		tier = *params.Tier
 	}
-	available, err := h.store.ListAvailableModels(r.Context(), provider, tier)
+	top := 0
+	if params.Top != nil {
+		top = *params.Top
+	}
+	available, err := h.store.ListAvailableModels(r.Context(), provider, tier, top)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -185,12 +189,16 @@ func toContractAvailableModels(a ai.AvailableModels) crmcontracts.AvailableModel
 	models := make([]crmcontracts.AvailableModel, 0, len(a.Models))
 	for _, m := range a.Models {
 		models = append(models, crmcontracts.AvailableModel{
-			Id:          m.ID,
-			DisplayName: optionalString(m.DisplayName),
-			Lane:        availableModelLane(m.Lane),
+			Id:            m.ID,
+			DisplayName:   optionalString(m.DisplayName),
+			Lane:          availableModelLane(m.Lane),
+			ContextLength: m.ContextLength,
+			InputPerMtok:  m.InputPerMtok,
+			OutputPerMtok: m.OutputPerMtok,
+			RankScore:     m.RankScore,
 		})
 	}
-	out := crmcontracts.AvailableModelList{Provider: a.Provider, Models: models}
+	out := crmcontracts.AvailableModelList{Provider: a.Provider, Models: models, RankedBy: optionalString(a.RankedBy)}
 	if a.Unavailable != ai.AvailabilityOK {
 		reason := crmcontracts.AvailableModelListUnavailable(a.Unavailable)
 		out.Unavailable = &reason

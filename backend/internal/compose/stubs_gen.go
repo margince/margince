@@ -119,10 +119,6 @@ func (stubs) ListAgentTools(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListAgentTools")
 }
 
-func (stubs) ListAiModelCatalogue(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAiModelCatalogueParams) {
-	httperr.NotImplemented(w, r, "ListAiModelCatalogue")
-}
-
 func (stubs) ListAiModelRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAiModelRatesParams) {
 	httperr.NotImplemented(w, r, "ListAiModelRates")
 }

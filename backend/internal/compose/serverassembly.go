@@ -118,7 +118,14 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	// without a restart. Always wired, including on an installation that has
 	// bound nothing — an operator binding models for the first time reaches it
 	// through the same surface as one re-pointing a lane.
-	s.aiRoutingHandlers = aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS)}
+	//
+	// WithCatalogue wires the public OpenRouter model read unconditionally: it
+	// needs no tenant credential, so there is no "no provider connected"
+	// configuration to honor here.
+	s.aiRoutingHandlers = aiRoutingHandlers{
+		store: ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).
+			WithCatalogue(ai.NewModelCatalogue(systemClock{})),
+	}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
 	// name, reporting zone, base currency — the last of which locks once a

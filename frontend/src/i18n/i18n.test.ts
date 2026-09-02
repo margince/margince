@@ -22,22 +22,14 @@ import { vi as viCatalog } from "./vi";
 const KEPT_IN_ENGLISH = new Set<string>([
   // The product name of the buyer surface.
   "room.card.title",
-  // Google's own name for the page an operator has to open. Translating a
-  // product name sends them looking for a screen that does not exist under it.
-  "firstRun.google.helpConsole",
-  // Same word in Vietnamese, and it is the right one: the label on the redirect
-  // URI an operator copies for mail.
-  "firstRun.google.helpRedirectMail",
-  // The two platforms' own names. "Google Workspace" and "Microsoft 365" are
-  // what the vendors call them in every market they sell in, and an operator
-  // matching this answer against their own contract needs the name on the
-  // contract.
-  "firstRun.platform.google",
-  "firstRun.platform.microsoft",
   // Two placeholders and a dash. Every word in the line comes from elsewhere —
   // the dimension's own label and the sentence the server wrote — so there is
   // nothing here for a locale to translate.
   "co.strip.healthSummary.because",
+  // Two placeholders and a colon. The field name is already translated one
+  // level down (factFieldLabelKey) and the value is the page's own word, so
+  // there is nothing left in this string for a locale to translate either.
+  "ob.scan.tickerFact",
   // The record's own name beside the numeral that names its reading. There is
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.

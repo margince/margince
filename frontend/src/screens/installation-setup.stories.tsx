@@ -92,26 +92,26 @@ export const BindingTheModel: Story = {
 // The vendor's live catalogue, ranked. Only OpenRouter has one, so the story
 // picks that vendor and the list appears under the chat field's own sheet rows.
 const VENDOR_CATALOGUE = {
+  provider: "openrouter",
   ranked_by: "Artificial Analysis intelligence index",
-  unavailable: false,
-  data: [
+  models: [
     {
-      model_id: "anthropic/claude-opus-5",
-      name: "Anthropic: Claude Opus 5",
+      id: "anthropic/claude-opus-5",
+      display_name: "Anthropic: Claude Opus 5",
       input_per_mtok: "5",
       output_per_mtok: "25",
       rank_score: "63.1",
     },
     {
-      model_id: "x-ai/grok-4.6",
-      name: "xAI: Grok 4.6",
+      id: "x-ai/grok-4.6",
+      display_name: "xAI: Grok 4.6",
       input_per_mtok: "2",
       output_per_mtok: "6",
       rank_score: "60.9",
     },
     {
-      model_id: "z-ai/glm-5.3-flash",
-      name: "Z.AI: GLM 5.3 Flash",
+      id: "z-ai/glm-5.3-flash",
+      display_name: "Z.AI: GLM 5.3 Flash",
       input_per_mtok: "0.07",
       output_per_mtok: "0.25",
       rank_score: "57.5",
@@ -133,7 +133,8 @@ export const TheLiveList: Story = {
         { step: "ai_models", configured: false },
         { step: "google_app", configured: false },
       ]),
-      "GET /ai-model-catalogue": () => jsonResponse(VENDOR_CATALOGUE),
+      "GET /ai/available-models/openrouter": () =>
+        jsonResponse(VENDOR_CATALOGUE),
     });
     return (
       <StoryProviders>
@@ -160,8 +161,8 @@ export const TheLiveListUnavailable: Story = {
         { step: "ai_models", configured: false },
         { step: "google_app", configured: false },
       ]),
-      "GET /ai-model-catalogue": () =>
-        jsonResponse({ ranked_by: "", unavailable: true, data: [] }),
+      "GET /ai/available-models/openrouter": () =>
+        jsonResponse({ provider: "openrouter", models: [], unavailable: "unreachable" }),
     });
     return (
       <StoryProviders>

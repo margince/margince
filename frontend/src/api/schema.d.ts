@@ -7274,6 +7274,11 @@ export interface paths {
             query?: {
                 /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
                 tier?: string;
+                /**
+                 * @description Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
+                 *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
+                 */
+                top?: number;
             };
             header?: never;
             path: {
@@ -10637,102 +10642,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/quotas": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List quotas (cursor-paginated). */
-        get: operations["listQuotas"];
-        put?: never;
-        /**
-         * Create a quota (owner XOR team revenue target for one period).
-         * @description RD-WIRE-2. Exactly one of owner_id/team_id must be non-null (RD-DDL-2 CHECK) —
-         *     supplying both or neither is refused with a 422 validation_error carrying a distinct
-         *     details.errors[].code (owner_xor_team_required), not the generic per-field
-         *     validation code, so a caller can branch on this specific violation. target_minor is
-         *     always human-set (RD-PARAM-3) — no default, no AI-guessed or server-computed
-         *     fallback. Quota targets follow the pipeline/stage-config posture (createPipeline,
-         *     updateStage): human session only (x-agent-access: human-only), never an MCP tool
-         *     tier — an agent never sets or changes a sales target.
-         */
-        post: operations["createQuota"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/quotas/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /** Get a quota by id. */
-        get: operations["getQuota"];
-        put?: never;
-        post?: never;
-        /**
-         * Archive (soft-delete) a quota.
-         * @description Archive semantics (API-CONV-2): sets archived_at, drops from default lists, stays
-         *     fetchable by id, and returns 200 + the full archived entity — never 204. This
-         *     deliberately does not follow /automations/{id}'s deleteAutomation 204-on-archive
-         *     shape, which predates/diverges from the standard convention every other archive
-         *     operation in this contract (archivePerson, archiveOrganization, archiveDeal)
-         *     correctly follows. Human session only, like createQuota/updateQuota.
-         */
-        delete: operations["archiveQuota"];
-        options?: never;
-        head?: never;
-        /**
-         * Update a quota (partial).
-         * @description Merge-PATCH (API-CONV-1); If-Match required for concurrency-safe writes (API-CC-2).
-         *     Re-validates the owner-XOR-team contract after the merge — patching into a both-set
-         *     or neither-set state returns the same 422 owner_xor_team_required shape as
-         *     createQuota. Human session only, like createQuota/archiveQuota (see createQuota's
-         *     description) — an agent never sets or changes a sales target.
-         */
-        patch: operations["updateQuota"];
-        trace?: never;
-    };
-    "/quotas/{id}/attainment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /**
-         * Server-computed attainment for this quota (RD-WIRE-3), decomposed per closed-won deal.
-         * @description RD-FORM-2: attainment = Σ(closed-won base_value_minor in the quota's period) ÷
-         *     target_minor, base-currency converted. Never client-summed — contributing_deals
-         *     always sums to closed_won_minor. A zero or otherwise unusable target refuses the
-         *     computation honestly (422 attainment_target_zero, RD-AC-4/AC-quota-6) rather than
-         *     dividing by zero; a failed clean-core query (e.g. a missing FX rate, mirroring
-         *     getOrganizationHierarchyRollup's fx_rate_unavailable) is an honest error, never a
-         *     stale or invented figure. Requires read on quotas AND deals (the aggregate is
-         *     built from deal sums); per-deal row visibility is deliberately not consulted —
-         *     attainment is a workspace-level figure, the hierarchy-rollup posture.
-         */
-        get: operations["getQuotaAttainment"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/attachments": {
         parameters: {
             query?: never;
@@ -12112,41 +12021,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/ai-model-catalogue": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * What a vendor serves right now, ranked, at the vendor's own asking price.
-         * @description Admin/ops-only. Reads the vendor's public catalogue live and returns its highest-ranked
-         *     models by a published third-party measure, named in `ranked_by` so a screen can say what
-         *     "top" MEANS rather than asserting a bare "top ten" nobody can check.
-         *
-         *     THE PRICES ARE THE VENDOR'S, not this installation's. Nothing here has been through the
-         *     confirm-first path that writes `ai_model_rate`, so a caller renders these as proposed and
-         *     lets a sheet row win wherever one exists. One colour, one meaning: a number a machine
-         *     fetched is not a number this installation has agreed to.
-         *
-         *     IT FAILS OPEN. A vendor that is slow, down, or serving a shape this cannot read yields
-         *     `unavailable: true` and no rows rather than an error status, because first run must never
-         *     be blocked by somebody else's uptime. `unavailable` is what keeps that honest: an empty
-         *     list on its own cannot tell "the vendor is unreachable" from "the vendor serves nothing",
-         *     and a screen that cannot tell them apart says the wrong thing in one of the two cases.
-         *
-         *     Human session only (x-agent-access: human-only).
-         */
-        get: operations["listAiModelCatalogue"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/organizations/{id}/profile-fields/{field}": {
         parameters: {
             query?: never;
@@ -12496,43 +12370,6 @@ export interface components {
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];
-        };
-        /**
-         * @description One model a vendor serves right now, at the vendor's own asking price. A PROPOSAL rather
-         *     than a rate: it carries no effective date because nothing dated it, and the two prices are
-         *     in the same USD-per-1M-tokens decimal strings as `AiModelRate` so one screen can put a
-         *     proposed price and a recorded one side by side without converting between them.
-         */
-        AiModelCatalogueEntry: {
-            /** @description The id to bind, spelled the vendor's way. */
-            model_id: string;
-            /** @description What the vendor calls it, for a reader who does not think in ids. */
-            name: string;
-            /** @description Omitted where the vendor does not publish one. */
-            context_length?: number;
-            input_per_mtok: string;
-            output_per_mtok: string;
-            /**
-             * @description This model's score under `ranked_by`, so a screen can show WHY a model is in the list
-             *     rather than asking a reader to trust the order. A decimal string for the same reason
-             *     the prices are: a score is displayed, never arithmetic.
-             */
-            rank_score?: string;
-        };
-        AiModelCatalogueResponse: {
-            /**
-             * @description The measure the order came from, in words a screen can print. "Top" is meaningless
-             *     without it, and the vendor's own list arrives in no useful order at all.
-             */
-            ranked_by: string;
-            /** @description True when the vendor could not be read. `data` is then empty and the caller falls back to the price sheet. */
-            unavailable: boolean;
-            /**
-             * Format: date-time
-             * @description When the vendor was last read. Absent when unavailable.
-             */
-            fetched_at?: string;
-            data: components["schemas"]["AiModelCatalogueEntry"][];
         };
         SetAiModelRateRequest: {
             provider: string;
@@ -13065,13 +12902,19 @@ export interface components {
             /** @description The routing name of the vendor that was asked. */
             provider: string;
             models: components["schemas"]["AvailableModel"][];
+            /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
+            ranked_by?: string;
             /**
              * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
         };
-        /** @description One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on. */
+        /**
+         * @description One model a vendor says it serves.
+         *     Everything past `id` is OPTIONAL and stated only where that vendor states it: the vendors disagree about what they publish, and a caller that assumed a field was there would read a silence as a value. Absent is absent, never a default.
+         *     The price fields are the VENDOR'S OWN asking price, and they are not what a call is costed against. `/ai-model-rates` is that record: it is effective-dated and this installation has agreed to it, where these are a number the vendor printed today and nobody has confirmed. A screen may put the two side by side, and must say which is which. A model this installation cannot price is still bindable and reports UNPRICED.
+         */
         AvailableModel: {
             /** @description The string a binding names, exactly as the vendor spells it. */
             id: string;
@@ -13082,6 +12925,14 @@ export interface components {
              * @enum {string}
              */
             lane?: "chat" | "embeddings";
+            /** @description Absent where the vendor publishes none. */
+            context_length?: number;
+            /** @description The vendor's asking price per million input tokens, in the same USD decimal strings as `AiModelRate` so a screen can show a vendor's price beside a recorded one without converting between them. Absent where the vendor publishes no price. */
+            input_per_mtok?: string;
+            /** @description The same, per million output tokens. */
+            output_per_mtok?: string;
+            /** @description This model's score under the list's `ranked_by`, so a screen can show WHY a model is in a shortened list rather than asking a reader to trust the order. A decimal string for the same reason the prices are: it is displayed, never arithmetic. Absent where the vendor publishes no such measure, which is also when the list cannot be ranked. */
+            rank_score?: string;
         };
         /** @description What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
@@ -21792,7 +21643,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan";
+        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -22551,7 +22402,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "quota" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "organization" | "overlay_connection" | "partner" | "person" | "product" | "project" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -25156,7 +25007,7 @@ export interface components {
             /** @description Omitted while access is `paused` or `expired`, and when nothing has been published yet. */
             room?: components["schemas"]["BuyerRoomContent"];
         };
-        /** @description A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like Quota/CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema. */
+        /** @description A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema. */
         OfferTemplate: {
             /** Format: uuid */
             id: string;
@@ -26962,146 +26813,6 @@ export interface components {
             source: string;
             /** @enum {string} */
             reason: "withheld" | "failed";
-        };
-        /**
-         * @description A per-owner or per-team revenue target for one period (RD-DDL-2). Exactly one of
-         *     owner_id/team_id is non-null (CHECK constraint) — never both, never neither;
-         *     createQuota/updateQuota document and enforce this (422 owner_xor_team_required).
-         *     target_minor is always human-set: no AI-guessed quota, no default, no
-         *     server-computed fallback (RD-PARAM-3). Deliberately carries no
-         *     source/captured_by/created_by provenance columns — unlike custom_field's
-         *     created_by (CF-T01), RD-DDL-2's column list has none. Attainment is a separate
-         *     read (getQuotaAttainment, RD-WIRE-3) — this schema never carries attainment
-         *     fields itself.
-         */
-        Quota: {
-            /** Format: uuid */
-            id: string;
-            /**
-             * Format: uuid
-             * @description Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-             */
-            owner_id?: string | null;
-            /**
-             * Format: uuid
-             * @description Exactly one of owner_id/team_id is non-null (RD-DDL-2 CHECK).
-             */
-            team_id?: string | null;
-            /** Format: date */
-            period_start: string;
-            /** Format: date */
-            period_end: string;
-            /**
-             * Format: int64
-             * @description Human-set revenue target, integer minor units (RD-PARAM-3) — never an AI-guessed or server-computed field.
-             */
-            target_minor: number;
-            currency: string;
-            version?: components["schemas"]["RowVersion"];
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-            /** Format: date-time */
-            archived_at?: string | null;
-        };
-        QuotaListResponse: {
-            data: components["schemas"]["Quota"][];
-            page: components["schemas"]["PageInfo"];
-        };
-        /**
-         * @description Exactly one of owner_id/team_id must be non-null — supplying both or neither is a 422
-         *     validation_error carrying a distinct, machine-branchable details.errors[].code
-         *     (owner_xor_team_required), not the generic per-field validation code (see
-         *     createQuota's 422 examples). Not expressed as an OpenAPI 3.1 oneOf here — a prose
-         *     note plus a 422 on mismatch, matching how CreateCustomFieldRequest documents its
-         *     conditional currency/options requirement (CF-T01).
-         */
-        CreateQuotaRequest: {
-            /** Format: uuid */
-            owner_id?: string | null;
-            /** Format: uuid */
-            team_id?: string | null;
-            /** Format: date */
-            period_start: string;
-            /** Format: date */
-            period_end: string;
-            /** Format: int64 */
-            target_minor: number;
-            currency: string;
-        };
-        /** @description Merge-PATCH (API-CONV-1). Re-validates owner-XOR-team after the merge is applied — patching the row into a both-set or neither-set state is refused with the same 422 owner_xor_team_required shape as createQuota, not silently accepted. Switching a quota between owner- and team-scoped is archive-and-recreate: merge-PATCH cannot express the null clear (omitted and null are the same wire shape), so a PATCH can only reassign within the side the row already carries. */
-        UpdateQuotaRequest: {
-            /** Format: uuid */
-            owner_id?: string | null;
-            /** Format: uuid */
-            team_id?: string | null;
-            /** Format: date */
-            period_start?: string;
-            /** Format: date */
-            period_end?: string;
-            /** Format: int64 */
-            target_minor?: number;
-            currency?: string;
-        };
-        /**
-         * @description RD-WIRE-3 / RD-FORM-2 — server-computed attainment for one quota, decomposed for
-         *     "explain this number": attainment = Σ(closed-won base_value_minor in the quota's
-         *     period) ÷ target_minor, base-currency converted, in integer minor units. Never
-         *     client-summed — contributing_deals always sums to closed_won_minor. Rides as a
-         *     sub-resource of the quota (mirrors /organizations/{id}/hierarchy-rollup's
-         *     "computed read with decomposition" shape) rather than an inline field on Quota or
-         *     a GET ?include= expansion — chosen once, applied consistently; the plain Quota
-         *     response (list or single-get) never carries attainment fields. A failed or absent
-         *     computation is an honest error (getQuotaAttainment's 422 responses), never a
-         *     cached or invented figure (RD-AC-4).
-         */
-        QuotaAttainment: {
-            /** Format: uuid */
-            quota_id: string;
-            /**
-             * Format: int64
-             * @description Σ base_value_minor over closed-won deals in the quota's period (RD-FORM-2).
-             */
-            closed_won_minor: number;
-            /**
-             * Format: int64
-             * @description The BASE-CONVERTED target this attainment is measured against — Quota.target_minor converted into the workspace base currency at the as_of_date FX rate. It equals Quota.target_minor only when the quota is set in the base currency; a cross-currency quota's echo differs, so gap arithmetic never mixes currencies.
-             */
-            target_minor: number;
-            /** @description The workspace base currency — every money figure here (closed_won_minor, target_minor, gap_minor) is denominated in it, NOT in Quota.currency. */
-            currency: string;
-            /** @description closed_won_minor ÷ target_minor × 100 (RD-FORM-2). Uncapped raw value — e.g. 113 for the worked example — display capping (the ring visual stops at a full circle) is a RD-PARAM-4 UI concern, not this field's. */
-            attainment_pct: number;
-            /**
-             * Format: int64
-             * @description Signed gap to target — closed_won_minor minus target_minor (RD-FORM-2's worked example: +33.872,00 EUR once closed-won exceeds target); positive once attainment exceeds 100%, negative while short of target.
-             */
-            gap_minor: number;
-            /** @description Percent of the quota period elapsed at as_of_date (RD-PARAM-4 pace indicator): 0 before period_start, 100 at/after period_end, linear between. Carries period progress ONLY — comparing it against attainment_pct (ahead/behind pace) is the consumer's step, not encoded in this field. */
-            pace_pct: number;
-            /**
-             * @description Server-computed display band (RD-PARAM-4): met >= 100%, accent 60-99%, behind < 60%. The client never recomputes this from raw attainment_pct.
-             * @enum {string}
-             */
-            band: "met" | "accent" | "behind";
-            /**
-             * Format: date
-             * @description The date this attainment was computed.
-             */
-            as_of_date: string;
-            /** @description Per-deal decomposition for "Explain This Number"; sums to closed_won_minor. */
-            contributing_deals: components["schemas"]["QuotaAttainmentDeal"][];
-        };
-        /** @description One row of RD-FORM-2's per-deal breakdown — a closed-won deal counted toward this quota's attainment. */
-        QuotaAttainmentDeal: {
-            /** Format: uuid */
-            deal_id: string;
-            /**
-             * Format: int64
-             * @description This deal's counted amount toward closed_won_minor (base currency, minor units).
-             */
-            base_value_minor: number;
         };
         KnowledgeCorpus: {
             /** Format: uuid */
@@ -38903,6 +38614,11 @@ export interface operations {
             query?: {
                 /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
                 tier?: string;
+                /**
+                 * @description Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
+                 *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
+                 */
+                top?: number;
             };
             header?: never;
             path: {
@@ -44852,264 +44568,6 @@ export interface operations {
             };
         };
     };
-    listQuotas: {
-        parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-                /**
-                 * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
-                 *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
-                 *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
-                 *     accepted multi-field spelling; any other comma-separated multi-field spec returns
-                 *     `422 code: sort_unsupported`. **Allowed sort fields per resource** are the indexed columns
-                 *     enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
-                 *     columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
-                 *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
-                 */
-                sort?: components["parameters"]["Sort"];
-                /** @description Include soft-deleted (archived) rows. Default false. */
-                include_archived?: components["parameters"]["IncludeArchived"];
-                owner_id?: string;
-                team_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A page of quotas. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuotaListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    createQuota: {
-        parameters: {
-            query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateQuotaRequest"];
-            };
-        };
-        responses: {
-            /** @description Created quota. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quota"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            /** @description Validation failed, including the owner-XOR-team contract. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getQuota: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The quota. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quota"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    archiveQuota: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Archived quota (now carries a non-null archived_at). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quota"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    updateQuota: {
-        parameters: {
-            query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
-                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
-                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
-                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
-                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
-                 */
-                "If-Match"?: components["parameters"]["IfMatch"];
-            };
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateQuotaRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated quota. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quota"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            /** @description Validation failed, including the owner-XOR-team contract. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getQuotaAttainment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description This quota's server-computed attainment. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuotaAttainment"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Attainment cannot be honestly computed — target is zero, or the clean-core query failed. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
     listAttachments: {
         parameters: {
             query: {
@@ -46837,36 +46295,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RefreshAccepted"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-        };
-    };
-    listAiModelCatalogue: {
-        parameters: {
-            query: {
-                /**
-                 * @description The vendor to ask. Only a vendor whose catalogue is PUBLIC and unauthenticated can be
-                 *     listed here, because this read runs before any key is sealed; that is OpenRouter alone
-                 *     today. A native vendor's catalogue needs the operator's own key and belongs on a
-                 *     different route, not behind a widened enum here.
-                 */
-                provider: "openrouter";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The vendor's ranked catalogue, or an honest statement that it could not be read. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiModelCatalogueResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

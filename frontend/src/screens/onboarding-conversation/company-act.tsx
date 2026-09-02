@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { Button } from "../../design-system/atoms";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -642,6 +643,16 @@ export function CompanyAct({
   // worth a look, never an obstacle.
   const blocking = attentionRows.filter(blocksConfirm);
   const advisory = attentionRows.filter((row) => !blocksConfirm(row));
+  // The gate's own third counter, and deliberately the SAME list the deck
+  // renders one card at a time (`deckCards(blocking, advisory)`) rather than a
+  // second tally computed from the read directly — the two counting outstanding
+  // work differently is exactly the drift `deckCards` already exists to
+  // prevent one level down. `attentionRows` (and so `blocking`/`advisory`) is
+  // empty for most of a read simply because `reviewProposal` is still null —
+  // that is "not known yet", not "nothing to ask about", and the gate must be
+  // able to tell the two apart rather than showing a zero it has not earned.
+  const uncertainCount =
+    reviewProposal === null ? undefined : blocking.length + advisory.length;
 
   // The runtime bar keeps the live read total unless a clarify authorization
   // saw more calls — answering a decision is a real model round trip too,
@@ -692,9 +703,29 @@ export function CompanyAct({
       question.id !== pendingId &&
       !clarify.answers.some((answer) => answer.clarifyId === question.id),
   );
-  // The rail's own two counts: `blockingCount` is what the narration leads
-  // with — the still-open decisions count here too, because the live
-  // DecisionScene replaces the review outright while one is pending, the
+  /**
+   * Whether a confirm would be refused, spelled ONCE because two surfaces ask.
+   *
+   * The deck and the whole-profile card are two ways into the same submission,
+   * and they had two copies of this expression. The copies drifted immediately:
+   * the deck's omitted `confirmBlocked`, so after a `version_skew` or
+   * `not_confirmable` 409 its button came straight back to life and offered to
+   * resubmit the draft the server had just refused — on the surface most
+   * readers see, while the card behind it correctly stayed shut.
+   *
+   * Every term is a reason the SERVER would refuse:
+   * - a required field is still empty, which `confirmCompanySiteRead` 422s on;
+   * - a question the server still considers open is stranded, for the one
+   *   render between a clarify settling and its successor landing;
+   * - the act is not on a phase that has anything to confirm;
+   * - the server has already refused in a way pressing again cannot change.
+   */
+  const confirmRefused =
+    missing.length > 0 ||
+    openReviewQuestions.length > 0 ||
+    !(state.phase === "co.review" || state.phase === "co.manual") ||
+    confirmBlocked;
+
   const presence = presenceFor(state, { read, readBroken });
 
   // The gate and the read theatre are the company act's first face. It is
@@ -752,8 +783,11 @@ export function CompanyAct({
         notice={gateNotice}
         configuredModel={configuredModel}
         scan={scanning}
+        readBroken={readBroken}
+        uncertainCount={uncertainCount}
         onSubmit={startFromGate}
         onManual={() => dispatch({ type: "MANUAL_CHOSEN" })}
+        onRetryRead={() => siteRead.refetch()}
       />
     );
   }
@@ -868,20 +902,23 @@ export function CompanyAct({
             setDraft((current) => changeDraftField(current, field, value))
           }
           onDone={() => confirm.mutate()}
-          onReadWhole={() => setArtifactMode("edit")}
+          onReadWhole={() => setArtifactMode("profile")}
           // EVERY row, not just the outstanding ones: the article is what the
           // record says, and a version of it that showed only the unanswered
           // half would be the deck's own list again in prose.
           digest={(active) => <ProfileDigest rows={allRows} active={active} />}
           pending={confirm.isPending}
-          // The SAME predicates the confirm gate reads, never a second count of
-          // its own: a tray saying "nothing left" beside a button that refuses
-          // is the failure this shares its source with `confirmDisabled` to
-          // avoid.
-          disabled={missing.length > 0 || openReviewQuestions.length > 0}
+          disabled={confirmRefused}
         />
       ) : (
         <div className="ob-scene">
+          {/* The way back to the deck. The whole record is somewhere a reader
+              ASKED to go, so it needs a door out that is not the browser's back
+              button: without one the deck's tray, and the count of what is
+              still open, are unreachable from here. */}
+          <Button variant="ghost" onClick={() => setArtifactMode("dossier")}>
+            {t("ob.deck.backToOpen")}
+          </Button>
           <CompanyConfirmCard
             proposal={reviewProposal}
             draft={draft}
@@ -936,22 +973,7 @@ export function CompanyAct({
           onSwitchMode={setArtifactMode}
           onConfirm={() => confirm.mutate()}
           confirmPending={confirm.isPending}
-          confirmDisabled={
-            missing.length > 0 ||
-            // The profile can never be confirmed while a question the
-            // server still considers open is stranded: `useCompanyRead`
-            // re-promotes the next one to the decision surface the moment
-            // review has none live, which already swaps this scene back to
-            // DecisionScene — this is the belt on top of that suspender, for
-            // the one render between a question settling and its successor
-            // landing. `openReviewQuestions` is the rail's own attention
-            // list, so the reason is never a bare disabled button.
-            openReviewQuestions.length > 0 ||
-            !(state.phase === "co.review" || state.phase === "co.manual") ||
-            // A submission the server has already refused in a way pressing
-            // again cannot change — see confirmBlocked.
-            confirmBlocked
-          }
+          confirmDisabled={confirmRefused}
           saveError={confirmBannerMessage}
           refusal={refusal}
         />
