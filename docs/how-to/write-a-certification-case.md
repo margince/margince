@@ -92,8 +92,8 @@ the thing you are measuring is already known to work.
    ```
 
    [reference/ai-certification.md](../reference/ai-certification.md) lists every
-   site's scenarios and links each case, so a new scenario reds `make check`
-   until the committed page carries it. The command is free — no model, no
+   site's scenarios and links each case, so a new scenario turns `make check`
+   red until the committed page carries it. The command is free — no model, no
    network.
 6. **Then spend**: `make e2e-ai TASK=<task>`, and read the band with
    `make e2e-ai-report`. The page carries each site's RECORDS as well as its
