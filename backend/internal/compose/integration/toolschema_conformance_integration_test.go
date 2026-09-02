@@ -269,6 +269,8 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"granting it here would widen the authority every other tool in the sweep runs under, " +
 		"and the answer shape it would prove is the one remove_tag already shares",
 	"remove_tag": "same missing tag.read as apply_tag above",
+	"get_tag": "same missing tag.read as apply_tag above — it reads one tag back, and reading a " +
+		"tag is what the seat cannot do here",
 	"list_tags": "same missing tag.read as apply_tag above — and unlike remove_tag it shares its " +
 		"answer shape with nothing else here, so this waiver leaves that shape unproven rather " +
 		"than proven elsewhere",
