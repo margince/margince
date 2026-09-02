@@ -11,6 +11,12 @@ var listTagsCopy = toolCopy{
 		"list was cut, so a word missing from it may still exist.",
 }
 
+var getTagCopy = toolCopy{
+	Purpose: "Read one tag and how many people, companies and deals carry it.",
+	Limits: "The counts cover those three record types only. They say how much retiring or " +
+		"merging the word would touch; the records themselves come from list_records.",
+}
+
 var applyTagCopy = toolCopy{
 	Purpose: "Tag a person, company, deal, lead or project by tag_id, or by tag_name, which must " +
 		"name a tag the workspace already has.",

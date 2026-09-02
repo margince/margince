@@ -33,7 +33,7 @@ import (
 // does not — a projection store, and the brief engine plus the identity service
 // — not because they are gated differently: the gating is the same nothing, and
 // that is why they belong here rather than behind a condition of their own.
-func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
+func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig) {
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool})
 	addDeclaredWorker[CloseDateWorkspaceArgs](reg, &closeDateWorkspaceWorker{corrector: NewCloseDateCorrector(pool, log)})
 	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool})
@@ -55,5 +55,5 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})
 	addAIActivitySweepJobs(reg, pool, log)
-	addBriefGenerateJobs(reg, pool, log)
+	addBriefGenerateJobs(reg, pool, log, briefMail)
 }

@@ -10429,6 +10429,30 @@ func (e TagColor) Valid() bool {
 	}
 }
 
+// Defines values for TagDetailColor.
+const (
+	Amber TagDetailColor = "amber"
+	Rose  TagDetailColor = "rose"
+	Slate TagDetailColor = "slate"
+	Teal  TagDetailColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the TagDetailColor enum.
+func (e TagDetailColor) Valid() bool {
+	switch e {
+	case Amber:
+		return true
+	case Rose:
+		return true
+	case Slate:
+		return true
+	case Teal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TaggableEntityType.
 const (
 	TaggableEntityTypeDeal         TaggableEntityType = "deal"
@@ -11011,6 +11035,33 @@ func (e UpdateStageRequestSemantic) Valid() bool {
 	case UpdateStageRequestSemanticOpen:
 		return true
 	case UpdateStageRequestSemanticWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateTagRequestColor.
+const (
+	UpdateTagRequestColorAmber UpdateTagRequestColor = "amber"
+	UpdateTagRequestColorNone  UpdateTagRequestColor = "none"
+	UpdateTagRequestColorRose  UpdateTagRequestColor = "rose"
+	UpdateTagRequestColorSlate UpdateTagRequestColor = "slate"
+	UpdateTagRequestColorTeal  UpdateTagRequestColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the UpdateTagRequestColor enum.
+func (e UpdateTagRequestColor) Valid() bool {
+	switch e {
+	case UpdateTagRequestColorAmber:
+		return true
+	case UpdateTagRequestColorNone:
+		return true
+	case UpdateTagRequestColorRose:
+		return true
+	case UpdateTagRequestColorSlate:
+		return true
+	case UpdateTagRequestColorTeal:
 		return true
 	default:
 		return false
@@ -13641,22 +13692,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -22088,6 +22139,24 @@ type MeetingPlanUnknown struct {
 // MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
 type MeetingPlanUnknownKind string
 
+// MergeTagsRequest defines model for MergeTagsRequest.
+type MergeTagsRequest struct {
+	// IntoTagId The tag that survives. Must be live, and must not be this tag.
+	IntoTagId openapi_types.UUID `json:"into_tag_id"`
+}
+
+// MergeTagsResult What the merge did, in the two numbers that differ.
+type MergeTagsResult struct {
+	// Collapsed Records that already carried both. Their duplicate tagging is dropped rather than
+	// moved, so the target gains nothing from them — which is why this is not folded
+	// into `moved`.
+	Collapsed int                `json:"collapsed"`
+	IntoTagId openapi_types.UUID `json:"into_tag_id"`
+
+	// Moved Records that carried only the source and now carry the target.
+	Moved int `json:"moved"`
+}
+
 // Money Money as integer minor-units + ISO-4217 currency. Never a float.
 type Money struct {
 	// AmountMinor Smallest currency unit (e.g. cents). 100000 EUR-cents = €1,000.00.
@@ -28120,15 +28189,45 @@ type Tag struct {
 	Id          openapi_types.UUID `json:"id"`
 	Name        string             `json:"name"`
 	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
+	Version     *int64             `json:"version,omitempty"`
 }
 
 // TagColor defines model for Tag.Color.
 type TagColor string
 
+// TagDetail One tag with how much of the workspace carries it.
+type TagDetail struct {
+	ArchivedAt  *time.Time         `json:"archived_at,omitempty"`
+	Color       *TagDetailColor    `json:"color,omitempty"`
+	CreatedAt   *time.Time         `json:"created_at,omitempty"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	Name        string             `json:"name"`
+	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
+
+	// Usage How many records of each advertised type carry this tag, counted within what the
+	// reader may see. Lead and project taggings are storage the product does not advertise
+	// and are not counted.
+	Usage   TagUsage `json:"usage"`
+	Version *int64   `json:"version,omitempty"`
+}
+
+// TagDetailColor defines model for TagDetail.Color.
+type TagDetailColor string
+
 // TagListResponse defines model for TagListResponse.
 type TagListResponse struct {
 	Data []Tag    `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// TagUsage How many records of each advertised type carry this tag, counted within what the
+// reader may see. Lead and project taggings are storage the product does not advertise
+// and are not counted.
+type TagUsage struct {
+	Companies int `json:"companies"`
+	Deals     int `json:"deals"`
+	People    int `json:"people"`
 }
 
 // Taggable defines model for Taggable.
@@ -28906,6 +29005,23 @@ type UpdateStageRequest struct {
 
 // UpdateStageRequestSemantic defines model for UpdateStageRequest.Semantic.
 type UpdateStageRequestSemantic string
+
+// UpdateTagRequest A partial update: an omitted field is left alone.
+//
+// Clearing is spelled as a VALUE, not as null. `color: "none"` removes the colour and
+// `description: ""` removes the text, because a decoded absent field and a decoded null
+// are the same thing in the generated request type — a contract that promised the two
+// meant different things would be promising something no server can honour.
+//
+// The name cannot be cleared. A tag without one cannot be applied or read.
+type UpdateTagRequest struct {
+	Color       *UpdateTagRequestColor `json:"color,omitempty"`
+	Description *string                `json:"description,omitempty"`
+	Name        *string                `json:"name,omitempty"`
+}
+
+// UpdateTagRequestColor defines model for UpdateTagRequest.Color.
+type UpdateTagRequestColor string
 
 // UpdateTeamRequest defines model for UpdateTeamRequest.
 type UpdateTeamRequest struct {
@@ -34285,6 +34401,16 @@ type ListTagsParams struct {
 	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 }
 
+// UpdateTagParams defines parameters for UpdateTag.
+type UpdateTagParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // CreateTaskParams defines parameters for CreateTask.
 type CreateTaskParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -35414,11 +35540,17 @@ type UpdateStageJSONRequestBody = UpdateStageRequest
 // CreateTagJSONRequestBody defines body for CreateTag for application/json ContentType.
 type CreateTagJSONRequestBody = CreateTagRequest
 
+// UpdateTagJSONRequestBody defines body for UpdateTag for application/json ContentType.
+type UpdateTagJSONRequestBody = UpdateTagRequest
+
 // RemoveTagJSONRequestBody defines body for RemoveTag for application/json ContentType.
 type RemoveTagJSONRequestBody = ApplyTagRequest
 
 // ApplyTagJSONRequestBody defines body for ApplyTag for application/json ContentType.
 type ApplyTagJSONRequestBody = ApplyTagRequest
+
+// MergeTagsJSONRequestBody defines body for MergeTags for application/json ContentType.
+type MergeTagsJSONRequestBody = MergeTagsRequest
 
 // CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
 type CreateTaskJSONRequestBody = CreateTaskRequest
@@ -43459,7 +43591,7 @@ type ServerInterface interface {
 	// Lift an exclusion.
 	// (DELETE /capture/exclusions/{id})
 	DeleteCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id)
-	// Destroy the mail one of your own rules matched.
+	// Destroy the mail one exclusion rule matched.
 	// (POST /capture/exclusions/{id}/purge)
 	PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams)
 	// What your mailbox is holding right now.
@@ -44617,12 +44749,24 @@ type ServerInterface interface {
 	// Archive a tag.
 	// (DELETE /tags/{id})
 	ArchiveTag(w http.ResponseWriter, r *http.Request, id Id)
+	// Read one tag, with how much of the workspace carries it.
+	// (GET /tags/{id})
+	GetTag(w http.ResponseWriter, r *http.Request, id Id)
+	// Rename, recolour or describe a tag.
+	// (PATCH /tags/{id})
+	UpdateTag(w http.ResponseWriter, r *http.Request, id Id, params UpdateTagParams)
 	// Take one tag off one entity, leaving the tag itself in place.
 	// (DELETE /tags/{id}/apply)
 	RemoveTag(w http.ResponseWriter, r *http.Request, id Id)
 	// Apply a tag to an entity (person/org/deal/lead/project).
 	// (POST /tags/{id}/apply)
 	ApplyTag(w http.ResponseWriter, r *http.Request, id Id)
+	// Fold this tag into another, moving every record that carries it.
+	// (POST /tags/{id}/merge)
+	MergeTags(w http.ResponseWriter, r *http.Request, id Id)
+	// Bring an archived tag back into the vocabulary.
+	// (POST /tags/{id}/restore)
+	RestoreTag(w http.ResponseWriter, r *http.Request, id Id)
 	// Create a task — a commitment with an owner, on the records it is about.
 	// (POST /tasks)
 	CreateTask(w http.ResponseWriter, r *http.Request, params CreateTaskParams)
@@ -45412,7 +45556,7 @@ func (_ Unimplemented) DeleteCaptureExclusion(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Destroy the mail one of your own rules matched.
+// Destroy the mail one exclusion rule matched.
 // (POST /capture/exclusions/{id}/purge)
 func (_ Unimplemented) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -47728,6 +47872,18 @@ func (_ Unimplemented) ArchiveTag(w http.ResponseWriter, r *http.Request, id Id)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read one tag, with how much of the workspace carries it.
+// (GET /tags/{id})
+func (_ Unimplemented) GetTag(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename, recolour or describe a tag.
+// (PATCH /tags/{id})
+func (_ Unimplemented) UpdateTag(w http.ResponseWriter, r *http.Request, id Id, params UpdateTagParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Take one tag off one entity, leaving the tag itself in place.
 // (DELETE /tags/{id}/apply)
 func (_ Unimplemented) RemoveTag(w http.ResponseWriter, r *http.Request, id Id) {
@@ -47737,6 +47893,18 @@ func (_ Unimplemented) RemoveTag(w http.ResponseWriter, r *http.Request, id Id) 
 // Apply a tag to an entity (person/org/deal/lead/project).
 // (POST /tags/{id}/apply)
 func (_ Unimplemented) ApplyTag(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Fold this tag into another, moving every record that carries it.
+// (POST /tags/{id}/merge)
+func (_ Unimplemented) MergeTags(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Bring an archived tag back into the vocabulary.
+// (POST /tags/{id}/restore)
+func (_ Unimplemented) RestoreTag(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69127,6 +69295,98 @@ func (siw *ServerInterfaceWrapper) ArchiveTag(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetTag operation middleware
+func (siw *ServerInterfaceWrapper) GetTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTag(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateTag operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateTagParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTag(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveTag operation middleware
 func (siw *ServerInterfaceWrapper) RemoveTag(w http.ResponseWriter, r *http.Request) {
 
@@ -69186,6 +69446,74 @@ func (siw *ServerInterfaceWrapper) ApplyTag(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ApplyTag(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MergeTags operation middleware
+func (siw *ServerInterfaceWrapper) MergeTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeTags(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreTag operation middleware
+func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreTag(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -73401,10 +73729,22 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/tags/{id}", wrapper.ArchiveTag)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tags/{id}", wrapper.GetTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/tags/{id}", wrapper.UpdateTag)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/tags/{id}/apply", wrapper.RemoveTag)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tags/{id}/apply", wrapper.ApplyTag)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tags/{id}/merge", wrapper.MergeTags)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tags/{id}/restore", wrapper.RestoreTag)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tasks", wrapper.CreateTask)

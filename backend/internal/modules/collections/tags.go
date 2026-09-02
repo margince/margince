@@ -12,9 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -24,19 +22,22 @@ import (
 )
 
 type tagRow struct {
-	ID         ids.TagID
-	Name       string
-	Color      *string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	ArchivedAt *time.Time
+	ID          ids.TagID
+	Name        string
+	Color       *string
+	Description *string
+	Version     int64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ArchivedAt  *time.Time
 }
 
-const tagColumns = `id, name, color, created_at, updated_at, archived_at`
+const tagColumns = `id, name, color, description, version, created_at, updated_at, archived_at`
 
 func scanTag(r pgx.Row) (tagRow, error) {
 	var t tagRow
-	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt)
+	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.Description, &t.Version,
+		&t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt)
 	return t, err
 }
 
@@ -395,9 +396,16 @@ func (s *Store) lookupTagByName(ctx context.Context, name string) (ids.UUID, Tag
 	var id ids.TagID
 	var archived *time.Time
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Live first, then the most recently retired. uq_tag_name binds live
+		// rows only, so a name can be held by one live tag AND any number of
+		// archived ones — without the ordering this picks whichever row the
+		// planner reaches, and a caller naming a word they can see would be
+		// told it is archived.
 		return tx.QueryRow(ctx, `
 			SELECT id, archived_at FROM tag
-			 WHERE lower(name) = lower($1)`, NormalizeTagName(name)).Scan(&id, &archived)
+			 WHERE lower(name) = lower($1)
+			 ORDER BY archived_at IS NOT NULL, archived_at DESC
+			 LIMIT 1`, NormalizeTagName(name)).Scan(&id, &archived)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, tagNameMissing, nil
@@ -464,30 +472,4 @@ func (s *Store) NewTag(ctx context.Context, name, color string) (TagSummary, err
 		return TagSummary{}, err
 	}
 	return tagSummary(row), nil
-}
-
-func wireTag(t tagRow) crmcontracts.Tag {
-	var color *crmcontracts.TagColor
-	if t.Color != nil {
-		c := crmcontracts.TagColor(*t.Color)
-		color = &c
-	}
-	return crmcontracts.Tag{
-		Id:         openapi_types.UUID(t.ID.UUID),
-		Name:       t.Name,
-		Color:      color,
-		CreatedAt:  &t.CreatedAt,
-		UpdatedAt:  &t.UpdatedAt,
-		ArchivedAt: t.ArchivedAt,
-	}
-}
-
-func wireTaggable(tg taggableRow) crmcontracts.Taggable {
-	return crmcontracts.Taggable{
-		Id:         openapi_types.UUID(tg.ID),
-		TagId:      openapi_types.UUID(tg.TagID.UUID),
-		EntityType: crmcontracts.TaggableEntityType(tg.EntityType),
-		EntityId:   openapi_types.UUID(tg.EntityID),
-		CreatedAt:  &tg.CreatedAt,
-	}
 }

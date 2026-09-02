@@ -36,6 +36,7 @@ func buildCatalog() map[Language]Copy {
 	resetLines(line)
 	inviteLines(line)
 	weeklyLines(line)
+	morningLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
 }
@@ -178,4 +179,32 @@ func weeklyLines(line writeLine) {
 		"moved",
 		"bewegt",
 		"đã chuyển")
+}
+
+// morningLines is the daily brief.
+func morningLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.MorningSubject },
+		"Your morning: ",
+		"Dein Morgen: ",
+		"Buổi sáng của bạn: ")
+	line(func(c *Copy) *string { return &c.MorningHeading },
+		"Your morning, ",
+		"Dein Morgen, ",
+		"Buổi sáng của bạn, ")
+	line(func(c *Copy) *string { return &c.MorningTop },
+		"What to start with:",
+		"Womit du anfängst:",
+		"Bắt đầu với:")
+	line(func(c *Copy) *string { return &c.MorningAndMore },
+		"and %d more in the brief",
+		"und %d weitere im Briefing",
+		"và %d mục khác trong bản tóm tắt")
+	line(func(c *Copy) *string { return &c.MorningQuiet },
+		"Nothing is waiting on you this morning.",
+		"Heute Morgen wartet nichts auf dich.",
+		"Sáng nay không có gì đang chờ bạn.")
+	line(func(c *Copy) *string { return &c.MorningOpenDay },
+		"Open your day:",
+		"Öffne deinen Tag:",
+		"Mở ngày của bạn:")
 }

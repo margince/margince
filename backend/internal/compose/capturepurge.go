@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -65,13 +66,20 @@ func NewCapturePurger(pool *pgxpool.Pool, retention *privacy.RetentionService) *
 	return &CapturePurger{pool: pool, retention: retention}
 }
 
-// Purge destroys the mail one exclusion rule matched, for the CALLING seat.
+// Purge destroys the mail one exclusion rule matched.
 //
-// Own-rule only, and human-only. Destroying mail is not something a background
-// pass or a colleague does on somebody's behalf: the rule is the owner's, the
-// mailbox is the owner's, and the authority is the owner being the one asking.
+// Two scopes, two authorities. A seat's OWN rule destroys what that seat
+// imported, and the authority is the owner being the one asking. A WORKSPACE
+// rule destroys what the workspace captured, across every seat, and takes the
+// admin role — destroying every colleague's matching mail is the workspace's own
+// act, not one seat's.
 //
-// preview answers the same question and changes nothing, so the counts an owner
+// Human-only either way. Destroying mail is not something a background pass does
+// on somebody's behalf, which is why this takes a human principal even though
+// the sibling personal-mail sweep runs unattended: that sweep acts on a verdict
+// about one sender, and this acts on a rule somebody wrote.
+//
+// preview answers the same question and changes nothing, so the counts a caller
 // is shown before they confirm are the counts they get.
 func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview bool) (PurgeOutcome, error) {
 	actor, ok := principal.Actor(ctx)
@@ -86,25 +94,37 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	if !actor.SeatType.CanMutate() {
 		return PurgeOutcome{}, apperrors.ErrPermissionDenied
 	}
-	rule, err := p.ownRule(ctx, exclusionID, actor.UserID)
+	rule, workspaceScoped, err := p.purgeableRule(ctx, exclusionID, actor.UserID)
 	if err != nil {
 		return PurgeOutcome{}, err
 	}
 	var subject capture.PurgeSubject
 	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
+		if workspaceScoped {
+			subject, err = capture.SelectWorkspacePurgeSubjectTx(ctx, tx, rule.Kind, rule.Value, statutoryFloor())
+			return err
+		}
 		subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value, statutoryFloor())
 		return err
 	}); err != nil {
 		return PurgeOutcome{}, err
 	}
+	// Seat-scoped, and deliberately not run for a workspace rule.
+	// SelectPurgeablePeopleTx answers "which people did THIS seat's capture
+	// mint, that nothing else holds" — a question with no workspace-wide
+	// analogue, because a contact every seat can see is by definition held by
+	// more than the mail one rule matched. Anonymising workspace-wide is the
+	// erasure lane's job and takes a subject request, not an exclusion rule.
 	var people []ids.UUID
-	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		var err error
-		people, err = capture.SelectPurgeablePeopleTx(ctx, tx, actor.UserID, rule.Kind, rule.Value)
-		return err
-	}); err != nil {
-		return PurgeOutcome{}, err
+	if !workspaceScoped {
+		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+			var err error
+			people, err = capture.SelectPurgeablePeopleTx(ctx, tx, actor.UserID, rule.Kind, rule.Value)
+			return err
+		}); err != nil {
+			return PurgeOutcome{}, err
+		}
 	}
 	outcome := PurgeOutcome{
 		Destroyed:  len(subject.SoleImports),
@@ -116,7 +136,11 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	if preview {
 		return outcome, nil
 	}
-	if err := p.carryOut(ctx, subject, people, actor.UserID, privacy.PurgeOwnerRule); err != nil {
+	reason := privacy.PurgeOwnerRule
+	if workspaceScoped {
+		reason = privacy.PurgeWorkspaceRule
+	}
+	if err := p.carryOut(ctx, subject, people, actor.UserID, reason); err != nil {
 		return PurgeOutcome{}, err
 	}
 	return outcome, nil
@@ -158,6 +182,22 @@ func (p *CapturePurger) carryOut(
 	// leaving mail the owner believes is gone with nobody's name on it.
 	if _, err := p.retention.PurgeActivities(ctx, subject.SoleImports, reason); err != nil {
 		return err
+	}
+	// Every claim on a DESTROYED message goes with it. PurgeActivities empties
+	// the activity and leaves capture_import and activity_participant pointing
+	// at it, which for the seat arm is right — the row it destroys is one only
+	// that seat imported, and its own claim goes below with the release. For a
+	// workspace purge it is not: the message is destroyed for everyone, so a
+	// surviving claim is a stub on a colleague's timeline for mail the workspace
+	// was told is gone, that nothing would ever collect.
+	if reason == privacy.PurgeWorkspaceRule {
+		for _, id := range subject.SoleImports {
+			if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+				return capture.ReleaseEveryImportTx(ctx, tx, id)
+			}); err != nil {
+				return err
+			}
+		}
 	}
 	for _, id := range subject.SharedImports {
 		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
@@ -267,32 +307,59 @@ func statutoryFloor() capture.StatutoryFloor {
 	}
 }
 
-// ownRule reads the exclusion rule and refuses one that is not this seat's.
+// purgeableRule reads the rule this caller may act on, and reports whether it is
+// the workspace's rather than their own.
 //
-// A purge names a rule by id, and an id is a guess anybody can make. Reading it
-// back scoped to the caller is what stops one seat destroying the mail another
-// seat”'s rule matched.
+// Two authorities, one lookup, because a purge names a rule by id and an id is a
+// guess anybody can make. Reading it back scoped to what the caller may reach is
+// what stops one seat destroying the mail another seat's rule matched.
 //
-// Scoped on user_id, NOT created_by: created_by is the provenance string every
-// capture row carries (`human:<uuid>`, `connector:gmail`), and matching a uuid
-// against it would never succeed — the check would refuse every purge, which
-// looks like a permissions bug rather than the wrong column. A workspace-scoped
-// rule is refused here too: it belongs to the workspace, and destroying every
-// colleague”'s matching mail is not one seat”'s act.
-func (p *CapturePurger) ownRule(ctx context.Context, id, user ids.UUID) (capture.Exclusion, error) {
+// A WORKSPACE rule takes the admin role, gated directly rather than inferred
+// from being able to create one. Creating a workspace exclusion takes
+// `capture_settings.update`, which admin AND ops both hold, so inferring the
+// authority from the creation grant would hand workspace-wide destruction to an
+// ops seat. Destroying every colleague's matching mail is the workspace's own
+// act, and only an admin speaks for the workspace.
+//
+// A USER rule is scoped on user_id, NOT created_by: created_by is the provenance
+// string every capture row carries (`human:<uuid>`, `connector:gmail`), and
+// matching a uuid against it would never succeed — the check would refuse every
+// purge, which looks like a permissions bug rather than the wrong column.
+func (p *CapturePurger) purgeableRule(ctx context.Context, id, user ids.UUID) (capture.Exclusion, bool, error) {
 	var rule capture.Exclusion
+	var scope string
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT id, kind, value FROM capture_exclusion
-			 WHERE id = $1 AND scope = 'user' AND user_id = $2`,
-			id, user).Scan(&rule.ID, &rule.Kind, &rule.Value)
+			SELECT id, kind, value, scope FROM capture_exclusion
+			 WHERE id = $1 AND (scope = $3 OR (scope = $4 AND user_id = $2))`,
+			id, user, capture.ExclusionScopeWorkspace, capture.ExclusionScopeUser).
+			Scan(&rule.ID, &rule.Kind, &rule.Value, &scope)
 	})
 	if err != nil {
-		// Not found and not yours are one answer, so an id probe learns nothing
-		// about whether a rule exists.
-		return capture.Exclusion{}, fmt.Errorf("capture purge: no such rule of yours")
+		return capture.Exclusion{}, false, noSuchRule()
 	}
-	return rule, nil
+	if scope != capture.ExclusionScopeWorkspace {
+		return rule, false, nil
+	}
+	// A non-admin naming a real workspace rule gets the SAME answer as one
+	// naming nothing. Distinguishing them turns this endpoint into an existence
+	// oracle: a rep probing ids would read 403 as "a workspace rule with this id
+	// exists" and 404 as "it does not", which is how one seat learns what the
+	// workspace has decided to keep out.
+	if err := auth.RequireAdmin(ctx); err != nil {
+		return capture.Exclusion{}, false, noSuchRule()
+	}
+	return rule, true, nil
+}
+
+// noSuchRule is the one answer a caller gets for a rule that does not exist, one
+// that is not theirs, and one they may not act on.
+//
+// ErrNotFound rather than a bare error, because the bare one wraps no sentinel:
+// httperr cannot classify it and answers 500, which the contract does not
+// declare and which is itself distinguishable from every other outcome.
+func noSuchRule() error {
+	return fmt.Errorf("capture purge: no such rule of yours: %w", apperrors.ErrNotFound)
 }
 
 // capturePurgerFor builds the purge a background pass uses, or nil when the role

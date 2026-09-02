@@ -77,13 +77,13 @@ var personListFields = map[string]string{
 // Tags live in another module's tables, which this one may not import — but
 // the predicate is SQL, and a tagged person is a row in `taggable` whatever
 // package writes it. Matching is on the FOLDED name because that is what the
-// vocabulary is unique by (`uq_tag_name` over lower(name)), which also means a
-// name identifies at most one tag whether or not it has since been archived:
-// the link is the fact this filter answers, and retiring the word from the
-// picker does not un-tag the people who carry it. A record's own tag SECTION
-// deliberately answers otherwise (compose/org360 shows live tags only):
-// displaying a retired word beside a record is clutter, while failing to find
-// the people who carry it is a wrong answer.
+// vocabulary is unique by.
+//
+// `uq_tag_name` binds LIVE rows only, so a name can be held by one live tag and
+// any number of retired ones, and the clause names the live one. Without that
+// restriction, filtering by a word somebody re-coined after a merge would also
+// return the people carrying the older, retired tag of the same spelling —
+// records the reader would have no way to explain.
 //
 // EXISTS rather than a join: a person carries many tags, and a join would
 // return them once per matching link — rows the keyset cursor would then page
@@ -96,7 +96,7 @@ func personTagClause(tag *string, arg func(any) int) string {
 		SELECT 1 FROM taggable tg
 		  JOIN tag t ON t.id = tg.tag_id
 		WHERE tg.entity_type = $%d AND tg.entity_id = person.id
-		  AND lower(t.name) = $%d)`,
+		  AND lower(t.name) = $%d AND t.archived_at IS NULL)`,
 		arg(personEntity), arg(foldTagName(*tag)))
 }
 

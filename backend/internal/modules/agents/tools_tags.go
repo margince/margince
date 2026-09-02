@@ -41,12 +41,24 @@ type Tag struct {
 	Archived bool `json:"archived,omitempty"`
 }
 
+// TagDetail is one word with its weight: how many records of each advertised
+// type carry it. The counts answer "what does retiring this cost", which is
+// the question an agent asks before proposing a cleanup.
+type TagDetail struct {
+	Tag
+	People    int `json:"people"`
+	Companies int `json:"companies"`
+	Deals     int `json:"deals"`
+}
+
 // Tags is the seam onto the collections module's tag paths.
 type Tags interface {
-	// ListTags answers the workspace's vocabulary, newest spelling rules and
-	// all. Read before applying: apply_tag creates the word it is given, so a
-	// caller who cannot see the existing ones coins near-duplicates.
+	// ListTags answers the workspace's vocabulary. Read before applying:
+	// apply_tag REFUSES a word the workspace does not hold, so a caller who
+	// cannot see the existing ones asks for a near-duplicate.
 	ListTags(ctx context.Context, includeArchived bool) (tags []Tag, truncated bool, err error)
+	// GetTag answers one word with how much of the workspace carries it.
+	GetTag(ctx context.Context, tagID ids.UUID) (TagDetail, error)
 	// EnsureTaggable refuses a record the caller cannot tag, before a tag is
 	// created for it. Same check ApplyTag makes at the end of its own
 	// transaction; asked earlier so a failed apply leaves nothing behind.
@@ -75,6 +87,7 @@ func RegisterTagTools(r *Registry, tags Tags) {
 		return
 	}
 	r.Register(listTags{tags: tags})
+	r.Register(getTag{tags: tags})
 	r.Register(applyTag{tags: tags})
 	r.Register(removeTag{tags: tags})
 }
@@ -134,6 +147,36 @@ func (t listTags) Handle(ctx context.Context, in json.RawMessage) (json.RawMessa
 		tags = []Tag{}
 	}
 	return json.Marshal(ListTagsResult{Tags: tags, Truncated: truncated})
+}
+
+// --- get_tag (🟢 read) ---
+
+type getTag struct{ tags Tags }
+
+func (t getTag) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "get_tag", Title: "Get a tag", Version: toolVersionV1,
+		Description:   getTagCopy.render(),
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "getTag",
+		InputSchema: schema(`{"type":"object","required":["tag_id"],"properties":{
+			"tag_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
+		OutputSchema: schemaFor[TagDetail](),
+	}
+}
+
+func (t getTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args struct {
+		TagID ids.UUID `json:"tag_id"`
+	}
+	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	detail, err := t.tags.GetTag(ctx, args.TagID)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(detail)
 }
 
 // --- apply_tag / remove_tag (🟢 write) ---
