@@ -5137,8 +5137,10 @@ export const de = {
   "prefs.undoExplicit":
     "Ein erneutes Abonnieren ist eine ausdrückliche Zustimmung — wir schalten es nicht stillschweigend wieder ein. Speichere unten, um deine Zustimmung festzuhalten, oder verwirf.",
 
+  "auto.tier.runs": "läuft",
+  "auto.tier.approval": "Freigabe",
   "auto.sub":
-    "ein geschlossener Katalog — Typ wählen, Parameter setzen, aktivieren",
+    'Eine Regel mit "läuft" handelt selbstständig. Eine mit "Freigabe" wandert in den Freigabe-Eingang.',
   "auto.readOnly":
     "Nur-Lese-Ansicht — du hast keine Berechtigung, Automatisierungen zu ändern.",
   "auto.catalog": "Starter-Bibliothek",
@@ -6244,11 +6246,61 @@ export const de = {
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
+  "aiSettings.sub":
+    "Wohin der Text dieser Installation geht und was er kostet.",
+  "aiSettings.tabs": "Welcher Teil der KI-Einstellungen offen ist",
+  "aiSettings.tab.routing": "Routing",
+  "aiSettings.tab.providers": "Anbieter",
+  "aiSettings.tab.automations": "Automatisierungen",
+  "aiSettings.tab.usage": "Verbrauch",
+  "aiSettings.tab.logs": "Protokoll",
+  "aiSettings.withheld": "Nicht für Sie einsehbar",
+  "aiSettings.unread": "Konnte nicht gelesen werden",
+  "aiSettings.pending": "Wird gelesen…",
+  "aiSettings.spend.label": "Verbrauch diesen Monat",
+  "aiSettings.spend.value": "{spent} von {budget} Token",
+  "aiSettings.spend.estimated": "≈ {amount} geschätzt",
+  "aiSettings.providers.label": "Anbieter",
+  "aiSettings.providers.value": "{count} mit Schlüssel",
+  "aiSettings.providers.missing": "{count} gebunden, ohne Schlüssel",
+  "aiSettings.providers.lastCall": "letzter Aufruf {elapsed}",
+  "aiSettings.discardTitle": "Änderungen am Routing verwerfen?",
+  "aiSettings.discardBody":
+    "Die geänderten Bindungen sind nicht gespeichert. Wer diesen Tab verlässt, verwirft sie.",
+  "aiSettings.discard": "Verwerfen",
+  "elapsed.justNow": "gerade eben",
+  "elapsed.minutes": "vor {minutes} Min.",
+  "elapsed.hours": "vor {hours} Std.",
+  "elapsed.days": "vor {days} T.",
+  "aiRouting.lane.local_small": "Massen-Klassifikation auf eigener Hardware",
+  "aiRouting.lane.cheap_cloud":
+    "Alltag — Anreicherung, Zusammenfassungen, Triage",
+  "aiRouting.lane.premium": "Alles, was ein Kunde liest",
+  "aiRouting.lane.frontier": "Das schwierigste Denken, sparsam eingesetzt",
+  "aiRouting.lane.local_large":
+    "Schwerere Arbeit, die die eigenen Hosts nicht verlässt",
+  "aiRouting.lane.embeddings": "Suche und Retrieval über die eigenen Daten",
+  "aiRouting.lanes.title": "Routing-Bahnen",
+  "aiRouting.lanes.sub":
+    "Günstigste zuerst. Eine Aufgabe wählt die Bahn, die Bahn wählt das Modell.",
+  "aiRouting.priceSheet": "Preisliste",
+  "aiRouting.provider.label": "Anbieter",
+  "aiRouting.change": "Ändern",
+  "aiRouting.done": "Fertig",
+  "aiRouting.noKey": "kein Schlüssel",
+  "aiRouting.unpriced": "kein Preis",
+  "aiRouting.effect":
+    "Gespeicherte Bindungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
   "aiProviderKeys.title": "Anbieter-Schlüssel",
   "aiProviderKeys.sub":
     "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",
-  "aiProviderKeys.configured": "Schlüssel gespeichert",
-  "aiProviderKeys.absent": "Kein Schlüssel",
+  "aiProviderKeys.keyless": "kein Schlüssel nötig",
+  "aiProviderKeys.field": "API-Schlüssel",
+  "aiProviderKeys.save": "Schlüssel speichern",
+  "aiProviderKeys.adminOnly":
+    "Nur Admin oder Ops können Anbieter-Zugangsdaten ändern.",
+  "aiProviderKeys.configured": "eingerichtet",
+  "aiProviderKeys.absent": "nicht gesetzt",
   "aiProviderKeys.configuredHint":
     "Im Schlüsseltresor versiegelt. Er kann nicht ausgelesen werden — füge einen neuen ein, um ihn zu ersetzen. Er kann auch über {envVar} ankommen.",
   "aiProviderKeys.absentHint":
@@ -6266,10 +6318,15 @@ export const de = {
   "aiRouting.withheld":
     "Nur wer die Modellbindung ändern darf, sieht, welche Modelle diese Installation verwendet.",
   "aiRouting.title": "Modell-Routing",
+  "aiRouting.sheetAsOf":
+    "Die Modelllisten sind die Preisliste mit Stand {date}. Jede neuere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
+  "aiRouting.sheetUnknown":
+    "Die Modelllisten stammen aus der Preisliste, die Sie nicht einsehen dürfen. Jede ID, die Ihr Anbieter bedient, funktioniert — einfach eintippen.",
   "aiRouting.sub":
     "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",
   "aiRouting.unbound":
     "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Die erste Bindung deklariert eine Bereitstellung unter seeds.ai_routing in margince.yaml.",
+  "aiRouting.profile.card": "Bereitstellungsprofil",
   "aiRouting.profile.label": "Standort",
   "aiRouting.profile.help":
     "Wo die Inferenz läuft. Souverän bedeutet kein Datenabfluss: nur Modelle auf eigenen Hosts — abgelehnt beim Speichern, nicht erst beim ersten Aufruf.",
@@ -6279,11 +6336,20 @@ export const de = {
   "aiRouting.dimensions.label": "Vektorbreite",
   "aiRouting.dimensions.help":
     "Leer lassen für den Standard des Anbieters. Ein Wert außerhalb von 1 bis 2000 wird abgelehnt.",
-  "aiRouting.embeddings.label": "Embeddings",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
     "Die Host-Wurzel des Anbieters, ohne Versionssegment. Der Adapter hängt /v1 an. Für openai_compatible erforderlich, das keinen eigenen Standard hat.",
+  "aiRouting.models.noKey":
+    "Nur die Preisliste — dieser Anbieter hat keinen Schlüssel und kann nicht gefragt werden, was er bedient. Jede ID, die er bedient, funktioniert trotzdem: eintippen.",
+  "aiRouting.models.noEndpoint":
+    "Nur die Preisliste — tragen Sie oben den Host ein, dann kann dieser Anbieter gefragt werden. Jede ID, die er bedient, funktioniert trotzdem: eintippen.",
+  "aiRouting.models.profileForbids":
+    "Nur die Preisliste — dieses Bereitstellungsprofil erlaubt es nicht, diesen Anbieter zu erreichen.",
+  "aiRouting.models.notPublished":
+    "Nur die Preisliste — dieser Anbieter veröffentlicht keine Modellliste.",
+  "aiRouting.models.unreachable":
+    "Nur die Preisliste — dieser Anbieter hat nicht geantwortet. Jede ID, die er bedient, funktioniert trotzdem: eintippen.",
   "aiRouting.model.label": "Modell",
   "aiRouting.model.help":
     "Aufgeführt sind die Modelle, für die diese Installation Preise kennt — je Million Token, Eingabe → Ausgabe. Jede andere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",

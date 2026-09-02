@@ -22,7 +22,7 @@ import { viewerZone } from "../format/timezone";
 
 type AiUsage = components["schemas"]["AiUsage"];
 type UsageTask = AiUsage["days"][number]["tasks"][number];
-type Month = { from: string; to: string };
+export type Month = { from: string; to: string };
 
 export function bandTone(band: string): "warn" | "danger" | undefined {
   if (band === "normal") return undefined;
@@ -71,7 +71,7 @@ function monthAround(seed: string, offset: number): Month {
 // minus one is August, which is the month already on screen — and on the last
 // evening west of UTC it skipped a month entirely. One reading of "this month",
 // used for the first window and every step from it.
-function currentMonth(): Month {
+export function currentMonth(): Month {
   return monthAround(`${calendarMonth(new Date(), viewerZone())}-01`, 0);
 }
 
@@ -311,19 +311,13 @@ function AiUsageBody({
   );
 }
 
-export function AiUsageCard() {
-  const t = useT();
-  const me = useMe();
-  // The server treats the AI runtime's spend as operator information and gates
-  // this read on automation:update — a write verb guarding a GET, which is why
-  // the seat ceiling stays out of it (capability.ts): a read seat may still read.
-  const canSee = useCan("automation", "update");
-  // Read once, at mount: the reader's month is what this card is about, and
-  // recomputing it per render would churn the query key on the one day of the
-  // month it could change.
-  const [month, setMonth] = useState<Month>(currentMonth);
-  const query = useQuery({
-    enabled: canSee,
+// The month's meter, as one query two surfaces share: this card, which lets a
+// reader step through months, and the page header, which is fixed on the
+// current one. Keyed on the window, so the two are the same fetch exactly when
+// they are asking the same question.
+export function useAiUsage(month: Month, enabled: boolean) {
+  return useQuery({
+    enabled,
     queryKey: ["ai-usage", month],
     queryFn: async () => {
       const { data, error } = await api.GET("/ai/usage", {
@@ -336,6 +330,20 @@ export function AiUsageCard() {
       return data;
     },
   });
+}
+
+export function AiUsageCard() {
+  const t = useT();
+  const me = useMe();
+  // The server treats the AI runtime's spend as operator information and gates
+  // this read on automation:update — a write verb guarding a GET, which is why
+  // the seat ceiling stays out of it (capability.ts): a read seat may still read.
+  const canSee = useCan("automation", "update");
+  // Read once, at mount: the reader's month is what this card is about, and
+  // recomputing it per render would churn the query key on the one day of the
+  // month it could change.
+  const [month, setMonth] = useState<Month>(currentMonth);
+  const query = useAiUsage(month, canSee);
 
   if (!canSee) {
     // Withheld, not absent. An absent spend card on the AI page is a claim about

@@ -142,3 +142,70 @@ func optionalInt(v int) *int {
 	}
 	return &v
 }
+
+// ListAvailableModels asks one vendor what it serves, for the form that binds a
+// lane to it.
+//
+// A vendor that cannot be asked is a 200 carrying the reason, not an error: the
+// routing form still binds any id a reader types, and turning "your local
+// ollama is not running" into a failed request would take the settings page
+// down with it. Only the RBAC refusal is an error, because that one is about
+// the reader rather than about the vendor.
+func (h aiRoutingHandlers) ListAvailableModels(
+	w http.ResponseWriter,
+	r *http.Request,
+	provider string,
+	params crmcontracts.ListAvailableModelsParams,
+) {
+	if h.store == nil {
+		httperr.NotImplemented(w, r, "ListAvailableModels")
+		return
+	}
+	// The lane is optional, and an absent one is not a refusal: it only narrows
+	// WHICH stored binding supplies the host, and every installation that binds
+	// its vendors at one host each has nothing to narrow.
+	tier := ""
+	if params.Tier != nil {
+		tier = *params.Tier
+	}
+	available, err := h.store.ListAvailableModels(r.Context(), provider, tier)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, toContractAvailableModels(available))
+}
+
+// toContractAvailableModels maps one vendor's answer onto the wire shape.
+//
+// Models is always an array, never nil: a vendor that answered with nothing and
+// a read that failed are different states, and the second is what `unavailable`
+// is for — a null here would leave a client guessing which it had.
+func toContractAvailableModels(a ai.AvailableModels) crmcontracts.AvailableModelList {
+	models := make([]crmcontracts.AvailableModel, 0, len(a.Models))
+	for _, m := range a.Models {
+		models = append(models, crmcontracts.AvailableModel{
+			Id:          m.ID,
+			DisplayName: optionalString(m.DisplayName),
+			Lane:        availableModelLane(m.Lane),
+		})
+	}
+	out := crmcontracts.AvailableModelList{Provider: a.Provider, Models: models}
+	if a.Unavailable != ai.AvailabilityOK {
+		reason := crmcontracts.AvailableModelListUnavailable(a.Unavailable)
+		out.Unavailable = &reason
+	}
+	return out
+}
+
+// availableModelLane carries a STATED lane and nothing else. An empty lane is
+// the vendor declining to say, which the wire spells as an absent field —
+// defaulting it to chat would claim the vendor said something it did not, and
+// an embedder offered on a chat tier cannot serve a call.
+func availableModelLane(lane string) *crmcontracts.AvailableModelLane {
+	if lane == "" {
+		return nil
+	}
+	out := crmcontracts.AvailableModelLane(lane)
+	return &out
+}
