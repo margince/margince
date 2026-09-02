@@ -28,6 +28,24 @@
 // rather than a question. Sorting by producer instead would put a merge next
 // to a reminder and leave the reader to work out which one matters.
 //
+// WHAT IS DELIBERATELY NOT A LANE, so an omission is not read as an oversight.
+//
+// review_commitments is an MCP tool, and the briefing plan listed it as a
+// Worklist lane to build. It was not built, on purpose. Its seam reads open
+// tasks through activities.ListOpenTasks and its result is keyed by task id —
+// which is the same population `planned` already shows, plus the undated ones
+// `planned` excludes on purpose. A lane for it would put the same rows on the
+// same screen under a second heading, which is the duplication this package
+// exists to end, and it would make three commitment surfaces of two: the
+// claims lane, the task lane, and it.
+//
+// What would earn one is a different QUESTION rather than a second rendering of
+// this one — the unassigned open promises, say, which is the state that the
+// tool's own result type calls out and which `planned` cannot show. That lane
+// deserves its own name rather than the plan's.
+//
+// The tool itself is untouched by any of this and still answers.
+//
 // A lane the caller may not read is OMITTED and named, never returned empty.
 // "You may not see this" and "there is none" are different answers, and a
 // surface whose whole promise is "this is your day" must not report a clear
