@@ -20,8 +20,16 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
+	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -93,4 +101,24 @@ func agentBriefLine(sentence crmcontracts.OrganizationBriefSentence) agents.Meet
 		})
 	}
 	return line
+}
+
+// newMeetingBriefService composes a brief for a role that has NO SERVER to
+// borrow one from: the harnesses and the non-server registries built through
+// NewRegistryFor, where the tool would otherwise degrade to the assembled
+// picture and prep_for_meeting would answer without a brief at all.
+//
+// This is not the second engine the seam above refuses. That refusal is about
+// one PROCESS holding two, where WithMeetingBriefWriter binds the model lane to
+// the server's instance and the agent surface would silently keep the
+// deterministic floor. A composition with no server has no instance to diverge
+// from; this is the only one, and the api role still passes its own.
+func newMeetingBriefService(db *database.DB) *meetingbrief.Service {
+	pool := db.Pool()
+	peopleStore := people.NewStore(db)
+	view := person360.NewService(pool, peopleStore, deals.NewStore(db, DealsInstallation()), ProjectsStore(pool),
+		consent.NewStore(db),
+		comms.NewStore(db, time.Now, activities.NewStore(db)),
+		ai.NewFeedbackStore(db), time.Now)
+	return meetingbrief.NewService(pool, view, peopleStore, time.Now)
 }
