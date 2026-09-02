@@ -1,7 +1,7 @@
 # Issue labels
 
 Every issue in this repository carries **exactly one `priority:` and exactly one
-`area:`**, plus a `status:` when it is not yet workable and whatever provenance
+`area:`**, plus a `status:` when it is not now's work and whatever provenance
 labels apply. This page is the full taxonomy; the binding short form is in
 `AGENTS.md`.
 
@@ -27,7 +27,8 @@ Every issue you open carries **exactly one `priority:` and exactly one `area:`**
 
 **Priority** is a claim about severity, never about your schedule. Do not demote
 a real defect because it is not this week's work — the milestone carries the
-schedule, the label carries the truth:
+schedule, or `status: deferred` when no milestone fits it yet, and the label
+carries the truth:
 
 | Label | It qualifies when |
 |---|---|
@@ -52,13 +53,21 @@ misleads about.
 
 ## Status
 
-**Status**, when it applies — these mark an issue that is not yet workable, and
-leaving them off puts unactionable work in somebody's queue:
+**Status**, when it applies — these mark an issue nobody should pick up yet,
+whether because it cannot be worked or because it is deliberately not now's
+work. Leaving one off puts that issue in somebody's queue:
 
 - `status: needs-decision` — unactionable until a human rules, whether the ruling
   is technical or a product call. Say what the options are and which you
   recommend: an issue that only asks "what should we do?" gives the decider
   nothing to decide from.
+- `status: deferred` — understood and agreed, and deliberately not scheduled:
+  a later release, and nobody knows which yet. It keeps its honest priority,
+  because deferring is a schedule and the priority is the severity — parking a
+  real defect by relabelling it `priority: low` makes the tracker lie about what
+  is wrong with the product. Drop the label when the work gets a milestone. Say
+  in the issue what it is waiting for, so the reader who filters it back in
+  knows what changed.
 
 ## Provenance
 
