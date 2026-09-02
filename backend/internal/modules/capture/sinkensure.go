@@ -208,7 +208,11 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// sender, not only those a suppression rule matched — since T4 defers the
 	// ambiguous class, the answer now decides create-versus-defer for ordinary
 	// senders too, which is worth a query per captured message.
-	corresponded, correspondedRepeatedly, err := correspondenceDepthTx(ctx, tx, cp.Email)
+	corresponded, err := correspondencePositiveTx(ctx, tx, cp.Email)
+	if err != nil {
+		return counterpartyDecision{}, err
+	}
+	exchanged, err := s.exchangedWith(ctx, tx, cp.Email)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -222,12 +226,8 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// And ONE send is not yet a correspondence — see exchangedWith. A single
 	// send defers to the verdict rather than being refused, so a real prospect
 	// written to once still becomes a contact, a moment later and for a reason.
-	exchanged, err := s.exchangedWith(ctx, tx, cp.Email, correspondedRepeatedly)
-	if err != nil {
-		return counterpartyDecision{}, err
-	}
 	decision.create = corresponded && exchanged && s.recordWorthy(cp)
-	roleMailbox := refusesToNameAPerson(cp.Email, correspondedRepeatedly)
+	roleMailbox := refusesToNameAPerson(cp.Email, exchanged)
 	if roleMailbox {
 		decision.create = false
 	}

@@ -25,18 +25,18 @@ import (
 // own tests say so. Reachability and identity are two questions, and the second
 // is this one.
 //
-// REPEATED correspondence outranks it, exactly as T1 outranks the T2 registry
-// and a stale terminal answer, and for the same reason: a shared mailbox the
-// workspace keeps writing to is a working relationship, and `sales@` at a
-// supplier answered twice is somebody worth holding. One send to `billing@` is
-// an errand.
+// An EXCHANGE outranks it, exactly as T1 outranks the T2 registry and a stale
+// terminal answer, and for the same reason: a shared mailbox that answers, or
+// that the workspace opens a second conversation with, is a working
+// relationship. `sales@` at a supplier who replies is somebody worth holding;
+// one send to `billing@` is an errand.
 //
 // The caller refuses only the CREATE on a true answer. The address still
 // travels the ladder's ordinary path, so a first sighting defers and opens the
 // ledger question the verdict answers as `role_mailbox` — returning early would
 // skip that write and leave the queue unjudged, re-asked on every later message.
-func refusesToNameAPerson(email string, correspondedRepeatedly bool) bool {
-	if correspondedRepeatedly {
+func refusesToNameAPerson(email string, exchanged bool) bool {
+	if exchanged {
 		return false
 	}
 	_, role := mailrole.Match(email)
@@ -50,19 +50,18 @@ func refusesToNameAPerson(email string, correspondedRepeatedly bool) bool {
 // and hears from six. Creating on the send alone recorded the other
 // thirty-four, along with the test addresses and the one-off errands.
 //
-// Two shapes count, and the cheaper one is asked first: the workspace wrote on
-// two separate threads, which the correspondence read already established, or
-// the address wrote back on a thread the workspace started.
+// Two shapes count: the address wrote back on a thread the workspace wrote on,
+// or the workspace wrote to them on two separate threads. Nobody starts a
+// second conversation with somebody by accident.
 //
 // Both are facts about what happened, not judgements about the sender. That is
 // what makes this safe to put in front of a create: an address it refuses is
 // deferred to the verdict rather than dismissed, and the verdict reads the
 // message.
-func (s *Sink) exchangedWith(
-	ctx context.Context, tx pgx.Tx, email string, correspondedRepeatedly bool,
-) (bool, error) {
-	if correspondedRepeatedly {
-		return true, nil
+func (s *Sink) exchangedWith(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	replied, err := wroteBackTx(ctx, tx, email)
+	if err != nil || replied {
+		return replied, err
 	}
-	return wroteBackTx(ctx, tx, email)
+	return wroteOnTwoThreadsTx(ctx, tx, email)
 }

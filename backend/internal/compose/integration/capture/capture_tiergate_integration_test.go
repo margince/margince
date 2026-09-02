@@ -462,6 +462,62 @@ func TestCaptureTierGateNeedsAnExchangeRatherThanASend(t *testing.T) {
 		}
 	})
 
+	t.Run("a forged thread root manufactures nothing", func(t *testing.T) {
+		// thread_key is the message's own References root, so a sender chooses
+		// it verbatim. A stranger who names the root of a thread the workspace
+		// wrote on to SOMEBODY ELSE would otherwise turn a colleague's
+		// correspondence into their own exchange.
+		syncSent(t, map[string]bool{"ex6@myco.example": true},
+			email(captureOwner, "", "genuine@partner.example", "ex6@myco.example", ""))
+		sync(t, email("forger@spam.example", "Forger", captureOwner,
+			"ex6f@spam.example", "ex6@myco.example"))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'forger@spam.example'`); n != 0 {
+			t.Fatalf("%d persons for a forged thread root, want 0 — that thread was somebody else's", n)
+		}
+
+		// And still nothing after the workspace writes to them once, which is
+		// the shape that satisfies the correspondence rung on its own.
+		syncSent(t, map[string]bool{"ex6b@myco.example": true},
+			email(captureOwner, "", "forger@spam.example", "ex6b@myco.example", ""))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'forger@spam.example'`); n != 0 {
+			t.Fatalf("%d persons for a forger the workspace wrote to once, want 0 — "+
+				"a thread they forged into is not a reply they sent", n)
+		}
+		// THREE guards refuse this sender and this test cannot tell them apart:
+		// the correspondence rung (no attested send to them when the forgery
+		// lands), the ledger's prior decision (the forged message opened its own
+		// question), and the exchange rule's address correlation. Reverting any
+		// one alone leaves this green, so this asserts the OUTCOME and not the
+		// mechanism.
+		//
+		// The correlation stays regardless, because it is the only one of the
+		// three that is about this question — was that thread ours with THEM —
+		// and the other two are guarding their own invariants and may move.
+		// sinkmailgates.go says the same thing beside the clause.
+	})
+
+	t.Run("two sends on ONE thread are one conversation", func(t *testing.T) {
+		// A send and its own follow-up is one conversation, not two. Counting
+		// messages rather than threads would admit exactly the unreturned intent
+		// this rule refuses.
+		syncSent(t, map[string]bool{"ex7@myco.example": true},
+			email(captureOwner, "", "nudged@prospect.example", "ex7@myco.example", ""))
+		syncSent(t, map[string]bool{"ex7b@myco.example": true},
+			email(captureOwner, "", "nudged@prospect.example", "ex7b@myco.example", "ex7@myco.example"))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'nudged@prospect.example'`); n != 0 {
+			t.Fatalf("%d persons after two sends on one thread, want 0 — following up is not a second conversation", n)
+		}
+	})
+
 	t.Run("a bulk reply is not writing back", func(t *testing.T) {
 		// An address the workspace wrote to once, which then sends a newsletter,
 		// has not answered anybody: it added the workspace to a list. Reading
