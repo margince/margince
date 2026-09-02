@@ -18,16 +18,19 @@ func TestASendableReplyIsRead(t *testing.T) {
 		"fenced":      "```json\n{\"subject\":\"Intro to Philipp?\",\"body\":\"Hi Sofia, could you introduce me to Philipp Königs?\"}\n```",
 		"padded":      `{"subject":"  Intro to Philipp?  ","body":"  Hi Sofia, could you introduce me to Philipp Königs?  "}`,
 	} {
-		subject, body, err := draftreply.Parse(raw, "Sofia", "Philipp Königs")
-		if err != nil {
-			t.Fatalf("%s: refused a sendable reply: %v", name, err)
-		}
-		if subject != "Intro to Philipp?" {
-			t.Errorf("%s: subject came back %q", name, subject)
-		}
-		if !strings.HasPrefix(body, "Hi Sofia,") {
-			t.Errorf("%s: body came back %q", name, body)
-		}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			subject, body, err := draftreply.Parse(raw, "Sofia", "Philipp Königs")
+			if err != nil {
+				t.Fatalf("refused a sendable reply: %v", err)
+			}
+			if subject != "Intro to Philipp?" {
+				t.Errorf("subject came back %q", subject)
+			}
+			if !strings.HasPrefix(body, "Hi Sofia,") {
+				t.Errorf("body came back %q", body)
+			}
+		})
 	}
 }
 

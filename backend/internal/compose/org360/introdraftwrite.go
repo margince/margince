@@ -53,32 +53,17 @@ func writeIntroRequest(
 	return wireIntroRequest(written, crmcontracts.Model, facts)
 }
 
-// validatedLane is a lane that can re-ask when the reply is refused. The
-// refusal message goes back to the model, so a rule it broke once is a rule it
-// is told rather than one it keeps breaking.
-type validatedLane interface {
-	CompleteValidated(ctx context.Context, req model.Request, validate ai.Validator) (model.Response, error)
-}
-
 // introFromModel writes the ask and checks what came back.
 //
-// The retry is judged by the SAME parse the answer path runs: a reply that is
-// valid JSON and still names nobody is exactly what a retry can fix, and a
-// looser shape check would spend the attempt without naming the fault.
+// draftreply.Ask re-asks through the SAME parse the answer path runs, so a
+// reply this site would refuse goes back to the model with the reason.
 func introFromModel(
 	ctx context.Context, lane Completer, facts introFacts,
 ) (introDraft, error) {
-	req := introRequest(facts)
-	var res model.Response
-	var err error
-	if structured, ok := lane.(validatedLane); ok {
-		res, err = structured.CompleteValidated(ctx, req, func(text string) error {
-			_, parseErr := parseIntroDraft(text, facts)
-			return parseErr
-		})
-	} else {
-		res, err = lane.Complete(ctx, req)
-	}
+	res, err := draftreply.Ask(ctx, lane, introRequest(facts), func(text string) error {
+		_, parseErr := parseIntroDraft(text, facts)
+		return parseErr
+	})
 	if err != nil {
 		return introDraft{}, fmt.Errorf("org360: drafting the introduction request: %w", err)
 	}

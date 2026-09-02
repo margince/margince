@@ -39,7 +39,9 @@ import (
 // text — which is what a caller does to a MODEL reply and to nothing else.
 // Matching the tags alone flagged an email row and a licence response that
 // merely have a subject; matching Unfence alone would flag every other reply
-// shape in the tree.
+// shape in the tree. The tag patterns admit an option list, because
+// `json:"subject,omitempty"` is the same envelope field and an exact-match
+// pattern would have read past it.
 //
 // What it cannot see: a reader that unwraps a model reply some other way, or
 // one that names the fields without the tags. Both are reachable and neither
@@ -47,8 +49,8 @@ import (
 // the scan failing SHORT, which is the one way this gate could report PASS
 // while reading nothing.
 var replyEnvelopeMarkers = []*regexp.Regexp{
-	regexp.MustCompile(`json:"subject"`),
-	regexp.MustCompile(`json:"body"`),
+	regexp.MustCompile(`json:"subject[,"]`),
+	regexp.MustCompile(`json:"body[,"]`),
 	regexp.MustCompile(`Unfence\(`),
 }
 

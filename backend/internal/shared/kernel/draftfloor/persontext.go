@@ -16,6 +16,7 @@ package draftfloor
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -102,7 +103,7 @@ func NamesPerson(text, name string) bool {
 		}
 		start := at + found
 		end := start + len(wanted)
-		if !partOfAWord(folded, start-1) && !partOfAWord(folded, end) {
+		if !wordBefore(folded, start) && !partOfAWord(folded, end) {
 			return true
 		}
 		at = start + 1
@@ -114,7 +115,29 @@ func partOfAWord(text string, i int) bool {
 	if i < 0 || i >= len(text) {
 		return false
 	}
-	r := rune(text[i])
+	// Decode the rune rather than widening one byte. text[i] inside a
+	// multi-byte character is a CONTINUATION byte, and most of them widen to
+	// runes unicode.IsLetter rejects — so "MüLena" reported that it names
+	// "Lena", and a draft that buries the reader's name inside another word
+	// passed the check that exists to catch exactly that.
+	r, _ := utf8.DecodeRuneInString(text[i:])
+	if r == utf8.RuneError {
+		return false
+	}
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+// wordBefore reports whether the rune ENDING at i is a letter or digit, which
+// is a different question from partOfAWord: a match's left edge is the rune
+// before it, and in UTF-8 that rune does not start at i-1.
+func wordBefore(text string, i int) bool {
+	if i <= 0 || i > len(text) {
+		return false
+	}
+	r, _ := utf8.DecodeLastRuneInString(text[:i])
+	if r == utf8.RuneError {
+		return false
+	}
 	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 

@@ -127,3 +127,32 @@ func TestNamesPersonMatchesAWordAndNotASubstring(t *testing.T) {
 		t.Error("an empty name refused a draft it cannot judge")
 	}
 }
+
+// A name buried inside a word is not a name the draft states, and the boundary
+// on either side of a match may be a multi-byte rune.
+//
+// It read one BYTE and widened it: inside a character like "ü" that byte is a
+// continuation byte, and most of them widen to runes unicode.IsLetter rejects.
+// So "MüLena" reported that it names "Lena" — the check that exists to catch an
+// embedded name accepted one, and only where the neighbouring text is non-ASCII.
+func TestANameInsideAWordIsNotNamedAcrossAMultiByteBoundary(t *testing.T) {
+	t.Parallel()
+	for name, text := range map[string]string{
+		"non-ASCII immediately before": "MüLena schrieb gestern",
+		"non-ASCII immediately after":  "Lenaüber alles",
+		"both sides":                   "MüLenaüber",
+	} {
+		if NamesPerson(text, "Lena") {
+			t.Errorf("%s: %q was read as naming %q", name, text, "Lena")
+		}
+	}
+	for name, text := range map[string]string{
+		"after a multi-byte word":  "Grüße Lena, kurz zum Angebot",
+		"before a multi-byte word": "Lena über das Angebot",
+		"between them":             "Grüße Lena über das Angebot",
+	} {
+		if !NamesPerson(text, "Lena") {
+			t.Errorf("%s: %q does name %q and was refused", name, text, "Lena")
+		}
+	}
+}

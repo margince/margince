@@ -57,35 +57,17 @@ func writeIntroNote(
 	return wireIntroNote(written, crmcontracts.Model, facts)
 }
 
-// validatedLane is a lane that can re-ask when the reply is refused.
-//
-// The refusal message goes back to the model, which is the difference between
-// a rule it broke once and a rule it never learns: this note reaches a
-// customer, and losing the lane costs the colleague the phrasing.
-type validatedLane interface {
-	CompleteValidated(ctx context.Context, req model.Request, validate ai.Validator) (model.Response, error)
-}
-
 // noteFromModel writes the note and checks what came back.
 //
-// The retry is judged by the SAME parse the answer path runs, not a looser
-// shape check: a reply that parses as JSON and still names nobody is exactly
-// the reply a retry can fix, and telling the model only "be valid JSON" would
-// spend the attempt without saying what was wrong.
+// draftreply.Ask re-asks through the SAME parse the answer path runs, so a
+// reply this site would refuse goes back to the model with the reason.
 func noteFromModel(
 	ctx context.Context, lane Completer, facts noteFacts,
 ) (introNote, error) {
-	req := noteRequest(facts)
-	var res model.Response
-	var err error
-	if structured, ok := lane.(validatedLane); ok {
-		res, err = structured.CompleteValidated(ctx, req, func(text string) error {
-			_, parseErr := parseIntroNote(text, facts)
-			return parseErr
-		})
-	} else {
-		res, err = lane.Complete(ctx, req)
-	}
+	res, err := draftreply.Ask(ctx, lane, noteRequest(facts), func(text string) error {
+		_, parseErr := parseIntroNote(text, facts)
+		return parseErr
+	})
 	if err != nil {
 		return introNote{}, fmt.Errorf("network: drafting the introduction note: %w", err)
 	}
