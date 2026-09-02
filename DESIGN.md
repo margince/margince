@@ -440,22 +440,62 @@ place under the identity.
 
 ### The shell around every record
 
-The sidebar collapses to a 60px icon rail and that is the default. Labels
+The sidebar collapses to a 52px icon rail and that is the default. Labels
 return on hover as tooltips, the counts that matter (tasks, approvals) stay as
-small badges, the agent's orb stays at the foot. The fold control sits in the
-rail's head. An expanded rail is the reader's choice and is remembered.
+small badges, the agent's orb stays at the foot. The details panel on the left
+of the reading folds to nothing from the Details control in the top row.
 
-### The list page, home and the board
+### What main changed, and how this structure absorbs it
 
-The list page: `--fs-h1` title with the count in mono, saved-view tabs as a
-glass strip, one search field and the query dials on one line, the table in
-one pane with eyebrow headers, hairline rows, mono figures right-aligned and
-the selected row in `--accentWash` with a 2px emerald mark. Home: a display
-greeting with the date in mono; the week's readings as panes with a sparkline
-each; Decide (the agent's cards), Today (meetings), Follow up (who wrote last).
-The board: columns on the ground with the stage as an eyebrow and the sum in
-mono; glass cards that lift on hover; a card the agent moved dashed indigo
-until a person confirms it.
+The record pages on `main` were reworked onto shared parts (the reading, the
+call card, the day's panel, the timeline thread) after this document's first
+inventory. The structure above holds; these are the facts it now carries.
+
+- **Every record page reads in the same order** on main: readings, then the
+  call with the thread under it, then what needs a person, then the pairs.
+  That is the order here, with the thread as its own zone between the
+  readings and the needs, because the 360 opens on what happened last.
+- **The contact's strip is four readings**: Whose move (Yours / Theirs /
+  Gone quiet / Never spoken, with "last from them"), Open promises (a count,
+  late in red), Deals they decide (with "Open deals"), Next meeting (with
+  "Open meetings"). Consent left the strip and lives in the panel's channel
+  rows. The call is always drawn, "Not shown" when withheld. Up to three open
+  tasks join the needs list with the assignee as the mark.
+- **The deal's readings moved onto the overview**, and Momentum opens "See the
+  ledger". The stage stepper follows them. Tags are on the deal. The briefing
+  splits into the call (standing, the because-sentence, the signals, the
+  thread), the found move as a row of the needs list (the "What to do next"
+  caption is gone; the row's own chrome says it), and "What this deal is" as
+  its own block with "Written by" and "Write it again". Offers and the
+  committee sit side by side on main; here they are Commercial and the
+  committee zone.
+- **The lead has a standing**: Your move (with the first-response due or
+  overdue), Their move, In motion, Qualified, Closed, each saying what it
+  rests on. The Source reading is gone; First response reads Answered / Still
+  owed / due by. The score card and "What you know about this lead" moved
+  out of the rail into the reading, so the rail is Details and Owner. The
+  needs list carries "Answer {name} · First response owed" when one is owed,
+  and the next task. A lead carries no agent suggestions; the "Ready to
+  qualify" row on this page is a proposal, derived from the same evidence the
+  qualify dialog derives its reason from.
+- **Home draws five fixed readings**: Customer waiting, Meetings ahead,
+  Promises due, Lead response, Quota pace. Two of them say what they cannot
+  answer ("promises are not tracked yet", "no target is set") rather than
+  showing a zero, and the floor line under the row says when a source was read
+  to its limit. The old four cards are gone.
+- **Tags** are a panel on company, contact and deal (four visible, "+N more",
+  a split pill that opens the tag or its menu, "Add tag" opens a picker that
+  cannot create a word), a Tags column on the people, companies and deals
+  lists (two visible, not sortable), a tag on the board card, and a "Tags ·
+  Any tag" filter chip. Leads are not tagged.
+- **The email verb is an outlined button on every record**, in the same
+  place, with the same word. The filled verb is the move the call names,
+  inside the needs list. Qualify stays filled on a lead, because it is the
+  lead's whole point.
+- **The timeline thread has a failed state** ("The thread could not be read",
+  with retry), states when earlier pages were cut ("More conversations before
+  this"), and the silence gap is pluralised.
+
 
 ## 8. Components, restated in this language
 
