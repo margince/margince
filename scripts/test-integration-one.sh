@@ -60,4 +60,4 @@ echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
        MARGINCE_TEST_APP_DSN="$(app_clone_dsn "$db")" \
        MARGINCE_TEST_BLOBSTORE_BUCKET="$(bucket_for one)" \
        MARGINCE_TEST_REDIS_DB="${MARGINCE_TEST_REDIS_DB:-15}" \
-    go test -p 1 -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" "${run_flag[@]+"${run_flag[@]}"}" "$rel" )
+    go test -p 1 -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" "${run_flag[@]+"${run_flag[@]}"}" "$rel" ${IT_ARGS:+$IT_ARGS} )
