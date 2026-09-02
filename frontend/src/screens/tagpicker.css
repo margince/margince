@@ -1,0 +1,32 @@
+.tagpicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 22rem;
+}
+
+/* The list scrolls rather than growing the dialog: a workspace with sixty
+   words would otherwise push the search field off the top of the screen, and
+   the field is what a reader reaches for first. */
+.tagpicker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+/* Each option is one row: the word on the left, its state on the right. A
+   disabled row still READS — a reader has to see that the tag is already on
+   the record, not merely find it unclickable. */
+.tagpicker-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-2);
+}
+
+.tagpicker-option:disabled {
+  opacity: 0.7;
+}

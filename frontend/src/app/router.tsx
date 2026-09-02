@@ -43,6 +43,9 @@ const SCREENS = [
   "offers",
   "search",
   "share",
+  // A tag has a page of its own: the records carrying one word, grouped by
+  // type. Every tag pill in the product links here.
+  "tags",
   "onboarding",
   "client",
   "book",
@@ -178,6 +181,10 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   scheduled: WHOLE_ADDRESS,
   offers: WHOLE_ADDRESS,
   search: WHOLE_ADDRESS,
+  // A different tag is a different page, not a tab of one: the whole address
+  // keys it, so opening a second word starts a fresh read rather than showing
+  // the first one's counts under the second one's name.
+  tags: WHOLE_ADDRESS,
   share: WHOLE_ADDRESS,
   onboarding: WHOLE_ADDRESS,
   client: WHOLE_ADDRESS,

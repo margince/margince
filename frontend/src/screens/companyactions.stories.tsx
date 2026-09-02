@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { NewDealAction, TagAction } from "./companyactions";
+import { NewDealAction } from "./companyactions";
 import {
   installFetchStub,
   jsonResponse,
@@ -29,7 +29,6 @@ import {
 // flow actually spends, so the session reads as the rep the story is about.
 
 type Pipeline = components["schemas"]["Pipeline"];
-type Tag = components["schemas"]["Tag"];
 
 const page = { has_more: false, next_cursor: null };
 
@@ -222,109 +221,3 @@ export const NewDealFailed: Story = {
 // The id the workspace mints for a name its catalog has never carried. The
 // apply call is addressed to a RESOLVED tag, so a story that wants to answer
 // it has to route the id the create handed back, not the contract's template.
-const mintedTagId = "t-9";
-
-function TagCompany({
-  tags,
-  apply,
-}: Readonly<{
-  tags: Tag[];
-  apply?: (body: unknown) => Response | Promise<Response>;
-}>) {
-  installFetchStub({
-    // Read the catalog, mint the tag a typed name has no match for, put it on
-    // the company: three grants on the one object, all three spent per submit.
-    "GET /me": meRoute({ tag: ["read", "create", "update"] }),
-    "GET /tags": () => jsonResponse({ data: tags, page }),
-    "POST /tags": () => jsonResponse({ id: mintedTagId }, 201),
-    ...(apply ? { [`POST /tags/${mintedTagId}/apply`]: apply } : {}),
-  });
-  return (
-    <StoryProviders>
-      <TagAction orgId="o-1" />
-    </StoryProviders>
-  );
-}
-
-// Resting: the workspace already has tags on file, but that catalog never
-// surfaces in this control — it is a typed name, not a picker, matching to
-// an existing tag underneath rather than presenting one on screen.
-export const TagResting: Story = {
-  render: () => (
-    <TagCompany
-      tags={[
-        { id: "t-1", name: "VIP" },
-        { id: "t-2", name: "Churn risk" },
-      ]}
-    />
-  ),
-};
-
-// Open: one field, the name the rep types — a fresh workspace with no tags
-// yet renders identically, because the form never lists what already exists.
-export const TagOpen: Story = {
-  render: () => <TagCompany tags={[]} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Add tag" }),
-    );
-    await body.findByRole("textbox", { name: "Tag name" });
-  },
-};
-
-// Pending: the name is typed, Save is clicked, and the apply call never
-// resolves.
-export const TagPending: Story = {
-  render: () => <TagCompany tags={[]} apply={() => new Promise(() => {})} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Add tag" }),
-    );
-    await userEvent.type(
-      await body.findByRole("textbox", { name: "Tag name" }),
-      "VIP",
-    );
-    await userEvent.click(body.getByRole("button", { name: "Create" }));
-    await expectCreating(body);
-  },
-};
-
-// Failed: the apply call refuses for a reason that is not "already applied"
-// (that case is folded into success — see resolveTagId's own docblock), so
-// the server's refusal is the one thing left to show. The session holds
-// tag:update, and it is meant to: the refusal is about THIS account, which is
-// row scope, and no grant a client can read predicts it.
-export const TagFailed: Story = {
-  render: () => (
-    <TagCompany
-      tags={[]}
-      apply={() =>
-        jsonResponse(
-          {
-            code: "forbidden",
-            title: "Not permitted",
-            detail: "You cannot tag this account.",
-          },
-          403,
-        )
-      }
-    />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Add tag" }),
-    );
-    await userEvent.type(
-      await body.findByRole("textbox", { name: "Tag name" }),
-      "VIP",
-    );
-    await userEvent.click(body.getByRole("button", { name: "Create" }));
-    await body.findByText(/cannot tag this account/);
-  },
-};

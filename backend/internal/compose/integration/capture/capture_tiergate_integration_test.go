@@ -377,9 +377,19 @@ func TestCaptureTierGateHonorsCorrespondenceFromACRMOriginatedSend(t *testing.T)
 		WHERE pe.email = 'team@news.prospect.example'`); n != 1 {
 		t.Fatalf("%d persons for a sender the CRM had written to, want 1 — a CRM send must count as correspondence", n)
 	}
+	// A ledger row here is expected, and it is not a deferral. #3719 made both
+	// create tiers open the same question the deferred tier opens, because a
+	// sender created on sight and never judged stayed the mailbox owner's
+	// permanently. T1 still decides STORAGE — the person above exists, which is
+	// what "nothing defers" was ever about. What the row asks is whose record it
+	// is, and `advisor` is a legitimate answer that keeps it private, so the
+	// question cannot be skipped for a corresponded-with sender either.
 	if n := countRows(t, e, `
-		SELECT count(*) FROM capture_pending_counterparty WHERE email = 'team@news.prospect.example'`); n != 0 {
-		t.Fatalf("%d ledger rows for a corresponded-with sender, want 0 — T1 decides, nothing defers", n)
+		SELECT count(*) FROM capture_pending_counterparty
+		WHERE email = 'team@news.prospect.example'
+		  AND status = 'pending' AND resolved_at IS NULL`); n != 1 {
+		t.Fatalf("%d open visibility questions for a corresponded-with sender, want 1 — "+
+			"T1 creates the record on sight and still asks whose it is", n)
 	}
 }
 
