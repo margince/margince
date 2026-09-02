@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -274,21 +273,4 @@ func readTeamReps(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) ([]TeamRep,
 		out = append(out, rep)
 	}
 	return out, rows.Err()
-}
-
-// teamNameOf reads a team's current name, for stamping into a new snapshot.
-func teamNameOf(ctx context.Context, tx pgx.Tx, teamID ids.UUID) (string, error) {
-	var name string
-	err := tx.QueryRow(ctx,
-		`SELECT name FROM team WHERE id = $1 AND archived_at IS NULL`, teamID).Scan(&name)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", apperrors.ErrNotFound
-	}
-	if err != nil {
-		return "", fmt.Errorf("weekly: reading the team's name: %w", err)
-	}
-	if strings.TrimSpace(name) == "" {
-		return "", apperrors.ErrNotFound
-	}
-	return name, nil
 }
