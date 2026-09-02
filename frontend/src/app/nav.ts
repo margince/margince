@@ -113,7 +113,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     headingKey: "nav.group.intelligence",
     items: [
-      { screen: "reports", labelKey: "nav.reports", icon: BarChart3 },
+      { screen: "analytics", labelKey: "nav.analytics", icon: BarChart3 },
       { screen: "ai", labelKey: "nav.ai", icon: Sparkles },
     ],
   },

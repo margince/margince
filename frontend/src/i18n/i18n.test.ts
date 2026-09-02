@@ -22,6 +22,11 @@ import { vi as viCatalog } from "./vi";
 const KEPT_IN_ENGLISH = new Set<string>([
   // The product name of the buyer surface.
   "room.card.title",
+  // The area's name, which is the same word in all three catalogs by decision:
+  // "Analytics" is what the product calls this surface, and both German and
+  // Vietnamese borrow it as a term of art rather than translating it. The
+  // section labels UNDER it are translated normally.
+  "nav.analytics",
   // Two placeholders and a dash. Every word in the line comes from elsewhere —
   // the dimension's own label and the sentence the server wrote — so there is
   // nothing here for a locale to translate.

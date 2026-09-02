@@ -162,7 +162,7 @@ export const de = {
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
   "nav.today": "Arbeitsliste",
-  "nav.reports": "Berichte",
+  "nav.analytics": "Analytics",
   "nav.ai": "Margince fragen",
   "nav.settings": "Einstellungen",
   "nav.automations": "Automatisierungen",
@@ -3123,20 +3123,20 @@ export const de = {
   "tasks.isDone": "Abgeschlossen",
   "tasks.logged": "Erfasst",
 
-  "reports.sub": "Deals je Phase — ungewichtet neben gewichtet",
-  "reports.currency": "Währung",
-  "reports.count": "Deals",
-  "reports.unweighted": "Ungewichtet",
-  "reports.weighted": "Gewichtet",
-  "reports.planNote":
+  "analytics.sub": "Deals je Phase — ungewichtet neben gewichtet",
+  "analytics.currency": "Währung",
+  "analytics.count": "Deals",
+  "analytics.unweighted": "Ungewichtet",
+  "analytics.weighted": "Gewichtet",
+  "analytics.planNote":
     "der ausgeführte Plan und die Zeilen, auf die sich die Zahl zurückrechnet",
-  "reports.reportDeals": "Deals nach Phase",
-  "reports.reportForecast": "Forecast",
-  "reports.reportOpenByCompany": "Offene Deals pro Firma",
-  "reports.forecastBanner":
+  "analytics.reportDeals": "Deals nach Phase",
+  "analytics.reportForecast": "Forecast-Kategorien",
+  "analytics.reportOpenByCompany": "Offene Deals pro Firma",
+  "analytics.forecastBanner":
     "Jede Kachel zeigt die Rohsumme und darunter die gewichtete Summe — pro Deal gerundet, sodass sie immer mit „Diese Zahl erklären“ übereinstimmt.",
-  "reports.company": "Firma",
-  "reports.openDeals": "Offene Deals",
+  "analytics.company": "Firma",
+  "analytics.openDeals": "Offene Deals",
   "explain.sources": "Quellzeilen",
 
   "ai.sub": "bring deinen eigenen Agenten mit — geregelt über die zwei Stufen",

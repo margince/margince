@@ -92,7 +92,7 @@ const CORE_SCREENS = [
   // second level of nesting indents it again.
   "filters",
   "worklist",
-  "reports",
+  "analytics",
   "settings",
   // The automations editor is configuration on the AI settings page now, not a
   // destination of its own. Sweeping `#/automations` after the route retired
@@ -1360,7 +1360,7 @@ async function expectNoAaViolations(page: Page, screen: string) {
 const ADDRESSED_VIEWS = [
   "companies?q=brandt&sort=name",
   "companies/o-brandt/tasks",
-  "reports/forecast",
+  "analytics/forecast",
   // The three record headers whose verbs are icon-only: the name a sighted
   // reader gets on hover is not the name axe checks, so what is swept here is
   // the other half — that every square carries an accessible name at all, and
