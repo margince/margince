@@ -278,3 +278,57 @@ func TestABackwardsWindowIsRefusedRatherThanAnsweredWithZeros(t *testing.T) {
 		t.Fatal("a window ending before it starts answered instead of refusing")
 	}
 }
+
+// A forged thread key cannot manufacture an answer from another medium.
+//
+// thread_key is one flat namespace holding both a mail thread root and a
+// channel's provider:bot:chat key, and the mail half is attacker-supplied — it
+// is the message's own References root, chosen verbatim by the sender. Matching
+// a reply on the key alone lets a stranger name a Telegram conversation whose
+// parts are both discoverable, and have somebody else's channel reply counted as
+// the answer to their mail.
+//
+// Two things break if it does. The published median absorbs a data point the
+// attacker chose, in whichever direction they chose it. And this reader would
+// call the thread answered while waitingSQL — which does apply the medium match
+// — still shows it waiting, so the two readers of one question disagree.
+//
+// Every other thread reader in the tree matches the triple and says in its own
+// comment that this is a security control. This case is what keeps the
+// restatement here honest.
+func TestAReplyOnAnotherMediumDoesNotAnswerAForgedMailThread(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	from, to := window()
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The key a channel conversation already lives under.
+	forged := "telegram:bot-7:chat-42"
+	// The colleague's channel reply on it, which the attacker was never part of.
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, channel_provider, source, captured_by)
+		VALUES ($1, 'message', 'outbound', 'Sure, sending now', now() - interval '1 hour', $2, 'telegram', 'seed', 'system')`,
+		ids.NewV7(), forged)
+	// The stranger's mail, carrying that key as its References root.
+	inbound := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
+		VALUES ($1, 'email', 'inbound', 'Forged root', now() - interval '2 hours', $2, 'seed', 'system')`,
+		inbound, forged)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
+		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), inbound, person)
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if after.Answered != before.Answered {
+		t.Fatalf("the answered count moved %d → %d over a mail nobody replied to — "+
+			"a channel reply on a forged thread key was counted as its answer",
+			before.Answered, after.Answered)
+	}
+}

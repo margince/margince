@@ -77,7 +77,26 @@ const firstResponseSQL = `
 	  JOIN LATERAL (
 	         SELECT a.occurred_at
 	           FROM activity a
+	          -- Matched within ONE medium, on the same triple every other thread
+	          -- reader in this tree matches on, and it is a SECURITY control
+	          -- rather than a convenience.
+	          --
+	          -- thread_key is one flat namespace holding both a mail thread root
+	          -- and a channel's provider:bot:chat key, and the mail half
+	          -- is attacker-supplied: it is the message's own References root, so
+	          -- a sender chooses it verbatim. Matching on the key alone lets a
+	          -- forged References header naming a Telegram conversation — a bot
+	          -- id is public and a private chat's id is the target's own — count
+	          -- somebody else's channel reply as the answer to that mail. The
+	          -- published median then carries a data point a stranger chose, in
+	          -- whichever direction they chose it.
+	          --
+	          -- It also keeps the two readers of "was this answered" agreeing:
+	          -- waitingSQL's anti-join matches this same triple, so without it a
+	          -- thread would be answered here and still waiting there.
 	          WHERE a.thread_key = inbound.thread_key
+	            AND a.kind = inbound.kind
+	            AND a.channel_provider IS NOT DISTINCT FROM inbound.channel_provider
 	            AND a.direction = 'outbound'
 	            AND a.archived_at IS NULL
 	            AND a.occurred_at > inbound.occurred_at
@@ -143,6 +162,15 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 		// The same content gate the waiting lane composes. A message this reader
 		// may not read contributes to no figure here: a median over rows they
 		// cannot open would publish the timing of somebody else's conversations.
+		// The INBOUND side only, and the asymmetry is deliberate rather than an
+		// oversight. The waiting lane ignores the audience arm on its own reply
+		// anti-join for a stated reason — a reply this reader may not see still
+		// answered the customer — and gating the reply here would make the two
+		// readers disagree about which threads were answered.
+		//
+		// What it costs is stated in the contract rather than hidden: a caller
+		// who can read an inbound but not the limited reply to it learns when a
+		// colleague answered, folded into the median. A timestamp, not content.
 		content, err := auth.ActivityContentClause(ctx, "inbound", arg)
 		if err != nil {
 			return err

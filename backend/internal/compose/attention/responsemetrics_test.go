@@ -87,6 +87,36 @@ func TestNoWindowAskedForReadsTheDefaultFortnight(t *testing.T) {
 	}
 }
 
+// The service holds the bound even when nothing above it did.
+//
+// The handler refuses an out-of-range window, which is the tree's convention
+// for a published range. This is the second line: a caller reaching the service
+// directly — a future job, another seam — gets the widest honest window rather
+// than an unbounded scan over every message the installation has ever held.
+//
+// Worth its own case because the contract's `maximum` enforces nothing: the
+// generated parameter is a bare *int, so a bound that lives only in YAML is a
+// bound that does not exist.
+func TestTheServiceHoldsTheWindowBoundOnItsOwn(t *testing.T) {
+	t.Parallel()
+
+	seam := &answering{}
+	svc := unboundService()
+	svc.waiting = seam
+
+	if _, err := svc.ResponseMetrics(context.Background(), 100_000); err != nil {
+		t.Fatal(err)
+	}
+
+	if seam.from == nil {
+		t.Fatal("the seam was never asked")
+	}
+	if days := seam.to.Sub(*seam.from).Hours() / 24; days > 91 {
+		t.Fatalf("read a window of %.0f days — the contract's cap is not enforced "+
+			"anywhere the router can see, so the service is what has to hold it", days)
+	}
+}
+
 // Every figure crosses the seam. A projection that dropped one would publish a
 // zero, and a zero here reads as a workspace answering instantly or judging
 // nothing — both flattering, both wrong.

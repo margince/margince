@@ -6750,9 +6750,18 @@ export interface paths {
          *     number taken from today would swing on one slow afternoon. The window defaults to
          *     the last 14 days.
          *
-         *     Counted under the CALLER's own visibility, like `/worklist/team` and
-         *     `/worklist/hidden`: a median over conversations they may not open would publish the
-         *     timing of somebody else's customers.
+         *     Counted under the CALLER's own visibility — but only on the INBOUND side, and the
+         *     difference is worth stating rather than glossing. A message the caller may not read
+         *     contributes to no figure here. The REPLY that answered it is not gated: the waiting
+         *     lane deliberately ignores the audience arm on its own reply anti-join, because a
+         *     reply somebody else may see still answered the customer, and skipping it would
+         *     report an answered message as waiting.
+         *
+         *     So a caller who can read an inbound but not the audience-limited reply to it learns
+         *     WHEN a colleague answered, to the minute, folded into the median. That is a
+         *     timestamp rather than content, and it is the price of the two readers agreeing
+         *     about which threads were answered — but it is a real disclosure and this is where
+         *     it is written down.
          */
         get: operations["getResponseMetrics"];
         put?: never;

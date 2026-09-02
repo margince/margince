@@ -4,6 +4,7 @@
 package attention
 
 import (
+	"fmt"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -75,6 +76,22 @@ func (h Handlers) GetResponseMetrics(
 ) {
 	days := 0
 	if params.Days != nil {
+		// Refused rather than clamped, which is this tree's convention for a
+		// published range (automations_preview.go and filterpreview.go both say
+		// so in their own words). A caller asking for a window the reading does
+		// not cover has made a mistake, and answering a different window than
+		// they asked for hands them a figure they will read as the one they
+		// requested.
+		//
+		// Enforced HERE because nothing else does: the generated parameter is a
+		// bare *int, so the contract's minimum and maximum are documentation the
+		// router never applies. Left unchecked, `days=3650000` reaches the store
+		// and scans every message the installation has ever held.
+		if *params.Days < 1 || *params.Days > responseWindowMaxDays {
+			httperr.Write(w, r, httperr.Validation("days", "out_of_range",
+				fmt.Sprintf("the window must be between 1 and %d days", responseWindowMaxDays)))
+			return
+		}
 		days = *params.Days
 	}
 	out, err := h.svc.ResponseMetrics(r.Context(), days)
