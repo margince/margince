@@ -248,6 +248,42 @@ button.glance-count:active {
   gap: var(--space-2);
 }
 
+/* ── The day's own shape, in the rail ──────────────────────────────────────
+ * A schedule row is read as a COLUMN of times: the hour sits on its own rail
+ * so the eye runs down the times rather than hunting for each one at the head
+ * of a sentence of different length. */
+
+.rail-schedule-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+/* Tabular figures so 09:30 and 11:00 occupy the same width — a column of times
+   that shifts by a digit reads as a ragged edge rather than as a rail. */
+.rail-schedule-when {
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The badge sits WITH the title rather than after it, so a meeting whose name
+   wraps keeps its warning attached to it. */
+.rail-schedule-what {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* What the panel cannot tell you, under what it can. Quiet like every other
+   line where a surface reports on its own limits. */
+.rail-promise-note {
+  color: var(--textSecondary);
+  margin: 0;
+}
+
 /* ── Folds ────────────────────────────────────────────────────────────────
  * `PageZones` folds the columns; what folds here is the briefing's own scale.
  * A display-size greeting on a phone costs three lines before a reader has

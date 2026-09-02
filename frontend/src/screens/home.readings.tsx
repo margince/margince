@@ -11,7 +11,8 @@ import {
   usePlural,
   useT,
 } from "../i18n";
-import type { Worklist, WorklistItem } from "./worklist.queries";
+import { isUnprepared } from "./worklist.copy";
+import type { Worklist } from "./worklist.queries";
 
 // The day's readings, on one plate.
 //
@@ -34,12 +35,6 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 // invite the reading where the others are exact.
 
 const MEETINGS = "meetings";
-
-// The reason a meeting row carries when nothing has been prepared for it. The
-// SERVER decides readiness; the strip counts what the queue already says and
-// never re-derives it from a meeting's own fields, so the badge on a row and the
-// figure in this slot cannot disagree.
-const UNPREPARED = "meeting_unprepared";
 
 export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
@@ -193,8 +188,4 @@ function meetingsReading(day: Worklist): {
     meetings: entry.considered,
     unready: whole ? day.queue.filter(isUnprepared).length : null,
   };
-}
-
-function isUnprepared(item: WorklistItem): boolean {
-  return item.because.some((reason) => reason.kind === UNPREPARED);
 }
