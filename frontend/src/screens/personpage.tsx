@@ -61,6 +61,7 @@ import { primaryTransportAction, useTransports } from "./persontransports";
 import { RecordReading, RecordReadingPair } from "./record360";
 import { RecordEmailAside } from "./recordemail";
 import "./person360.css";
+import { buyingRoleLabel } from "./companypeople/summary";
 
 // The person record page V2 (ADR-0096, concept person-record-page-v2).
 //
@@ -640,7 +641,7 @@ function PersonIdentityLine({
             buying role and the line simply omits it. */}
         {role && (
           <span className="pe-meta-fact pe-meta-quiet">
-            {t("person.page.buyingRole")}: {role.replace(/_/g, " ")}
+            {t("person.page.buyingRole")}: {buyingRoleLabel(role, t)}
           </span>
         )}
         <span className="pe-meta-fact pe-meta-quiet">

@@ -12,6 +12,7 @@ import {
 } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
+import { buyingRoleLabel } from "./companypeople/summary";
 import type { PersonTab } from "./persontab";
 
 // The contact's four readings, in the cards every record page draws them in
@@ -327,7 +328,7 @@ function DealCard({
               {
                 key: "role",
                 term: t("person.page.buyingRole"),
-                value: view.commercial.role.replace(/_/g, " "),
+                value: buyingRoleLabel(view.commercial.role, t),
               },
             ]}
           />

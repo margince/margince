@@ -338,22 +338,27 @@ function ActionVerb({
   onAction: (action: PersonMomentAction) => void;
 }>) {
   const t = useT();
+  const blocked = action.state === "blocked";
   return (
     <span className="pe-today-verb">
+      {/* Readiness is stated rather than left to a disabled button, because
+          "you may not do this yet" and "this will ask you to confirm" are
+          different answers. A blocked verb hands its sentence to the Button,
+          whose `reason` bars the press AND describes the control with it — a
+          `title` on a disabled button reaches no screen reader. The other
+          states keep the caption under the verb. */}
       <Button
         variant={primary ? "primary" : "ghost"}
         small
         onClick={() => onAction(action)}
-        disabled={action.state === "blocked"}
-        title={action.blocked_reason}
+        reason={blocked ? readiness(action, t) : undefined}
       >
         {actionIcon(action.kind)}
         {action.label}
       </Button>
-      {/* Readiness is stated rather than left to a disabled button, because
-          "you may not do this yet" and "this will ask you to confirm" are
-          different answers. */}
-      <span className="pe-today-verb-state">{readiness(action, t)}</span>
+      {!blocked && (
+        <span className="pe-today-verb-state">{readiness(action, t)}</span>
+      )}
     </span>
   );
 }

@@ -3820,6 +3820,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const timelineQuery = useRecordTimeline("deal", id, {
     filters: timelineFilters,
   });
+  // The thread under the call reads the WHOLE history, not the page the filter
+  // strip narrowed: a filter is a view of the timeline tab, and a call that
+  // said "no reply since" because the reader had hidden emails would be false.
+  // The two share one query whenever no filter is set.
+  const threadQuery = useRecordTimeline("deal", id);
   const timelineEntries = activityTimeline(
     timelineQuery.activities,
     viewerId,
@@ -4007,12 +4012,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   spine={
                     <RecordSpine
                       source={timelineSpineSource(
-                        timelineQuery.activities,
+                        threadQuery.activities,
                         // The page has no server `as_of` for a deal, so the
                         // thread is read at the moment it is drawn — the same
                         // clock the readings band measures the close against.
                         new Date().toISOString(),
-                        timelineQuery.hasNextPage,
+                        threadQuery.hasNextPage,
                       )}
                       commercial={{ next_close_on: deal.expected_close_date }}
                     />

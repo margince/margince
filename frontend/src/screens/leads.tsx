@@ -1404,7 +1404,8 @@ function LeadOverviewPane({
   promotion: PromotionRecord;
   overlay: boolean;
   terminalReasonId: string;
-  // The lead's timeline page, which the thread under the call is drawn from.
+  // The lead's unfiltered timeline page, which the thread under the call is
+  // drawn from.
   activities: readonly components["schemas"]["Activity"][];
   activitiesHaveMore: boolean;
   onQualify: () => void;
@@ -1688,6 +1689,11 @@ function LeadRecord({
   const timelineQuery = useRecordTimeline("lead", id, {
     filters: timelineFilters,
   });
+  // The thread under the call reads the WHOLE history, not the page the filter
+  // strip narrowed. A filter is a view of the timeline tab; a call that said
+  // "no reply since" because the reader had hidden emails would be false, and
+  // the two share one query whenever no filter is set.
+  const threadQuery = useRecordTimeline("lead", id);
   const viewerId = useViewerId();
   const timelineEntries = activityTimeline(timelineQuery.activities, viewerId);
   const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(null);
@@ -1725,7 +1731,7 @@ function LeadRecord({
           <ContactLink
             kind="email"
             value={lead.email}
-            className="t-mono lead-email"
+            className="link-button t-mono lead-email"
           />
         ) : null
       }
@@ -1832,8 +1838,8 @@ function LeadRecord({
           promotion={promotion}
           overlay={overlay}
           terminalReasonId={terminalReasonId}
-          activities={timelineQuery.activities}
-          activitiesHaveMore={timelineQuery.hasNextPage}
+          activities={threadQuery.activities}
+          activitiesHaveMore={threadQuery.hasNextPage}
           onQualify={() => setDialog("qualify")}
           onDisqualify={() => setDialog("disqualify")}
           onTouchLogged={refreshAfterTouch}

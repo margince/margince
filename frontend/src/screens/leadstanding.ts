@@ -1,5 +1,5 @@
 import type { components } from "../api/schema";
-import { formatDateAbbrev } from "../format/format";
+import { formatDateAbbrev, formatDateTime } from "../format/format";
 import type { Locale, Translator } from "../i18n";
 import type { Grounding, StandingTone } from "./record360";
 
@@ -31,6 +31,9 @@ export function leadStanding(
   zone: string,
 ): LeadStanding {
   const when = (at: string) => formatDateAbbrev(at, locale, zone);
+  // The first-response target is set in hours, so its deadline is an instant
+  // and prints with its time — the same precision the readings card gives it.
+  const instant = (at: string) => formatDateTime(at, locale, zone);
   if (lead.status === "promoted") {
     return {
       label: t("lead.standing.qualified"),
@@ -69,7 +72,7 @@ export function leadStanding(
     return {
       label: t("lead.standing.yourMove"),
       tone: slaTone(lead.sla_state),
-      because: unansweredBecause(lead, t, when),
+      because: unansweredBecause(lead, t, instant),
       restsOn: [
         {
           key: "captured",
@@ -133,12 +136,12 @@ function slaTone(state: Lead["sla_state"]): StandingTone {
 function unansweredBecause(
   lead: Lead,
   t: Translator,
-  when: (at: string) => string,
+  instant: (at: string) => string,
 ): string {
   if (!lead.sla_deadline_at) {
     return t("lead.standing.noResponse");
   }
   return lead.sla_state === "breached"
-    ? t("lead.standing.overdueSince", { at: when(lead.sla_deadline_at) })
-    : t("lead.standing.dueBy", { at: when(lead.sla_deadline_at) });
+    ? t("lead.standing.overdueSince", { at: instant(lead.sla_deadline_at) })
+    : t("lead.standing.dueBy", { at: instant(lead.sla_deadline_at) });
 }
