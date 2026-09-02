@@ -139,14 +139,19 @@ func orderClause(in ListActivitiesInput) string {
 	return " ORDER BY a.occurred_at DESC, a.id DESC"
 }
 
-// errOpenAndDueByWithCursor is refused rather than built into SQL. The keyset
-// cursor above is always keyed to the recency order (a.occurred_at, a.id) —
-// it has to be, since that is the only order a Cursor is ever decoded
-// against. Pairing it with OpenAndDueBy, which runs the query under a
-// different order (a.due_at ASC), would resume on an axis the query is not
-// sorted by and silently return the wrong rows rather than the next page.
-// No caller does this today; the guard is here so the day one tries, it
-// fails loudly instead of paginating wrongly.
+// errOpenAndDueByWithCursor is refused rather than built into SQL. On THIS
+// read, the keyset cursor is always decoded against the recency order
+// (a.occurred_at, a.id) — storekit.Cursor's SortField/SortDesc exist for a
+// query built through the sort-aware ListSort (listquery.go) to carry a
+// different one, but this hand-built query does not mint or check them.
+// Pairing a cursor with OpenAndDueBy, which runs under a different order
+// (a.due_at ASC), would resume on an axis this query never validates and
+// silently return the wrong rows rather than the next page. No caller does
+// this today; the guard is here so the day one tries, it fails loudly instead
+// of paginating wrongly. Routing this read through ListSort would let it mint
+// a due_at-aware cursor and remove the need for this guard entirely — left
+// for a follow-up rather than done here, since it touches the shared keyset
+// path every other ListActivities caller also runs through.
 var errOpenAndDueByWithCursor = errors.New(
 	"activities: a cursor built for the recency order cannot resume an open-and-due read")
 
@@ -207,20 +212,19 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		// The open-and-due order has no cursor to hand out — one is never
-		// decoded against it (errOpenAndDueByWithCursor) — so it reports no
-		// resumable page at all rather than a HasMore a caller has no way to
-		// act on. Rows beyond the cap still exist; CountOpenForViewer is the
-		// query that answers how many.
-		page = storekit.Page{HasMore: in.OpenAndDueBy == nil}
 		if in.OpenAndDueBy == nil {
 			last := activities[len(activities)-1]
 			next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
 			if err != nil {
 				return nil, storekit.Page{}, err
 			}
-			page.NextCursor = next
+			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
+		// Else: the open-and-due order has no cursor to hand out — one is
+		// never decoded against it (errOpenAndDueByWithCursor) — so it
+		// reports no resumable page at all rather than a HasMore a caller has
+		// no way to act on. Rows beyond the cap still exist; CountOpenForViewer
+		// is the query that answers how many.
 	}
 	if err := attachLinks(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err

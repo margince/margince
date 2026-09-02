@@ -3,35 +3,18 @@
 
 package activities
 
-// Which ORDER BY a timeline read gets: newest-first for the general read, and
-// due-soonest for the one caller asking "what is open and due" — the dial a
-// capped page needs so it keeps the most urgent rows rather than the most
-// recently logged ones. And the cursor a resumed read carries: it is keyed to
-// whichever order actually ran, so the two may never disagree.
+// The cursor a resumed read carries is keyed to whichever order actually
+// ran, so the two may never disagree. The ORDER BY choice itself
+// (newest-first vs. due-soonest) is proven behaviourally by
+// TestThePlannedLaneCapKeepsTheMostOverdueNotTheNewestLogged, which fails
+// against the pre-fix ordering — a unit test asserting the literal SQL
+// string here would only restate orderClause's own body.
 
 import (
 	"errors"
 	"testing"
 	"time"
 )
-
-func TestTheOpenAndDueQueueOrdersByDueDateNotRecency(t *testing.T) {
-	until := time.Now()
-	got := orderClause(ListActivitiesInput{OpenAndDueBy: &until})
-	want := " ORDER BY a.due_at ASC, a.id ASC"
-	if got != want {
-		t.Fatalf("order clause = %q, want %q — a cap over the wrong order keeps the newest rows, not the most overdue ones",
-			got, want)
-	}
-}
-
-func TestEveryOtherTimelineReadStaysNewestFirst(t *testing.T) {
-	got := orderClause(ListActivitiesInput{})
-	want := " ORDER BY a.occurred_at DESC, a.id DESC"
-	if got != want {
-		t.Fatalf("order clause = %q, want %q", got, want)
-	}
-}
 
 // A cursor from the recency read cannot resume an open-and-due read: it is
 // keyed to (occurred_at, id), the query would run ordered by (due_at, id),

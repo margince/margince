@@ -23,14 +23,19 @@ import (
 // the same fact classifyRisk's "deals_at_risk" rows carry, so this reads it
 // the way that sibling does rather than the way classifyTask reads a task's
 // due date: closing_soon whenever a date is set, never due_today, because a
-// close date three months out is a forecast and not work owed for today. The
-// deadline is still stamped, so a passed close date orders and badges as
-// overdue exactly as it would on the risk lane's own row for the same deal.
+// close date three months out is a forecast and not work owed for today.
+//
+// Overdue is set directly here rather than through stampDeadline: that
+// helper's own contract is a date the READER owes, which a forecast close
+// date is not — this computes the identical overdueAt the ordering already
+// uses, so a passed close date still orders and badges as overdue, just
+// without invoking a helper whose documented purpose is the opposite case.
 func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
-	stampDeadline(&row, item.DueAt, asOf)
 	if item.DueAt != nil {
 		row.Because = append(row.Because, reason("closing_soon", nil))
+		past := overdueAt(item.DueAt, asOf)
+		row.Overdue = &past
 	}
 	return ranked{
 		item:       row,

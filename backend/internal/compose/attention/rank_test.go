@@ -333,7 +333,7 @@ func TestOccurrenceReportsDaysNotDates(t *testing.T) {
 // one place — worklistFrom, right before rankAll — rather than at each row's
 // classifier. This drives the real production entry point rather than
 // rankAll directly, so a caller that stopped stamping it breaks here: with no
-// asOf, occurredDaysOf clamps every row to zero days and the step stops
+// asOf, daysSince clamps every row to zero days and the step stops
 // publishing values, which reads exactly like a passing suite until this
 // test is the one that reaches the wiring.
 func TestTheRealPipelineStampsAsOfBeforeRanking(t *testing.T) {
