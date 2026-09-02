@@ -196,19 +196,23 @@ var rankSteps = []rankStep{
 		// `order` means every step tied, and reporting it here would tell the
 		// reader something false about their own page.
 		//
-		// The instants travel only when they read differently: thirteen seconds
-		// apart renders as "23:20 against 23:20" under a heading about waiting
-		// days, which is two wrong things at once.
+		// Published as a DAY COUNT, the shape the comparator name already
+		// promises — not the raw instant, which is what the waiting lane's own
+		// sibling step above already learned not to do. The two travel only
+		// when they would read as different day counts: two rows nine seconds
+		// apart both waited "12 days", and offering "12 against 12" as the
+		// reason decided nothing a reader could check.
 		explain: func(a, b ranked) crmcontracts.WorklistComparison {
-			if sameMinute(a.occurredAt, b.occurredAt) {
+			aDays, bDays := occurredDaysOf(a.occurredAt, a.asOf), occurredDaysOf(b.occurredAt, b.asOf)
+			if aDays == bDays {
 				return crmcontracts.WorklistComparison{
 					Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
 				}
 			}
 			return crmcontracts.WorklistComparison{
 				Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
-				Mine:       occurredValue(a),
-				Theirs:     occurredValue(b),
+				Mine:       daysValue(aDays),
+				Theirs:     daysValue(bDays),
 			}
 		},
 	},

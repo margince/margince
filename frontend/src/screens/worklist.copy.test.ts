@@ -11,8 +11,17 @@ import { describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
 import type { Translator } from "../i18n";
 import { translate } from "../i18n";
-import { comparisonText, moveHref, moveOpensComposer } from "./worklist.copy";
-import type { WorklistComparison, WorklistItem } from "./worklist.queries";
+import {
+  comparisonText,
+  moveHref,
+  moveOpensComposer,
+  reasonText,
+} from "./worklist.copy";
+import type {
+  WorklistComparison,
+  WorklistItem,
+  WorklistReason,
+} from "./worklist.queries";
 
 const t: Translator = (key, params) => translate("en", key, params);
 // The elapsed-days math under test (calendarDaysBetween) does not take a
@@ -151,5 +160,39 @@ describe("moveHref — the draft_reply move", () => {
     };
     expect(moveHref(noMove as unknown as WorklistItem)).toBeUndefined();
     expect(moveOpensComposer(noMove as unknown as WorklistItem)).toBe(false);
+  });
+});
+
+// A row waiting one day said "waiting 1 days". quiet_days carries the exact
+// same day-count value shape through the exact same reasonText path, so it
+// gets the exact same fix rather than a patch on one string.
+describe("reasonText — day-count plural", () => {
+  it("uses the singular day form for a one-day wait", () => {
+    const reason: WorklistReason = {
+      kind: "waiting_days",
+      value: { kind: "days", days: 1 },
+    };
+    expect(reasonText(reason, t, "en", zone)).toBe("waiting 1 day");
+  });
+
+  it("uses the plural day form otherwise", () => {
+    const reason: WorklistReason = {
+      kind: "waiting_days",
+      value: { kind: "days", days: 5 },
+    };
+    expect(reasonText(reason, t, "en", zone)).toBe("waiting 5 days");
+  });
+
+  it("pluralizes the sibling quiet_days reason the same way", () => {
+    const one: WorklistReason = {
+      kind: "quiet_days",
+      value: { kind: "days", days: 1 },
+    };
+    const many: WorklistReason = {
+      kind: "quiet_days",
+      value: { kind: "days", days: 14 },
+    };
+    expect(reasonText(one, t, "en", zone)).toBe("quiet for 1 day");
+    expect(reasonText(many, t, "en", zone)).toBe("quiet for 14 days");
   });
 });

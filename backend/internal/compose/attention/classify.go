@@ -367,7 +367,18 @@ func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 // the arrangement this endpoint exists to end.
 func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+	stampDeadline(&row, item.DueAt, asOf)
+	if overdueAt(item.DueAt, asOf) {
+		row.Because = append(row.Because, reason("overdue", nil))
+	} else if item.DueAt != nil {
+		row.Because = append(row.Because, reason("due_today", nil))
+	}
+	return ranked{
+		item:       row,
+		deadlineAt: deadlineOf(item.DueAt),
+		overdue:    overdueAt(item.DueAt, asOf),
+		occurredAt: occurredOf(item, asOf),
+	}
 }
 
 // classifyTask: work already agreed. Overdue is the fact that moves it; a task

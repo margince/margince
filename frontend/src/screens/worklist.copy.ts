@@ -1,5 +1,4 @@
 import { ENTITY, isEntityKind } from "../app/entity";
-
 import { routeHash } from "../app/router";
 import {
   calendarDaysBetween,
@@ -9,6 +8,7 @@ import {
   formatNumber,
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
+import { translatePlural } from "../i18n";
 import { COMPOSE_PARAM } from "./personpage.address";
 import { settingsAddress } from "./settings";
 import type {
@@ -119,13 +119,13 @@ function valueText(
   }
 }
 
-// The reasons that read differently with a figure in them. Spelled as a set
-// rather than inferred from whether a value arrived: a value can travel for a
-// reason whose sentence has nowhere to put it, and a key composed from that
-// would not exist.
+// The reasons that read differently with a figure in them and whose figure is
+// a currency amount, not a count — a money figure never needs the reader's
+// plural rule, which is what sets these apart from DAYS_VALUED_REASONS below.
+// Spelled as a set rather than inferred from whether a value arrived: a value
+// can travel for a reason whose sentence has nowhere to put it, and a key
+// composed from that would not exist.
 const VALUED_REASONS = {
-  waiting_days: true,
-  quiet_days: true,
   expected_revenue: true,
   material: true,
   below_material: true,
@@ -135,6 +135,20 @@ type ValuedReason = keyof typeof VALUED_REASONS;
 
 function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
   return kind in VALUED_REASONS;
+}
+
+// The valued reasons whose figure is a DAY COUNT rather than a currency
+// amount. "1 days" is a different kind of wrong from "1 day" — a count needs
+// the reader's own plural rule, which a money figure never does.
+const DAYS_VALUED_REASONS = {
+  waiting_days: true,
+  quiet_days: true,
+} as const;
+
+function daysValued(
+  kind: WorklistReason["kind"],
+): kind is keyof typeof DAYS_VALUED_REASONS {
+  return kind in DAYS_VALUED_REASONS;
 }
 
 // Every reason this client has a sentence for.
@@ -204,6 +218,15 @@ export function reasonText(
     return null;
   }
   const value = valueText(reason.value, locale, zone);
+  if (
+    value !== null &&
+    daysValued(reason.kind) &&
+    reason.value?.kind === "days" &&
+    reason.value.days != null
+  ) {
+    const base = `worklist.because.${reason.kind}.value` as const;
+    return translatePlural(locale, base, reason.value.days, { value });
+  }
   if (value !== null && valued(reason.kind)) {
     return t(`worklist.because.${reason.kind}.value` as const, { value });
   }

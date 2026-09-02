@@ -30,6 +30,7 @@ func candidate(id string, level int, opts ...func(*ranked)) ranked {
 			Because: []crmcontracts.WorklistReason{},
 		},
 		occurredAt: rankInstant,
+		asOf:       rankInstant,
 	}
 	for _, opt := range opts {
 		opt(&row)
@@ -279,11 +280,11 @@ func TestADateComparisonIsNeverOfferedBetweenInstantsThatReadAlike(t *testing.T)
 	}
 }
 
-// Occurrence decides at the same reader resolution a deadline does. Thirteen
-// seconds apart printed "23:20 against 23:20" under a heading about waiting
-// days — two wrong things at once, and the live page showed it.
+// Occurrence publishes a DAY COUNT, and two instants close enough to round to
+// the same day count must not be offered as though the (equal) count decided
+// anything a reader could check.
 func TestOccurrenceOffersNoValuesWhenTheTwoInstantsReadAlike(t *testing.T) {
-	base := rankInstant.Add(-90 * 24 * time.Hour)
+	base := rankInstant.Add(-90*24*time.Hour + 12*time.Hour)
 	first := candidate("a", levelWaiting)
 	first.occurredAt = base
 	second := candidate("b", levelWaiting)
@@ -293,6 +294,37 @@ func TestOccurrenceOffersNoValuesWhenTheTwoInstantsReadAlike(t *testing.T) {
 
 	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
 		t.Fatal("the row offers two identical-looking times as its reason")
+	}
+}
+
+// The occurrence step is the fallback every non-waiting source falls through
+// to once nothing else separated a pair. It published the two rows' raw
+// occurredAt INSTANTS under the contract's waiting_days comparator — a reader
+// shown a date, not a day count, under a heading about days. It must publish
+// the same shape the comparator name promises: a day count each side.
+func TestOccurrenceReportsDaysNotDates(t *testing.T) {
+	older := candidate("older", levelWaiting)
+	older.occurredAt = rankInstant.Add(-10 * 24 * time.Hour)
+	newer := candidate("newer", levelWaiting)
+	newer.occurredAt = rankInstant.Add(-2 * 24 * time.Hour)
+
+	got := rankAll([]ranked{newer, older})
+
+	above := got[0].AboveNext
+	if above == nil {
+		t.Fatal("the leading row explains nothing about why it leads")
+	}
+	if above.Comparator != crmcontracts.WorklistComparisonComparatorWaitingDays {
+		t.Fatalf("claimed %q decided it, wanted waiting_days", above.Comparator)
+	}
+	if above.Mine == nil || above.Mine.Kind != "days" || above.Mine.Days == nil {
+		t.Fatalf("mine = %+v, wanted a days-kind value", above.Mine)
+	}
+	if above.Theirs == nil || above.Theirs.Kind != "days" || above.Theirs.Days == nil {
+		t.Fatalf("theirs = %+v, wanted a days-kind value", above.Theirs)
+	}
+	if *above.Mine.Days != 10 || *above.Theirs.Days != 2 {
+		t.Fatalf("mine=%d theirs=%d, wanted 10 and 2", *above.Mine.Days, *above.Theirs.Days)
 	}
 }
 

@@ -7767,7 +7767,8 @@ export const de = {
   "worklist.because.pinned": "Von dir angeheftet",
   "worklist.because.buyer_wrote_last": "Sie haben zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",
-  "worklist.because.waiting_days.value": "wartet seit {value} Tagen",
+  "worklist.because.waiting_days.value_one": "wartet seit {value} Tag",
+  "worklist.because.waiting_days.value_other": "wartet seit {value} Tagen",
   "worklist.because.overdue": "überfällig",
   "worklist.because.due_today": "heute fällig",
   "worklist.because.closing_soon": "hat ein Abschlussdatum",
@@ -7780,7 +7781,8 @@ export const de = {
   "worklist.because.below_material.value":
     "Wert {value}, unter dem üblichen offenen Deal",
   "worklist.because.quiet_days": "still geworden",
-  "worklist.because.quiet_days.value": "seit {value} Tagen still",
+  "worklist.because.quiet_days.value_one": "seit {value} Tag still",
+  "worklist.because.quiet_days.value_other": "seit {value} Tagen still",
   "worklist.because.no_champion": "kein Fürsprecher",
   "worklist.because.promised": "du hast es zugesagt",
   "worklist.because.approved_and_failed":

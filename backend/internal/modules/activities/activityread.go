@@ -127,6 +127,23 @@ type ListActivitiesInput struct {
 	OpenAndDueBy *time.Time
 }
 
+// orderClause is newest-first for every timeline read except the open-and-due
+// task queue, which orders by the date the work is OWED rather than the date
+// it was logged. A cap applied over the wrong order keeps the tasks most
+// recently filed; capping THIS order keeps the tasks nearest their deadline,
+// which is what a page capped at a dozen can actually afford to drop.
+//
+// OpenAndDueBy is set from exactly one caller (openTasksDueBy), and that
+// caller never sets Cursor — the keyset clause above stays built for the
+// occurred_at order because nothing pairs the two today. A caller that
+// combined them would need to widen it.
+func orderClause(in ListActivitiesInput) string {
+	if in.OpenAndDueBy != nil {
+		return " ORDER BY a.due_at ASC, a.id ASC"
+	}
+	return " ORDER BY a.occurred_at DESC, a.id DESC"
+}
+
 // ListActivities is the timeline read: newest first, optionally scoped to
 // one entity through activity_link (the indexed 360-view join).
 func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]crmcontracts.Activity, storekit.Page, error) {
@@ -168,7 +185,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 
 	rows, err := tx.Query(ctx,
 		`SELECT `+activityColumns(content)+` FROM activity a`+join+` WHERE `+strings.Join(where, " AND ")+
-			sprintf(` ORDER BY a.occurred_at DESC, a.id DESC LIMIT %d`, limit+1),
+			orderClause(in)+sprintf(" LIMIT %d", limit+1),
 		args...)
 	if err != nil {
 		return nil, storekit.Page{}, err

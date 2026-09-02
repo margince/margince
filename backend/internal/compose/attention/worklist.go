@@ -275,6 +275,12 @@ func (s *Service) worklistFrom(
 	// the whole narrowed set — so page two weighs exactly what page one weighed
 	// and continues it rather than re-deciding it.
 	shown, more, reached := pageFrom(rows, limit, cursor)
+	// Stamped here rather than by each classifier: every row on this page reads
+	// against the SAME instant, whichever lane or fold produced it, and the
+	// occurrence step is the one comparator that needs it.
+	for i := range shown {
+		shown[i].asOf = day.AsOf
+	}
 	ordered := rankAll(shown)
 	bands := bandsOf(ordered)
 	// What never answered, assembled ONCE and used twice: the page names these
