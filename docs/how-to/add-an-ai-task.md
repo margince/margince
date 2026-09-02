@@ -42,6 +42,9 @@ make gen                                   # compiles it into tasks_gen.go
 
 make check                                 # free: every gate names what is missing
 make e2e-ai-report                         # free: your site now shows as `absent`
+
+# 4. carry the new site into the committed certification page
+go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
 ```
 
 **Run `make check` early and often — it is the whole feedback loop.** The gates
@@ -223,7 +226,13 @@ and it caps how much of the site one certification run can cover:
      MODEL=gemini:gemini-3.1-flash-lite \
      JUDGE=anthropic:claude-sonnet-4-6
    make e2e-ai-report                # free: band, scope, binding, counts, scenario coverage
+   go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
    ```
+
+   That last line rewrites
+   [reference/ai-certification.md](../reference/ai-certification.md) from the
+   record the run just wrote. It is free, and `make check` fails until the
+   committed page matches — a band nobody published is a band nobody reads.
 
    `TASK=` takes the name you declared in step 1. A name with no scenarios behind
    it — a typo, or a task nobody has written a corpus for — stops the run with

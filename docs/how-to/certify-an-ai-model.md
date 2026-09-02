@@ -17,9 +17,9 @@ developer/CI tool, never part of a request path.
 > already says, including the ones nothing has ever certified. Read it before you
 > spend — it tells you whether the run you are about to pay for is the missing one.
 
-See also [ai-runtime.md](../explanation/ai-runtime.md),
-[connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md) and
-[add-an-ai-task.md](add-an-ai-task.md) (adding one rather than certifying it).
+See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md),
+[add-an-ai-task.md](add-an-ai-task.md) (adding one rather than certifying it), and
+[reference/ai-certification.md](../reference/ai-certification.md) — the committed page these records render to.
 
 ## Prerequisites
 

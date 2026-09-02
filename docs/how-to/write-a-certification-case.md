@@ -85,7 +85,17 @@ the thing you are measuring is already known to work.
    whatever the model does is worse than no scenario, and
    `TestEveryClosedAnswerKindCarriesAScenario` names the kinds of your site's
    answer enum that still have no accepted scenario (below).
-5. **Then spend**: `make e2e-ai TASK=<task>`, and read the band with
+5. **Regenerate the certification page**, in the same commit as the scenario:
+
+   ```
+   go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
+   ```
+
+   [reference/ai-certification.md](../reference/ai-certification.md) lists every
+   site's scenarios and links each case, so a new scenario reds `make check`
+   until the committed page carries it. The command is free — no model, no
+   network.
+6. **Then spend**: `make e2e-ai TASK=<task>`, and read the band with
    `make e2e-ai-report`.
 
 ## The interface
