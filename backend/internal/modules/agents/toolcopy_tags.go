@@ -19,9 +19,9 @@ var getTagCopy = toolCopy{
 
 var getRecordTagsCopy = toolCopy{
 	Purpose: "Read the tags on one person, company or deal, with who applied each and when.",
-	Limits: "Those three record types only. `withheld` true means the caller may read the record " +
-		"and not the tag vocabulary — it is NOT the same as a record carrying no tags, and must " +
-		"not be reported as one. An archived tag stays on the record it was applied to.",
+	Limits: "Those three record types only. `withheld` true means the vocabulary is not visible " +
+		"to this caller, so the list is empty for that reason — NOT because the record carries no " +
+		"tags, and it must not be reported as none. An archived tag stays on whatever carries it.",
 }
 
 var applyTagCopy = toolCopy{

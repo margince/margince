@@ -5,7 +5,7 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 61,
-    "tokens": 19250,
+    "tokens": 19253,
     "median_tool_tokens": 274,
     "mean_tool_tokens": 315
   },
@@ -286,12 +286,12 @@
       "tokens": 149
     },
     {
-      "name": "list_colleagues",
-      "tokens": 148
+      "name": "get_record_tags",
+      "tokens": 149
     },
     {
-      "name": "get_record_tags",
-      "tokens": 146
+      "name": "list_colleagues",
+      "tokens": 148
     },
     {
       "name": "whoami",

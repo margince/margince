@@ -10,16 +10,16 @@
   "totals": {
     "tools": 61,
     "resources": 9,
-    "tool_catalog_bytes": 177697,
+    "tool_catalog_bytes": 177708,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 45302,
+    "approx_wire_tokens_total": 45305,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 41200,
+      "description_bytes": 41211,
       "input_schema_bytes": 37786,
       "output_schema_bytes": 85524,
-      "description_plus_input_schema_bytes": 78986
+      "description_plus_input_schema_bytes": 78997
     }
   },
   "tools": {
@@ -3511,7 +3511,7 @@
           "readOnlyHint": true,
           "title": "Get a record's tags"
         },
-        "description": "Read the tags on one person, company or deal, with who applied each and when. Those three record types only. `withheld` true means the caller may read the record and not the tag vocabulary — it is NOT the same as a record carrying no tags, and must not be reported as one. An archived tag stays on the record it was applied to. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Read the tags on one person, company or deal, with who applied each and when. Those three record types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty for that reason — NOT because the record carries no tags, and it must not be reported as none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

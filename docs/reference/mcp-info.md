@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 173.5 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 45302 |
+| Approx. wire tokens | 45305 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -3994,7 +3994,7 @@ Learn about an organization by reading its public website, and propose what was 
 
 **Get a record's tags**
 
-Read the tags on one person, company or deal, with who applied each and when. Those three record types only. `withheld` true means the caller may read the record and not the tag vocabulary — it is NOT the same as a record carrying no tags, and must not be reported as one. An archived tag stays on the record it was applied to. (Governance: runs immediately; requires passport scope "read".)
+Read the tags on one person, company or deal, with who applied each and when. Those three record types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty for that reason — NOT because the record carries no tags, and it must not be reported as none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 

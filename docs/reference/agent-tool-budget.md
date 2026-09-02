@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1661 | 6% | 15339 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2509 | 10% | 14491 | 15 | 8 |
-| _whole served catalog, for scale_ | 61 | 19250 | 80% | — | — | — |
+| _whole served catalog, for scale_ | 61 | 19253 | 80% | — | — | — |
 
 ### `morning_brief`
 
@@ -186,8 +186,8 @@ a term in an addition.
 | `read_project_360` | 163 | — |
 | `read_approval` | 160 | — |
 | `commit_import` | 149 | — |
+| `get_record_tags` | 149 | — |
 | `list_colleagues` | 148 | — |
-| `get_record_tags` | 146 | — |
 | `whoami` | 136 | — |
 | `list_tags` | 102 | — |
 | `get_tag` | 94 | — |
