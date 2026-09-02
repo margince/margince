@@ -241,6 +241,27 @@ func (e *Env) As(user ids.UUID, teams []ids.UUID, perms principal.Permissions) c
 // column is a foreign key into app_user.
 func (e *Env) Admin() context.Context { return e.As(e.AdminUser, nil, AdminPerms) }
 
+// AutomationCtx binds the principal a workflow firing stages under: the system
+// actor, acting on behalf of the automation's owner.
+//
+// Both halves matter and they say different things. The system actor is what
+// makes the row a SERVER proposal the approve-side executor may run — an
+// agent-minted one deliberately reaches no executor. on_behalf_of names the
+// human whose decision it waits on, which the authority predicate narrows a held
+// draft by: releasing one SENDS it from the approver's own mailbox, so only the
+// person it goes out as may release it.
+//
+// A staging that omitted the owner would model a row production no longer
+// writes, and it would be decidable by nobody — so a suite using it would prove
+// the release path works against a card no one can press.
+func (e *Env) AutomationCtx(owner ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system", OnBehalfOf: owner,
+	})
+}
+
 // AgentCtx binds a synthetic agent principal for staging (the staging
 // path itself is not what a suite using this is testing).
 //

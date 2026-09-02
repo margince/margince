@@ -162,24 +162,45 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 	return nil
 }
 
-// withSendingOwner names the human an outbound message this firing composes
-// goes out AS.
+// withSendingOwner names the human this firing acts for: whose voice an
+// outbound message it composes is written in, and whose decision anything it
+// stages is waiting on.
 //
 // A message an automation drafts leaves under the OWNER's name, so the owner is
-// who it must sound like. The acting principal stays the system actor —
-// attribution, audit and row scope are all deliberately unmoved, and this value
-// authorizes nothing; the only question that reads it is whose voice to write
-// in (ai.ActiveVoiceForActor). Before it existed, every automated draft resolved
-// the system actor's zero UserID and was written in nobody's voice while a rep
-// with a built profile got their own voice everywhere else.
+// who it must sound like. principal.WithSendingHuman carries that, and
+// ai.ActiveVoiceForActor is its only reader.
 //
-// A system-seeded firing has no owner and binds nothing, which drafts unvoiced —
-// the honest answer for a message no human authored.
+// Held by: TestTheSendingHumanHasOneReader
+// (backend/gates/sendinghumanreaders_test.go), which sweeps the tree for every
+// site reading that value and fails one nobody agreed to. The narrowness IS the
+// safety argument: a value naming a human that authorises nothing stops being
+// safe the moment a second question turns on it.
+//
+// OnBehalfOf carries the same person to the staging layer, where it becomes
+// approval.on_behalf_of — the column the decision-authority predicate narrows a
+// self-only kind by (approvals/authority.go). Without it a held draft is staged
+// with no human recorded, and "the rep it was written for" has no one to be.
+//
+// It does NOT move authority. The acting principal stays the system actor:
+// auth.AuthzRule short-circuits on PrincipalSystem before reading this field,
+// and auth.Gate.Admit returns early for anything that is not an agent. What it
+// does move is attribution, which is the point — storekit writes it to
+// audit_log.on_behalf_of, so the trail says which human's automation acted.
+//
+// A system-seeded firing has no owner and binds neither: it drafts unvoiced, and
+// what it stages is decidable on grants alone. That is the honest answer for a
+// firing no human authored, and it is why the caller must never invent one.
 func withSendingOwner(ctx context.Context, ev workflow.Event) context.Context {
 	if ev.OwnerID == ids.Nil {
 		return ctx
 	}
-	return principal.WithSendingHuman(ctx, ev.OwnerID)
+	ctx = principal.WithSendingHuman(ctx, ev.OwnerID)
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return ctx
+	}
+	actor.OnBehalfOf = ev.OwnerID
+	return principal.WithActor(ctx, actor)
 }
 
 // recordApplyOutcome writes the terminal shape of one Apply call onto its
