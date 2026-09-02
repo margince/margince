@@ -15559,6 +15559,11 @@ type Attention struct {
 	// Counts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 	// queue's own count under its both-sides-visible rule, kept separate because the
 	// lane shows a bounded slice of it.
+	//
+	// A lane whose count is its bounded page says so in its own description. `needs_you`,
+	// `planned` and `commitments` report the TOTAL beside a bounded page, because a badge
+	// that stops at the cap tells a reader with thirteen that they have twelve — and these
+	// lanes offer no second page to find the thirteenth by.
 	Counts AttentionCounts `json:"counts"`
 
 	// DidNotRun Decisions THIS reader approved whose released work then failed, reading
@@ -15740,6 +15745,11 @@ type AttentionThisMorningState string
 // AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
+//
+// A lane whose count is its bounded page says so in its own description. `needs_you`,
+// `planned` and `commitments` report the TOTAL beside a bounded page, because a badge
+// that stops at the cap tells a reader with thirteen that they have twelve — and these
+// lanes offer no second page to find the thirteenth by.
 type AttentionCounts struct {
 	// AiWorkHealth How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures.
 	AiWorkHealth *int `json:"ai_work_health,omitempty"`
@@ -15756,7 +15766,7 @@ type AttentionCounts struct {
 	// CaptureHealth How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page.
 	CaptureHealth *int `json:"capture_health,omitempty"`
 
-	// Commitments How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
+	// Commitments How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
 
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
@@ -15777,7 +15787,9 @@ type AttentionCounts struct {
 
 	// Notices How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
 	Notices *int `json:"notices,omitempty"`
-	Planned int  `json:"planned"`
+
+	// Planned How many pieces of agreed work are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it. The lane shows the soonest-due dozen; the number says how many there are, which is the reading `needs_you` has always had.
+	Planned int `json:"planned"`
 
 	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
 	RelationshipDecay *int `json:"relationship_decay,omitempty"`

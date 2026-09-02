@@ -312,3 +312,69 @@ func TestAPromiseDueExactlyAtTheBoundBelongsToTomorrow(t *testing.T) {
 		t.Fatalf("the lane = %v, want only the promise due before the day ends", got)
 	}
 }
+
+// THE COUNT BESIDE THE PAGE IS THE SAME QUESTION, asked without a bound.
+//
+// The lane shows a dozen and the badge says how many there are, so the two must
+// agree about WHICH promises those are: same owner, same window, same scopes. A
+// count assembled from its own copy of the arms would drift from the cards under
+// it one arm at a time, and nothing would fail to say so.
+func TestTheCommitmentCountAnswersTheSameQuestionAsThePage(t *testing.T) {
+	e := integration.Setup(t)
+	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
+	other := e.SeedPerson(t, "Frau Nachbar", &e.Rep2)
+	todayLater := laneClock.Add(6 * time.Hour)
+	nextWeek := laneClock.AddDate(0, 0, 7)
+	for range 3 {
+		seedPromise(t, e, person, "Heute Nachmittag", &todayLater)
+	}
+	// Neither of these is on this rep's lane: one is due next week, one belongs
+	// to a colleague. A count that included either would be counting a lane the
+	// reader is not looking at.
+	seedPromise(t, e, person, "Nächste Woche", &nextWeek)
+	seedPromise(t, e, other, "Nicht meins", &todayLater)
+
+	store := people.NewStore(e.DB())
+	bound := laneClock.Add(24 * time.Hour)
+	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), bound, 20)
+	if err != nil {
+		t.Fatalf("reading the lane: %v", err)
+	}
+	total, err := store.CountOpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), bound)
+	if err != nil {
+		t.Fatalf("counting the lane: %v", err)
+	}
+	if len(rows) != 3 || total != 3 {
+		t.Fatalf("the page carries %d and the count says %d, want three each — the badge and the "+
+			"cards must be answering the same question", len(rows), total)
+	}
+}
+
+// AND IT COUNTS PAST THE PAGE'S BOUND, which is the whole point: a reader with
+// more than fits is told how many, on a lane with no second page.
+func TestTheCommitmentCountSeesPastTheLanesCap(t *testing.T) {
+	e := integration.Setup(t)
+	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
+	todayLater := laneClock.Add(6 * time.Hour)
+	for range 5 {
+		seedPromise(t, e, person, "Heute Nachmittag", &todayLater)
+	}
+
+	store := people.NewStore(e.DB())
+	bound := laneClock.Add(24 * time.Hour)
+	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), bound, 2)
+	if err != nil {
+		t.Fatalf("reading the lane: %v", err)
+	}
+	total, err := store.CountOpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), bound)
+	if err != nil {
+		t.Fatalf("counting the lane: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("the page carries %d, want the bound of two", len(rows))
+	}
+	if total != 5 {
+		t.Errorf("the count says %d, want five — a badge that stops at the page tells a rep with "+
+			"five that they have two", total)
+	}
+}

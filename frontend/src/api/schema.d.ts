@@ -26244,11 +26244,17 @@ export interface components {
          * @description How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
          *     queue's own count under its both-sides-visible rule, kept separate because the
          *     lane shows a bounded slice of it.
+         *
+         *     A lane whose count is its bounded page says so in its own description. `needs_you`,
+         *     `planned` and `commitments` report the TOTAL beside a bounded page, because a badge
+         *     that stops at the cap tells a reader with thirteen that they have twelve — and these
+         *     lanes offer no second page to find the thirteenth by.
          */
         AttentionCounts: {
             /** @description Briefing items still unanswered in the rep's run for today. */
             this_morning: number;
             needs_you: number;
+            /** @description How many pieces of agreed work are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it. The lane shows the soonest-due dozen; the number says how many there are, which is the reading `needs_you` has always had. */
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
             duplicates_open?: number;
@@ -26256,7 +26262,7 @@ export interface components {
             meetings?: number;
             /** @description How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under. */
             at_risk?: number;
-            /** @description How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
+            /** @description How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
             commitments?: number;
             /** @description How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in. */
             relationship_decay?: number;

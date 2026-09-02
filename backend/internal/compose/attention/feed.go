@@ -253,10 +253,10 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return crmcontracts.Attention{}, err
 	}
 
-	planned, err := s.planned(ctx, asOf, until, s.taskScope)
+	planned, plannedTotal, err := s.planned(ctx, asOf, until, s.taskScope)
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
-		out.Counts.Planned = len(planned)
+		out.Counts.Planned = plannedTotal
 	})
 	if err != nil {
 		return crmcontracts.Attention{}, err
@@ -405,10 +405,20 @@ func interleave(first, second []crmcontracts.AttentionItem, limit int) []crmcont
 
 // planned is today's agreed work, overdue first. The bound is the day's end,
 // resolved once by Assemble so every due-dated lane judges the same afternoon.
-func (s *Service) planned(ctx context.Context, asOf, until time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
+func (s *Service) planned(
+	ctx context.Context, asOf, until time.Time, scope TaskScope,
+) ([]crmcontracts.AttentionItem, int, error) {
 	open, err := s.tasks.OpenForViewer(ctx, until, plannedCap, scope, s.taskOwner)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	// How many there ARE, beside the page. The lane is capped at a dozen, so a
+	// badge of len(items) tells a reader with thirteen that they have twelve —
+	// and there is no second page on this lane to find the thirteenth by. The
+	// same reading needs_you has always had.
+	total, err := s.tasks.CountOpenForViewer(ctx, until, scope, s.taskOwner)
+	if err != nil {
+		return nil, 0, err
 	}
 	items := make([]crmcontracts.AttentionItem, 0, len(open))
 	for _, task := range open {
@@ -419,7 +429,7 @@ func (s *Service) planned(ctx context.Context, asOf, until time.Time, scope Task
 	sort.SliceStable(items, func(i, j int) bool {
 		return overdue(items[i]) && !overdue(items[j])
 	})
-	return items, nil
+	return items, total, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and
