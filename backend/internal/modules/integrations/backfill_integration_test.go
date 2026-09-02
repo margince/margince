@@ -359,6 +359,55 @@ func TestARecordFixedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
 	}
 }
 
+// The employer half of the same advice. Linking a company writes a
+// relationship row and moves nothing on person, so a rule reading only
+// person.updated_at would tell the reader to add the company and then not
+// look until tomorrow — the exact failure the arm above exists to lift.
+func TestAnEmployerLinkedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+
+	hired := e.plantSubjectSkippedFor(t, provider.SkipNoIdentifiers)
+	severed := e.plantSubjectSkippedFor(t, provider.SkipNoIdentifiers)
+
+	e.linkEmployer(t, hired, false)
+	// An archived edge is not a fix: the record still carries no company a
+	// provider could match on, so re-asking would spend a run on nothing.
+	e.linkEmployer(t, severed, true)
+
+	selected := e.sweepSelects(t)
+	if !selected[hired] {
+		t.Error("a contact whose employer was linked after the no-identifiers skip was NOT re-selected: " +
+			"the page told the reader to add the company and then ignored the relationship row it landed in")
+	}
+	if selected[severed] {
+		t.Error("a contact whose only employment edge is archived was re-selected: an archived edge " +
+			"carries no company to match on, so this spends a run on a contact nothing fixed")
+	}
+}
+
+// linkEmployer plants an employment edge dated after the contact's runs,
+// archived or live.
+func (e *runsEnv) linkEmployer(t *testing.T, personID ids.PersonID, archived bool) {
+	t.Helper()
+	ctx := context.Background()
+	var orgID ids.UUID
+	if err := e.owner.QueryRow(ctx, `
+		INSERT INTO organization (display_name, source, captured_by)
+		VALUES ('Sweep Employer', 'test', 'test:sweep')
+		RETURNING id`).Scan(&orgID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO relationship
+		       (kind, person_id, organization_id, is_current_primary, source, captured_by,
+		        updated_at, archived_at)
+		VALUES ('employment', $1, $2, NOT $3, 'test', 'test:sweep',
+		        now() + interval '1 second', CASE WHEN $3 THEN now() END)`,
+		personID, orgID, archived); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // plantSubjectSkippedFor adds a contact whose one run was skipped for the
 // given reason, created now.
 func (e *runsEnv) plantSubjectSkippedFor(t *testing.T, reason provider.SkipReason) ids.PersonID {

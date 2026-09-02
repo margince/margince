@@ -53,10 +53,13 @@ func TestALandedLinkedinFillReachesTheSocialSlot(t *testing.T) {
 	personID, _ := e.seedEmployedPerson(ctx, t,
 		"Nora Vik", "nora@slotfill.test", "Vik AS", "slotfill.test")
 
-	const url = "https://www.linkedin.com/in/nora-vik/"
+	// The trailing slash is deliberate: the slot stores the normalized
+	// spelling (the dedupe key's), not the verbatim evidence value.
+	const observed = "https://www.linkedin.com/in/nora-vik/"
+	const normalized = "https://www.linkedin.com/in/nora-vik"
 	applied, err := e.store.ApplyDiscoveredFields(ctx, personID, []DiscoveredField{{
 		Field:           "linkedin",
-		Value:           url,
+		Value:           observed,
 		EvidenceSnippet: "Nora Vik — Vik AS",
 		SourceRef:       "search:slotfill",
 	}})
@@ -66,8 +69,8 @@ func TestALandedLinkedinFillReachesTheSocialSlot(t *testing.T) {
 	if len(applied) != 1 {
 		t.Fatalf("applied = %v, want the linkedin fill to land", applied)
 	}
-	if got := storedLinkedinHandle(ctx, t, e, personID); got != url {
-		t.Errorf("linkedin slot = %q, want %q: the evidence row landed without reaching the record", got, url)
+	if got := storedLinkedinHandle(ctx, t, e, personID); got != normalized {
+		t.Errorf("linkedin slot = %q, want %q: the evidence row landed without reaching the record", got, normalized)
 	}
 }
 

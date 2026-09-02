@@ -220,6 +220,18 @@ func fillEmptyLinkedinSlot(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	if !isLinkedinURL(value) {
 		return nil
 	}
+	// One stored spelling, through the same normalizer the exact-match dedupe
+	// key uses: the slot this fills is compared verbatim elsewhere, and a
+	// tracked, unschemed or trailing-slash variant of one profile would read
+	// as a different one. A value the normalizer refuses (a non-http scheme,
+	// an unparseable URL) is a skipped fill, not a fault — the evidence row
+	// keeps the verbatim claim either way.
+	normalized, err := NormalizeLinkedInURL(value)
+	if err != nil {
+		//nolint:nilerr // a value the normalizer refuses is a skipped fill, not a fault
+		return nil
+	}
+	value = normalized
 	// The row probe, restated here rather than inherited: every caller funnels
 	// through writePersonProfileField, whose entry points each probe the row,
 	// but this write reaches person_social and the person row itself, and the

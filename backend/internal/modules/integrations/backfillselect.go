@@ -46,15 +46,29 @@ const sweepRetryAfter = "1 day"
 // says the record carried no profile link and no company, and the section
 // tells the reader to add one — so holding them back for a full day would be
 // telling somebody to do something and then ignoring it until tomorrow.
-// `p.updated_at > r.created_at` is the cheapest honest test that the record
-// changed since we looked; the identifier check at queue time is what decides
-// whether it changed in a way that helps, so a passing contact that gained
-// only a phone number is skipped again for the price of one row.
+//
+// "The record changed since we looked" has two homes, because the two things
+// the page asks for land in different tables. A profile link bumps the person
+// row itself (the social slot is part of the person aggregate). An employer
+// is a relationship row, and linking one moves NOTHING on person — so the
+// test also watches for an employment edge younger than the run, or a
+// contact whose employer arrived seconds after the skip would wait out the
+// full cooldown the arm exists to lift. Loose on purpose: whether the edge
+// is current-primary is the queue-time identifier check's question, and a
+// passing contact that gained only an ended employment is skipped again for
+// the price of one row.
 const coveredByARun = `
 	r.state IN ('queued', 'submitting', 'in_progress', 'completed', 'no_match')
 	OR (r.state IN ('skipped', 'failed', 'cancelled', 'submission_unknown')
 	    AND r.created_at > now() - interval '` + sweepRetryAfter + `'
-	    AND NOT (r.skip_reason = 'no_identifiers' AND p.updated_at > r.created_at))`
+	    AND NOT (r.skip_reason = 'no_identifiers'
+	             AND (p.updated_at > r.created_at
+	                  OR EXISTS (
+	                      SELECT 1 FROM relationship employer
+	                       WHERE employer.person_id = p.id
+	                         AND employer.kind = 'employment'
+	                         AND employer.archived_at IS NULL
+	                         AND employer.updated_at > r.created_at))))`
 
 // uncoveredSubjects names the contacts this tick should queue.
 //
