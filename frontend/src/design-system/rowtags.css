@@ -1,0 +1,29 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* The row's chip strip does NOT wrap. A table cell that grows a second line
+   pushes every row below it down, and a page of fifty rows stops being a
+   scannable grid — the "+N" is what keeps one row one line high. */
+.rowtags {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+}
+
+/* A button because the words behind the count must be reachable on focus, not
+   a button because it looks like one: no chrome, no fill, no border. */
+.rowtags-rest {
+  color: var(--textMeta);
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: default;
+}
+
+.rowtags-rest:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}

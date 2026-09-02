@@ -1790,6 +1790,12 @@ export const en = {
   "co.recent.re": "on a deal",
   "co.recent.reNamed": "on {name}",
   "tags.archived": "archived",
+  "tags.columnHeader": "Tags",
+  "tags.filterAll": "Any tag",
+  "tags.moreUncounted": "more",
+  "tags.moreUncountedTip":
+    "Including {names}. Open the record for the full set.",
+  "tags.columnHeaderPartial": "Tags (partial list)",
   "tags.loading": "Loading tags…",
   "tags.panelTitle": "Tags",
   "tags.panelSub": "Open a tag, or use its menu to manage this assignment",
@@ -5653,6 +5659,8 @@ export const en = {
   "captureActivity.reason.derivation_failed":
     "the contact step failed; the message itself is unaffected",
   "captureActivity.reason.no_counterparty": "no sender this CRM could record",
+  "captureActivity.reason.role_mailbox":
+    "a shared mailbox, not a person — kept, but no contact created",
   "captureActivity.reason.transactional_infra":
     "the sender is mail infrastructure, not a company you work with",
   "captureActivity.reason.transactional_prefix":
@@ -5709,6 +5717,8 @@ export const en = {
   "pipeline.reason.noise_prior": "a previous verdict judged this sender noise",
   "pipeline.reason.decided_prior": "this sender was already decided",
   "pipeline.reason.no_counterparty": "no sender this CRM could record",
+  "pipeline.reason.role_mailbox":
+    "a shared mailbox, not a person — kept, but no contact created",
   "pipeline.reason.no_granting_human":
     "the connection named no member to act for",
   "pipeline.reason.derivation_failed":

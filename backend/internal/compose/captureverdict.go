@@ -235,6 +235,9 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 	if decided {
 		return e.applyOwnerDecision(ctx, row, kind)
 	}
+	if addressIsARoleMailbox(row.Email) {
+		return e.applyJudged(ctx, row, capture.KindRoleMailbox)
+	}
 	answers, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err

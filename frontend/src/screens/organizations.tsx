@@ -119,6 +119,7 @@ import {
   listFetchLimit,
   useListQuery,
   useOwnerChips,
+  useTagChips,
 } from "./listquery";
 import { PersonMeetingBrief } from "./meetingbrief";
 import { PartnerTab } from "./partners";
@@ -142,9 +143,11 @@ import {
   mineEmptyNote,
   ownerColumn,
   standardViews,
+  tagsColumn,
 } from "./recordlist";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
+import { listQueryParams } from "./tagfilter";
 import {
   TaskDetailModal,
   TaskQuickActions,
@@ -205,7 +208,7 @@ async function fetchOrganizationsPage(
         include_archived: query.includeArchived || undefined,
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        ...query.filters,
+        ...listQueryParams(query.filters),
       },
     },
   });
@@ -569,6 +572,7 @@ export function CompaniesScreen() {
   // nothing — the same reason the deal list builds its owner chip this way.
   const viewerId = useViewerId();
   const ownerChips = useOwnerChips();
+  const tagChips = useTagChips();
   const savedViews = useSavedViewTabs("organizations");
   // Beside the owner dial rather than in `chips`, and the reason is the option
   // labels. A `chips` entry runs every label through `t()`, so its options must
@@ -643,6 +647,7 @@ export function CompaniesScreen() {
             header: t("org.description"),
             cell: (org: Organization) => org.description ?? "",
           },
+          tagsColumn<Organization>(t),
           {
             key: "website",
             header: t("org.website"),
@@ -718,7 +723,7 @@ export function CompaniesScreen() {
         tools={<SaveViewAction resource="organizations" query={state.query} />}
         rowKey={(org) => org.id}
         rowRoute={(org) => ({ screen: "companies", id: org.id })}
-        dataChips={[...ownerChips, ...sizeChip]}
+        dataChips={[...ownerChips, ...sizeChip, ...tagChips]}
         chips={[
           {
             key: "lifecycle",
