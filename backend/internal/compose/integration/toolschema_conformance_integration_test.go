@@ -272,6 +272,8 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"list_tags": "same missing tag.read as apply_tag above — and unlike remove_tag it shares its " +
 		"answer shape with nothing else here, so this waiver leaves that shape unproven rather " +
 		"than proven elsewhere",
+	"get_tag": "same missing tag.read as apply_tag above, and the same unproven answer shape as " +
+		"list_tags: TagDetail is read back by nothing else in this sweep",
 	"book_meeting":         "needs a live calendar provider",
 	"send_email":           "needs an outbound mail provider",
 	"send_account_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",
