@@ -19,18 +19,18 @@ import (
 // ranking never sees is a lane the reader was told to read separately, which is
 // the arrangement this endpoint exists to end.
 //
-// The date is a deal's expected close date (applyDealFigures, dealfacts.go),
-// not a deadline the reader owes — so unlike classifyTask this never claims
-// due_today for it: a close date three months out is not due today, and this
-// lane runs no query narrowing it to today the way the task queue's
-// OpenAndDueBy does. Overdue is the one fact worth stamping, because a close
-// date that has already passed is exactly the "deal drifts" this row exists
-// to say.
+// The date is a deal's expected close date (applyDealFigures, dealfacts.go) —
+// the same fact classifyRisk's "deals_at_risk" rows carry, so this reads it
+// the way that sibling does rather than the way classifyTask reads a task's
+// due date: closing_soon whenever a date is set, never due_today, because a
+// close date three months out is a forecast and not work owed for today. The
+// deadline is still stamped, so a passed close date orders and badges as
+// overdue exactly as it would on the risk lane's own row for the same deal.
 func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
 	stampDeadline(&row, item.DueAt, asOf)
-	if overdueAt(item.DueAt, asOf) {
-		row.Because = append(row.Because, reason("overdue", nil))
+	if item.DueAt != nil {
+		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
 	return ranked{
 		item:       row,

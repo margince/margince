@@ -21,6 +21,9 @@ import type {
 } from "./worklist.queries";
 
 const t: Translator = (key, params) => translate("en", key, params);
+// The "still renders a full date" case below only asserts the year, so the
+// viewer's own zone stands in rather than a pinned literal
+// (format/zone-by-purpose.test.ts).
 const zone = viewerZone();
 
 describe("comparisonText", () => {

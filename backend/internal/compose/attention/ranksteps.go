@@ -203,7 +203,7 @@ var rankSteps = []rankStep{
 		// apart both waited "12 days", and offering "12 against 12" as the
 		// reason decided nothing a reader could check.
 		explain: func(a, b ranked) crmcontracts.WorklistComparison {
-			aDays, bDays := occurredDaysOf(a.occurredAt, a.asOf), occurredDaysOf(b.occurredAt, b.asOf)
+			aDays, bDays := daysSince(a.occurredAt, a.asOf), daysSince(b.occurredAt, b.asOf)
 			if aDays == bDays {
 				return crmcontracts.WorklistComparison{
 					Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,

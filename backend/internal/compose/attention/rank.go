@@ -294,14 +294,13 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 	return value
 }
 
-// occurredDaysOf turns an occurrence instant into the age the occurrence step
-// reports, against the same asOf the row was classified with — deadline.DaysPast
-// read backwards, since "whole days past" and "whole days ago" are the same
-// arithmetic on two instants. Zero for a row read before its own occurredAt,
-// under clock skew between two reads of one page: that is not a wait from the
-// future.
-func occurredDaysOf(occurred, asOf time.Time) int {
-	days, _ := deadline.DaysPast(&occurred, asOf)
+// daysSince is how many whole days ago `from` was, against `asOf` —
+// deadline.DaysPast read backwards, since "whole days past" and "whole days
+// ago" are the same arithmetic on two instants. Zero when `from` is not
+// before `asOf` — a row read before its own occurrence or deadline, under
+// clock skew between two reads of one page, is not aged from the future.
+func daysSince(from, asOf time.Time) int {
+	days, _ := deadline.DaysPast(&from, asOf)
 	return days
 }
 

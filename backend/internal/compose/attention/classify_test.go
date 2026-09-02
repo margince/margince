@@ -32,15 +32,15 @@ func TestClassifyBriefItemStampsItsDeadline(t *testing.T) {
 	if !got.overdue {
 		t.Fatal("a close date in the past was not marked overdue")
 	}
-	if !hasReasonKind(got.item.Because, "overdue") {
-		t.Fatalf("because = %+v, wanted an overdue reason", got.item.Because)
-	}
 }
 
-// A close date months out is a forecast, not work owed: unlike a task's due
-// date, it never claims due_today — that word means the reader owes it
-// TODAY, and a deal closing three months out is not.
-func TestClassifyBriefItemNeverClaimsAFutureCloseDateIsDueToday(t *testing.T) {
+// The date is a deal's expected close date, the same fact classifyRisk's own
+// "deals_at_risk" row carries for the identical deal — so it reads closing_soon
+// the way that sibling does, never due_today (a word that means the reader
+// owes it TODAY, which a deal closing in three months is not) and never a
+// second "overdue" sentence classifyRisk does not say either — the badge
+// already carries that, from the SAME deadlineAt this stamps.
+func TestClassifyBriefItemNamesTheCloseDateLikeItsRiskLaneSibling(t *testing.T) {
 	closes := rankInstant.Add(90 * 24 * time.Hour)
 	item := crmcontracts.AttentionItem{
 		Id:     "brief-2",
@@ -55,6 +55,12 @@ func TestClassifyBriefItemNeverClaimsAFutureCloseDateIsDueToday(t *testing.T) {
 	}
 	if hasReasonKind(got.item.Because, "due_today") {
 		t.Fatalf("because = %+v, a close date three months out is not due today", got.item.Because)
+	}
+	if hasReasonKind(got.item.Because, "overdue") {
+		t.Fatalf("because = %+v, overdue is the badge's job (item.Overdue), not a because reason here", got.item.Because)
+	}
+	if !hasReasonKind(got.item.Because, "closing_soon") {
+		t.Fatalf("because = %+v, wanted closing_soon — the same reason classifyRisk gives the identical fact", got.item.Because)
 	}
 	if got.deadlineAt.IsZero() {
 		t.Fatal("deadlineAt is zero even with a close date set; a far-future date must still reach the ordering")

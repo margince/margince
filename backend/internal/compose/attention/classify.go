@@ -237,7 +237,7 @@ const waitingDaysCeiling = 30
 // an empty composer would be worse than no button.
 func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	subject := waiting.Subject
-	days := occurredDaysOf(waiting.Since, asOf)
+	days := daysSince(waiting.Since, asOf)
 	// Stale and unfunded: the row belongs to review, not to today.
 	level := levelWaiting
 	stale := days > waitingStaleDays && !waiting.HasOpenDeal
