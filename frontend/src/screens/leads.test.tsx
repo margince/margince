@@ -2203,16 +2203,25 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    // Said wherever the score is: the score card and the reading beside it
-    // both carry the figure, so both say what stands behind it — exactly
-    // two, so neither surface can drop the sentence unnoticed.
-    await waitFor(() =>
-      expect(
-        screen.getAllByText(
-          "The breakdown for this score isn\u2019t stored yet — the next update will show it.",
-        ),
-      ).toHaveLength(2),
+    // Said wherever the score is. The score card states it in the open; the
+    // reading beside it keeps its receipt behind its "How it stands" door, so
+    // the sentence is counted once before that door opens and twice after —
+    // exactly, so neither surface can drop it unnoticed.
+    const notStored =
+      "The breakdown for this score isn\u2019t stored yet — the next update will show it.";
+    await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(1));
+    const grid = document.querySelector(".readings-grid");
+    if (!(grid instanceof HTMLElement)) {
+      throw new Error("the lead's readings row is not on the page");
+    }
+    const scoreCard = within(grid).getByText("Score").closest(".stat-card");
+    if (!(scoreCard instanceof HTMLElement)) {
+      throw new Error("the score reading is not a card in the readings row");
+    }
+    await userEvent.click(
+      within(scoreCard).getByRole("button", { name: "How it stands" }),
     );
+    await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(2));
     expect(screen.queryByText("What this score has to work with:")).toBeNull();
     expect(
       screen.queryByText("Nothing counted toward this score yet."),
