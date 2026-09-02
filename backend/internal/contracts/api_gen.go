@@ -9789,6 +9789,7 @@ const (
 	SearchResultTypeOrganization SearchResultType = "organization"
 	SearchResultTypePerson       SearchResultType = "person"
 	SearchResultTypeProject      SearchResultType = "project"
+	SearchResultTypeTag          SearchResultType = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchResultType enum.
@@ -9805,6 +9806,8 @@ func (e SearchResultType) Valid() bool {
 	case SearchResultTypePerson:
 		return true
 	case SearchResultTypeProject:
+		return true
+	case SearchResultTypeTag:
 		return true
 	default:
 		return false
@@ -14145,6 +14148,7 @@ const (
 	SearchParamsTypesOrganization SearchParamsTypes = "organization"
 	SearchParamsTypesPerson       SearchParamsTypes = "person"
 	SearchParamsTypesProject      SearchParamsTypes = "project"
+	SearchParamsTypesTag          SearchParamsTypes = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchParamsTypes enum.
@@ -14161,6 +14165,8 @@ func (e SearchParamsTypes) Valid() bool {
 	case SearchParamsTypesPerson:
 		return true
 	case SearchParamsTypesProject:
+		return true
+	case SearchParamsTypesTag:
 		return true
 	default:
 		return false

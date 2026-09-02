@@ -222,3 +222,58 @@ func TestAListRowOmitsArchivedTags(t *testing.T) {
 		}
 	}
 }
+
+// A tag is findable by name in search. Finding the WORD is the step before
+// finding the records that carry it, and without it a reader has to know the
+// vocabulary already.
+func TestSearchFindsATagByName(t *testing.T) {
+	e := tagEnv(t)
+	createTag(t, e, "Key Account")
+
+	var page struct {
+		Data []struct {
+			Type  string `json:"type"`
+			ID    string `json:"id"`
+			Title string `json:"title"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/search?q=Key", nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("searching: status=%d", status)
+	}
+	var found bool
+	for _, hit := range page.Data {
+		if hit.Type == "tag" && hit.Title == "Key Account" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("search for a tag name returned %+v, which carries no tag hit", page.Data)
+	}
+}
+
+// A retired word is not a search hit: it is not in the picker, so a hit on one
+// leads to a page nobody can act on.
+func TestSearchOmitsAnArchivedTag(t *testing.T) {
+	e := tagEnv(t)
+	tag := createTag(t, e, "Retired Word")
+
+	var archived integration.AnyMap
+	if status := e.Call(t, "DELETE", "/v1/tags/"+tag, nil, nil, &archived); status != http.StatusOK {
+		t.Fatalf("archiving: status=%d body=%v", status, archived)
+	}
+
+	var page struct {
+		Data []struct {
+			Type  string `json:"type"`
+			Title string `json:"title"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/search?q=Retired", nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("searching: status=%d", status)
+	}
+	for _, hit := range page.Data {
+		if hit.Type == "tag" {
+			t.Errorf("a retired word is a search hit: %+v", hit)
+		}
+	}
+}

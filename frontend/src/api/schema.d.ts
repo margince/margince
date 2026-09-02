@@ -22476,7 +22476,7 @@ export interface components {
         };
         SearchResult: {
             /** @enum {string} */
-            type: "person" | "organization" | "deal" | "activity" | "lead" | "project";
+            type: "person" | "organization" | "deal" | "activity" | "lead" | "project" | "tag";
             /** Format: uuid */
             id: string;
             /** @description Display label (name/subject). */
@@ -36822,7 +36822,7 @@ export interface operations {
                 /** @description The search query. */
                 q: string;
                 /** @description Restrict to these object types (default all). */
-                types?: ("person" | "organization" | "deal" | "activity" | "lead" | "project")[];
+                types?: ("person" | "organization" | "deal" | "activity" | "lead" | "project" | "tag")[];
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset

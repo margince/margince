@@ -8218,7 +8218,7 @@ paths:
           in: query
           schema:
             type: array
-            items: { type: string, enum: [person, organization, deal, activity, lead, project] }
+            items: { type: string, enum: [person, organization, deal, activity, lead, project, tag] }
           style: form
           explode: false
           description: Restrict to these object types (default all).
@@ -30925,7 +30925,10 @@ components:
       type: object
       required: [type, id]
       properties:
-        type: { type: string, enum: [person, organization, deal, activity, lead, project] }
+        # `tag` is a WORD, not a record: finding it is the step before finding
+        # the records that carry it, and without it a reader has to know the
+        # vocabulary already.
+        type: { type: string, enum: [person, organization, deal, activity, lead, project, tag] }
         id: { type: string, format: uuid }
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }

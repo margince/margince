@@ -2361,6 +2361,7 @@ public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_mirror_conflict_class CREATE INDEX idx_system_log_mirror_conflict_class ON public.system_log USING btree (((detail ->> 'object_class'::text)), occurred_at DESC) WHERE (action = 'mirror.conflict'::text)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
+public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
 public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable USING btree (entity_type, entity_id)
 public.idx_taggable_tag CREATE INDEX idx_taggable_tag ON public.taggable USING btree (tag_id)
 public.idx_team_membership_team CREATE INDEX idx_team_membership_team ON public.team_membership USING btree (team_id)
@@ -4429,6 +4430,7 @@ public.tag.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.tag.description text gen=- def=-
 public.tag.id uuid NOT NULL gen=- def=uuidv7()
 public.tag.name text NOT NULL gen=- def=-
+public.tag.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
 public.tag.tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text]))))
 public.tag.tag_pkey PRIMARY KEY (id)
 public.tag.trg_tag_updated CREATE TRIGGER trg_tag_updated BEFORE UPDATE ON public.tag FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
