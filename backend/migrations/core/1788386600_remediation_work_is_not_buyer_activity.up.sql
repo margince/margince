@@ -23,9 +23,19 @@
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE activity
-    ADD COLUMN origin text NOT NULL DEFAULT 'human',
+    ADD COLUMN origin text NOT NULL DEFAULT 'human';
+
+-- NOT VALID first, then VALIDATE: a validated CHECK scans the whole table under
+-- ACCESS EXCLUSIVE, and lock_timeout bounds only how long we WAIT for the lock,
+-- never how long we hold it once scanning. On an installation whose activity
+-- table holds years of captured mail that is every capture blocked for the
+-- length of the scan. NOT VALID takes the lock briefly, VALIDATE re-reads under
+-- a weaker one, and the constraint ends up enforced either way.
+ALTER TABLE activity
     ADD CONSTRAINT activity_origin_check
-        CHECK (origin IN ('human', 'agent', 'system_remediation'));
+        CHECK (origin IN ('human', 'agent', 'system_remediation')) NOT VALID;
+
+ALTER TABLE activity VALIDATE CONSTRAINT activity_origin_check;
 
 -- The default exists so the ALTER does not rewrite the table, not so a caller
 -- can stay silent: LogActivityInput.Origin states it on every write.
@@ -98,3 +108,28 @@ CREATE OR REPLACE FUNCTION last_activity_of_project(pid uuid) RETURNS timestampt
      AND a.origin <> 'system_remediation'
    WHERE l.project_id = pid
 $$;
+
+-- The triggers have to learn about origin too, for the same reason they had to
+-- learn about audience: they fire on occurred_at, archived_at and audience, so
+-- relabelling an activity's origin would change what the helpers WOULD answer
+-- while nothing asked them again, leaving the stored clock on its old value
+-- until some unrelated edit happened to move it.
+DROP TRIGGER activity_last_activity ON activity;
+CREATE TRIGGER activity_last_activity
+	AFTER UPDATE OF occurred_at, archived_at, audience, origin ON activity
+	FOR EACH ROW
+	WHEN (old.occurred_at IS DISTINCT FROM new.occurred_at
+	   OR old.archived_at IS DISTINCT FROM new.archived_at
+	   OR old.audience IS DISTINCT FROM new.audience
+	   OR old.origin IS DISTINCT FROM new.origin)
+	EXECUTE FUNCTION trg_activity_last_activity();
+
+DROP TRIGGER activity_project_last_activity ON activity;
+CREATE TRIGGER activity_project_last_activity
+	AFTER UPDATE OF occurred_at, archived_at, audience, origin ON activity
+	FOR EACH ROW
+	WHEN (old.occurred_at IS DISTINCT FROM new.occurred_at
+	   OR old.archived_at IS DISTINCT FROM new.archived_at
+	   OR old.audience IS DISTINCT FROM new.audience
+	   OR old.origin IS DISTINCT FROM new.origin)
+	EXECUTE FUNCTION trg_activity_project_last_activity();

@@ -158,3 +158,39 @@ func sortStrings(s []string) {
 		}
 	}
 }
+
+// recencyReadersOutsideTheHelpers are the Go queries that compute "when was
+// this last touched" WITHOUT going through the four SQL helpers. Each one is a
+// second spelling of the same question, so each carries the same exclusion.
+//
+// This half of the census exists because the SQL half cannot see them: a
+// reader that runs its own max(occurred_at) is invisible to a gate that only
+// reads migrations, and it was four such readers — not the helpers — that
+// still counted remediation work when this column first landed.
+// gatekit:fixture the reader files this census covers and what each computes —
+// expected data naming the subjects, not waivers excusing them.
+var recencyReadersOutsideTheHelpers = map[string]string{
+	"internal/modules/activities/lasttouch.go":       "genuine engagement for the quiet-record scan",
+	"internal/modules/deals/health.go":               "the record behind deal.last_activity_at",
+	"internal/modules/activities/projectcoverage.go": "Project 360's last activity",
+	"internal/modules/people/lead_read.go":           "the lead's last-touch clock",
+}
+
+// TestRecencyReadersOutsideTheHelpersExcludeRemediation holds the Go side.
+func TestRecencyReadersOutsideTheHelpersExcludeRemediation(t *testing.T) {
+	t.Parallel()
+
+	for file, what := range recencyReadersOutsideTheHelpers {
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			t.Errorf("%s (%s): %v — a reader named here must exist, or this "+
+				"census is guarding a file that moved", file, what, err)
+			continue
+		}
+		if !strings.Contains(string(raw), remediationOrigin) {
+			t.Errorf("%s computes %s and does not mention %q — a second spelling "+
+				"of last_activity_at that still counts work the product filed "+
+				"about the record", file, what, remediationOrigin)
+		}
+	}
+}

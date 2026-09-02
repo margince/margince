@@ -63,6 +63,26 @@ CREATE OR REPLACE FUNCTION last_activity_of_project(pid uuid) RETURNS timestampt
    WHERE l.project_id = pid
 $$;
 
+-- The triggers must stop watching origin BEFORE the column goes, or Postgres
+-- refuses the drop: a trigger's UPDATE OF column list is a real dependency.
+DROP TRIGGER activity_last_activity ON activity;
+CREATE TRIGGER activity_last_activity
+	AFTER UPDATE OF occurred_at, archived_at, audience ON activity
+	FOR EACH ROW
+	WHEN (old.occurred_at IS DISTINCT FROM new.occurred_at
+	   OR old.archived_at IS DISTINCT FROM new.archived_at
+	   OR old.audience IS DISTINCT FROM new.audience)
+	EXECUTE FUNCTION trg_activity_last_activity();
+
+DROP TRIGGER activity_project_last_activity ON activity;
+CREATE TRIGGER activity_project_last_activity
+	AFTER UPDATE OF occurred_at, archived_at, audience ON activity
+	FOR EACH ROW
+	WHEN (old.occurred_at IS DISTINCT FROM new.occurred_at
+	   OR old.archived_at IS DISTINCT FROM new.archived_at
+	   OR old.audience IS DISTINCT FROM new.audience)
+	EXECUTE FUNCTION trg_activity_project_last_activity();
+
 ALTER TABLE activity
     DROP CONSTRAINT IF EXISTS activity_origin_check,
     DROP COLUMN IF EXISTS origin;
