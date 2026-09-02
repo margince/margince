@@ -2326,6 +2326,14 @@ export const en = {
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan next week",
+  // The head of the ranked queue, on the page a rep opens first. The same rows
+  // the Worklist draws, in the order the server decided.
+  "brief.donext.title": "Do next",
+  "brief.donext.sub": "One order, from your worklist.",
+  "brief.donext.loading": "Reading what waits on you",
+  "brief.donext.clear": "Nothing is waiting on you right now.",
+  "brief.donext.rest": "{count} more on the worklist",
+
   // A team's week, frozen when it closed. Two weeks compare because neither
   // moves under the comparison.
   "teamweekly.title": "The team's week",

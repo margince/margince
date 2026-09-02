@@ -2273,6 +2273,14 @@ export const vi = {
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
   "plan.title": "Lập kế hoạch tuần tới",
+  // Phần đầu của danh sách đã xếp hạng, trên trang mở đầu tiên — cùng những
+  // dòng mà Danh sách công việc hiển thị, theo thứ tự máy chủ đã quyết định.
+  "brief.donext.title": "Làm tiếp theo",
+  "brief.donext.sub": "Một thứ tự, từ danh sách công việc của bạn.",
+  "brief.donext.loading": "Đang đọc những gì đang chờ bạn",
+  "brief.donext.clear": "Hiện không có gì đang chờ bạn.",
+  "brief.donext.rest": "{count} mục khác trong danh sách công việc",
+
   // Tuần của một nhóm, đóng băng khi tuần khép lại. Hai tuần so sánh được vì
   // không tuần nào dịch chuyển dưới phép so sánh.
   "teamweekly.title": "Tuần của nhóm",
