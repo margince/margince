@@ -1264,6 +1264,12 @@
   margin: var(--space-1) 0 0;
   padding: 0;
 }
+/* The stack reads as information, not as a verb: the aside still opens on
+   hover, click and focus, but a pointer cursor would promise a navigation
+   the trigger does not make. */
+.co-person-routes .popover-trigger {
+  cursor: default;
+}
 
 /* A signal row: a coloured dot the row's severity comes from, the finding,
    then when it was seen. Mirrors person360.css's own .pe-signal/.pe-dot pair,
