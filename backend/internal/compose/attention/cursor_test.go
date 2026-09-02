@@ -591,3 +591,69 @@ func TestIndistinguishableAnchorsDoNotStallAWalk(t *testing.T) {
 		t.Fatal("the walk made no progress; a cursor on a duplicated id would repeat forever")
 	}
 }
+
+// Naming yourself and omitting the owner must return the SAME page.
+//
+// resolveOwner collapses the two onto one resolved question, which changes
+// which branch the read takes: a self-named owner used to go through
+// forOwner/TasksOwnedBy and now falls through to forReader/TasksMine. Those
+// two are equivalent for this case by construction — one files the query under
+// actor.UserID, the other under an owner that IS actor.UserID — but "by
+// construction" is the kind of claim that stops being true quietly, so it is
+// checked against the assembled page rather than argued.
+func TestNamingYourselfAnswersTheSamePageAsOmittingTheOwner(t *testing.T) {
+	t.Parallel()
+
+	build := func() *Service {
+		svc := NewService(
+			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
+			stubBriefing{}, nil, nil, nil, nil,
+			nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		svc.waiting = waitingOwnedBy{
+			{
+				ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000b1"),
+				Subject:    "their own customer",
+				Since:      readInstant.Add(-3 * 24 * time.Hour), OwnerID: theManager,
+			},
+			{
+				ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000b2"),
+				Subject:    "somebody else's customer",
+				Since:      readInstant.Add(-2 * 24 * time.Hour), OwnerID: theRep,
+			},
+		}
+		svc.teammates = teammatesSaying(true)
+		return svc
+	}
+
+	omitted, err := build().Worklist(managerReading(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("reading with the owner omitted: %v", err)
+	}
+	named, err := build().Worklist(managerReading(), "", "", theManager, 25, "")
+	if err != nil {
+		t.Fatalf("reading with the owner named as yourself: %v", err)
+	}
+
+	rows := func(out crmcontracts.Worklist) []string {
+		got := []string{}
+		for _, row := range out.Queue {
+			got = append(got, string(row.Source)+"|"+row.Id)
+		}
+		return got
+	}
+	left, right := rows(omitted), rows(named)
+	if len(left) == 0 {
+		t.Fatal("both reads were empty; this test would pass vacuously")
+	}
+	if len(left) != len(right) {
+		t.Fatalf("two spellings of one question answered differently: %v against %v", left, right)
+	}
+	for i := range left {
+		if left[i] != right[i] {
+			t.Errorf("row %d differs between the two spellings: %q against %q", i, left[i], right[i])
+		}
+	}
+	if omitted.Scope != named.Scope {
+		t.Errorf("the two spellings reported different scopes: %q against %q", omitted.Scope, named.Scope)
+	}
+}
