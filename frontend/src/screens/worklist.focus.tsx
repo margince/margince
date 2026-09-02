@@ -100,6 +100,14 @@ function worthFocusing(item: WorklistItem): boolean {
   if (item.band === "review" || item.primary_action === undefined) {
     return false;
   }
+  // `acknowledge` names no record to route to — the same reason WorklistRow's
+  // own VERB_DESTINATION table excludes it. Excluded here explicitly, not
+  // left to `rowHref` coming back undefined: a notice ever gaining a subject
+  // href would otherwise arm this as a link to nowhere the reader clicks
+  // expecting "I've seen this".
+  if (item.primary_action === "acknowledge") {
+    return false;
+  }
   // And somewhere for the verb to GO. A row filed under no record — a task
   // nobody linked to anything — has no address at all: rowHref falls through
   // the subject and the source-queue map and finds none. The card would then

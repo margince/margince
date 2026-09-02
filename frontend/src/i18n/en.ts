@@ -7595,6 +7595,8 @@ export const en = {
   "worklist.focus.verb.merge": "Review the pair",
   "worklist.focus.verb.complete": "Complete it",
   "worklist.focus.verb.act": "Act on it",
+  // Required by the template's key type, never produced: worthFocusing
+  // excludes primary_action "acknowledge" before this key is ever built.
   "worklist.focus.verb.acknowledge": "Acknowledge",
   "worklist.focus.verb.open": "Open it",
   "worklist.focus.verb.snooze": "Open it",
@@ -7753,7 +7755,8 @@ export const en = {
   "worklist.verb.open": "Open",
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
-  "worklist.verb.acknowledge": "Open",
+  "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.source.failed": "{source} could not be read",
   "worklist.source.withheld": "{source} is hidden from your account",
   "worklist.untitled.generic": "Something needs you",
