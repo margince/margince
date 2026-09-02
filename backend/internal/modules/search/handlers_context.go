@@ -38,6 +38,12 @@ const (
 var contextAnchorTypes = func() string {
 	names := make([]string, 0, len(searchBranches))
 	for _, branch := range searchBranches {
+		// A text-only branch is not an anchor: a word has no neighbours to
+		// return, so naming one here would advertise a read that answers
+		// nothing.
+		if branch.textOnly {
+			continue
+		}
 		names = append(names, branch.entity)
 	}
 	return strings.Join(names, ", ")
