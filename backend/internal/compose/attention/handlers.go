@@ -64,6 +64,27 @@ func (h Handlers) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// GetResponseMetrics answers how fast the workspace replies over a window.
+//
+// The window is the ONE parameter, and it is a length rather than a pair of
+// instants: a caller naming both ends could ask for a window the figures were
+// never meant to describe, and every reader of this endpoint wants "the last N
+// days" rather than an arbitrary fortnight in the past.
+func (h Handlers) GetResponseMetrics(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.GetResponseMetricsParams,
+) {
+	days := 0
+	if params.Days != nil {
+		days = *params.Days
+	}
+	out, err := h.svc.ResponseMetrics(r.Context(), days)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // GetWorklist answers the same day as one ranked queue.
 //
 // It reads through the same assembler GetAttention does, so a lane added there
