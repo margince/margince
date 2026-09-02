@@ -168,6 +168,10 @@ func TestE2ECertify(t *testing.T) {
 		// unset = no trace. `make e2e-ai` sets it to the repo-root
 		// .tmp/aicert default (TRACE=1); pass TRACE= to disable.
 		TraceDir: os.Getenv("MARGINCE_AICERT_TRACE"),
+		// MARGINCE_AICERT_RESUME names a directory for the resume journal;
+		// unset = every run is paid for. `make e2e-ai` sets it to the repo-root
+		// .tmp/aicert/resume default (RESUME=1); pass RESUME= to disable.
+		ResumeDir: os.Getenv("MARGINCE_AICERT_RESUME"),
 	}
 
 	records, runErr := aicert.Run(context.Background(), cfg, slog.Default())

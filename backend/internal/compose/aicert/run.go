@@ -12,8 +12,10 @@ package aicert
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -27,25 +29,30 @@ import (
 // grader anywhere in the set means no record, not a lower band.
 func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, census *aitasks.Registry, repeats int,
 	candidateRouter *ai.Router, candidateRec *traceRecorder, judgeRouter *ai.Router, judgeRec *traceRecorder,
-	log *slog.Logger, acc *taskAccumulation, trace *payloadTrace,
+	log *slog.Logger, acc *taskAccumulation, trace *payloadTrace, journal taskJournal,
 ) (string, error) {
 	scenarioResults := make([]RunResult, 0, repeats)
 	for i := 0; i < repeats; i++ {
-		outcome, runErr := runOnce(ctx, candidateRouter, candidateRec, judgeRouter, judgeRec, sc, task, census, log, trace, i+1)
-		if runErr != nil {
-			return "", fmt.Errorf("aicert: task %s scenario %s run %d: %w", task, sc.Name, i+1, runErr)
+		run := i + 1
+		outcome, replayed := journal.lookup(sc, stamp, run)
+		if replayed {
+			log.InfoContext(ctx, "aicert: replaying a journaled run — not paying for it again",
+				"task", string(task), "scenario", sc.Name, "run", run)
+		} else {
+			var runErr error
+			outcome, runErr = driveRun(ctx, candidateRouter, candidateRec, judgeRouter, judgeRec, sc, task, census, log, trace, run)
+			if runErr != nil {
+				return "", fmt.Errorf("aicert: task %s scenario %s run %d: %w", task, sc.Name, run, runErr)
+			}
 		}
-		if outcome.Degraded {
-			return "", fmt.Errorf(
-				"aicert: task %s scenario %s run %d: candidate attempt served on a budget-degraded route — refusing to certify a demoted answer",
-				task, sc.Name, i+1,
-			)
+		// Applied to a replayed run too, though only a run that already passed
+		// it is ever journaled: one gate over both paths is one answer to
+		// "may this run be certified", rather than two that can drift apart.
+		if err := degradeGate(task, sc, run, outcome); err != nil {
+			return "", err
 		}
-		if outcome.JudgeDegraded {
-			return "", fmt.Errorf(
-				"aicert: task %s scenario %s run %d: judge attempt served on a budget-degraded route — refusing to trust a demoted grader",
-				task, sc.Name, i+1,
-			)
+		if !replayed {
+			journal.append(ctx, sc, stamp, run, outcome, nowFunc(), log)
 		}
 		if err := acc.addRun(task, sc, i, outcome); err != nil {
 			return "", err
@@ -55,6 +62,102 @@ func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, c
 	scenarioVerdict, _ := Verdict(scenarioResults, sc.Expect.Bands)
 	acc.scenarios = append(acc.scenarios, scenarioRow(sc, stamp, scenarioVerdict, scenarioResults))
 	return scenarioVerdict, nil
+}
+
+// degradeGate voids the whole task when a run was served, or graded, on a
+// budget-degraded route. It is a gate rather than a lower band on purpose: a
+// demoted answer and a demoted grader are both measurements of something other
+// than the binding the record names.
+func degradeGate(task ai.Task, sc Scenario, run int, outcome runOutcome) error {
+	if outcome.Degraded {
+		return fmt.Errorf(
+			"aicert: task %s scenario %s run %d: candidate attempt served on a budget-degraded route — refusing to certify a demoted answer",
+			task, sc.Name, run,
+		)
+	}
+	if outcome.JudgeDegraded {
+		return fmt.Errorf(
+			"aicert: task %s scenario %s run %d: judge attempt served on a budget-degraded route — refusing to trust a demoted grader",
+			task, sc.Name, run,
+		)
+	}
+	return nil
+}
+
+// runAttempts is how many times one run is driven before its task is given up.
+//
+// The router itself retries nothing: ai.attemptLadder walks each bound rung
+// exactly once, and the cert lane binds ONE model to every rung, so a dropped
+// connection burns the whole ladder in milliseconds and returns. Three attempts
+// here is what stands between a transient fault and discarding every run the
+// task had already paid for.
+const runAttempts = 3
+
+// runRetryBackoff is the wait before each re-drive, indexed by the attempt
+// about to be made. It rises because the fault worth retrying — a connection
+// dropped under an idle HTTP/2 ping, a broker shedding load — clears on its own
+// timescale rather than instantly, and an immediate re-drive usually just buys
+// the same failure at the price of another call.
+var runRetryBackoff = [runAttempts - 1]time.Duration{2 * time.Second, 8 * time.Second}
+
+// sleepFunc is this file's injectable delay, the seam a test swaps so a retry
+// path is exercised without a real wait — the same pattern runner.go's nowFunc
+// uses, and for the same reason: a test that slept for real would be the sort of
+// clock-dependent flake this repo forbids.
+var sleepFunc = func(ctx context.Context, d time.Duration) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(d):
+		return nil
+	}
+}
+
+// driveRun drives one run, re-driving it whole when the router came back having
+// failed on every bound rung.
+//
+// The retry is at RUN granularity and not call granularity because a run is the
+// smallest thing this lane can repeat honestly: a site may turn a multi-turn
+// conversation or a whole tool loop, and there is no resuming one of those from
+// the middle. Re-driving costs one run; the alternative — what happens today —
+// costs every run the task had already paid for.
+//
+// Only an exhausted ladder is retried. A validator failure, a mixed-model
+// refusal or a caps miss is a measurement, and repeating it until it reads
+// better is how a certification lane starts lying.
+func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceRecorder, judge *ai.Router, judgeRec *traceRecorder,
+	sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, run int,
+) (runOutcome, error) {
+	var lastErr error
+	for attempt := 1; attempt <= runAttempts; attempt++ {
+		if attempt > 1 {
+			log.WarnContext(ctx, "aicert: re-driving a run after the router exhausted every bound tier — the calls the failed attempt made are paid for and discarded",
+				"task", string(task), "scenario", sc.Name, "run", run, "attempt", attempt, "err", lastErr)
+			if err := sleepFunc(ctx, runRetryBackoff[attempt-2]); err != nil {
+				return runOutcome{}, errors.Join(err, lastErr)
+			}
+		}
+		outcome, err := runOnce(ctx, candidate, candidateRec, judge, judgeRec, sc, task, census, log, trace, run)
+		if err == nil {
+			return outcome, nil
+		}
+		if !worthRedriving(err) {
+			return runOutcome{}, err
+		}
+		lastErr = err
+	}
+	return runOutcome{}, fmt.Errorf("every bound tier failed on all %d attempts: %w", runAttempts, lastErr)
+}
+
+// worthRedriving reports whether err is the router having exhausted its ladder
+// on something a later attempt could get past.
+//
+// An exhausted account is the one exclusion: ai.attemptLadder stops the walk on
+// it and reports it through the same aggregate error, and retrying a spending
+// cap changes nothing until a human raises it. A throttle is left retryable,
+// because backoff is exactly what it asks for.
+func worthRedriving(err error) bool {
+	return errors.Is(err, ai.ErrAllTiersFailed) && !errors.Is(err, ai.ErrProviderQuota)
 }
 
 // scenarioRow is what this scenario's own runs did, for the record to carry
@@ -90,11 +193,17 @@ func scenarioRow(sc Scenario, stamp, verdict string, results []RunResult) Scenar
 // CertifiedScope is read off the CASE rather than the scenario's name for the
 // site, because the case is what drives the invocation and so what knows how
 // much of it a run reaches.
+//
+// The json tags are the resume journal's on-disk shape — see RunResult, which
+// this embeds.
 type runOutcome struct {
 	RunResult
-	Provider, ServedModel, ServedIdentitySource, JudgeServedModel string
-	CertifiedScope                                                string
-	JudgeDegraded                                                 bool
+	Provider             string `json:"provider"`
+	ServedModel          string `json:"served_model"`
+	ServedIdentitySource string `json:"served_identity_source"`
+	JudgeServedModel     string `json:"judge_served_model"`
+	CertifiedScope       string `json:"certified_scope"`
+	JudgeDegraded        bool   `json:"judge_degraded"`
 }
 
 // runOnce drives exactly one prepared case and its judge score, cache off, so
