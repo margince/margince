@@ -154,8 +154,15 @@ func TestEveryReaderFacingProblemCodeHasClientCopy(t *testing.T) {
 	// there today and miss the one added in a subpackage tomorrow — a census
 	// that fails short reports PASS with nothing to notice, which is the one
 	// way a gate must not break.
-	consts := map[string]string{}
-	var wanted []string
+	//
+	// Constants are collected PER PACKAGE. A flat map keyed on the identifier
+	// resolves a call against whichever declaration the walk happened to visit
+	// last, so two packages that spell one name differently would answer for
+	// each other — and the direction that hurts is the silent one, where a code
+	// with no copy borrows a mapped value from somewhere else and passes.
+	consts := map[string]map[string]string{}
+	type callSite struct{ pkg, ref string }
+	var wanted []callSite
 	if err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -167,12 +174,16 @@ func TestEveryReaderFacingProblemCodeHasClientCopy(t *testing.T) {
 		if readErr != nil {
 			return readErr
 		}
+		pkg := filepath.Dir(path)
 		text := string(source)
 		for _, m := range codeConstDecl.FindAllStringSubmatch(text, -1) {
-			consts[m[1]] = m[2]
+			if consts[pkg] == nil {
+				consts[pkg] = map[string]string{}
+			}
+			consts[pkg][m[1]] = m[2]
 		}
 		for _, m := range unavailableCall.FindAllStringSubmatch(text, -1) {
-			wanted = append(wanted, m[1])
+			wanted = append(wanted, callSite{pkg: pkg, ref: m[1]})
 		}
 		return nil
 	}); err != nil {
@@ -189,12 +200,18 @@ func TestEveryReaderFacingProblemCodeHasClientCopy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the problem mapping: %v", err)
 	}
-	slices.Sort(wanted)
-	for _, w := range slices.Compact(wanted) {
-		code := strings.Trim(w, `"`)
-		if resolved, ok := consts[w]; ok {
+	var codes []string
+	for _, w := range wanted {
+		code := strings.Trim(w.ref, `"`)
+		if resolved, ok := consts[w.pkg][w.ref]; ok {
 			code = resolved
 		}
+		codes = append(codes, code)
+	}
+	// Sorted before compacting: Compact drops only ADJACENT repeats, so a code
+	// answered from two packages would be reported twice unsorted.
+	slices.Sort(codes)
+	for _, code := range slices.Compact(codes) {
 		if !strings.Contains(string(mapping), `"`+code+`"`) {
 			t.Errorf("the api answers problem code %q and %s maps no copy to it — the reader gets the "+
 				"English detail whatever language they set", code, problemCodeMapping)
