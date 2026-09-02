@@ -199,6 +199,15 @@ var (
 			objInstallSettings: {Read: true, Update: true},
 			"project":          {Create: true, Read: true, Update: true, Delete: true},
 			objRelationship:    {Create: true, Read: true, Update: true, Delete: true},
+			// tag and list are crud for admin in the real seed
+			// (identity/internal/policy's admin row), and this fixture had
+			// neither. That drift was not inert: the tag FILTER refuses a
+			// caller without tag.read by rendering FALSE rather than by
+			// erroring, so an admin missing the grant asked "who carries
+			// VIP" and was answered "nobody" — and this fixture was
+			// narrower than AccountRepPerms, which already carries both.
+			"tag":  {Create: true, Read: true, Update: true, Delete: true},
+			"list": {Create: true, Read: true, Update: true, Delete: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
