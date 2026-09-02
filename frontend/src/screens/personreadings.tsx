@@ -291,7 +291,10 @@ function DealCard({
       <StatCard {...door} label={label} value={t("person.strip.noOpenDeal")} />
     );
   }
-  const priced = deal.amount_minor != null && deal.currency;
+  const priced =
+    deal.amount_minor != null && deal.currency
+      ? { amountMinor: deal.amount_minor, currency: deal.currency }
+      : undefined;
   const parts = [
     deal.stage ?? undefined,
     deal.close_date
@@ -309,14 +312,10 @@ function DealCard({
       // deal that failed to load.
       value={
         priced
-          ? formatMoneyCompact(
-              deal.amount_minor as number,
-              deal.currency as string,
-              locale,
-            )
+          ? formatMoneyCompact(priced.amountMinor, priced.currency, locale)
           : deal.title
       }
-      numeric={Boolean(priced)}
+      numeric={priced !== undefined}
       detail={priced ? [deal.title, ...parts].join(" · ") : parts.join(" · ")}
       basisLabel={
         view.commercial?.role ? t("co.strip.basis.reading") : undefined

@@ -164,7 +164,7 @@ describe("what they decide and when we next meet", () => {
             deal_id: "d1",
             title: "PIM rollout Phase 2",
             stage: "Negotiation",
-            amount_minor: 18_500_000,
+            amount_minor: 18_550_000,
             currency: "EUR",
             close_date: "2026-09-09",
           },
@@ -177,8 +177,10 @@ describe("what they decide and when we next meet", () => {
       }),
     );
     const deal = card(grid, "Deals they decide");
-    // en-GB compact notation, one decimal: the reader's own spelling.
-    expect(within(deal).getByText("€185.0k")).toBeTruthy();
+    // en-GB compact notation, one decimal: the reader's own spelling. The
+    // sample carries a real tenth, because whether a whole thousand shows a
+    // trailing ".0" is the ICU build's decision, not this reading's.
+    expect(within(deal).getByText("€185.5k")).toBeTruthy();
     expect(within(deal).getByText(/Negotiation/)).toBeTruthy();
     const meeting = card(grid, "Next meeting");
     expect(within(meeting).getByText("Demo, Product Cloud")).toBeTruthy();
