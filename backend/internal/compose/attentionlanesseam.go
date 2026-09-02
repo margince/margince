@@ -47,11 +47,6 @@ import (
 // the feed omits and NAMES the lane instead of reporting a clear day.
 type attentionCommitments struct{ store *people.Store }
 
-// The binding is deliberately not wired today (newAttentionService passes nil
-// — the lane's production writer is issue #849's), so this assertion is the
-// one thing keeping the seam compiled against the interface it will be
-// rebound as. The store read behind it keeps its own integration test; the
-// seam wiring itself is untested exactly because nothing wires it.
 var _ attention.Commitments = attentionCommitments{}
 
 func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int) ([]attention.Commitment, error) {

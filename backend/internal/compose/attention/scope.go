@@ -284,9 +284,19 @@ func narrowedByItsOwnLane(row ranked) bool {
 // The counterpart to keepReadersOwn, over the same evidence: a row with an owner
 // belongs to that person and not to this queue. A row with nobody to name stays,
 // which is what the scope is for.
+//
+// A promise is the exception, and it is not decorative. A conversation claim
+// has no assignee column, so it reaches here with no owner to read while
+// already belonging to the rep whose query produced it. Reading only answersTo
+// would file the rep's own debt under work nobody answers for.
+//
+// An ownerless task or lead genuinely answers to nobody — those stay.
 func keepUnowned(rows []ranked) []ranked {
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
+		if row.item.Source == sourceClaim {
+			continue
+		}
 		if _, ok := answersTo(row); !ok {
 			kept = append(kept, row)
 		}
