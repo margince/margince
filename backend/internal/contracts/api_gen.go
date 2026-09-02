@@ -28103,6 +28103,16 @@ type SetSignatureEnrichmentRequest struct {
 	Enabled *bool `json:"enabled"`
 }
 
+// ShareCaptureHoldHistoryResponse defines model for ShareCaptureHoldHistoryResponse.
+type ShareCaptureHoldHistoryResponse struct {
+	// Released How many of the caller's own imports stopped being held for this reason. Not the same
+	// as how many messages the workspace can now read: a message a colleague also holds
+	// stays limited, because the audience is the strictest answer across every seat that
+	// imported it. Zero means every message the caller's holds caught is held for some
+	// other reason too, or was captured before the product recorded more than one reason.
+	Released int `json:"released"`
+}
+
 // SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
 type SignInProvider struct {
 	// Enabled Whether this installation currently offers it on the login screen.
@@ -43764,6 +43774,9 @@ type ServerInterface interface {
 	// Keep one party's mail to the people on it.
 	// (POST /capture/counterparty-holds)
 	CreateCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request)
+	// Re-open the mail the caller's counterparty holds already caught.
+	// (POST /capture/counterparty-holds/share-history)
+	ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request)
 	// Lift a counterparty hold.
 	// (DELETE /capture/counterparty-holds/{id})
 	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
@@ -45723,6 +45736,12 @@ func (_ Unimplemented) ListCaptureCounterpartyHolds(w http.ResponseWriter, r *ht
 // Keep one party's mail to the people on it.
 // (POST /capture/counterparty-holds)
 func (_ Unimplemented) CreateCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-open the mail the caller's counterparty holds already caught.
+// (POST /capture/counterparty-holds/share-history)
+func (_ Unimplemented) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52220,6 +52239,26 @@ func (siw *ServerInterfaceWrapper) CreateCaptureCounterpartyHold(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateCaptureCounterpartyHold(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ShareCaptureCounterpartyHoldHistory operation middleware
+func (siw *ServerInterfaceWrapper) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ShareCaptureCounterpartyHoldHistory(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -73194,6 +73233,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/capture/counterparty-holds", wrapper.CreateCaptureCounterpartyHold)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/counterparty-holds/share-history", wrapper.ShareCaptureCounterpartyHoldHistory)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)

@@ -398,6 +398,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/brief/items/{itemId}/snooze":                               {Op: "snoozeBriefItem", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/consumer-mail-domains":                             {Op: "addConsumerMailDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/counterparty-holds":                                {Op: "createCaptureCounterpartyHold", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/capture/counterparty-holds/share-history":                  {Op: "shareCaptureCounterpartyHoldHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/email-domains":                                     {Op: "createWorkspaceEmailDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/exclusions":                                        {Op: "createCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/exclusions/{id}/purge":                             {Op: "purgeCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

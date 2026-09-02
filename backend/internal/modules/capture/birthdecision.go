@@ -41,6 +41,30 @@ type birthDecision struct {
 	posture       string
 	verdictStatus string
 	reason        string
+	// reasons lists the rules that matched, strictest first, with reason as its
+	// head. Deciding takes the first; REMEMBERING takes all of them, because
+	// "re-open everything my counterparty hold caught" cannot be answered from
+	// a single reason — a row reading 'counterparty' may be one a marker or the
+	// workspace floor would hold anyway, and widening that publishes a message
+	// the sender asked us not to share.
+	//
+	// Empty for a decision that holds nothing, so a row born open records no
+	// reasons rather than a list of one empty string.
+	reasons []string
+}
+
+// hold records one matched rule and returns the decision, so a ladder step
+// reads as "this rule matched" rather than as list bookkeeping.
+//
+// The FIRST call decides: posture and reason are set once and never overwritten,
+// which is what keeps the born audience identical to the pre-list behaviour.
+// Later calls only append.
+func (d birthDecision) hold(reason string) birthDecision {
+	if d.posture == "" {
+		d.posture, d.reason = PostureHeld, reason
+	}
+	d.reasons = append(d.reasons, reason)
+	return d
 }
 
 // decideBirthTx answers what this mailbox asks of this message.
@@ -60,6 +84,19 @@ type birthDecision struct {
 //
 // Steps 1 to 4 can only hold. Step 5 is the only one that can open a message,
 // and it runs last, so nothing above it can be overturned by it.
+//
+// ALL FIVE steps are evaluated even after one of them matches, because the row
+// records every reason it was held while the audience follows only the first. A
+// message held for two reasons and a message held for one look identical from a
+// single reason, and telling them apart is what makes a hold liftable.
+//
+// Steps 4 and 5 matter as much as 1 to 3 here, and it would be easy to think
+// otherwise. An inherited verdict is NOT opening-only — inheritedVerdictTx
+// returns held, unsure and held_by_owner for any sender at all — and a mailbox
+// asking for `held` is a standing instruction that outlives one counterparty
+// hold. Skipping either would let a widening keyed on "counterparty was the
+// only reason" publish mail the thread's verdict, or the mailbox itself, had
+// already held.
 func decideBirthTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (birthDecision, error) {
@@ -73,8 +110,12 @@ func decideBirthTx(
 	if err != nil {
 		return birthDecision{}, fmt.Errorf("capture: reading the mail-sharing posture: %w", err)
 	}
+	// Every holding rule is evaluated, not just up to the first match. The
+	// DECISION is unchanged — `hold` keeps the first rule's answer — but the row
+	// now records that a message was held for two reasons when it was.
+	var decision birthDecision
 	if !sharing {
-		return birthDecision{posture: PostureHeld, reason: audienceReasonWorkspaceFloor}, nil
+		decision = decision.hold(audienceReasonWorkspaceFloor)
 	}
 
 	held, err := heldCounterpartyTx(ctx, tx, rec)
@@ -82,7 +123,7 @@ func decideBirthTx(
 		return birthDecision{}, err
 	}
 	if held {
-		return birthDecision{posture: PostureHeld, reason: audienceReasonCounterparty}, nil
+		decision = decision.hold(audienceReasonCounterparty)
 	}
 
 	if explicitlyConfidential(fields.Subject) {
@@ -91,10 +132,16 @@ func decideBirthTx(
 		// information about that conversation, and leaving the cleared verdict
 		// standing would let the NEXT message on it inherit an answer this
 		// message just contradicted.
+		//
+		// This now runs even when a stricter rule already held the message,
+		// which the early return used to skip. That is a fix rather than a side
+		// effect of the rewrite: the cleared verdict it clears is about the
+		// THREAD, and the next message on that thread may arrive from an
+		// address no counterparty hold covers.
 		if err := reopenClearedThreadTx(ctx, tx, rec.ThreadKey); err != nil {
 			return birthDecision{}, err
 		}
-		return birthDecision{posture: PostureHeld, reason: audienceReasonConfidentialMarker}, nil
+		decision = decision.hold(audienceReasonConfidentialMarker)
 	}
 
 	inherited, err := inheritedVerdictTx(ctx, tx, rec)
@@ -102,14 +149,49 @@ func decideBirthTx(
 		return birthDecision{}, err
 	}
 	if inherited != "" {
-		return birthDecision{verdictStatus: inherited}, nil
+		if holdingVerdict(inherited) {
+			// A thread the classifier or its owner already held. Recorded as a
+			// reason of its own so a later widening can see it: without this the
+			// row reads "counterparty only" and re-opening the hold would
+			// discard the only record that the conversation was held anyway.
+			decision = decision.hold(audienceReasonInheritedVerdict)
+		}
+		if decision.posture == "" {
+			return birthDecision{verdictStatus: inherited}, nil
+		}
+		decision.verdictStatus = inherited
+		return decision, nil
 	}
 
 	posture, err := mailboxPostureTx(ctx, tx)
 	if err != nil {
 		return birthDecision{}, err
 	}
+	if posture != PostureShared {
+		// The mailbox's own standing answer, recorded even when something
+		// stricter already decided. It outlives any one counterparty hold, so a
+		// widening that did not know about it would publish mail from a mailbox
+		// that never asked for its mail to be shared.
+		decision = decision.hold(audienceReasonPosture)
+		decision.posture = posture
+		return decision, nil
+	}
+	if decision.posture != "" {
+		return decision, nil
+	}
 	return birthDecision{posture: posture}, nil
+}
+
+// holdingVerdict answers whether an inherited thread verdict keeps a message
+// back. The opening ones (cleared, shared_by_owner) and pending are not holds:
+// pending means the classifier has not answered yet, and what holds the message
+// meanwhile is the mailbox posture, which records its own reason below.
+func holdingVerdict(status string) bool {
+	switch status {
+	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
+		return true
+	}
+	return false
 }
 
 // mailboxPostureTx reads the posture of the connection that DELIVERED this
@@ -206,7 +288,14 @@ func foldedAddressesAndDomains(raw []string) (addresses, domains []string) {
 func (d birthDecision) bornAudience() (audience, reason string) {
 	switch d.verdictStatus {
 	case VerdictCleared, VerdictSharedByOwner:
-		return audienceWorkspace, ""
+		// An opening verdict opens only a message nothing else held. The ladder
+		// evaluates every rung rather than returning at the first, so a message
+		// the workspace floor or a counterparty hold already caught now reaches
+		// this verdict too — and answering `workspace` here would publish it.
+		// Falling through to the posture switch is what keeps the earlier hold.
+		if d.posture == "" {
+			return audienceWorkspace, ""
+		}
 	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner, VerdictPending:
 		return audienceParticipants, audienceReasonPendingVerdict
 	}
