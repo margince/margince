@@ -101,6 +101,16 @@ type ListActivitiesInput struct {
 	// [day 00:00, next day 00:00) with no double-counting at midnight.
 	OccurredAfter  *time.Time
 	OccurredBefore *time.Time
+	// WaitingReplyAsOf narrows the list to the SAME thread walk WaitingReplies
+	// answers for the Worklist: the newest inbound message per thread that
+	// nobody has answered, as of this instant. Nil means the filter is off.
+	//
+	// An instant rather than a plain bool, for the reason OpenAndDueBy is one:
+	// the caller resolves it (the store's own clock for an HTTP read, a fixed
+	// moment for a test), so the whole read stays one snapshot rather than
+	// this filter and the rest of the page judging against two different
+	// clock reads.
+	WaitingReplyAsOf *time.Time
 	// OpenAndDueBy narrows to tasks still open and already due at an instant:
 	// the day's work, asked as one question.
 	//

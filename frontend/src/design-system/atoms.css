@@ -412,6 +412,22 @@
   flex-direction: column;
   padding: 0;
 }
+/* The SPLIT drawer: a reply, with the conversation it answers beside it.
+ *
+ * A reply written over the top of the thread it answers is the failure this
+ * width exists to fix — the centred box covered the timeline, and the wide
+ * drawer has room for one column, not two. It stops at 1040px for the same
+ * reason the wide one stops at 560: past that the drawer has stopped being a
+ * margin on the record and become the page.
+ *
+ * Below the fold width the two columns cannot both be read, so the layout
+ * collapses to one and the conversation folds into a disclosure above the
+ * form (composethread.css). The width follows it down rather than holding a
+ * two-column measure with one column in it. */
+.modal-drawer-split {
+  width: clamp(360px, 62vw, 1040px);
+}
+
 /* The zero padding above belongs to the head/body/foot split: those three
    bands pay their own, so the drawer must not pay it twice. A wide drawer
    that does NOT split — the composer, which is one scrolling form — has
@@ -1025,6 +1041,15 @@
   border-color: var(--danger);
 }
 .input[aria-invalid="true"]:focus {
+  box-shadow: var(--focus-glow-danger);
+}
+/* A textarea carries its own class rather than `.input`, so the boundary above
+   never reached one: a refused body sat unmarked beside a refused subject that
+   was outlined, and the pair read as though only one of them was the problem. */
+.textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.textarea[aria-invalid="true"]:focus {
   box-shadow: var(--focus-glow-danger);
 }
 .field-shell:has([aria-invalid="true"]) {

@@ -2895,6 +2895,13 @@ export const en = {
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send this email?",
+  "compose.threadHeading": "This conversation",
+  "compose.continueHeading": "Continue a conversation?",
+  "compose.threadLeave": "Choose another",
+  "compose.messageCount_one": "{count} message",
+  "compose.messageCount_other": "{count} messages",
+  "compose.threadContinuing": "The last exchange, which this will continue",
+  "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "You are sending this email now. This is an outbound, irreversible action.",
   // A moment picked in the field above turns this dialog into a different
@@ -2942,6 +2949,9 @@ export const en = {
   "compose.relinkThreadHint":
     "Every message in this thread you can edit moves with it, in one step.",
   "compose.emptyRecipients": "Add at least one recipient.",
+  "compose.missingSubject": "Give this email a subject.",
+  "compose.missingBody": "Write the message before sending it.",
+  "compose.missingPurpose": "Choose what this message is for.",
   "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 
@@ -5119,6 +5129,11 @@ export const en = {
   "dealmail.sub.fresh": "Write to the people on this deal.",
   "dealmail.reply": "Draft the reply",
   "dealmail.send": "Send an email",
+  "recordmail.title": "Email",
+  "recordmail.sub.reply": "An answer is owed.",
+  "recordmail.sub.fresh": "Write to this record's contacts.",
+  "recordmail.reply": "Draft the reply",
+  "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
   "deal360.readFull": "Read the full briefing",
   "deal360.createTask": "Add this task",

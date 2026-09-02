@@ -40,8 +40,9 @@ export function ConfirmModal({
   confirmLabel: string;
   // Passed through to Modal. A confirm whose body is a form the user has to
   // READ before an irreversible act — an email about to leave — needs more
-  // than the compact width every yes/no confirm uses.
-  size?: "default" | "wide";
+  // than the compact width every yes/no confirm uses. "split" is the two-column
+  // drawer: the reply beside the conversation it answers.
+  size?: "default" | "wide" | "split";
   // Passed through to Modal. "right" is the drawer form: the record the
   // confirm is about stays visible beside it as context, which a centred box
   // covers. The composer uses it so a rep can read the account while writing

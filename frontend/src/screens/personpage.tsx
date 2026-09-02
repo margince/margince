@@ -27,7 +27,8 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { linkedinUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { throwProblem, useSorMode } from "./common";
+import { ComposeModal } from "./compose";
 import { ConsentSection } from "./consent";
 import { LogActivityAction } from "./logactivity";
 import { PersonMeetingBrief } from "./meetingbrief";
@@ -57,6 +58,7 @@ import {
 import { PersonToday } from "./persontoday";
 import type { Transport } from "./persontransports";
 import { primaryTransportAction, useTransports } from "./persontransports";
+import { RecordEmailAside } from "./recordemail";
 import "./person360.css";
 
 // The person record page V2 (ADR-0096, concept person-record-page-v2).
@@ -251,6 +253,10 @@ export function PersonPageV2({
     setDrawer("composer");
   };
 
+  // Read before the loading returns: a hook below an early return renders a
+  // different hook count per state, which React rejects.
+  const overlay = useSorMode() === "overlay";
+
   if (view.isLoading) {
     return <div className="wrap">{t("person.page.loading")}</div>;
   }
@@ -346,6 +352,7 @@ export function PersonPageV2({
               consentKnown={guard.data !== undefined}
               personId={id}
               onWrite={() => openComposer("")}
+              onWriteMail={() => setDrawer("mail")}
               onResearch={() => setDrawer("research")}
               onLogActivity={() => setDrawer("activity_log")}
             />
@@ -393,6 +400,11 @@ export function PersonPageV2({
             guard={guard.data}
             firstName={firstName}
             onExplain={() => navigate({ screen: "contacts", id })}
+          />
+          <PersonEmailPanel
+            personId={id}
+            overlay={overlay}
+            archived={Boolean(person.archived_at)}
           />
         </PageAside>
         {tab === "overview" && (
@@ -450,6 +462,11 @@ export function PersonPageV2({
           intent={composerIntent}
           onClose={() => setDrawer(null)}
         />
+        <PersonMailDrawer
+          personId={id}
+          open={drawer === "mail"}
+          onClose={() => setDrawer(null)}
+        />
         <PersonResearchDrawer
           personId={id}
           personName={person.full_name}
@@ -486,7 +503,7 @@ export function PersonPageV2({
 // reachable only for the soonest meeting and only while the prep moment was
 // live — every other meeting on the record had a brief the backend would
 // happily assemble and no way to ask for it.
-type Drawer = "composer" | "research" | "activity_log" | null;
+type Drawer = "composer" | "mail" | "research" | "activity_log" | null;
 
 // The query key naming which meeting is being briefed. One spelling, because
 // another screen composes this address and this one reads it; two would be a
@@ -655,6 +672,55 @@ function writeRefusal(
   return t("person.action.consentRefused");
 }
 
+// The rail's email box, and when the page may not draw it: not in overlay — a
+// mirrored workspace has no thread data, and the server refuses the
+// waiting-reply read there outright — and not on an archived contact, whose
+// page offers no writes.
+function PersonEmailPanel({
+  personId,
+  overlay,
+  archived,
+}: Readonly<{ personId: string; overlay: boolean; archived: boolean }>) {
+  if (overlay || archived) {
+    return null;
+  }
+  return (
+    <RecordEmailAside
+      entityType="person"
+      entityId={personId}
+      personId={personId}
+      detectWaitingReply
+    />
+  );
+}
+
+// The header's generic mail verb opens the shared compose drawer — the thread
+// offers and the conversation beside the form, the same shape every record's
+// mail box opens. Split out so the page renders it unconditionally, the same
+// way PersonMeetingBrief carries its own `open`. Keyed by the record: navigating
+// to another person while it is open remounts it rather than re-pointing it —
+// without the key the text written for one contact would be filed against
+// another.
+function PersonMailDrawer({
+  personId,
+  open,
+  onClose,
+}: Readonly<{ personId: string; open: boolean; onClose: () => void }>) {
+  if (!open) {
+    return null;
+  }
+  return (
+    <ComposeModal
+      key={personId}
+      entityType="person"
+      entityId={personId}
+      personId={personId}
+      open
+      onClose={onClose}
+    />
+  );
+}
+
 // The primary actions, in the concept's order (§5.2). Writing leads and is the
 // only green one: a page with two primary actions has none.
 function PersonActions({
@@ -663,6 +729,7 @@ function PersonActions({
   consentKnown,
   personId,
   onWrite,
+  onWriteMail,
   onResearch,
   onLogActivity,
 }: Readonly<{
@@ -671,6 +738,7 @@ function PersonActions({
   consentKnown: boolean;
   personId: string;
   onWrite: () => void;
+  onWriteMail: () => void;
   onResearch: () => void;
   onLogActivity: () => void;
 }>): ReactNode {
@@ -687,6 +755,11 @@ function PersonActions({
   const write = primaryTransportAction(transports, t);
   const WriteIcon = write.icon;
   const refusal = writeRefusal({ transports, consentAllows, consentKnown }, t);
+  // Where the verb goes. Mail as the only way in opens the shared compose
+  // drawer, which knows the record's conversations; a channel in the mix keeps
+  // PersonComposer, the one place that can ask which transport and answer a
+  // provider-anchored conversation.
+  const mailOnly = transports.length === 1 && transports[0].id === "email";
   return (
     <>
       {/* The lead verb, and the only green one: a page with two primary
@@ -697,7 +770,7 @@ function PersonActions({
         variant="primary"
         disabled={!consentKnown}
         reason={refusal}
-        onClick={onWrite}
+        onClick={mailOnly ? onWriteMail : onWrite}
       >
         <WriteIcon size={15} aria-hidden="true" /> {write.label}
       </Button>
