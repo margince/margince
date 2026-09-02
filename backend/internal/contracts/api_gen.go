@@ -28177,6 +28177,7 @@ type Tag struct {
 	Id          openapi_types.UUID `json:"id"`
 	Name        string             `json:"name"`
 	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
+	Version     *int64             `json:"version,omitempty"`
 }
 
 // TagColor defines model for Tag.Color.

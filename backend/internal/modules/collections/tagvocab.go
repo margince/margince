@@ -89,42 +89,61 @@ func (s *Store) GetTag(ctx context.Context, id ids.TagID) (tagRow, TagUsage, err
 	return out, usage, err
 }
 
-// tagUsage counts the taggings per advertised type in one grouped pass.
+// tagUsage counts, per advertised type, the tagged records THIS CALLER MAY SEE.
 //
-// It counts `taggable` rows and does NOT join the record tables, which means
-// it does not apply each type's row scope. That is a deliberate limit and the
-// reason the contract calls this a weight rather than a list: the counts tell
-// an admin how much retiring a word would touch, and the records themselves
-// come from the list endpoints, which are row-scoped. A count that leaked
-// which rows exist would be a different problem — this one leaks only how many
-// carry a word the caller can already read.
+// One query per type rather than one grouped pass over `taggable`, because the
+// visibility rule is per table: a rep may see every company and only their own
+// people. Counting the link rows alone would be cheaper and would report how
+// many records carry the word regardless of who is asking — which discloses
+// the existence of rows the caller cannot open, and would make the number on
+// screen one they cannot reconcile with the list behind it.
 func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT entity_type, count(*)
-		  FROM taggable
-		 WHERE tag_id = $1 AND entity_type = ANY($2)
-		 GROUP BY entity_type`, id, advertisedTagTypes)
-	if err != nil {
-		return TagUsage{}, fmt.Errorf("collections: counting tag usage: %w", err)
-	}
-	defer rows.Close()
 	var out TagUsage
-	for rows.Next() {
-		var entityType string
-		var n int
-		if scanErr := rows.Scan(&entityType, &n); scanErr != nil {
-			return TagUsage{}, scanErr
+	for _, c := range []struct {
+		entityType string
+		table      string
+		into       *int
+	}{
+		{typePerson, "person", &out.People},
+		{typeOrganization, "organization", &out.Companies},
+		{typeDeal, "deal", &out.Deals},
+	} {
+		n, err := countVisibleTagged(ctx, tx, id, c.entityType, c.table)
+		if err != nil {
+			return TagUsage{}, err
 		}
-		switch entityType {
-		case typePerson:
-			out.People = n
-		case typeOrganization:
-			out.Companies = n
-		case typeDeal:
-			out.Deals = n
-		}
+		*c.into = n
 	}
-	return out, rows.Err()
+	return out, nil
+}
+
+// countVisibleTagged counts one type's tagged records under that type's own
+// row-scope predicate.
+func countVisibleTagged(ctx context.Context, tx pgx.Tx, id ids.TagID, entityType, table string) (int, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	tagPos, typePos := arg(id), arg(entityType)
+	scope, err := auth.ScopeClauseFor(ctx, table, "r", arg)
+	if err != nil {
+		return 0, fmt.Errorf("collections: scoping %s tag usage: %w", table, err)
+	}
+	if scope == "" {
+		// An unbounded caller sees every row, and the empty clause is how the
+		// helper says so — not a missing predicate to be defaulted open.
+		scope = "TRUE"
+	}
+	var n int
+	query := fmt.Sprintf(`
+		SELECT count(*)
+		  FROM taggable tg
+		  JOIN %s r ON r.id = tg.entity_id
+		 WHERE tg.tag_id = $%d AND tg.entity_type = $%d
+		   AND r.archived_at IS NULL
+		   AND (%s)`, pgx.Identifier{table}.Sanitize(), tagPos, typePos, scope)
+	if err := tx.QueryRow(ctx, query, args...).Scan(&n); err != nil {
+		return 0, fmt.Errorf("collections: counting %s tag usage: %w", table, err)
+	}
+	return n, nil
 }
 
 // TagUpdate is the partial a rename carries. A nil field is left alone; a
@@ -293,6 +312,20 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID) (MergeR
 	}
 	var out MergeResult
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Both rows, lowest id first. The count, the move, the delete and the
+		// archive are four statements: without the lock a concurrent apply can
+		// land between the count and the move, and the numbers reported to the
+		// admin describe a state that never existed. Ordering by id is what
+		// stops two merges of the same pair deadlocking on each other.
+		first, second := source, target
+		if second.UUID.String() < first.UUID.String() {
+			first, second = second, first
+		}
+		for _, id := range []ids.TagID{first, second} {
+			if _, err := storekit.LockRow(ctx, tx, "tag", id.UUID, storekit.IncludeArchived); err != nil {
+				return err
+			}
+		}
 		if err := requireLiveTag(ctx, tx, target, intoTagIDField); err != nil {
 			return err
 		}

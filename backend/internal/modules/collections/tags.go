@@ -398,9 +398,16 @@ func (s *Store) lookupTagByName(ctx context.Context, name string) (ids.UUID, Tag
 	var id ids.TagID
 	var archived *time.Time
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Live first, then the most recently retired. uq_tag_name binds live
+		// rows only, so a name can be held by one live tag AND any number of
+		// archived ones — without the ordering this picks whichever row the
+		// planner reaches, and a caller naming a word they can see would be
+		// told it is archived.
 		return tx.QueryRow(ctx, `
 			SELECT id, archived_at FROM tag
-			 WHERE lower(name) = lower($1)`, NormalizeTagName(name)).Scan(&id, &archived)
+			 WHERE lower(name) = lower($1)
+			 ORDER BY archived_at IS NOT NULL, archived_at DESC
+			 LIMIT 1`, NormalizeTagName(name)).Scan(&id, &archived)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, tagNameMissing, nil
@@ -475,13 +482,16 @@ func wireTag(t tagRow) crmcontracts.Tag {
 		c := crmcontracts.TagColor(*t.Color)
 		color = &c
 	}
+	version := t.Version
 	return crmcontracts.Tag{
-		Id:         openapi_types.UUID(t.ID.UUID),
-		Name:       t.Name,
-		Color:      color,
-		CreatedAt:  &t.CreatedAt,
-		UpdatedAt:  &t.UpdatedAt,
-		ArchivedAt: t.ArchivedAt,
+		Id:          openapi_types.UUID(t.ID.UUID),
+		Name:        t.Name,
+		Color:       color,
+		Description: t.Description,
+		Version:     &version,
+		CreatedAt:   &t.CreatedAt,
+		UpdatedAt:   &t.UpdatedAt,
+		ArchivedAt:  t.ArchivedAt,
 	}
 }
 

@@ -21270,6 +21270,8 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | null;
             description?: string | null;
+            /** Format: int64 */
+            version?: number;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */

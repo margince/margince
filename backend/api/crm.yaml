@@ -29215,6 +29215,10 @@ components:
         # not a distinction. Mirrors the tag_color_check constraint.
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
         description: { type: [string, 'null'] }
+        # The If-Match precondition a caller sends back when they rename this
+        # tag. Without it on the read, a client has nothing to quote and every
+        # rename is last-write-wins.
+        version: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }

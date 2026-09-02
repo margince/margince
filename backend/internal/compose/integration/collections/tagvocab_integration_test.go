@@ -103,6 +103,22 @@ func TestMergeCountsWhatMovedApartFromWhatCollapsed(t *testing.T) {
 	if detail.Usage.People != 2 {
 		t.Errorf("the target carries %d people, want 2 — one it had, one that moved", detail.Usage.People)
 	}
+
+	// And the collapsed row is GONE, not merely uncounted. A merge that left
+	// the duplicate behind would report the same numbers and leave the person
+	// carrying a tag nobody can see.
+	var srcDetail detail0
+	if status := e.Call(t, "GET", "/v1/tags/"+source, nil, nil, &srcDetail); status != http.StatusOK {
+		t.Fatalf("reading the merged source: status=%d", status)
+	}
+	if srcDetail.Usage.People != 0 {
+		t.Errorf("the merged-away tag still carries %d people; every tagging was meant to move or be dropped", srcDetail.Usage.People)
+	}
+}
+
+// detail0 is the shape both merge tests read back.
+type detail0 struct {
+	Usage struct{ People int } `json:"usage"`
 }
 
 // The source is archived and its NAME IS RELEASED. That is the product
@@ -271,5 +287,77 @@ func TestUsageCountsOnlyTheAdvertisedRecordTypes(t *testing.T) {
 	}
 	if detail.Usage.People != 1 || detail.Usage.Companies != 1 || detail.Usage.Deals != 0 {
 		t.Errorf("usage = %+v, want 1 person, 1 company, 0 deals", detail.Usage)
+	}
+}
+
+// The rename path itself, which the conflict test above cannot reach: a
+// handler that always answered 409 would pass that one.
+func TestRenamingRecolouringAndDescribingATag(t *testing.T) {
+	e := tagEnv(t)
+	tag := createTag(t, e, "Draft Name")
+
+	var updated struct {
+		Name        string  `json:"name"`
+		Color       *string `json:"color"`
+		Description *string `json:"description"`
+	}
+	if status := e.Call(t, "PATCH", "/v1/tags/"+tag, integration.AnyMap{
+		"name": "Settled Name", "color": "teal", "description": "What it means",
+	}, nil, &updated); status != http.StatusOK {
+		t.Fatalf("renaming: status=%d body=%+v", status, updated)
+	}
+	if updated.Name != "Settled Name" {
+		t.Errorf("name = %q, want the new one", updated.Name)
+	}
+	if updated.Color == nil || *updated.Color != "teal" {
+		t.Errorf("color = %v, want teal", updated.Color)
+	}
+	if updated.Description == nil || *updated.Description != "What it means" {
+		t.Errorf("description = %v, want the text sent", updated.Description)
+	}
+
+	// Clearing is a VALUE, not a null: the generated request type cannot tell
+	// an absent field from a null one, so "none" and "" are what carry it.
+	var cleared struct {
+		Name        string  `json:"name"`
+		Color       *string `json:"color"`
+		Description *string `json:"description"`
+	}
+	if status := e.Call(t, "PATCH", "/v1/tags/"+tag, integration.AnyMap{
+		"color": "none", "description": "",
+	}, nil, &cleared); status != http.StatusOK {
+		t.Fatalf("clearing: status=%d body=%+v", status, cleared)
+	}
+	if cleared.Color != nil {
+		t.Errorf("color = %v after clearing, want absent", *cleared.Color)
+	}
+	if cleared.Description != nil && *cleared.Description != "" {
+		t.Errorf("description = %v after clearing, want absent", *cleared.Description)
+	}
+	// The name was not mentioned in the clearing call and must survive it.
+	if cleared.Name != "Settled Name" {
+		t.Errorf("name = %q after a colour-only patch; an omitted field must be left alone", cleared.Name)
+	}
+}
+
+// A stale If-Match is version skew, and the write must not land.
+func TestAStaleIfMatchRefusesTheRename(t *testing.T) {
+	e := tagEnv(t)
+	tag := createTag(t, e, "Versioned")
+
+	var problem integration.AnyMap
+	if status := e.Call(t, "PATCH", "/v1/tags/"+tag, integration.AnyMap{"name": "Renamed"},
+		map[string]string{"If-Match": "99"}, &problem); status != http.StatusConflict {
+		t.Fatalf("a stale If-Match: status=%d body=%v, want 409", status, problem)
+	}
+
+	var after struct {
+		Name string `json:"name"`
+	}
+	if status := e.Call(t, "GET", "/v1/tags/"+tag, nil, nil, &after); status != http.StatusOK {
+		t.Fatalf("reading it back: status=%d", status)
+	}
+	if after.Name != "Versioned" {
+		t.Errorf("name = %q; the refused rename was applied anyway", after.Name)
 	}
 }
