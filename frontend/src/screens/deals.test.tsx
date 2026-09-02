@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { PageAsideProvider, PageAsideRegion } from "../app/pageaside";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
@@ -1921,15 +1922,26 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 
   // A control that can only fail is worse than none: an archived deal is not
   // moved through the pipeline, it is restored first.
-  // The deal's tags ride in the OVERVIEW pane, not in a rail: this record page
-  // hands RecordView neither rail nor aside, so it collapses to one column and
-  // there is no side column for a card to sit in.
-  it("draws the deal's tags on the overview", async () => {
+  // The deal's tags ride in the CONTEXT rail, beside the seats, the deal room
+  // and the mail card — the same column a person and a company draw theirs in.
+  // They sat in the overview pane once, full-width between the readings and the
+  // stage stepper, on the belief that this page had no side column; it fills one
+  // through `PageAside`, which portals into the shell's rail.
+  it("draws the deal's tags in the context rail", async () => {
     const d = deal({ id: "x" });
     vi.stubGlobal("fetch", stubBackend([d], { single: d }));
-    render(<DealScreen id="x" />);
+    // The provider and the region together, because `PageAside` is a PORTAL:
+    // without a mounted host it renders null, and a bare screen would report
+    // the card missing whichever column it was written into.
+    render(
+      <PageAsideProvider>
+        <DealScreen id="x" />
+        <PageAsideRegion />
+      </PageAsideProvider>,
+    );
 
-    expect(await screen.findByText("Renewal")).toBeTruthy();
+    const tag = await screen.findByText("Renewal");
+    expect(tag.closest("aside")).not.toBeNull();
   });
 
   it("offers no move on an archived deal", async () => {

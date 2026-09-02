@@ -8100,7 +8100,7 @@ paths:
         in: path
         required: true
         schema: { type: string }
-        description: Report key (prebuilt) or a saved-report id.
+        description: A prebuilt report key. Saved reports are not served; a UUID here is refused.
         examples:
           prebuilt: { value: open-deals-per-company }
     post:
@@ -8142,6 +8142,10 @@ paths:
                       - { organization_id: 018f3a1b-0000-7000-8000-000000000020, open_deals: 3 }
                     total_rows: 1
                     generated_at: '2026-06-04T08:00:00Z'
+                    as_of: '2026-06-04T08:00:00Z'
+                    timezone: Europe/Berlin
+                    base_currency: EUR
+                    fiscal_year_start_month: 1
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -8157,7 +8161,7 @@ paths:
         in: path
         required: true
         schema: { type: string }
-        description: Report key (prebuilt) or a saved-report id.
+        description: A prebuilt report key. Saved reports are not served; a UUID here is refused.
     get:
       tags: [Reports]
       operationId: explainReport
@@ -30913,9 +30917,8 @@ components:
         (the per-report allowed dimension/measure list in data-model.md §13 / contract README).
         An out-of-vocabulary field returns `422 code: report_field_not_allowed`. `additionalProperties`
         is open only to admit *values*, never to admit arbitrary SQL identifiers.
-        **`/reports/{report}` path param:** a value matching the UUID format resolves to a saved
-        report; any other value resolves against the prebuilt-report key catalog (README "Prebuilt
-        reports"). A prebuilt key is never a UUID, so there is no collision.
+        **`/reports/{report}` path param:** a prebuilt-report key (README "Prebuilt
+        reports"). Saved reports are not served; a UUID here is refused.
       properties:
         filters:
           type: object
@@ -30930,16 +30933,43 @@ components:
             type: object
             required: [fn]
             properties:
-              fn: { type: string, enum: [count, count_distinct, sum, avg, min, max] }
+              fn: { type: string, enum: [count, sum, avg, min, max] }
               field: { type: [string, 'null'] }
               as: { type: [string, 'null'] }
-        as_of_date: { type: [string, 'null'], format: date, description: Snapshot / historical reporting via deal_stage_history. }
 
     ReportResult:
       type: object
-      required: [report, plan, columns, rows]
+      required: [report, plan, columns, rows, as_of, timezone, base_currency, fiscal_year_start_month]
       properties:
         report: { type: string }
+        as_of:
+          type: string
+          format: date-time
+          description: >-
+            The instant this result was computed. A report is a reading taken at
+            a time, and without it two screens showing different numbers look
+            like a bug rather than two moments.
+        timezone:
+          type: string
+          description: >-
+            The installation's reporting zone, as an IANA name. Day and period
+            boundaries in this result are cut in it, never in UTC and never in
+            the reader's own zone.
+        base_currency:
+          type: string
+          description: >-
+            The installation's configured base currency, as an ISO-4217 code.
+            It labels the frame, not the columns: a money column carries each
+            record's OWN currency, which is why every money report groups by
+            `currency`. Converting to this one is the frozen-FX roll-up, a
+            capability this endpoint does not serve.
+        fiscal_year_start_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: >-
+            The month the installation's financial year opens, so a quarter in
+            this result can be placed without assuming it starts in January.
         plan:
           type: object
           additionalProperties: true

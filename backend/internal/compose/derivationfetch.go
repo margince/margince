@@ -37,12 +37,16 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		// The identical mask exclusion the report applied (reportmask.go):
 		// the explanation must not out-see the number it explains, and the
 		// withheld count rides the envelope the same way.
+		frame, err := readReportFrame(ctx, tx)
+		if err != nil {
+			return err
+		}
 		maskClauses, masked, err := maskExclusionClauses(ctx, spec, arg)
 		if err != nil {
 			return err
 		}
 		if masked {
-			n, err := countMaskExcluded(ctx, tx, spec, where, maskClauses, args)
+			n, err := countMaskExcluded(ctx, tx, frame, spec, where, maskClauses, args)
 			if err != nil {
 				return err
 			}
@@ -51,7 +55,7 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		}
 		whereSQL := strings.Join(where, " AND ")
 
-		rowsSQL, rowsArgs, err := bindReportTokens(ctx, tx, fmt.Sprintf(
+		rowsSQL, rowsArgs, err := bindReportTokens(ctx, frame, fmt.Sprintf(
 			"SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %d",
 			strings.Join(plan.selects, ", "), spec.fromClause(), whereSQL, reportRowLimit), args)
 		if err != nil {
@@ -72,7 +76,7 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		// (count(*) rides along as the honest total behind the capped
 		// rows slice). Values are read positionally, so a caller alias
 		// cannot shadow the total.
-		aggSQL, aggArgs, err := bindReportTokens(ctx, tx, fmt.Sprintf(
+		aggSQL, aggArgs, err := bindReportTokens(ctx, frame, fmt.Sprintf(
 			"SELECT count(*), %s FROM %s WHERE %s",
 			strings.Join(plan.aggSelects, ", "), spec.fromClause(), whereSQL), args)
 		if err != nil {
