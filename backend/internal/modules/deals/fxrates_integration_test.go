@@ -67,14 +67,16 @@ func TestTheEngineReadsTheNewestRateOnOrBeforeTheAsOfDay(t *testing.T) {
 		t.Errorf("the rate is dated %s, want %s — the newest ON OR BEFORE the as-of day, never one after it",
 			got.On.Format(time.DateOnly), want.Format(time.DateOnly))
 	}
-	// 100 minor units at 0.0061 is 0.61, which rounds to 1 away from zero.
-	converted, err := ConvertToBase(100, got.Rate)
+	// ¥100 at 0.0061 is €0.61, which is 61 EUR minor units. JPY carries no
+	// minor unit and EUR carries two, so both scales are in this number: a
+	// conversion that multiplied the minor units alone would answer 1.
+	converted, err := ConvertToBase(100, got.Rate, "JPY", "EUR")
 	if err != nil {
 		t.Fatalf("converting at the read rate: %v", err)
 	}
-	if converted != 1 {
-		t.Errorf("100 minor units at the read rate = %d, want 1 — the rate that came back is not the one "+
-			"seeded for that day", converted)
+	if converted != 61 {
+		t.Errorf("¥100 at the read rate = %d EUR minor units, want 61 (€0.61) — either the rate that came "+
+			"back is not the one seeded for that day, or the minor-unit scales were not both applied", converted)
 	}
 }
 
@@ -117,7 +119,7 @@ func TestTheBaseCurrencyNeedsNoStoredRate(t *testing.T) {
 	if !found {
 		t.Fatal("the base currency answered not found")
 	}
-	converted, err := ConvertToBase(123456, got.Rate)
+	converted, err := ConvertToBase(123456, got.Rate, "EUR", "EUR")
 	if err != nil {
 		t.Fatalf("converting at the identity rate: %v", err)
 	}

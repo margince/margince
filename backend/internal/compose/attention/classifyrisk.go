@@ -22,12 +22,12 @@ import (
 // classifyRisk: a deal drifting. Whether it is worth interrupting the day for
 // is decided against the pipeline's own median rather than a number somebody
 // typed once, so "material" tracks the business as it changes.
-func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialBar) ranked {
+func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialBar, money dayMoney) ranked {
 	consequence := crmcontracts.WorklistItemConsequence("deal_drifts")
 	if item.Kind != nil && *item.Kind == "close_overdue" {
 		consequence = "deal_slips_past_close"
 	}
-	expected, known := expectedRevenue(item)
+	expected, known := expectedRevenue(item, money)
 	// Material revenue interrupts the day; a smaller deal drifting is agreed
 	// work like any other. The bar is the pipeline's own median rather than a
 	// number somebody typed once, so "material" tracks the business as it
@@ -37,10 +37,15 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		level = levelMaterialRisk
 	}
 	row := base(item, level, "deals_at_risk", consequence)
+	// The reason carries the figure the verdict actually weighed, in the units
+	// it was weighed in — the base currency once conversion ran — so a reader
+	// comparing it against the summary's threshold compares like with like.
+	// The deal's own amount in its own currency still rides on the row's deal
+	// facts, so nothing the card states is lost.
 	if level == levelMaterialRisk {
-		row.Because = append(row.Because, reason("material", moneyOf(expected, item.Deal)))
+		row.Because = append(row.Because, reason("material", money.value(expected, item.Deal)))
 	} else if known {
-		row.Because = append(row.Because, reason("below_material", moneyOf(expected, item.Deal)))
+		row.Because = append(row.Because, reason("below_material", money.value(expected, item.Deal)))
 	}
 	quiet := quietDaysOf(item)
 	if quiet > 0 {
@@ -53,13 +58,14 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
 	return ranked{
-		item:         row,
-		deadlineAt:   deadlineOf(item.DueAt),
-		overdue:      item.Overdue != nil && *item.Overdue,
-		expectedBase: expected,
-		hasExpected:  known,
-		waitingDays:  quiet,
-		occurredAt:   occurredOf(item, asOf),
+		item:             row,
+		deadlineAt:       deadlineOf(item.DueAt),
+		overdue:          item.Overdue != nil && *item.Overdue,
+		expectedBase:     expected,
+		hasExpected:      known,
+		expectedCurrency: money.base,
+		waitingDays:      quiet,
+		occurredAt:       occurredOf(item, asOf),
 	}
 }
 
@@ -94,14 +100,22 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 //
 // The win probability lives on the stage rather than the deal, and this feed
 // does not read stages — so until that read exists the amount stands in for the
-// expectation. Naming that here rather than silently multiplying by one: the
-// figure is comparable between deals in one currency, which is what the
-// ordering needs, and it will get more accurate rather than change meaning.
-func expectedRevenue(item crmcontracts.AttentionItem) (int64, bool) {
+// expectation, and it will get more accurate rather than change meaning.
+//
+// Once conversion ran, the answer is the deal's amount in the installation's
+// base currency — the only figure by which two deals may be compared — and a
+// deal the estate could not price answers unknown rather than a raw number in
+// the wrong units. Before conversion (an assembly without the FX seam) the raw
+// amount stands, comparable only while every deal shares one currency.
+func expectedRevenue(item crmcontracts.AttentionItem, money dayMoney) (int64, bool) {
 	if item.Deal == nil || item.Deal.AmountMinor == nil {
 		return 0, false
 	}
-	return *item.Deal.AmountMinor, true
+	if !money.converted() {
+		return *item.Deal.AmountMinor, true
+	}
+	converted, priced := money.byItem[item.Id]
+	return converted, priced
 }
 
 // moneyOf carries the deal's own currency beside the amount. An amount without
@@ -110,7 +124,7 @@ func expectedRevenue(item crmcontracts.AttentionItem) (int64, bool) {
 // reaches the reader as a bare "material" with the number silently dropped.
 func moneyOf(minor int64, deal *crmcontracts.AttentionDealFacts) *crmcontracts.WorklistValue {
 	value := minor
-	money := &crmcontracts.WorklistValue{Kind: "money", Minor: &value}
+	money := &crmcontracts.WorklistValue{Kind: valueMoney, Minor: &value}
 	if deal != nil {
 		money.Currency = deal.Currency
 	}

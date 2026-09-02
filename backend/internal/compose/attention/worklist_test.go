@@ -59,7 +59,7 @@ func TestEveryItemSaysWhatHappensIfTheReaderDoesNothing(t *testing.T) {
 		Bounces:  lane(item("b1", "bounce")),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	if len(rows) == 0 {
 		t.Fatal("classified nothing from a day with four items in it")
@@ -80,7 +80,7 @@ func TestADealPastItsCloseDateSlipsWhileAnIdleOneDrifts(t *testing.T) {
 		AtRisk: lane(item("late", "deal_at_risk", withKind("close_overdue")), item("idle", "deal_at_risk", withKind("quiet"))),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	for _, row := range rows {
 		want := crmcontracts.WorklistItemConsequence("deal_drifts")
@@ -105,7 +105,7 @@ func TestASendDecisionOutranksAContactDecision(t *testing.T) {
 		},
 	}
 
-	got := rankAll(classifyDay(day, rankInstant))
+	got := rankAll(classifyDay(day, rankInstant, dayMoney{}))
 
 	assertOrder(t, got, "send", "hygiene")
 	if got[0].Level != levelBlocking || got[1].Level != levelRoutine {
@@ -124,7 +124,7 @@ func TestAMeetingWithinTwoHoursLeadsAndALaterOneDoesNot(t *testing.T) {
 		),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	for _, row := range rows {
 		want := levelAgreed
@@ -150,7 +150,7 @@ func TestTheSummaryCountsTheSameItemsTheQueueCarries(t *testing.T) {
 		Commitments: lane(item("c1", "conversation_claim", withDue(rankInstant.Add(-24*time.Hour)))),
 	}
 
-	ordered := rankAll(classifyDay(day, rankInstant))
+	ordered := rankAll(classifyDay(day, rankInstant, dayMoney{}))
 	summary := summarize(ordered, materialBar{})
 
 	if summary.Total != len(ordered) {
@@ -204,7 +204,7 @@ func TestAFilteredQueueCarriesOnlyThatKindOfWork(t *testing.T) {
 		AtRisk:   lane(item("r1", "deal_at_risk")),
 	}
 
-	kept := keepCategory(classifyDay(day, rankInstant), "deals_at_risk")
+	kept := keepCategory(classifyDay(day, rankInstant, dayMoney{}), "deals_at_risk")
 
 	if len(kept) != 1 || kept[0].item.Id != "r1" {
 		t.Fatalf("filtering for deals kept %d rows, wanted just the deal", len(kept))
@@ -223,7 +223,7 @@ func TestADecisionsExpiryIsNotCountedAsWorkDue(t *testing.T) {
 		Planned: []crmcontracts.AttentionItem{item("real-task", "task", withDue(rankInstant.Add(-time.Hour)))},
 	}
 
-	summary := summarize(rankAll(classifyDay(day, rankInstant)), materialBarOf(day))
+	summary := summarize(rankAll(classifyDay(day, rankInstant, dayMoney{})), materialBarOf(day, dayMoney{}))
 
 	if summary.Due != 1 {
 		t.Fatalf("counted %d due, wanted only the task — a proposal's expiry is not the reader's deadline", summary.Due)
@@ -249,7 +249,7 @@ func TestARiskRowCarriesTheDealsFigures(t *testing.T) {
 		AtRisk: lane(item("d", "deal_at_risk", withDeal(160_100_00))),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	if rows[0].item.Deal == nil || rows[0].item.Deal.AmountMinor == nil {
 		t.Fatal("the deal facts the lane feed resolved never reached the queue row")
@@ -269,7 +269,7 @@ func TestOnlyADealAboveTheMedianReachesTheMaterialBand(t *testing.T) {
 		),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	for _, row := range rows {
 		want := levelAgreed
@@ -295,7 +295,7 @@ func TestADealPastItsCloseDateOutranksAQuieterOne(t *testing.T) {
 		),
 	}
 
-	got := rankAll(classifyDay(day, rankInstant))
+	got := rankAll(classifyDay(day, rankInstant, dayMoney{}))
 
 	assertOrder(t, got, "past-close", "quiet-longer")
 }
@@ -309,7 +309,7 @@ func TestTheOvernightBriefingReachesTheQueue(t *testing.T) {
 		ThisMorning: []crmcontracts.AttentionItem{item("brief-1", "brief_item")},
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	if len(rows) != 1 || rows[0].item.Source != "brief_item" {
 		t.Fatalf("the briefing lane produced %d queue rows, wanted one", len(rows))
@@ -346,7 +346,7 @@ func TestEveryOutboundSendKindBlocksCustomerWork(t *testing.T) {
 			NeedsYou: []crmcontracts.AttentionItem{item("a", "approval", withKind(kind))},
 		}
 
-		rows := classifyDay(day, rankInstant)
+		rows := classifyDay(day, rankInstant, dayMoney{})
 
 		if rows[0].item.Level != levelBlocking {
 			t.Fatalf("%q landed at level %d, wanted the blocking band", kind, rows[0].item.Level)
@@ -365,7 +365,7 @@ func TestOnlyAnArrivedDateCountsAsDue(t *testing.T) {
 		},
 	}
 
-	summary := summarize(rankAll(classifyDay(day, rankInstant)), materialBarOf(day))
+	summary := summarize(rankAll(classifyDay(day, rankInstant, dayMoney{})), materialBarOf(day, dayMoney{}))
 
 	if summary.Due != 1 {
 		t.Fatalf("counted %d due, wanted only the one whose date has passed", summary.Due)
@@ -383,7 +383,7 @@ func TestTheBiggerOfTwoDealsIsMaterial(t *testing.T) {
 		),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	for _, row := range rows {
 		want := levelAgreed
@@ -540,7 +540,7 @@ func TestAPileOfAlikeDecisionsBecomesOneRow(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 1 {
 		t.Fatalf("forty alike decisions drew %d rows", len(got))
@@ -568,7 +568,7 @@ func TestContactDecisionsSplitByWhatTheyAreAbout(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: items}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	keys := map[crmcontracts.WorklistBatchKey]int{}
 	for _, row := range got {
@@ -620,7 +620,7 @@ func TestADecisionThatBlocksACustomerIsNeverFolded(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 5 {
 		t.Fatalf("five customer-blocking decisions drew %d rows", len(got))
@@ -638,7 +638,7 @@ func TestTwoAlikeDecisionsStayThemselves(t *testing.T) {
 		},
 	}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if len(got) != 2 {
 		t.Fatalf("two decisions drew %d rows", len(got))
@@ -656,7 +656,7 @@ func TestABatchNamesSomeOfWhatItHolds(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
 
-	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
 	if got[0].Batch.Sample == nil || len(*got[0].Batch.Sample) != 3 {
 		t.Fatal("the group names none of what it holds, so it cannot be checked")
@@ -779,7 +779,7 @@ func TestAGivenUpSendReachesTheQueueAndSaysWhatItCost(t *testing.T) {
 		Bounces:     lane(item("b1", "bounce")),
 	}
 
-	rows := classifyDay(day, rankInstant)
+	rows := classifyDay(day, rankInstant, dayMoney{})
 
 	var undelivered, bounced *ranked
 	for i := range rows {
@@ -817,7 +817,7 @@ func TestAMaterialDealCarriesTheCurrencyOfItsOwnAmount(t *testing.T) {
 		Actions: []crmcontracts.AttentionItemActions{},
 	}}
 
-	rows := classifyDay(crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}, rankInstant)
+	rows := classifyDay(crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}, rankInstant, dayMoney{})
 
 	var money *crmcontracts.WorklistValue
 	for _, row := range rows {

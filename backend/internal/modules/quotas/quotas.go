@@ -365,7 +365,11 @@ func (s *Store) ListQuotas(ctx context.Context, in ListQuotasInput) ([]crmcontra
 		if len(out) > limit {
 			out = out[:limit]
 			last := out[len(out)-1]
-			page = storekit.Page{HasMore: true, NextCursor: sorted.EncodePageCursor(cursorKeys[limit-1], last.CreatedAt, ids.UUID(last.Id))}
+			next, err := sorted.EncodePageCursor(cursorKeys[limit-1], last.CreatedAt, ids.UUID(last.Id))
+			if err != nil {
+				return err
+			}
+			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
 		return nil
 	})

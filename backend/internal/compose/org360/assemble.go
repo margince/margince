@@ -154,6 +154,8 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, orgID ids.Organizatio
 		// grants and the same row scope, so they can see further back than a
 		// truncated section page without ever seeing wider.
 		{sectionSuggestions, a.readSuggestions},
+		// After next_steps, whose rows it ranks. See moment.go.
+		{sectionMoments, a.readMoment},
 	}
 	for _, section := range each {
 		err := section.read()

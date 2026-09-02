@@ -123,7 +123,11 @@ func ListRestrictedActivities(ctx context.Context, db *database.DB, cursor *stri
 	if len(page.Records) > size {
 		page.Records = page.Records[:size]
 		last := page.Records[len(page.Records)-1]
-		page.NextCursor = storekit.EncodeCursor(last.RestrictedAt, last.ActivityID)
+		next, err := storekit.EncodeCursor(last.RestrictedAt, last.ActivityID)
+		if err != nil {
+			return RestrictedPage{}, err
+		}
+		page.NextCursor = next
 		page.HasMore = true
 	}
 	return page, nil

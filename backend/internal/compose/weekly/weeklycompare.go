@@ -79,7 +79,7 @@ func countWeekMoney(
 			// One unconvertible deal, and the whole figure is unknown.
 			return Money{}, nil
 		}
-		amount, err := deals.ConvertToBase(row.amountMinor, rate.Rate)
+		amount, err := deals.ConvertToBase(row.amountMinor, rate.Rate, row.currency, base)
 		if err != nil {
 			return Money{}, fmt.Errorf("weekly: converting the week's pipeline: %w", err)
 		}

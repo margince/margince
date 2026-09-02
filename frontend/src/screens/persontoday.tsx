@@ -62,7 +62,7 @@ type Activity = components["schemas"]["Activity"];
 // rather than left implicit: "Gone quiet" and "Promise overdue" lead to
 // different moves, and a reader who sees only the sentence has to infer which
 // kind of thing they are looking at.
-const MOMENT_RULE_LABEL = {
+export const MOMENT_RULE_LABEL = {
   meeting_prep: "person.moment.rule.meeting_prep",
   re_engaged: "person.moment.rule.re_engaged",
   job_change: "person.moment.rule.job_change",
@@ -76,7 +76,7 @@ const MOMENT_RULE_LABEL = {
   nothing_needed: "person.moment.rule.nothing_needed",
 } as const satisfies Record<PersonMoment["rule"], MessageKey>;
 
-const MOMENT_EVIDENCE_LABEL = {
+export const MOMENT_EVIDENCE_LABEL = {
   activity: "person.moment.evidence.activity",
   task: "person.moment.evidence.task",
   relationship_change: "person.moment.evidence.relationship_change",
@@ -89,7 +89,7 @@ const MOMENT_EVIDENCE_LABEL = {
 // read as warnings; the quiet success state reads as settled rather than as
 // something nobody has judged. Everything else is a live thread — a fact about
 // the relationship that wants a move rather than a verdict on it.
-function standingTone(rule: PersonMoment["rule"]): StandingTone {
+export function standingTone(rule: PersonMoment["rule"]): StandingTone {
   if (isLate(rule)) {
     return "warn";
   }
@@ -100,7 +100,7 @@ function standingTone(rule: PersonMoment["rule"]): StandingTone {
 // date is late whether it was read out of an email or filed as a task — one
 // rung covers both — while a promise not yet due is a live thread, not a
 // warning.
-function isLate(rule: PersonMoment["rule"]): boolean {
+export function isLate(rule: PersonMoment["rule"]): boolean {
   return rule === "gone_quiet" || rule === "overdue_promise";
 }
 

@@ -61,6 +61,11 @@ const (
 // here, where a bare "none" in three places reads as a coincidence.
 const valueNone = "none"
 
+// valueMoney is the comparator value kind for an amount, named for the reason
+// valueNone is: three sites spell it, and a typo in one would hand the client
+// a value it draws as nothing.
+const valueMoney = "money"
+
 // meetingHorizon is how soon a meeting must start to become the reader's most
 // urgent item. Two hours is the window in which preparing is still possible and
 // no longer optional.
@@ -75,11 +80,17 @@ type ranked struct {
 	// none. Overdue items carry a past instant and sort first by that fact.
 	deadlineAt time.Time
 	overdue    bool
-	// expectedBase is expected revenue in the installation's base currency,
-	// which is the ONLY figure by which two deals may be compared. Raw minor
-	// units compare a yen to a euro and get it wrong.
+	// expectedBase is expected revenue in the currency expectedCurrency names:
+	// the installation's base currency once the FX seam priced the day, which
+	// is the ONLY figure by which two deals may be compared — raw minor units
+	// compare a yen to a euro and get it wrong. In an assembly without the
+	// seam it is the deal's own raw amount and expectedCurrency stays empty.
 	expectedBase int64
 	hasExpected  bool
+	// expectedCurrency names expectedBase's units, empty when the figure is a
+	// raw amount not genuinely in any one currency — the comparison's money
+	// values claim a currency only when one is true.
+	expectedCurrency string
 	// waitingDays is the TRUE age of a wait, in days, and it is what a reader is
 	// ever shown — both in the row's own reasons and in the comparison naming
 	// why it sits above the next one.
@@ -257,7 +268,12 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 		return &crmcontracts.WorklistValue{Kind: valueNone}
 	}
 	minor := r.expectedBase
-	return &crmcontracts.WorklistValue{Kind: "money", Minor: &minor}
+	value := &crmcontracts.WorklistValue{Kind: valueMoney, Minor: &minor}
+	if r.expectedCurrency != "" {
+		currency := r.expectedCurrency
+		value.Currency = &currency
+	}
+	return value
 }
 
 func occurredValue(r ranked) *crmcontracts.WorklistValue {

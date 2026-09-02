@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { Badge } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
+import { PanelBody } from "../design-system/panel";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -18,6 +19,11 @@ import {
   useAccountStanding,
 } from "./companylookups";
 import { EntityRef } from "./entityref";
+import {
+  MOMENT_EVIDENCE_LABEL,
+  MOMENT_RULE_LABEL,
+  standingTone,
+} from "./persontoday";
 import { CallCard, TodayPanel, TodoRow } from "./record360";
 
 // "Today on this account" — the record's daily brief, and the only part of
@@ -144,6 +150,17 @@ export function TodayOnThisAccount({
 
   return (
     <>
+      {/* WHAT WE OWE, first. A promise past its date outranks a reading of the
+          account: one is a thing to do today and the other is context for it.
+          The contact page opens the same way, and on the same card, because a
+          promise is a promise whichever record you came in through. */}
+      {view.moment && (
+        <AccountMoment
+          moment={view.moment}
+          name={view.organization?.display_name}
+          onOpenRecord={onOpenRecord}
+        />
+      )}
       <CallCard
         name={view.organization?.display_name}
         standing={standing}
@@ -405,3 +422,67 @@ function byStrengthThenId(
 type Organization360Contact = NonNullable<
   Organization360["people"]
 >["data"][number];
+
+// What this account owes, as its own card above the reading.
+//
+// The SAME card the contact page opens on, from the same server rule: a
+// promise past its date, or the next one coming due, read from both places a
+// promise gets written down — a task somebody filed, and a commitment an
+// extractor read out of a conversation. Two screens answering "what do we owe
+// them?" differently is what this closes.
+//
+// Its own card rather than a row inside the reading below, for the reason the
+// reading and the moves are already two panels: a thing to do today and the
+// context for it are different to a reader who is scanning, and sharing a box
+// makes them read as one continuous section. The card is the kit's `CallCard`,
+// the same one the contact page draws the moment on, so the two pages cannot
+// drift apart in shape.
+function AccountMoment({
+  moment,
+  name,
+  onOpenRecord,
+}: Readonly<{
+  moment: components["schemas"]["PersonMoment"];
+  name?: string;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+}>) {
+  const t = useT();
+  const destination = moment.recommended_action.destination;
+  // The button appears only where the server said the action can be taken AND
+  // named somewhere to go. A card whose verb lands nowhere is worse than a
+  // card with no verb: the reader clicks, nothing happens, and they stop
+  // trusting the ones that work.
+  const target =
+    moment.recommended_action.state === "available" &&
+    destination?.entity_type != null &&
+    destination.entity_id != null
+      ? { type: destination.entity_type, id: destination.entity_id }
+      : undefined;
+  return (
+    <CallCard
+      name={name}
+      standing={{
+        label: t(MOMENT_RULE_LABEL[moment.rule]),
+        tone: standingTone(moment.rule),
+      }}
+      because={moment.headline}
+      restsOn={moment.evidence.map((item) => ({
+        key: `${item.type}-${item.id ?? item.label}`,
+        quote: item.label,
+        from: t(MOMENT_EVIDENCE_LABEL[item.type]),
+      }))}
+      footer={
+        target ? (
+          <Button
+            variant="ghost"
+            onClick={() => onOpenRecord?.(target.type, target.id)}
+          >
+            {moment.recommended_action.label}
+          </Button>
+        ) : undefined
+      }
+    >
+      <PanelBody>{moment.why_now}</PanelBody>
+    </CallCard>
+  );
+}

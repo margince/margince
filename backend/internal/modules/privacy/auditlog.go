@@ -352,7 +352,11 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 	if len(page.Entries) > limit {
 		page.Entries = page.Entries[:limit]
 		last := page.Entries[len(page.Entries)-1]
-		page.NextCursor = storekit.EncodeCursor(last.OccurredAt, last.ID)
+		next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+		if err != nil {
+			return AuditPage{}, err
+		}
+		page.NextCursor = next
 		page.HasMore = true
 	}
 	return page, nil
