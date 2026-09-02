@@ -165,12 +165,12 @@ test("a linked tab opens on that tab, not on the overview", async ({
 test("a report is an address, and Back steps between reports", async ({
   page,
 }) => {
-  await page.goto("/#/reports");
-  await page.getByRole("button", { name: "Forecast" }).click();
-  await expect(page).toHaveURL(/#\/reports\/forecast$/);
+  await page.goto("/#/analytics");
+  await page.getByRole("button", { name: "Forecast-Kategorien" }).click();
+  await expect(page).toHaveURL(/#\/analytics\/forecast$/);
 
   await page.goBack();
-  await expect(page).toHaveURL(/#\/reports$/);
+  await expect(page).toHaveURL(/#\/analytics$/);
 });
 
 test("the deals board remembers its pipeline and its view in the address", async ({

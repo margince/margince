@@ -28,7 +28,7 @@ import {
 } from "./common";
 import { EntityRef } from "./entityref";
 
-// Reports (B-EP09.12c, D-11): a picker over three reports — deals-by-stage
+// Analytics (B-EP09.12c, D-11): a picker over three reports — deals-by-stage
 // (unweighted next to weighted), forecast (category readings, each showing
 // unweighted and weighted, plus the server-derived "slipped" bucket), and
 // open deals per company. "Explain this number" opens the executed plan +
@@ -135,16 +135,16 @@ function byCurrency(
 // card that segment opens read the same key, so the tab and the surface behind
 // it cannot drift into two names for one report.
 const REPORT_LABEL_KEY = {
-  "deals-by-stage": "reports.reportDeals",
-  forecast: "reports.reportForecast",
-  "open-deals-per-company": "reports.reportOpenByCompany",
+  "deals-by-stage": "analytics.reportDeals",
+  forecast: "analytics.reportForecast",
+  "open-deals-per-company": "analytics.reportOpenByCompany",
 } as const satisfies Record<ReportKey, string>;
 
 // The line under the segment picker, for the two segments whose copy says
 // something the card's own title does not. A segment absent from here gets no
 // caption: an explanation of the report beside it is worse than none.
 const segmentSub: Partial<Record<Segment, MessageKey>> = {
-  "deals-by-stage": "reports.sub",
+  "deals-by-stage": "analytics.sub",
 };
 
 type ReportAggregate = NonNullable<
@@ -239,7 +239,7 @@ export function ForecastTile({
       detail={
         weightedMinor == null
           ? undefined
-          : `${t("reports.weighted")}: ${formatMoneyOrAbsent(weightedMinor, currency, locale)}`
+          : `${t("analytics.weighted")}: ${formatMoneyOrAbsent(weightedMinor, currency, locale)}`
       }
     />
   );
@@ -270,7 +270,7 @@ function ForecastStrip({
   const t = useT();
   return (
     <>
-      <Callout tone="info">{t("reports.forecastBanner")}</Callout>
+      <Callout tone="info">{t("analytics.forecastBanner")}</Callout>
       {/* ONE STRIP PER CURRENCY. A slot carries a single figure, so a category
           holding euros and dong cannot state one — and adding them would be the
           unit-less total data-semantics §1 r4 forbids. Banding by currency keeps
@@ -328,11 +328,11 @@ function CompanyTable({
   const t = useT();
   return (
     <DataTable
-      label={t("reports.reportOpenByCompany")}
+      label={t("analytics.reportOpenByCompany")}
       columns={[
         {
           key: "company",
-          header: t("reports.company"),
+          header: t("analytics.company"),
           // The report answers with an organization id and nothing else, so the
           // column read `01a0131c-3154-74cb-…` for every row — a company report
           // nobody could read. One record lookup per row, cached by id for a
@@ -348,19 +348,19 @@ function CompanyTable({
         },
         {
           key: FIELD_CURRENCY,
-          header: t("reports.currency"),
+          header: t("analytics.currency"),
           render: (row: ReportRow) => (
             <span className="t-mono">{rowCurrency(row) ?? MONEY_ABSENT}</span>
           ),
         },
         {
           key: "count",
-          header: t("reports.openDeals"),
+          header: t("analytics.openDeals"),
           render: (row: ReportRow) => String(rowCount(row, "deal_count")),
         },
         {
           key: "raw",
-          header: t("reports.unweighted"),
+          header: t("analytics.unweighted"),
           render: (row: ReportRow) => (
             <span className="t-mono">
               {formatMoneyOrAbsent(
@@ -429,7 +429,7 @@ function StageTable({
   const aggregates = buildStageAggregates(rows, stages);
   return (
     <DataTable
-      label={t("reports.reportDeals")}
+      label={t("analytics.reportDeals")}
       columns={[
         {
           key: "stage",
@@ -438,19 +438,19 @@ function StageTable({
         },
         {
           key: FIELD_CURRENCY,
-          header: t("reports.currency"),
+          header: t("analytics.currency"),
           render: (row: StageAgg) => (
             <span className="t-mono">{row.currency ?? MONEY_ABSENT}</span>
           ),
         },
         {
           key: "count",
-          header: t("reports.count"),
+          header: t("analytics.count"),
           render: (row: StageAgg) => String(row.count),
         },
         {
           key: "raw",
-          header: t("reports.unweighted"),
+          header: t("analytics.unweighted"),
           render: (row: StageAgg) => (
             <span className="t-mono">
               {formatMoneyOrAbsent(row.rawMinor, row.currency, locale)}
@@ -459,7 +459,7 @@ function StageTable({
         },
         {
           key: "weighted",
-          header: t("reports.weighted"),
+          header: t("analytics.weighted"),
           render: (row: StageAgg) => (
             <span className="t-mono">
               {formatMoneyOrAbsent(row.weightedMinor, row.currency, locale)}
@@ -520,7 +520,7 @@ function ExplainCard({
       id={id}
       ariaLabel={t("explain.title")}
       title={t("explain.title")}
-      sub={query.data?.definition ?? t("reports.planNote")}
+      sub={query.data?.definition ?? t("analytics.planNote")}
     >
       {url == null && <p className="t-caption">{t("common.empty")}</p>}
       {url != null && query.isPending && (
@@ -550,7 +550,7 @@ function ExplainCard({
   );
 }
 
-export function ReportsScreen() {
+export function AnalyticsScreen() {
   const t = useT();
   const { locale } = useLocale();
   const [explain, setExplain] = useState(false);
@@ -561,11 +561,11 @@ export function ReportsScreen() {
   // own: a suite that renders it directly goes on pressing the picker.
   const route = useRoute();
   const segment: Segment =
-    route.screen === "reports" && isSegment(route.id)
+    route.screen === "analytics" && isSegment(route.id)
       ? route.id
       : "deals-by-stage";
   const setSegment = (next: Segment) =>
-    navigate({ screen: "reports", id: next });
+    navigate({ screen: "analytics", id: next });
   const report: ReportKey = segment;
   // Deal reports aggregate over the pipeline/stage structure the overlay mirror
   // does not hold (the report endpoints answer 422 unsupported_by_sor in
@@ -649,7 +649,7 @@ export function ReportsScreen() {
           ),
         }}
       />
-      {/* Only where the copy is true of the SELECTED segment. `reports.sub`
+      {/* Only where the copy is true of the SELECTED segment. `analytics.sub`
           explains deals-by-stage's two money columns; printed over the forecast
           or the per-company table it described a report the reader was not
           looking at. The others are named by their card's own title. */}

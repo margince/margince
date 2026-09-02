@@ -16,10 +16,10 @@ import { LocaleProvider } from "../i18n";
 type Stage = components["schemas"]["Stage"];
 
 import {
+  AnalyticsScreen,
   buildStageAggregates,
   parseDerivationQuery,
-  ReportsScreen,
-} from "./reports";
+} from "./analytics";
 
 // D2 acceptance: a report picker over deals-by-stage (unchanged), forecast
 // (unweighted category tiles + a weighted-vs-unweighted banner), and
@@ -122,10 +122,10 @@ function reportsStub(opts: ReportsStubOpts = {}) {
   });
 }
 
-describe("ReportsScreen", () => {
+describe("AnalyticsScreen", () => {
   it("defaults to deals-by-stage and renders unweighted/weighted columns", async () => {
     vi.stubGlobal("fetch", reportsStub());
-    render(<ReportsScreen />);
+    render(<AnalyticsScreen />);
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
   });
 
@@ -146,9 +146,9 @@ describe("ReportsScreen", () => {
         ],
       }),
     );
-    render(<ReportsScreen />);
+    render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Forecast" }),
+      await screen.findByRole("button", { name: "Forecast categories" }),
     );
     await waitFor(() => expect(screen.getByText("Commit")).toBeTruthy());
     expect(
@@ -188,9 +188,9 @@ describe("ReportsScreen", () => {
         ],
       }),
     );
-    render(<ReportsScreen />);
+    render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Forecast" }),
+      await screen.findByRole("button", { name: "Forecast categories" }),
     );
     await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
   });
@@ -214,7 +214,7 @@ describe("ReportsScreen", () => {
         ],
       }),
     );
-    render(<ReportsScreen />);
+    render(<AnalyticsScreen />);
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     expect(
       bodies.some(
@@ -244,7 +244,7 @@ describe("ReportsScreen", () => {
         ],
       }),
     );
-    render(<ReportsScreen />);
+    render(<AnalyticsScreen />);
     await userEvent.click(
       await screen.findByRole("button", { name: "Open deals per company" }),
     );
@@ -266,7 +266,7 @@ describe("ReportsScreen", () => {
         },
       }),
     );
-    render(<ReportsScreen />);
+    render(<AnalyticsScreen />);
     await userEvent.click(
       await screen.findByRole("button", { name: /Explain/ }),
     );
@@ -319,7 +319,7 @@ describe("reports never sum money across currencies", () => {
       "fetch",
       reportsStub({ onRun: (key, body) => bodies.push({ key, body }) }),
     );
-    render(<ReportsScreen />);
+    render(<AnalyticsScreen />);
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     const stagePlan = bodies.find((sent) => sent.key === "deals-by-stage");
     expect(stagePlan?.body).toMatchObject({
@@ -349,7 +349,7 @@ describe("reports never sum money across currencies", () => {
         ],
       }),
     );
-    render(<ReportsScreen />);
+    render(<AnalyticsScreen />);
     expect(
       await screen.findByText(formatMoney(100_000, "EUR", "en")),
     ).toBeTruthy();
@@ -380,7 +380,7 @@ describe("reports never sum money across currencies", () => {
         ],
       }),
     );
-    render(<ReportsScreen />);
+    render(<AnalyticsScreen />);
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     // The count is real and stays; only the money is unknown.
     expect(screen.getByText("4")).toBeTruthy();
@@ -390,8 +390,10 @@ describe("reports never sum money across currencies", () => {
 
   it("renders a forecast category with no deals as absent rather than as zero euros", async () => {
     vi.stubGlobal("fetch", reportsStub({ forecastRows: [] }));
-    render(<ReportsScreen />);
-    await userEvent.setup().click(await screen.findByText("Forecast"));
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByText("Forecast categories"));
     await waitFor(() =>
       expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0),
     );
@@ -476,8 +478,10 @@ describe("reports never sum money across currencies", () => {
         ],
       }),
     );
-    render(<ReportsScreen />);
-    await userEvent.setup().click(await screen.findByText("Forecast"));
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByText("Forecast categories"));
     // Both currencies of the uncategorised pipeline, each in its own unit.
     expect(
       await screen.findByText(formatMoney(202_720_000, "EUR", "en")),
@@ -508,8 +512,10 @@ describe("reports never sum money across currencies", () => {
         ],
       }),
     );
-    render(<ReportsScreen />);
-    await userEvent.setup().click(await screen.findByText("Forecast"));
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByText("Forecast categories"));
     await waitFor(() =>
       expect(screen.getByText(formatMoney(1000, "EUR", "en"))).toBeTruthy(),
     );

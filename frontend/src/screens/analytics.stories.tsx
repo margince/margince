@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
-import { ForecastTile, ReportsScreen } from "./reports";
+import { AnalyticsScreen, ForecastTile } from "./analytics";
 import {
   installFetchStub,
   jsonResponse,
@@ -151,7 +151,7 @@ function screenStory() {
   installFetchStub(routes);
   return (
     <StoryProviders>
-      <ReportsScreen />
+      <AnalyticsScreen />
     </StoryProviders>
   );
 }

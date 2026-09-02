@@ -630,7 +630,7 @@ export const SectionPhone: Story = {
  * it, or a keyboard reader is left tabbing through a page they can no longer see.
  */
 function PhoneSheetExample() {
-  const route: Route = { screen: "reports" };
+  const route: Route = { screen: "analytics" };
   const { openSearch, palette } = usePaletteSeam();
   return (
     <div className="app railexpanded">

@@ -169,7 +169,7 @@ export const en = {
   // The merge decision. Both values survive a merge — choosing a side decides
   // which record stands and which value is shown first — so the copy never says
   // "delete", because nothing is deleted.
-  "nav.reports": "Reports",
+  "nav.analytics": "Analytics",
   "nav.ai": "Ask Margince",
   "nav.settings": "Settings",
   "nav.automations": "Automations",
@@ -3170,20 +3170,20 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 
-  "reports.sub": "deals by stage — unweighted next to weighted",
-  "reports.currency": "Currency",
-  "reports.count": "Deals",
-  "reports.unweighted": "Unweighted",
-  "reports.weighted": "Weighted",
-  "reports.planNote":
+  "analytics.sub": "deals by stage — unweighted next to weighted",
+  "analytics.currency": "Currency",
+  "analytics.count": "Deals",
+  "analytics.unweighted": "Unweighted",
+  "analytics.weighted": "Weighted",
+  "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
-  "reports.reportDeals": "Deals by stage",
-  "reports.reportForecast": "Forecast",
-  "reports.reportOpenByCompany": "Open deals per company",
-  "reports.forecastBanner":
+  "analytics.reportDeals": "Deals by stage",
+  "analytics.reportForecast": "Forecast categories",
+  "analytics.reportOpenByCompany": "Open deals per company",
+  "analytics.forecastBanner":
     "Each tile shows the raw total and, beneath it, the probability-weighted total — rounded per deal, so it always reconciles to Explain This Number.",
-  "reports.company": "Company",
-  "reports.openDeals": "Open deals",
+  "analytics.company": "Company",
+  "analytics.openDeals": "Open deals",
   "explain.sources": "Source rows",
 
   "ai.sub": "bring your own agent — governed by the two-tier contract",
