@@ -412,6 +412,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 			projects:   projects.NewStore(db),
 		},
 		now,
+		// The installation's own midnight is where "today" ends for the
+		// due-dated lanes. Unbound it would be UTC's, which is nobody's day
+		// outside one timezone.
+		attention.WithZone(attentionZone(pool)),
 	).WithWaiting(attentionWaiting{store: activities.NewStore(db), now: now}).
 		// The asks waiting on this colleague to answer. Until this lane existed
 		// a colleague learned they had been asked only by opening that
@@ -448,4 +452,18 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// at a dozen and a board built from it would call every loaded rep
 		// equally loaded.
 		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
+}
+
+// attentionZone binds the feed's day boundary to the installation's timezone,
+// through the SAME read the slipping-deal sweep and the morning brief already
+// make — one spelling of "which day is it here", so two surfaces cannot come to
+// disagree about when today ended.
+//
+// A transaction per call and no cache: the setting is one indexed row, the feed
+// asks once per request, and a cached zone would go on deciding "today" for
+// however long the process lives after an operator moved the installation.
+func attentionZone(pool *pgxpool.Pool) attention.Zone {
+	return func(ctx context.Context) (*time.Location, error) {
+		return installationZone(ctx, pool)
+	}
 }
