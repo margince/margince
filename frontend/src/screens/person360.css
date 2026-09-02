@@ -476,11 +476,16 @@
 }
 
 /* A rail row is one action or one reading: label left, value right. */
+/* The label keeps a floor and the reading takes the rest, wrapping when it is
+   long: with the label on a collapsible track and the reading set on one line,
+   "0 colleagues" grew the reading's column until the label had no room and
+   the two printed over each other. A reading is a few words, so it wraps to a
+   second line rather than losing its end to an ellipsis. */
 .pe-rail-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(6rem, auto) minmax(0, 1fr);
   gap: var(--space-3);
-  align-items: center;
+  align-items: baseline;
   padding: var(--space-2) 0;
   font-size: 14px;
 }
@@ -497,15 +502,11 @@
   min-width: 0;
 }
 
-/* Set on one line, and min-width: 0 is what makes the ellipsis reachable: the
-   `auto` track's floor is the value's own min-content width, so without it the
-   longest reading sizes the rail's column instead of truncating inside it. */
 .pe-rail-value {
   min-width: 0;
   color: var(--textPrimary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .pe-rail-value-good {

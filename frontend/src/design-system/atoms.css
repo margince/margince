@@ -1658,11 +1658,19 @@
    floating wherever its own content ended. */
 .stat-card-foot {
   display: flex;
+  /* Two whole items that may go onto two lines, never two items broken
+     mid-phrase: in a four-across row the receipt and the door do not always
+     share a line, and a receipt shrunk to one word per line reads as damage. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
   margin-top: auto;
   padding-top: var(--space-2);
+}
+
+.stat-card-foot > * {
+  white-space: nowrap;
 }
 /* Only the door: with no receipt beside it, it still sits at the card's end
    rather than under the figure. */
