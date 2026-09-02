@@ -2287,6 +2287,57 @@ export const de = {
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Nächste Woche planen",
+  // Die Woche eines Teams, eingefroren beim Abschluss. Zwei Wochen sind
+  // vergleichbar, weil keine sich unter dem Vergleich bewegt.
+  "teamweekly.title": "Die Woche des Teams",
+  "teamweekly.weekOf": "{team} · Woche ab {day}",
+  "teamweekly.frozen": "Eingefroren",
+  "teamweekly.loading": "Teamwoche wird gelesen",
+  "teamweekly.empty": "Für diese Woche gibt es nichts zu zeigen.",
+  "teamweekly.forbidden":
+    "Die Woche eines Teams ist eine Teamfrage, und dein Zugriff reicht nur bis zu deinen eigenen Datensätzen.",
+  "teamweekly.noSnapshot":
+    "Für dieses Team wurde noch keine Woche abgeschlossen. Die erste Momentaufnahme entsteht am Montag nach der ersten vollen Woche.",
+  "teamweekly.pickTeam": "Team auswählen",
+  "teamweekly.repsUnread":
+    "{count} Mitglied(er) konnten nicht gelesen werden. Alle Zahlen hier decken {counted} ab.",
+  "teamweekly.ofTotal": "{part} von {whole}",
+  "teamweekly.headline.plain":
+    "Die Woche lief ohne einen Wert, der in eine Richtung heraussticht.",
+  "teamweekly.headline.healthy":
+    "{reading} ist gesund bei {pct}%, gemessen an einer Schwelle von {bar}%.",
+  "teamweekly.headline.weak":
+    "{reading} ist es nicht, bei {pct}% gegen eine Schwelle von {bar}%.",
+  "teamweekly.reading.firstResponse": "Erstreaktion",
+  "teamweekly.reading.nextStep": "Termine mit nächstem Schritt",
+  "teamweekly.reading.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.firstResponse": "Rechtzeitig beantwortet",
+  "teamweekly.card.firstResponseBasis": "{breached} überschritten",
+  "teamweekly.card.meetings": "Termine mit nächstem Schritt",
+  "teamweekly.card.meetingsBasis": "der gehaltenen Termine",
+  "teamweekly.card.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.commitmentsBasis": "des Zugesagten",
+  "teamweekly.card.won": "Gewonnen",
+  "teamweekly.card.wonBasis": "{lost} verloren",
+  "teamweekly.card.reps": "Gezählte Mitglieder",
+  "teamweekly.card.repsBasis": "deren Woche vollständig gelesen wurde",
+  "teamweekly.movement.title": "Was die Woche bewegt hat",
+  "teamweekly.movement.won": "Gewonnen",
+  "teamweekly.movement.lost": "Verloren",
+  "teamweekly.movement.meetings": "Gehaltene Termine",
+  "teamweekly.movement.leads": "Zugewiesene Leads",
+  "teamweekly.coach.title": "Diese Woche begleiten",
+  "teamweekly.coach.sub":
+    "Ein Schwerpunkt pro Mitglied — auch für das Mitglied, dessen Woche gut lief.",
+  "teamweekly.coach.empty": "In dieser Woche war niemand in diesem Team.",
+  "teamweekly.focus.help_requested": "Hat um Hilfe gebeten",
+  "teamweekly.focus.leads_breached": "Leads blieben unbeantwortet",
+  "teamweekly.focus.commitments_missed": "Zusagen verpasst",
+  "teamweekly.focus.meetings_without_next_step":
+    "Termine ohne nächsten Schritt",
+  "teamweekly.focus.strong_week": "Zum Nachmachen",
+  "teamweekly.focus.quiet_week": "Eine ruhige Woche",
+
   "plan.sub": "Was du dir vorgenommen hast — und was du dafür brauchst.",
   "plan.loading": "Plan wird gelesen",
   "plan.empty": "Noch nichts auf dem Plan.",

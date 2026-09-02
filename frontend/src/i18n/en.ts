@@ -2324,6 +2324,57 @@ export const en = {
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan next week",
+  // A team's week, frozen when it closed. Two weeks compare because neither
+  // moves under the comparison.
+  "teamweekly.title": "The team's week",
+  "teamweekly.weekOf": "{team} · week of {day}",
+  "teamweekly.frozen": "Frozen",
+  "teamweekly.loading": "Reading the team's week",
+  "teamweekly.empty": "Nothing to show for this week.",
+  "teamweekly.forbidden":
+    "A team's week is a team question, and your access reaches your own rows only.",
+  "teamweekly.noSnapshot":
+    "No week has closed for this team yet. The first snapshot is written on the Monday after their first full week.",
+  "teamweekly.pickTeam": "Choose a team",
+  "teamweekly.repsUnread":
+    "{count} member(s) could not be read. Every figure here covers {counted}.",
+  "teamweekly.ofTotal": "{part} of {whole}",
+  "teamweekly.headline.plain":
+    "The week ran without a reading that stands out either way.",
+  "teamweekly.headline.healthy":
+    "{reading} is healthy at {pct}%, against a bar of {bar}%.",
+  "teamweekly.headline.weak":
+    "{reading} is not, at {pct}% against a bar of {bar}%.",
+  "teamweekly.reading.firstResponse": "First response",
+  "teamweekly.reading.nextStep": "Meetings with a next step",
+  "teamweekly.reading.commitments": "Promises kept",
+  "teamweekly.card.firstResponse": "Answered in time",
+  "teamweekly.card.firstResponseBasis": "{breached} breached",
+  "teamweekly.card.meetings": "Meetings with a next step",
+  "teamweekly.card.meetingsBasis": "of the meetings held",
+  "teamweekly.card.commitments": "Promises kept",
+  "teamweekly.card.commitmentsBasis": "of what was owed",
+  "teamweekly.card.won": "Won",
+  "teamweekly.card.wonBasis": "{lost} lost",
+  "teamweekly.card.reps": "Members counted",
+  "teamweekly.card.repsBasis": "whose week was read in full",
+  "teamweekly.movement.title": "What the week did",
+  "teamweekly.movement.won": "Won",
+  "teamweekly.movement.lost": "Lost",
+  "teamweekly.movement.meetings": "Meetings held",
+  "teamweekly.movement.leads": "Leads routed",
+  "teamweekly.coach.title": "Coach this week",
+  "teamweekly.coach.sub":
+    "One focus per member, including the member whose week went well.",
+  "teamweekly.coach.empty": "Nobody was on this team that week.",
+  "teamweekly.focus.help_requested": "Asked for help",
+  "teamweekly.focus.leads_breached": "Leads went unanswered",
+  "teamweekly.focus.commitments_missed": "Promises missed",
+  "teamweekly.focus.meetings_without_next_step":
+    "Meetings left without a next step",
+  "teamweekly.focus.strong_week": "Worth copying",
+  "teamweekly.focus.quiet_week": "A quiet week",
+
   "plan.sub": "What you said you would do, and what you need to do it.",
   "plan.loading": "Reading your plan",
   "plan.empty": "Nothing on the plan yet.",
