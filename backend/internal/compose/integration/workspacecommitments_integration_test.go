@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
@@ -91,5 +92,79 @@ func TestASettledPromiseLeavesTheSweep(t *testing.T) {
 
 	if rows, _ := workspacePromises(t, e, 20); len(rows) != 0 {
 		t.Errorf("a settled promise is still owed according to the sweep: %d rows", len(rows))
+	}
+}
+
+// The task read behind review_commitments must keep the promise that slipped
+// LAST when the bound cuts, for the same reason the claim read must.
+//
+// Ordered earliest-first and then truncated — which is what the display queue
+// wants and what this read did — a bounded sweep holds the oldest promises and
+// drops the one that slipped yesterday. The tool then names the least
+// recoverable promise on the record and the read looks like it worked.
+func TestABoundedTaskSweepKeepsTheTaskThatSlippedLast(t *testing.T) {
+	e := integration.Setup(t)
+	person := e.SeedPerson(t, "Carol Wagner", nil)
+	seedTask := func(subject string, dueDaysAgo int) {
+		t.Helper()
+		due := sweepClock.AddDate(0, 0, -dueDaysAgo)
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "task", Subject: &subject, DueAt: &due, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: person}},
+		}); err != nil {
+			t.Fatalf("logging %q: %v", subject, err)
+		}
+	}
+	seedTask("Chase the ancient NDA", 30)
+	seedTask("Chase the older NDA", 20)
+	seedTask("Send yesterday's file", 1)
+
+	rows, more, err := activities.NewStore(e.DB()).ListOpenTasks(e.Admin(),
+		activities.ListOpenTasksInput{Limit: 1, MostRecentlySlippedFirst: true})
+	if err != nil {
+		t.Fatalf("reading the open tasks: %v", err)
+	}
+
+	if len(rows) != 1 {
+		t.Fatalf("asked for 1 task and got %d", len(rows))
+	}
+	if rows[0].Subject != "Send yesterday's file" {
+		t.Errorf("the bounded sweep kept %q; it must keep the task that slipped most recently, "+
+			"which is the one still worth rescuing", rows[0].Subject)
+	}
+	if !more {
+		t.Error("cut tasks from the sweep and did not say so")
+	}
+}
+
+// The queue ordering is unchanged for the callers that DISPLAY a list: they
+// want the earliest deadline at the top, and the flag is what separates the
+// two questions rather than one order being made to serve both.
+func TestTheDisplayQueueStillLeadsWithTheEarliestDeadline(t *testing.T) {
+	e := integration.Setup(t)
+	person := e.SeedPerson(t, "Carol Wagner", nil)
+	for _, row := range []struct {
+		subject    string
+		dueDaysAgo int
+	}{{"Chase the ancient NDA", 30}, {"Send yesterday's file", 1}} {
+		due := sweepClock.AddDate(0, 0, -row.dueDaysAgo)
+		subject := row.subject
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "task", Subject: &subject, DueAt: &due, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: person}},
+		}); err != nil {
+			t.Fatalf("logging %q: %v", subject, err)
+		}
+	}
+
+	rows, _, err := activities.NewStore(e.DB()).ListOpenTasks(e.Admin(),
+		activities.ListOpenTasksInput{Limit: 5})
+	if err != nil {
+		t.Fatalf("reading the open tasks: %v", err)
+	}
+
+	if len(rows) == 0 || rows[0].Subject != "Chase the ancient NDA" {
+		t.Errorf("the queue leads with %v; a display list is ordered by the earliest deadline",
+			rows)
 	}
 }

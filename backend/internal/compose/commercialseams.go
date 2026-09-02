@@ -50,6 +50,14 @@ import (
 // seam and the tool withholds the claims a bounded read cannot support.
 const handoffScanLimit = 50
 
+// commitmentAboutPerson is the entity type a promise's "about" row carries when
+// the record it names is a contact.
+//
+// Its own constant rather than flipsource.go's flipObjectPerson: that one names
+// an object in the system-of-record FLIP, and borrowing it here would tie two
+// vocabularies together that are free to move apart.
+const commitmentAboutPerson = "person"
+
 // commitmentLister serves the open-promise set from the activities module's
 // own gated read.
 func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
@@ -58,7 +66,18 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 	claims := people.NewStore(db)
 	return func(ctx context.Context, in agents.CommitmentQuery) (agents.CommitmentSweep, error) {
 		now := clockNow()
-		query := activities.ListOpenTasksInput{AssigneeID: in.AssigneeID, Limit: in.Limit}
+		// ONE bound for the merged answer, resolved here rather than left to
+		// each source's own default. The two disagree — the task read defaults
+		// to fifty and the claim read to two hundred — so a caller who omits
+		// the argument would get whatever the two happened to add up to, and
+		// be told nothing was cut.
+		asked := agents.CommitmentSweepLimit(in.Limit)
+		query := activities.ListOpenTasksInput{
+			AssigneeID: in.AssigneeID, Limit: asked,
+			// The bound cuts before the merge does, so the store has to keep
+			// the promise the ranking is about rather than the oldest ones.
+			MostRecentlySlippedFirst: true,
+		}
 		if in.WithinProjectID != nil {
 			project := ids.From[ids.ProjectKind](*in.WithinProjectID)
 			query.WithinProjectID = &project
@@ -67,11 +86,11 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 		if err != nil {
 			return agents.CommitmentSweep{}, err
 		}
-		said, saidMore, err := extractedCommitments(ctx, pool, claims, in)
+		said, saidMore, err := extractedCommitments(ctx, pool, claims, in, asked)
 		if err != nil {
 			return agents.CommitmentSweep{}, err
 		}
-		promises, cut := rankPromises(now, asCommitments(filed), asExtracted(said), in.Limit)
+		promises, cut := rankPromises(now, asCommitments(filed), asExtracted(said), asked)
 		return agents.CommitmentSweep{
 			AsOf:        now,
 			Commitments: promises,
@@ -90,7 +109,8 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 // Returning none is the honest answer; the tool's own copy says the narrowed
 // answer covers recorded tasks alone.
 func extractedCommitments(
-	ctx context.Context, pool *pgxpool.Pool, store *people.Store, in agents.CommitmentQuery,
+	ctx context.Context, pool *pgxpool.Pool, store *people.Store,
+	in agents.CommitmentQuery, limit int,
 ) ([]people.OrgCommitment, bool, error) {
 	if in.AssigneeID != nil || in.WithinProjectID != nil {
 		return nil, false, nil
@@ -99,7 +119,7 @@ func extractedCommitments(
 	var more bool
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
-		out, more, err = store.OpenCommitmentsAcrossWorkspace(ctx, tx, in.Limit)
+		out, more, err = store.OpenCommitmentsAcrossWorkspace(ctx, tx, limit)
 		return err
 	})
 	return out, more, err
@@ -118,12 +138,14 @@ func rankPromises(now time.Time, filed, said []agents.OpenCommitment, limit int)
 	items := make([]owedwork.Item, 0, len(filed)+len(said))
 	for _, promise := range filed {
 		items = append(items, owedwork.Item{
-			Ref: promise, Source: owedwork.FromTask, DueAt: promise.DueAt,
+			Ref: promise, Source: owedwork.FromTask,
+			DueAt: promise.DueAt, FiledAt: promise.FiledAt,
 		})
 	}
 	for _, promise := range said {
 		items = append(items, owedwork.Item{
-			Ref: promise, Source: owedwork.FromClaim, DueAt: promise.DueAt,
+			Ref: promise, Source: owedwork.FromClaim,
+			DueAt: promise.DueAt, FiledAt: promise.FiledAt,
 		})
 	}
 	out := make([]agents.OpenCommitment, 0, len(items))
@@ -134,7 +156,7 @@ func rankPromises(now time.Time, filed, said []agents.OpenCommitment, limit int)
 		}
 		out = append(out, promise)
 	}
-	if limit > 0 && len(out) > limit {
+	if len(out) > limit {
 		return out[:limit], true
 	}
 	return out, false
@@ -154,8 +176,10 @@ func asExtracted(claims []people.OrgCommitment) []agents.OpenCommitment {
 			// the person it was promised TO as though they owed it.
 			ClaimID: &claimID, SourceActivityID: &activityID,
 			Quote: claim.SourceQuote, Subject: claim.Body, DueAt: claim.DueAt,
+			FiledAt: claim.OccurredAt,
 			About: []agents.CommitmentAbout{{
-				EntityType: "person", EntityID: claim.PersonID.UUID, Name: claim.PersonName,
+				EntityType: commitmentAboutPerson,
+				EntityID:   claim.PersonID.UUID, Name: claim.PersonName,
 			}},
 		})
 	}
@@ -178,6 +202,7 @@ func asCommitments(tasks []activities.OpenTask) []agents.OpenCommitment {
 		out = append(out, agents.OpenCommitment{
 			Source: agents.CommitmentFromTask,
 			TaskID: &taskID, Subject: t.Subject, DueAt: t.DueAt,
+			FiledAt:    t.CreatedAt,
 			AssigneeID: t.AssigneeID, AssigneeName: t.AssigneeName, About: about,
 		})
 	}

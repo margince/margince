@@ -7,17 +7,21 @@ package agents
 // date first, each with the person who owes it and the record it was made
 // about.
 //
-// EARLIEST DUE, not oldest promise. The order is the due date ascending with
-// undated last — a promise made a year ago and never dated sorts behind one
-// made this morning for tomorrow, because what a reviewer is chasing is the
-// date that has passed rather than the day the words were said.
+// MOST OVERDUE FIRST, and the order is kernel/owedwork's — the same ranking the
+// contact and company pages apply, so an agent and a reader looking at one
+// account agree about what is most overdue. Among late promises the one whose
+// deadline passed LAST leads, because that is the one still recoverable; then
+// the rest by nearest deadline, with undated ones behind them.
 //
-// A promise here is a TASK ACTIVITY that nobody has ticked off. That is the
-// whole definition, and it is the tool's honesty problem: a commitment made
-// out loud in a meeting and never written down is not in this answer, and a
-// model told nothing would report the list as "what we owe" rather than as
-// "what we recorded that we owe". The description says so, and the tool
-// refuses to imply more than the rows support.
+// The order matters more than a display choice would, because the bound cuts
+// against it: read earliest-first and truncated, a bounded answer holds the
+// oldest promises and drops the one that slipped yesterday.
+//
+// A promise here is EITHER a task nobody ticked off or a commitment an
+// extractor read out of a captured conversation. The two are unlinked rows, so
+// one promise both said and typed appears twice; what is absent is a promise
+// made where nothing was captured at all. The description says both, and the
+// tool refuses to imply more than the rows support.
 //
 // THE TOOL IS CLOCK-FREE. The seam stamps the instant it swept at, and
 // everything below is a pure function of (due date, that instant) — which is
@@ -70,9 +74,13 @@ type OpenCommitment struct {
 	SourceActivityID *ids.UUID
 	// Quote is the sentence the promise was made in. Claims only: a task
 	// carries what somebody retyped and has nothing to quote.
-	Quote        string
-	Subject      string
-	DueAt        *time.Time
+	Quote   string
+	Subject string
+	DueAt   *time.Time
+	// FiledAt is when the promise was made: a task's creation, a claim's
+	// message. It breaks ties between two promises sharing a deadline, so the
+	// answer does not depend on which source a seam happened to read first.
+	FiledAt      time.Time
 	AssigneeID   *ids.UUID
 	AssigneeName string
 	About        []CommitmentAbout
@@ -143,12 +151,26 @@ const (
 // a model told nothing reports it as one. It matters more here than most,
 // because the question this tool answers is "is anything being dropped".
 const commitmentsTruncatedMessage = "More open commitments exist than are listed here. " +
-	"Report these as the soonest-due promises found, not as everything outstanding."
+	"Report these as the most overdue promises found, not as everything outstanding."
 
 // maxCommitments bounds one call. It is the schema's maximum and the
 // server-side ceiling both, so a caller that omits the argument gets a
 // bounded read rather than the whole table.
 const maxCommitments = 50
+
+// CommitmentSweepLimit is how many promises one call serves, for a seam that
+// merges more than one source.
+//
+// The bound belongs to the TOOL, not to either read behind it. Each source has
+// a default of its own — they differ — so a seam that passed the caller's zero
+// straight through would return whatever the two happened to add up to, and
+// report nothing as cut because neither read had hit its own bound.
+func CommitmentSweepLimit(asked int) int {
+	if asked <= 0 || asked > maxCommitments {
+		return maxCommitments
+	}
+	return asked
+}
 
 type reviewCommitments struct{ list CommitmentLister }
 

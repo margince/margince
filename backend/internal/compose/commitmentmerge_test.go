@@ -40,7 +40,7 @@ func saidInConversation(subject string, dueInDays int) agents.OpenCommitment {
 func TestAPromiseMadeInAConversationReachesTheAnswer(t *testing.T) {
 	got, _ := rankPromises(swept, nil, []agents.OpenCommitment{
 		saidInConversation("Send the security questionnaire", -2),
-	}, 0)
+	}, agents.CommitmentSweepLimit(0))
 
 	if len(got) != 1 {
 		t.Fatalf("answered with %d promises; a commitment nobody typed is still owed", len(got))
@@ -62,7 +62,7 @@ func TestBothSourcesRankByOneRule(t *testing.T) {
 	got, _ := rankPromises(swept,
 		[]agents.OpenCommitment{filedTask("Return the redlines", -20)},
 		[]agents.OpenCommitment{saidInConversation("Send the quote", -1)},
-		0)
+		agents.CommitmentSweepLimit(0))
 
 	if len(got) != 2 {
 		t.Fatalf("merged into %d promises, want both", len(got))
@@ -89,18 +89,60 @@ func TestTheMergedAnswerHonoursTheCallersBound(t *testing.T) {
 	}
 }
 
-// An unbounded ask keeps every promise. Zero means "no limit" on this seam, and
-// silently trimming would drop work nobody asked to hide.
-func TestAnUnboundedAskKeepsEveryPromise(t *testing.T) {
+// An answer that fits under the bound keeps every promise and says nothing was
+// cut. Reporting truncation on a complete answer would have a model hedge a
+// fact it could have stated.
+func TestAnAnswerThatFitsReportsNoTruncation(t *testing.T) {
 	got, truncated := rankPromises(swept,
 		[]agents.OpenCommitment{filedTask("a", -3)},
 		[]agents.OpenCommitment{saidInConversation("b", -1)},
-		0)
+		agents.CommitmentSweepLimit(0))
 
 	if len(got) != 2 {
-		t.Errorf("returned %d promises with no limit set, want both", len(got))
+		t.Errorf("returned %d promises, want both", len(got))
 	}
 	if truncated {
 		t.Error("reported truncation without cutting anything")
+	}
+}
+
+// The bound belongs to the tool, not to either read behind it. The two sources
+// default differently — fifty for tasks, two hundred for claims — so a caller
+// who omits the limit would get whatever the two happened to add up to, and be
+// told nothing was cut.
+func TestAnOmittedLimitIsTheToolsOwnCeiling(t *testing.T) {
+	var said []agents.OpenCommitment
+	for i := range 60 {
+		said = append(said, saidInConversation("promise", -i-1))
+	}
+
+	got, truncated := rankPromises(swept, nil, said, agents.CommitmentSweepLimit(0))
+
+	// Both ends, because either alone passes for the wrong reason: a ceiling
+	// with no floor is satisfied by returning nothing, and a floor with no
+	// ceiling by returning everything both reads happened to fetch.
+	if len(got) != 50 {
+		t.Errorf("returned %d promises for a caller who named no limit; the tool serves exactly "+
+			"its ceiling of 50 when more exist", len(got))
+	}
+	if !truncated {
+		t.Error("cut ten promises and reported nothing; a model reads a bounded set as everything outstanding")
+	}
+}
+
+// Two promises due the same day rank by when they were promised, whichever
+// source holds them. Left to input order, every task would beat every claim on
+// a tie regardless of which was actually made first.
+func TestASharedDeadlineBreaksOnWhenThePromiseWasMade(t *testing.T) {
+	task := filedTask("Return the redlines", 8)
+	task.FiledAt = swept.AddDate(0, 0, -1)
+	claim := saidInConversation("Send the quote", 8)
+	claim.FiledAt = swept.AddDate(0, 0, -30)
+
+	got, _ := rankPromises(swept, []agents.OpenCommitment{task}, []agents.OpenCommitment{claim}, 10)
+
+	if got[0].Subject != "Send the quote" {
+		t.Errorf("led with %q; of two promises due the same day the one promised first leads, "+
+			"and the claim was made a month before the task", got[0].Subject)
 	}
 }
