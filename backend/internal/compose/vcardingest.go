@@ -53,14 +53,16 @@ import (
 // past a limit of five.
 const vcardIngestMaxCards = 5
 
-// vcardIngestMaxAttempts bounds the retry: parsing a handful of local files
-// and writing at most vcardIngestMaxCards people touches no model and no
-// network (api/jobs.yaml's timeout says so), so a failure here is either a
-// transient database hiccup, worth one or two more tries, or a defect in the
-// card or the code — neither of which a 25th identical attempt fixes. River's
-// own default would keep retrying a deterministic refusal for hours across an
-// exponential ladder, for no different an answer than the first attempt gave.
-const vcardIngestMaxAttempts = 3
+// vcardIngestMaxAttempts bounds the retry. This kind is on-demand — nothing
+// re-enqueues a message the trigger already fired for — so the ladder has to
+// carry BOTH failure shapes alone: a blob-store read that is down for a
+// minute (worth the retries) and a malformed card or a code defect (worth
+// none, since River's own default would answer no differently on its 25th
+// identical attempt). Five, not three: unlike a lookup this job can retry
+// freely (geocodeMaxAttempts, vatCheckMaxAttempts), it is never re-swept, so
+// it needs the same headroom scheduledSendMaxAttempts and
+// embedReindexMaxAttempts carry for a dependency with no second chance.
+const vcardIngestMaxAttempts = 5
 
 // vcardIngestInsertOpts is the trigger's insert, spelled here beside the worker
 // whose queue and attempt cap it names.
@@ -126,9 +128,11 @@ func (w *vcardIngestWorker) Work(ctx context.Context, job *river.Job[VCardIngest
 			"activity", job.Args.Activity, "workspace", job.Args.Workspace)
 		return nil
 	default:
-		// River owns the attempt cap, from the contract's own max_attempts.
-		// A second ceiling counted here would be a copy of that number, and the
-		// two would drift the first time either moved.
+		// River retries this against vcardIngestMaxAttempts, declared beside
+		// vcardIngestInsertOpts — this kind is opts_owner: caller, so nothing
+		// reads a bound from api/jobs.yaml for it the way workspaceSweepOpts
+		// reads one for a fan_out kind; the cap has to live at the insert
+		// site instead.
 		return jobs.FaultContext(ctx, err)
 	}
 }
