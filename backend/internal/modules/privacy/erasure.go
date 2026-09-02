@@ -163,7 +163,10 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		if err := redactApprovalsCitingActivities(ctx, tx, append(activitiesRedacted, activitiesHeld...), ErasedSourceWithdrawal); err != nil {
 			return err
 		}
-		if err := redactWorkflowRuns(ctx, tx, emails); err != nil {
+		// What the subject's name is left standing in inside somebody else's
+		// working record — an automation's run, and a colleague's plan for
+		// their week (erasure_commitments.go).
+		if err := redactWorkingRecords(ctx, tx, subject, emails); err != nil {
 			return err
 		}
 		// Purge the subject's attachment bytes and rows together, inside the

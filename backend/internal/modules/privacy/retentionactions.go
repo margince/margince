@@ -322,6 +322,17 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		err = purgeSubjectPurchases(ctx, tx, id)
 	}
 	if err == nil {
+		// What a colleague wrote down to DO about them, on their own weekly
+		// plan. The SAME statement the Art. 17 cascade runs, called rather than
+		// copied: the two acts differ only by the suppression list, and a
+		// second spelling here would be the drift personscrub_test.go exists to
+		// catch. Nothing cascades to it — the table holds no person FK and is
+		// keyed to the rep who wrote it — so an anonymize that skipped it would
+		// leave the subject's name in a commitment beside an "Erased Subject"
+		// record.
+		err = redactCommitmentsNaming(ctx, tx, ids.From[ids.PersonKind](id))
+	}
+	if err == nil {
 		// The channel identity is a resolution key on the subject as
 		// much as their address: left behind, it would keep binding
 		// inbound messages to the row this sweep just anonymized.
