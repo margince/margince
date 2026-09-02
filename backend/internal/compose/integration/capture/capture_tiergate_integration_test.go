@@ -144,6 +144,11 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 			t.Fatalf("%d attested outbound activities, want 1 — the T1 evidence must be stamped", n)
 		}
 
+		// They answer on our thread, which is the exchange the create tier needs.
+		// The newsletter that follows is not that answer: a List-Unsubscribe
+		// says a list sent it, and a list writes back to nobody.
+		sync(t, email("team@event.expo.example", "Expo", captureOwner,
+			"ev1r@event.expo.example", "ev1@myco.example"))
 		sync(t, emailWithListUnsub("team@event.expo.example", "Expo", "ev2@event.expo.example"))
 		if n := countRows(t, e, `
 			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
@@ -222,6 +227,10 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 		// organization called "Gmail" — the junk this ADR exists to prevent.
 		syncSent(t, map[string]bool{"fm1@myco.example": true},
 			email(captureOwner, "", "carol@gmail.com", "fm1@myco.example", ""))
+		// Carol answers, which is what makes her a contact without a verdict.
+		// The subject here is what her DOMAIN can name, so the exchange is
+		// fixture rather than finding.
+		sync(t, email("carol@gmail.com", "Carol", captureOwner, "fm1r@gmail.com", "fm1@myco.example"))
 		if n := countRows(t, e, `
 			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
 			WHERE pe.email = 'carol@gmail.com'`); n != 1 {
@@ -386,6 +395,146 @@ func TestCaptureTierGateMintsNoContactForACalendarInvite(t *testing.T) {
 	}
 }
 
+// One send is intent. An exchange is a correspondence.
+//
+// The tier that creates on the strength of an outbound message read "we wrote
+// here" as "this is a contact", and intent is often unreturned: a founder mails
+// forty people about a conference and hears from six. The other thirty-four
+// became contacts anyway, along with the test addresses and the one-off
+// errands.
+//
+// Nothing is refused, only deferred. A single send sends the address to the
+// verdict, which reads the message and answers on its merits — so a real
+// prospect written to once still becomes a contact, a moment later and for a
+// reason.
+func TestCaptureTierGateNeedsAnExchangeRatherThanASend(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync, syncSent := env.e, env.sync, env.syncSent
+
+	t.Run("one send defers instead of creating", func(t *testing.T) {
+		syncSent(t, map[string]bool{"ex1@myco.example": true},
+			email(captureOwner, "", "quiet@prospect.example", "ex1@myco.example", ""))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'quiet@prospect.example'`); n != 0 {
+			t.Fatalf("%d persons after one send, want 0 — writing once is intent, not a correspondence", n)
+		}
+		// Deferred, not dismissed: the verdict still gets to answer, and a real
+		// prospect becomes a contact that way.
+		if n := countRows(t, e, `
+			SELECT count(*) FROM capture_pending_counterparty
+			WHERE email = 'quiet@prospect.example' AND status = 'pending'`); n != 1 {
+			t.Fatalf("%d open questions after one send, want 1 — the sender is deferred, not refused", n)
+		}
+	})
+
+	t.Run("their reply on our thread is the exchange", func(t *testing.T) {
+		syncSent(t, map[string]bool{"ex2@myco.example": true},
+			email(captureOwner, "", "answers@prospect.example", "ex2@myco.example", ""))
+		sync(t, email("answers@prospect.example", "Answers", captureOwner,
+			"ex2r@prospect.example", "ex2@myco.example"))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'answers@prospect.example'`); n != 1 {
+			t.Fatalf("%d persons after they wrote back, want 1 — somebody read our mail and answered", n)
+		}
+	})
+
+	t.Run("two separate threads are an exchange too", func(t *testing.T) {
+		// Nobody writes to the same address on two different threads by
+		// accident, so the second send is its own evidence — no reply needed.
+		syncSent(t, map[string]bool{"ex3@myco.example": true},
+			email(captureOwner, "", "twice@prospect.example", "ex3@myco.example", ""))
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'twice@prospect.example'`); n != 0 {
+			t.Fatalf("%d persons after the first send, want 0 — the fixture never reaches the case under test", n)
+		}
+		syncSent(t, map[string]bool{"ex4@myco.example": true},
+			email(captureOwner, "", "twice@prospect.example", "ex4@myco.example", ""))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'twice@prospect.example'`); n != 1 {
+			t.Fatalf("%d persons after two threads, want 1 — writing twice is not an accident", n)
+		}
+	})
+
+	t.Run("a forged thread root manufactures nothing", func(t *testing.T) {
+		// thread_key is the message's own References root, so a sender chooses
+		// it verbatim. A stranger who names the root of a thread the workspace
+		// wrote on to SOMEBODY ELSE would otherwise turn a colleague's
+		// correspondence into their own exchange.
+		syncSent(t, map[string]bool{"ex6@myco.example": true},
+			email(captureOwner, "", "genuine@partner.example", "ex6@myco.example", ""))
+		sync(t, email("forger@spam.example", "Forger", captureOwner,
+			"ex6f@spam.example", "ex6@myco.example"))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'forger@spam.example'`); n != 0 {
+			t.Fatalf("%d persons for a forged thread root, want 0 — that thread was somebody else's", n)
+		}
+
+		// And still nothing after the workspace writes to them once, which is
+		// the shape that satisfies the correspondence rung on its own.
+		syncSent(t, map[string]bool{"ex6b@myco.example": true},
+			email(captureOwner, "", "forger@spam.example", "ex6b@myco.example", ""))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'forger@spam.example'`); n != 0 {
+			t.Fatalf("%d persons for a forger the workspace wrote to once, want 0 — "+
+				"a thread they forged into is not a reply they sent", n)
+		}
+		// THREE guards refuse this sender and this test cannot tell them apart:
+		// the correspondence rung (no attested send to them when the forgery
+		// lands), the ledger's prior decision (the forged message opened its own
+		// question), and the exchange rule's address correlation. Reverting any
+		// one alone leaves this green, so this asserts the OUTCOME and not the
+		// mechanism.
+		//
+		// The correlation stays regardless, because it is the only one of the
+		// three that is about this question — was that thread ours with THEM —
+		// and the other two are guarding their own invariants and may move.
+		// sinkmailgates.go says the same thing beside the clause.
+	})
+
+	t.Run("two sends on ONE thread are one conversation", func(t *testing.T) {
+		// A send and its own follow-up is one conversation, not two. Counting
+		// messages rather than threads would admit exactly the unreturned intent
+		// this rule refuses.
+		syncSent(t, map[string]bool{"ex7@myco.example": true},
+			email(captureOwner, "", "nudged@prospect.example", "ex7@myco.example", ""))
+		syncSent(t, map[string]bool{"ex7b@myco.example": true},
+			email(captureOwner, "", "nudged@prospect.example", "ex7b@myco.example", "ex7@myco.example"))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'nudged@prospect.example'`); n != 0 {
+			t.Fatalf("%d persons after two sends on one thread, want 0 — following up is not a second conversation", n)
+		}
+	})
+
+	t.Run("a bulk reply is not writing back", func(t *testing.T) {
+		// An address the workspace wrote to once, which then sends a newsletter,
+		// has not answered anybody: it added the workspace to a list. Reading
+		// that as a reply would admit exactly the senders the transactional
+		// gates exist to refuse.
+		syncSent(t, map[string]bool{"ex5@myco.example": true},
+			email(captureOwner, "", "list@prospect.example", "ex5@myco.example", ""))
+		sync(t, emailWithListUnsub("list@prospect.example", "List", "ex5r@prospect.example"))
+
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'list@prospect.example'`); n != 0 {
+			t.Fatalf("%d persons for a list that mailed back, want 0 — a list answers nobody", n)
+		}
+	})
+}
+
 func TestCaptureTierGateSuppressesAMachineLocalpartWithoutLosingTheMessage(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
@@ -516,9 +665,40 @@ func TestCaptureTierGateHonorsCorrespondenceFromACRMOriginatedSend(t *testing.T)
 		t.Fatalf("%d attested outbound activities after a CRM send, want 1 — the echo will not record it later", n)
 	}
 
-	// Their reply arrives on a prefix subdomain WITH a List-Unsubscribe header
-	// — the exact shape T2 suppresses for an unknown sender. Because the
-	// workspace wrote to them first, T1 spares it.
+	// They answer on the thread the CRM send started, and their mail carries a
+	// List-Unsubscribe header — the exact shape T2 suppresses for an unknown
+	// sender. Because the workspace wrote to them first and they wrote back, T1
+	// spares it.
+	//
+	// The reply is threaded, which is what makes it a reply: an unthreaded
+	// message from the same address is a first approach that happens to share a
+	// sender, and the exchange rule reads the thread rather than the address.
+	//
+	// The thread key is read back rather than guessed: the CRM send generated
+	// it, so a literal here would silently stop threading the day that changes.
+	var crmThread string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT thread_key FROM activity
+			 WHERE counterparty_email = 'team@news.prospect.example'
+			   AND direction = 'outbound' AND counterparty_outbound_attested
+			 LIMIT 1`).Scan(&crmThread)
+	}); err != nil {
+		t.Fatalf("reading the CRM send's thread: %v", err)
+	}
+	if crmThread == "" {
+		t.Fatal("the CRM send joined no thread — the reply below could not answer it")
+	}
+	// A person at that address answers the CRM's mail. This is the exchange the
+	// create tier now needs, and it is deliberately NOT the bulk-headered
+	// message below: a List-Unsubscribe says a list sent this, and a list has
+	// not written back to anybody.
+	sync(t, email("team@news.prospect.example", "Prospect", captureOwner,
+		"pr0@news.prospect.example", crmThread))
+	// Their newsletter then arrives on a prefix subdomain WITH a
+	// List-Unsubscribe header — the exact shape T2 suppresses for an unknown
+	// sender. Because the workspace wrote to them and they answered, T1 spares
+	// it.
 	sync(t, emailWithListUnsub("team@news.prospect.example", "Prospect", "pr1@news.prospect.example"))
 	if n := countRows(t, e, `
 		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
@@ -561,7 +741,7 @@ func TestCaptureDoesNotReEnrichACompanyItAlreadyHas(t *testing.T) {
 	// records at all: the owner wrote to them first, attested by the provider.
 	syncSent(t, map[string]bool{"out1@myco.example": true},
 		email(captureOwner, "", "cto@newco.example", "out1@myco.example", ""))
-	sync(t, email("cto@newco.example", "CTO", captureOwner, "in1@newco.example", ""))
+	sync(t, email("cto@newco.example", "CTO", captureOwner, "in1@newco.example", "out1@myco.example"))
 
 	// The corresponded-with sender becomes a PERSON, and their domain becomes
 	// one open company question — not a company invented from the domain label.

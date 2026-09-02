@@ -73,6 +73,10 @@ func TestAPersonTheSinkMintsBelongsToTheMailboxOwnerAlone(t *testing.T) {
 	const counterparty = "anwalt@kanzlei.example"
 	syncSent(t, map[string]bool{"scope-1@kanzlei.example": true},
 		emailSaying(counterparty, "scope-1@kanzlei.example", "", "können wir nächste Woche sprechen"))
+	// They answer, which is the exchange the create tier needs. The subject here
+	// is WHOSE the minted contact is, so the reply is fixture rather than
+	// finding.
+	env.sync(t, email(counterparty, "Anwalt", captureOwner, "scope-1r@kanzlei.example", "scope-1@kanzlei.example"))
 
 	if got := personVisibility(t, e, counterparty); got != "owner" {
 		t.Fatalf("a contact the sink minted is %q, want owner — a year of history would otherwise publish every correspondent", got)
@@ -89,6 +93,9 @@ func TestAVerdictPromotesTheContactItJudged(t *testing.T) {
 	const counterparty = "einkauf@kunde.example"
 	syncSent(t, map[string]bool{"promote-1@kunde.example": true},
 		emailSaying(counterparty, "promote-1@kunde.example", "", "danke für das Angebot"))
+	// They answer, which is the exchange the create tier needs. The subject here
+	// is what a VERDICT then does to the record's visibility.
+	env.sync(t, email(counterparty, "Einkauf", captureOwner, "promote-1r@kunde.example", "promote-1@kunde.example"))
 	if got := personVisibility(t, e, counterparty); got != "owner" {
 		t.Fatalf("the contact starts %q, want owner", got)
 	}

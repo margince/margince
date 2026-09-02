@@ -238,6 +238,12 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 	if addressIsARoleMailbox(row.Email) {
 		return e.applyJudged(ctx, row, capture.KindRoleMailbox)
 	}
+	// Everything above answers from the address and the ledger alone; what
+	// follows needs a model. An installation without one asks a human instead —
+	// see askAHumanInstead.
+	if !e.CanJudge() {
+		return e.askAHumanInstead(ctx, row)
+	}
 	answers, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err
