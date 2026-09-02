@@ -258,7 +258,7 @@ test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
       links.map((link) => link.getAttribute("aria-label")),
     );
   expect(labels).toEqual([
-    "Start",
+    "Briefing",
     "Kontakte",
     "Firmen",
     "Leads",

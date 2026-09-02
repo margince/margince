@@ -90,7 +90,7 @@ afterEach(() => {
 // The route id never changes with a label: `deals` presents as Pipeline, which
 // names the board this row opens.
 const CANONICAL_ORDER = [
-  "Home",
+  "Brief",
   "Contacts",
   "Companies",
   "Leads",
@@ -159,7 +159,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     // is asserted where it belongs.
     expect(levelLabels()).toEqual(CANONICAL_ORDER);
     // The mark leads them, which is what "logomark → home" means.
-    const home = screen.getByRole("link", { name: "Home" });
+    const home = screen.getByRole("link", { name: "Brief" });
     expect(
       brand.compareDocumentPosition(home) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeGreaterThan(0);
@@ -335,7 +335,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
           ? "agent"
           : "more",
     );
-    expect(cells).toEqual(["Home", "Contacts", "agent", "Pipeline", "more"]);
+    expect(cells).toEqual(["Brief", "Contacts", "agent", "Pipeline", "more"]);
   });
 
   // The Worklist is the destination the bar gave up for that cell. Off the bar
@@ -396,7 +396,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     render(<WorkspaceRail route={{ screen: "home" }} />);
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(document.activeElement).toBe(
-      screen.getByRole("link", { name: "Home" }),
+      screen.getByRole("link", { name: "Brief" }),
     );
 
     await user.keyboard("{Escape}");
@@ -506,7 +506,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     // the document on <body>.
     await waitFor(() => expect(levelLabels()).toEqual(CANONICAL_ORDER));
     expect(document.activeElement).toBe(
-      screen.getByRole("link", { name: "Home" }),
+      screen.getByRole("link", { name: "Brief" }),
     );
   });
 
@@ -537,7 +537,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
 
     await waitFor(() => expect(levelLabels()).toEqual(CANONICAL_ORDER));
     expect(document.activeElement).toBe(
-      screen.getByRole("link", { name: "Home" }),
+      screen.getByRole("link", { name: "Brief" }),
     );
   });
 

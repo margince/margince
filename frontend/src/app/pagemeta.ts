@@ -21,7 +21,8 @@ import type { Route } from "./router";
  * Screens that head THEMSELVES, so the shell prints no heading above them.
  *
  * Home greets the reader by name in its own h1 — "Guten Morgen, Demo." — and
- * the shell's "Start" above it named the page a second time at heading level.
+ * the shell's own nav label above it named the page a second time at heading
+ * level.
  * Two top-level headings is no outline at all, and it is the same defect the
  * shell already avoids for a record (whose name is its heading) and a unit.
  *
