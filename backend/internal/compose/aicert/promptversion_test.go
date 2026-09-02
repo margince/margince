@@ -499,3 +499,41 @@ func TestScenarioStampsRefusesTwoScenariosWithOneName(t *testing.T) {
 		t.Errorf("the refusal must name the clashing scenario, got %q", err)
 	}
 }
+
+// Scenario.Path is where the loader read a case from, carried so a reader can
+// open it. It is not part of the claim a record makes: moving a scenario file
+// changes nothing a model is sent, and a stamp that moved with it would discard
+// every measurement of a case nothing about which had changed.
+func TestMovingAScenarioFileDoesNotMoveItsStamp(t *testing.T) {
+	census, err := compose.NewTaskCensus()
+	if err != nil {
+		t.Fatalf("building the task census: %v", err)
+	}
+	corpus, err := LoadCorpus("corpus", census)
+	if err != nil {
+		t.Fatalf("LoadCorpus: %v", err)
+	}
+	if len(corpus) == 0 {
+		t.Fatal("the corpus is empty, so this proves nothing about a scenario's stamp")
+	}
+	ctx := context.Background()
+	before, err := ScenarioStamps(ctx, corpus, census)
+	if err != nil {
+		t.Fatalf("ScenarioStamps: %v", err)
+	}
+	for i := range corpus {
+		if corpus[i].Path == "" {
+			t.Fatalf("scenario %q came back from the loader with no path", corpus[i].Name)
+		}
+		corpus[i].Path = "somewhere/else/" + corpus[i].Name + ".yaml"
+	}
+	after, err := ScenarioStamps(ctx, corpus, census)
+	if err != nil {
+		t.Fatalf("ScenarioStamps after the move: %v", err)
+	}
+	for name, stamp := range before {
+		if after[name] != stamp {
+			t.Errorf("scenario %q changed stamp when only its file path moved", name)
+		}
+	}
+}

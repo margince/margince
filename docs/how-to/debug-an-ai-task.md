@@ -10,7 +10,7 @@ verdict as numbers.
 |---|---|
 | Is this model good enough for this prompt? | `make e2e-ai` — scores a fixed corpus, writes a record |
 | Does this site survive **this** input? | **`make ai-probe`** — one site, your input, no score, no record |
-| Which sites carry a certification record? | `make e2e-ai-report` |
+| Which sites carry a certification record? | `make e2e-ai-report`, or the page generated from the same three trees: [reference/ai-certification.md](../reference/ai-certification.md) |
 
 The two are not interchangeable, and the gap between them is real. `rate_extract/pricing`
 was `certified` at reliability 1.00 on `openai_compatible mistralai/mistral-large-2512`
