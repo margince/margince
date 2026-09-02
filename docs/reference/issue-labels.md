@@ -1,7 +1,7 @@
 # Issue labels
 
 Every issue in this repository carries **exactly one `priority:` and exactly one
-`area:`**, plus a `status:` when it is not yet workable and whatever provenance
+`area:`**, plus a `status:` when it is not now's work and whatever provenance
 labels apply. This page is the full taxonomy; the binding short form is in
 `AGENTS.md`.
 
