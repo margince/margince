@@ -170,12 +170,7 @@ func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput
 			if in.Classification != nil {
 				where = append(where, storekit.SQLf("classification = $%d", arg(*in.Classification)))
 			}
-			if clause := organizationDomainClause(in.Domain, in.IncludeArchived, arg); clause != "" {
-				where = append(where, clause)
-			}
-			if clause := storekit.TagFilterClause(ctx, organizationEntity, "organization.id", in.TagIDs, in.TagMode, arg); clause != "" {
-				where = append(where, clause)
-			}
+			where = appendOrgLinkClauses(ctx, where, in, arg)
 			// A value outside the enum is a client mistake, not a selection
 			// that happens to match nothing: answering 200 with an empty page
 			// tells the reader this account list is empty when the question
@@ -265,4 +260,22 @@ func scanOrganizationPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *s
 		return nil, nil, err
 	}
 	return orgs, cursorKeys, nil
+}
+
+// appendOrgLinkClauses adds the narrowings that reach ANOTHER table — a
+// domain row and a tagging — rather than a column on organization. They are
+// grouped because they share that shape, and because the list they sit in has
+// a size ceiling that a third one would push through.
+func appendOrgLinkClauses(
+	ctx context.Context, where []string, in ListOrganizationsInput, arg func(any) int,
+) []string {
+	if clause := organizationDomainClause(in.Domain, in.IncludeArchived, arg); clause != "" {
+		where = append(where, clause)
+	}
+	if clause := storekit.TagFilterClause(
+		ctx, organizationEntity, "organization.id", in.TagIDs, in.TagMode, arg,
+	); clause != "" {
+		where = append(where, clause)
+	}
+	return where
 }
