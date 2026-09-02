@@ -33,12 +33,11 @@ import (
 // operationId spelled the same way.
 const opRenameCustomField = "renameCustomField"
 
-// The remaining five action-shaped ops named below are ALSO both this
+// The remaining four action-shaped ops named below are ALSO both this
 // file's and agentcommand.go's restCommands table's
 // (agentcommandnested.go): named once here so the two do not spell an
 // operationId twice each.
 const (
-	opAddListMember       = "addListMember"
 	opApplyTag            = "applyTag"
 	opRemoveTag           = "removeTag"
 	opAddOfferLineItem    = "addOfferLineItem"
@@ -70,7 +69,6 @@ const (
 var actionShapedUpdateOps = map[string]bool{
 	opApplyTag:            true,
 	opRemoveTag:           true,
-	opAddListMember:       true,
 	opAddOfferLineItem:    true,
 	opUpdateOfferLineItem: true,
 	opRemoveOfferLineItem: true,

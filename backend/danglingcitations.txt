@@ -112,7 +112,6 @@ backend/internal/modules/automation/automations_catalog.go core 0035
 backend/internal/modules/automation/automations_catalog.go core 0078
 backend/internal/modules/automation/automations_runs.go migration 0061
 backend/internal/modules/automation/automations_runs_test.go migration 0061
-backend/internal/modules/automation/catalog_actions.go core 0008
 backend/internal/modules/automation/engine_blocked.go migration 0061
 backend/internal/modules/automation/gate.go migration 0061
 backend/internal/modules/automation/rundetail.go migration 0079

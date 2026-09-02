@@ -7,8 +7,6 @@ import (
 	"errors"
 	"net/http"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -21,16 +19,6 @@ import (
 // names the entity, so the assertion lives here, not in the store).
 func pathID[K ids.EntityKind](id crmcontracts.Id) ids.ID[K] {
 	return ids.From[K](ids.UUID(id))
-}
-
-// idArg asserts an optional wire UUID (a body field) as entity K's id;
-// nil stays nil.
-func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
-	if u == nil {
-		return nil
-	}
-	v := ids.From[K](ids.UUID(*u))
-	return &v
 }
 
 // Handlers is the module's transport slice; compose embeds it so the

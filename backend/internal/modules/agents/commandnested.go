@@ -37,61 +37,20 @@ import (
 )
 
 const (
-	// listRecordType and tagRecordType name AddListMemberCommand's and
-	// ApplyTagCommand's fixed targets — plain strings, not
-	// datasource.EntityType, for the same reason customFieldRecordType
-	// (commandaction.go) is: the record seam has never served either.
-	listRecordType = "list"
-	tagRecordType  = "tag"
+	// tagRecordType names ApplyTagCommand's fixed target — a plain string,
+	// not datasource.EntityType, for the same reason customFieldRecordType
+	// (commandaction.go) is: the record seam has never served it.
+	tagRecordType = "tag"
 	// offerRecordType names the three offer-line-item commands' fixed
 	// target. An offer itself is one of the six archivable types the seam
 	// does not serve either.
 	offerRecordType = "offer"
 )
 
-// AddListMemberCommand is one static-list member addition, whichever door
-// asked for it — the routed list id only. It does not carry the member
-// being added: neither Guards nor Subject reads it, the same reason
-// UpdateFactCommand's own doc (commandsidecar.go) gives for dropping a
-// value nothing here reads.
-type AddListMemberCommand struct {
-	ID ids.UUID
-}
-
-// NewAddListMemberCall binds one member addition to the resolver that
-// answers for it.
-//
-//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewAddListMemberCall(records datasource.SystemOfRecordProvider, cmd AddListMemberCommand) GovernedCall {
-	return bind[AddListMemberCommand](addListMemberResolver{
-		target: routedRecordTarget{records: records, recordType: listRecordType},
-	}, cmd)
-}
-
-type addListMemberResolver struct {
-	target routedRecordTarget
-}
-
-// Subject names the LIST the approval binds to — a membership row has no
-// row of its own on the seam.
-func (r addListMemberResolver) Subject(_ context.Context, cmd AddListMemberCommand) (StageInfo, error) {
-	return StageInfo{
-		TargetType: listRecordType,
-		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Add a member to list %s", cmd.ID),
-	}, nil
-}
-
-// Guards stands down: the seam has never served `list`, so there is
-// nothing here to read and nothing to refuse.
-func (r addListMemberResolver) Guards(ctx context.Context, cmd AddListMemberCommand) error {
-	return r.target.refuse(ctx, cmd.ID)
-}
-
 // ApplyTagCommand is one tag application, whichever door asked for it — the
 // routed tag id only. It does not carry which record the tag is applied to:
-// neither Guards nor Subject reads it, the same reasoning AddListMemberCommand's
-// own doc gives.
+// neither Guards nor Subject reads it, the same reasoning UpdateFactCommand's
+// own doc (commandsidecar.go) gives for dropping a value nothing here reads.
 type ApplyTagCommand struct {
 	ID ids.UUID
 }
@@ -127,7 +86,7 @@ func (r applyTagResolver) Guards(ctx context.Context, cmd ApplyTagCommand) error
 // AddOfferLineItemCommand is one offer line-item addition, whichever door
 // asked for it — the routed offer id only. It does not carry the line
 // item's own fields: neither Guards nor Subject reads them, the same
-// reasoning AddListMemberCommand's own doc gives, and Guards does not check
+// reasoning ApplyTagCommand's own doc gives, and Guards does not check
 // whether the offer is still a draft (the state the handler itself refuses
 // a line-item add against) — that read is the executor's, not this
 // approval's.

@@ -16,7 +16,7 @@ func TestActionKindSetIsClosed(t *testing.T) {
 		workflow.ActionCreateRecord, workflow.ActionUpdateRecord, workflow.ActionCreateTask,
 		workflow.ActionAssignOwner, workflow.ActionAdvanceDeal, workflow.ActionSendEmail,
 		workflow.ActionEmitFlowEvent, workflow.ActionRecomputeScore, workflow.ActionEnqueueJob,
-		workflow.ActionNotify, workflow.ActionAddToList, workflow.ActionDraftEmail,
+		workflow.ActionNotify, workflow.ActionDraftEmail,
 	}
 	got := workflow.AllActionKinds()
 	if len(got) != len(want) {
