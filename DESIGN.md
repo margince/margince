@@ -264,9 +264,10 @@ Nine steps, and the page uses at most five of them.
 └──────────┴──────────────────────────────────────────────────────────┘
 ```
 
-- **Rail**: 232px, `--railPane` over the emerald glow, `--ink2` labels, the
-  active row a pane with a rim. The agent's status is a small indigo pane at
-  the foot with the orb breathing (`--dur` 4s, reduced-motion still).
+- **Rail**: 60px collapsed by default, 232px expanded; `--railPane` over the
+  emerald glow, `--ink2` labels, the active row a pane. Collapsed, the labels
+  become tooltips, the task and approval counts stay as small badges, and the
+  agent's orb stays at the foot.
 - **Top row**: not a bar. The breadcrumb, the command field (`⌘K`) and the
   reader's monogram sit on the ground itself; the content scrolls under
   nothing.
@@ -307,7 +308,27 @@ cards stacked above a third list of things to do:
    happening".** Ask at the top, then the people, the fields, the tags. State
    and work stay in the work column, where the reading order is.
 
-### The company record, in six zones
+### The order of the zones
+
+1. **Who.** Identity, the standing badges, one line of facts, the verbs.
+2. **Where it stands.** The readings, and on a deal or a lead the stage
+   stepper beside them.
+3. **What happened.** The timeline, headed by the spine. It sits this high on
+   every record because the 360 opens on what happened last: a rep who has
+   been away for a week reads the gap before anything else.
+4. **What needs you.** One list. The agent's read of the record is its lead
+   row; the agent's finds, staged approvals, the reply that is owed, overdue
+   and due tasks and the next meeting are the rows under it.
+5. **The money or the score.** Commercial on a company and a deal; the score
+   on a lead.
+6. **The slow-changing rest.** About on a company, understanding on a
+   contact, the buying committee on a deal, the details on a lead.
+
+The context column is the same on every record: Ask at the top, then the
+panes that answer "who and what is this" (people or seats, details, tags,
+the Deal Room, documents, evidence).
+
+### The company record
 
 1. **Who.** Mark, name, lifecycle and relationship badges, one line of facts
    (site · industry · size · owner · way in), one quiet line (last contact ·
@@ -317,57 +338,138 @@ cards stacked above a third list of things to do:
    standing word, whose move it is, and the three rated dimensions as dots.
    Open pipeline, Invoiced, Conversation, each a door into its tab. "Not shown"
    and "Not assessed" stay distinct.
-3. **What needs you.** The moment as the lead row (indigo ground, the verdict
+3. **What happened.** The spine, then the recent rows. "N new since your last
+   visit" in the zone head.
+4. **What needs you.** The moment as the lead row (indigo ground, the verdict
    word in the display face, what it rests on, the agent's action in the agent's
    fill). Then the agent's finds, the overdue and due tasks, the next meeting.
    The foot names what was hidden from the reader.
-4. **What happened.** The spine, then the recent rows. "N new since your last
-   visit" in the zone head.
 5. **Commercial.** Contract state, won and lost on one line; then each open
    deal with its one status clause; then the project it belongs to.
 6. **About.** The dossier lead and paragraph, its provenance and age, the
-   signals, the fit verdict with a link to how it was judged. Last, because it
-   changes slowest.
+   signals, the fit verdict with a link to how it was judged.
 
 Context column: Ask (with three prepared questions), People (three, with who is
 in touch from our side), Details (nine fields including mail capture), Tags.
 
 **What merged, moved or went.** The call card merged into Health. Next steps,
 the agent's suggestions, the manual moves and the tasks merged into one list.
-The record spine merged into the timeline. Work in flight, the commercial
-figures and projects merged into Commercial. The dossier, signals and growth
-fit merged into About. Active deals left the rail; key people became the rail's
-People; Ask moved from the foot of the page to the top of the column. The
-Details grid lost its empty duplicate rows and gained mail capture. Nothing the
-page could say is gone; each thing is said once.
+The record spine merged into the timeline, and the timeline moved up to third.
+Work in flight, the commercial figures and projects merged into Commercial. The
+dossier, signals and growth fit merged into About. Active deals left the rail;
+key people became the rail's People; Ask moved from the foot of the page to
+the top of the column. Nothing the page could say is gone; each thing is said
+once.
 
-### The contact record, in six zones
+### The contact record
 
 1. **Who.** Round monogram, name, the buying-role badge, title and employer,
    the glyph line (email, phone, city, LinkedIn, owner), and the verbs: Write
    email (the transport, filled), Call, Add task, more.
 2. **Where you stand with her.** One strip of seven: Overall (the pulse
-   verdict, in its colour only when not withheld), Last inbound, Last outbound,
-   Reciprocity as counts, Coverage, Next meeting, Consent.
-3. **What needs you.** The moment as the lead row with its actions and their
+   verdict, in its colour only when not withheld), Last inbound, Last
+   outbound, In · out as counts, Colleagues, Next meeting, Consent.
+3. **What was said.** Conversation memory with its All / Email / Meetings /
+   Calls / Notes cut, replied or unanswered, a reply verb per row.
+4. **What needs you.** The moment as the lead row with its actions and their
    readiness; then the commitments and open loops as rows with a read-only
    tick.
-4. **What was said.** Conversation memory with its All / Email / Meetings /
-   Calls / Notes cut, replied or unanswered, a reply verb per row.
 5. **The deal she decides.** Title, amount, stage, close, owner, the buying
    committee.
 6. **Understanding her.** The relationship brief, then Priorities, Objections
    and Success as three rows, then provenance and "Correct something".
 
-Context column: Ask, the waiting email, Details (title, company, before,
-reports to, languages, city, the withheld mobile), Who knows her, Consent &
+Context column: Ask, the waiting email, Details, Who knows her, Consent &
 channels.
 
 **What merged, moved or went.** The rail's relationship pulse merged into the
-strip. Commitments merged into the needs list. The rail's recent activity merged
-into what was said. The brief and what matters merged into Understanding. What
-Margince read moved to Data & tools, its home. Consent became a compact rail
-pane with the purposes; the full grant/withdraw table lives behind Manage.
+strip. Commitments merged into the needs list. The rail's recent activity
+merged into what was said, which moved up to third. The brief and what matters
+merged into Understanding. What Margince read moved to Data & tools. Consent
+became a compact rail pane; the grant and withdraw table lives behind Manage.
+
+### The deal record
+
+1. **Who.** Mark, name, the status badge and the project chip, the company
+   and partner line, the three facts (Value, Stage, Owner) and the pulse
+   sentence ("It's your move. They wrote last on 1 Sep — 3 days ago."). Verbs:
+   the reply that is owed (filled, because the pulse says it is your move),
+   Log activity, Edit deal, more (Archive, Share, Reopen).
+2. **Where this deal stands.** The money (with the newest offer and its
+   status), The close (days, forecast category, provisional or waiting), The
+   people (engaged of total, champion named, single-threaded), The momentum
+   (days since the last contact, stalled). Under them the stage stepper: done
+   stages tinted, the current one filled, terminal stages last, the rule that
+   a terminal stage asks first stated beside it.
+3. **What happened.** The spine (meetings, calls, offers, the gap, today, the
+   expected close), then the rows, including the agent's own stage change.
+4. **What needs you.** The Deal360 briefing as the lead row: the verdict word
+   (Live / Drifting / Blocked / Cold), the because-sentence with its citations
+   inline, the coverage signals as chips, "What to do next" with its one verb,
+   "Read the full briefing", written-by and write-it-again. Then any staged
+   approval (dashed, Accept / Dismiss), then the reply that is owed.
+5. **Commercial.** The offers table (number, revision, status, value, sent),
+   the FX basis in the zone head, then forecast, wait-until and the custom
+   fields as rows.
+6. **The buying committee.** The map (our circle, their seats, threads only to
+   the engaged, a dashed ghost per coverage gap), then the stakeholder table
+   with role, person, talking, dates and edit. Add stakeholder in the zone
+   head.
+
+Context column: Ask, Deal Room (state, invited, signed in, last seen, open),
+Who is on this deal (seats with Engaged / No two-way contact and who of ours
+carries it), Related evidence, Documents.
+
+**What merged, moved or went.** The stage stepper moved beside the readings.
+Deal360, the approvals queue and the email box merged into the needs list.
+Offers, the FX line and custom fields merged into Commercial. The committee map,
+the seats and the stakeholders table merged into one zone, with the read-only
+seats list kept in the rail as the short form. Log activity became a verb, not
+a form on the page. The Documents tab keeps its full list; the rail shows the
+latest two.
+
+### The lead record
+
+A lead is kept apart from the contact graph on purpose, and the page says so:
+the ground carries the accent tint as its marker, the badge reads "Lead", and
+the segregation sentence sits under the identity. Nothing on a lead is indigo;
+the tint says "not a contact yet", which is a different claim from "an agent
+did this".
+
+1. **Who.** Monogram, name, the Lead badge, title and company as text (a lead
+   has no company record), email, LinkedIn, source and date, owner. Verbs:
+   Qualify (filled), Edit, Disqualify, more (Share).
+2. **Where this lead stands.** Score (with its top two factors), Status (with
+   how it was set: by hand, or automatically from a reply or a meeting), First
+   response (the SLA verdict and the target), Source. Under them the ladder:
+   New › Contacted › Engaged › Qualified › Disqualified, the terminal two
+   opening a dialog.
+3. **What happened.** The spine from the web form to the booked demo, then the
+   rows, including the automatic status change.
+4. **What needs you.** "Ready to qualify" as the lead row when the evidence
+   the product asks for exists (a reply or a meeting), with the derived reason
+   and "Qualify and open deal"; then the reply that is owed, then the tasks.
+5. **The score.** Explain this score (each factor with its points, decay and
+   activity count, the reconciliation line), then what you know about this
+   lead (the three questions, how you know, add to the score), with Override
+   score in the zone head.
+6. **Details** live in the context column with Owner and the qualify preview
+   ("Merges into nobody", the suggested deal), because a lead has few fields
+   and the page's work is the ladder and the score.
+
+**What merged, moved or went.** The ladder moved beside the readings. The
+promoted-lead panel, the email box and the tasks merged into the needs list
+(the promoted panel becomes the lead row once the lead is qualified). Owner
+and score split: owner to the rail, the score breakdown and the manual signals
+to one zone. The write-refusal callout and the terminal sentence keep their
+place under the identity.
+
+### The shell around every record
+
+The sidebar collapses to a 60px icon rail and that is the default. Labels
+return on hover as tooltips, the counts that matter (tasks, approvals) stay as
+small badges, the agent's orb stays at the foot. The fold control sits in the
+rail's head. An expanded rail is the reader's choice and is remembered.
 
 ### The list page, home and the board
 
