@@ -17,7 +17,14 @@
 -- only picks up rows whose next_attempt_at is set, which a settled row's is
 -- not.
 --
--- So the rows the old reading settled are reopened here, and only those.
+-- WHAT THIS REOPENS, AND WHAT IT CANNOT TELL APART. The classifier writes the
+-- same verdict and the same sentence for EVERY landing page with no readable
+-- text, and the stored read keeps no page text, so nothing in the database
+-- distinguishes a forwarding page from a genuinely parked one. This therefore
+-- reopens both. That is deliberate and it is the cheap direction to be wrong
+-- in: a domain that really is parked costs one bounded re-read and settles as
+-- parked again, while one left closed stays wrong forever with no company and
+-- nobody looking. A domain settled on any OTHER evidence is untouched.
 SET LOCAL lock_timeout = '5s';
 
 UPDATE organization_domain_disposition

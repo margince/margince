@@ -128,11 +128,57 @@ func TestRefreshSpellingsTheWebActuallyUses(t *testing.T) {
 			html: `<meta http-equiv="content-type" content="text/html; charset=utf-8">`,
 			want: "",
 		},
+		{
+			// The key must be exactly `url`. Accepting anything that merely
+			// starts with it invents a redirect out of markup nobody wrote,
+			// and the crawler pays a fetch for the misreading.
+			name: "a key that only begins with url",
+			html: `<meta http-equiv="refresh" content="garbage; url-not=/private">`,
+			want: "",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			if head := extractHeadAssets(tc.html, base); head.refresh != tc.want {
 				t.Fatalf("refresh = %q, want %q", head.refresh, tc.want)
+			}
+		})
+	}
+}
+
+// HTML permits a page to omit </head>, and a page that does was still having
+// its body markup read as the site's own declaration — which is how a refresh
+// somebody else wrote could send the crawler somewhere.
+func TestBodyMarkupIsIgnoredEvenWhenTheHeadIsNeverClosed(t *testing.T) {
+	base := mustParseURL(t, "https://acme.example/")
+	unclosed := []struct {
+		name string
+		html string
+	}{
+		{
+			name: "a body opened without the head being closed",
+			html: `<html><head><title>x</title><body>` +
+				`<meta http-equiv="refresh" content="0; URL=/injected">` +
+				`<meta property="og:image" content="/injected.png">` +
+				`<link rel="icon" href="/injected-icon.png"></body></html>`,
+		},
+		{
+			name: "a page with no head element at all",
+			html: `<html><body><meta http-equiv="refresh" content="0; URL=/injected">` +
+				`<link rel="icon" href="/injected-icon.png"></body></html>`,
+		},
+	}
+	for _, tc := range unclosed {
+		t.Run(tc.name, func(t *testing.T) {
+			head := extractHeadAssets(tc.html, base)
+			if head.refresh != "" {
+				t.Errorf("refresh = %q, want nothing — it was declared in the body", head.refresh)
+			}
+			if head.ogImage != "" {
+				t.Errorf("og:image = %q, want nothing — it was declared in the body", head.ogImage)
+			}
+			if len(head.icons) != 0 {
+				t.Errorf("icons = %+v, want none — they were declared in the body", head.icons)
 			}
 		})
 	}

@@ -164,12 +164,21 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 			return head
 		}
 		name, hasAttr := tokenizer.TagName()
-		// The harvest stops at </head>, because that is where a site declares
-		// its own identity. Markup in the body is not the same claim: on a page
-		// that renders user-generated content, whoever wrote that content also
-		// wrote the tags around it, and a <link rel="icon"> down there would
-		// let them choose the company's face.
+		// The harvest stops where the head does, because that is where a site
+		// declares its own identity. Markup in the body is not the same claim:
+		// on a page that renders user-generated content, whoever wrote that
+		// content also wrote the tags around it, and a <link rel="icon"> down
+		// there would let them choose the company's face — or, for a refresh,
+		// where the crawler goes next.
+		//
+		// A page may legally omit </head>, so <body> ends it too. Testing only
+		// for the closing tag let body markup on such a page be read as the
+		// site's own declaration, which is the whole thing this boundary
+		// exists to prevent.
 		if tokenType == html.EndTagToken && string(name) == "head" {
+			return head
+		}
+		if tokenType == html.StartTagToken && string(name) == "body" {
 			return head
 		}
 		if !hasAttr {
@@ -265,12 +274,15 @@ func refreshTarget(content string) (string, bool) {
 	if !found {
 		return "", false
 	}
-	rest := strings.TrimSpace(after)
-	if !strings.HasPrefix(strings.ToLower(rest), "url") {
+	key, target, found := strings.Cut(after, "=")
+	if !found {
 		return "", false
 	}
-	_, target, found := strings.Cut(rest, "=")
-	if !found {
+	// The key must be exactly `url`, not merely start with it. Accepting any
+	// `url…=` spelling turned `garbage; url-not=/private` into a redirect
+	// nobody wrote, and every one of those is a fetch the crawler makes on
+	// markup it misread.
+	if !strings.EqualFold(strings.TrimSpace(key), "url") {
 		return "", false
 	}
 	// Quotes are common in hand-written markup and are not part of the URL.

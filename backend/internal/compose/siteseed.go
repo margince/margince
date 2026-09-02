@@ -29,7 +29,7 @@ import (
 // fetchSeed gets the landing page, or reports why the site could not be read
 // at all. It returns the URL that ANSWERED, which is the site's own spelling
 // of itself and what the crawl treats as on-site from then on.
-func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL string) (string, webread.Page, error) {
+func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL string) (seedRead, error) {
 	page, err := c.fetchPaced(ctx, pacer, seedURL)
 	if transientCrawlError(ctx, err) {
 		// The landing page is the only irreplaceable discovery source. One
@@ -38,15 +38,14 @@ func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL s
 		page, err = c.fetchPaced(ctx, pacer, seedURL)
 	}
 	if err == nil {
-		answered, landed := c.settleSeed(ctx, pacer, seedURL, page)
-		return answered, landed, nil
+		return c.settleSeed(ctx, pacer, seedURL, page), nil
 	}
 	if errors.Is(err, webread.ErrRobotsDisallowed) {
 		// A refused seed carries no body, so there is nothing to follow and
 		// nothing to read: the refusal itself is the answer.
 		answered := answeredSeedURL(seedURL, page)
 		c.applyCrawlDelay(pacer, answered)
-		return answered, page, err
+		return seedRead{URL: answered, Page: page}, err
 	}
 	for _, candidate := range seedFallbacks(seedURL) {
 		if ctx.Err() != nil {
@@ -60,18 +59,29 @@ func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL s
 			retryPage, retryErr = c.fetchPaced(ctx, pacer, candidate)
 		}
 		if retryErr == nil {
-			answered, landed := c.settleSeed(ctx, pacer, candidate, retryPage)
-			return answered, landed, nil
+			return c.settleSeed(ctx, pacer, candidate, retryPage), nil
 		}
 		// A refusal is the site's answer, not a spelling that failed to
 		// resolve. Every remaining candidate is the SAME site under another
 		// host or scheme, so trying them would be answering a "no" by
 		// knocking on the next door.
 		if errors.Is(retryErr, webread.ErrRobotsDisallowed) {
-			return seedURL, webread.Page{}, retryErr
+			return seedRead{URL: seedURL}, retryErr
 		}
 	}
-	return seedURL, webread.Page{}, err
+	return seedRead{URL: seedURL}, err
+}
+
+// seedRead is the landing page a seed resolved to: the URL that answered, the
+// body, and whether the site named an address the crawl could not reach.
+type seedRead struct {
+	URL  string
+	Page webread.Page
+	// UnresolvedForward is set when the landing page named somewhere else as
+	// the site's real address and that address could not be read. The page
+	// below is then the forwarding shell — empty, but empty for a reason that
+	// is not "this domain is parked".
+	UnresolvedForward bool
 }
 
 // settleSeed turns a seed that answered into the page the crawl should treat
@@ -92,22 +102,40 @@ func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL s
 // pages pointing at each other would never end. A refresh that leaves the
 // site's own registrable domain was already dropped at parse time
 // (webread.refreshFrom), so the hop stays on the site we resolved to read.
-func (c *siteCrawler) settleSeed(ctx context.Context, pacer crawlPacer, requested string, page webread.Page) (string, webread.Page) {
+// A follow that does not arrive says so, in UnresolvedForward. The shell is
+// then still empty, but the triage must not read that emptiness as a parked
+// domain: the site named an address, and failing to reach it is a gap in the
+// read rather than an answer about the company.
+func (c *siteCrawler) settleSeed(ctx context.Context, pacer crawlPacer, requested string, page webread.Page) seedRead {
 	answered := answeredSeedURL(requested, page)
 	c.applyCrawlDelay(pacer, answered)
 	if !page.MetaRefreshOnly() {
-		return answered, page
+		return seedRead{URL: answered, Page: page}
 	}
+	unresolved := seedRead{URL: answered, Page: page, UnresolvedForward: true}
 	landed, err := c.fetchPaced(ctx, pacer, page.Refresh)
 	if err != nil {
-		// The trampoline is all this site gave us. Returning it unchanged
-		// leaves the triage exactly the evidence it had before — an empty
-		// landing page — rather than inventing a read that did not happen.
-		return answered, page
+		// The trampoline is all this site gave us.
+		return unresolved
 	}
 	followed := answeredSeedURL(page.Refresh, landed)
+	// Where the hop LANDED, not just where it pointed. The parse-time check
+	// judged the target URL, and a target on the site's own domain can still
+	// 30x onto somebody else's — an open redirect is an ordinary thing to find
+	// on a corporate site. Letting that through would hand the crawl a
+	// boundary, and a company identity, chosen by whoever wrote the markup.
+	//
+	// A seed that redirects off-domain by HTTP is different and stays allowed
+	// (answeredSeedURL): there the destination is where the domain WE were
+	// asked to read forwards to, which is that domain's own answer about
+	// where it lives.
+	if !webread.SameRegistrableDomain(answered, followed) {
+		return unresolved
+	}
 	c.applyCrawlDelay(pacer, followed)
-	return followed, landed
+	// A second forwarding shell is not followed again — one hop is the cap —
+	// so it leaves the read unresolved for the same reason a failed fetch does.
+	return seedRead{URL: followed, Page: landed, UnresolvedForward: landed.MetaRefreshOnly()}
 }
 
 // answeredSeedURL is the URL the seed's body actually came from. The fetch

@@ -149,6 +149,76 @@ func TestAForwardingTargetThatFailsLeavesTheOriginalPage(t *testing.T) {
 	if want := "https://acme.example"; page.URL != want {
 		t.Errorf("landing page URL = %q, want the page that did answer, %q", page.URL, want)
 	}
+	// Without this the empty shell reads exactly like a parked domain, which
+	// is the defect the follow exists to fix, re-created on the failure path.
+	if !page.UnresolvedForward {
+		t.Error("the page named an address the crawl could not reach and must say so")
+	}
+}
+
+// A page that says GO HERE and one that says nothing are different claims, and
+// only the second is evidence that a domain is parked.
+func TestAnUnresolvedForwardIsNotSettledAsParked(t *testing.T) {
+	unreadable := crawlPage{Text: "", UnresolvedForward: true}
+	if verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), unreadable); err != nil {
+		t.Fatalf("classifying: %v", err)
+	} else if verdict.Aborts() {
+		t.Errorf("verdict %+v settles the domain — an unread forward must leave the question open", verdict)
+	}
+
+	// The shortcut still holds for a page that genuinely carries nothing.
+	empty := crawlPage{Text: ""}
+	if verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), empty); err != nil {
+		t.Fatalf("classifying: %v", err)
+	} else if !verdict.Aborts() {
+		t.Errorf("verdict %+v does not settle a genuinely empty landing page", verdict)
+	}
+}
+
+// The one-hop cap and the unresolved mark have to agree: a second shell is
+// correctly not followed, and must therefore be reported as unread rather than
+// handed to the classifier as an empty page.
+func TestASecondForwardingShellIsReportedUnresolved(t *testing.T) {
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		"https://acme.example":     {refresh: "https://acme.example/one"},
+		"https://acme.example/one": {refresh: "https://acme.example/two"},
+		"https://acme.example/two": {text: "the real site"},
+	}}
+	page, err := newSiteCrawler(site, CrawlCaps{}).ReadSeed(context.Background(), "https://acme.example")
+	if err != nil {
+		t.Fatalf("reading the seed: %v", err)
+	}
+	if !page.UnresolvedForward {
+		t.Error("the hop landed on another forwarding shell, which is not a read of the site")
+	}
+}
+
+// The parse-time check judges where the refresh POINTS. A target on the site's
+// own domain can still redirect onto somebody else's — an open redirect is an
+// ordinary thing to find on a corporate site — and letting that through would
+// hand the crawl a boundary, and a company identity, chosen by whoever wrote
+// the markup.
+func TestAForwardingHopThatRedirectsOffTheSiteIsNotAccepted(t *testing.T) {
+	site := &fakeSite{pages: map[string]fakeSitePage{
+		"https://acme.example": {refresh: "https://acme.example/out?to=evil"},
+		"https://acme.example/out?to=evil": {
+			text:     "a different company's site",
+			finalURL: "https://evil.test/landing",
+		},
+	}}
+	page, err := newSiteCrawler(site, CrawlCaps{}).ReadSeed(context.Background(), "https://acme.example")
+	if err != nil {
+		t.Fatalf("reading the seed: %v", err)
+	}
+	if want := "https://acme.example"; page.URL != want {
+		t.Errorf("landing page URL = %q, want %q — the hop left the site and must not become the seed", page.URL, want)
+	}
+	if page.Text != "" {
+		t.Errorf("landing page text = %q, want nothing — it came from another company's site", page.Text)
+	}
+	if !page.UnresolvedForward {
+		t.Error("the site's real address was never reached, so the read is unresolved, not parked")
+	}
 }
 
 // A site reached through the www/scheme ladder gets the same follow: the two
