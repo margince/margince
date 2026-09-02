@@ -1747,6 +1747,10 @@ export const de = {
     "Die Wörter, unter denen diese Organisation Datensätze ablegt. Anwenden darf jeder; anlegen, umbenennen und stilllegen nur Admin- und Ops-Plätze.",
   "tagAdmin.listLabel": "Vokabular",
   "tagAdmin.empty": "Noch keine Tags. Legen Sie das erste Wort an.",
+  "import.contextTag": "Diesen Stapel unter einem Tag ablegen",
+  "import.contextTagHint":
+    "Wird auf neu angelegte Datensätze angewendet, damit der Stapel auffindbar bleibt. Aktualisierte Datensätze behalten ihre Tags.",
+  "import.contextTagNone": "Kein Tag",
   "tagAdmin.add": "Tag anlegen",
   "tagAdmin.addTitle": "Tag anlegen",
   "tagAdmin.editTitle": "Tag bearbeiten",

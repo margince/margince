@@ -7,11 +7,13 @@ import { useCan, useCanWrite } from "../app/capability";
 import {
   Button,
   EmptyState,
+  Field,
   Modal,
   SegmentedControl,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
+import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -32,6 +34,7 @@ import type {
   ImportRun,
 } from "./importtypes";
 import { identifyingFieldFor } from "./importtypes";
+import { useTagVocabulary } from "./tags.queries";
 import "./import.css";
 
 // Bringing a customer's file into the estate (S-E11.6): upload it, see what its
@@ -250,8 +253,15 @@ function ImportWizard({
           pending={validate.isPending}
           error={validate.error}
           onChange={flow.setTarget}
+          contextTagID={flow.contextTagID}
+          onContextTag={flow.chooseContextTag}
           onValidate={() =>
-            validate.mutate({ object: flow.object, profile, mapping })
+            validate.mutate({
+              object: flow.object,
+              profile,
+              mapping,
+              contextTagID: flow.contextTagID,
+            })
           }
         />
       ) : null}
@@ -624,6 +634,8 @@ function ImportMappingStep({
   error,
   onChange,
   onValidate,
+  contextTagID,
+  onContextTag,
 }: Readonly<{
   profile: ImportProfile;
   mapping: Record<string, string>;
@@ -637,6 +649,9 @@ function ImportMappingStep({
   error: unknown;
   onChange: (column: string, target: string) => void;
   onValidate: () => void;
+  /** The word this run's created records are filed under, and how it changes. */
+  contextTagID: string;
+  onContextTag: (next: string) => void;
 }>) {
   const t = useT();
   const identifying = identifyingFieldFor(object);
@@ -662,6 +677,10 @@ function ImportMappingStep({
           {t("import.needsIdentifier", { field: identifying })}
         </Callout>
       )}
+      {/* Chosen BEFORE the dry run, because the commit honours what the dry
+          run reported on — a word picked afterwards would file records the
+          report never said would be filed. */}
+      <ImportContextTag value={contextTagID} onChange={onContextTag} />
       <Button
         small
         variant="primary"
@@ -678,6 +697,46 @@ function ImportMappingStep({
         </Callout>
       ) : null}
     </>
+  );
+}
+
+/**
+ * The word every record this run CREATES is filed under.
+ *
+ * Optional, and an existing word only: an import that coined one would hand the
+ * vocabulary's one governed door to anyone who can upload a file, and a
+ * misspelled column header would become a permanent tag nobody chose.
+ *
+ * Creates only, which the label says. A row that UPDATES a record the estate
+ * already held leaves its tags alone — the run did not put it there, and
+ * tagging it would claim the batch contains records it only touched.
+ */
+function ImportContextTag({
+  value,
+  onChange,
+}: Readonly<{ value: string; onChange: (next: string) => void }>) {
+  const t = useT();
+  const vocabulary = useTagVocabulary();
+  const words = vocabulary.data?.tags ?? [];
+  if (words.length === 0) {
+    // No vocabulary, or none this caller may read. A dial whose only option is
+    // "none" asks a question with one answer.
+    return null;
+  }
+  return (
+    <Field label={t("import.contextTag")} hint={t("import.contextTagHint")}>
+      {(control) => (
+        <Select
+          {...control}
+          value={value}
+          onChange={onChange}
+          options={[
+            { value: "", label: t("import.contextTagNone") },
+            ...words.map((tag) => ({ value: tag.id, label: tag.name })),
+          ]}
+        />
+      )}
+    </Field>
   );
 }
 

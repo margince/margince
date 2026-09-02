@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -606,5 +608,78 @@ func TestAResumedRunKeepsItsRefusals(t *testing.T) {
 			t.Errorf("skipped = %d on a %d-walk report, want the stale skip dropped",
 				out.Disposition.Skipped, walks)
 		}
+	}
+}
+
+// The context tag rides on the stored MAPPING rather than on the create call,
+// for the reason on_duplicate does: the commit happens on a later request, and
+// a decision that lived only in the create body would be gone by the time
+// anything wrote a row.
+func TestMappingCarriesTheContextTagToTheCommit(t *testing.T) {
+	t.Parallel()
+
+	word := openapi_types.UUID(ids.NewV7())
+	mapping, err := mappingFrom(migration.ObjectOrganization, crmcontracts.CreateImportRunRequest{
+		Mapping:      map[string]string{"Name": "display_name"},
+		ContextTagId: &word,
+	})
+	if err != nil {
+		t.Fatalf("mappingFrom: %v", err)
+	}
+	if mapping.ContextTag != word.String() {
+		t.Fatalf("the run's word did not reach the stored mapping: got %q, want %q",
+			mapping.ContextTag, word.String())
+	}
+}
+
+// A body naming the zero id names no word. Storing it would make every created
+// record fail its apply at COMMIT time, long after the request that could have
+// said so — so it is refused where the caller can still fix it.
+func TestMappingRefusesTheZeroContextTag(t *testing.T) {
+	t.Parallel()
+
+	var zero openapi_types.UUID
+	_, err := mappingFrom(migration.ObjectOrganization, crmcontracts.CreateImportRunRequest{
+		Mapping:      map[string]string{"Name": "display_name"},
+		ContextTagId: &zero,
+	})
+	if err == nil {
+		t.Fatal("the zero uuid was accepted as a tag; every created record would fail its apply at commit")
+	}
+}
+
+// A run that named no word files nothing, and must not be refused for it.
+func TestMappingWithoutAContextTagFilesNothing(t *testing.T) {
+	t.Parallel()
+
+	mapping, err := mappingFrom(migration.ObjectOrganization, crmcontracts.CreateImportRunRequest{
+		Mapping: map[string]string{"Name": "display_name"},
+	})
+	if err != nil {
+		t.Fatalf("mappingFrom: %v", err)
+	}
+	if mapping.ContextTag != "" {
+		t.Fatalf("a run naming no word carried one anyway: %q", mapping.ContextTag)
+	}
+}
+
+// The writer files only the objects the tag surface carries. It is derived from
+// the canonical record vocabulary rather than restated, so an object added to
+// either side does not need this switch remembered — and the case that would
+// otherwise rot silently is an importable object that is NOT taggable.
+func TestTaggableObjectFollowsTheRecordVocabulary(t *testing.T) {
+	t.Parallel()
+
+	for _, object := range []string{
+		migration.ObjectOrganization,
+		migration.ObjectPerson,
+		migration.ObjectLead,
+	} {
+		if _, ok := taggableObjectOf(object); !ok {
+			t.Fatalf("%q is importable and in the record vocabulary, but files under no tag", object)
+		}
+	}
+	if _, ok := taggableObjectOf("activity"); ok {
+		t.Fatal("an object outside the record vocabulary was accepted as taggable")
 	}
 }

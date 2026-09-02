@@ -200,6 +200,9 @@ type ValidateInput = Readonly<{
   object: ImportObject;
   profile: ImportProfile;
   mapping: Record<string, string>;
+  /** The word every record this run CREATES is filed under, so a batch stays
+   *  findable as a batch. Empty when the run is filed under none. */
+  contextTagID: string;
 }>;
 
 // The import's state machine, kept out of the card so the card is markup.
@@ -221,6 +224,9 @@ export function useImportFlow() {
   const [object, setObject] = useState<ImportObject>("lead");
   const [profile, setProfile] = useState<ImportProfile | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  // The word this run's created records are filed under. Chosen once, before
+  // the dry run, because the commit honours what the dry run reported on.
+  const [contextTagID, setContextTagID] = useState("");
   const [run, setRun] = useState<ImportRun | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
   // Whether the run on screen was recovered rather than produced here. The card
@@ -365,6 +371,11 @@ export function useImportFlow() {
           object: input.object,
           source_ref: input.profile.source_ref,
           mapping: mappedOnly(input.mapping),
+          // Omitted rather than sent empty: the endpoint refuses a tag id that
+          // names no word, and "" is not a choice the reader made.
+          ...(input.contextTagID === ""
+            ? {}
+            : { context_tag_id: input.contextTagID }),
         },
       });
       if (error) {
@@ -490,6 +501,8 @@ export function useImportFlow() {
     mapping,
     setTarget: (column: string, target: string) =>
       setMapping((current) => ({ ...current, [column]: target })),
+    contextTagID,
+    chooseContextTag: setContextTagID,
     run,
     report,
     resumed,
