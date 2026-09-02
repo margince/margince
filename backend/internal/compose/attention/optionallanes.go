@@ -29,6 +29,13 @@ type optionalLane struct {
 	name  string
 	bound bool
 	read  func() ([]crmcontracts.AttentionItem, error)
+	// total answers how many there ARE, where the lane can say. Nil means the
+	// page length is the whole truth — a lane that is not capped, or one whose
+	// source cannot count without reading. Where it is set, the badge beside the
+	// title is the total and the cards below it are the page, which is the
+	// reading needs_you has always had: a reader with forty must be told forty,
+	// then shown the few worth one sitting.
+	total func() (int, error)
 	into  **[]crmcontracts.AttentionItem
 	count **int
 }
@@ -61,6 +68,13 @@ func (l optionalLane) collect(
 	default:
 		*l.into = &items
 		count := len(items)
+		if l.total != nil {
+			// Asked AFTER the page, so a lane this reader may not see is
+			// withheld by the read above rather than counted here.
+			if count, err = l.total(); err != nil {
+				return omitted, err
+			}
+		}
 		*l.count = &count
 		return omitted, nil
 	}
@@ -104,7 +118,8 @@ func (s *Service) optionalLanes(
 					return commitmentItem(promise, asOf)
 				}), err
 			},
-			into: &out.Commitments, count: &out.Counts.Commitments,
+			total: func() (int, error) { return s.commitments.CountDueBy(ctx, until) },
+			into:  &out.Commitments, count: &out.Counts.Commitments,
 		},
 		{
 			name: "did_not_run", bound: s.failed != nil,

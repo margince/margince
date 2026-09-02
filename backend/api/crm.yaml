@@ -34678,11 +34678,23 @@ components:
         How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
         queue's own count under its both-sides-visible rule, kept separate because the
         lane shows a bounded slice of it.
+
+        A lane whose count is its bounded page says so in its own description. `needs_you`,
+        `planned` and `commitments` report the TOTAL beside a bounded page, because a badge
+        that stops at the cap tells a reader with thirteen that they have twelve — and these
+        lanes offer no second page to find the thirteenth by.
       required: [needs_you, planned, this_morning]
       properties:
         this_morning: { type: integer, minimum: 0, description: "Briefing items still unanswered in the rep's run for today." }
         needs_you: { type: integer, minimum: 0 }
-        planned: { type: integer, minimum: 0 }
+        planned:
+          type: integer
+          minimum: 0
+          description: >-
+            How many pieces of agreed work are due by the end of the installation's day —
+            EVERY one this caller may see, not the bounded page below it. The lane shows the
+            soonest-due dozen; the number says how many there are, which is the reading
+            `needs_you` has always had.
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
         meetings:
           type: integer
@@ -34700,9 +34712,9 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many promises this lane is CARRYING, which is the bounded page rather than every
-            promise due — the same bound `planned` reports under. A rep past the bound sees the
-            soonest-due ones, which is the order the lane is in.
+            How many promises are due by the end of the installation's day — EVERY one this
+            caller may see, not the bounded page below it, the same reading `planned` carries.
+            A rep past the bound sees the soonest-due ones, which is the order the lane is in.
         relationship_decay:
           type: integer
           minimum: 0

@@ -350,3 +350,25 @@ func TestTheWorklistsDayEndsAtTheInstallationsMidnight(t *testing.T) {
 			"where this installation is, and UTC's midnight is not its day", got)
 	}
 }
+
+// THE PLANNED BADGE COUNTS PAST THE LANE'S CAP, through the shipped wiring.
+//
+// The lane shows a dozen; a rep with thirteen used to see twelve cards and a
+// badge of twelve, on a lane with no second page to reach the thirteenth by.
+func TestThePlannedBadgeCountsEveryTaskDueNotJustThePage(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Now().UTC()
+	due := now.Add(2 * time.Hour)
+	// One past the cap, which is the case the badge used to misreport.
+	for i := range 13 {
+		logTask(t, e, fmt.Sprintf("Owed %d", i), due, false)
+	}
+
+	day := assembleFeed(e.Admin(), t, e, now)
+	if len(day.Planned) != 12 {
+		t.Fatalf("the lane carries %d cards, want the cap of twelve", len(day.Planned))
+	}
+	if day.Counts.Planned != 13 {
+		t.Errorf("counts.planned = %d, want 13 — the badge is how many they have", day.Counts.Planned)
+	}
+}

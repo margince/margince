@@ -348,18 +348,20 @@ func (f attentionDealFacts) Figures(
 // activity of kind `task`, so this is the same read the task queue makes.
 type attentionTasks struct{ store *activities.Store }
 
-func (t attentionTasks) OpenForViewer(
-	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
-) ([]attention.Task, error) {
-	// The store answers "open and due by then" itself, so the limit bounds the
-	// rows that QUALIFY. This used to read ten times the lane and narrow
-	// afterwards, which put the bound on the wrong set: a pile of completed
-	// tasks filled the scan, the overdue promise underneath never reached the
-	// reader, and the day rendered clear while the work was still there.
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, Limit: &limit}
-	// Narrowed in the QUERY, so the store's own bound applies to the rows that
-	// qualify. Filtering the answer instead would let a colleague's twelve
-	// tasks fill the page and hide the reader's own overdue one behind them.
+// openTasksDueBy is the ONE narrowing the lane's page and its count share.
+//
+// Narrowed in the QUERY, so the store's own bound applies to the rows that
+// qualify. Filtering the answer instead would let a colleague's twelve tasks
+// fill the page and hide the reader's own overdue one behind them — and a count
+// built from a second copy of these arms would answer a different question from
+// the page it sits beside, one arm at a time.
+//
+// The false answer means "no reader to answer for", which is a page of nothing
+// rather than a refusal.
+func openTasksDueBy(
+	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
+) (activities.ListActivitiesInput, bool) {
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until}
 	switch scope {
 	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)
@@ -367,7 +369,7 @@ func (t attentionTasks) OpenForViewer(
 			// No human, no "own work" to answer for. Reading every task and
 			// calling the result theirs is the widening this narrowing exists
 			// to prevent.
-			return nil, nil
+			return activities.ListActivitiesInput{}, false
 		}
 		// Exactly theirs. A task they wrote themselves carries their name from
 		// the moment it is written, so this needs no unassigned arm — and the
@@ -387,6 +389,22 @@ func (t attentionTasks) OpenForViewer(
 		// Every open task the reader may see; the row-scope gate in the store
 		// is the only narrowing.
 	}
+	return in, true
+}
+
+func (t attentionTasks) OpenForViewer(
+	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+) ([]attention.Task, error) {
+	// The store answers "open and due by then" itself, so the limit bounds the
+	// rows that QUALIFY. This used to read ten times the lane and narrow
+	// afterwards, which put the bound on the wrong set: a pile of completed
+	// tasks filled the scan, the overdue promise underneath never reached the
+	// reader, and the day rendered clear while the work was still there.
+	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	if !ok {
+		return nil, nil
+	}
+	in.Limit = &limit
 	rows, _, err := t.store.ListActivities(ctx, in)
 	if err != nil {
 		return nil, err
@@ -434,4 +452,30 @@ func (o attentionOverdue) OverduePerAssignee(
 		per[row.OwnerID] = row.Overdue
 	}
 	return per, nil
+}
+
+// CountOpenForViewer answers how many tasks the lane's own narrowing matches,
+// with no cap on it — the badge beside a bounded page.
+//
+// The same openTasksDueBy the page is built from, so the number and the cards
+// cannot come to answer different questions. A second statement, which is what a
+// true total beside a bounded page costs and what needs_you has always paid.
+func (t attentionTasks) CountOpenForViewer(
+	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
+) (int, error) {
+	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	if !ok {
+		return 0, nil
+	}
+	return t.store.CountActivities(ctx, in)
+}
+
+// CountDueBy answers how many promises are due, for the reason the task lane's
+// count exists: the page is capped at a dozen and the badge is not the cap.
+func (c attentionCommitments) CountDueBy(ctx context.Context, by time.Time) (int, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return 0, apperrors.ErrPermissionDenied
+	}
+	return c.store.CountOpenCommitmentsDue(ctx, ids.From[ids.UserKind](actor.UserID), by)
 }

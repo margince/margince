@@ -116,6 +116,77 @@ func (s *Store) OpenCommitmentsDue(ctx context.Context, owner ids.UserID, by tim
 	return out, err
 }
 
+// openCommitmentsDueFrom is the promises this rep owes and the day they are
+// owed by, spelled ONCE.
+//
+// The page and the count that sits beside it share it deliberately: a count
+// assembled from a second copy of these arms would answer a different question
+// from the cards under it, one arm at a time, and nothing would fail to say so.
+//
+// %[1]d is the owner, %[2]d the bound, %[3]s the activity-content scope and
+// %[4]s the person scope.
+//
+// Held by: TestTheCommitmentCountAnswersTheSameQuestionAsThePage
+// (backend/internal/compose/integration/commitmentlane_integration_test.go)
+const openCommitmentsDueFrom = `
+		  FROM conversation_claim c
+		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN person pr ON pr.id = c.person_id AND pr.archived_at IS NULL
+		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
+		   AND c.archived_at IS NULL
+		   -- STRICTLY before, which is what the caller's bound means: it is the
+		   -- END of the day, so an inclusive test put a promise due at exactly
+		   -- tomorrow's midnight on today's list — reported late a day early,
+		   -- and again tomorrow. The task lane beside this one reads it the
+		   -- same way, and the two decide the same afternoon.
+		   AND c.due_at IS NOT NULL AND c.due_at < $%[2]d
+		   AND pr.owner_id = $%[1]d
+		   AND (%[3]s) AND (%[4]s)`
+
+// CountOpenCommitmentsDue answers how many promises are due by an instant, with
+// no cap on it — the badge beside the lane's bounded page.
+//
+// Same gates as the page, in the same order: the claim names a person and quotes
+// a message, so both objects are required before either row is counted, and the
+// row scopes narrow the count exactly as they narrow the list. A number that
+// moved when a colleague captured a contact this reader may not see would
+// disclose that contact.
+func (s *Store) CountOpenCommitmentsDue(ctx context.Context, owner ids.UserID, by time.Time) (int, error) {
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		return 0, err
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return 0, err
+	}
+	var total int
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		ownerPos := arg(owner)
+		byPos := arg(by)
+		activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+		if err != nil {
+			return err
+		}
+		if activityScope == "" {
+			activityScope = sqlAlwaysVisible
+		}
+		personScope, err := auth.ScopeClauseFor(ctx, "person", "pr", arg)
+		if err != nil {
+			return err
+		}
+		if personScope == "" {
+			personScope = sqlAlwaysVisible
+		}
+		return tx.QueryRow(ctx, fmt.Sprintf(`SELECT count(*)`+openCommitmentsDueFrom,
+			ownerPos, byPos, activityScope, personScope), args...).Scan(&total)
+	})
+	if err != nil {
+		return 0, fmt.Errorf("count the rep's commitments coming due: %w", err)
+	}
+	return total, nil
+}
+
 func openCommitmentsDue(
 	ctx context.Context, tx pgx.Tx, owner ids.UserID, by time.Time, limit int,
 ) ([]CommitmentDue, error) {
@@ -141,20 +212,7 @@ func openCommitmentsDue(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.person_id, c.body, c.source_quote,
 		       coalesce(pr.full_name, ''), coalesce(a.subject, ''),
-		       a.occurred_at, c.due_at
-		  FROM conversation_claim c
-		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
-		  JOIN person pr ON pr.id = c.person_id AND pr.archived_at IS NULL
-		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
-		   AND c.archived_at IS NULL
-		   -- STRICTLY before, which is what the caller's bound means: it is the
-		   -- END of the day, so an inclusive test put a promise due at exactly
-		   -- tomorrow's midnight on today's list — reported late a day early,
-		   -- and again tomorrow. The task lane beside this one reads it the
-		   -- same way, and the two decide the same afternoon.
-		   AND c.due_at IS NOT NULL AND c.due_at < $%[2]d
-		   AND pr.owner_id = $%[1]d
-		   AND (%[3]s) AND (%[4]s)
+		       a.occurred_at, c.due_at`+openCommitmentsDueFrom+`
 		 ORDER BY c.due_at ASC, c.id
 		 LIMIT %[5]d`,
 		ownerPos, byPos, activityScope, personScope, commitmentsDueLimit(limit)), args...)
