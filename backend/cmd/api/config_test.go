@@ -241,3 +241,31 @@ func TestTheBootLineNamesWhichHalfOfTheEnvironmentAppIsMissing(t *testing.T) {
 		})
 	}
 }
+
+// A LIST BELONGS TO SIGN-IN, and --graph-tenant is spliced into a URL.
+//
+// Capture builds login.microsoftonline.com/%s/oauth2/... out of this value, so
+// a comma produces an authority no directory answers for — and the failure
+// arrives at Microsoft's consent screen, in Microsoft's words, long after boot.
+// Its sibling takes several directories and falls back to this flag, which is
+// exactly why somebody would put the list here.
+func TestTheCaptureTenantRefusesAListAndSaysWhereItGoes(t *testing.T) {
+	t.Parallel()
+	_, err := parseAPIFlags([]string{
+		"--dsn", "postgres://x/y",
+		"--graph-tenant", "11111111-2222-3333-4444-555555555555,9188040d-6c67-4c5b-b112-36a304b66dad",
+	})
+	if err == nil {
+		t.Fatal("a list of directories was accepted as the capture authority")
+	}
+	if !strings.Contains(err.Error(), "--microsoft-signin-tenant") {
+		t.Errorf("the refusal reads %q, want it to name the flag that does take a list", err)
+	}
+
+	// ONE authority still boots, including the alias capture defaults to.
+	for _, tenant := range []string{"common", "11111111-2222-3333-4444-555555555555"} {
+		if _, err := parseAPIFlags([]string{"--dsn", "postgres://x/y", "--graph-tenant", tenant}); err != nil {
+			t.Errorf("--graph-tenant %s was refused: %v", tenant, err)
+		}
+	}
+}

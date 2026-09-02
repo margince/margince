@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -132,7 +133,7 @@ func TestBothSignInProvidersSurviveEachOther(t *testing.T) {
 }
 
 func TestMicrosoftIssuerBindsTheTokenToTheConfiguredDirectory(t *testing.T) {
-	check := microsoftIssuer(testTenant)
+	check := microsoftIssuer([]string{testTenant})
 
 	if err := check(oidcClaims{Iss: testIssuer, Tid: testTenant}); err != nil {
 		t.Fatalf("the configured directory's own token was rejected: %v", err)
@@ -162,7 +163,7 @@ func TestMicrosoftIssuerBindsTheTokenToTheConfiguredDirectory(t *testing.T) {
 func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 	rig := newOIDCTestRig(t)
 	adapter := microsoftOIDCVerifierAdapter{v: newOIDCVerifier(
-		rig.jwksURL(), microsoftIssuer(testTenant), func(oidcClaims) error { return nil },
+		rig.jwksURL(), microsoftIssuer([]string{testTenant}), func(oidcClaims) error { return nil },
 	).withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base })}
 
 	tok := rig.mint(t, testKID, "RS256", map[string]any{
@@ -220,3 +221,166 @@ func oidcProviderKeys(t *testing.T, s *Server) []string {
 }
 
 var _ identity.OIDCVerifier = microsoftOIDCVerifierAdapter{}
+
+// A SECOND DIRECTORY IS ACCEPTED, AND AN UNLISTED ONE STILL IS NOT.
+//
+// The list is what an operator vouched for, so widening it is a decision rather
+// than a side effect: adding a tenant admits that tenant and nothing else, and
+// every check the single-directory case made still runs against each entry.
+func TestMicrosoftIssuerAcceptsEveryListedDirectoryAndNoOther(t *testing.T) {
+	const second = "22222222-3333-4444-5555-666666666677"
+	check := microsoftIssuer([]string{testTenant, second})
+
+	for name, claims := range map[string]oidcClaims{
+		"the first directory":  {Iss: testIssuer, Tid: testTenant},
+		"the second directory": {Iss: "https://login.microsoftonline.com/" + second + "/v2.0", Tid: second},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := check(claims); err != nil {
+				t.Errorf("a listed directory was refused: %v", err)
+			}
+		})
+	}
+
+	for name, claims := range map[string]oidcClaims{
+		"a directory nobody listed": {
+			Iss: "https://login.microsoftonline.com/99999999-9999-9999-9999-999999999999/v2.0",
+			Tid: "99999999-9999-9999-9999-999999999999",
+		},
+		// Listing two directories does not admit personal accounts: they are
+		// their own entry, and an installation that wanted them says so.
+		"a personal account": {
+			Iss: "https://login.microsoftonline.com/" + microsoftConsumerTenant + "/v2.0",
+			Tid: microsoftConsumerTenant,
+		},
+		// Borrowing a listed tid while the issuer names the borrower's own
+		// directory is the attack the pair of checks exists for, and a longer
+		// list does not weaken it.
+		"a listed tid under another issuer": {
+			Iss: "https://login.microsoftonline.com/99999999-9999-9999-9999-999999999999/v2.0",
+			Tid: second,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := check(claims); err == nil {
+				t.Error("accepted a token this installation never vouched for")
+			}
+		})
+	}
+}
+
+// PERSONAL ACCOUNTS ARE ADMITTED BY NAMING THEIR TENANT, and by nothing else.
+func TestPersonalAccountsSignInOnlyWhenTheirTenantIsListed(t *testing.T) {
+	personal := oidcClaims{
+		Iss: "https://login.microsoftonline.com/" + microsoftConsumerTenant + "/v2.0",
+		Tid: microsoftConsumerTenant,
+	}
+	if err := microsoftIssuer([]string{testTenant, microsoftConsumerTenant})(personal); err != nil {
+		t.Errorf("a listed consumer tenant was refused: %v", err)
+	}
+	// And the refusal says WHICH thing happened, because somebody who signed in
+	// with their private account by mistake needs a different answer from
+	// somebody whose employer is not listed.
+	err := microsoftIssuer([]string{testTenant})(personal)
+	if err == nil {
+		t.Fatal("an unlisted consumer tenant was accepted")
+	}
+	if !strings.Contains(err.Error(), "personal Microsoft account") {
+		t.Errorf("the refusal reads %q, want it to name the personal account", err)
+	}
+}
+
+// A PERSONAL ACCOUNT'S SIGN-IN NAME IS NOT AN ADDRESS, and honouring it would
+// let somebody choose their way into a member's account.
+//
+// The UPN fallback exists for work accounts whose directory publishes no mail
+// attribute, and it is safe there for a reason that does not travel: the domain
+// is one Microsoft made a tenant prove by DNS. A consumer account has no tenant
+// to have proved anything and its preferred_username is a handle its holder
+// picks, so only the `email` claim — the one Microsoft made them prove they
+// receive mail at — is taken.
+func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
+	rig := newOIDCTestRig(t)
+	tenants := []string{testTenant, microsoftConsumerTenant}
+	adapter := microsoftOIDCVerifierAdapter{v: newOIDCVerifier(
+		rig.jwksURL(), microsoftIssuer(tenants), func(oidcClaims) error { return nil },
+	).withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base })}
+
+	consumerIss := "https://login.microsoftonline.com/" + microsoftConsumerTenant + "/v2.0"
+	tok := rig.mint(t, testKID, "RS256", map[string]any{
+		"iss": consumerIss, "tid": microsoftConsumerTenant, "sub": "sub-msa",
+		// EMPTY, not absent from this map: the rig seeds an address into every
+		// token, and the case under test is the one where Microsoft published
+		// none.
+		"email": "", "preferred_username": "admin@margince.test",
+	})
+	email, _, verified, err := adapter.Verify(context.Background(), tok)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if email != "" || verified {
+		t.Errorf("a personal account's preferred_username %q was taken as a verified address — "+
+			"a handle its holder picks would be a way into whichever member already has it", email)
+	}
+
+	// The claim Microsoft DID make them prove is still taken.
+	proven := rig.mint(t, testKID, "RS256", map[string]any{
+		"iss": consumerIss, "tid": microsoftConsumerTenant, "sub": "sub-msa",
+		"email": "someone@gmail.test", "preferred_username": "admin@margince.test",
+	})
+	email, _, verified, err = adapter.Verify(context.Background(), proven)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if email != "someone@gmail.test" || !verified {
+		t.Errorf("a personal account's proven address = %q (verified %v), want it taken", email, verified)
+	}
+
+	// And a WORK account keeps the fallback, or a directory that publishes no
+	// mail attribute could not sign anybody in.
+	work := rig.mint(t, testKID, "RS256", map[string]any{
+		"iss": testIssuer, "tid": testTenant, "sub": "sub-work",
+		"email": "", "preferred_username": "dana@corp.test",
+	})
+	email, _, verified, err = adapter.Verify(context.Background(), work)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if email != "dana@corp.test" || !verified {
+		t.Errorf("a work account's UPN = %q (verified %v), want it taken", email, verified)
+	}
+}
+
+// WHERE THE BROWSER IS SENT is not what decides which token is accepted, and the
+// widest authority is used only when the list actually names personal accounts.
+func TestTheRoutingAuthorityWidensNoFurtherThanTheListDoes(t *testing.T) {
+	const second = "22222222-3333-4444-5555-666666666677"
+	for name, tc := range map[string]struct {
+		tenant string
+		want   string
+	}{
+		"one directory keeps its own authority": {testTenant, testTenant},
+		"several work directories share the one that excludes personal accounts": {
+			testTenant + "," + second, microsoftWorkAuthority,
+		},
+		"naming personal accounts takes the widest": {
+			testTenant + "," + microsoftConsumerTenant, microsoftCommonAuthority,
+		},
+		"blank and repeated entries are typos, not policy": {
+			testTenant + ", ," + testTenant, testTenant,
+		},
+		// One id like any other by the rule above, and the one id that must not
+		// take it: an installation signing in personal accounts alone would
+		// otherwise route through the guid rather than the alias Microsoft
+		// documents for them.
+		"personal accounts alone take their alias": {
+			microsoftConsumerTenant, microsoftConsumerAuthority,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := (MicrosoftSignInConfig{Tenant: tc.tenant}).routingAuthority(); got != tc.want {
+				t.Errorf("routingAuthority = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
