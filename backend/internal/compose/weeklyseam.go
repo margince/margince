@@ -19,6 +19,13 @@ func (s Server) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 	s.weeklyHandlers.ListWeeklyReviews(w, r)
 }
 
+// GetTeamWeeklyReview implements (GET /weekly-reviews/team).
+func (s Server) GetTeamWeeklyReview(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.GetTeamWeeklyReviewParams,
+) {
+	s.weeklyHandlers.GetTeamWeeklyReview(w, r, params)
+}
+
 // GetLatestWeeklyReview implements (GET /weekly-reviews/latest).
 func (s Server) GetLatestWeeklyReview(
 	w http.ResponseWriter, r *http.Request, params crmcontracts.GetLatestWeeklyReviewParams,
