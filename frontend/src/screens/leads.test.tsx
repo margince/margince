@@ -2203,17 +2203,16 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
+    // Said wherever the score is: the score card and the reading beside it
+    // both carry the figure, so both say what stands behind it.
     await waitFor(() =>
       expect(
-        screen.getByText(
+        screen.getAllByText(
           "The breakdown for this score isn\u2019t stored yet — the next update will show it.",
-        ),
-      ).toBeTruthy(),
+        ).length,
+      ).toBeGreaterThan(0),
     );
     expect(screen.queryByText("What this score has to work with:")).toBeNull();
-    // Nor does the readings row beside it: the score card has said the
-    // breakdown is not stored, and a second card claiming nothing counted
-    // toward 72 would contradict it.
     expect(
       screen.queryByText("Nothing counted toward this score yet."),
     ).toBeNull();

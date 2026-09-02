@@ -79,11 +79,11 @@ function ScoreCard({
   // factors. A basis that vanished on a failed read left the score looking
   // complete, which is the one thing a receipt must not do.
   //
-  // A non-zero score with no retained breakdown is the one case that says
-  // nothing here: something counted and this client cannot say what, so
-  // "nothing counted" would be false — and the score card beside this row
-  // already states that the breakdown is not stored yet. For a score of ZERO
-  // the same absence is the truth, whether or not a breakdown was retained.
+  // A non-zero score with no retained breakdown says so: something counted
+  // and this client cannot say what, so "nothing counted" would be false, and
+  // silence would leave the figure standing over "no qualifying signals". For
+  // a score of ZERO the absence is the truth, whether or not a breakdown was
+  // retained.
   const basis = explain.isPending ? (
     <p className="t-small">{t("lead.scoreLoading")}</p>
   ) : explain.isError ? (
@@ -104,7 +104,9 @@ function ScoreCard({
     />
   ) : explain.data?.explained || lead.score === 0 ? (
     <p className="t-small">{t("lead.scoreNoFactors")}</p>
-  ) : null;
+  ) : (
+    <p className="t-small">{t("lead.scoreNotStoredYet")}</p>
+  );
   return (
     <StatCard
       label={t("lead.score")}
