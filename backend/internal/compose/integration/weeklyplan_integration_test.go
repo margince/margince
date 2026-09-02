@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package weeklyplan_test
+package integration
 
 // The plan over real migrated Postgres.
 //
@@ -20,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
@@ -46,7 +45,7 @@ func (a teammates) SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID)
 var planClock = time.Date(2026, 6, 10, 9, 0, 0, 0, time.UTC)
 
 type planEnv struct {
-	*integration.Env
+	*Env
 	store *weeklyplan.Store
 	// rep1 and rep2 share a team; rep3 sits in another.
 	rep1Ctx, rep2Ctx, rep3Ctx context.Context
@@ -54,7 +53,7 @@ type planEnv struct {
 
 func setupPlan(t *testing.T) *planEnv {
 	t.Helper()
-	e := integration.Setup(t)
+	e := Setup(t)
 	// The same handle compose builds (InstallationDB): the pool bound to the
 	// installation's workspace resolver. A raw pool would skip the workspace
 	// GUC every tenant query runs under.
@@ -63,9 +62,9 @@ func setupPlan(t *testing.T) *planEnv {
 	return &planEnv{
 		Env:     e,
 		store:   weeklyplan.NewStore(db, weekly.WeekStartOf, teammates{svc: svc}),
-		rep1Ctx: e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
-		rep2Ctx: e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms),
-		rep3Ctx: e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminPerms),
+		rep1Ctx: e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms),
+		rep2Ctx: e.As(e.Rep2, []ids.UUID{e.Team1}, AdminPerms),
+		rep3Ctx: e.As(e.Rep3, []ids.UUID{e.Team2}, AdminPerms),
 	}
 }
 
@@ -188,7 +187,7 @@ func TestClosingTheWeekTwiceAnswersTheSameCounts(t *testing.T) {
 	// set this case up. What arrives here is a database in the state a
 	// late-landing write or a repair would leave it in, and the question is
 	// whether a second close overwrites the frozen answer.
-	owner := integration.OwnerConn(t)
+	owner := OwnerConn(t)
 	if _, err := owner.Exec(context.Background(), `
 		UPDATE weekly_plan_commitment SET state = 'done', completed_at = now()
 		 WHERE state = 'missed'`); err != nil {
@@ -239,7 +238,7 @@ func TestADroppedCommitmentIsNeitherOwedNorKept(t *testing.T) {
 // mutation in this tree.
 func TestAHelpRequestLandsOneAuditRowAndOneEvent(t *testing.T) {
 	e := setupPlan(t)
-	owner := integration.OwnerConn(t)
+	owner := OwnerConn(t)
 	ctx := context.Background()
 
 	commitment := planCommitment(t, e, e.rep1Ctx, "Chase the signature")
@@ -266,7 +265,7 @@ func TestAHelpRequestLandsOneAuditRowAndOneEvent(t *testing.T) {
 // Withdrawing a request must not page a lead a second time.
 func TestWithdrawingARequestEmitsNoSecondHelpEvent(t *testing.T) {
 	e := setupPlan(t)
-	owner := integration.OwnerConn(t)
+	owner := OwnerConn(t)
 	ctx := context.Background()
 
 	commitment := planCommitment(t, e, e.rep1Ctx, "Chase the signature")
