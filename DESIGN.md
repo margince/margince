@@ -121,21 +121,25 @@ styleseed visual-craft rules and Emil Kowalski's design-engineering notes.
 
 ## 2. The language in five sentences
 
-1. **One ground, one line, one row.** A white page, a one-pixel hairline, and
-   a row. There is no glass, no glow, no gradient, no shadow at rest, and no
-   card unless the thing is genuinely a separate object on a board. Dark mode
-   is the same page in a dark neutral, not a second design.
+1. **A lit ground, and one pane per zone.** The page is a pale green paper lit
+   from two corners, an emerald glow behind the sidebar and an indigo one
+   behind the far edge. Each zone of a record is one white pane on it, with a
+   hairline edge and a 14px corner, and inside a pane there is only ever a
+   title, a rule and rows. Dark is the same room with the lights down.
 2. **Everything is a list.** A record's attributes are a list of label and
-   value. What happened is a list. What needs you is a list. Money is a list.
-   Because every list is the same list, a rep never learns a second layout.
-3. **One face, three sizes, two weights.** Inter with tabular figures at 13px
-   for everything, 12px for meta, 18px for a record's name; 400 and 500, with
-   600 only on a name and a zone title. Figures are the same face, aligned.
-4. **The record's details live in a left panel that folds.** The reading is on
-   the right: the standing, the timeline, the needs, the money, the rest.
-5. **Colour means something.** Emerald is the one filled verb and a link.
-   Indigo is a tinted row that says an agent wrote it. Green, amber and red are
-   a dot before a word. Nothing is coloured to look nice.
+   value in a panel on the left that folds. What happened is a list. What
+   needs you is a list. Money is a list. Because every list is the same list,
+   a rep never learns a second layout.
+3. **One display face carries identity.** The name of a record, a zone's
+   title and the verdict the agent speaks are set in the display face; every
+   figure is set in the mono face, tabular; everything else is one quiet sans.
+4. **Buttons are flat and there is one filled one.** No gradient, no rim, no
+   glow: a filled emerald verb for the move the page names, white outlines for
+   the rest.
+5. **Colour means something.** Emerald is the one filled verb, a link and the
+   light behind the sidebar. Indigo is a tinted row that says an agent wrote
+   it, and the light behind the far edge. Green, amber and red are a dot
+   before a word. Nothing is coloured to look nice.
 
 Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 
@@ -143,116 +147,113 @@ Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 
 The semantic split is unchanged and remains pinned by `tokens.test.ts`:
 `--accent` (emerald) is brand and primary action, `--ai*` (indigo) is agent
-provenance, `--success` / `--warn` / `--danger` are status. What changes is
-that the grounds go neutral and the surfaces go away.
+provenance, `--success` / `--warn` / `--danger` are status. What changes is the
+ground, which is lit, and the surface, which is one translucent pane per zone.
 
 ### Light (the default)
 
 | Token | Value | Role |
 |---|---|---|
-| `--bg` | `#ffffff` | The page. |
-| `--bg2` | `#fafafa` | The sidebar, a hovered table row, the ask field. |
-| `--bg3` | `#f4f4f5` | A pill, a keycap, the active sidebar row, a pressed segment. |
-| `--line` | `#e9e9eb` | The one hairline: between rows, under headers, beside the panels. |
-| `--line2` | `#d9d9dc` | A control's outline (a button, an input), the spine's axis. |
-| `--ink` / `--ink2` / `--ink3` / `--ink4` | `#18181b` / `#3f3f46` / `#71717a` / `#a1a1aa` | Names and values / body / labels and meta / placeholders and dates. |
+| `--bg` | `#f1f5f2` | The paper the page is read on. |
+| `--glowA` / `--glowB` | `rgba(24,190,120,.16)` / `rgba(91,97,214,.12)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the bottom-right. Radials of 900×620, the only decoration on the page. |
+| `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
+| `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the active sidebar row. |
+| `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; a control's outline, the spine's axis. |
+| `--ink` / `--ink2` / `--ink3` / `--ink4` | `#101a15` / `#33403a` / `#66736c` / `#9aa59f` | Names and values / body / labels and meta / placeholders and dates. |
 | `--accent` / `--accentText` / `--accentBg` | `#0b7a53` / `#0a6f4b` / `#e8f3ee` | The one filled verb; a link; a selected row or a done stage. |
-| `--ai` / `--aiText` / `--aiBg` / `--aiLine` | `#5b61d6` / `#3f45b0` / `#eef0fb` / `#c9ccf3` | The agent's filled verb; its label; the tinted row; the dashed edge of a staged row. |
+| `--ai` / `--aiText` / `--aiBg` / `--aiLine` | `#5b61d6` / `#3f45b0` / `rgba(91,97,214,.09)` / `.35` | The agent's filled verb; its label; the tinted row; the dashed edge of a staged row. |
 | `--ok` / `--warn` / `--bad` | `#15803d` / `#a16207` / `#b91c1c` | Status, as a dot before a word, or as a pill for the one status that must not be missed. |
 
 ### Dark
 
-The same page in a dark neutral: `--bg #131316`, `--bg2 #18181b`, `--bg3
-#1f1f23`, `--line #26262b`, `--line2 #34343a`, ink from `#f4f4f5` down to
-`#5f5f68`; the accent lifts to `#2bb673` with dark ink on it; the indigo text
-lifts to `#b3b7f5` on `#1d1e33`; the status colours lift one step. The
-three-state theme pattern (`:root`, `prefers-color-scheme` guarded by
-`:not([data-theme="light"])`, `[data-theme="dark"]`) is how they switch.
+The same room with the lights down: `--bg #0a100e`, the glows brighter
+(`.22` / `.24`) because they are the only light, panes at
+`rgba(255,255,255,.045)` with a `.09` edge, ink from `#eef3ef` down to
+`#5c6862`, the accent lifted to `#2bb673` with dark ink on it, the indigo text
+lifted to `#b3b7f5`. The three-state theme pattern (`:root`,
+`prefers-color-scheme` guarded by `:not([data-theme="light"])`,
+`[data-theme="dark"]`) is how they switch.
 
 ### How colour is spent
 
+- **The two glows are the chrome.** The sidebar is glass over the emerald
+  light; there is no coloured bar anywhere.
 - **The page carries at most ONE filled control in view**, in emerald: the
-  primary verb. Every other button is a white outline.
-- **The sidebar is one step off the page** (`--bg2`), divided by the hairline.
-  It carries no colour of its own.
+  move the page names. Every other button is a pane with an outline.
 - **Indigo is a fact, not a mood.** The agent's read is a row on `--aiBg`; a
   staged change is a row with a dashed `--aiLine` edge until a person accepts
   it. Nothing else is indigo.
-- **Status is a dot before it is a pill.** A pill is reserved for a state the
-  reader must not miss (Overdue, Unanswered, Won).
-- **Monogram tones went.** Avatars are `--bg3` with `--ink2` initials; a
-  record is told apart by its name, not by a colour.
+- **Status is a dot before it is a pill.**
+- **Avatars are neutral.** `--bg3` with `--ink2` initials; a record is told
+  apart by its name.
 
 ## 4. Type
 
-One family, which is well under the ceiling `check-font-lock.sh` holds.
+Three families, which is the ceiling `check-font-lock.sh` holds.
 
-| Role | Setting |
-|---|---|
-| Everything | **Inter**, `font-feature-settings: "cv11", "ss01", "tnum"` (the single-storey a, the open digits, tabular figures). |
-| A record's name | 18px, 600, `-0.01em`. |
-| A zone title, a list page title | 12.5px 600 and 18px 600. |
-| A reading's figure | 18px 600, tabular; a reading's word 15px 600. |
-| A row's lead | 13px 500. |
-| Body | 13px 400, line-height 1.5; prose at 13.5px, 72ch. |
-| Labels, meta, dates | 12px and 11.5px 400 in `--ink3` / `--ink4`. |
+| Role | Family | Where |
+|---|---|---|
+| Display | **Bricolage Grotesque** 600 | A record's name at 24px (`-0.025em`), the home greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px. |
+| Body and UI | **Geist** | 13px 400 for everything, 500 for a row's lead and a control, 12px in `--ink3` for meta and labels. Prose at 13.5px, 72ch. |
+| Figures | **Geist Mono** 500, tabular | A reading's figure at 22px (`-0.03em`), and every amount, count, date and identifier in a row or a cell. |
 
-- **A figure is the same face as the word beside it**, aligned by `tnum`. A
-  second mono face was one more thing to learn and went.
+- **Weight 600 is for the display face.** Everything that must stand out in a
+  row does it at 500 in the body face.
 - **No uppercase anywhere.** Labels are sentence case in a lighter ink.
-- **Weight 600 is for a name and a title.** Everything that must stand out in
-  a row does it at 500.
 
 ## 5. Space, shape, depth
 
 - **4px base**, the existing `--space-*` ladder. Rows are 36–40px; a table row
   38px; a sidebar row 30px; a control 30px (26px in a row).
-- **Radii**: 6px for a control, a pill and a card; 8px for the agent's row and
-  a board card; full for a monogram.
-- **Depth**: none at rest. A hairline separates; a one-step ground (`--bg2`)
-  hosts; a popover, menu or drawer takes the one shadow. A board card has a
-  hairline and takes a faint shadow on hover, because it is being picked up.
-- **Rows, not boxes.** A zone is a title with a hairline under it and rows
-  under that. The only enclosed shapes on a record page are the agent's tinted
-  row and a staged row's dashed edge.
+- **Radii by role**: 14px for a pane and the details panel, 12px for a board
+  card, 10px for the agent's row, 6px for a control and a pill, full for a
+  monogram.
+- **Depth is light, not shadow.** A pane is translucent over the lit ground
+  with a hairline edge; that is its whole elevation. Nothing at rest casts a
+  shadow, glows or has a gradient. A popover, menu or drawer takes the one
+  shadow; a board card takes a faint one on hover, because it is being picked
+  up.
+- **No pane inside a pane.** A zone is one pane; the things in it are a
+  title, a rule and rows. The only enclosed shapes inside a pane are the
+  agent's tinted row and a staged row's dashed edge.
 
 ## 6. The shell
 
 ```
 ┌────────┬───────────────────────────────────────────────────────────────┐
 │ sidebar│ crumb                                            Details · me  │
-│ (--bg2)├───────────────────────────────────────────────────────────────┤
-│ Search │ mark  NAME  badges                          verbs, right       │
-│ Home   │       facts line                                               │
-│ RECORDS│ tabs ───────────────────────────────────────────────────────── │
-│ …      │ ┌ details (280, folds) ┐ ┌ reading ───────────────────────────┐│
-│ WORK   │ │ Ask                  │ │ 2 Where it stands  (cells on a rule)││
-│ …      │ │ Details  label value │ │ 3 What happened    (spine + rows)  ││
-│        │ │ People / Seats       │ │ 4 What needs you   (one list)      ││
-│ ● agent│ │ Tags / Room / Docs   │ │ 5 Commercial / The score           ││
-│        │ └──────────────────────┘ │ 6 About / Understanding / Committee││
+│ (glass │                                                               │
+│  over  │ mark  NAME (display)  badges                  verbs, right     │
+│  the   │       facts line                                               │
+│  glow) │ tabs ───────────────────────────────────────────────────────── │
+│ Search │ ┌ details pane (280) ┐ ┌ zone pane 2  Where it stands (cells) ┐│
+│ Home   │ │ Ask                │ └──────────────────────────────────────┘│
+│ RECORDS│ │ Details label value│ ┌ zone pane 3  What happened          ┐│
+│ …      │ │ People / Seats     │ └──────────────────────────────────────┘│
+│ WORK   │ │ Tags / Room / Docs │ ┌ zone pane 4  What needs you         ┐│
+│ ● agent│ └────────────────────┘ └──────────────────────────────────────┘│
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
 - **Sidebar**: 224px expanded, 52px collapsed, and collapsed is the default.
-  `--bg2` with a hairline. Workspace name and the fold at the top, the search
-  field with `⌘K`, the navigation in groups under sentence-case group labels,
-  the agent's status at the foot. Collapsed, labels become tooltips and only
-  the task and approval counts stay, as small badges.
-- **Top row**: 44px, the breadcrumb on the left, the Details toggle and the
-  reader's monogram on the right.
-- **Record head**: a 40px mark, the name at 18px with its badges on the same
-  line, one line of facts under it, the verbs on the right.
-- **Details panel**: 280px on the left of the reading, folds to nothing. It
-  holds Ask, the attributes as label and value rows (with the evidence
-  underline on a machine-read value and a lighter "Add …" on an empty one),
-  and the short lists that describe the record (people, seats, tags, the Deal
-  Room, documents).
-- **Directions set aside.** A lit glass "Aurora", an emerald chrome, a deep
-  ink chrome, an editorial paper, a monochrome command surface, a bento and a
-  tactile set were built on the same page. Each added a kind of element. The
-  brief that settled it was Attio: clean, simple, modern; one ground, one line,
-  one row.
+  Glass over the emerald glow, a hairline on its right. Workspace name and the
+  fold at the top, the search field with `⌘K`, the navigation in groups under
+  sentence-case labels, the agent's orb at the foot. Collapsed, labels become
+  tooltips and only the task and approval counts stay, as small badges.
+- **Top row**: 44px on the ground, no bar: the breadcrumb on the left, the
+  Details toggle and the reader's monogram on the right.
+- **Record head**: a 40px mark, the name in the display face with its badges
+  on the same line, one line of facts under it, the verbs on the right.
+- **Details pane**: 280px on the left of the reading, one pane, folds to
+  nothing. It holds Ask, the attributes as label and value rows (with the
+  evidence underline on a machine-read value and a lighter "Add …" on an
+  empty one), and the short lists that describe the record (people, seats,
+  tags, the Deal Room, documents).
+- **Directions set aside.** Aurora as first built (glass panes with glows and
+  gradients on every element) was too much; a plain white "one ground, one
+  line, one row" set was too little. This is the pair reconciled: Aurora's
+  atmosphere, the clean set's structure, and no more than one kind of
+  anything.
 
 ## 7. How the tool feels, and how a page is structured
 
@@ -505,14 +506,14 @@ looks now.
 | Primitive | Treatment |
 |---|---|
 | `Button` primary | `--accent` fill, white text, 6px radius, 30px, weight 500. One per view. |
-| `Button` secondary | White fill, `--line2` outline, `--ink` text. Icon-only at 30×30 for the overflow. |
+| `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. Icon-only at 30×30 for the overflow. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | Outlined in `--bad`; fills only inside a `ConfirmModal`. |
 | `TextInput` / `Select` | White, `--line2` outline, 30px, 6px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
 | `Badge` | `quiet` by default: a 6px dot and a word. The pill (`--bg3`, 20px, 11.5px 500) is for the one status that must not be missed and for the record's standing badges beside its name. |
 | `Chip` | The same pill. There is one pill. |
-| `Panel` | Becomes a **zone**: a 12.5px 600 title with its count and its verb, a hairline, rows. No fill, no edge, no radius. `PanelPlate` (the inset well) becomes a row on `--bg2`. |
-| `StatCard` | A **cell** on a rule: label at 11.5px, figure at 18px 600 tabular, basis at 12px; cells separated by a vertical hairline, not by boxes. |
+| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 14px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
+| `StatCard` | A **cell** inside the standing pane: label at 11.5px, figure at 22px mono, basis at 12px; cells separated by a vertical hairline, not by boxes. |
 | `FieldGrid` / `FieldRow` | The attribute row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 38px rows; hairlines; figures right-aligned; the selected row on `--accentBg`. Edge to edge inside its zone. |
 | `RecordTabs` | Text tabs on a rule; the open one in `--ink` with a 2px ink underline; counts at 11px in `--ink4`. |
@@ -544,10 +545,11 @@ The existing durations and curves stay (`--dur-tap` 90ms, `--dur-state` 140ms,
 
 ## 10. Restraint — what a screen in this language does not do
 
-- Does not draw a box around a section. A zone is a title, a hairline and
-  rows.
-- Does not cast a shadow, a glow, a tint or a gradient at rest. A button is a
-  flat shape; the only tinted thing on a page is the agent's row.
+- Does not put a pane inside a pane. A zone is one pane; inside it a title, a
+  hairline and rows.
+- Does not cast a shadow, a glow or a gradient at rest. The two corner glows
+  on the ground are the only light; a button is a flat shape; the only tinted
+  thing inside a pane is the agent's row.
 - Does not say a fact twice. One home per fact; the rest are links to it.
 - Does not fill a button, a row or a surface with emerald except the one
   primary verb and a selected row's wash.
@@ -556,7 +558,7 @@ The existing durations and curves stay (`--dur-tap` 90ms, `--dur-state` 140ms,
 - Does not centre a title, a section or a table.
 - Does not use uppercase outside an eyebrow, or weight 700 outside the rare
   word that must outrank a heading.
-- Does not add a second typeface, an uppercase label, an emoji glyph, a
+- Does not add a fourth typeface, an uppercase label, an emoji glyph, a
   gradient hero, or a shadow under a shadow.
 - Does not invent a component that the catalog already names. Grep first.
 
@@ -567,16 +569,18 @@ The tokens above land in `frontend/src/design-system/tokens.css`, and
 the test is what proves the canon moved rather than one screen. The order of
 work that gets the most visible change for the least churn:
 
-1. **The shell.** The sidebar to `--bg2` with a hairline and the fold, the
-   top strip to a 44px row with the breadcrumb and the Details toggle. One file
+1. **The shell.** The two glows on the ground, the sidebar as glass with the
+   fold, the top strip to a 44px row with the breadcrumb and the Details
+   toggle. One file
    each (`shell.css`, `topbar.css`), and the whole product stops looking like a
    template.
-2. **Type.** One family, Inter with `cv11`, `ss01` and `tnum`, and the scale
-   in §4. `check-font-lock.sh` holds the count.
-3. **Zones.** Restyle `Panel` from a bordered white card to a title, a
-   hairline and rows. Every record page and settings page changes with it.
-4. **Figures.** `tnum` on the whole page and `StatCard` as a cell on a rule;
-   the mono face retires from figures and stays for identifiers only.
+2. **Type.** The three families and the scale in §4. `check-font-lock.sh`
+   holds the count at three.
+3. **Zones.** Restyle `Panel` to one translucent pane per zone with a
+   display-face title, a hairline and rows. Every record page and settings
+   page changes with it.
+4. **Figures.** The mono face, tabular, on every figure through `StatCard`
+   cells, `ListTable` cells and `FieldGrid` values.
 5. **Grounds.** Move the paper and surface values; re-check every `color-mix()`
    derivation in both themes with Storybook's theme control.
 
@@ -585,9 +589,11 @@ the new grounds with the existing axe suite before the values are pinned.
 
 ## 12. Checklist for a new screen
 
-- [ ] One name at 18px 600; every other emphasis is 500.
-- [ ] Every figure is tabular and right-aligned in a column.
-- [ ] Every zone is a title, a hairline and rows; nothing casts a shadow at rest.
+- [ ] The display face on the name, the zone titles and the verdict; nothing
+      else uses it.
+- [ ] Every figure is mono and tabular, right-aligned in a column.
+- [ ] Every zone is one pane with a title, a hairline and rows; nothing casts
+      a shadow at rest.
 - [ ] One emerald-filled control in view.
 - [ ] Anything an agent wrote is a row on `--aiBg` labelled "Margince read
       this record"; a staged change has a dashed edge until accepted.
