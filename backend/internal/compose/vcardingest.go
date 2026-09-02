@@ -53,6 +53,15 @@ import (
 // past a limit of five.
 const vcardIngestMaxCards = 5
 
+// vcardIngestMaxAttempts bounds the retry: parsing a handful of local files
+// and writing at most vcardIngestMaxCards people touches no model and no
+// network (api/jobs.yaml's timeout says so), so a failure here is either a
+// transient database hiccup, worth one or two more tries, or a defect in the
+// card or the code — neither of which a 25th identical attempt fixes. River's
+// own default would keep retrying a deterministic refusal for hours across an
+// exponential ladder, for no different an answer than the first attempt gave.
+const vcardIngestMaxAttempts = 3
+
 // vcardIngestInsertOpts is the trigger's insert, spelled here beside the worker
 // whose queue and attempt cap it names.
 //
@@ -68,8 +77,9 @@ const vcardIngestMaxCards = 5
 // their own.
 func vcardIngestInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
-		Queue:      aiCaptureQueue,
-		UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+		Queue:       aiCaptureQueue,
+		MaxAttempts: vcardIngestMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}
 }
 

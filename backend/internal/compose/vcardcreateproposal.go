@@ -58,8 +58,12 @@ type vcardCreateProposal struct {
 	// The rest of what an approval RELEASES, flattened for the card: the
 	// decider is shown every field the create will write, or they are
 	// approving more than they were asked. Empty fields are omitted so the
-	// card carries facts, not blanks.
-	Organization string `json:"organization,omitempty"`
+	// card carries facts, not blanks — Organization is the one exception:
+	// it also joins the identity below, and the engine's containment check
+	// refuses an identity asserting a field the payload omits. A card
+	// naming no company still displays as nothing; omitempty just cannot
+	// be the reason it does, or that card can never be staged at all.
+	Organization string `json:"organization"`
 	Title        string `json:"title,omitempty"`
 	Phones       string `json:"phones,omitempty"`
 	URL          string `json:"url,omitempty"`
