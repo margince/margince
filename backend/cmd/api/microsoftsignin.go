@@ -24,7 +24,12 @@ import (
 // reads its own --microsoft-signin-tenant, which falls back to --graph-tenant
 // when that already names one directory rather than an authority alias. An
 // installation running `common` capture therefore gets no Microsoft sign-in
-// until it says which directory its people are in, and the boot log says so.
+// until it says which directories its people are in, and the boot log says so.
+//
+// DIRECTORIES, plural, because a flag holding exactly one made "any Entra
+// tenant" mean "no sign-in at all". Each entry is a directory whose
+// administrators this installation vouches for, which is a decision somebody
+// can make; an alias is not, and stays refused.
 //
 // RedirectBase (where Microsoft sends the browser back) and PostLoginURL/
 // FailureURL (where the callback then sends it) read DIFFERENT bases, the same
@@ -49,7 +54,7 @@ func microsoftSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, 
 	}
 	switch {
 	case ssoCfg.Enabled():
-		_, _ = fmt.Fprintf(stdout, "api microsoft sign-in enabled (/auth/oidc/microsoft/*, directory %s)\n", ssoCfg.Tenant)
+		_, _ = fmt.Fprintf(stdout, "api microsoft sign-in enabled (/auth/oidc/microsoft/*, directories %s)\n", ssoCfg.Tenant)
 		_, _ = fmt.Fprintf(stdout, "api microsoft sign-in redirect URI to register on the Entra app: %s\n",
 			compose.MicrosoftSignInRedirectURI(redirectBase))
 	case cfg.graphClientID != "":
@@ -58,8 +63,8 @@ func microsoftSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, 
 	return []compose.Option{compose.WithMicrosoftSignIn(ssoCfg)}, nil
 }
 
-// microsoftSignInTenant resolves the directory sign-in is pinned to: its own
-// flag, or the capture connector's when that already names a directory.
+// microsoftSignInTenant resolves the directories sign-in accepts: its own flag,
+// or the capture connector's when that already names one.
 //
 // The fallback is deliberately one-way. Inheriting a real directory id saves an
 // operator from configuring the same GUID twice, while inheriting `common` (or
