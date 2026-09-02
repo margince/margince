@@ -152,6 +152,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The component takes the zone as a required prop and these cases assert which GROUPS render and which badges they carry — no date rendering is asserted. The zone is the shape being satisfied, not a rendering under test.",
   },
   {
+    file: "screens/historyreversalrow.stories.tsx",
+    why: "The story hand-renders a member row and passes the formatter's required zone directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
+  },
+  {
     file: "screens/recordconversations.stories.tsx",
     why: "The story passes the component's required zone prop directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
   },
