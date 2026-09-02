@@ -1083,30 +1083,6 @@ func (stubs) ExplainLeadScore(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "ExplainLeadScore")
 }
 
-func (stubs) ListLists(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListListsParams) {
-	httperr.NotImplemented(w, r, "ListLists")
-}
-
-func (stubs) CreateList(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "CreateList")
-}
-
-func (stubs) ArchiveList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "ArchiveList")
-}
-
-func (stubs) GetList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetList")
-}
-
-func (stubs) ListListMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListListMembersParams) {
-	httperr.NotImplemented(w, r, "ListListMembers")
-}
-
-func (stubs) AddListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "AddListMember")
-}
-
 func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCurrentPrincipal")
 }

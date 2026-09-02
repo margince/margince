@@ -7240,104 +7240,6 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
 
   # ------------------------------ /lists ------------------------------------
-  /lists:
-    get:
-      tags: [Lists]
-      operationId: listLists
-      summary: List lists (static + dynamic segments).
-      parameters:
-        - name: entity_type
-          in: query
-          schema: { type: string, enum: [person, organization, deal, lead, project] }
-        - $ref: '#/components/parameters/IncludeArchived'
-      responses:
-        '200':
-          description: Lists.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ListListResponse' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-    post:
-      tags: [Lists]
-      operationId: createList
-      x-mcp-tool: { verb: create_record, record_type: list, tier: auto_execute, scope: write }
-      summary: Create a list (static set or dynamic segment).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateListRequest' }
-      responses:
-        '201':
-          description: Created list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/List' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-
-  /lists/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Lists]
-      operationId: getList
-      summary: Get a list by id.
-      responses:
-        '200':
-          description: The list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/List' }
-        '404': { $ref: '#/components/responses/NotFound' }
-    delete:
-      tags: [Lists]
-      operationId: archiveList
-      x-mcp-tool: { verb: archive_record, record_type: list, tier: auto_execute, scope: write }
-      summary: Archive a list.
-      responses:
-        '200':
-          description: Archived list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/List' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /lists/{id}/members:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Lists]
-      operationId: listListMembers
-      summary: List a list's members — explicit rows for a static list, or the live filter evaluation for a dynamic segment.
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: Members of the list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ListMemberListResponse' }
-        '404': { $ref: '#/components/responses/NotFound' }
-    post:
-      tags: [Lists]
-      operationId: addListMember
-      x-mcp-tool: { verb: update_record, record_type: list, tier: auto_execute, scope: write }
-      summary: Add a member to a static list.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/AddListMemberRequest' }
-      responses:
-        '201':
-          description: Added member.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ListMember' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-
   # ------------------------- /filters/vocabulary -----------------------------
   /filters/vocabulary:
     get:
@@ -23864,7 +23766,7 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [people, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments]
+            enum: [people, deals, projects, strength, activities, tags, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments]
         people:
           type: object
           required: [data, page]
@@ -23895,7 +23797,6 @@ components:
         strength: { $ref: '#/components/schemas/OrganizationStrength' }
         activities: { $ref: '#/components/schemas/ActivityListResponse' }
         tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
-        list_memberships: { type: array, items: { $ref: '#/components/schemas/List' } }
         pending_approvals:
           type: object
           required: [data, page]
@@ -29264,17 +29165,6 @@ components:
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
 
-    CreateListRequest:
-      type: object
-      required: [name, entity_type]
-      properties:
-        name: { type: string }
-        entity_type: { type: string, enum: [person, organization, deal, lead, project] }
-        list_type: { type: string, enum: [static, dynamic], default: static }
-        definition: { type: [object, 'null'], additionalProperties: true }
-        owner_id: { type: [string, 'null'], format: uuid }
-        team_id: { type: [string, 'null'], format: uuid }
-
     ListMember:
       type: object
       required: [id, list_id, entity_type, entity_id]
@@ -29285,27 +29175,6 @@ components:
         entity_id: { type: string, format: uuid }
         added_by: { type: string }
         created_at: { type: string, format: date-time }
-
-    AddListMemberRequest:
-      type: object
-      required: [entity_type, entity_id]
-      properties:
-        entity_type: { type: string, enum: [person, organization, deal, lead, project] }
-        entity_id: { type: string, format: uuid }
-
-    ListListResponse:
-      type: object
-      required: [data, page]
-      properties:
-        data: { type: array, items: { $ref: '#/components/schemas/List' } }
-        page: { $ref: '#/components/schemas/PageInfo' }
-
-    ListMemberListResponse:
-      type: object
-      required: [data, page]
-      properties:
-        data: { type: array, items: { $ref: '#/components/schemas/ListMember' } }
-        page: { $ref: '#/components/schemas/PageInfo' }
 
     FilterPreviewRequest:
       type: object

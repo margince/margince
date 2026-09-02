@@ -1717,9 +1717,7 @@ export const de = {
     "{field} ist als \u201e{value}\u201c erfasst. Ihn zu entfernen bedeutet: Das ist kein Fakt über die Firma. Ein späteres Lesen der Website kann ihn erneut erfassen.",
   "co.facts.showAll": "Alle {count} anzeigen",
   "co.facts.showLess": "Weniger anzeigen",
-  "co.tags.lists": "Listen",
   "co.tags.tags": "Tags",
-  "co.tags.noLists": "Auf keiner Liste.",
   "co.tags.noTags": "Keine Tags vergeben.",
   "co.project.new": "Neues Projekt",
   "co.deal.new": "Neuer Deal",
@@ -1730,11 +1728,6 @@ export const de = {
   "co.tags.pick": "Tag-Name",
   "co.tags.overCap":
     "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
-  "co.lists.added": "Zu „{name}“ hinzugefügt",
-  "co.lists.add": "Zu Liste hinzufügen",
-  "co.lists.pick": "Listenname",
-  "co.lists.overCap":
-    "Es gibt mehr Listen, als angezeigt werden können; eine Liste, die hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Listen aufzuräumen, bevor eine neue angelegt wird.",
   "co.recent.title": "Was zuletzt passiert ist",
   "co.recent.emptyDetail":
     "Sobald Sie eine E-Mail senden, einen Anruf festhalten oder sich treffen, steht der Austausch hier, mit dem, was jede Seite getan hat.",
@@ -7313,10 +7306,6 @@ export const de = {
   "filters.pickRecord": "Eintrag wählen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert wählen",
-  "filters.saveList": "Als Liste speichern",
-  "filters.saveListTitle": "Diesen Filter als dynamische Liste speichern",
-  "filters.listName": "Listenname",
-  "filters.saveListConfirm": "Liste erstellen",
   "filters.exportCsv": "Als CSV exportieren",
   "filters.exportJson": "Als JSON exportieren",
 

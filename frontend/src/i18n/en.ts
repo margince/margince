@@ -1754,9 +1754,7 @@ export const en = {
     "{field} is recorded as \u201c{value}\u201d. Removing it says this is not a fact about the company. A later read of their website may state it again.",
   "co.facts.showAll": "Show all {count}",
   "co.facts.showLess": "Show fewer",
-  "co.tags.lists": "Lists",
   "co.tags.tags": "Tags",
-  "co.tags.noLists": "Not on any list.",
   "co.tags.noTags": "No tags applied.",
   "co.project.new": "New project",
   "co.deal.new": "New deal",
@@ -1767,11 +1765,6 @@ export const en = {
   "co.tags.pick": "Tag name",
   "co.tags.overCap":
     "There are more tags than this list can show, so a tag missing from it may still exist. Ask an admin to prune the tags before adding a new one.",
-  "co.lists.added": "Added to “{name}”",
-  "co.lists.add": "Add to list",
-  "co.lists.pick": "List name",
-  "co.lists.overCap":
-    "There are more lists than can be shown, so a list missing from them may still exist. Ask an admin to prune the lists before adding a new one.",
   "co.recent.title": "What happened lately",
   "co.recent.emptyDetail":
     "Once you send an email, log a call or hold a meeting, the exchange appears here, with who did what on each side.",
@@ -7370,10 +7363,6 @@ export const en = {
   "filters.pickRecord": "Choose one",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Choose a value",
-  "filters.saveList": "Save as list",
-  "filters.saveListTitle": "Save this filter as a dynamic list",
-  "filters.listName": "List name",
-  "filters.saveListConfirm": "Create list",
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 

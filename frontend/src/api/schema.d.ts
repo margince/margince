@@ -4769,66 +4769,6 @@ export interface paths {
         patch: operations["updateRelationship"];
         trace?: never;
     };
-    "/lists": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List lists (static + dynamic segments). */
-        get: operations["listLists"];
-        put?: never;
-        /** Create a list (static set or dynamic segment). */
-        post: operations["createList"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/lists/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /** Get a list by id. */
-        get: operations["getList"];
-        put?: never;
-        post?: never;
-        /** Archive a list. */
-        delete: operations["archiveList"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/lists/{id}/members": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /** List a list's members — explicit rows for a static list, or the live filter evaluation for a dynamic segment. */
-        get: operations["listListMembers"];
-        put?: never;
-        /** Add a member to a static list. */
-        post: operations["addListMember"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/filters/vocabulary": {
         parameters: {
             query?: never;
@@ -16502,7 +16442,7 @@ export interface components {
             next_meeting?: components["schemas"]["Organization360NextMeeting"];
             health?: components["schemas"]["Organization360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("people" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments")[];
+            sections_omitted: ("people" | "deals" | "projects" | "strength" | "activities" | "tags" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments")[];
             people?: {
                 data: components["schemas"]["Organization360Contact"][];
                 page: components["schemas"]["PageInfo"];
@@ -16517,7 +16457,6 @@ export interface components {
             strength?: components["schemas"]["OrganizationStrength"];
             activities?: components["schemas"]["ActivityListResponse"];
             tags?: components["schemas"]["Tag"][];
-            list_memberships?: components["schemas"]["List"][];
             pending_approvals?: {
                 data: components["schemas"]["Approval"][];
                 page: components["schemas"]["PageInfo"];
@@ -21197,23 +21136,6 @@ export interface components {
             /** Format: date-time */
             archived_at?: string | null;
         };
-        CreateListRequest: {
-            name: string;
-            /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "project";
-            /**
-             * @default static
-             * @enum {string}
-             */
-            list_type: "static" | "dynamic";
-            definition?: {
-                [key: string]: unknown;
-            } | null;
-            /** Format: uuid */
-            owner_id?: string | null;
-            /** Format: uuid */
-            team_id?: string | null;
-        };
         ListMember: {
             /** Format: uuid */
             id: string;
@@ -21226,20 +21148,6 @@ export interface components {
             added_by?: string;
             /** Format: date-time */
             created_at?: string;
-        };
-        AddListMemberRequest: {
-            /** @enum {string} */
-            entity_type: "person" | "organization" | "deal" | "lead" | "project";
-            /** Format: uuid */
-            entity_id: string;
-        };
-        ListListResponse: {
-            data: components["schemas"]["List"][];
-            page: components["schemas"]["PageInfo"];
-        };
-        ListMemberListResponse: {
-            data: components["schemas"]["ListMember"][];
-            page: components["schemas"]["PageInfo"];
         };
         /** @description A candidate filter to evaluate without saving it. */
         FilterPreviewRequest: {
@@ -35605,171 +35513,6 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
-        };
-    };
-    listLists: {
-        parameters: {
-            query?: {
-                entity_type?: "person" | "organization" | "deal" | "lead" | "project";
-                /** @description Include soft-deleted (archived) rows. Default false. */
-                include_archived?: components["parameters"]["IncludeArchived"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Lists. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    createList: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateListRequest"];
-            };
-        };
-        responses: {
-            /** @description Created list. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["List"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    getList: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The list. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["List"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-        };
-    };
-    archiveList: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Archived list. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["List"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-        };
-    };
-    listListMembers: {
-        parameters: {
-            query?: {
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Members of the list. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListMemberListResponse"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-        };
-    };
-    addListMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddListMemberRequest"];
-            };
-        };
-        responses: {
-            /** @description Added member. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListMember"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
         };
     };
     getFilterVocabulary: {
