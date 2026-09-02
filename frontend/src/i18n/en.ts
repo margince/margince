@@ -4142,9 +4142,11 @@ export const en = {
   "connectors.oauthDenied": "You declined access — nothing was connected.",
   "connectors.oauthError":
     "The connection couldn't be completed — please try again.",
-  // Two failures that "try again" would be wrong about: the provider refused
-  // the grant (retrying the same way repeats it), and the provider's API isn't
-  // enabled for this deployment (no user action can clear it).
+  // Three failures that "try again" would be wrong about, each fixed somewhere
+  // else: the provider refused the grant (retrying the same way repeats it),
+  // its API is not enabled for this deployment (the vendor's console), and it
+  // refused this deployment's own client credentials (the app card in
+  // Settings). The last two are an administrator's; no user action clears them.
   "connectors.oauthRejected":
     "The provider declined the connection. Make sure you accept every permission it asks for, then try connecting again.",
   "connectors.oauthMisconfigured":

@@ -383,7 +383,8 @@ func TestCallbackDenialWithUntrustedStateKeepsTheDefaultSurface(t *testing.T) {
 	}
 }
 
-// AN INSTALLATION WITH NO APP IS TOLD THAT, not that the feature does not exist.
+// AN INSTALLATION WITH NO APP IS TOLD WHICH APP IS MISSING, not that the
+// feature does not exist.
 //
 // 501 is right for both "nobody built this route" and "this deployment has not
 // configured it", and only the first is what the generic stub text describes.
