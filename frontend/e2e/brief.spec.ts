@@ -219,6 +219,17 @@ test.describe("the Brief — page shape", () => {
     );
   });
 
+  // The strip is five slots on EVERY morning, including a quiet one. A row that
+  // shrank when a reading had nothing in it would be compared against a fuller
+  // one and read as fewer questions asked, which is why the two slots the
+  // product cannot answer yet stay in the row and say what they have none of.
+  test("the readings strip is five slots wide", async ({ page }) => {
+    await openBrief(page);
+    await expectShellRendered(page);
+
+    await expect(page.locator(`${STRIP} > *`)).toHaveCount(5);
+  });
+
   // The retrospective is LAST, under the work. It is what a rep reads once on
   // Monday, after the work waiting on them today; above either of those it puts
   // last week ahead of this morning.

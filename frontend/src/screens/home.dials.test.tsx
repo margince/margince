@@ -4,7 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
+import { readingsDay, waitingRow } from "./home.fixtures";
 import { jsonResponse, render, stubApi } from "./home.testkit";
+import type { Worklist } from "./worklist.queries";
 
 // The dials, on the rendered page.
 //
@@ -21,32 +23,17 @@ beforeEach(() => {
   globalThis.location.hash = "#/home";
 });
 
-function worklist(scopeOptions: string[]) {
-  return {
-    as_of: "2026-06-10T06:00:00Z",
-    scope: "mine",
-    scope_options: scopeOptions,
-    queue: [
-      {
-        id: "w1",
-        source: "waiting_customer",
-        category: "customer_waiting",
-        title: "Aster Handel",
-        because: [],
-        actions: ["open"],
-        dispositions: [],
-        overdue: false,
-      },
-    ],
-    counts: [],
-    reach: [],
-    sources_unavailable: [],
-    summary: { total: 1, urgent: 1 },
-  };
+// One waiting customer, under the scopes this case is about. Built on the shared
+// day so the whole answer stays in one spelling: the strip, the sentence and Do
+// next are all drawn from it, and a hand-built copy here would drift from theirs
+// one edited field at a time.
+function worklist(scopeOptions: Worklist["scope_options"]) {
+  const day = readingsDay({}, [waitingRow()]);
+  return { ...day, scope_options: scopeOptions };
 }
 
 /** Stub every read the Brief fans out to, for a reader with the given scopes. */
-function stubHome(scopeOptions: string[]) {
+function stubHome(scopeOptions: Worklist["scope_options"]) {
   return stubApi({
     "GET /worklist": () => jsonResponse(worklist(scopeOptions)),
     "GET /worklist/team": () =>

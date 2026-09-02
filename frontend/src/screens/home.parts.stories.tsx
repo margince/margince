@@ -12,6 +12,7 @@ import {
   pipelineRows,
   quietRun,
   ranked,
+  readingsDay,
   report,
   singles,
 } from "./home.fixtures";
@@ -210,43 +211,31 @@ export const GlanceUnread: Story = {
 
 // ── The readings strip ──────────────────────────────────────────────────────
 
-// Four counts and deliberately no money: the pipeline is worth three currencies
-// at once, and no honest single figure for it exists. The per-currency figures
-// are the rail's Position panel, below.
+// Five slots, always, and deliberately no money: the pipeline is worth three
+// currencies at once and no honest single figure for it exists. The per-currency
+// figures are the rail's Position panel, below.
 export const Readings: Story = {
-  render: part(
-    <HomeReadingsStrip
-      decisions={{ pending: 6, expiringToday: 2 }}
-      open={{ deals: { seen: 5, more: false }, currencies: 2 }}
-      ranked={{ count: 3, topPct: 74 }}
-      quiet={{ seen: 2, more: false }}
-    />,
-  ),
+  render: part(<HomeReadingsStrip day={readingsDay()} />),
 };
 
-// The page ended short of the list, so every reading taken from it is a FLOOR.
-// The figure carries the "+" rather than the caption, because a reader who takes
-// a bounded number for a total does it while looking at the number.
+// A source ended short of its list, so every figure is a floor. The caveat sits
+// under the whole strip rather than on one slot: a caveat on one figure invites
+// the reading where the other four are exact.
 export const ReadingsCapped: Story = {
   render: part(
     <HomeReadingsStrip
-      decisions={{ pending: 6, expiringToday: 2 }}
-      open={{ deals: { seen: 100, more: true }, currencies: 3 }}
-      ranked={{ count: 3, topPct: 74 }}
-      quiet={{ seen: 12, more: true }}
+      day={readingsDay({ buyer_replies: 100, more_available: true })}
     />,
   ),
 };
 
-// Two readings could not be taken. The strip draws three slots rather than five
-// with two zeroes in them — a slot that is absent cannot be misread as a nought.
-export const ReadingsPartlyUnread: Story = {
+// A quiet morning. The two untracked slots read the same as ever — the strip
+// does not get shorter on a day with less in it, because a reader comparing it
+// with yesterday's would take the missing slot for an answered question.
+export const ReadingsQuiet: Story = {
   render: part(
     <HomeReadingsStrip
-      decisions={{ pending: 6, expiringToday: 0 }}
-      open={null}
-      ranked={{ count: 0, topPct: null }}
-      quiet={null}
+      day={readingsDay({ buyer_replies: 0, prospecting: 0 }, [])}
     />,
   ),
 };
