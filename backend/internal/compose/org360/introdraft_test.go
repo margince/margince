@@ -252,7 +252,11 @@ func TestARecordValueCannotOpenAParagraphInTheTemplate(t *testing.T) {
 // the checker, this one holds the instruction the checker's rule depends on.
 func TestTheIntroPromptAsksForTheNamesTheCheckerRequires(t *testing.T) {
 	t.Parallel()
-	for _, required := range []string{"Address the colleague by name", "name the person you want to meet"} {
+	for _, required := range []string{
+		"Address the colleague by name",
+		"name the person you want to meet",
+		`Write a short subject line in the "subject" field`,
+	} {
 		if !strings.Contains(introSystem, required) {
 			t.Fatalf("the prompt never asks the model to %q, but parseIntroDraft refuses a draft that omits it", required)
 		}

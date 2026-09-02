@@ -72,6 +72,7 @@ Rules you must not break:
 - Say who you want to meet and why, in one sentence each, and name the person you want to meet in full.
 - Do not invent anything about the relationship. You are told how warm it is and when they last spoke; say no more than that.
 - Do not write the introduction itself, and do not write to the contact. The message is TO the colleague.
+- Write a short subject line in the "subject" field, naming the person you want to meet.
 - No subject line inside the body.`
 
 // introRequest builds the model call.
