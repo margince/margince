@@ -230,37 +230,41 @@ function DeckCardFace({
           })}
         </span>
       </div>
-      <label className="rdeck-question" htmlFor={controlId}>
-        {card.question}
-      </label>
-      {card.evidence === undefined ? null : (
-        <p className="rdeck-evidence">{card.evidence}</p>
-      )}
-      {card.multiline ? (
-        <textarea
-          id={controlId}
-          value={card.value}
-          onChange={(event) => onField(card.field, event.target.value)}
-        />
-      ) : (
-        <input
-          id={controlId}
-          value={card.value}
-          onChange={(event) => onField(card.field, event.target.value)}
-        />
-      )}
-      {/* What this answer puts on the record, in the words it will be stored
+      <div className="rdeck-body">
+        <label className="rdeck-question" htmlFor={controlId}>
+          {card.question}
+        </label>
+        {card.evidence === undefined ? null : (
+          <p className="rdeck-evidence">{card.evidence}</p>
+        )}
+        {card.multiline ? (
+          <textarea
+            id={controlId}
+            value={card.value}
+            onChange={(event) => onField(card.field, event.target.value)}
+          />
+        ) : (
+          <input
+            id={controlId}
+            value={card.value}
+            onChange={(event) => onField(card.field, event.target.value)}
+          />
+        )}
+        {/* What this answer puts on the record, in the words it will be stored
           in. Blank while nothing is typed, because "nothing is written" is a
           statement about an empty field and this one may still be filled. */}
-      {card.value.trim() === "" ? null : (
-        <p className="rdeck-writes">
-          <span className="rdeck-writes-lead">{t("ob.conv.scene.writes")}</span>
-          <code>{card.value}</code>
-        </p>
-      )}
-      {card.source === undefined || card.source === "" ? null : (
-        <span className="rdeck-source">{card.source}</span>
-      )}
+        {card.value.trim() === "" ? null : (
+          <p className="rdeck-writes">
+            <span className="rdeck-writes-lead">
+              {t("ob.conv.scene.writes")}
+            </span>
+            <code>{card.value}</code>
+          </p>
+        )}
+        {card.source === undefined || card.source === "" ? null : (
+          <span className="rdeck-source">{card.source}</span>
+        )}
+      </div>
       <div className="rdeck-acts">
         {/* Leaving something out is what an EMPTY optional card offers. Once
             an answer is typed the same control is simply the way onward, and

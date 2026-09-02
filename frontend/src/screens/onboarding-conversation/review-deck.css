@@ -52,9 +52,11 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-6);
-  border: 1px solid var(--borderSubtle);
+  /* Three regions, each its own band, so the card reads as an instrument
+     rather than a stack of paragraphs: what this is, what it asks, what you
+     do about it. `overflow` is what keeps the bands inside the corners. */
+  overflow: hidden;
+  border: 1.5px dashed var(--aiMed);
   border-inline-start: 3px solid var(--ai);
   border-radius: var(--r-md);
   background: var(--bgCard);
@@ -66,17 +68,29 @@
   border-inline-start-color: var(--danger);
 }
 
+/* What this card is, on the agent's own ground: everything the band states
+   was decided by the read rather than by a person. */
 .rdeck-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--borderSubtle);
+  background: var(--aiLight);
+}
+
+.rdeck-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
 }
 
 .rdeck-tag {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
-  background: var(--aiLight);
+  background: var(--bgCard);
   color: var(--aiText);
 }
 .rdeck-tag[data-required="true"] {
@@ -143,18 +157,23 @@
 
 .rdeck-source {
   align-self: flex-start;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-full);
   background: var(--bgElevated);
   color: var(--textMeta);
   font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
 
+/* The way onward is a foot, not a button loose under the prose: it is the one
+   thing on the card that acts, and it says so by standing on its own ground. */
 .rdeck-acts {
   display: flex;
   justify-content: flex-end;
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--borderSubtle);
+  background: var(--bgElevated);
 }
 
 /* The tray: what is left, what went in without anybody, and the way onward. */
