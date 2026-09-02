@@ -2,6 +2,11 @@
 
 Read this before you hand-roll a control.
 
+This file is the catalog: what exists and what each thing is for. How a screen
+should LOOK — grounds, chrome, type, depth, the anatomy of a record page — is
+[`DESIGN.md`](../../../DESIGN.md) at the repository root; read that first when
+the question is taste rather than parts.
+
 ## The rule
 
 **Every interactive control comes from this directory.** A native `<select>`, a
