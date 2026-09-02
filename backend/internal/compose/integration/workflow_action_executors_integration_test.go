@@ -204,17 +204,10 @@ func TestDraftEmailFiringLandsTheComposedDraftOnTheRunRecord(t *testing.T) {
 	// as a lost permission, the same requirement
 	// no_activity_reminder_workqueue_integration_test.go's
 	// seedTaskCreatePermission documents for its own owned automation.
-	seedTaskCreatePermission(t, OwnerConn(t), e.WS, e.Rep1)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO automation (key, name, trigger, action, params, owner_id, enabled)
-			VALUES ('task11a_draft_email_probe', 'Draft Email Probe',
-			        '{"event_type":"deal.stage_changed"}', '{"kind":"draft_email"}', '{}'::jsonb, $1, true)`,
-			e.Rep1)
-		return err
-	}); err != nil {
-		t.Fatalf("enrolling the draft-email probe instance: %v", err)
-	}
+	owner := OwnerConn(t)
+	seedTaskCreatePermission(t, owner, e.WS, e.Rep1)
+	seedOwnedAutomation(t, owner, "task11a_draft_email_probe", "Draft Email Probe",
+		`{"event_type":"deal.stage_changed"}`, `{"kind":"draft_email"}`, json.RawMessage(`{}`), e.Rep1)
 
 	ctx := context.Background()
 	if err := engine.HandleEvent(ctx, kevents.Envelope{
