@@ -357,7 +357,11 @@ func TestTheWorklistsDayEndsAtTheInstallationsMidnight(t *testing.T) {
 // badge of twelve, on a lane with no second page to reach the thirteenth by.
 func TestThePlannedBadgeCountsEveryTaskDueNotJustThePage(t *testing.T) {
 	e := integration.Setup(t)
-	now := time.Now().UTC()
+	// A FIXED midday, not the clock: due-two-hours-from-now falls past the end
+	// of the day for the last two hours of it, and every task would drop off the
+	// lane — a test that passes for twenty-two hours a day and fails the merge
+	// queue at random.
+	now := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
 	due := now.Add(2 * time.Hour)
 	// One past the cap, which is the case the badge used to misreport.
 	for i := range 13 {
