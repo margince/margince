@@ -89,7 +89,11 @@ func (s *Store) ListDealOffers(ctx context.Context, dealID ids.DealID, in ListDe
 		if len(offers) > limit {
 			offers = offers[:limit]
 			last := offers[len(offers)-1]
-			page = storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))}
+			next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+			if err != nil {
+				return err
+			}
+			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
 		return attachOfferLines(ctx, tx, offers)
 	})

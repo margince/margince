@@ -228,6 +228,14 @@ function WeeklyBody({
           )}
         />
         <StatCard
+          label={t("home.weekly.promisesKept")}
+          value={t("home.weekly.ofDue", {
+            done: formatNumber(c.commitments_kept, locale),
+            due: formatNumber(c.commitments_due, locale),
+          })}
+          detail={since(c.commitments_kept, prior?.commitments_kept)}
+        />
+        <StatCard
           label={t("home.weekly.meetingsHeld")}
           value={t("home.weekly.ofMeetings", {
             withStep: formatNumber(c.meetings_with_next_step, locale),

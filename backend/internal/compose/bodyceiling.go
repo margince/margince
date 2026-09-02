@@ -40,8 +40,23 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 		// own — the two are the same kind of upload, a delimited address book.
 		"/v1/people/vcard-import":              limits.CSVImport,         // importVCards
 		"/v1/knowledge/corpora/{id}/documents": limits.KnowledgeDocument, // uploadCorpusDocument
+		// A company mark, and the only ceiling here an operator cannot move.
+		// The others bound what a workspace ACCUMULATES — attachments, imports,
+		// corpora — where an installation's appetite is its own business. This
+		// one bounds a single square image that is re-encoded to 256px before
+		// anything is stored, so a larger upload buys the sender nothing but
+		// decode work: there is no deployment for which a different number is
+		// the right one, and a dial nobody can have a reason to turn is a
+		// question asked of every operator for no answer.
+		"/v1/company/logo": companyLogoUploadBytes, // uploadCompanyLogo
 	}
 }
+
+// What a company mark may arrive as. Generous for what it holds — a 5 MB
+// source is a photograph, not a logo — because the cost of refusing a person's
+// own file is that they go and find image software, while the cost of
+// accepting it is one decode of an image this server immediately shrinks.
+const companyLogoUploadBytes = 5_000_000
 
 // bodyCeilingFor is the chassis's BodyCeiling for this composition.
 //

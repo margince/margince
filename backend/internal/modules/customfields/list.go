@@ -98,7 +98,11 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]crmcontracts.Custom
 		if len(fields) > limit {
 			fields = fields[:limit]
 			last := fields[len(fields)-1]
-			page = storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))}
+			next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+			if err != nil {
+				return err
+			}
+			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
 		return nil
 	})

@@ -249,8 +249,12 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		}
 		if len(rows) > limit {
 			rows = rows[:limit]
+			next, err := storekit.EncodeCursor(rows[limit-1].occurredAt, rows[limit-1].id)
+			if err != nil {
+				return err
+			}
 			page.HasMore = true
-			page.NextCursor = storekit.EncodeCursor(rows[limit-1].occurredAt, rows[limit-1].id)
+			page.NextCursor = next
 		}
 		for _, row := range rows {
 			page.Entries = append(page.Entries, recordHistoryEntry(row, mask))

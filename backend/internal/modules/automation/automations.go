@@ -152,7 +152,11 @@ func (s *AutomationStore) List(ctx context.Context, cursor *string, limit *int) 
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		page.NextCursor = storekit.EncodeCursor(last.CreatedAt, last.ID.UUID)
+		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID.UUID)
+		if err != nil {
+			return AutomationPage{}, err
+		}
+		page.NextCursor = next
 		page.HasMore = true
 	}
 	return page, nil

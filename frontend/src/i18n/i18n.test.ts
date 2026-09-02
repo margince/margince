@@ -40,6 +40,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
   "dealmail.title",
+  // Same word, same reason, on the generic record mail box every other page
+  // shares.
+  "recordmail.title",
   // Same word, same reason: the exchange kind on the account's recent list.
   "co.recent.kind.email",
   // And on the record's chronology, for the same reason again.
@@ -61,10 +64,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "oauthApp.microsoft.clientIdPlaceholder",
   "oauthApp.tenant",
   "oauthApp.tenantPlaceholder",
-  // "Embeddings" is the vocabulary of the routing document itself, which this
-  // form renders raw beside `premium` and `gemini`. The host placeholder is a
-  // URL, which is the same string in every language.
-  "aiRouting.embeddings.label",
+  // A URL, which is the same string in every language.
   "aiRouting.baseUrl.placeholder",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",

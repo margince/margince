@@ -111,7 +111,10 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 	if len(contracts) > limit {
 		contracts = contracts[:limit]
 		last := contracts[len(contracts)-1]
-		next := storekit.EncodeCursor(cursorTime(last.CreatedAt), ids.UUID(last.Id))
+		next, err := storekit.EncodeCursor(cursorTime(last.CreatedAt), ids.UUID(last.Id))
+		if err != nil {
+			return crmcontracts.ContractListResponse{}, err
+		}
 		page.NextCursor = &next
 		page.HasMore = true
 	}

@@ -1,5 +1,6 @@
 import type { paths } from "@composition/schema";
 import createClient from "openapi-fetch";
+import { beginModelCall, endModelCall } from "./model-inflight";
 
 // The ONE API seam (architecture/01: the frontend depends on the generated
 // contract, never Go internals). Types come from src/api/schema.d.ts —
@@ -121,17 +122,51 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
 // rather than the app refusing something.
 const GATEWAY_STATUSES = new Set([502, 503, 504]);
 
-// The routes whose handler calls a model and waits. Only these get the gateway
-// message below, and the narrowness is the point: a bodiless 5xx from any other
-// endpoint is an ordinary server fault, and the app has surfaces that read it
-// as one — the composer branches on a bare 501, the connector screens on a
-// bodiless 503. Rewriting every one of those to say "the work may still be
-// running" would be false about a mailer that is simply not wired.
+// The routes whose handler calls a model and waits.
 //
-// What makes these three different is duration: a model call runs for tens of
-// seconds, so a proxy giving up on one really does leave work in flight, and
-// really does make a retry a second call rather than a repeat.
-const MODEL_ROUTE_SUFFIXES = ["/draft-email", "/dossier", "/growth-fit"];
+// ONE list, TWO readers, and they want the same routes for the same reason.
+// `withGatewayProblem` gives only these a "the work may still be running"
+// sentence when a proxy gives up, and the narrowness is the point: a bodiless
+// 5xx from any other endpoint is an ordinary server fault, and the app has
+// surfaces that read it as one: the composer branches on a bare 501, the
+// connector screens on a bodiless 503. Rewriting every one of those would be
+// false about a mailer that is simply not wired. `model-inflight.ts` counts a
+// request to one of these as the agent working, so the chrome reports the ask
+// at the moment it is made rather than at the next poll of the activity feed.
+//
+// What makes these routes different is duration: a model call runs for tens of
+// seconds, so a proxy giving up on one really does leave work in flight and
+// really does make a retry a second call rather than a repeat, and a person who
+// pressed the button really is waiting on the agent for that whole time.
+//
+// Suffixes, so one entry covers a route the contract spells for a person, an
+// organization and an activity alike. The COUNT reads them for POST only: the
+// dossier and the growth-fit reading are also READ at these paths, and a panel
+// fetching the last reading is the reader's own click, not the agent at work.
+// A route that ENQUEUES model work rather
+// than waiting for it does not belong here in either reader's sense: it answers
+// at once, so there is no long request for a proxy to cut and nothing for this
+// tab to wait on, and its occurrence reaches the chrome the way every
+// background run does, through the feed. The deep read, the document
+// extraction, the transcript proposals and the technical enrich are all that
+// shape and all deliberately absent.
+//
+// The list read three routes for a long time while the contract had nine, which
+// was invisible in both directions: the extra six could have their connection
+// cut and say nothing about it, and the whole of a corpus answer or an offer
+// rewrite ran with the chrome at rest. A suffix here is a claim about a
+// handler, so check the handler before adding one.
+const MODEL_ROUTE_SUFFIXES = [
+  "/ask",
+  "/coldstart",
+  "/coldstart/preview",
+  "/draft-email",
+  "/dossier",
+  "/enrich",
+  "/growth-fit",
+  "/regenerate",
+  "/research",
+];
 
 /**
  * Give a proxy's failure ON A SLOW AI ROUTE a problem body, so the reader is
@@ -176,6 +211,14 @@ function callsAModel(url: string): boolean {
   return MODEL_ROUTE_SUFFIXES.some((suffix) => path.endsWith(suffix));
 }
 
+// Whether THIS request is the agent at work: a POST to a model route. The
+// reads that share those paths are the reader's own, and the gateway reader
+// above keeps its wider view — a cut connection on either is still a request
+// the server did not finish.
+function asksAModel(request: Request): boolean {
+  return request.method === "POST" && callsAModel(request.url);
+}
+
 export const api = createClient<paths>({
   // same-origin absolute base + the /v1 mount: contract paths are
   // unprefixed, the server serves them under /v1 (same as curl :8080/v1/me)
@@ -190,7 +233,15 @@ export const api = createClient<paths>({
     if (language && !request.headers.has("Accept-Language")) {
       request.headers.set("Accept-Language", language);
     }
-    return fetchWithDeadline(request);
+    if (!asksAModel(request)) {
+      return fetchWithDeadline(request);
+    }
+    // The chrome learns the agent is working HERE, where it is already known,
+    // rather than on the next poll of the activity feed seconds later. Counted
+    // in a `finally` so a refusal and a stall end the call as surely as an
+    // answer does.
+    beginModelCall();
+    return fetchWithDeadline(request).finally(endModelCall);
   },
 });
 

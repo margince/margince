@@ -439,7 +439,13 @@ func debugLogo(logo resolvedLogo, attempts []logoAttempt) DebugLogo {
 // A nil store is a role that holds no objects; it never reaches a key worth
 // collecting, because the row-writing calls that report one are guarded by the
 // same fact.
-func deleteUnreferencedLogo(ctx context.Context, blob blobstore.Store, log *slog.Logger, readID ids.UUID, key *string) {
+//
+// `subject` names what the collection belongs to — the dossier a resolve ran
+// for, or the company a person's own write superseded a mark on. It is a
+// caller's string rather than a read id because the upload path has no read:
+// the detached-context rule above is the invariant, and a second copy of it
+// spelled for uploads is how one of the two paths quietly loses it.
+func deleteUnreferencedLogo(ctx context.Context, blob blobstore.Store, log *slog.Logger, subject string, key *string) {
 	if blob == nil || key == nil || *key == "" {
 		return
 	}
@@ -447,14 +453,14 @@ func deleteUnreferencedLogo(ctx context.Context, blob blobstore.Store, log *slog
 	defer cancel()
 	if err := blob.Delete(ctx, *key); err != nil {
 		log.WarnContext(ctx, "reclaiming an unreferenced logo object failed",
-			"read", readID.String(), "key", *key, "err", err)
+			"subject", subject, "key", *key, "err", err)
 	}
 }
 
 // reclaimLogoObject binds the worker's own object store and logger to the
 // collection every write path in this lane ends with.
 func (w *siteDeepReadWorker) reclaimLogoObject(ctx context.Context, readID ids.UUID, key *string) {
-	deleteUnreferencedLogo(ctx, w.blob, w.log, readID, key)
+	deleteUnreferencedLogo(ctx, w.blob, w.log, "read "+readID.String(), key)
 }
 
 // logoAttemptSummary renders the attempts as one log-friendly line, so a

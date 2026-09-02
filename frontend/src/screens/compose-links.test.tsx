@@ -476,7 +476,22 @@ describe("what a channel reply says it will be filed under", () => {
 
   it("leaves a mail reply asking, because a subject tag can carry the answer", async () => {
     stubRoutes({
-      "GET /activities/act-1": () => jsonResponse({ id: "act-1", links: [] }),
+      // A whole activity, not an id with links: the contract makes kind and
+      // occurred_at required, and the composer now reads the anchor itself to
+      // draw the conversation beside the reply.
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          subject: "Re: Q3",
+          occurred_at: "2026-07-01T00:00:00Z",
+          is_done: false,
+          source: "manual",
+          captured_by: "human:u1",
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          links: [],
+        }),
     });
     render(
       <ComposeModal

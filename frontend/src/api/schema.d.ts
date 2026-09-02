@@ -5574,6 +5574,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the installation's own company mark with an uploaded image.
+         * @description Multipart upload. The image is re-encoded to the same square PNG a resolved mark is
+         *     normalized to, so what is served from `logo_url` is always this origin's own bytes
+         *     and never third-party markup. PNG, JPEG, GIF, WebP, ICO and SVG are accepted;
+         *     anything that will not decode is refused as 415.
+         *
+         *     The upload is a HUMAN write and takes precedence: while it stands, a website read
+         *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
+         *     record returns to its monogram and the next read may resolve a mark again.
+         */
+        post: operations["uploadCompanyLogo"];
+        /**
+         * Take the installation's own company mark off the record.
+         * @description The record goes back to its deterministic monogram and the stored object is
+         *     collected. It also gives the field back: a person's mark is what holds a website
+         *     read off, so a company with no mark can be given one by the next read.
+         *
+         *     Removing a mark the installation never had is not an error — the outcome the
+         *     caller asked for is the outcome they get.
+         */
+        delete: operations["deleteCompanyLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company/context/capabilities": {
         parameters: {
             query?: never;
@@ -7247,6 +7283,49 @@ export interface paths {
          *     whatever its passport scopes admit.
          */
         get: operations["listAiProviderKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/available-models/{provider}": {
+        parameters: {
+            query?: {
+                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
+                tier?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * What one vendor says it serves today (admin/ops).
+         * @description Asks the VENDOR what it currently serves, so the routing form offers models that exist
+         *     rather than only the ones somebody last hand-entered on the price sheet.
+         *
+         *     AVAILABILITY only — never price. `/ai-model-rates` is the effective-dated record a call
+         *     is costed against, and a model listed here that it cannot price is bindable and reports
+         *     UNPRICED.
+         *
+         *     The vendor is named, and only the vendor: the host it is reached at comes from this
+         *     installation's own stored binding, or from the adapter's default. There is no request
+         *     parameter that selects an endpoint.
+         *
+         *     A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`
+         *     naming the state. The model field on the routing form takes any id the vendor serves,
+         *     whether or not it appears here.
+         *
+         *     `lane` is stated only where the vendor states it. A caller that needs the distinction
+         *     must treat an absent `lane` as unknown rather than as chat: an embedder bound to a chat
+         *     tier cannot serve a call.
+         */
+        get: operations["listAvailableModels"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10294,6 +10373,156 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/weekly-plans/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's plan for this week — what they said they would do.
+         * @description The forward half of the Brief's weekly. `/weekly-reviews/latest` is the week that
+         *     closed, frozen and edited by nobody; this is the week running, authored by the rep.
+         *
+         *     Whose plan is not a parameter. A plan is a personal record and the caller's own is
+         *     the only one this path answers for; a lead reads a rep's through
+         *     `/weekly-plans/{owner_id}/current`, which states whose week it wants.
+         *
+         *     404 when the rep has not started one. The read never writes: creating a plan here
+         *     would put an empty week in every rep's history the first time they opened the page,
+         *     and "did this person plan their week" would stop being answerable.
+         */
+        get: operations["getCurrentWeeklyPlan"];
+        put?: never;
+        /**
+         * Open a plan for this week.
+         * @description Idempotent: a second call answers the plan the first opened rather than reporting a
+         *     race. Two tabs pressing "plan my week" produce one plan.
+         */
+        post: operations["startWeeklyPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/{owner_id}/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A teammate's plan for this week, for their lead.
+         * @description The second reader, and the only path that names a person. Gated on the same
+         *     shared-live-team question that decides whether a lead may open a rep's queue or put
+         *     a notice in it — one seam, never a fourth spelling of "is this my colleague".
+         *
+         *     404 rather than 403 for a reader who is not their lead: whether a person has a plan
+         *     is itself something a stranger may not learn.
+         */
+        get: operations["getTeammateWeeklyPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write one thing onto this week's plan.
+         * @description Onto the CALLER's own plan, opening one for the week if they have none. There is no
+         *     plan id in the body: a plan id would be a way to write onto somebody else's week,
+         *     and there is no reason for one to exist.
+         */
+        post: operations["addWeeklyPlanCommitment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments/{id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Mark one commitment done, reopen it, or drop it.
+         * @description `missed` is not settable. It is what the week's CLOSE writes over a commitment left
+         *     open, not something a rep declares about themselves — a rep who decides they will
+         *     not do a thing drops it, which says something different and truer.
+         */
+        put: operations["setWeeklyPlanCommitmentState"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments/{id}/help": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say what you need from your lead on one commitment.
+         * @description An empty ask withdraws a standing request. The withdrawal emits the ordinary plan
+         *     update rather than the help-requested event, so retracting a request does not page
+         *     a lead a second time.
+         */
+        put: operations["askForWeeklyPlanHelp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/commitments/{id}/response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Answer a teammate's request for help.
+         * @description The lead's one write, and it touches three columns together — the answer, who wrote
+         *     it and when — because an answer with nobody behind it cannot be shown to the person
+         *     who asked.
+         *
+         *     It touches nothing else. A lead may answer a request; they may not settle a
+         *     commitment, reword it or drop it, and there is no argument here by which they could.
+         */
+        put: operations["answerWeeklyPlanCommitment"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notices": {
         parameters: {
             query?: never;
@@ -12699,6 +12928,32 @@ export interface components {
         AiProviderKeyList: {
             providers: components["schemas"]["AiProviderKeyStatus"][];
         };
+        /**
+         * @description One vendor's own answer about what it serves.
+         *     An empty `models` with NO `unavailable` is a vendor that answered and serves nothing — a local runner with no model pulled onto it is the ordinary case. It is a different state from a vendor that could not be asked, which always sets `unavailable`, and a client that folded the two would tell a reader to paste a key they already have.
+         */
+        AvailableModelList: {
+            /** @description The routing name of the vendor that was asked. */
+            provider: string;
+            models: components["schemas"]["AvailableModel"][];
+            /**
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+             * @enum {string}
+             */
+            unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
+        };
+        /** @description One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on. */
+        AvailableModel: {
+            /** @description The string a binding names, exactly as the vendor spells it. */
+            id: string;
+            /** @description The vendor's own human label, absent where it publishes none. */
+            display_name?: string;
+            /**
+             * @description What the vendor says the model is FOR, absent where it does not say. Absent means UNKNOWN, not chat — binding an embedder to a chat tier produces a call that cannot succeed.
+             * @enum {string}
+             */
+            lane?: "chat" | "embeddings";
+        };
         /** @description What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
             /** @description The routing name of the vendor, the same string a binding uses. */
@@ -15086,7 +15341,8 @@ export interface components {
             version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
-             * @description When something last happened with this account — the newest `occurred_at` of an activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first linked activity. Sortable (DM-VOCAB-2).
+             * @description When something last happened with this account — the newest `occurred_at` of a WORKSPACE-AUDIENCE activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first such activity. Sortable (DM-VOCAB-2).
+             *     A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
             /** Format: date-time */
@@ -18260,7 +18516,7 @@ export interface components {
             closed_at?: string | null;
             /**
              * Format: date-time
-             * @description Drives the deterministic stalled flag.
+             * @description Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
              */
             last_activity_at?: string | null;
             /** @description Derived — no activity past the threshold (absolute duration). */
@@ -18725,7 +18981,7 @@ export interface components {
             ended_at?: string | null;
             /**
              * Format: date-time
-             * @description Maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly.
+             * @description The newest WORKSPACE-AUDIENCE activity filed under the project, maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
             source: string;
@@ -18877,7 +19133,7 @@ export interface components {
             open_commitments: number;
             /**
              * Format: date-time
-             * @description The newest activity filed under the project; null when nothing is filed yet.
+             * @description The newest WORKSPACE-AUDIENCE activity filed under the project; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
              */
             last_activity_at: string | null;
             /** @description Every live activity filed under the project. */
@@ -21327,12 +21583,80 @@ export interface components {
             } | null;
         };
         /**
+         * @description One rep's week as they meant it to go — the forward counterpart to the frozen
+         *     WeeklyReview beside it.
+         */
+        WeeklyPlan: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description The Monday of the week planned, in the installation reporting timezone.
+             */
+            local_week_start: string;
+            /**
+             * @description `closed` once the weekly job has settled the week and frozen its outcome into the
+             *     review. A closed plan stops accepting edits, which is what keeps the review's
+             *     counts true.
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            commitments: components["schemas"]["WeeklyPlanCommitment"][];
+        };
+        /** @description One thing a rep said they would do this week. */
+        WeeklyPlanCommitment: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            /**
+             * @description The record this is about, when it names one. Carried as a type and an id and
+             *     NEVER resolved here — the client asks the record's own endpoint, so a record the
+             *     reader may not see simply does not resolve, and a deleted one stops resolving
+             *     without erasing the commitment that named it.
+             */
+            linked_record?: components["schemas"]["WeeklyPlanLink"];
+            /** Format: date */
+            due_on?: string | null;
+            /**
+             * @description `missed` is written by the week's close over a commitment left open; a rep
+             *     settles their own as done or dropped. Dropped counts as neither owed nor kept:
+             *     deciding a thing is not worth doing is not failing to do it.
+             * @enum {string}
+             */
+            state: "open" | "done" | "missed" | "dropped";
+            /** @description What the rep needs from their lead, absent when they have asked nothing. */
+            help_requested?: string | null;
+            /** @description What the lead answered, absent until they have. */
+            manager_response?: string | null;
+            /** Format: uuid */
+            manager_user_id?: string | null;
+            /** Format: date-time */
+            responded_at?: string | null;
+            /** Format: date-time */
+            completed_at?: string | null;
+            /** @description The order the rep put them in. */
+            position: number;
+        };
+        WeeklyPlanLink: {
+            /** @enum {string} */
+            type: "deal" | "lead" | "person" | "organization" | "project";
+            /** Format: uuid */
+            id: string;
+        };
+        NewWeeklyPlanCommitment: {
+            label: string;
+            /** @description Both halves or neither — a type with no id names nothing. */
+            linked_record?: components["schemas"]["WeeklyPlanLink"];
+            /** Format: date */
+            due_on?: string | null;
+        };
+        /**
          * @description The closed set of RBAC-governed object types (features/04 §1).
          *     The web client types every capability check against this enum, which openapi-typescript renders as a string union — so a misspelled object is a compile error there.
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction";
+        RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -22258,6 +22582,15 @@ export interface components {
             display_name: string;
             /** @description The company's own domain (acme.com) — stored as its primary domain, the same handle a read-back resolves organizations by. A full URL is accepted on write and reduced to its domain. */
             website?: string | null;
+            /**
+             * @description Where to fetch the installation's own company logo — the same `getOrganizationLogo`
+             *     path `Organization.logo_url` carries for that record, cookie-authenticated and
+             *     same-origin. The mark is whichever one the company is wearing: the one a website
+             *     read resolved from its own site, or the one a person uploaded through
+             *     `uploadCompanyLogo`. ABSENT entirely (not null) when the company wears none, which
+             *     is never an error: a client draws the deterministic monogram then.
+             */
+            readonly logo_url?: string | null;
             /** @description The registered legal entity, when it differs from display_name. */
             legal_name?: string | null;
             /** @description The registered address as one formatted line. */
@@ -25312,6 +25645,15 @@ export interface components {
             brief_items_acted: number;
             /** @description And dismissed. */
             brief_items_dismissed: number;
+            /**
+             * @description Commitments the rep stood by in the week's plan. A dropped commitment is in
+             *     neither this nor `commitments_kept`: deciding on Wednesday that a thing is not
+             *     worth doing is not failing to do it, and counting it against a rep teaches them
+             *     to leave dead commitments open rather than say so.
+             */
+            commitments_due: number;
+            /** @description And how many were done. */
+            commitments_kept: number;
             /** @description Inbound leads routed to this rep during the week. */
             leads_routed: number;
             /**
@@ -25964,7 +26306,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice" | "introduction_request" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -31858,6 +32200,11 @@ export interface operations {
                 occurred_after?: string;
                 /** @description Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`. */
                 occurred_before?: string;
+                /**
+                 * @description Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+                 *     Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified. `false` asks for nothing and is accepted in either mode.
+                 */
+                waiting_reply?: boolean;
             };
             header?: never;
             path?: never;
@@ -31878,6 +32225,15 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             /** @description The `entity_type`/`entity_id` this read was narrowed TO is outside the caller's row scope, or names nothing. Filtering BY a record is a read OF it, so an unreadable one owes the same existence-hiding answer a direct read would — the caller cannot tell "not yours" from "not there". Note this is the NARROWING TARGET, not the activities: a readable target with no activities answers 200 with an empty page. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A filter the workspace's mode cannot answer — `waiting_reply=true`, or any other narrowing the incumbent mirror carries no data for, in overlay mode. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36411,6 +36767,95 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    uploadCompanyLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The company, carrying the `logo_url` the upload now answers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfile"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No company saved yet — there is no record to give a mark to. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+            /** @description The upload is not an image this server can decode and re-encode. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The deployment has no object store configured, so no logo can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteCompanyLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The company, with no `logo_url`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfile"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No company saved yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getCompanyContextCapabilities: {
         parameters: {
             query?: never;
@@ -38304,6 +38749,34 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listAvailableModels: {
+        parameters: {
+            query?: {
+                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
+                tier?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the vendor serves, or why it could not be asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailableModelList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     setAiProviderKey: {
@@ -43834,6 +44307,195 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getCurrentWeeklyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The week as planned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    startWeeklyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plan, whether this call opened it or found it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getTeammateWeeklyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Whose week to read. */
+                owner_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The teammate's week as planned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addWeeklyPlanCommitment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewWeeklyPlanCommitment"];
+            };
+        };
+        responses: {
+            /** @description The commitment as written. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlanCommitment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setWeeklyPlanCommitmentState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    state: "open" | "done" | "dropped";
+                };
+            };
+        };
+        responses: {
+            /** @description Settled. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    askForWeeklyPlanHelp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    help_requested: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    answerWeeklyPlanCommitment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    manager_response: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Answered. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     raiseNotice: {

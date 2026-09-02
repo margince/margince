@@ -82,16 +82,20 @@ const prefillIntent = "intent"
 //
 // It runs LAST among the sections so it can read what the others gathered.
 func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now time.Time, out *crmcontracts.Person360) error {
-	moment := deriveMoment(ctx, now, out)
-	dismissed, err := s.momentDismissed(ctx, tx, personID, moment)
-	if err != nil {
-		return err
+	var readErr error
+	dismissed := func(moment crmcontracts.PersonMoment) bool {
+		if readErr != nil {
+			return false
+		}
+		put, err := s.momentDismissed(ctx, tx, personID, moment)
+		if err != nil {
+			readErr = err
+		}
+		return put
 	}
-	if dismissed {
-		// Dismissed against THIS evidence. The quiet success state is what the
-		// reader asked for by dismissing, and it is a moment of its own rather
-		// than an empty card.
-		moment = nothingNeededMoment(ctx, now, out)
+	moment := deriveMomentPast(ctx, now, out, dismissed)
+	if readErr != nil {
+		return readErr
 	}
 	withholdLogActivity(ctx, &moment)
 	out.Moment = &moment
@@ -169,9 +173,40 @@ func (s *Service) momentDismissed(ctx context.Context, tx pgx.Tx, personID ids.P
 // inputs this build does not have, and a rule that cannot fire belongs nowhere
 // on the page.
 func deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Person360) crmcontracts.PersonMoment {
+	return deriveMomentPast(ctx, now, page, func(crmcontracts.PersonMoment) bool { return false })
+}
+
+// deriveMomentPast walks the same ladder and skips the rungs whose card this
+// reader has already put away.
+//
+// A DISMISSAL SILENCES ONE CARD, NOT THE RECORD. Stopping at the first rung
+// and answering "nothing needs you today" when that card was dismissed says
+// something false about everything below it: a reader who puts one promise
+// away is told the contact needs nothing while a second promise sits open.
+// The card they dismissed is the card they meant, and the next reason down is
+// still a reason.
+//
+// A rung that fires and is dismissed is passed over rather than ending the
+// walk, so the ladder's order still decides what the reader sees — they see
+// the highest rung they have NOT put away.
+func deriveMomentPast(
+	ctx context.Context, now time.Time, page *crmcontracts.Person360,
+	dismissed func(crmcontracts.PersonMoment) bool,
+) crmcontracts.PersonMoment {
 	for _, rung := range momentLadder {
-		if moment, ok := rung(ctx, now, page); ok {
-			return moment
+		moment, ok := rung(ctx, now, page)
+		if !ok || !dismissed(moment) {
+			if ok {
+				return moment
+			}
+			continue
+		}
+		// The rung fired and this reader has put THAT card away. Ask it again
+		// without the dismissed card in front of it: a rung speaks for a set —
+		// three open promises, one card — so passing over the rung would hide
+		// the other two along with the one that was dismissed.
+		if next, ok := rungPast(ctx, now, page, rung, dismissed); ok {
+			return next
 		}
 	}
 	// 10. Nothing needs you today. A quiet success state, not a blank card:

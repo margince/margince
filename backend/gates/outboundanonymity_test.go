@@ -68,6 +68,10 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/modules/ai/ollama.go:func post":        "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
 	"internal/modules/ai/openai.go:func postRaw":     "carries the customer's own provider key, which is the identity that provider bills and throttles",
 	"internal/modules/ai/openaicompat.go:func post":  "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	// One builder for all five vendors' model-list endpoint, on the same ground
+	// as their completion calls above: the request that asks a vendor what it
+	// serves carries the same credential as the request that then calls it.
+	"internal/modules/ai/modellist.go:func getListBody": "carries the customer's own provider key, which is the identity that provider bills and throttles — a local runner aside, where the operator already knows what is calling the host they configured",
 
 	// The capture connectors. Every one of these is an OAuth or token session
 	// the person themselves granted, so the provider knows the grant, the app

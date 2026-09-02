@@ -232,7 +232,11 @@ func scanFieldHistorySpine(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter,
 			// The scan cap keeps a filter that skips most rows from
 			// walking the whole spine in one call; more MAY match, and
 			// claiming so is the honest side to err on.
-			page.NextCursor = storekit.EncodeCursor(cursorTime, cursorID)
+			next, err := storekit.EncodeCursor(cursorTime, cursorID)
+			if err != nil {
+				return FieldHistoryPage{}, err
+			}
+			page.NextCursor = next
 			page.HasMore = true
 			return page, nil
 		case len(page.Entries) >= limit:
@@ -241,7 +245,11 @@ func scanFieldHistorySpine(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter,
 				return FieldHistoryPage{}, err
 			}
 			if more {
-				page.NextCursor = storekit.EncodeCursor(cursorTime, cursorID)
+				next, err := storekit.EncodeCursor(cursorTime, cursorID)
+				if err != nil {
+					return FieldHistoryPage{}, err
+				}
+				page.NextCursor = next
 				page.HasMore = true
 			}
 			return page, nil

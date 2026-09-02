@@ -26,12 +26,21 @@
 .agentedge {
   position: fixed;
   inset: 0;
-  /* Just above the chrome, and no higher. The top bar and the rail sit at 20
-     (topbar.css, shell.css) and were painting over the top edge of the glow,
-     which cropped the frame along one side. Everything that wants a reader's
-     attention is at 28 or above (sheets, scrims, menus, tooltips), so it keeps
-     its place over this. */
-  z-index: 21;
+  /* Above everything the page can raise, and below the skip link alone.
+
+     It used to sit at 21, just over the chrome, on the reasoning that anything
+     asking for a reader's attention belongs over it. That reasoning had the
+     subject wrong. The mark is a property of the WINDOW and not of the page: it
+     says the agent is working for this person right now, which stays true while
+     a composer is open over the record, and a scrim that covers the page was
+     covering the one report that is not about the page. Pressing "Draft with
+     AI" in the composer lit an edge nobody could see.
+
+     Safe to sit this high because it can only ever be seen and never touched:
+     `pointer-events: none` and `aria-hidden` throughout, one translucent rim on
+     the window's extreme edge. The skip link (100, shell.css) stays above it,
+     because a keyboard affordance being visible outranks a decoration. */
+  z-index: 90;
   pointer-events: none;
 }
 

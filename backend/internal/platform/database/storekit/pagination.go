@@ -30,24 +30,20 @@ type Cursor struct {
 	SortKey   *string   `json:"v,omitempty"`
 }
 
-func EncodeCursor(createdAt time.Time, id ids.UUID) string {
-	return mintCursorToken(Cursor{CreatedAt: createdAt, ID: id})
-}
-
-// mintCursorToken renders an ordinary keyset position.
+// EncodeCursor mints the token that continues a page after this row.
 //
-// A page's cursor has no error channel to a caller mid-page, and the shape here
-// is a keyset this package built from a row it just read — so a failure would
-// mean a created_at outside year 0..9999, which is a row nothing in this
-// product can produce. It is dropped rather than swallowed silently: the empty
-// token that results is refused on the way back in, which is the honest end of
-// a position that cannot be written down.
-func mintCursorToken(c Cursor) string {
-	token, err := EncodeOpaque(c)
-	if err != nil {
-		return ""
-	}
-	return token
+// It ANSWERS an error rather than returning an empty token, because the caller
+// pairs what comes back with HasMore: true. A position that cannot be written
+// down would otherwise reach the client as "there is another page, and here is
+// nothing to fetch it with" — a page they can ask for and never receive, silent
+// on the server and permanent for that list.
+//
+// The failure is reachable. time.Time refuses to marshal an instant outside
+// years 0000-9999, and Postgres timestamptz reaches year 294276, so a row with
+// an absurd-but-storable created_at produces exactly this. Every caller is a
+// store method that already answers an error, so there is a channel for it.
+func EncodeCursor(createdAt time.Time, id ids.UUID) (string, error) {
+	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id})
 }
 
 // SweepCursor is a position in a walk across SEVERAL streams: which stream the

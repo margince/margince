@@ -570,10 +570,12 @@ test("AC-book: the booking page renders rail-less with live slots", async ({
 test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({
   page,
 }) => {
-  // Automations are configuration, not a destination: the editor is a section
-  // of the AI settings page, so every assertion below is scoped to that section
-  // rather than to a page that is now shared with the AI spend cards.
+  // Automations are configuration, not a destination: the editor is one BODY of
+  // the AI settings page, reached by its tab, so every assertion below is scoped
+  // to that section rather than to a page that also carries routing, provider
+  // credentials, spend and the call trace.
   await page.goto("/#/settings/ai");
+  await page.getByRole("button", { name: "Automatisierungen" }).click();
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations
@@ -607,10 +609,11 @@ test("AC-automations-2 (features/10 §1): anti-DSL — no free-form rule body, n
   page,
 }) => {
   // The anti-DSL claim is about the automations surface, so it is asserted over
-  // that surface: the editor now shares a settings page with cards whose inputs
-  // have nothing to do with rule authoring, and counting those in would say
-  // something else entirely.
+  // that surface: the editor is one tab of a settings page whose other bodies
+  // carry inputs with nothing to do with rule authoring, and counting those in
+  // would say something else entirely.
   await page.goto("/#/settings/ai");
+  await page.getByRole("button", { name: "Automatisierungen" }).click();
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations

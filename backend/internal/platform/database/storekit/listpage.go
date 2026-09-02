@@ -166,9 +166,8 @@ func RunListPageTx[T any](
 	if len(out) > pre.limit {
 		out = out[:pre.limit]
 		createdAt, id := key(out[len(out)-1])
-		page = Page{
-			HasMore:    true,
-			NextCursor: pre.sorted.EncodePageCursor(cursorKeys[pre.limit-1], createdAt, id),
+		if page, err = nextPage(pre.sorted, cursorKeys[pre.limit-1], createdAt, id); err != nil {
+			return nil, Page{}, err
 		}
 	}
 	for _, f := range finish {
@@ -180,4 +179,23 @@ func RunListPageTx[T any](
 		out = []T{}
 	}
 	return out, page, nil
+}
+
+// nextPage is the page that continues after this row: the flag and the token
+// TOGETHER, because either without the other is a lie.
+//
+// A token that will not mint abandons the read rather than shipping an empty
+// one beside HasMore: true, which would tell a client there is another page and
+// hand them nothing to fetch it with — a page they can ask for and never
+// receive, silent on the server and permanent for that list.
+//
+// The failure is reachable: time.Time refuses an instant outside years
+// 0000-9999 and Postgres timestamptz reaches year 294276, so one absurd row's
+// created_at is enough.
+func nextPage(sorted *ListSort, sortKey *string, createdAt time.Time, id ids.UUID) (Page, error) {
+	next, err := sorted.EncodePageCursor(sortKey, createdAt, id)
+	if err != nil {
+		return Page{}, err
+	}
+	return Page{HasMore: true, NextCursor: next}, nil
 }

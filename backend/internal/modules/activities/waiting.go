@@ -247,6 +247,12 @@ const waitingRepliesSQL = `
 	   AND a.archived_at IS NULL
 	   AND a.occurred_at <= $%[1]d
 	   AND %[2]s
+	   -- Entity narrowing goes HERE, before WaitingScanCap's LIMIT below: a
+	   -- record's own wait can sit outside the oldest WaitingScanCap threads
+	   -- workspace-wide, and narrowing after the cap would report nothing
+	   -- waiting on the very record this asks about. "TRUE" for the
+	   -- workspace-wide Worklist read.
+	   AND (%[11]s)
 	   AND a.thread_key IS NOT NULL
 	   -- Old enough and it is history, not work — UNLESS an open deal is on it.
 	   --
@@ -376,6 +382,19 @@ const waitingRepliesSQL = `
 	 ORDER BY a.occurred_at DESC
 	 LIMIT %[4]d`
 
+// waitingRepliesSQL is Sprintf'd directly at BOTH call sites — WaitingReplies
+// below (entityClause scopeUnbounded, the workspace-wide Worklist read) and
+// the entity-scoped list filter (waitingReplyExistsClause) — rather than
+// through a wrapper. Eleven positional holes is already the shape the
+// constant settled on for its own eligibility rules; a wrapper over that
+// many arguments would just be the same Sprintf call once removed, with a
+// second place to keep its parameter order in sync with the %[N] indices
+// below. What must not fork between the two call sites is the SQL TEXT — the
+// anti-joins, the tie break, the future-dated guard, the horizon, the
+// live-record predicates — and sharing the one constant holds that; a test
+// feeding both callers the same timeline and requiring the same answer holds
+// the rest.
+
 // WaitingReplies answers who is waiting on this reader for a reply.
 //
 // One row per thread — the newest inbound in it — because a customer who wrote
@@ -437,7 +456,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 				liveRecord(workingLeadPredicate, "ld"),
 				liveRecord(openDealPredicate, "openDeal"),
 				liveRecord(openDealPredicate, "fd"),
-				reader), args...)
+				reader,
+				scopeUnbounded), args...)
 		if err != nil {
 			return err
 		}

@@ -214,8 +214,7 @@ func (s *TraceStore) readPage(ctx context.Context, tx pgx.Tx, scope traceScope,
 	if err := rows.Err(); err != nil {
 		return nil, "", fmt.Errorf("capture: reading the trace page: %w", err)
 	}
-	page, next := finishTracePage(items, n)
-	return page, next, nil
+	return finishTracePage(items, n)
 }
 
 // traceWhere is the window, the scope and the funnel filter, in that order, for
@@ -236,12 +235,16 @@ func traceWhere(scope traceScope, addArg func(any) int) string {
 }
 
 // finishTracePage trims the lookahead row and mints the next cursor from it.
-func finishTracePage(items []TraceRow, n int) ([]TraceRow, string) {
+func finishTracePage(items []TraceRow, n int) ([]TraceRow, string, error) {
 	if len(items) <= n {
-		return items, ""
+		return items, "", nil
 	}
 	last := items[n-1]
-	return items[:n], storekit.EncodeCursor(last.OccurredAt, last.ID)
+	next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+	if err != nil {
+		return nil, "", err
+	}
+	return items[:n], next, nil
 }
 
 // traceRowColumns and resolutionJoin are ONE spelling of "a trace row and what

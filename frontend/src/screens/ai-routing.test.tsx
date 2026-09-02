@@ -75,6 +75,14 @@ const SHEET = [
   sheetRow("anthropic", "claude-opus-4-8", "chat", "5.00", "25.00"),
 ];
 
+// Which vendors hold a credential. `anthropic` is bound by nothing in BOUND,
+// so its absence never lights a row: the pill follows the ROUTING, and a vendor
+// nobody points at is not this installation's problem.
+const PROVIDER_KEYS = [
+  { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
+  { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
+];
+
 const BOUND = {
   profile: "eu_hosted",
   tiers: {
@@ -82,6 +90,27 @@ const BOUND = {
     cheap_cloud: { provider: "gemini", model: "gemini-3.1-flash-lite" },
   },
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
+};
+
+const VENDOR_MODELS: Record<string, unknown> = {
+  gemini: {
+    provider: "gemini",
+    models: [
+      // Newer than anything on the sheet: the model a reader came looking for.
+      {
+        id: "gemini-4.0-flash",
+        display_name: "Gemini 4.0 Flash",
+        lane: "chat",
+      },
+      {
+        id: "gemini-3.5-flash",
+        display_name: "Gemini 3.5 Flash",
+        lane: "chat",
+      },
+      { id: "gemini-embedding-001", lane: "embeddings" },
+    ],
+  },
+  anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
 };
 
 function backendFor(
@@ -102,6 +131,19 @@ function backendFor(
       if (req.url.endsWith("/v1/me")) {
         return jsonResponse(meFixture({ allow }));
       }
+      if (req.url.includes("/ai/available-models/")) {
+        // The lane rides along as a query parameter, so the provider is the
+        // path segment before it — the vendor is what this stub answers for.
+        const provider = req.url
+          .split("/ai/available-models/")[1]
+          .split("?")[0];
+        return jsonResponse(
+          VENDOR_MODELS[provider] ?? { provider, models: [] },
+        );
+      }
+      if (req.url.includes("/ai/provider-keys")) {
+        return jsonResponse({ providers: PROVIDER_KEYS });
+      }
       if (req.url.includes("/ai-model-rates")) {
         return sheetStatus === 200
           ? jsonResponse({ data: SHEET })
@@ -121,6 +163,16 @@ function backendFor(
     fetchMock,
     getCapturedPut: (): CapturedRouting | null => capturedPut,
   };
+}
+
+/** Opens one lane's fields, the way a reader does. */
+async function openLane(
+  user: ReturnType<typeof userEvent.setup>,
+  testId: string,
+) {
+  const lane = screen.getByTestId(testId);
+  await user.click(within(lane).getByRole("button", { name: /change/i }));
+  return lane;
 }
 
 const render = (ui: ReactNode, locale: Locale = "en") => {
@@ -144,21 +196,24 @@ describe("AiRoutingCard", () => {
     vi.stubGlobal("fetch", backendFor(ROUTING_EDITOR).fetchMock);
     render(<AiRoutingCard />);
 
-    expect(await screen.findByDisplayValue("gemini-3.5-flash")).toBeTruthy();
-    expect(screen.getByDisplayValue("gemini-3.1-flash-lite")).toBeTruthy();
+    // Read off the row itself: a lane reports its binding without being
+    // opened, which is the whole point of folding the fields away.
+    expect(await screen.findByText("gemini-3.5-flash")).toBeTruthy();
+    expect(screen.getByText("gemini-3.1-flash-lite")).toBeTruthy();
   });
 
   it("sends the WHOLE binding, so an untouched tier is not dropped", async () => {
+    const user = userEvent.setup();
     const backend = backendFor(ROUTING_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
 
-    const model = await screen.findByDisplayValue("gemini-3.5-flash");
-    await userEvent.clear(model);
-    await userEvent.type(model, "gemini-3.1-pro-preview");
-    await userEvent.click(
-      screen.getByRole("button", { name: /save routing/i }),
-    );
+    const tier = await openLane(user, "ai-routing-tier-premium");
+    const model = within(tier).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "gemini-3.1-pro-preview");
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
 
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
     // PUT replaces the whole document, so the tier nobody touched has to travel
@@ -179,7 +234,7 @@ describe("AiRoutingCard", () => {
 
     // Disabled, never hidden: somebody who cannot change the binding still
     // needs to see which vendor their installation's text goes to.
-    expect(await screen.findByDisplayValue("gemini-3.5-flash")).toBeTruthy();
+    expect(await screen.findByText("gemini-3.5-flash")).toBeTruthy();
     // `disabled`, not `aria-disabled`: the design system reserves the second
     // for a write in flight, so a reader keeps focus on the control they just
     // pressed. A refusal is the first, and the reason travels with it.
@@ -229,7 +284,7 @@ describe("AiRoutingCard", () => {
     );
     render(<AiRoutingCard />);
 
-    await screen.findByDisplayValue("ls");
+    await screen.findByText("ls");
     const shown = screen
       .getAllByTestId(/^ai-routing-tier-/)
       .map((el) => el.getAttribute("data-testid"));
@@ -245,16 +300,17 @@ describe("AiRoutingCard", () => {
   // re-point every chat tier and go on sending their retrieval to the vendor
   // they had just moved away from, with nothing on screen saying so.
   it("lets the embedding lane be re-pointed, and sends it", async () => {
+    const user = userEvent.setup();
     const backend = backendFor(ROUTING_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
+    await screen.findByText("gemini-embedding-001");
 
-    const model = await screen.findByDisplayValue("gemini-embedding-001");
-    await userEvent.clear(model);
-    await userEvent.type(model, "gemini-embedding-002");
-    await userEvent.click(
-      screen.getByRole("button", { name: /save routing/i }),
-    );
+    const lane = await openLane(user, "ai-routing-embeddings");
+    const model = within(lane).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "gemini-embedding-002");
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
 
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
     expect(backend.getCapturedPut()?.embeddings.model).toBe(
@@ -273,24 +329,22 @@ describe("AiRoutingCard", () => {
     const backend = backendFor(ROUTING_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
-    await screen.findByDisplayValue("gemini-3.5-flash");
+    await screen.findByText("gemini-3.5-flash");
 
     // A native vendor addresses its own API, so no host is asked for.
     expect(screen.queryByLabelText("Host")).toBeNull();
 
-    const tier = screen.getByTestId("ai-routing-tier-premium");
+    const tier = await openLane(user, "ai-routing-tier-premium");
     // Named, because the row now holds two comboboxes: the adapter, and the
     // model picker that offers what this installation can price.
     await pickOption(
       user,
-      within(tier).getByRole("combobox", { name: "premium" }),
+      within(tier).getByRole("combobox", { name: "Provider" }),
       "openai_compatible",
     );
     const host = await within(tier).findByLabelText("Host");
     await user.type(host, "https://openrouter.ai/api");
-    await userEvent.click(
-      screen.getByRole("button", { name: /save routing/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
 
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
     const sent = backend.getCapturedPut();
@@ -305,12 +359,12 @@ describe("AiRoutingCard", () => {
     const backend = backendFor(ROUTING_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
-    await screen.findByDisplayValue("gemini-embedding-001");
+    await screen.findByText("gemini-embedding-001");
 
-    const lane = screen.getByTestId("ai-routing-embeddings");
+    const lane = await openLane(user, "ai-routing-embeddings");
     await pickOption(
       user,
-      within(lane).getByRole("combobox", { name: "Embeddings" }),
+      within(lane).getByRole("combobox", { name: "Provider" }),
       "openai_compatible",
     );
     await user.type(
@@ -335,9 +389,9 @@ describe("AiRoutingCard", () => {
     const backend = backendFor(ROUTING_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
-    await screen.findByDisplayValue("gemini-embedding-001");
+    await screen.findByText("gemini-embedding-001");
 
-    const lane = screen.getByTestId("ai-routing-embeddings");
+    const lane = await openLane(user, "ai-routing-embeddings");
     const width = within(lane).getByLabelText("Vector width");
     await user.type(width, "768");
     await user.clear(width);
@@ -357,19 +411,24 @@ describe("AiRoutingCard", () => {
     const backend = backendFor(ROUTING_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
-    await screen.findByDisplayValue("gemini-3.5-flash");
+    await screen.findByText("gemini-3.5-flash");
 
-    const tier = screen.getByTestId("ai-routing-tier-premium");
+    const tier = await openLane(user, "ai-routing-tier-premium");
     await user.click(within(tier).getByRole("combobox", { name: "Model" }));
     // The row says both: which model, and what it costs per million tokens in
     // → out, which is what a reader is choosing between.
+    //
+    // The VENDOR's models first, in the order it returned them, then whatever
+    // the sheet prices that the vendor did not name — sorted, so the tail is
+    // stable. A price appears where the sheet has one and nowhere else.
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
     expect(offered).toEqual([
+      "gemini-4.0-flash",
+      "gemini-3.5-flashUS$1.50 → US$9.00",
       "gemini-3.1-flash-liteUS$0.25 → US$1.50",
       "gemini-3.1-pro-previewUS$2.00 → US$12.00",
-      "gemini-3.5-flashUS$1.50 → US$9.00",
     ]);
     // Neither the embedder nor another vendor's model.
     expect(offered.join(" ")).not.toContain("gemini-embedding-001");
@@ -381,9 +440,9 @@ describe("AiRoutingCard", () => {
     const backend = backendFor(ROUTING_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
-    await screen.findByDisplayValue("gemini-3.5-flash");
+    await screen.findByText("gemini-3.5-flash");
 
-    const tier = screen.getByTestId("ai-routing-tier-premium");
+    const tier = await openLane(user, "ai-routing-tier-premium");
     await pickSuggestion(
       user,
       within(tier).getByRole("combobox", { name: "Model" }),
@@ -397,6 +456,60 @@ describe("AiRoutingCard", () => {
     );
   });
 
+  // The defect this replaced: the picker offered the price sheet alone, so a
+  // model the vendor shipped after somebody last edited that table was absent
+  // and a reader concluded the product could not reach it.
+  it("offers what the VENDOR serves, including a model the sheet never priced", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backendFor(ROUTING_EDITOR).fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
+
+    const tier = await openLane(user, "ai-routing-tier-premium");
+    await user.click(within(tier).getByRole("combobox", { name: "Model" }));
+    const offered = within(screen.getByRole("listbox"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+
+    // Newest first, in the vendor's own order, and priced only where the sheet
+    // can price it — the new model carries no figure rather than a zero.
+    expect(offered[0]).toBe("gemini-4.0-flash");
+    expect(offered[1]).toBe("gemini-3.5-flashUS$1.50 → US$9.00");
+    // The embedder the vendor DID declare stays off a chat lane: it cannot
+    // serve one, and offering it would bind a call that must fail.
+    expect(offered.join(" ")).not.toContain("gemini-embedding-001");
+  });
+
+  // A vendor that cannot be asked degrades to the sheet and says which state it
+  // is in, rather than emptying the field or failing the form.
+  it("falls back to the sheet, and says why, when the vendor holds no key", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backendFor(ROUTING_EDITOR).fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
+
+    const tier = await openLane(user, "ai-routing-tier-premium");
+    await pickOption(
+      user,
+      within(tier).getByRole("combobox", { name: "Provider" }),
+      "anthropic",
+    );
+    expect(await within(tier).findByText(/holds no key/i)).toBeTruthy();
+    // And the sheet's own anthropic row is still offered, so the field is not
+    // left empty by a vendor it could not reach. The box is cleared first: it
+    // still holds the previous vendor's model, and the list filters on what is
+    // typed.
+    const model = within(tier).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.click(model);
+    expect(
+      within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((o) => o.textContent)
+        .join(" "),
+    ).toContain("claude-opus-4-8");
+  });
+
   // The half that keeps this from being a Select: the sheet is a starting
   // point, the server takes any id its vendor serves, and a vendor ships a
   // model on a Tuesday.
@@ -405,9 +518,9 @@ describe("AiRoutingCard", () => {
     const backend = backendFor(ROUTING_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
-    await screen.findByDisplayValue("gemini-3.5-flash");
+    await screen.findByText("gemini-3.5-flash");
 
-    const tier = screen.getByTestId("ai-routing-tier-premium");
+    const tier = await openLane(user, "ai-routing-tier-premium");
     const model = within(tier).getByRole("combobox", { name: "Model" });
     await user.clear(model);
     await user.type(model, "gemini-4-experimental-0731");
@@ -420,21 +533,31 @@ describe("AiRoutingCard", () => {
   });
 
   // A seat holding the routing grant but not the sheet's own, or an
-  // installation whose sheet was never seeded. The field is what it was before
-  // the picker existed, and the form still saves.
-  it("still binds by hand when the sheet cannot be read", async () => {
+  // installation whose sheet was never seeded.
+  //
+  // This used to leave the field with no suggestions at all, because the sheet
+  // was the only source. The VENDOR is now the other one and it is still
+  // answering, so an unreadable sheet costs the reader the PRICES beside each
+  // id rather than the list itself — and the form still saves either way.
+  it("still offers the vendor's models when the sheet cannot be read", async () => {
     const user = userEvent.setup();
     const backend = backendFor(ROUTING_EDITOR, BOUND, { sheetStatus: 403 });
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
-    await screen.findByDisplayValue("gemini-3.5-flash");
+    await screen.findByText("gemini-3.5-flash");
 
-    const tier = screen.getByTestId("ai-routing-tier-premium");
+    const tier = await openLane(user, "ai-routing-tier-premium");
     const model = within(tier).getByRole("combobox", { name: "Model" });
-    await user.click(model);
-    expect(screen.queryByRole("listbox")).toBeNull();
-
     await user.clear(model);
+    await user.click(model);
+    expect(
+      within(await screen.findByRole("listbox"))
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+      // Every id the vendor named, and not one price: the sheet is what
+      // carries those and it is not this reader's to read.
+    ).toEqual(["gemini-4.0-flash", "gemini-3.5-flash"]);
+
     await user.type(model, "gemini-3.1-pro-preview");
     await user.click(screen.getByRole("button", { name: /save routing/i }));
 

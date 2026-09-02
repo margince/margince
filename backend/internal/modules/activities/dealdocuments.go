@@ -133,7 +133,11 @@ func (s *Store) ListDealDocuments(
 		if len(out) > lim {
 			out = out[:lim]
 			last := out[len(out)-1].Attachment
-			page = storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))}
+			next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+			if err != nil {
+				return err
+			}
+			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
 		return nil
 	})

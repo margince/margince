@@ -20,6 +20,5 @@ func scanOwnDecisions(ctx context.Context, tx pgx.Tx, in ListInput, start *keyse
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	rows, page := capPage(batch, in.Limit, nil)
-	return rows, page, nil
+	return capPage(batch, in.Limit, nil)
 }
