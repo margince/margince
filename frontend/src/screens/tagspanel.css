@@ -1,0 +1,62 @@
+/* The tag strip. Wraps rather than scrolls: a reader scanning a record's
+   context should see every chip at once, and a horizontal scroller hides the
+   ones past the edge behind a gesture nobody makes on a rail. */
+.tagspanel-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* The split pill: the word and its menu read as one object, so they sit in one
+   bordered group rather than as two buttons a gap apart. */
+.tagspanel-combo {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tagspanel-open {
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-sm);
+}
+
+.tagspanel-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tagspanel-more {
+  opacity: 0.6;
+}
+
+.tagspanel-more:hover,
+.tagspanel-more:focus-visible {
+  opacity: 1;
+}
+
+.tagspanel-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 15rem;
+  padding: 4px;
+}
+
+.tagspanel-note {
+  color: var(--textMeta);
+  margin: 0;
+}
+
+/* The empty state teaches rather than reporting. A bare "No tags" tells a
+   reader what is absent; this tells them what the feature is for. */
+.tagspanel-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tagspanel-empty-title {
+  margin: 0;
+  font-weight: 500;
+}

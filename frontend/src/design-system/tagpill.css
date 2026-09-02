@@ -1,0 +1,24 @@
+/* The tone dot. Seven pixels because it has to read as a colour cue beside a
+   word rather than as a bullet in front of one. */
+.tagpill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+}
+
+/* The four tones map onto tokens the rest of the product already uses, so a
+   theme change carries them rather than leaving tags behind on fixed hues. */
+.tagpill-dot-teal {
+  background: var(--accent);
+}
+.tagpill-dot-amber {
+  background: var(--warn);
+}
+.tagpill-dot-rose {
+  background: var(--danger);
+}
+.tagpill-dot-slate {
+  background: var(--textMeta);
+}
