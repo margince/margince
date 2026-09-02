@@ -12,6 +12,15 @@ export type WorklistValue = components["schemas"]["WorklistValue"];
 // hand-written union goes stale the moment the server adds a value, and it goes
 // stale silently — nothing compares the two.
 export type WorklistScope = Worklist["scope"];
+/**
+ * The one scope word an ADDRESS carries: `#/worklist/unassigned`.
+ *
+ * Here rather than on the screen, so Home can name the same pile without
+ * importing the queue, and typed as WorklistScope so a scope renamed in
+ * crm.yaml fails to compile instead of leaving an address that silently stops
+ * opening what it names.
+ */
+export const UNASSIGNED: WorklistScope = "unassigned";
 export type WorklistFilter = NonNullable<Worklist["filter"]>;
 export type WorklistCategory = WorklistItem["category"];
 // The ways a row can be put down, derived from the item rather than spelled

@@ -20,7 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
@@ -306,7 +306,7 @@ func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func(
 
 // overlayOptions wires the overlay's two cross-role edges: the budget every
 // force-fresh read spends against, and the incumbent's inbound push.
-func overlayOptions(cfg apiConfig, deployCfg deployconfig.Config, rdb *redis.Client, quotaMeter *agentquota.Meter, pool *pgxpool.Pool, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
+func overlayOptions(cfg apiConfig, deployCfg deployconfig.Config, rdb *redis.Client, volumeMeter *agentvolume.Meter, pool *pgxpool.Pool, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
 	// The overlay budget meter records against Redis, the SAME server the
 	// worker's poller uses, so force-fresh reads (this role) and poller
 	// sweeps (cmd/worker) spend against ONE shared per-workspace-per-
@@ -318,7 +318,7 @@ func overlayOptions(cfg apiConfig, deployCfg deployconfig.Config, rdb *redis.Cli
 	// caller rather than here, because the model path needs the same pointer to
 	// charge MCP-SESS-COST against — two meters would count one agent's spend
 	// in two windows, neither of them the one the gate reads.
-	opts := []compose.Option{compose.WithOverlayMeter(overlayMeter), compose.WithAgentQuota(quotaMeter)}
+	opts := []compose.Option{compose.WithOverlayMeter(overlayMeter), compose.WithAgentVolume(volumeMeter)}
 
 	// The HubSpot webhook-as-signal receiver (OVA-WIRE-10) mounts only when the
 	// app client secret is configured — it verifies the inbound v3 signature
@@ -399,12 +399,12 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 // carries it — each role resolves its own — so the reset's cache flush can only
 // drop what its router cached from here.
 //
-// quotaMeter is the SAME per-Passport volume meter the admission gate and the
-// tool registry take through WithAgentQuota (MCP-SESS-COST): binding it here
+// volumeMeter is the SAME per-Passport volume meter the admission gate and the
+// tool registry take through WithAgentVolume (MCP-SESS-COST): binding it here
 // charges a model call to the agent that caused it, where the tokens are known.
 // A model path bound to a different meter would meter an agent's spend into a
 // window nothing else looks at, so the path leaves this function already bound.
-func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, deployCfg deployconfig.Config, pool *pgxpool.Pool, logger *slog.Logger, quotaMeter *agentquota.Meter) ([]compose.Option, *compose.ModelPath, error) {
+func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, deployCfg deployconfig.Config, pool *pgxpool.Pool, logger *slog.Logger, volumeMeter *agentvolume.Meter) ([]compose.Option, *compose.ModelPath, error) {
 	opts, modelPath, err := modelSurfaceOptions(ctx, cfg, deployCfg, pool, logger)
 	if err != nil {
 		return nil, nil, err
@@ -418,7 +418,7 @@ func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// consumer here guards it the same way. There is no model call to charge in
 	// that shape, so there is nothing to bind.
 	if modelPath != nil {
-		*modelPath = modelPath.WithAgentTokenSpend(compose.AgentTokenSpend{Meter: quotaMeter})
+		*modelPath = modelPath.WithAgentTokenSpend(compose.AgentTokenSpend{Meter: volumeMeter})
 	}
 	return append(opts, handoffOpts...), modelPath, nil
 }

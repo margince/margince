@@ -203,7 +203,7 @@ describe("what a staged proposal shows", () => {
   // exactly its limit is one that just hit the ceiling.
   it("keeps a usage figure that equals its own limit", () => {
     const fields = resolveDisplay(
-      "quota_release",
+      "volume_release",
       { tool: "send_email", observed: 40, limit: 40, allowance: 100 },
       t,
       day,

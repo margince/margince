@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -490,7 +490,7 @@ func (a *fakeApprovals) StageCall(_ context.Context, in StageRequest) (ids.Appro
 	return a.staged, false, nil
 }
 
-func (a *fakeApprovals) StageQuotaRelease(context.Context, QuotaReleaseRequest) (ids.ApprovalID, bool, error) {
+func (a *fakeApprovals) StageVolumeRelease(context.Context, VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, errors.New("no step-up in this fixture")
 }
 
@@ -567,13 +567,13 @@ func (q *fakeQuota) exceed() {
 	q.exceeded = true
 }
 
-func (q *fakeQuota) Read(_ context.Context, c agentquota.Counter) agentquota.Reading {
+func (q *fakeQuota) Read(_ context.Context, c agentvolume.Counter) agentvolume.Reading {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	return agentquota.Reading{Counter: c, Exceeded: q.exceeded}
+	return agentvolume.Reading{Counter: c, Exceeded: q.exceeded}
 }
 
-func (q *fakeQuota) Consume(context.Context, agentquota.Counter, int) error { return nil }
+func (q *fakeQuota) Consume(context.Context, agentvolume.Counter, int) error { return nil }
 
 // recordReader is the live re-read a recorded answer is proven against. Taking
 // a record out of `visible` is how a test narrows the caller's access after the
@@ -696,8 +696,8 @@ func stagingDispatcher(t *testing.T) (*Dispatcher, *fakeTasks) {
 	// gate.
 	reader := &recordReader{visible: map[ids.UUID]bool{tool.target: true}}
 	quota := &fakeQuota{}
-	registry := NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}, auth.WithQuota(quota)),
-		WithReplayReader(reader), WithQuotaCharger(quota))
+	registry := NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}, auth.WithVolumeMeter(quota)),
+		WithReplayReader(reader), WithVolumeCharger(quota))
 	registry.Register(tool)
 	s := NewDispatcher(registry, bindAuthenticated, "margince-crm", "test").
 		WithLogger(discardLog()).WithTasks(store, approvals)

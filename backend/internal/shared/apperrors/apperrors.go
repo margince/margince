@@ -111,7 +111,7 @@ var (
 	// no longer matches If-Match (409 version_skew, ADR-0036).
 	ErrVersionSkew = errors.New("version skew")
 
-	// ErrBudgetExceeded: a session or agent quota ran out
+	// ErrBudgetExceeded: a session or agent volume budget ran out
 	// (api-rate-limits §2; 429-equivalent).
 	ErrBudgetExceeded = errors.New("budget exceeded")
 
@@ -135,7 +135,7 @@ var (
 	// seat and never clears by an admin's action, and from ErrBudgetExceeded,
 	// which is metered and refills on its own — nothing about this one clears
 	// with time, and telling a caller to retry would be advice that can only
-	// ever fail. It is the licensed ceiling (A36/ADR-0029), not a quota.
+	// ever fail. It is the licensed ceiling (A36/ADR-0029), not a volume budget.
 	ErrSeatLimitReached = errors.New("seat limit reached")
 )
 

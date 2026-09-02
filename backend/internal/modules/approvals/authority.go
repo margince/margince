@@ -100,7 +100,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// everyone, which is the failure decisionGrantsFor's own comment names — so
 	// the two entries are one decision and TestAStepUpIsDecidedByTheLenderAlone
 	// holds them together.
-	KindQuotaRelease: {},
+	KindVolumeRelease: {},
 
 	"advance_deal": {{tableDeal, principal.ActionUpdate}},
 	// progress_deal is advance_deal plus a timeline note; the gated effect
@@ -377,7 +377,7 @@ const (
 // whether to retry it or abandon it, and nobody else has standing to answer.
 var selfOnlyKinds = map[string]bool{
 	kindLinkedInMatch:     true,
-	KindQuotaRelease:      true,
+	KindVolumeRelease:     true,
 	KindScheduledSendHeld: true,
 	// A vCard review is one member's own uploaded address book, exactly the
 	// LinkedIn-match shape: the staged card names a third party who never

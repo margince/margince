@@ -287,3 +287,28 @@ func TestAReaderWithoutTheActivityGrantIsRefusedRatherThanShownNothing(t *testin
 		t.Fatalf("the rep's lane = %v, want their own promise", got)
 	}
 }
+
+// A PROMISE DUE EXACTLY AT THE BOUND BELONGS TO TOMORROW.
+//
+// The caller passes the END of the day, so an inclusive test put a promise due
+// at exactly tomorrow's midnight on today's list — reported late a day early,
+// and again tomorrow when it actually is. The task lane beside this one already
+// read it exclusively, so the two disagreed about the same afternoon.
+func TestAPromiseDueExactlyAtTheBoundBelongsToTomorrow(t *testing.T) {
+	e := integration.Setup(t)
+	person := e.SeedPerson(t, "Frau Vogt", &e.Rep1)
+	bound := laneClock.Add(24 * time.Hour)
+	justInside := bound.Add(-time.Second)
+	seedPromise(t, e, person, "Kurz vor Mitternacht", &justInside)
+	seedPromise(t, e, person, "Punkt Mitternacht", &bound)
+
+	store := people.NewStore(e.DB())
+	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), bound, 20)
+	if err != nil {
+		t.Fatalf("reading the lane: %v", err)
+	}
+	got := bodiesOf(rows)
+	if len(got) != 1 || got[0] != "Kurz vor Mitternacht" {
+		t.Fatalf("the lane = %v, want only the promise due before the day ends", got)
+	}
+}

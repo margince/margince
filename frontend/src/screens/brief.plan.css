@@ -1,0 +1,45 @@
+/* The week ahead. Rows are a checkbox beside a stack: label, then the meta line
+   under it, then whatever the rep and their lead have said to each other. */
+.plan-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.plan-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.plan-row-label {
+  color: var(--textContent);
+  font-weight: 500;
+}
+
+.plan-row-meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--textMeta);
+}
+
+.plan-help {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.plan-help-asked,
+.plan-help-answer,
+.plan-help-waiting {
+  margin: 0;
+}
+
+.plan-help-waiting {
+  color: var(--textMeta);
+}

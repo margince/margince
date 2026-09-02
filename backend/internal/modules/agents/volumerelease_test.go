@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -20,17 +20,17 @@ import (
 // crossedQuota is a meter that reports one counter already spent — the state
 // every rung of the ladder is entered from.
 type crossedQuota struct {
-	counter  agentquota.Counter
+	counter  agentvolume.Counter
 	observed int
 	limit    int
 	bucket   int64
 }
 
-func (q crossedQuota) Read(_ context.Context, c agentquota.Counter) agentquota.Reading {
+func (q crossedQuota) Read(_ context.Context, c agentvolume.Counter) agentvolume.Reading {
 	if c != q.counter {
-		return agentquota.Reading{Counter: c, Limit: 1000, Bucket: q.bucket}
+		return agentvolume.Reading{Counter: c, Limit: 1000, Bucket: q.bucket}
 	}
-	return agentquota.Reading{
+	return agentvolume.Reading{
 		Counter: c, Observed: q.observed, Limit: q.limit, Exceeded: true, Bucket: q.bucket,
 	}
 }
@@ -39,7 +39,7 @@ func (q crossedQuota) Read(_ context.Context, c agentquota.Counter) agentquota.R
 func steppedUpRegistry(t *testing.T, quota crossedQuota, scope principal.Scope, egress bool) (*Registry, *recordingApprovals, context.Context) {
 	t.Helper()
 	staging := &recordingApprovals{}
-	r := NewRegistry(staging, auth.NewGate(fullSeatAuthority{}, auth.WithQuota(quota)))
+	r := NewRegistry(staging, auth.NewGate(fullSeatAuthority{}, auth.WithVolumeMeter(quota)))
 	spec := readToolSpec("search_records")
 	spec.RequiredScope, spec.Egress = scope, egress
 	if scope != principal.ScopeRead {
@@ -63,7 +63,7 @@ func steppedUpRegistry(t *testing.T, quota crossedQuota, scope principal.Scope, 
 // bulk reading into a dead end rather than into a visible, gated event.
 func TestACrossedReadThresholdPutsTheQuestionToTheConnectingHuman(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
-		crossedQuota{counter: agentquota.Reads, observed: 2431, limit: 2000, bucket: 42},
+		crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42},
 		principal.ScopeRead, false)
 
 	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
@@ -82,7 +82,7 @@ func TestACrossedReadThresholdPutsTheQuestionToTheConnectingHuman(t *testing.T) 
 		t.Fatalf("the human was asked %d times, want once", len(staging.steppedUp))
 	}
 	asked := staging.steppedUp[0].Proposal
-	if asked.Counter != agentquota.Reads || asked.Observed != 2431 || asked.Limit != 2000 || asked.Bucket != "42" {
+	if asked.Counter != agentvolume.Reads || asked.Observed != 2431 || asked.Limit != 2000 || asked.Bucket != "42" {
 		t.Errorf("the question carried %+v; it must name what was spent, against what, in which window", asked)
 	}
 	if !strings.Contains(staging.steppedUp[0].Summary, "2431") || !strings.Contains(staging.steppedUp[0].Summary, "2000") {
@@ -95,7 +95,7 @@ func TestACrossedReadThresholdPutsTheQuestionToTheConnectingHuman(t *testing.T) 
 // path for "may it keep writing" is a second thing to get wrong.
 func TestACrossedWriteThresholdAsksTheSameQuestion(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
-		crossedQuota{counter: agentquota.Writes, observed: 240, limit: 200, bucket: 9},
+		crossedQuota{counter: agentvolume.Writes, observed: 240, limit: 200, bucket: 9},
 		principal.ScopeWrite, false)
 
 	_, err := r.Invoke(ctx, "update_record", json.RawMessage(`{}`))
@@ -104,7 +104,7 @@ func TestACrossedWriteThresholdAsksTheSameQuestion(t *testing.T) {
 	if !errors.As(err, &staged) {
 		t.Fatalf("a write past its threshold → %v, want a staged step-up", err)
 	}
-	if len(staging.steppedUp) != 1 || staging.steppedUp[0].Proposal.Counter != agentquota.Writes {
+	if len(staging.steppedUp) != 1 || staging.steppedUp[0].Proposal.Counter != agentvolume.Writes {
 		t.Fatalf("the human was asked %+v", staging.steppedUp)
 	}
 	if strings.Contains(staging.steppedUp[0].Summary, "records") {
@@ -118,12 +118,12 @@ func TestACrossedWriteThresholdAsksTheSameQuestion(t *testing.T) {
 // agent would wait for it.
 func TestAHardStopNeverReachesAHumansInbox(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
-		crossedQuota{counter: agentquota.Egress, observed: 21, limit: 20, bucket: 3},
+		crossedQuota{counter: agentvolume.Egress, observed: 21, limit: 20, bucket: 3},
 		principal.ScopeSend, true)
 
 	_, err := r.Invoke(ctx, "send_email", json.RawMessage(`{}`))
 
-	var overQuota *auth.QuotaExceededError
+	var overQuota *auth.VolumeExceededError
 	if !errors.As(err, &overQuota) {
 		t.Fatalf("a send past its ceiling → %v, want a plain quota refusal", err)
 	}
@@ -141,7 +141,7 @@ func TestAHardStopNeverReachesAHumansInbox(t *testing.T) {
 // though reads are releasable.
 func TestASuspendedAgentIsRefusedWithoutAskingAnyone(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
-		crossedQuota{counter: agentquota.Calls, observed: 1001, limit: 1000, bucket: 3},
+		crossedQuota{counter: agentvolume.Calls, observed: 1001, limit: 1000, bucket: 3},
 		principal.ScopeRead, false)
 
 	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
@@ -159,7 +159,7 @@ func TestASuspendedAgentIsRefusedWithoutAskingAnyone(t *testing.T) {
 // call, and the refusal they intended becomes a stream of notifications.
 func TestAQuestionAlreadyRefusedIsNotAskedAgain(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
-		crossedQuota{counter: agentquota.Reads, observed: 2431, limit: 2000, bucket: 42},
+		crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42},
 		principal.ScopeRead, false)
 	staging.stepUpDeclined = true
 
@@ -174,13 +174,13 @@ func TestAQuestionAlreadyRefusedIsNotAskedAgain(t *testing.T) {
 	}
 }
 
-// A staging that FAILS leaves the quota refusal as the answer. Reporting the
+// A staging that FAILS leaves the volume budget refusal as the answer. Reporting the
 // staging failure instead would tell the agent to retry the staging, which is
 // our problem and not one it can do anything about — and would hide the refusal
 // that is the real reason the call did not run.
 func TestAFailedStagingLeavesTheQuotaRefusalAsTheAnswer(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
-		crossedQuota{counter: agentquota.Reads, observed: 2431, limit: 2000, bucket: 42},
+		crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42},
 		principal.ScopeRead, false)
 	staging.stepUpErr = errors.New("the inbox is unreachable")
 
@@ -199,9 +199,9 @@ func TestAFailedStagingLeavesTheQuotaRefusalAsTheAnswer(t *testing.T) {
 // with every other such call, and the release path refuses a row without a
 // passport — so the question could never be answered even if it were asked.
 func TestACallerWithNoPassportIsRefusedWithoutAskingAnyone(t *testing.T) {
-	quota := crossedQuota{counter: agentquota.Reads, observed: 2431, limit: 2000, bucket: 42}
+	quota := crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42}
 	staging := &recordingApprovals{}
-	r := NewRegistry(staging, auth.NewGate(fullSeatAuthority{}, auth.WithQuota(quota)))
+	r := NewRegistry(staging, auth.NewGate(fullSeatAuthority{}, auth.WithVolumeMeter(quota)))
 	r.Register(&servingTool{spec: readToolSpec("search_records"), records: 1})
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -220,11 +220,11 @@ func TestACallerWithNoPassportIsRefusedWithoutAskingAnyone(t *testing.T) {
 }
 
 // A surface with no approvals engine still refuses, and refuses the same way.
-// The Surface-B runner composes one; a quota refusal there has nowhere to land
+// The Surface-B runner composes one; a volume budget refusal there has nowhere to land
 // and must not become an error about the composition.
 func TestASurfaceWithNoInboxStillRefusesOnTheQuota(t *testing.T) {
-	quota := crossedQuota{counter: agentquota.Reads, observed: 2431, limit: 2000, bucket: 42}
-	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}, auth.WithQuota(quota)))
+	quota := crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42}
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}, auth.WithVolumeMeter(quota)))
 	r.Register(&servingTool{spec: readToolSpec("search_records"), records: 1})
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -247,11 +247,11 @@ func TestTheTwoRungsGiveTheAgentDifferentInstructions(t *testing.T) {
 	d := NewDispatcher(nil, bindAuthenticated, "test", "1")
 
 	stepUp := d.explain("search_records", &StepUpStagedError{
-		ApprovalID: ids.New[ids.ApprovalKind](), Counter: agentquota.Reads,
+		ApprovalID: ids.New[ids.ApprovalKind](), Counter: agentvolume.Reads,
 	})
-	hardStop := d.explain("send_email", &auth.QuotaExceededError{
+	hardStop := d.explain("send_email", &auth.VolumeExceededError{
 		Tool:    "send_email",
-		Reading: agentquota.Reading{Counter: agentquota.Egress, Observed: 21, Limit: 20, Exceeded: true},
+		Reading: agentvolume.Reading{Counter: agentvolume.Egress, Observed: 21, Limit: 20, Exceeded: true},
 	})
 
 	if !strings.Contains(stepUp, "repeat this call unchanged") || !strings.Contains(stepUp, "Do not send an approval_id") {
@@ -272,9 +272,9 @@ func TestTheTwoRungsGiveTheAgentDifferentInstructions(t *testing.T) {
 func TestADeclinedStepUpDoesNotClaimNoApprovalCouldLiftIt(t *testing.T) {
 	d := NewDispatcher(nil, bindAuthenticated, "test", "1")
 
-	answer := d.explain("search_records", &auth.QuotaExceededError{
+	answer := d.explain("search_records", &auth.VolumeExceededError{
 		Tool:    "search_records",
-		Reading: agentquota.Reading{Counter: agentquota.Reads, Observed: 4000, Limit: 4000, Exceeded: true},
+		Reading: agentvolume.Reading{Counter: agentvolume.Reads, Observed: 4000, Limit: 4000, Exceeded: true},
 	})
 
 	if strings.Contains(answer, "no approval lifts it") {
@@ -290,11 +290,11 @@ func TestADeclinedStepUpDoesNotClaimNoApprovalCouldLiftIt(t *testing.T) {
 
 // spentShare is a cost reader whose share is already gone.
 type spentShare struct {
-	reading agentquota.Reading
+	reading agentvolume.Reading
 	asked   int
 }
 
-func (s *spentShare) CostShare(context.Context) agentquota.Reading {
+func (s *spentShare) CostShare(context.Context) agentvolume.Reading {
 	s.asked++
 	return s.reading
 }
@@ -303,8 +303,8 @@ func (s *spentShare) CostShare(context.Context) agentquota.Reading {
 // served, and it carries the fact. A counter that were merely counted, with
 // nothing ever showing it, would govern nothing at all.
 func TestASpentBudgetShareWarnsOnTheAnswerAndWithholdsNothing(t *testing.T) {
-	share := &spentShare{reading: agentquota.Reading{
-		Counter: agentquota.Cost, Observed: 41_000, Limit: 40_000, Exceeded: true,
+	share := &spentShare{reading: agentvolume.Reading{
+		Counter: agentvolume.Cost, Observed: 41_000, Limit: 40_000, Exceeded: true,
 	}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithCostShare(share))
 	r.Register(&servingTool{spec: readToolSpec("search_records"), records: 1})
@@ -329,7 +329,7 @@ func TestASpentBudgetShareWarnsOnTheAnswerAndWithholdsNothing(t *testing.T) {
 // And under the share, nothing is said. A warning present on every answer says
 // as little as one present on none.
 func TestAnAnswerUnderTheBudgetShareSaysNothingAboutIt(t *testing.T) {
-	share := &spentShare{reading: agentquota.Reading{Counter: agentquota.Cost, Observed: 10, Limit: 40_000}}
+	share := &spentShare{reading: agentvolume.Reading{Counter: agentvolume.Cost, Observed: 10, Limit: 40_000}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithCostShare(share))
 	r.Register(&servingTool{spec: readToolSpec("search_records"), records: 1})
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())

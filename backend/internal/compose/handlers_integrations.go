@@ -93,7 +93,7 @@ func (h integrationsHandlers) UpdateProviderConnection(w http.ResponseWriter, r 
 		return
 	}
 	// Read off the header rather than the generated params struct, which is
-	// the house spelling (quotas, people, deals, roles): httperr.IfMatchVersion
+	// the house spelling (people, deals, roles): httperr.IfMatchVersion
 	// is where "a bare integer, not a quoted ETag" and the malformed-header
 	// refusal are decided once, for every surface.
 	ifVersion, ok := httperr.IfMatchVersion(w, r)

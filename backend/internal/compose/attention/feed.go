@@ -72,7 +72,10 @@ type Service struct {
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
 	meetings Meetings
-	failed   FailedEffects
+	// zone resolves the installation timezone the day boundary is measured in;
+	// nil is UTC, for the reason WithZone gives.
+	zone   Zone
+	failed FailedEffects
 	// dsrs is OPTIONAL like the lanes above it, and withheld-by-grant on top:
 	// even where it is bound, only a DSR admin's read succeeds.
 	dsrs DSRs
@@ -179,11 +182,16 @@ func (s *Service) forUnowned() *Service {
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
 	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, u AutomationHealth, e Notices, n Names, now Clock,
+	opts ...Option,
 ) *Service {
-	return &Service{
+	svc := &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
 		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
 	}
+	for _, opt := range opts {
+		opt(svc)
+	}
+	return svc
 }
 
 // countingDecisions returns a copy of this service that reads decisions to
@@ -202,6 +210,13 @@ func (s *Service) countingDecisions() *Service {
 // must not read as a clear day.
 func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) {
 	asOf := s.now().UTC()
+	// The day's end, resolved ONCE for the whole assembly: every due-dated lane
+	// is judged against the same instant, and the installation is asked for its
+	// timezone once rather than per lane.
+	until, err := s.endOfDay(ctx, asOf)
+	if err != nil {
+		return crmcontracts.Attention{}, err
+	}
 	// Every lane starts as an empty slice, never nil. The contract declares
 	// them as arrays, and a withheld lane leaves its field unset — which
 	// serialises as `null` and breaks a generated client that iterates what the
@@ -238,7 +253,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return crmcontracts.Attention{}, err
 	}
 
-	planned, err := s.planned(ctx, asOf, s.taskScope)
+	planned, err := s.planned(ctx, asOf, until, s.taskScope)
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = len(planned)
@@ -249,7 +264,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 
 	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
 	// shape they share; what differs is the reader and the drawing.
-	for _, lane := range s.optionalLanes(ctx, asOf, &out) {
+	for _, lane := range s.optionalLanes(ctx, asOf, until, &out) {
 		omitted, err = lane.collect(omitted)
 		if err != nil {
 			return crmcontracts.Attention{}, err
@@ -388,15 +403,10 @@ func interleave(first, second []crmcontracts.AttentionItem, limit int) []crmcont
 	return out
 }
 
-// endOfDay is the boundary both due-dated lanes stop at, so a promise and a
-// task falling on the same afternoon are judged against the same instant.
-func endOfDay(asOf time.Time) time.Time {
-	return asOf.Truncate(24 * time.Hour).Add(24 * time.Hour)
-}
-
-// planned is today's agreed work, overdue first.
-func (s *Service) planned(ctx context.Context, asOf time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
-	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, scope, s.taskOwner)
+// planned is today's agreed work, overdue first. The bound is the day's end,
+// resolved once by Assemble so every due-dated lane judges the same afternoon.
+func (s *Service) planned(ctx context.Context, asOf, until time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
+	open, err := s.tasks.OpenForViewer(ctx, until, plannedCap, scope, s.taskOwner)
 	if err != nil {
 		return nil, err
 	}

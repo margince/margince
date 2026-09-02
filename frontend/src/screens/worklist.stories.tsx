@@ -71,6 +71,15 @@ export const AFullDay: Story = {
       summary: { urgent: 1, due: 2, lower_priority: 3, total: 5 },
       sources_unavailable: [],
       reach: [],
+      // A full day: money drifting, buyers waiting, a decision pile.
+      readings: {
+        revenue_at_risk_minor: 384_500_00,
+        revenue_currency: "EUR",
+        buyer_replies: 14,
+        prospecting: 3,
+        review: 27,
+        more_available: false,
+      },
       // More work than the page carries, which is the ordinary case and the one
       // these figures exist for: four decisions sit behind the single row drawn.
       counts: [
@@ -176,6 +185,15 @@ export const NothingWaiting: Story = {
       summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
       sources_unavailable: [],
       reach: [],
+      // Nothing waiting: every figure honestly zero, and the money priced.
+      readings: {
+        revenue_at_risk_minor: 0,
+        revenue_currency: "EUR",
+        buyer_replies: 0,
+        prospecting: 0,
+        review: 0,
+        more_available: false,
+      },
       // A genuinely clear day: nothing read, nothing counted, nothing hidden.
       counts: [],
       queue: [],
@@ -200,6 +218,15 @@ export const PartlyUnread: Story = {
       sources_unavailable: [{ source: "capture_health", reason: "failed" }],
       queue: [],
       reach: [],
+      // Partly unread: the figures are floors, so the strip says so.
+      readings: {
+        revenue_at_risk_minor: 42_000_00,
+        revenue_currency: "EUR",
+        buyer_replies: 2,
+        prospecting: 1,
+        review: 5,
+        more_available: true,
+      },
       // Nothing counted, because the source that would have filled the day is
       // the one that could not be read. The warning says so; the counts do not
       // pretend otherwise.
@@ -228,6 +255,14 @@ export const ALeadsDay: Story = {
       summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
       sources_unavailable: [],
       reach: [],
+      // A leads day: prospecting carries it, and nothing at risk could be priced.
+      readings: {
+        revenue_at_risk_minor: null,
+        buyer_replies: 1,
+        prospecting: 9,
+        review: 0,
+        more_available: false,
+      },
       counts: [
         { category: "tasks", considered: 1, shown: 1, more_available: false },
       ],
@@ -268,6 +303,15 @@ export const ATeamBiggerThanTheBoardCanCount: Story = {
         summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
         sources_unavailable: [],
         reach: [],
+        // A team bigger than the board can count: every figure a floor.
+        readings: {
+          revenue_at_risk_minor: 1_250_000_00,
+          revenue_currency: "EUR",
+          buyer_replies: 61,
+          prospecting: 24,
+          review: 140,
+          more_available: true,
+        },
         counts: [],
         queue: [],
       },

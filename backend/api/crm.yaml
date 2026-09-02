@@ -29093,8 +29093,12 @@ components:
       required: [id, name]
       properties:
         id: { type: string, format: uuid }
-        name: { type: string }
-        color: { type: [string, 'null'] }
+        name: { type: string, maxLength: 64 }
+        # The palette the design system draws, closed on purpose: a tag is a
+        # shared word, and a colour a reader cannot tell from another one is
+        # not a distinction. Mirrors the tag_color_check constraint.
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -29103,8 +29107,12 @@ components:
       type: object
       required: [name]
       properties:
-        name: { type: string }
-        color: { type: [string, 'null'] }
+        # Bounded because the server bounds it: leading and inner whitespace is
+        # collapsed before the length is measured, so a name that fits once
+        # normalized is accepted even when it was typed longer.
+        name: { type: string, maxLength: 64 }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
 
     Taggable:
       type: object
@@ -34924,7 +34932,7 @@ components:
         does, widened: a source the caller may not read is named as `withheld`, and one
         that failed to answer is named as `failed`. Both keep the summary from claiming a
         clear day it did not actually see.
-      required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts]
+      required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts, readings]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
         scope:
@@ -34983,6 +34991,7 @@ components:
             pill counts, and what lets the page say how much it is not showing. Counted
             before any narrowing, so a filtered page still reports the categories it is
             not drawing.
+        readings: { $ref: '#/components/schemas/WorklistReadings' }
         bands:
           type: array
           items: { $ref: '#/components/schemas/WorklistBand' }
@@ -35175,6 +35184,86 @@ components:
             the client can say WHY a deal ranked where it did. Null when the pipeline has
             no open deals to take a median of.
         base_currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$', description: 'The currency every expected-revenue figure here is converted to.' }
+
+    WorklistReadings:
+      type: object
+      description: |
+        The day's four OUTCOME figures, for the strip above the queue: what money is
+        drifting, who is waiting on an answer, how much new business is in hand, and how
+        much routine work is queued behind a decision.
+
+        These are not the filter pills. `counts` says how many items of a kind the queue
+        holds; these say what those items MEAN for the day, which is why one of them is a
+        sum of money rather than a tally. Both are on the page because a rep asks two
+        different questions — "what is there" and "what is at stake".
+
+        Every figure describes the same set `counts.considered` describes: what this read
+        weighed AFTER the scope narrowing and BEFORE the category filter, the fold and the
+        page cut. That is the only set for which the numbers are stable — computed over
+        the page, the strip would shrink as a reader walked the queue and read as work
+        disappearing; computed after the filter, opening a pill would empty the other
+        three.
+
+        `more_available` carries the same honesty `WorklistCount` carries, for the same
+        reason: a source read to its work bound makes every figure here a FLOOR rather
+        than a total, and a strip stating "3 buyers waiting" over a scan that stopped
+        early tells a rep the opposite of the truth.
+      required: [revenue_at_risk_minor, buyer_replies, prospecting, review, more_available]
+      properties:
+        revenue_at_risk_minor:
+          type: [integer, 'null']
+          format: int64
+          description: |
+            What the drifting deals are worth, summed over the deals this read PRICED, in
+            the currency `revenue_currency` names.
+
+            Null when no deal at risk could be priced — no amount recorded, or no stored
+            rate for its currency. Null is not zero: zero says the pipeline is safe, and
+            absence says nobody can tell. A deal the estate cannot price is left OUT of
+            the sum rather than counted as nothing, so a partly priced day reports what it
+            could price and says so through `revenue_currency`.
+
+            It is a FLOOR on what is drifting, never a total, and two things put work
+            outside it. A deal nobody could price is one. The other is that only the
+            at-risk lane goes through the currency conversion, so a deal reaching the page
+            from the overnight brief draws an amount on its own card and adds nothing
+            here. Both are why `more_available` matters: read this figure as "at least
+            this much", and read the `deals_at_risk` entry in `counts` for how many deals
+            stand behind it.
+        revenue_currency:
+          type: [string, 'null']
+          pattern: '^[A-Z]{3}$'
+          description: |
+            The currency `revenue_at_risk_minor` is stated in — the installation's base
+            currency, once the amounts went through the conversion seam.
+
+            Null when they did not, which makes the sum a total of raw minor units in no
+            one currency. A client must not format a figure whose units it cannot name:
+            with this absent the amount is not money yet, and drawing it as money is the
+            error the conversion seam exists to prevent.
+        buyer_replies:
+          type: integer
+          minimum: 0
+          description: 'How many customers have written and are waiting on an answer.'
+        prospecting:
+          type: integer
+          minimum: 0
+          description: 'How much new business is in hand and owed a first response.'
+        review:
+          type: integer
+          minimum: 0
+          description: |
+            How much routine work is queued behind a decision. Counted before the fold, so
+            a hundred alike approvals read as a hundred here even where the queue draws
+            them as one row — the strip says how much work there is, and the queue says
+            how much reading it costs.
+        more_available:
+          type: boolean
+          description: |
+            True when any source behind any figure here was read to its work bound, so
+            every number above is a floor. Set once for the strip rather than per reading:
+            the four are read as one row, and a reader who cannot trust one of them cannot
+            trust the row.
 
     WorklistItem:
       type: object

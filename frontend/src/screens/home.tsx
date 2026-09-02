@@ -11,6 +11,8 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
+import { PlanSection } from "./brief.plan";
+import { TeamWeeklyPanel } from "./brief.teamweekly";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
 import { DecisionsSection } from "./home.decisions";
@@ -32,6 +34,7 @@ import {
 } from "./home.queries";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
+import { HomeTeamBoard } from "./home.teamboard";
 import { TodaySection } from "./home.today";
 import { WeeklySection } from "./home.weekly";
 import { useWorklist } from "./worklist.queries";
@@ -187,6 +190,7 @@ function HomeWork({
   brief,
   deals,
   briefState,
+  teamOffered,
   onAlreadyDecided,
 }: Readonly<{
   items: readonly DecisionDeckItem[];
@@ -195,6 +199,9 @@ function HomeWork({
   brief: MorningBrief | null;
   deals: readonly Deal[];
   briefState: SectionState;
+  // Whether the reader's scope reaches a team, off the worklist read the page
+  // already makes. The same gate the team BOARD uses, so one tier decides both.
+  teamOffered: boolean;
   onAlreadyDecided: () => void;
 }>) {
   const decisions = (
@@ -225,9 +232,16 @@ function HomeWork({
   // Monday, after the work that is waiting on them today. Ordering it above
   // either of those would put last week ahead of this morning.
   const lastWeek = <WeeklySection key="weekly" />;
+  // The team's frozen week, on the same tier the team BOARD is offered on:
+  // read off scope_options so the control and the refusal cannot disagree.
+  const teamWeek = <TeamWeeklyPanel key="team-weekly" offered={teamOffered} />;
+  // The plan goes UNDER the retrospective, never above it. A rep decides what
+  // next week holds by reading what this one did, so the frozen past leads and
+  // the live future follows.
+  const nextWeek = <PlanSection key="plan" />;
   return items.length > 0
-    ? [decisions, today, lastWeek]
-    : [today, decisions, lastWeek];
+    ? [decisions, today, lastWeek, teamWeek, nextWeek]
+    : [today, decisions, lastWeek, teamWeek, nextWeek];
 }
 
 /**
@@ -365,6 +379,12 @@ export function HomeScreen() {
       {/* Before the readings, because a strip of numbers a reader cannot
           trust is worse than one they can qualify. */}
       {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
+      {/* Who on the team is carrying what — a lead's first question, on the
+          page they open first. Behind its own disclosure, so their own day
+          still leads: it is the SECOND thing they came for. */}
+      <HomeTeamBoard
+        offered={worklistQuery.data?.scope_options?.includes("team") ?? false}
+      />
       <HomeReadingsStrip
         decisions={decisionReadings}
         open={openReading}
@@ -384,6 +404,13 @@ export function HomeScreen() {
             brief={brief}
             deals={deals}
             briefState={readState(briefQuery)}
+            // The optional chain reaches the FIELD, not just the payload: a
+            // worklist answer that carried no scope_options crashed the whole
+            // page, and a page that throws is a worse answer than one that
+            // simply does not offer the team view.
+            teamOffered={
+              worklistQuery.data?.scope_options?.includes("team") ?? false
+            }
             onAlreadyDecided={onAlreadyDecided}
           />
         }

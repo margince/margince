@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package agentquota
+package agentvolume
 
 // Which counter a call belongs to, what each one costs when it is crossed, and
 // the thresholds themselves.
@@ -12,12 +12,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// Counter is one per-Passport quota. The string value is part of the Redis key,
+// Counter is one per-Passport volume budget. The string value is part of the Redis key,
 // so it is the name the counter has had since it was written and not a display
 // label to be improved.
 type Counter string
 
-// The five quotas of api-rate-limits-and-abuse §2.2.
+// The five counters of api-rate-limits-and-abuse §2.2.
 const (
 	// Reads counts RECORDS handed to the agent (MCP-SESS-READS).
 	Reads Counter = "reads"
@@ -39,7 +39,7 @@ const (
 // exist to turn bulk activity into a gated, VISIBLE event rather than to end it.
 // Egress is BYO-STEP-3 and is fail-closed on the spec's own reasoning — it is
 // the exfiltration endpoint, and "resuming needs a new approved session". Calls
-// is BYO-STEP-4's suspension, the ceiling under which every other quota sits;
+// is BYO-STEP-4's suspension, the ceiling under which every other volume budget sits;
 // releasing it would release all four at once.
 //
 // Cost is not releasable because it never refuses: there is nothing to release.
@@ -53,7 +53,7 @@ func (c Counter) Releasable() bool {
 // runtime's own budget guardrail, not a refusal on the tool surface.
 func (c Counter) Governed() bool { return c != Cost }
 
-// CounterFor names the quota one tool call is charged against — the DERIVED
+// CounterFor names the volume budget one tool call is charged against — the DERIVED
 // answer, taken once, so the half that refuses and the half that charges cannot
 // disagree.
 //
@@ -66,8 +66,8 @@ func (c Counter) Governed() bool { return c != Cost }
 //
 // EGRESS OUTRANKS WRITES, and the order matters: every egress tool on this
 // surface also mutates (a send writes an activity), so asking "does it write?"
-// first would charge send_email against the 200-call write quota and leave the
-// 20-call egress quota — the tightest one, guarding the exfiltration endpoint —
+// first would charge send_email against the 200-call write volume budget and leave the
+// 20-call egress volume budget — the tightest one, guarding the exfiltration endpoint —
 // permanently unspent.
 func CounterFor(spec mcp.ToolSpec) Counter {
 	switch {

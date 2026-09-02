@@ -72,13 +72,13 @@ func (l optionalLane) collect(
 // began an hour ago cannot be prepared for, and one that ended would be plainly
 // wrong on a lane headed "still ahead".
 func (s *Service) optionalLanes(
-	ctx context.Context, asOf time.Time, out *crmcontracts.Attention,
+	ctx context.Context, asOf, until time.Time, out *crmcontracts.Attention,
 ) []optionalLane {
 	lanes := []optionalLane{
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetings.Today(ctx, asOf, endOfDay(asOf), plannedCap)
+				booked, err := s.meetings.Today(ctx, asOf, until, plannedCap)
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,
@@ -99,7 +99,7 @@ func (s *Service) optionalLanes(
 		{
 			name: "commitments", bound: s.commitments != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				due, err := s.commitments.DueBy(ctx, endOfDay(asOf), plannedCap)
+				due, err := s.commitments.DueBy(ctx, until, plannedCap)
 				return renderEach(due, func(promise Commitment) crmcontracts.AttentionItem {
 					return commitmentItem(promise, asOf)
 				}), err

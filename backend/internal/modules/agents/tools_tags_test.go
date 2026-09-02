@@ -57,9 +57,16 @@ func (s stubTags) FindTag(_ context.Context, name string) (ids.UUID, bool, error
 	return ids.NewV7(), true, nil
 }
 
-func (s stubTags) EnsureTag(_ context.Context, name string) (ids.UUID, error) {
+// ResolveTag stands in for a governed vocabulary: it answers for a name the
+// workspace already holds and REFUSES anything else. Returning a fresh id for
+// every name — which the stub it replaced did — would let a test claiming
+// "apply_tag never creates" pass against a tool that creates.
+func (s stubTags) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
 	if s.ensured != nil {
 		*s.ensured = name
+	}
+	if name != knownTagName {
+		return ids.UUID{}, errNoSuchTag
 	}
 	return ids.NewV7(), nil
 }
@@ -101,25 +108,44 @@ func TestApplyAndRemoveReachTheSameTaggingBothWays(t *testing.T) {
 	}
 }
 
-// A NAME rather than an id is the capture flow's shape: "add tag: K5
-// Conference 2026" is one act to the person asking. Making them call a create
-// verb first, only to hand its answer straight back, is a second call that
-// exists for the surface's convenience rather than theirs.
-func TestApplyTagTakesANameAndReusesOrCreatesTheWord(t *testing.T) {
-	var ensured string
+// A NAME rather than an id is the capture flow's shape: "add tag: Champion" is
+// one act to the person asking. Making them call a lookup verb first, only to
+// hand its answer straight back, is a second call that exists for the
+// surface's convenience rather than theirs.
+func TestApplyTagTakesANameAndResolvesTheExistingWord(t *testing.T) {
+	var resolved string
 	var applied taggingArgs
-	_, err := (applyTag{tags: stubTags{applied: &applied, ensured: &ensured}}).Handle(
+	_, err := (applyTag{tags: stubTags{applied: &applied, ensured: &resolved}}).Handle(
 		context.Background(),
-		json.RawMessage(`{"tag_name":"K5 Conference 2026","record_type":"organization",`+
+		json.RawMessage(`{"tag_name":"`+knownTagName+`","record_type":"organization",`+
 			`"record_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
 		t.Fatalf("applying by name answered %v, want the tag resolved", err)
 	}
-	if ensured != "K5 Conference 2026" {
-		t.Errorf("the seam was asked to ensure %q, want the name as given", ensured)
+	if resolved != knownTagName {
+		t.Errorf("the seam was asked to resolve %q, want the name as given", resolved)
 	}
 	if applied.TagID.IsZero() {
 		t.Error("the tagging carries no tag id, want the resolved one")
+	}
+}
+
+// The governance rule, asserted where an agent would break it. The vocabulary
+// is Admin and Ops's to extend; a tool that coined a word on a name it did not
+// recognise would hand every agent — and through it every rep — the authority
+// the governance exists to withhold. A misspelling would become a permanent
+// second tag nobody chose.
+func TestApplyTagRefusesAnUnknownNameRatherThanCoiningIt(t *testing.T) {
+	var applied taggingArgs
+	_, err := (applyTag{tags: stubTags{applied: &applied}}).Handle(
+		context.Background(),
+		json.RawMessage(`{"tag_name":"Champoin","record_type":"organization",`+
+			`"record_id":"`+ids.NewV7().String()+`"}`))
+	if err == nil {
+		t.Fatal("a typo'd name was accepted; want a refusal, because accepting it creates a second tag nobody chose")
+	}
+	if !applied.TagID.IsZero() {
+		t.Errorf("a tagging reached the seam as %+v after the name was refused; nothing may be written", applied)
 	}
 }
 
@@ -179,14 +205,22 @@ func (r refusingTaggable) EnsureTaggable(context.Context, string, ids.UUID) erro
 	return errNoSuchRecord
 }
 
-func (r refusingTaggable) EnsureTag(_ context.Context, name string) (ids.UUID, error) {
+func (r refusingTaggable) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
 	if r.ensured != nil {
 		*r.ensured = name
+	}
+	if name != knownTagName {
+		return ids.UUID{}, errNoSuchTag
 	}
 	return ids.NewV7(), nil
 }
 
 var errNoSuchRecord = errors.New("no such record in this workspace")
+
+// knownTagName is the one word these stubs' vocabulary holds.
+const knownTagName = "Champion"
+
+var errNoSuchTag = errors.New("no tag by that name exists, and this tool does not create one")
 
 type noSuchTag struct{ stubTags }
 

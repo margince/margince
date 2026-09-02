@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 59,
-    "tokens": 18954,
+    "tokens": 19010,
     "median_tool_tokens": 275,
-    "mean_tool_tokens": 320
+    "mean_tool_tokens": 321
   },
   "agents": [
     {
@@ -214,6 +214,10 @@
       "tokens": 260
     },
     {
+      "name": "apply_tag",
+      "tokens": 258
+    },
+    {
       "name": "account_coverage",
       "tokens": 252
     },
@@ -246,10 +250,6 @@
       "tokens": 213
     },
     {
-      "name": "apply_tag",
-      "tokens": 211
-    },
-    {
       "name": "who_knows",
       "tokens": 201
     },
@@ -258,12 +258,12 @@
       "tokens": 198
     },
     {
-      "name": "intro_path_to",
-      "tokens": 197
+      "name": "remove_tag",
+      "tokens": 198
     },
     {
-      "name": "remove_tag",
-      "tokens": 190
+      "name": "intro_path_to",
+      "tokens": 197
     },
     {
       "name": "list_channel_providers",

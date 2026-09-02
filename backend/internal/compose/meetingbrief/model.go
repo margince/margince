@@ -229,7 +229,7 @@ func ParseBriefSections(reply string, in Input) ([]Section, error) {
 	}
 	known := knownRecords(in)
 	byKind := map[crmcontracts.MeetingBriefSectionKind][]Sentence{}
-	// The quota is on the BRIEF, not on one section: a model returning two
+	// The volume budget is on the BRIEF, not on one section: a model returning two
 	// talking_points sections would otherwise be handed the allowance twice.
 	recommendations := 0
 	for _, section := range parsed.Sections {
@@ -277,7 +277,7 @@ func keptSentence(
 			Evidence{EntityType: cited.EntityType, EntityID: cited.EntityID})
 	}
 	// Grounding decides FIRST. Counting an ungrounded recommendation would let
-	// one malformed claim spend the quota and suppress the valid advice behind
+	// one malformed claim spend the volume budget and suppress the valid advice behind
 	// it — the reader loses the advice and is told nothing about why.
 	if !claims.Grounded(sentence, known) {
 		return Sentence{}, false

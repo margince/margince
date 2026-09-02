@@ -42,7 +42,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   coldstart: "approval.kind.coldstart",
   // Not a change to a record — a question about a credential's volume, which is
   // why its label says what a yes DOES rather than naming an object.
-  quota_release: "approval.kind.quota_release",
+  volume_release: "approval.kind.volume_release",
   enrich: "approval.kind.enrich",
   deepread: "approval.kind.deepread",
   linkedin_match: "approval.kind.linkedin_match",
@@ -432,7 +432,7 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     ],
     // The agent hit a ceiling and is asking for room. What it was doing and how
     // much it has used are the question; the passport id is not.
-    quota_release: [
+    volume_release: [
       { field: "tool", label: "approval.field.tool", as: "text" },
       { field: "observed", label: "approval.field.observed", as: "text" },
       { field: "limit", label: "approval.field.limit", as: "text" },
