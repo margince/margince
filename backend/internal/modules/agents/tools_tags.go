@@ -51,6 +51,27 @@ type TagDetail struct {
 	Deals     int `json:"deals"`
 }
 
+// RecordTagsResult is what one record carries. Withheld says the caller may
+// read the record and not the vocabulary, which is not the same as a record
+// with no tags — a model told "no tags" would report a fact nobody established.
+type RecordTagsResult struct {
+	Tags     []RecordTagOnRecord `json:"tags"`
+	Withheld bool                `json:"withheld,omitempty"`
+}
+
+// RecordTagOnRecord is one tag as it sits on one record.
+type RecordTagOnRecord struct {
+	TagID    ids.UUID `json:"tag_id"`
+	Name     string   `json:"name"`
+	Archived bool     `json:"archived,omitempty"`
+	// AssignedBy names the person behind the assignment where the row records
+	// one; AssignedByKind says whether the hand was a human's, an agent's or
+	// an import's.
+	AssignedBy     string `json:"assigned_by,omitempty"`
+	AssignedByKind string `json:"assigned_by_kind,omitempty"`
+	AssignedAt     string `json:"assigned_at"`
+}
+
 // Tags is the seam onto the collections module's tag paths.
 type Tags interface {
 	// ListTags answers the workspace's vocabulary. Read before applying:
@@ -59,6 +80,12 @@ type Tags interface {
 	ListTags(ctx context.Context, includeArchived bool) (tags []Tag, truncated bool, err error)
 	// GetTag answers one word with how much of the workspace carries it.
 	GetTag(ctx context.Context, tagID ids.UUID) (TagDetail, error)
+	// RecordTags answers the tags on one record, with who applied each.
+	RecordTags(ctx context.Context, entityType string, entityID ids.UUID) (RecordTagsResult, error)
+	// RecordTagTypes answers the record types that read serves — the store's
+	// own list, so the tool's schema advertises exactly what it will accept
+	// rather than a copy kept here that can drift from it.
+	RecordTagTypes() []string
 	// EnsureTaggable refuses a record the caller cannot tag, before a tag is
 	// created for it. Same check ApplyTag makes at the end of its own
 	// transaction; asked earlier so a failed apply leaves nothing behind.
@@ -88,6 +115,7 @@ func RegisterTagTools(r *Registry, tags Tags) {
 	}
 	r.Register(listTags{tags: tags})
 	r.Register(getTag{tags: tags})
+	r.Register(getRecordTags{tags: tags, types: tags.RecordTagTypes()})
 	r.Register(applyTag{tags: tags})
 	r.Register(removeTag{tags: tags})
 }
@@ -177,6 +205,48 @@ func (t getTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage
 		return nil, err
 	}
 	return json.Marshal(detail)
+}
+
+// --- get_record_tags (🟢 read) ---
+
+type getRecordTags struct {
+	tags  Tags
+	types []string
+}
+
+func (t getRecordTags) Spec() mcp.ToolSpec {
+	quoted := make([]string, 0, len(t.types))
+	for _, rt := range t.types {
+		quoted = append(quoted, `"`+rt+`"`)
+	}
+	return mcp.ToolSpec{
+		Name: "get_record_tags", Title: "Get a record's tags", Version: toolVersionV1,
+		Description:   getRecordTagsCopy.render(),
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "getRecordTags",
+		InputSchema: schema(`{"type":"object","required":["record_type","record_id"],"properties":{
+			"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},
+			"record_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
+		OutputSchema: schemaFor[RecordTagsResult](),
+	}
+}
+
+func (t getRecordTags) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args struct {
+		RecordType string   `json:"record_type"`
+		RecordID   ids.UUID `json:"record_id"`
+	}
+	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	result, err := t.tags.RecordTags(ctx, args.RecordType, args.RecordID)
+	if err != nil {
+		return nil, err
+	}
+	if result.Tags == nil {
+		result.Tags = []RecordTagOnRecord{}
+	}
+	return json.Marshal(result)
 }
 
 // --- apply_tag / remove_tag (🟢 write) ---

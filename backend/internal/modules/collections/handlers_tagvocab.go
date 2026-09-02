@@ -79,6 +79,67 @@ func (h Handlers) MergeTags(w http.ResponseWriter, r *http.Request, id crmcontra
 	})
 }
 
+// GetRecordTags serves the tags on one record, with the assignment behind each.
+//
+// entity_type arrives as a plain string: the generated wrapper binds a path
+// enum without calling the Valid() it also generates, so the store's own check
+// is what refuses a type this route does not serve.
+func (h Handlers) GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityID openapi_types.UUID) {
+	tags, err := h.store.RecordTagsFor(r.Context(), entityType, ids.UUID(entityID))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireRecordTags(tags))
+}
+
+// wireRecordTags renders the read. `data` is always an array, never null: a
+// client that has to special-case a missing list will eventually forget to.
+func wireRecordTags(in RecordTags) crmcontracts.RecordTagsResponse {
+	out := crmcontracts.RecordTagsResponse{
+		Data:     make([]crmcontracts.RecordTag, 0, len(in.Data)),
+		Withheld: in.Withheld,
+	}
+	for _, t := range in.Data {
+		out.Data = append(out.Data, wireRecordTag(t))
+	}
+	return out
+}
+
+func wireRecordTag(t RecordTag) crmcontracts.RecordTag {
+	var color *crmcontracts.RecordTagColor
+	if t.Color != nil {
+		c := crmcontracts.RecordTagColor(*t.Color)
+		color = &c
+	}
+	out := crmcontracts.RecordTag{
+		TagId:       openapi_types.UUID(t.TagID),
+		Name:        t.Name,
+		Color:       color,
+		Description: t.Description,
+		Archived:    t.Archived,
+		AssignedAt:  t.AssignedAt,
+	}
+	// The assigner rides only when the row records one. An assignment written
+	// before the product kept it has no name to give, and inventing one would
+	// put a person's name on a choice they may not have made.
+	if t.AssignedByKind != "" {
+		assigner := crmcontracts.RecordTagAssigner{
+			Kind: crmcontracts.RecordTagAssignerKind(t.AssignedByKind),
+		}
+		if t.AssignedBy != (ids.UUID{}) {
+			id := openapi_types.UUID(t.AssignedBy)
+			assigner.UserId = &id
+		}
+		if t.AssignedByName != "" {
+			name := t.AssignedByName
+			assigner.DisplayName = &name
+		}
+		out.AssignedBy = &assigner
+	}
+	return out
+}
+
 // tagUpdateFrom translates the wire partial into the store's.
 //
 // The store's clearable fields carry two levels of pointer: the outer says
