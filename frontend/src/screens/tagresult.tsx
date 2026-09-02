@@ -9,7 +9,8 @@ import { api } from "../api/client";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { TagPill } from "../design-system/tagpill";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
 import "./tagresult.css";
 
@@ -23,6 +24,7 @@ import "./tagresult.css";
  */
 export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const tag = useQuery({
     queryKey: ["tag", tagID],
     enabled: Boolean(tagID),
@@ -42,14 +44,14 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   }
   if (tag.isError) {
     // A merged-away or deleted tag: the pill that led here outlived the word.
-    return <p className="tagresult-note">{t("tagResult.gone")}</p>;
+    return <p className="wrap tagresult-note">{t("tagResult.gone")}</p>;
   }
 
   const usage = tag.data.usage;
   const total = usage.people + usage.companies + usage.deals;
 
   return (
-    <div className="tagresult">
+    <div className="wrap tagresult">
       <header className="tagresult-head">
         <TagPill
           name={tag.data.name}
@@ -57,7 +59,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
           archived={Boolean(tag.data.archived_at)}
         />
         <span className="t-small">
-          {t("tagResult.totalVisible", { count: String(total) })}
+          {t("tagResult.totalVisible", { count: formatNumber(total, locale) })}
         </span>
       </header>
       {tag.data.description && (
@@ -106,10 +108,12 @@ function ResultGroup({
   href: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const shown = formatNumber(count, locale);
   return (
     <Panel
       title={title}
-      titleAction={<Badge>{String(count)}</Badge>}
+      titleAction={<Badge>{shown}</Badge>}
       footer={
         count > 0 ? (
           <Button
@@ -117,7 +121,7 @@ function ResultGroup({
             variant="ghost"
             onClick={() => (window.location.hash = href.slice(1))}
           >
-            {t("tagResult.viewAll", { count: String(count), kind: title })}
+            {t("tagResult.viewAll", { count: shown, kind: title })}
           </Button>
         ) : undefined
       }
@@ -127,7 +131,7 @@ function ResultGroup({
           <Icon aria-hidden />
           <span>
             {count > 0
-              ? t("tagResult.carry", { count: String(count) })
+              ? t("tagResult.carry", { count: shown })
               : t("tagResult.none")}
           </span>
         </span>

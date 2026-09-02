@@ -54,6 +54,23 @@ afterEach(() => {
 });
 
 describe("the tags panel", () => {
+  // A malformed answer must not take the RECORD PAGE down with it. This one
+  // is what a stub or a server disagreeing with the contract sends, and
+  // reading .slice off the missing list crashed every company screen test
+  // until the default landed.
+  it("survives an answer that carries no list at all", async () => {
+    installFetchStub({
+      [`GET /records/organization/${ORG}/tags`]: () => jsonResponse({}),
+    });
+    render(
+      <StoryProviders>
+        <TagsPanel entityType="organization" entityID={ORG} canEdit />
+      </StoryProviders>,
+    );
+    // The panel draws its empty state rather than throwing.
+    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
+  });
+
   it("draws the words a record carries", async () => {
     mount([KEY_ACCOUNT]);
     expect(await screen.findByText("Key Account")).toBeInTheDocument();

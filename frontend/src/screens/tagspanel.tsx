@@ -8,7 +8,7 @@ import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
 import { TagPill } from "../design-system/tagpill";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { RecordTag, TaggableType } from "./tags.queries";
@@ -37,6 +37,7 @@ export function TagsPanel({
   canEdit: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const read = useRecordTags(entityType, entityID);
 
@@ -57,7 +58,11 @@ export function TagsPanel({
     );
   }
 
-  const tags = read.data.data;
+  // Default the list rather than trusting it. The contract makes `data`
+  // required, so an answer without one is a server or a stub that disagrees
+  // with the contract — and reading `.slice` off undefined takes the whole
+  // RECORD PAGE down, not just this panel. A tag strip is not worth that.
+  const tags = read.data.data ?? [];
   const visible = expanded ? tags : tags.slice(0, VISIBLE_TAGS);
   const hidden = tags.length - visible.length;
 
@@ -85,7 +90,7 @@ export function TagsPanel({
             ))}
             {hidden > 0 && (
               <Button small variant="ghost" onClick={() => setExpanded(true)}>
-                {t("tags.more", { count: String(hidden) })}
+                {t("tags.more", { count: formatNumber(hidden, locale) })}
               </Button>
             )}
             {expanded && tags.length > VISIBLE_TAGS && (
