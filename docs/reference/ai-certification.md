@@ -41,7 +41,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | … best state `partial` | 1 |
 | … best state `stale` | 1 |
 | … `absent` on every binding | 9 |
-| Scenarios in the corpus | 125 |
+| Scenarios in the corpus | 126 |
 | Committed records | 44 |
 | Bindings measured | 9 |
 
@@ -59,7 +59,7 @@ The band columns count the same sites by the verdict each reached.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 18 | 1 | 1 | 240 | 216 | 0.90 | 12 | 1 | 7 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 18 | 1 | 1 | 249 | 225 | 0.90 | 12 | 1 | 7 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 3 | 0 | 0 | 3 | 18 | 18 | 1.00 | 2 | 0 | 1 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 9 | 6 | 0 | 3 | 63 | 59 | 0.94 | 7 | 0 | 2 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 9 | 0.60 | 0 | 0 | 1 |
@@ -689,10 +689,11 @@ Records (4):
 
 Scope a run of it can claim: `single_call`.
 
-Scenarios (2):
+Scenarios (3):
 
 | Scenario | Expects | Case |
 |---|---|---|
+| `customer_story_credits_the_customer_not_the_reader` | `accepted` | [customer_story_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/customer_story_01.yaml) |
 | `impressum_page_company_facts_and_entities` | `accepted` | [basic_02.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_02.yaml) |
 | `services_page_offering_facts` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_01.yaml) |
 
@@ -700,7 +701,7 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 3/3 | `certified` | 15 | 15 | 1.00 | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 6 | 6 | 1.00 | 6 | 0 | 0 | 0 |
 
 ### `site_triage`
