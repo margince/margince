@@ -372,8 +372,12 @@ func replyDraftServedRegister(trace aitasks.Trace) (string, error) {
 		return "", errors.New("compose: the drafter issued no request, so no draft was served")
 	}
 	system := trace.Requests[len(trace.Requests)-1].System
+	// The voice rule is what separates the two variants, and it is asked
+	// FIRST: a voiced call is its site's own prompt PLUS that rule, so a check
+	// ordered the other way would match the site prefix on both and report
+	// every voiced draft as plain.
 	switch {
-	case strings.HasPrefix(system, string(replyDraftVoiceSystem)):
+	case strings.Contains(system, draftvoice.SystemRule):
 		return replyDraftRegisterVoiced, nil
 	case strings.HasPrefix(system, string(replyDraftSystem)):
 		return replyDraftRegisterPlain, nil

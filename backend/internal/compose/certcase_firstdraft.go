@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -83,16 +84,22 @@ func (firstDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 // firstDraftCase is one first-message request ready to be answered.
 type firstDraftCase struct{ data replyActivityData }
 
-// Run drives the production lane — the same completeChecked, correction loop and
-// validators DraftFirstEmail drives — and records every request it issued.
+// Run drives the production lane — the same completeFirstVoiced, correction loop
+// and validators DraftFirstEmail drives — and records every request it issued.
 //
 // The drafter is built with a brain and nothing else because this path does no
 // I/O at all: unlike the reply, there is no activity to read and no voice signal
 // to record, which is the same property that lets the seam take an intent and
 // nothing else.
+//
+// The voice state is the EMPTY one, which certifies the plain variant. That is
+// this site's only certified register today and saying so here is the point: a
+// scenario cannot yet state a profile for a first message, so nothing measures
+// the voiced turn. Certifying the voiced variant needs a fixture that carries a
+// voice artifact, the way the reply site's does.
 func (c *firstDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	recorder := &replyDraftRecorder{completer: completer}
-	_, err := replyDrafter{brain: recorder}.completeChecked(ctx, firstDraftSystem, c.data, nil)
+	_, err := replyDrafter{brain: recorder}.completeFirstVoiced(ctx, c.data, draftvoice.Context{})
 	trace := aitasks.Trace{Requests: recorder.requests}
 	if recorder.failed != nil {
 		return trace, fmt.Errorf("%s: the model call did not complete: %w", firstDraftSite, recorder.failed)
