@@ -631,7 +631,7 @@ func TestAnOffsetPastTheEndEndsTheWalk(t *testing.T) {
 // wherever a cursor is actually minted, and that is worth knowing rather than
 // relying on: a token is minted only when rows remain past the cut, which needs
 // a full `limit` page, and a clamped read has nothing remaining and mints
-// nothing. So the two formulas cannot diverge here — but `reached` is the one
+// nothing. So the two formulas answer alike here — but `reached` is the one
 // that stays right if that ever stops holding, because it reads the ranking in
 // front of it rather than trusting what the caller said about a previous one.
 func TestTheOffsetIsWhereTheCutLandedInThisRanking(t *testing.T) {
