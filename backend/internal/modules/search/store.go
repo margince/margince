@@ -85,10 +85,19 @@ type searchBranch struct {
 	snippet      string
 	activityWalk bool
 	// workspaceWide marks a branch whose rows carry no owner: the tag
-	// vocabulary is one word list the whole workspace shares, so object RBAC
-	// is the only gate and there is no per-row predicate to render. Asking
-	// ScopeClauseFor for one would be an error, not an empty clause.
+	// vocabulary is one word list the whole workspace shares, so a seat that
+	// may read it reads all of it and there is no per-row predicate to
+	// render. Asking ScopeClauseFor for one would be an error rather than an
+	// empty clause, which is why the branch says so rather than passing "".
 	workspaceWide bool
+	// textOnly marks a branch that answers the name search and NOTHING else.
+	// A tag is a word, not a record: it has no fields to plan a structured
+	// query over, no neighbours to walk in the graph, and no prose to embed.
+	// The three surfaces that reason about records therefore skip it, and the
+	// gate that requires a contract binding per searchable entity skips it for
+	// the same reason — deriving a vocabulary for a word would describe a
+	// record that does not exist.
+	textOnly bool
 	// extraWhere narrows DISCOVERY on this branch, beyond archived_at and the
 	// row scope. The by-id graph anchor read (graph.go) deliberately does not
 	// apply it: a record named by id is not being discovered, and the own
@@ -206,8 +215,7 @@ var searchBranches = []searchBranch{
 	//
 	// Archived words are excluded: a retired tag is not in the picker, so a hit
 	// on one leads to a page that cannot be acted on.
-	{entity: "tag", table: "tag", title: "name", snippet: "NULL",
-		workspaceWide: true, extraWhere: "%s.archived_at IS NULL"},
+	{entity: "tag", table: "tag", title: "name", snippet: "NULL", workspaceWide: true, textOnly: true, extraWhere: "%s.archived_at IS NULL"},
 	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true},
 }
 

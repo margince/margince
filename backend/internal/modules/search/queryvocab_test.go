@@ -299,6 +299,11 @@ func TestTheInverseOfADeclaredReferenceIsTraversable(t *testing.T) {
 // error on the first plan that names it.
 func TestEverySearchableEntityHasAContractBinding(t *testing.T) {
 	for _, branch := range searchBranches {
+		// A text-only branch answers the name search and nothing else, so it
+		// has no record vocabulary to derive and needs no binding.
+		if branch.textOnly {
+			continue
+		}
 		if contractRecords[branch.entity] == nil {
 			t.Errorf("searchable entity %q has no contract record binding, so no vocabulary can be derived for it", branch.entity)
 		}
