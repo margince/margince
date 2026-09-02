@@ -175,7 +175,15 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvo
 		// nothing about the request's shape.
 		req.Messages[len(req.Messages)-1].Content += correction
 	}
-	res, err := lane.Complete(ctx, req)
+	// The reading goes down to the lane so a reply this function would refuse
+	// is re-asked WITH the refusal, instead of degrading to the floor with the
+	// model never told what was wrong. It is ParseDraft itself rather than a
+	// schema check beside it: a lane that accepted anything less would spend
+	// the re-ask on a question this parse does not ask.
+	res, err := draftcore.CompleteChecked(ctx, lane, req, func(text string) error {
+		_, refused := ParseDraft(text, in)
+		return refused
+	})
 	if err != nil {
 		return Draft{}, err
 	}

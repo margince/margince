@@ -153,12 +153,7 @@ func (d replyDrafter) completeWith(ctx context.Context, site draftSystem, activi
 		return replyDraft{}, err
 	}
 
-	var resp model.Response
-	if structured, ok := d.brain.(validatedBrain); ok {
-		resp, err = structured.CompleteValidated(ctx, req, replyDraftShapeValid)
-	} else {
-		resp, err = d.brain.Complete(ctx, req)
-	}
+	resp, err := draftcore.CompleteChecked(ctx, d.brain, req, replyDraftShapeValid)
 	if err != nil {
 		return replyDraft{}, err
 	}
