@@ -48,7 +48,12 @@ type Message struct {
 	// machineTouched is the BROADER question — did any machine have a hand in
 	// this? It never drops a message; it only refuses the outbound attestation,
 	// so a responder's reply cannot vouch for an address the owner never chose.
-	machineTouched  bool
+	machineTouched bool
+	// calendarNotice is groupware sending an invitation on a person's behalf.
+	// It implies machineTouched and says something narrower: this message names
+	// an EVENT, so its recipients are attendees rather than people the workspace
+	// corresponded with.
+	calendarNotice  bool
 	listUnsubscribe bool // an RFC 2369 List-Unsubscribe header — transactional-gate corroboration
 	sentByOwner     bool // the PROVIDER attested the owner sent this — set by AttestSentByOwner, never parsed
 	// participants are everyone on To, Cc and Bcc who is neither the mailbox
@@ -118,7 +123,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
-	body, parts, drops := extractText(reader)
+	body, parts, drops, hasCalendarPart := extractText(reader)
 
 	ownerLower := strings.ToLower(strings.TrimSpace(owner))
 	direction := connector.DirectionInbound
@@ -133,6 +138,16 @@ func Parse(raw []byte, owner string) (Message, error) {
 	autoSubmitted, precedence := header.Values("Auto-Submitted"), header.Values("Precedence")
 	autoReply := isAutoReply(autoSubmitted, precedence)
 	machineTouched := isMachineTouched(autoSubmitted, precedence, hasMachineHandledHeader(header))
+	// Groupware speaking for a person is a machine having a hand in the message,
+	// and it is the one shape no RFC 3834 marker covers: an invitation carries
+	// no Auto-Submitted, no List-* pair and no bulk Precedence. Withholding the
+	// attestation here is a DIFFERENT effect from withholding the counterparty
+	// in recordCounterparty — see that function — and each refuses the contact
+	// on its own, so each carries its own test.
+	calendarNotice := calendarNotification(header, hasCalendarPart)
+	if calendarNotice {
+		machineTouched = true
+	}
 
 	return Message{
 		messageID:        strings.TrimSpace(messageID),
@@ -147,8 +162,9 @@ func Parse(raw []byte, owner string) (Message, error) {
 		threadKey:        threadKey(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		autoReply:        autoReply,
 		machineTouched:   machineTouched,
+		calendarNotice:   calendarNotice,
 		listUnsubscribe:  strings.TrimSpace(header.Get("List-Unsubscribe")) != "",
-		participants:     otherParties(toList, ccList, bccList, ownerLower, counterparty),
+		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
 		parts:            parts,
 		partDrops:        drops,
@@ -301,16 +317,10 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			OccurredAt: m.occurredAt,
 			Direction:  m.direction,
 		},
-		Source:     source,
-		CapturedBy: "connector:" + connectorName,
-		Raw:        raw,
-		Counterparty: connector.Counterparty{
-			Email:           strings.ToLower(strings.TrimSpace(m.counterparty)),
-			DisplayName:     m.counterpartyName,
-			Domain:          domainOf(m.counterparty),
-			Direction:       m.direction,
-			ListUnsubscribe: m.listUnsubscribe,
-		}.WithOwnerAttestation(m.sentByOwner),
+		Source:       source,
+		CapturedBy:   "connector:" + connectorName,
+		Raw:          raw,
+		Counterparty: m.recordCounterparty(),
 		ThreadKey:    m.threadKey,
 		Participants: m.participants,
 		Addresses:    m.addresses,
@@ -336,8 +346,9 @@ func domainOf(addr string) string {
 // part exists, so an HTML-only newsletter still yields readable text. Attachment parts are collected on the SAME walk: a MIME reader
 // is single-pass, so a second walk would mean holding or re-parsing the whole
 // message to find files this one already stepped over.
-func extractText(reader *mail.Reader) (string, []Part, []PartDrop) {
+func extractText(reader *mail.Reader) (string, []Part, []PartDrop, bool) {
 	var plain, html string
+	calendar := false
 	files := newCollector()
 	for {
 		if files.exhausted() {
@@ -387,9 +398,15 @@ func extractText(reader *mail.Reader) (string, []Part, []PartDrop) {
 			plain = string(content)
 		case strings.HasPrefix(contentType, "text/html") && html == "":
 			html = string(content)
+		case strings.HasPrefix(contentType, "text/calendar"):
+			// The iCalendar payload of an invitation. It arrives inline and
+			// unnamed, so it reaches no other reader — the collector keeps only
+			// named parts, and the body readers keep plain and html. This walk
+			// is the one place it is visible at all.
+			calendar = true
 		}
 	}
-	return bodyText(plain, html), files.parts, files.drops()
+	return bodyText(plain, html), files.parts, files.drops(), calendar
 }
 
 func bodyText(plain, html string) string {
