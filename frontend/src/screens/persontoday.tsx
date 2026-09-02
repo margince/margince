@@ -106,13 +106,19 @@ export function isLate(rule: PersonMoment["rule"]): boolean {
 
 export function PersonToday({
   moment,
-  firstName,
+  name,
   view,
   onAction,
   onOpenTasks,
 }: Readonly<{
-  moment: PersonMoment;
-  firstName: string;
+  // Absent when the caller lacks a grant the rule needs — the server names the
+  // section in `sections_omitted` — and the page still opens on the call and
+  // the day's work: a reading that is withheld says so where the reading goes,
+  // it does not disappear and leave the reader wondering which shape this
+  // record page has.
+  moment?: PersonMoment;
+  // The record's full name, for the card's head.
+  name: string;
   // The record the thread and the open tasks are read from. The same read the
   // moment arrived on, so the thread cannot disagree with the call above it.
   view: Person360;
@@ -124,6 +130,22 @@ export function PersonToday({
   const t = useT();
   const { locale } = useLocale();
   const taskRows = useOpenTaskRows(view);
+  if (!moment) {
+    return (
+      <>
+        <CallCard
+          name={name}
+          standing={{ label: t("record.notShown"), tone: "unknown" }}
+        >
+          <RecordSpine
+            source={spineSourceOf(view)}
+            commercial={{ next_close_on: view.commercial?.deal?.close_date }}
+          />
+        </CallCard>
+        <TodayPanel onOpenTasks={onOpenTasks}>{taskRows}</TodayPanel>
+      </>
+    );
+  }
   // What the moment rests on, in the shape every claim on a record states it:
   // the label a reader can act on, and the kind of record it was read from.
   // Same disclosure as the account's call, because it is the same promise —
@@ -155,7 +177,7 @@ export function PersonToday({
   return (
     <>
       <CallCard
-        name={firstName}
+        name={name}
         standing={{
           label: t(MOMENT_RULE_LABEL[moment.rule]),
           tone: standingTone(moment.rule),

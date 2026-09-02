@@ -343,6 +343,14 @@
 /* A thread as one row. It is a `PanelRow`, so the hairline and the gutters come
    from there; the column template is the memory's own — date, channel, what it
    said, its standing, the time. */
+/* In the paired half the filter strip does not always fit beside the title.
+   It drops under the title as one row rather than breaking into two ragged
+   rows beside it, and the head grows to hold both. */
+.pe-memory .panel-head {
+  flex-wrap: wrap;
+  padding-block: var(--space-2);
+}
+
 .pe-memory-row {
   display: grid;
   /* The last track is the reply, and it is sized `auto` so a row that offers

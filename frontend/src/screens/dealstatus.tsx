@@ -145,19 +145,30 @@ export function DealStatusCardPanel({
   // goes is the reading claiming to have reached one. The head every written
   // reading carries still names what is being read.
   return (
-    <CallCard name={dealName}>
-      <QueryStates query={status} pendingLines={6}>
-        {status.isSuccess && !status.data?.story ? (
-          // `story` is required on the wire and the server always writes at
-          // least one line, so reaching here means a response that is not the
-          // shape the contract promises. Saying so beats an empty panel, which
-          // reads as a deal nobody has touched.
-          <PanelBody>
-            <p className="t-small">{t("deal360.unreadable")}</p>
-          </PanelBody>
-        ) : null}
-      </QueryStates>
-    </CallCard>
+    <>
+      <CallCard name={dealName}>
+        <QueryStates query={status} pendingLines={6}>
+          {status.isSuccess && !status.data?.story ? (
+            // `story` is required on the wire and the server always writes at
+            // least one line, so reaching here means a response that is not
+            // the shape the contract promises. Saying so beats an empty panel,
+            // which reads as a deal nobody has touched.
+            <PanelBody>
+              <p className="t-small">{t("deal360.unreadable")}</p>
+            </PanelBody>
+          ) : null}
+        </QueryStates>
+      </CallCard>
+      {/* The day's work keeps its place under the call in every state of the
+          read: the page has one shape, and a panel that comes and goes with a
+          request reads as a record that has and then has not any work. What
+          it says follows the read — pending, failed — rather than claiming a
+          quiet day it has not established. */}
+      <TodayPanel
+        state={status.isPending ? "loading" : "failed"}
+        onOpenTasks={() => navigate({ screen: "worklist" })}
+      />
+    </>
   );
 }
 
@@ -217,7 +228,7 @@ function Briefing({
         <SignalStrip signals={coverage.signals} />
         {spine}
       </CallCard>
-      <TodayPanel>
+      <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
         {card.next ? (
           <Move key="next" dealId={dealId} move={card.next} />
         ) : null}

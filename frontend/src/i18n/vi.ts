@@ -2573,7 +2573,8 @@ export const vi = {
   "co.spine.said.met": "{host} đã gặp {who}",
   "co.spine.said.held": "Cuộc họp do {host} chủ trì",
   "co.spine.lastSpoke": "L\u1ea7n cu\u1ed1i trao \u0111\u1ed5i",
-  "co.spine.days": "{count} ng\u00e0y",
+  "co.spine.days_one": "{count} ng\u00e0y",
+  "co.spine.days_other": "{count} ng\u00e0y",
   "co.spine.quietSince": "Im l\u1eb7ng t\u1eeb \u0111\u00f3",
   "co.spine.neverReplied": "H\u1ecd ch\u01b0a bao gi\u1edd h\u1ed3i \u00e2m",
   "co.spine.singleThreaded":
@@ -7655,6 +7656,7 @@ export const vi = {
   "lead.readings.title": "Vị thế của khách hàng tiềm năng này",
   "lead.readings.firstResponse": "Phản hồi đầu tiên",
   "lead.readings.noClock": "chưa đặt mục tiêu phản hồi",
+  "lead.readings.owed": "Ch\u01b0a tr\u1ea3 l\u1eddi",
   "lead.today.answer": "Trả lời {name}",
   "lead.today.answerMeta": "Còn nợ phản hồi đầu tiên",
   "lead.today.nextTask": "Việc tiếp theo",

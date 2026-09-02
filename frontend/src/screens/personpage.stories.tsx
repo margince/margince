@@ -830,9 +830,9 @@ export const LeadMoment: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <PersonToday
+          name="Anna Weber"
           view={populated}
           moment={meetingPrepMoment}
-          firstName="Dana"
           onAction={() => {}}
         />
       </div>
@@ -845,9 +845,9 @@ export const LeadMomentWarning: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <PersonToday
+          name="Anna Weber"
           view={populated}
           moment={goneQuietMoment}
-          firstName="Dana"
           onAction={() => {}}
         />
       </div>
@@ -884,10 +884,10 @@ export const LeadMomentLadder: Story = {
       >
         {REMAINING_MOMENTS.map((moment) => (
           <PersonToday
+            name="Anna Weber"
             view={populated}
             key={moment.claim_key}
             moment={moment}
-            firstName="Dana"
             onAction={() => {}}
           />
         ))}

@@ -137,7 +137,7 @@ function FirstResponseCard({
     return (
       <StatCard
         label={label}
-        value={t("lead.today.answerMeta")}
+        value={t("lead.readings.owed")}
         detail={t("lead.readings.noClock")}
       />
     );

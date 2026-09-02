@@ -414,15 +414,13 @@ export function PersonPageV2({
                 reads. What was said lately and what is owed are the pair,
                 because the moment above is argued from exactly those two. */}
             <RecordReading>
-              {view.data.moment && (
-                <PersonToday
-                  moment={view.data.moment}
-                  firstName={firstName}
-                  view={view.data}
-                  onAction={runAction}
-                  onOpenTasks={() => navigate({ screen: "worklist" })}
-                />
-              )}
+              <PersonToday
+                moment={view.data.moment}
+                name={person.full_name}
+                view={view.data}
+                onAction={runAction}
+                onOpenTasks={() => navigate({ screen: "worklist" })}
+              />
               <RecordReadingPair>
                 <PersonMemory view={view.data} />
                 <PersonCommitmentsCard view={view.data} firstName={firstName} />

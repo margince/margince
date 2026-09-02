@@ -1441,7 +1441,9 @@ function LeadOverviewPane({
           activities={activities}
           hasMore={activitiesHaveMore}
         />
-        <TodayPanel>{leadTodoRows(lead, t, locale)}</TodayPanel>
+        <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
+          {leadTodoRows(lead, t, locale)}
+        </TodayPanel>
         <RecordReadingPair>
           <LeadScoreCard
             lead={lead}

@@ -352,7 +352,9 @@ function silence(view: SpineSource, ctx: Ctx): Stop | undefined {
   return {
     key: "silence",
     tone: "gap",
-    when: ctx.t("co.spine.days", { count: formatNumber(days, ctx.locale) }),
+    when: translatePlural(ctx.locale, "co.spine.days", days, {
+      count: formatNumber(days, ctx.locale),
+    }),
     title: everReplied
       ? ctx.t("co.spine.quietSince")
       : ctx.t("co.spine.neverReplied"),

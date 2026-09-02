@@ -72,9 +72,13 @@
 /* The reference sections, side by side. Half the measure each, because a
    reader consults them rather than reads them through; one column as soon as
    two would not fit, since a list squeezed to nothing is worse than a fold. */
+/* Two consulted sections side by side wherever the column gives each 24rem: a
+   1440px window with the context panel open leaves the record column about
+   52rem, and the earlier 27rem floor stacked the pair on exactly the screen
+   the design pairs them on. Narrower than that they fold into one column. */
 .co-reading-pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 27rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
   /* The page's own rhythm in both directions. Once these two fold into one
      column the gap between them is a gap between stacked cards like any other,
      and 8px there was the same card 8px from its neighbour on a page that puts
