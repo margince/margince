@@ -188,13 +188,13 @@
       "model": "gemini-3.1-flash-lite",
       "env_class": "eu_hosted",
       "status": "current",
-      "band": "not_supported",
+      "band": "certified",
       "scope": "single_call",
       "runs": 39,
-      "passed": 33,
+      "passed": 39,
       "measured_scenarios": 13,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T00:57:59Z"
+      "ran_at": "2026-09-02T05:39:12Z"
     },
     {
       "task": "capture_counterparty_verdict",
@@ -236,10 +236,10 @@
       "band": "not_supported",
       "scope": "single_call",
       "runs": 39,
-      "passed": 30,
+      "passed": 34,
       "measured_scenarios": 13,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-01T19:43:53Z"
+      "ran_at": "2026-09-02T05:46:30Z"
     },
     {
       "task": "cert_judge",
@@ -299,7 +299,7 @@
       "passed": 15,
       "measured_scenarios": 5,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:07:59Z"
+      "ran_at": "2026-09-02T05:47:54Z"
     },
     {
       "task": "cold_start",
@@ -338,13 +338,13 @@
       "model": "openai/gpt-oss-120b",
       "env_class": "eu_hosted",
       "status": "current",
-      "band": "supported_degraded",
+      "band": "not_supported",
       "scope": "single_call",
       "runs": 15,
-      "passed": 14,
+      "passed": 9,
       "measured_scenarios": 5,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-01T18:19:56Z"
+      "ran_at": "2026-09-02T05:53:14Z"
     },
     {
       "task": "cold_start",
@@ -352,14 +352,14 @@
       "provider": "gemini",
       "model": "gemini-3.1-flash-lite",
       "env_class": "eu_hosted",
-      "status": "current",
-      "band": "supported_degraded",
+      "status": "stale",
+      "band": "certified",
       "scope": "single_call",
       "runs": 3,
       "passed": 3,
-      "measured_scenarios": 1,
+      "measured_scenarios": 0,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:07:59Z"
+      "ran_at": "2026-09-02T05:47:54Z"
     },
     {
       "task": "cold_start",
@@ -397,14 +397,14 @@
       "provider": "openai_compatible",
       "model": "openai/gpt-oss-120b",
       "env_class": "eu_hosted",
-      "status": "current",
+      "status": "stale",
       "band": "certified",
       "scope": "single_call",
       "runs": 3,
       "passed": 3,
-      "measured_scenarios": 1,
+      "measured_scenarios": 0,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-01T18:19:56Z"
+      "ran_at": "2026-09-02T05:53:14Z"
     },
     {
       "task": "cold_start",
@@ -419,7 +419,7 @@
       "passed": 3,
       "measured_scenarios": 1,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:07:59Z"
+      "ran_at": "2026-09-02T05:47:54Z"
     },
     {
       "task": "cold_start",
@@ -464,7 +464,7 @@
       "passed": 3,
       "measured_scenarios": 1,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-01T18:19:56Z"
+      "ran_at": "2026-09-02T05:53:14Z"
     },
     {
       "task": "cold_start",
@@ -472,14 +472,14 @@
       "provider": "gemini",
       "model": "gemini-3.1-flash-lite",
       "env_class": "eu_hosted",
-      "status": "current",
+      "status": "stale",
       "band": "not_supported",
       "scope": "single_call",
       "runs": 6,
       "passed": 3,
-      "measured_scenarios": 2,
+      "measured_scenarios": 0,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:07:59Z"
+      "ran_at": "2026-09-02T05:47:54Z"
     },
     {
       "task": "cold_start",
@@ -517,14 +517,14 @@
       "provider": "openai_compatible",
       "model": "openai/gpt-oss-120b",
       "env_class": "eu_hosted",
-      "status": "current",
+      "status": "stale",
       "band": "not_supported",
       "scope": "single_call",
       "runs": 6,
-      "passed": 4,
-      "measured_scenarios": 2,
+      "passed": 3,
+      "measured_scenarios": 0,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-01T18:19:56Z"
+      "ran_at": "2026-09-02T05:53:14Z"
     },
     {
       "task": "corpus_ask",
@@ -582,7 +582,7 @@
       "passed": 3,
       "measured_scenarios": 1,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:10:51Z"
+      "ran_at": "2026-09-02T05:54:55Z"
     },
     {
       "task": "draft_reply",
@@ -613,6 +613,21 @@
       "measured_scenarios": 0,
       "pending_scenarios": 0,
       "ran_at": "2026-08-12T09:31:09Z"
+    },
+    {
+      "task": "draft_reply",
+      "site": "account",
+      "provider": "openai_compatible",
+      "model": "openai/gpt-oss-120b",
+      "env_class": "eu_hosted",
+      "status": "current",
+      "band": "certified",
+      "scope": "full_invocation",
+      "runs": 3,
+      "passed": 3,
+      "measured_scenarios": 1,
+      "pending_scenarios": 0,
+      "ran_at": "2026-09-02T06:05:17Z"
     },
     {
       "task": "draft_reply",
@@ -627,7 +642,22 @@
       "passed": 3,
       "measured_scenarios": 1,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:10:51Z"
+      "ran_at": "2026-09-02T05:54:55Z"
+    },
+    {
+      "task": "draft_reply",
+      "site": "first",
+      "provider": "openai_compatible",
+      "model": "openai/gpt-oss-120b",
+      "env_class": "eu_hosted",
+      "status": "current",
+      "band": "not_supported",
+      "scope": "full_invocation",
+      "runs": 3,
+      "passed": 3,
+      "measured_scenarios": 1,
+      "pending_scenarios": 0,
+      "ran_at": "2026-09-02T06:05:17Z"
     },
     {
       "task": "draft_reply",
@@ -639,10 +669,25 @@
       "band": "not_supported",
       "scope": "full_invocation",
       "runs": 6,
-      "passed": 0,
+      "passed": 6,
       "measured_scenarios": 2,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:10:51Z"
+      "ran_at": "2026-09-02T05:54:55Z"
+    },
+    {
+      "task": "draft_reply",
+      "site": "intro",
+      "provider": "openai_compatible",
+      "model": "openai/gpt-oss-120b",
+      "env_class": "eu_hosted",
+      "status": "current",
+      "band": "not_supported",
+      "scope": "full_invocation",
+      "runs": 6,
+      "passed": 5,
+      "measured_scenarios": 2,
+      "pending_scenarios": 0,
+      "ran_at": "2026-09-02T06:05:17Z"
     },
     {
       "task": "draft_reply",
@@ -651,13 +696,13 @@
       "model": "gemini-3.1-flash-lite",
       "env_class": "eu_hosted",
       "status": "current",
-      "band": "supported_degraded",
+      "band": "not_supported",
       "scope": "full_invocation",
       "runs": 3,
       "passed": 3,
       "measured_scenarios": 1,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:10:51Z"
+      "ran_at": "2026-09-02T05:54:55Z"
     },
     {
       "task": "draft_reply",
@@ -691,18 +736,33 @@
     },
     {
       "task": "draft_reply",
+      "site": "person",
+      "provider": "openai_compatible",
+      "model": "openai/gpt-oss-120b",
+      "env_class": "eu_hosted",
+      "status": "current",
+      "band": "supported_degraded",
+      "scope": "full_invocation",
+      "runs": 3,
+      "passed": 3,
+      "measured_scenarios": 1,
+      "pending_scenarios": 0,
+      "ran_at": "2026-09-02T06:05:17Z"
+    },
+    {
+      "task": "draft_reply",
       "site": "reply",
       "provider": "gemini",
       "model": "gemini-3.1-flash-lite",
       "env_class": "eu_hosted",
       "status": "current",
-      "band": "supported_degraded",
+      "band": "certified",
       "scope": "full_invocation",
       "runs": 12,
       "passed": 12,
       "measured_scenarios": 4,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:10:51Z"
+      "ran_at": "2026-09-02T05:54:55Z"
     },
     {
       "task": "draft_reply",
@@ -763,6 +823,21 @@
       "measured_scenarios": 0,
       "pending_scenarios": 0,
       "ran_at": "2026-07-31T03:57:59Z"
+    },
+    {
+      "task": "draft_reply",
+      "site": "reply",
+      "provider": "openai_compatible",
+      "model": "openai/gpt-oss-120b",
+      "env_class": "eu_hosted",
+      "status": "current",
+      "band": "not_supported",
+      "scope": "full_invocation",
+      "runs": 12,
+      "passed": 12,
+      "measured_scenarios": 4,
+      "pending_scenarios": 0,
+      "ran_at": "2026-09-02T06:05:17Z"
     },
     {
       "task": "enrich",
@@ -1177,13 +1252,13 @@
       "model": "gemini-3.1-flash-lite",
       "env_class": "eu_hosted",
       "status": "current",
-      "band": "supported_degraded",
+      "band": "certified",
       "scope": "full_invocation",
       "runs": 3,
-      "passed": 2,
+      "passed": 3,
       "measured_scenarios": 1,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:09:08Z"
+      "ran_at": "2026-09-02T04:51:11Z"
     },
     {
       "task": "voice_build",
@@ -1217,6 +1292,21 @@
     },
     {
       "task": "voice_build",
+      "site": "derive",
+      "provider": "openai_compatible",
+      "model": "openai/gpt-oss-120b",
+      "env_class": "eu_hosted",
+      "status": "current",
+      "band": "supported_degraded",
+      "scope": "full_invocation",
+      "runs": 3,
+      "passed": 2,
+      "measured_scenarios": 1,
+      "pending_scenarios": 0,
+      "ran_at": "2026-09-02T05:14:12Z"
+    },
+    {
+      "task": "voice_build",
       "site": "eval_draft",
       "provider": "gemini",
       "model": "gemini-3.1-flash-lite",
@@ -1228,7 +1318,7 @@
       "passed": 3,
       "measured_scenarios": 1,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:09:08Z"
+      "ran_at": "2026-09-02T04:51:11Z"
     },
     {
       "task": "voice_build",
@@ -1262,6 +1352,21 @@
     },
     {
       "task": "voice_build",
+      "site": "eval_draft",
+      "provider": "openai_compatible",
+      "model": "openai/gpt-oss-120b",
+      "env_class": "eu_hosted",
+      "status": "current",
+      "band": "certified",
+      "scope": "full_invocation",
+      "runs": 3,
+      "passed": 3,
+      "measured_scenarios": 1,
+      "pending_scenarios": 0,
+      "ran_at": "2026-09-02T05:14:12Z"
+    },
+    {
+      "task": "voice_build",
       "site": "eval_scores",
       "provider": "gemini",
       "model": "gemini-3.1-flash-lite",
@@ -1273,7 +1378,7 @@
       "passed": 3,
       "measured_scenarios": 1,
       "pending_scenarios": 0,
-      "ran_at": "2026-09-02T02:09:08Z"
+      "ran_at": "2026-09-02T04:51:11Z"
     },
     {
       "task": "voice_build",
@@ -1304,6 +1409,21 @@
       "measured_scenarios": 0,
       "pending_scenarios": 0,
       "ran_at": "2026-07-31T04:03:57Z"
+    },
+    {
+      "task": "voice_build",
+      "site": "eval_scores",
+      "provider": "openai_compatible",
+      "model": "openai/gpt-oss-120b",
+      "env_class": "eu_hosted",
+      "status": "current",
+      "band": "supported_degraded",
+      "scope": "full_invocation",
+      "runs": 3,
+      "passed": 2,
+      "measured_scenarios": 1,
+      "pending_scenarios": 0,
+      "ran_at": "2026-09-02T05:14:12Z"
     },
     {
       "task": "weekly_review",
