@@ -260,5 +260,7 @@ scripts/deploy/db-bootstrap.sql migration 0015
 scripts/lib-testdb.sh migration 0015
 scripts/test-migration-versions.sh core 0002
 scripts/test-migration-versions.sh core 0003
+scripts/test-migration-versions.sh core 1799999997
+scripts/test-migration-versions.sh core 1799999998
 scripts/test-migration-versions.sh core 1799999999
 scripts/test-migration-versions.sh migration 1799999999

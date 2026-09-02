@@ -40,15 +40,27 @@
 # written for it. Clearing the cache is therefore the whole fix — the findings do
 # not come back with local paths, they go away, because locally they are waived.
 #
-# WHAT THIS DOES NOT CATCH, deliberately: nothing about the cache itself. It
-# neither clears it nor partitions it per worktree. Clearing is destructive to a
-# resource other sessions are using concurrently and belongs to the human who
-# knows what else is running; partitioning (GOLANGCI_LINT_CACHE per checkout)
-# costs every worktree a cold analysis cache forever, to buy back a message this
-# prints for free. This targets the misreading, which is what the time went on.
+# AND the cache is partitioned per checkout, unless the caller has already
+# chosen one: with several worktrees linting concurrently by design, one shared
+# cache is both the stale-path source above and a file two sessions write at
+# once. Each checkout gets its own directory, keyed by its absolute path, under
+# ~/.cache/golangci-lint/ — INSIDE golangci's default Linux cache root
+# deliberately, because ci.yml's "Cache the golangci-lint analysis cache" step
+# saves and restores exactly that directory, and a partition outside it would
+# silently turn every CI lint cold. The cost is one cold analysis per new
+# worktree; the detector below stays armed for a caller who points
+# GOLANGCI_LINT_CACHE somewhere shared anyway. Clearing a stale cache remains
+# the human's call, for the reason it always was: destructive to a resource
+# other sessions may be using.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+
+if [[ -z "${GOLANGCI_LINT_CACHE:-}" ]]; then
+  # cksum, not shasum: POSIX, present everywhere this runs. The basename rides
+  # along so a human listing the cache directory can tell the partitions apart.
+  export GOLANGCI_LINT_CACHE="$HOME/.cache/golangci-lint/$(basename "$root")-$(printf '%s' "$root" | cksum | cut -d' ' -f1)"
+fi
 
 # Prefer the version-pinned install from `make tools` over whatever is on PATH,
 # for the reason backend/Makefile spells out: a Homebrew golangci-lint would
@@ -93,8 +105,21 @@ trap 'rm -f "$log"' EXIT
 # files stay next to the findings they belong to. The stated cost of reading
 # what golangci printed is that it now prints into a pipe, so its `--color auto`
 # resolves to none where a bare terminal run used to be coloured.
+# golangci refuses to start while another instance runs ANYWHERE on the
+# machine — the lock is machine-wide and independent of the cache directory, so
+# with several worktrees gating at once a run died with "parallel golangci-lint
+# is running" (exit 3) even on a private cache (measured 2026-09-01). That lock
+# exists to keep two runners out of one analysis cache, and the partitioning
+# above is what makes waiving it sound: each checkout writes its own cache, so
+# a `run` here has nothing to collide with. Only `run` takes the flag — the
+# other subcommands (cache, version) do not know it.
+parallel_ok=()
+if [[ "${1:-}" == "run" ]]; then
+  parallel_ok=(--allow-parallel-runners)
+fi
+
 set +e
-"$golangci" "$@" 2>&1 | tee "$log"
+"$golangci" "$@" ${parallel_ok[@]+"${parallel_ok[@]}"} 2>&1 | tee "$log"
 status=${PIPESTATUS[0]}
 set -e
 
