@@ -126,6 +126,40 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 	}
 }
 
+// orgLessReviewedCard is the shape margince#3410 refused forever: no ORG
+// line at all, so the card's identity asserts organization: "" while the
+// payload's omitempty dropped the key entirely — staging's containment check
+// refused the mismatch on every attempt, and re-importing failed identically.
+func orgLessReviewedCard() people.VCardEntry {
+	return people.VCardEntry{
+		FullName: "Anna Weber",
+		Emails:   []people.VCardChannel{{Value: reviewedCardEmail, Kind: "work"}},
+	}
+}
+
+func TestACardNamingNoCompanyCanStillBeStaged(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	if _, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
+		FullName: "Anna Weber", Source: "ui",
+		Emails: []people.PersonEmailInput{{Email: existingContactEmail, EmailType: "work", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("seeding the existing contact: %v", err)
+	}
+	results, err := e.People.ImportVCards(ctx, []people.VCardEntry{orgLessReviewedCard()})
+	if err != nil {
+		t.Fatalf("importing the near-match card: %v", err)
+	}
+	if len(results) != 1 || results[0].Outcome != people.VCardNeedsReview {
+		t.Fatalf("import outcome = %+v, want the one needs_review refusal", results)
+	}
+
+	stage := vcardCreateStager(e.Pool)
+	if err := stage(ctx, orgLessReviewedCard(), results[0].PersonID); err != nil {
+		t.Fatalf("staging a card naming no company: %v", err)
+	}
+}
+
 func TestADeclinedVCardReviewIsNotReAsked(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
