@@ -87,7 +87,7 @@ const SITE_READ_STEP = notDisplayed(
  * TOTAL over the contract's kinds, and the compiler is what holds it there: a
  * new kind fails the build until somebody either writes its copy in every
  * locale or says, here, why it is not shown. The second branch exists because
- * every AI task now reports — nineteen of them, most narrating work no rep
+ * every AI task now reports — twenty-seven of them, most narrating work no rep
  * asked to watch — and forcing copy for all of them would have bought 300
  * strings nobody reads and taught the next author that the answer to a new kind
  * is boilerplate.
@@ -335,7 +335,7 @@ function isActivityKind(kind: string): kind is ActivityKind {
  * DERIVED from ACTIVITY_LINE rather than listed, and that is the whole point:
  * the server reports every AI task, and `recent` is bounded at ten. A client
  * that asked for everything and drew three kinds would be handed the newest ten
- * of twenty-three — ten it renders nothing for — and the rail would go blank on
+ * of twenty-seven — ten it renders nothing for — and the rail would go blank on
  * the day a rep used the composer a lot, while the projection was right the
  * whole time. Naming the kinds moves the bound inside this list; deriving it
  * means the list cannot fall out of step with the copy that decides it.

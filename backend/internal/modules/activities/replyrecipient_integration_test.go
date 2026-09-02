@@ -182,6 +182,9 @@ func TestOurOwnSenderIsNeverTheAddressOnOurOutboundMail(t *testing.T) {
 func TestOurOwnSenderIsNotGreetedThroughTheLinkFallback(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
+	if _, err := e.owner.Exec(context.Background(), `UPDATE activity SET direction = 'outbound' WHERE id = $1`, anchor); err != nil {
+		t.Fatalf("marking the anchor outbound: %v", err)
+	}
 
 	us := e.linkPerson(t, anchor, "Sofia Meier")
 	e.seedPersonEmail(t, us, "sofia.private@gmail.test")

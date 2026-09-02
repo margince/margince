@@ -142,7 +142,7 @@ binds nothing leaves the field null, and the client draws its generic sentence.
 
 **`kinds` is how a client that draws part of the record asks for its part**, and
 it is applied BEFORE the bounds. Every task reports, so a caller that renders six
-kinds and is served the newest ten of twenty-three can be handed ten it draws
+kinds and is served the newest ten of twenty-seven can be handed ten it draws
 nothing for — the bound would fall on rows the reader never sees and the rail
 would go blank while its work was reported correctly. An empty list is a 422, and
 so is an unknown name; both would otherwise come back as an empty feed, which is
