@@ -2304,7 +2304,6 @@ export const en = {
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
   "home.asOf": "as of {at}",
-  "home.refresh": "Refresh brief",
   "home.refreshing": "Ranking…",
   "home.generate": "Get today's brief now",
   "home.noneBody":
@@ -3006,6 +3005,8 @@ export const en = {
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
+  "brief.coverage.summary": "Some sources have more than this page shows",
+  "brief.coverage.bounded": "{shown} shown of at least {considered} read",
   "delivery.morningLabel": "Your morning brief",
   "delivery.morningHelp":
     "Whether the day's brief also arrives by email. It is on your Brief page either way.",
