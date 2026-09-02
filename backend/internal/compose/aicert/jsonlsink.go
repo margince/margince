@@ -33,10 +33,13 @@ import (
 // looking like one with nothing to replay — so a buffer added here would break a
 // caller that has no way to ask for its absence.
 type jsonlSink struct {
-	mu   sync.Mutex
-	w    io.WriteCloser
-	enc  *json.Encoder
-	Path string // absolute, printed to stdout when the sink opens
+	mu  sync.Mutex
+	w   io.WriteCloser
+	enc *json.Encoder
+	// broken is the first write failure, after which the sink refuses rather
+	// than appending behind a line a reader will stop at. See encodeLine.
+	broken error
+	Path   string // absolute, printed to stdout when the sink opens
 }
 
 // openJSONLSink opens dir/name with flags and returns the sink writing to it,
@@ -83,7 +86,16 @@ func encodeLine[T tracedCall | journaledRun](s *jsonlSink, line T) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// A failed write may already have put a partial line on disk, and a reader
+	// stops at the first line it cannot decode. Appending past one would leave
+	// every LATER run stranded behind it — the file would keep growing and keep
+	// replaying nothing, which reads exactly like a journal that never had
+	// anything to replay. One failure closes the sink instead.
+	if s.broken != nil {
+		return fmt.Errorf("aicert: %s stopped at an earlier failed write: %w", s.Path, s.broken)
+	}
 	if err := s.enc.Encode(line); err != nil {
+		s.broken = err
 		return fmt.Errorf("aicert: write %s: %w", s.Path, err)
 	}
 	return nil

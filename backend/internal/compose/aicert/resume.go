@@ -360,6 +360,20 @@ type taskJournal struct {
 	candidate string
 }
 
+// restartHint says what a restart will actually cost, and says nothing when it
+// would cost everything.
+//
+// A message that promised a free restart under RESUME= — resuming switched off
+// — would send an operator back into a full paid corpus believing the runs
+// already scored were waiting for them. It reports what this run's journal can
+// really offer, or stays quiet.
+func (t taskJournal) restartHint() string {
+	if t.j == nil {
+		return " (resuming is off, so it will pay for every run again: RESUME=<dir> keeps them next time)"
+	}
+	return " — every run already scored replays from the resume journal for six hours, so a restart pays only for what is left"
+}
+
 // lookup returns the journaled outcome for one repeat of one scenario, if this
 // run may replay it.
 func (t taskJournal) lookup(sc Scenario, stamp string, run int) (runOutcome, bool) {

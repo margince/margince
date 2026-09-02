@@ -31,6 +31,15 @@ var (
 // instant does; pinning one keeps a journal's age arithmetic exact.
 var fixedResumeNow = time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC)
 
+// testRepeats is the repeat count every certification in this file drives, and
+// the count refusingFakes provisions its scripted failures from.
+//
+// One constant because the two must not drift: a fake whose script runs dry
+// falls back to a GENERATED, successful completion, so under-provisioning would
+// turn a test that demands a failure into a quiet pass — the exact shape of a
+// test that no longer holds what it names.
+const testRepeats = 3
+
 // withJournal opens a journal in dir, hands it to fn, and closes it — the shape
 // Run itself has. The journal holds an exclusive claim on its directory while
 // open, so a test that leaked one would refuse its own next "run" rather than
@@ -61,7 +70,7 @@ func replayable(t *testing.T, dir string, now time.Time, sc Scenario, candidate 
 }
 
 // certifyOnce runs one whole certification of sc against dir's journal — open,
-// drive, close — so each call is a separate "run" the way the lane's are.
+// drive, close — so each call is a separate "run", the way the lane's own are.
 func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.FakeClient) (Record, error) {
 	t.Helper()
 	withFixedNow(t, fixedResumeNow)
@@ -71,7 +80,7 @@ func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.Fak
 	var err error
 	withJournal(t, dir, fixedResumeNow, func(j *runJournal) {
 		rec, err = certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
-			testCandidateBinding, testJudgeBinding, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+			testCandidateBinding, testJudgeBinding, ai.ProfileEUHosted, testRepeats, quietLogger(), &certifyHooks{
 				candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 				judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 				journal:       j.forTask(ai.TaskSummarize, testCandidateBinding),
@@ -82,8 +91,12 @@ func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.Fak
 
 // answeringFakes are a candidate and judge that certify every run.
 func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
-	return ai.NewFakeClient().Script(containsWidget, containsWidget, containsWidget),
-		ai.NewFakeClient().Script(scoreJSON(90), scoreJSON(90), scoreJSON(90))
+	candidate, judge := ai.NewFakeClient(), ai.NewFakeClient()
+	for range testRepeats {
+		candidate.Script(containsWidget)
+		judge.Script(scoreJSON(90))
+	}
+	return candidate, judge
 }
 
 // refusingFakes answer nothing at all: every call is the fault a resumed run
@@ -92,7 +105,7 @@ func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
 func refusingFakes(t *testing.T) (*ai.FakeClient, *ai.FakeClient) {
 	t.Helper()
 	var steps []ai.FakeStep
-	for range ladderRungs(t) * runAttempts * 3 {
+	for range ladderRungs(t) * runAttempts * testRepeats {
 		steps = append(steps, ai.FakeStep{Err: errDroppedConnection})
 	}
 	return ai.NewFakeClient().ScriptSteps(steps...), ai.NewFakeClient().ScriptSteps(steps...)

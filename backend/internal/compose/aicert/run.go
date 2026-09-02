@@ -40,7 +40,7 @@ func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, c
 				"task", string(task), "scenario", sc.Name, "run", run)
 		} else {
 			var runErr error
-			outcome, runErr = driveRun(ctx, candidateRouter, candidateRec, judgeRouter, judgeRec, sc, task, census, log, trace, run)
+			outcome, runErr = driveRun(ctx, candidateRouter, candidateRec, judgeRouter, judgeRec, sc, task, census, log, trace, journal, run)
 			if runErr != nil {
 				return "", fmt.Errorf("aicert: task %s scenario %s run %d: %w", task, sc.Name, run, runErr)
 			}
@@ -133,7 +133,7 @@ var sleepFunc = func(ctx context.Context, d time.Duration) error {
 // refusal or a caps miss is a measurement, and repeating it until it reads
 // better is how a certification lane starts lying.
 func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceRecorder, judge *ai.Router, judgeRec *traceRecorder,
-	sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, run int,
+	sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, journal taskJournal, run int,
 ) (runOutcome, error) {
 	var lastErr error
 	for attempt := 1; attempt <= runAttempts; attempt++ {
@@ -154,9 +154,8 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 		lastErr = err
 	}
 	return runOutcome{}, fmt.Errorf(
-		"every bound tier failed on all %d attempts — re-run the same command once the provider is reachable: "+
-			"every run already scored replays from the resume journal for six hours, so a restart pays only for what is left: %w",
-		runAttempts, lastErr,
+		"every bound tier failed on all %d attempts — re-run the same command once the provider is reachable%s: %w",
+		runAttempts, journal.restartHint(), lastErr,
 	)
 }
 
@@ -286,6 +285,10 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	judgeMark := judgeRec.mark()
 	score, judgeServedModel, judgeDegraded, err := judgeScore(ctx, judge, judgeRec, sc, caseTrace, output, log)
 	if err != nil {
+		// The same debt the candidate side settles: a judge call that failed
+		// still spent, and driveRun may discard this whole attempt, so the
+		// trace is the only place its cost and its prompt can still be read.
+		traceSpentCalls(ctx, trace, "judge", task, sc, run, attempt, judgeRec, judgeMark, log)
 		return runOutcome{}, fmt.Errorf("judge: %w", err)
 	}
 	judgeCalls, err := judgeRec.terminalsSince(judgeMark)
@@ -328,16 +331,7 @@ func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidat
 	mark := candidateRec.mark()
 	caseTrace, err := prepared.Run(ctx, routedCompleter{router: candidate, task: task})
 	if err != nil {
-		// A failed case still SPENT: the calls it made before the fault are
-		// billed, and driveRun may now discard the whole attempt. Tracing them
-		// on the way out is the only record an operator gets of what that
-		// attempt cost and what it was asking for when it died.
-		if made, terr := candidateRec.terminalsSince(mark); terr == nil {
-			traceCalls(ctx, trace, "candidate", task, sc, run, attempt, made, log)
-		} else {
-			log.WarnContext(ctx, "aicert: could not read back the failed attempt's own calls — its spend goes untraced",
-				"task", string(task), "scenario", sc.Name, "run", run, "attempt", attempt, "err", terr)
-		}
+		traceSpentCalls(ctx, trace, "candidate", task, sc, run, attempt, candidateRec, mark, log)
 		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", err)
 	}
 	calls, err := candidateRec.terminalsSince(mark)
@@ -353,6 +347,26 @@ func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidat
 		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", err)
 	}
 	return caseTrace, pooled, nil
+}
+
+// traceSpentCalls writes the calls a FAILED stretch of a run already made.
+//
+// Both sides of a run owe this for the same reason: the calls are billed
+// whether or not the attempt they belonged to survives, and driveRun may throw
+// that attempt away entirely — so if they are not traced here they are traced
+// nowhere, and the operator's only forensic view is silent about spend that
+// happened. Read-back failing is itself only logged: a diagnostic must not
+// replace the error the caller is already returning.
+func traceSpentCalls(ctx context.Context, trace *payloadTrace, role string, task ai.Task, sc Scenario,
+	run, attempt int, rec *traceRecorder, mark int, log *slog.Logger,
+) {
+	made, err := rec.terminalsSince(mark)
+	if err != nil {
+		log.WarnContext(ctx, "aicert: could not read back the failed attempt's own calls — its spend goes untraced",
+			"task", string(task), "role", role, "scenario", sc.Name, "run", run, "attempt", attempt, "err", err)
+		return
+	}
+	traceCalls(ctx, trace, role, task, sc, run, attempt, made, log)
 }
 
 // routedCompleter hands a prepared case the one model call it may make,

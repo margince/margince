@@ -94,7 +94,9 @@ func TestCertifyTaskDoesNotRedriveAnExhaustedAccount(t *testing.T) {
 	waited := recordSleeps(t)
 	// Every rung refuses for the one reason another attempt cannot get past.
 	candidate := ai.NewFakeClient().ScriptSteps(failedWalk(t, fmt.Errorf("provider said no: %w", ai.ErrProviderQuota))...)
-	judge := ai.NewFakeClient().Script(scoreJSON(90))
+	// Left unscripted: the judge must never be reached, which is asserted below
+	// rather than papered over with an answer nothing consumes.
+	judge := ai.NewFakeClient()
 
 	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
@@ -113,6 +115,9 @@ func TestCertifyTaskDoesNotRedriveAnExhaustedAccount(t *testing.T) {
 	if got := len(candidate.Calls()); got != 1 {
 		t.Fatalf("the candidate was called %d times, want 1 — the walk stops at the refusing rung and nothing re-drives it", got)
 	}
+	if got := len(judge.Calls()); got != 0 {
+		t.Fatalf("the judge was called %d time(s) — an answer that was never served has nothing to grade, and grading it is paid for", got)
+	}
 }
 
 func TestCertifyTaskGivesUpAfterRunAttemptsAndSaysHowMany(t *testing.T) {
@@ -122,7 +127,7 @@ func TestCertifyTaskGivesUpAfterRunAttemptsAndSaysHowMany(t *testing.T) {
 		steps = append(steps, failedWalk(t, errDroppedConnection)...)
 	}
 	candidate := ai.NewFakeClient().ScriptSteps(steps...)
-	judge := ai.NewFakeClient().Script(scoreJSON(90))
+	judge := ai.NewFakeClient()
 
 	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
@@ -138,6 +143,9 @@ func TestCertifyTaskGivesUpAfterRunAttemptsAndSaysHowMany(t *testing.T) {
 	}
 	if got, want := len(candidate.Calls()), ladderRungs(t)*runAttempts; got != want {
 		t.Fatalf("the candidate was called %d times, want %d — one whole ladder walk per attempt", got, want)
+	}
+	if got := len(judge.Calls()); got != 0 {
+		t.Fatalf("the judge was called %d time(s) — no attempt ever produced an answer to grade", got)
 	}
 	if len(*waited) != runAttempts-1 {
 		t.Fatalf("waited %v, want %d rising waits", *waited, runAttempts-1)
