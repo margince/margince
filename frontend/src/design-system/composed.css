@@ -417,10 +417,14 @@
    column is: every panel in it is read top to bottom once rather than compared
    with the one beside it, and a panel whose body is prose gets a measure too
    narrow to read in a half-width column. */
+/* The page's rhythm between its bodies: the readings, the reading in parts,
+   the reference cards. A full step, because these are the breaks a scanning
+   reader uses to find their place; the groups inside keep the tighter 16px,
+   so the page reads as a few bodies rather than one long stack of cards. */
 .record-stack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-6);
   min-width: 0;
 }
 
