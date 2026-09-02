@@ -7593,6 +7593,7 @@ export const en = {
   "worklist.pane.lastOutbound": "We last wrote",
   "worklist.pane.never": "Never",
   "worklist.focus.title": "Do this next",
+  "worklist.nextup.title": "And then",
   "worklist.focus.verb.decide": "Decide",
   "worklist.focus.verb.merge": "Review the pair",
   "worklist.focus.verb.complete": "Complete it",

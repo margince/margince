@@ -7528,6 +7528,7 @@ export const de = {
   "worklist.pane.lastOutbound": "Wir zuletzt geschrieben",
   "worklist.pane.never": "Nie",
   "worklist.focus.title": "Das als Nächstes",
+  "worklist.nextup.title": "Und danach",
   "worklist.focus.verb.decide": "Entscheiden",
   "worklist.focus.verb.merge": "Paar prüfen",
   "worklist.focus.verb.complete": "Erledigen",

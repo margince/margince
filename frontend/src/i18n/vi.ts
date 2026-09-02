@@ -7447,6 +7447,7 @@ export const vi = {
   "worklist.pane.lastOutbound": "Chúng ta viết lần cuối",
   "worklist.pane.never": "Chưa bao giờ",
   "worklist.focus.title": "Làm việc này tiếp theo",
+  "worklist.nextup.title": "Và sau đó",
   "worklist.focus.verb.decide": "Quyết định",
   "worklist.focus.verb.merge": "Xem cặp trùng",
   "worklist.focus.verb.complete": "Hoàn thành",

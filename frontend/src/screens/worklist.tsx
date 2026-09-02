@@ -17,6 +17,7 @@ import {
 } from "./worklist.copy";
 import { FocusCard, focusOf } from "./worklist.focus";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
+import { NextUp, nextUpOf } from "./worklist.nextup";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
   UNASSIGNED,
@@ -195,6 +196,9 @@ function WorklistBody({
   const t = useT();
   const missing = day.sources_unavailable;
   const focus = focusOf(day.queue);
+  // What follows it, bounded. Taken in the server's own order — the ranking
+  // has already kept one lane from owning the top of the page.
+  const next = nextUpOf(day.queue, focus);
   // The row the pane is about. Resolved from the id rather than held as the
   // item itself: a refetch replaces every row object, and a held one would go
   // on describing a version of the day that is no longer on screen.
@@ -242,6 +246,10 @@ function WorklistBody({
           the queue below: removing it would make the rank numbers lie and the
           counts disagree with the page. */}
       {focus && <FocusCard item={focus} />}
+      {/* And then? A finite list a reader can see the end of, so a morning has a
+          shape rather than a backlog. Drawn only under a focus card: without
+          one there is no "next", only the queue. */}
+      {focus && <NextUp items={next} />}
       {day.queue.length === 0 ? (
         // One line, not a panel. No card is drawn to report a zero.
         <p className="t-body worklist-clear">
