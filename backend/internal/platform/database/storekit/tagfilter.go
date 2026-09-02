@@ -51,6 +51,10 @@ func ParseTagMode(raw *string) (TagMode, error) {
 // TagFilterClause renders the predicate narrowing one entity's rows by tag,
 // or "" when no tag was named.
 //
+// `taggableType` is the value `taggable.entity_type` stores, which is neither
+// an RBAC object nor a table name even where all three read the same. The
+// column has its own closed vocabulary and this names a member of it.
+//
 // `idColumn` is how the outer query names the record's own id — "person.id",
 // "o.id" — because each list builds its own FROM and this has to attach to it.
 //
@@ -62,7 +66,7 @@ func ParseTagMode(raw *string) (TagMode, error) {
 // a filter naming it selects a slice no reader can construct or explain; and
 // after a merge releases a name, a re-coined word would otherwise drag along
 // the records carrying the older retired tag of the same spelling.
-func TagFilterClause(entityType, idColumn string, tagIDs []ids.UUID, mode TagMode, arg func(any) int) string {
+func TagFilterClause(taggableType, idColumn string, tagIDs []ids.UUID, mode TagMode, arg func(any) int) string {
 	if len(tagIDs) == 0 {
 		return ""
 	}
@@ -73,22 +77,22 @@ func TagFilterClause(entityType, idColumn string, tagIDs []ids.UUID, mode TagMod
 		// reader can check tag by tag.
 		parts := make([]string, 0, len(tagIDs))
 		for _, id := range tagIDs {
-			parts = append(parts, tagExists(entityType, idColumn, []ids.UUID{id}, arg))
+			parts = append(parts, tagExists(taggableType, idColumn, []ids.UUID{id}, arg))
 		}
 		return "(" + strings.Join(parts, " AND ") + ")"
 	case TagModeNone:
-		return "NOT " + tagExists(entityType, idColumn, tagIDs, arg)
+		return "NOT " + tagExists(taggableType, idColumn, tagIDs, arg)
 	default:
-		return tagExists(entityType, idColumn, tagIDs, arg)
+		return tagExists(taggableType, idColumn, tagIDs, arg)
 	}
 }
 
 // tagExists renders one EXISTS over the taggable link for these ids.
-func tagExists(entityType, idColumn string, tagIDs []ids.UUID, arg func(any) int) string {
+func tagExists(taggableType, idColumn string, tagIDs []ids.UUID, arg func(any) int) string {
 	return fmt.Sprintf(`EXISTS (
 		SELECT 1 FROM taggable tg
 		  JOIN tag t ON t.id = tg.tag_id
 		WHERE tg.entity_type = $%d AND tg.entity_id = %s
 		  AND tg.tag_id = ANY($%d) AND t.archived_at IS NULL)`,
-		arg(entityType), idColumn, arg(tagIDs))
+		arg(taggableType), idColumn, arg(tagIDs))
 }

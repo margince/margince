@@ -60,6 +60,11 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 	return maskDealForCaller(ctx, tx, d)
 }
 
+// dealTaggableType is the value taggable.entity_type stores for a deal. It
+// reads the same as dealTable and means something else: one is the column's
+// vocabulary, the other is a relation name.
+const dealTaggableType = "deal"
+
 type ListDealsInput struct {
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the person and account lists.
@@ -209,7 +214,7 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	if in.OwnerID != nil {
 		where = append(where, storekit.SQLf("owner_id = $%d", arg(*in.OwnerID)))
 	}
-	if clause := storekit.TagFilterClause(dealTable, "deal.id", in.TagIDs, in.TagMode, arg); clause != "" {
+	if clause := storekit.TagFilterClause(dealTaggableType, "deal.id", in.TagIDs, in.TagMode, arg); clause != "" {
 		where = append(where, clause)
 	}
 	for _, ref := range []struct {

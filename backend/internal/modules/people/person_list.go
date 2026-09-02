@@ -9,7 +9,6 @@ package people
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -52,8 +51,8 @@ type ListPeopleInput struct {
 	CustomFilters map[string]string
 	// TagIDs narrows to the people carrying these tags, combined by TagMode.
 	// The tag vocabulary belongs to another module, so this is a link
-	// predicate rather than a column — storekit.TagFilterClause renders it,
-	// shared with the company and deal lists so the three cannot drift.
+	// predicate rather than a column; storekit.TagFilterClause renders it, and
+	// the company and deal lists call the same function.
 	TagIDs  []ids.UUID
 	TagMode storekit.TagMode
 	// OrganizationID narrows to the people employed there today. Employment is
@@ -123,11 +122,6 @@ func personEmployerClause(ctx context.Context, orgID *ids.OrganizationID, arg fu
 		  AND `+edgeBound+`
 		  AND rel.organization_id = $%d)`, arg(*orgID)), nil
 }
-
-// foldTagName matches how the tag vocabulary is stored and compared: names
-// are trimmed on write and unique under lower(), so a caller's spacing and
-// case decide nothing about which tag they named.
-func foldTagName(name string) string { return strings.ToLower(strings.TrimSpace(name)) }
 
 // ListPeople is the row-scoped person list read: quick-find, owner, tag and
 // custom-field filters, keyset pagination under the validated sort.
