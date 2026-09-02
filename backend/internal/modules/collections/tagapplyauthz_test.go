@@ -80,6 +80,20 @@ func TestRemovingATagNeedsUpdateOnTheTarget(t *testing.T) {
 	}
 }
 
+// EnsureTaggable is the apply-by-name path's pre-flight, and it moved from
+// ActionRead to ActionUpdate alongside ApplyTag itself: a caller who may only
+// see the target must be refused here too, before a ResolveTag lookup is
+// spent on their behalf.
+func TestEnsureTaggableNeedsUpdateOnTheTargetNotMerelyRead(t *testing.T) {
+	store := NewStore(nil)
+	ctx := taggerWith(map[string]principal.ObjectGrant{
+		"project": {Read: true},
+	})
+	if err := store.EnsureTaggable(ctx, "project", ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a seat holding project.read but not project.update passed EnsureTaggable: %v", err)
+	}
+}
+
 // The importer's entry point carries the SAME gates as the HTTP one. It reaches
 // the write from inside a transaction the migration module opened, and a path
 // that skipped a gate there would let an import tag records its approver could

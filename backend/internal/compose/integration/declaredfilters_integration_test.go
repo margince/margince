@@ -31,10 +31,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// tagCurator is a principal that may author the tag vocabulary and apply it.
-// The harness's admin fixture mirrors the real seed, which carries no tag
-// grant, so the fixture asks for exactly the object it needs rather than
-// widening the shared one. Applying a tag to a person WRITES that person (the
+// tagCurator is a principal that may author the tag vocabulary and apply it,
+// asking for exactly the objects this suite needs rather than widening the
+// shared admin fixture. Applying a tag to a person WRITES that person (the
 // same gate RemoveTag and EnsureTaggable hold), so the curator carries
 // person.update and RowScopeAll — a curator without either is refused at the
 // store door.

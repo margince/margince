@@ -199,9 +199,10 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 	// a record they cannot edit. This is the OBJECT grant only; the ROW gate
 	// is applyTagTx's EnsureWritableLive, which still answers not-found for a
 	// record that does not exist or is archived, exactly as EnsureLinkTarget
-	// did — every taggable type reads workspace-wide (tableclass.go), so
-	// existence-hiding here is about the row's own state, not the caller's
-	// scope.
+	// did — no owner predicate narrows a seated actor's read of a taggable
+	// table (tableclass.go), but capture privacy and the buyer bound still
+	// can, and both of those still answer not-found rather than a refusal
+	// that would confirm the row.
 	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
 		return taggableRow{}, err
 	}
