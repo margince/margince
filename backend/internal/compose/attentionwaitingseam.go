@@ -31,6 +31,23 @@ type attentionWaiting struct {
 // The instant comes from the caller so the whole read is one snapshot. Asking
 // the clock again here would let the anti-joins judge against a moment the rest
 // of the day was not read at.
+// Answered asks the module how fast it replied over a window. A pass-through,
+// like Hidden: the median and the counts are SQL and belong beside the query.
+func (w attentionWaiting) Answered(
+	ctx context.Context, from, to time.Time,
+) (attention.AnsweredWork, error) {
+	got, err := w.store.ResponseWindow(ctx, from, to)
+	if err != nil {
+		return attention.AnsweredWork{}, err
+	}
+	return attention.AnsweredWork{
+		Answered:         got.Answered,
+		MedianMinutes:    got.MedianMinutes,
+		Disposed:         got.Disposed,
+		DisposedNotSales: got.DisposedNotSales,
+	}, nil
+}
+
 // Hidden asks the module what its own hiding rules are keeping off the queue.
 //
 // A pass-through: the arithmetic is five reads of the eligibility query and

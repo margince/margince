@@ -4,6 +4,7 @@
 package attention
 
 import (
+	"fmt"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -57,6 +58,43 @@ func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 // somebody else.
 func (h Handlers) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 	out, err := h.svc.HiddenBacklog(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// GetResponseMetrics answers how fast the workspace replies over a window.
+//
+// The window is the ONE parameter, and it is a length rather than a pair of
+// instants: a caller naming both ends could ask for a window the figures were
+// never meant to describe, and every reader of this endpoint wants "the last N
+// days" rather than an arbitrary fortnight in the past.
+func (h Handlers) GetResponseMetrics(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.GetResponseMetricsParams,
+) {
+	days := 0
+	if params.Days != nil {
+		// Refused rather than clamped, which is this tree's convention for a
+		// published range (automations_preview.go and filterpreview.go both say
+		// so in their own words). A caller asking for a window the reading does
+		// not cover has made a mistake, and answering a different window than
+		// they asked for hands them a figure they will read as the one they
+		// requested.
+		//
+		// Enforced HERE because nothing else does: the generated parameter is a
+		// bare *int, so the contract's minimum and maximum are documentation the
+		// router never applies. Left unchecked, `days=3650000` reaches the store
+		// and scans every message the installation has ever held.
+		if *params.Days < 1 || *params.Days > responseWindowMaxDays {
+			httperr.Write(w, r, httperr.Validation("days", "out_of_range",
+				fmt.Sprintf("the window must be between 1 and %d days", responseWindowMaxDays)))
+			return
+		}
+		days = *params.Days
+	}
+	out, err := h.svc.ResponseMetrics(r.Context(), days)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
