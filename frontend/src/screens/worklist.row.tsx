@@ -10,6 +10,7 @@
 
 import { Badge, Button } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
+import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -161,11 +162,7 @@ export function WorklistRow({
         <ReassignControl item={item} owner={owner} />
       )}
       {decidable(item) && <RowDecision item={item} />}
-      {/* A notice's one verb is settling it, not going anywhere — the record
-          it names, if any, is already reachable through the title link above.
-          Rendered inline rather than through RowVerbs' link table: that table
-          sends the reader to the surface that owns a verb, and no surface
-          owns "I've seen this" but the row itself. */}
+      {/* Settled inline rather than drawn by RowVerbs — see NoticeAcknowledge. */}
       {item.source === "notice" && item.actions.includes("acknowledge") && (
         <NoticeAcknowledge id={item.id} />
       )}
@@ -207,13 +204,25 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
 // the reader to for "I've seen this".
 function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
   const t = useT();
+  const toast = useToast();
   const acknowledge = useNoticeRead([worklistKey]);
   return (
     <div className="worklist-row-verbs">
       <Button
         small
         pending={acknowledge.isPending}
-        onClick={() => acknowledge.mutate(id)}
+        onClick={() =>
+          acknowledge.mutate(id, {
+            // A rejected read leaves the button idle with nothing else on
+            // screen to say so — the same rendering a click that did nothing
+            // would leave. Without this the notice stays in the lane and the
+            // reader has no reason to try again.
+            onError: () =>
+              toast.show(t("worklist.verb.acknowledgeFailed"), {
+                mark: false,
+              }),
+          })
+        }
       >
         {t("worklist.verb.acknowledge")}
       </Button>
@@ -327,11 +336,8 @@ const VERB_DESTINATION: Partial<
   // They come back when the decision card is drawn inline, which is its own
   // piece of work.
   //
-  // `acknowledge` is absent too, and for a stronger reason than routing: it
-  // names no record to route to. Its only owner is the notice's own read
-  // endpoint, so WorklistRow draws it inline (NoticeAcknowledge) instead of
-  // through this table — a link here would only ever have pointed at the
-  // row's own subject, which is not what pressing "Got it" means.
+  // `acknowledge` is absent too — see NoticeAcknowledge, which draws it
+  // inline instead of through this table.
   //
   // Everything routable is the record the row is about.
   open: (href) => href,

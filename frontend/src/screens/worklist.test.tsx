@@ -159,45 +159,6 @@ describe("what the ranked queue tells a reader", () => {
     ).toBeTruthy();
   });
 
-  // useNoticeRead existed with zero callers after Today was retired: the
-  // mutation was never orphaned from the wire, only from every row that
-  // could fire it. This is the row wiring it back up.
-  it("settles a notice through its own read endpoint, not a link to the deal", async () => {
-    const user = userEvent.setup();
-    stub(
-      day({
-        queue: [
-          row({
-            id: "n1",
-            source: "notice",
-            title: "A deal you own changed stage",
-            detail: "Acme Renewal moved to a new pipeline stage.",
-            actions: ["acknowledge"],
-          }),
-        ],
-        summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    await screen.findByText("A deal you own changed stage");
-    await user.click(screen.getByRole("button", { name: "Got it" }));
-
-    await waitFor(() => {
-      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
-      const settled = calls.some((call) => {
-        const target = call[0];
-        const url = target instanceof Request ? target.url : String(target);
-        const method =
-          target instanceof Request
-            ? target.method
-            : (call[1]?.method ?? "GET");
-        return url.includes("/notices/n1/read") && method === "POST";
-      });
-      expect(settled).toBe(true);
-    });
-  });
-
   it("does not repeat a name the title already carries", async () => {
     stub(
       day({

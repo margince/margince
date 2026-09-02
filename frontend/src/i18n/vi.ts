@@ -7513,6 +7513,7 @@ export const vi = {
   "worklist.verb.complete": "Mở",
   "worklist.verb.snooze": "Mở",
   "worklist.verb.acknowledge": "Đã hiểu",
+  "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem.",
   "worklist.source.failed": "Không đọc được {source}",
   "worklist.source.withheld": "{source} bị ẩn với tài khoản của bạn",
   "worklist.untitled.generic": "Có việc cần bạn",

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { jsonResponse, StoryProviders } from "./story-utils";
 import { WorklistScreen } from "./worklist";
@@ -248,6 +249,73 @@ export const ALeadsDay: Story = {
       <StoryProviders>
         <WorklistScreen />
       </StoryProviders>
+    );
+  },
+};
+
+// The notice's one verb: settled here, not linked away.
+function stubNoticeDay(readPending: boolean) {
+  const day: Worklist = {
+    as_of: "2026-08-31T09:00:00Z",
+    scope: "mine",
+    scope_options: ["mine"],
+    summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+    sources_unavailable: [],
+    reach: [],
+    counts: [],
+    queue: [
+      {
+        id: "n1",
+        source: "notice",
+        category: "tasks",
+        level: 4,
+        consequence: "task_slips",
+        title: "A deal you own changed stage",
+        detail: "Acme Renewal moved to a new pipeline stage.",
+        because: [],
+        actions: ["acknowledge"],
+      },
+    ],
+  };
+  globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes("/notices/n1/read")) {
+      return readPending
+        ? new Promise(() => {})
+        : new Response(null, { status: 204 });
+    }
+    if (url.includes("/worklist")) {
+      return jsonResponse(day);
+    }
+    return jsonResponse({ data: [] });
+  }) as typeof fetch;
+}
+
+export const ANoticeToSettle: Story = {
+  render: () => {
+    stubNoticeDay(false);
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// Pending: "Got it" is clicked and the read call never resolves.
+export const ANoticeSettling: Story = {
+  render: () => {
+    stubNoticeDay(true);
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Got it" }),
     );
   },
 };
