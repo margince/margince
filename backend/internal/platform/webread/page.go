@@ -164,21 +164,7 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 			return head
 		}
 		name, hasAttr := tokenizer.TagName()
-		// The harvest stops where the head does, because that is where a site
-		// declares its own identity. Markup in the body is not the same claim:
-		// on a page that renders user-generated content, whoever wrote that
-		// content also wrote the tags around it, and a <link rel="icon"> down
-		// there would let them choose the company's face — or, for a refresh,
-		// where the crawler goes next.
-		//
-		// A page may legally omit </head>, so <body> ends it too. Testing only
-		// for the closing tag let body markup on such a page be read as the
-		// site's own declaration, which is the whole thing this boundary
-		// exists to prevent.
-		if tokenType == html.EndTagToken && string(name) == "head" {
-			return head
-		}
-		if tokenType == html.StartTagToken && string(name) == "body" {
+		if endsHead(tokenType, string(name)) {
 			return head
 		}
 		if !hasAttr {
@@ -207,6 +193,25 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 			}
 		}
 	}
+}
+
+// endsHead reports whether this token ends the document head, which is where
+// the asset harvest stops.
+//
+// The head is where a site declares its own identity. Markup in the body is
+// not the same claim: on a page that renders user-generated content, whoever
+// wrote that content also wrote the tags around it, and a <link rel="icon">
+// down there would let them choose the company's face — or, for a refresh,
+// where the crawler goes next.
+//
+// A page may legally omit </head>, so an opening <body> ends it too. Testing
+// only for the closing tag let body markup on such a page be read as the
+// site's own declaration, which is the whole thing this boundary prevents.
+func endsHead(tokenType html.TokenType, name string) bool {
+	if tokenType == html.EndTagToken && name == "head" {
+		return true
+	}
+	return tokenType == html.StartTagToken && name == "body"
 }
 
 // tagAttrs collects the current tag's attributes, keys lowercased. The
