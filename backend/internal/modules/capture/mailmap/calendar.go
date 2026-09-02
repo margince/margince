@@ -35,9 +35,20 @@ import (
 // calendar sends on their behalf. The header is the provider speaking, not the
 // organizer, and nobody is reachable at any of them.
 var calendarSenders = map[string]bool{
+	// Google, measured. Both spellings ship: the first on invitations, the
+	// second on some notification classes.
 	"calendar-notification@google.com": true,
 	"calendar-server@google.com":       true,
+	// Apple iCloud calendar invitations.
+	"calendar-notification@icloud.com": true,
+	"noreply@calendar.icloud.com":      true,
 }
+
+// exchangeCalendarClass is how Exchange and Outlook say the same thing. They
+// name no calendar Sender address at all — the organizer's own server sends —
+// so this header is the only evidence, and it is checked INSTEAD of the sender
+// allowlist rather than after it.
+const exchangeCalendarClass = "urn:content-classes:calendarmessage"
 
 // calendarNotification reports whether this message is groupware speaking for a
 // person rather than the person writing.
@@ -51,15 +62,18 @@ var calendarSenders = map[string]bool{
 // a mail they wrote themselves, and that message IS correspondence. Requiring
 // the provider's own Sender address keeps this to messages a machine composed.
 func calendarNotification(header mail.Header, hasCalendarPart bool) bool {
+	// Exchange and Outlook say it outright, and name no calendar Sender at all.
+	// Checked first, and independently of the allowlist: gating it behind a
+	// Google address made this arm unreachable for the only senders that write
+	// it.
+	if strings.EqualFold(strings.TrimSpace(header.Get("Content-Class")), exchangeCalendarClass) {
+		return true
+	}
 	if !calendarSenders[bareAddressOf(header.Get("Sender"))] {
 		return false
 	}
-	// Content-Class is Exchange's spelling of the same fact. Kept because a
-	// provider Sender header with no calendar payload is a message ABOUT
-	// calendars rather than an invitation.
-	if strings.EqualFold(strings.TrimSpace(header.Get("Content-Class")), "urn:content-classes:calendarmessage") {
-		return true
-	}
+	// A provider Sender header with no calendar payload is a message ABOUT
+	// calendars — a digest, a reminder digest — rather than an invitation.
 	return hasCalendarPart
 }
 

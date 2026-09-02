@@ -205,3 +205,142 @@ func TestBothCalendarGuardsAreLoadBearing(t *testing.T) {
 		t.Error("the counterparty guard: an attendee is not somebody the workspace wrote to")
 	}
 }
+
+// An invitation the owner RECEIVES is not the case this rule is about.
+//
+// Its organizer is named in From and is a person who wrote to the owner —
+// exactly the counterparty capture exists to record. The wrong contacts all
+// came from the other direction: the owner invites, and every attendee reads as
+// somebody the workspace writes to. Suppressing the inbound side as well
+// deleted a real correspondent from the record, and dropped the participants
+// with them, because otherParties walks To/Cc/Bcc and never From.
+func TestAnInviteTheOwnerRECEIVESKeepsItsOrganizer(t *testing.T) {
+	t.Parallel()
+	inbound := crlf(
+		"Sender: Google Calendar <calendar-notification@google.com>",
+		"From: Alice Organizer <alice@partner.example>",
+		"To: owner@myco.com",
+		"Subject: Invitation: Kickoff",
+		"Date: Mon, 01 Jun 2026 22:03:51 +0000",
+		"Message-ID: <cal-inbound@google.com>",
+		"Content-Type: multipart/alternative; boundary=\"b1\"",
+		"",
+		"--b1",
+		"Content-Type: text/plain; charset=UTF-8",
+		"",
+		"You have been invited.",
+		"",
+		"--b1",
+		"Content-Type: text/calendar; charset=UTF-8; method=REQUEST",
+		"",
+		"BEGIN:VCALENDAR",
+		"END:VCALENDAR",
+		"",
+		"--b1--",
+		"",
+	)
+	msg, err := Parse(inbound, "owner@myco.com")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got := msg.ToRecord("gmail", nil).Counterparty.Email; got != "alice@partner.example" {
+		t.Errorf("counterparty = %q, want the organizer — somebody invited the owner to something", got)
+	}
+}
+
+// Some clients send the .ics as a named ATTACHMENT rather than an inline part.
+// Both routes reach the file collector before the body switch, so reading the
+// type only in that switch missed the attachment form entirely.
+func TestAnInviteWhoseCalendarIsAnAttachmentIsStillRecognised(t *testing.T) {
+	t.Parallel()
+	attached := crlf(
+		"Sender: Google Calendar <calendar-notification@google.com>",
+		"From: Lars Organizer <owner@myco.com>",
+		"To: attendee@partner.example",
+		"Subject: Invitation: Weekly sync",
+		"Date: Mon, 01 Jun 2026 22:03:51 +0000",
+		"Message-ID: <cal-attached@google.com>",
+		"Content-Type: multipart/mixed; boundary=\"b1\"",
+		"",
+		"--b1",
+		"Content-Type: text/plain; charset=UTF-8",
+		"",
+		"You have been invited to Weekly sync.",
+		"",
+		"--b1",
+		"Content-Type: text/calendar; charset=UTF-8; method=REQUEST; name=\"invite.ics\"",
+		"Content-Disposition: attachment; filename=\"invite.ics\"",
+		"",
+		"BEGIN:VCALENDAR",
+		"END:VCALENDAR",
+		"",
+		"--b1--",
+		"",
+	)
+	msg, err := Parse(attached, "owner@myco.com")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got := msg.ToRecord("gmail", nil).Counterparty.Email; got != "" {
+		t.Errorf("counterparty = %q, want none — the .ics form does not change what it is", got)
+	}
+}
+
+// Exchange and Outlook name no calendar Sender at all: the organizer's own
+// server sends the invitation. Content-Class is the only evidence, so it is
+// read independently of the sender allowlist — gating it behind a Google
+// address made this arm unreachable for the senders that actually write it.
+func TestAnExchangeInviteIsRecognisedByItsContentClass(t *testing.T) {
+	t.Parallel()
+	exchange := crlf(
+		"From: Lars Organizer <owner@myco.com>",
+		"To: attendee@partner.example",
+		"Subject: Weekly sync",
+		"Date: Mon, 01 Jun 2026 22:03:51 +0000",
+		"Message-ID: <exchange-invite@myco.com>",
+		"Content-Class: urn:content-classes:calendarmessage",
+		"Content-Type: text/plain; charset=utf-8",
+		"",
+		"You have been invited.",
+		"",
+	)
+	msg, err := Parse(exchange, "owner@myco.com")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got := msg.ToRecord("gmail", nil).Counterparty.Email; got != "" {
+		t.Errorf("counterparty = %q, want none — Exchange says outright what this is", got)
+	}
+}
+
+// Every header this rule reads is typed by whoever sent the message, so the
+// question is what forging them buys. The answer is nothing, and the reason is
+// the outbound scoping rather than any check on the headers themselves.
+//
+// A stranger who sets both `Sender:` and `Content-Class:` is still INBOUND —
+// their From is not the mailbox owner, and only the owner's own address makes a
+// message outbound. So they cannot talk themselves out of being recorded, which
+// is the one thing a sender would want from this path.
+func TestAForgedCalendarHeaderDoesNotHideASender(t *testing.T) {
+	t.Parallel()
+	forged := crlf(
+		"Sender: Google Calendar <calendar-notification@google.com>",
+		"Content-Class: urn:content-classes:calendarmessage",
+		"From: Spammer <spam@bad.example>",
+		"To: owner@myco.com",
+		"Subject: Buy now",
+		"Date: Mon, 01 Jun 2026 22:03:51 +0000",
+		"Message-ID: <forged@bad.example>",
+		"Content-Type: text/plain; charset=utf-8",
+		"",
+		"hello",
+		"",
+	)
+	msg, err := Parse(forged, "owner@myco.com")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got := msg.ToRecord("gmail", nil).Counterparty.Email; got != "spam@bad.example" {
+		t.Errorf("counterparty = %q, want the sender — forged calendar headers must not hide anybody", got)
+	}
+}

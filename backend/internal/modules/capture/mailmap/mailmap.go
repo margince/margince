@@ -13,9 +13,7 @@ package mailmap
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -144,7 +142,14 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// attestation here is a DIFFERENT effect from withholding the counterparty
 	// in recordCounterparty — see that function — and each refuses the contact
 	// on its own, so each carries its own test.
-	calendarNotice := calendarNotification(header, hasCalendarPart)
+	// Only an invitation the OWNER sent. An invitation the owner RECEIVES names
+	// its organizer in From, and that organizer is a person who wrote to them —
+	// suppressing them would delete a real counterparty from the record, which
+	// is the opposite of this rule's purpose. The wrong contacts came from the
+	// outbound direction: the owner invites, and every attendee reads as
+	// somebody the workspace writes to.
+	calendarNotice := direction == connector.DirectionOutbound &&
+		calendarNotification(header, hasCalendarPart)
 	if calendarNotice {
 		machineTouched = true
 	}
@@ -336,85 +341,6 @@ func domainOf(addr string) string {
 	addr = strings.ToLower(strings.TrimSpace(addr))
 	if idx := strings.LastIndex(addr, "@"); idx >= 0 {
 		return addr[idx+1:]
-	}
-	return ""
-}
-
-// extractText returns the message's plain-text body and the files it carried.
-//
-// It prefers a text/plain part, rendering text/html to text only when no plain
-// part exists, so an HTML-only newsletter still yields readable text. Attachment parts are collected on the SAME walk: a MIME reader
-// is single-pass, so a second walk would mean holding or re-parsing the whole
-// message to find files this one already stepped over.
-func extractText(reader *mail.Reader) (string, []Part, []PartDrop, bool) {
-	var plain, html string
-	calendar := false
-	files := newCollector()
-	for {
-		if files.exhausted() {
-			// Past any real message. Everything beyond is unread and reported
-			// as such rather than walked, because walking it is the work an
-			// unauthenticated sender was trying to buy.
-			files.truncated()
-			break
-		}
-		part, err := reader.NextPart()
-		if err != nil {
-			if !errors.Is(err, io.EOF) {
-				// A structural failure ends the walk, so any file after this
-				// point is lost. Recorded rather than passed over: a message
-				// whose files went missing must not read like one that carried
-				// none (DOC-AC-12).
-				files.truncated()
-			}
-			break
-		}
-		if attached, ok := part.Header.(*mail.AttachmentHeader); ok {
-			files.take(attached, part.Body)
-			continue
-		}
-		inline, ok := part.Header.(*mail.InlineHeader)
-		if !ok {
-			continue
-		}
-		contentType, _, err := inline.ContentType()
-		if err != nil {
-			continue
-		}
-		// An INLINE part with a filename is a file. Several mail clients send
-		// PDFs and images that way as a matter of course, and reading only
-		// Content-Disposition: attachment loses them with nothing recorded —
-		// the sender chose how to render it, not whether we keep it.
-		if name := inlineFilename(inline); name != "" {
-			files.takeInline(inline, name, part.Body)
-			continue
-		}
-		content, err := io.ReadAll(part.Body)
-		if err != nil {
-			continue
-		}
-		switch {
-		case strings.HasPrefix(contentType, "text/plain") && plain == "":
-			plain = string(content)
-		case strings.HasPrefix(contentType, "text/html") && html == "":
-			html = string(content)
-		case strings.HasPrefix(contentType, "text/calendar"):
-			// The iCalendar payload of an invitation. It arrives inline and
-			// unnamed, so it reaches no other reader — the collector keeps only
-			// named parts, and the body readers keep plain and html. This walk
-			// is the one place it is visible at all.
-			calendar = true
-		}
-	}
-	return bodyText(plain, html), files.parts, files.drops(), calendar
-}
-
-func bodyText(plain, html string) string {
-	if strings.TrimSpace(plain) != "" {
-		return strings.TrimSpace(plain)
-	}
-	if html != "" {
-		return htmlToText(html)
 	}
 	return ""
 }
