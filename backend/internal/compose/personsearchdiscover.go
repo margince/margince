@@ -141,8 +141,8 @@ func canonicalProfileURL(raw string) (string, bool) {
 	return clean, true
 }
 
-// hostOf reads the hostname out of an address, empty when it does not parse;
-// callers decide how much of the host to show.
+// hostOf reads the hostname back out of an address this package has already
+// canonicalised, so the field lookup and the stored value agree on one host.
 func hostOf(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil {

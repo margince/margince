@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { en } from "../i18n/en";
 import { PersonPageV2 } from "./personpage";
 import { PERSON_TABS } from "./persontab";
 import {
@@ -872,5 +873,56 @@ describe("logging an activity", () => {
       subject: "Chase the signed order",
       links: [{ entity_type: "person", entity_id: "p-1" }],
     });
+  });
+});
+
+// The composer another screen sends a reader to.
+//
+// The worklist's `draft_reply` move refused to promise a draft while the click
+// only navigated. `?compose=reply` is the route that makes the promise true, so
+// these are about it opening, saying what it was asked for, and closing on Back
+// the way the brief drawer does.
+describe("PersonPageV2 — the addressed composer", () => {
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("opens the composer the address asks for, with nothing pressed", async () => {
+    window.location.hash = "#/contacts/p-1?compose=reply";
+    mount("overview");
+
+    // The INTENT is what makes this different from the generic "Write an
+    // email": the draft opens knowing what it is for. It is the field's VALUE
+    // rather than text on the page — the composer hands it to a model.
+    const intent = await screen.findByLabelText(en["person.composer.intent"]);
+    expect((intent as HTMLTextAreaElement).value).toBe(
+      en["person.composer.intentReply"],
+    );
+  });
+
+  // An address is something a person can type. A stray `?compose=x` silently
+  // opening an empty draft is worse than a link that does nothing.
+  it("opens nothing for an intent it does not know", async () => {
+    window.location.hash = "#/contacts/p-1?compose=sell-them-something";
+    mount("overview");
+
+    await screen.findByRole("heading", { name: view.person.full_name });
+    expect(screen.queryByLabelText(en["person.composer.intent"])).toBeNull();
+  });
+
+  // Derived from the address rather than seeded from it — the same reason the
+  // brief drawer is. Back is how a reader closes a thing they arrived at by
+  // link, and it has to work.
+  it("closes when the address stops asking for it", async () => {
+    window.location.hash = "#/contacts/p-1?compose=reply";
+    mount("overview");
+    await screen.findByLabelText(en["person.composer.intent"]);
+
+    window.location.hash = "#/contacts/p-1";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText(en["person.composer.intent"])).toBeNull(),
+    );
   });
 });

@@ -20,7 +20,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -31,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The enrich proposal's wire identity — one spelling for the two producers
@@ -70,9 +68,7 @@ func (e *scrapeEngine) Propose(ctx context.Context, orgID ids.UUID, override str
 		}
 	}
 
-	// The rail names the site being read, because that is what the reader
-	// pointed the AI at: "reading example.com" rather than "setting up".
-	evidenced, err := e.extract.extract(principal.WithWorkSubject(ctx, siteHostOf(rawURL)), rawURL, coldStartFieldValid)
+	evidenced, err := e.extract.extract(ctx, rawURL, coldStartFieldValid)
 	if err != nil {
 		return crmcontracts.EnrichmentProposal{}, err
 	}
@@ -120,16 +116,6 @@ func (e *scrapeEngine) Propose(ctx context.Context, orgID ids.UUID, override str
 	proposal.ProposalId = openapi_types.UUID(approvalID.UUID)
 	proposal.CreatedAt = &now
 	return proposal, nil
-}
-
-// siteHostOf is the site a reader would recognise in a rail line: the host of
-// the URL being read, lowercased and without a leading "www.", so the rail
-// names a company the same way regardless of how an override capitalised its
-// address. The empty string for anything that does not parse as a URL, which
-// the rail then names nothing for rather than echoing a malformed address at
-// a reader.
-func siteHostOf(rawURL string) string {
-	return strings.TrimPrefix(strings.ToLower(hostOf(rawURL)), "www.")
 }
 
 type scrapeHandlers struct{ engine *scrapeEngine }

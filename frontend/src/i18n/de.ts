@@ -3206,154 +3206,7 @@ export const de = {
     "Ich konnte dein Angebot nicht entwerfen.",
   "agent.activity.offerDraft.stalled":
     "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.growthFit.queued":
-    "Die Einschätzung, wie gut dieses Unternehmen passt, steht in der Warteschlange.",
-  "agent.activity.growthFit.running":
-    "Ich schätze ein, wie gut dieses Unternehmen zu unserem Angebot passt.",
-  "agent.activity.growthFit.stalled":
-    "Die Einschätzung dieses Unternehmens dauert ungewöhnlich lange. Möglicherweise wurde sie abgebrochen.",
-  "agent.activity.growthFit.done":
-    "Die Einschätzung dieses Unternehmens liegt vor.",
-  "agent.activity.growthFit.degraded":
-    "Ich habe dieses Unternehmen nur anhand eines Teils der Belege eingeschätzt und dann aufgehört.",
-  "agent.activity.growthFit.failed":
-    "Ich konnte nicht einschätzen, wie gut dieses Unternehmen passt.",
-  "agent.activity.growthFitNamed.queued":
-    "Die Einschätzung, wie gut {name} passt, steht in der Warteschlange.",
-  "agent.activity.growthFitNamed.running":
-    "Ich schätze ein, wie gut {name} zu unserem Angebot passt.",
-  "agent.activity.growthFitNamed.stalled":
-    "Die Einschätzung von {name} dauert ungewöhnlich lange. Möglicherweise wurde sie abgebrochen.",
-  "agent.activity.growthFitNamed.done":
-    "Die Einschätzung von {name} liegt vor.",
-  "agent.activity.growthFitNamed.degraded":
-    "Ich habe {name} nur anhand eines Teils der Belege eingeschätzt und dann aufgehört.",
-  "agent.activity.growthFitNamed.failed":
-    "Ich konnte nicht einschätzen, wie gut {name} passt.",
-  "agent.activity.corpusAsk.queued":
-    "Deine Frage an die Dokumente steht in der Warteschlange.",
-  "agent.activity.corpusAsk.running":
-    "Ich beantworte deine Frage aus den Dokumenten.",
-  "agent.activity.corpusAsk.stalled":
-    "Die Antwort aus den Dokumenten dauert ungewöhnlich lange. Möglicherweise wurde sie abgebrochen.",
-  "agent.activity.corpusAsk.done":
-    "Deine Antwort aus den Dokumenten ist fertig.",
-  "agent.activity.corpusAsk.degraded":
-    "Ich habe nur aus einem Teil der Dokumente geantwortet und dann aufgehört.",
-  "agent.activity.corpusAsk.failed":
-    "Ich konnte aus den Dokumenten nicht antworten.",
-  "agent.activity.corpusAskNamed.queued":
-    "Deine Frage an {name} steht in der Warteschlange.",
-  "agent.activity.corpusAskNamed.running":
-    "Ich beantworte deine Frage aus {name}.",
-  "agent.activity.corpusAskNamed.stalled":
-    "Die Antwort aus {name} dauert ungewöhnlich lange. Möglicherweise wurde sie abgebrochen.",
-  "agent.activity.corpusAskNamed.done": "Deine Antwort aus {name} ist fertig.",
-  "agent.activity.corpusAskNamed.degraded":
-    "Ich habe nur aus einem Teil von {name} geantwortet und dann aufgehört.",
-  "agent.activity.corpusAskNamed.failed":
-    "Ich konnte aus {name} nicht antworten.",
-  "agent.activity.coldStart.queued":
-    "Das Lesen der Website dieses Unternehmens steht in der Warteschlange.",
-  "agent.activity.coldStart.running":
-    "Ich lese die Website dieses Unternehmens.",
-  "agent.activity.coldStart.stalled":
-    "Das Lesen der Website dieses Unternehmens dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.coldStart.done":
-    "Ich habe die Website dieses Unternehmens gelesen.",
-  "agent.activity.coldStart.degraded":
-    "Ich habe nur einen Teil der Website dieses Unternehmens gelesen und dann aufgehört.",
-  "agent.activity.coldStart.failed":
-    "Ich konnte die Website dieses Unternehmens nicht lesen.",
-  "agent.activity.coldStartNamed.queued":
-    "{name} steht zum Lesen in der Warteschlange.",
-  "agent.activity.coldStartNamed.running": "Ich lese {name}.",
-  "agent.activity.coldStartNamed.stalled":
-    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.coldStartNamed.done": "Ich habe {name} gelesen.",
-  "agent.activity.coldStartNamed.degraded":
-    "Ich habe nur einen Teil von {name} gelesen und dann aufgehört.",
-  "agent.activity.coldStartNamed.failed": "Ich konnte {name} nicht lesen.",
-  "agent.activity.siteExtract.queued":
-    "Eine ausführliche Lektüre der Website dieses Unternehmens steht in der Warteschlange.",
-  "agent.activity.siteExtract.running":
-    "Ich lese die Website dieses Unternehmens ausführlich durch.",
-  "agent.activity.siteExtract.stalled":
-    "Das Durchlesen der Website dieses Unternehmens dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.siteExtract.done":
-    "Ich habe die Website dieses Unternehmens durchgelesen.",
-  "agent.activity.siteExtract.degraded":
-    "Ich habe nur einen Teil der Website dieses Unternehmens durchgelesen und dann aufgehört.",
-  "agent.activity.siteExtract.failed":
-    "Ich konnte die Website dieses Unternehmens nicht durchlesen.",
-  "agent.activity.siteExtractNamed.queued":
-    "Eine ausführliche Lektüre von {name} steht in der Warteschlange.",
-  "agent.activity.siteExtractNamed.running":
-    "Ich lese {name} ausführlich durch.",
-  "agent.activity.siteExtractNamed.stalled":
-    "Das Durchlesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.siteExtractNamed.done": "Ich habe {name} durchgelesen.",
-  "agent.activity.siteExtractNamed.degraded":
-    "Ich habe nur einen Teil von {name} durchgelesen und dann aufgehört.",
-  "agent.activity.siteExtractNamed.failed":
-    "Ich konnte {name} nicht durchlesen.",
-  "agent.activity.summarizeNamed.queued":
-    "Das Zusammentragen zu {name} steht in der Warteschlange.",
-  "agent.activity.summarizeNamed.running":
-    "Ich trage zusammen, was ich über {name} weiß.",
-  "agent.activity.summarizeNamed.stalled":
-    "Das Zusammentragen zu {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.summarizeNamed.done": "Was ich über {name} weiß, ist fertig.",
-  "agent.activity.summarizeNamed.degraded":
-    "Ich habe über {name} nur teilweise Informationen zusammengetragen und dann aufgehört.",
-  "agent.activity.summarizeNamed.failed":
-    "Ich konnte das Zusammentragen zu {name} nicht abschließen.",
-  "agent.activity.draftReplyNamed.queued":
-    "Deine Antwort an {name} steht zum Entwerfen in der Warteschlange.",
-  "agent.activity.draftReplyNamed.running":
-    "Ich entwerfe deine Antwort an {name}.",
-  "agent.activity.draftReplyNamed.stalled":
-    "Das Entwerfen deiner Antwort an {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.draftReplyNamed.done":
-    "Dein Antwortentwurf an {name} ist fertig.",
-  "agent.activity.draftReplyNamed.degraded":
-    "Ich bin bei deiner Antwort an {name} nur teilweise durchgekommen und habe gestoppt.",
-  "agent.activity.draftReplyNamed.failed":
-    "Ich konnte deine Antwort an {name} nicht entwerfen.",
-  "agent.activity.offerDraftNamed.queued":
-    "Dein Angebot für {name} steht zum Entwerfen in der Warteschlange.",
-  "agent.activity.offerDraftNamed.running":
-    "Ich entwerfe dein Angebot für {name}.",
-  "agent.activity.offerDraftNamed.stalled":
-    "Das Entwerfen deines Angebots für {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.offerDraftNamed.done":
-    "Dein Angebotsentwurf für {name} ist fertig.",
-  "agent.activity.offerDraftNamed.degraded":
-    "Ich bin bei deinem Angebot für {name} nur teilweise durchgekommen und habe gestoppt.",
-  "agent.activity.offerDraftNamed.failed":
-    "Ich konnte dein Angebot für {name} nicht entwerfen.",
-  "agent.activity.reason.budgetDeferred":
-    "Das KI-Budget dieses Monats ist aufgebraucht, deshalb wartet die Arbeit auf den nächsten Monat. Ein Admin kann das Budget unter Einstellungen → KI erhöhen, damit sie jetzt läuft.",
-  "agent.activity.reason.budgetDegrade":
-    "Das KI-Budget dieses Monats ist fast aufgebraucht, deshalb habe ich ein kleineres Modell verwendet. Ein Admin kann das Budget unter Einstellungen → KI erhöhen.",
-  "agent.activity.reason.budgetUnavailable":
-    "Ich konnte das KI-Budget nicht lesen, deshalb ist nichts gelaufen. Versuche es gleich noch einmal; wenn es weiterhin passiert, sag einem Admin Bescheid.",
-  "agent.activity.reason.meteringFailed":
-    "Die Antwort kam an, konnte aber nicht auf das Budget angerechnet werden, deshalb wurde sie verworfen. Versuche es gleich noch einmal.",
-  "agent.activity.reason.requestFailed":
-    "Die Anfrage konnte aus dem Datensatz nicht zusammengestellt werden. Versuche es noch einmal; wenn es weiterhin passiert, sag einem Admin Bescheid.",
-  "agent.activity.reason.schemaInvalid":
-    "Die Antwort des Modells kam nicht in einer Form zurück, die ich verwenden konnte. Versuche es noch einmal.",
-  "agent.activity.reason.providerQuota":
-    "Das Kontingent des KI-Anbieters ist aufgebraucht. Ein Admin kann es aufladen oder unter Einstellungen → KI ein anderes Modell anbinden.",
-  "agent.activity.reason.providerThrottled":
-    "Der KI-Anbieter begrenzt gerade die Anfragen. Warte einen Moment und versuche es noch einmal.",
-  "agent.activity.reason.providerRefused":
-    "Der KI-Anbieter hat die Anfrage abgelehnt. Versuche es noch einmal; wenn es weiterhin passiert, kann ein Admin den Anbieter unter Einstellungen → KI prüfen.",
-  "agent.activity.reason.providerError":
-    "Der KI-Anbieter hat nicht geantwortet. Versuche es gleich noch einmal; wenn es weiterhin passiert, kann ein Admin den Anbieter unter Einstellungen → KI prüfen.",
   "agent.panel.runningNow": "Läuft jetzt",
-  "agent.panel.wentWrong": "Was heute schiefging",
 
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":
@@ -7943,6 +7796,8 @@ export const de = {
   "worklist.untitled.batch": "Eine Gruppe Routineentscheidungen",
   "worklist.verb.review_batch": "Durchsehen",
   "worklist.verb.draft_reply": "Zum Antworten öffnen",
+  // Wo der Editor wirklich aufgeht, ist das Verb die HANDLUNG.
+  "worklist.verb.draft_reply_now": "Antwort entwerfen",
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
   "worklist.batch.unnamedCause": "Etwas",

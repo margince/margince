@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -134,7 +133,7 @@ func Answer(
 func answerWithModel(
 	ctx context.Context, lane Completer, question crmcontracts.OrganizationQuestion, orgID string, in Input, lang string,
 ) ([]Sentence, error) {
-	resp, err := lane.Complete(principal.WithWorkSubject(ctx, in.Name), AskRequest(question, in, lang))
+	resp, err := lane.Complete(ctx, AskRequest(question, in, lang))
 	if err != nil {
 		return nil, err
 	}

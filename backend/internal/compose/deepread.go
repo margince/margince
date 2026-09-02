@@ -36,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
@@ -209,9 +208,6 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 	// dossier row is the authority on who asked, never the job payload — so the
 	// provenance on what this read writes is the row's answer too.
 	ctx = withClaimedRequester(ctx, claim.RequestedBy, args.SiteReadID)
-	// Every model lane this read runs names the site, so the AI-activity rail
-	// can say which website is being read rather than that one is.
-	ctx = principal.WithWorkSubject(ctx, siteHostOf(claim.SeedURL))
 
 	if settled, err := w.routeClaimedRead(ctx, args, claim); settled || err != nil {
 		return err

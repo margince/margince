@@ -15,7 +15,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -35,10 +34,6 @@ import (
 // launder and none to honour. Row scope is enforced; field scope does not exist
 // yet. See margince/margince#4.
 type Facts interface {
-	// GetOrganization is the row itself, read under the same gate as the
-	// sidecars: it is what the company is CALLED, which the AI-activity rail
-	// needs to say which company is being read up on.
-	GetOrganization(ctx context.Context, id ids.OrganizationID, archived storekit.ArchivedFilter) (crmcontracts.Organization, error)
 	ListOrganizationProfileFields(ctx context.Context, id ids.OrganizationID) ([]crmcontracts.CompanyProfileField, error)
 	ListOrganizationFacts(ctx context.Context, id ids.OrganizationID) ([]crmcontracts.OrganizationFact, error)
 }
@@ -51,13 +46,8 @@ type Facts interface {
 // drops whole, taking their other, valid citations with them.
 type Input struct {
 	OrganizationID string `json:"-"`
-	// Name is what the product calls the company, for the AI-activity rail's
-	// line and nothing else. Withheld from the model for the same reason the id
-	// is: it is not a citable record, and the prose is grounded on the fields
-	// and facts below.
-	Name          string `json:"-"`
-	ProfileFields []crmcontracts.CompanyProfileField
-	Facts         []crmcontracts.OrganizationFact
+	ProfileFields  []crmcontracts.CompanyProfileField
+	Facts          []crmcontracts.OrganizationFact
 }
 
 // The citable record kinds, DERIVED from the contract's own enum rather than
@@ -72,14 +62,6 @@ var (
 
 // BuildInput reads the sidecars under the caller's own scope.
 func BuildInput(ctx context.Context, facts Facts, id ids.OrganizationID) (Input, error) {
-	// IncludeArchived, like the organization page's own read and the two
-	// sidecar reads below, neither of which filters archived rows: an archived
-	// company still has a page, and a dossier that refused it while its facts
-	// were readable would 404 a record the reader is looking at.
-	org, err := facts.GetOrganization(ctx, id, storekit.IncludeArchived)
-	if err != nil {
-		return Input{}, err
-	}
 	fields, err := facts.ListOrganizationProfileFields(ctx, id)
 	if err != nil {
 		return Input{}, err
@@ -90,7 +72,6 @@ func BuildInput(ctx context.Context, facts Facts, id ids.OrganizationID) (Input,
 	}
 	return Input{
 		OrganizationID: id.String(),
-		Name:           org.DisplayName,
 		ProfileFields:  fields,
 		Facts:          extracted,
 	}, nil

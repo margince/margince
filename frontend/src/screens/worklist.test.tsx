@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { WorklistScreen } from "./worklist";
 
 // The ranked queue, and the ways it can mislead the person reading it.
@@ -1033,5 +1034,49 @@ describe("the address opens a queue", () => {
     expect(requestedUrls().some((url) => url.includes("scope=mine"))).toBe(
       true,
     );
+  });
+});
+
+// The label moves with the route.
+//
+// The row's own comment refused to say "Draft the reply" while the click only
+// navigated: "a link labelled 'Draft the reply' would promise something the
+// click does not do… the label moves back when it lands". This is the assertion
+// that the two halves stay together — mutate either and one of these fails.
+describe("the draft_reply verb says what the click does", () => {
+  function replyRow(subjectType: string, id: string): WorklistItem {
+    return row({
+      id: `m-${id}`,
+      source: "waiting_customer",
+      category: "customer_waiting",
+      title: "Aster Handel",
+      subject: { type: subjectType, id },
+      move: { action: "draft_reply", activity_id: "a-1" },
+    } as unknown as Partial<WorklistItem>);
+  }
+
+  it("names the ACT where the address opens the composer", async () => {
+    stub(day({ queue: [replyRow("person", "p-1")] }));
+    renderWorklist();
+
+    const link = await screen.findByRole("link", {
+      name: en["worklist.verb.draft_reply_now"],
+    });
+    expect(link.getAttribute("href")).toContain("compose=reply");
+  });
+
+  it("names where it GOES where there is no composer to open", async () => {
+    stub(day({ queue: [replyRow("deal", "d-1")] }));
+    renderWorklist();
+
+    const link = await screen.findByRole("link", {
+      name: en["worklist.verb.draft_reply"],
+    });
+    expect(link.getAttribute("href")).not.toContain("compose=");
+    expect(
+      screen.queryByRole("link", {
+        name: en["worklist.verb.draft_reply_now"],
+      }),
+    ).toBeNull();
   });
 });
