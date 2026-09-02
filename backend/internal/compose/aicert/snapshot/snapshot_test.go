@@ -131,3 +131,26 @@ func TestTheCommittedSnapshotLoads(t *testing.T) {
 		}
 	}
 }
+
+// Rows that did not arrive as a file go through the same indexing and the same
+// duplicate refusal, which is why FromRows exists at all: a caller assembling
+// the map itself would prove nothing about the lookup the binary performs.
+func TestFromRowsIndexesAndRefusesLikeAFile(t *testing.T) {
+	t.Parallel()
+
+	row := Row{
+		Task: "draft_reply", Site: "reply", Provider: "openai_compatible",
+		Model: "openai/gpt-oss-120b", EnvClass: "eu_hosted",
+		Status: StatusCurrent, Band: "certified", Runs: 9, Passed: 9, Measured: 3,
+	}
+	snap, err := FromRows([]Row{row})
+	if err != nil {
+		t.Fatalf("indexing: %v", err)
+	}
+	if _, found := snap.For(row.Task, row.Site, row.Provider, row.Model, row.EnvClass); !found {
+		t.Error("a row given directly was not indexed")
+	}
+	if _, err := FromRows([]Row{row, row}); err == nil {
+		t.Error("two rows sharing a key were accepted, which a file would have refused")
+	}
+}
