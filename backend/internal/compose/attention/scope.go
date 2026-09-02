@@ -110,9 +110,17 @@ func (s *Service) resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, e
 		return ids.UUID{}, apperrors.ErrPermissionDenied
 	}
 	// Their own id needs no wider tier: "mine, spelled out" is the same
-	// question the default answers.
+	// question the default answers, so it resolves to the SAME answer — the
+	// zero owner the default carries — rather than to their id.
+	//
+	// The two spellings already read identically: TasksMine files the query
+	// under `actor.UserID` and TasksOwnedBy under `owner`, which for this case
+	// are one value. Returning the id instead made them differ everywhere the
+	// resolved owner is read as an identity rather than used as a filter — a
+	// continuation token minted under one spelling was refused under the other,
+	// and the caller was told their question had changed when it had not.
 	if owner == actor.UserID {
-		return owner, nil
+		return ids.UUID{}, nil
 	}
 	// An unbounded reader reaches every row, so for them the tier IS the whole
 	// test and naming anyone is answerable.

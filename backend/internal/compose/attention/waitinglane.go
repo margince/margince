@@ -12,8 +12,12 @@ package attention
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -57,4 +61,50 @@ type WaitingCustomer struct {
 	// the thread is filed under. Zero when nothing on it names an owner, which
 	// is an unowned customer rather than a missing answer.
 	OwnerID ids.UUID
+}
+
+// waitingCustomers reads who is waiting, or names why it could not.
+//
+// A refusal is reported as a withheld source; any other failure as a failed
+// one. Neither takes the rest of the day down with it — a page that answered
+// nothing because one source stumbled is less useful than a page that says
+// which part it could not read.
+func (s *Service) waitingCustomers(
+	ctx context.Context, asOf time.Time,
+) (waitingRead, *crmcontracts.WorklistSourceUnavailable) {
+	if s.waiting == nil {
+		return waitingRead{}, nil
+	}
+	rows, cut, err := s.waiting.Unanswered(ctx, asOf)
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
+			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
+		}
+	case err != nil:
+		// Named on the page AND recorded here. A source reported as failed with
+		// nothing in the log leaves an operator with a warning they cannot act
+		// on — which is how this one went a whole verification round without
+		// anybody being able to say what broke.
+		slog.ErrorContext(ctx, "the who-is-waiting read failed", "error", err)
+		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
+			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
+		}
+	default:
+		return waitingRead{rows: rows, read: true, cut: cut}, nil
+	}
+}
+
+// waitingRead is what the who-is-waiting source answered, and whether it ran.
+//
+// `read` tells an empty answer from an absent lane, the way the lead read's own
+// wrapper does: reach publishes a row for every source it is told about, so
+// recording a source that never ran would report it as successfully read and
+// empty. `cut` is the lane's own scan depth, which the row count cannot
+// recover — the seam drops machine senders and folds duplicate threads AFTER
+// the SQL cap, so a short answer is what a truncated scan looks like.
+type waitingRead struct {
+	rows []WaitingCustomer
+	read bool
+	cut  bool
 }

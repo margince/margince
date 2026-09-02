@@ -312,15 +312,24 @@ func TestAFailedMembershipReadRefusesAndReportsTheFailure(t *testing.T) {
 // Naming yourself is the question the default already answers, so every tier
 // may ask it. A rep following a link that spells out their own id must not be
 // refused their own day.
-func TestNamingYourselfNeedsNoWiderTier(t *testing.T) {
+//
+// It resolves to the SAME answer as the default — the zero owner — rather than
+// to their id, because "the same question" has to mean one resolved question
+// downstream and not two. The two spellings already read identically (TasksMine
+// files the query under actor.UserID, TasksOwnedBy under owner, one value
+// here); resolving them apart made every later reader of the resolved owner see
+// two different questions, and a continuation token minted under one spelling
+// was refused under the other.
+func TestNamingYourselfResolvesToTheDefaultQuestion(t *testing.T) {
 	me := ids.MustParse("01a05500-0000-7000-8000-000000000001")
 
 	got, err := (&Service{}).resolveOwner(readerAt(principal.RowScopeOwn), me)
 	if err != nil {
 		t.Fatalf("a reader was refused their OWN queue: %v", err)
 	}
-	if got != me {
-		t.Fatalf("asking for their own queue answered %v", got)
+	if !got.IsZero() {
+		t.Fatalf("naming yourself resolved to %v; it is the question the default answers, "+
+			"and resolving it apart makes one question look like two", got)
 	}
 }
 

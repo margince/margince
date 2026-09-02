@@ -29886,16 +29886,20 @@ type Worklist struct {
 	// NextCursor Send this back as `cursor` to continue past the last row of this page. See that
 	// parameter for what a walk does and does not guarantee.
 	//
-	// ABSENT MEANS THE WALK IS OVER — there is nothing behind this page. It is
+	// ABSENT MEANS THE WALK IS OVER — nothing was left behind this page. It is
 	// deliberately not minted on a final page: a cursor there invites one more request
 	// that can only answer empty, and a client walking until the cursor disappears
 	// would never stop.
 	//
 	// Absent is therefore a claim, not a silence, and it is the one this field must
-	// never make wrongly. `reach` and `counts` answer a different question — how deep
-	// each SOURCE was read, which is a bound on work rather than the end of a page —
-	// so a walk that has ended can still sit above sources that were cut short, and
-	// both statements are true at once.
+	// never make wrongly. It is a claim about THIS READ of the day: work that arrives
+	// afterwards, or that overtakes rows already handed out, appears on the next read
+	// rather than extending a finished walk.
+	//
+	// `reach` and `counts` answer a different question — how deep each SOURCE was read,
+	// which is a bound on work rather than the end of a page — so a walk that has ended
+	// can still sit above sources that were cut short, and both statements are true at
+	// once.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// Queue Everything actionable, best-first. The order is the product of this endpoint.
@@ -35003,23 +35007,43 @@ type GetWorklistParams struct {
 	// handed you, and the next page re-assembles the day, re-ranks it, and continues
 	// after that row.
 	//
-	// It encodes the `scope`, `filter` and `owner` it was minted under. Sending it
-	// alongside different ones returns `422 code: cursor_param_mismatch` rather than
-	// continuing into a different question — page two of your own tasks silently
+	// It encodes the `scope`, `filter` and `owner` it was minted under, NORMALISED, so
+	// that two spellings of one question share a cursor: an omitted `filter` and
+	// `filter=all` weigh the same candidates, and naming yourself as `owner` is the
+	// question the default already answers. Sending a cursor alongside a genuinely
+	// different scope, filter or owner returns `422 code: cursor_param_mismatch` rather
+	// than continuing into another question — page two of your own tasks silently
 	// becoming the team's deals is what that prevents, and nothing in the response would
 	// have said so. `limit` is deliberately NOT fingerprinted: it decides how many rows
 	// a page carries, not which rows exist, so changing it mid-walk is legitimate.
 	//
-	// A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	// A token that does not decode returns `422 code: malformed_cursor`. The token is
+	// opaque, NOT authenticated: it is base64 of a small JSON object and a caller who
+	// studies it can construct one. That grants nothing. A cursor only chooses where to
+	// resume inside a page that is re-assembled from scratch under the caller's own
+	// principal, so every row it can reach is one the caller could already read, and no
+	// forged token widens scope or row visibility.
 	//
 	// WHAT A WALK GUARANTEES, and what it does not. This is live work, so the day moves
 	// between pages: a rep answers a message, a deal closes, a colleague takes a task.
-	// The walk guarantees a row is not silently repeated, and that it terminates. It
-	// does not promise a stable snapshot, and should not — a page showing rows already
-	// dealt with would be worse than one that skipped them. If the row a cursor names is
-	// gone by the time the next page is asked for, the walk ENDS: restarting from the
-	// top would hand a client paging to exhaustion the same first page forever, each
-	// pass looking like ordinary progress.
+	//
+	// Guaranteed: the walk TERMINATES, and no row is lost from a part of the day that
+	// did not change. A row whose anchor is answered or reprioritised between pages does
+	// not end the walk early — the token carries a position as well as an identity, and
+	// the position continues it.
+	//
+	// Not guaranteed: a stable snapshot, which a set re-assembled and re-ranked on every
+	// read cannot offer. Two consequences, both deliberate:
+	//
+	// A row may REPEAT. Where the token's position and identity disagree — because the
+	// day moved under them — the earlier of the two wins. Repeating a row the caller has
+	// already seen is recoverable; skipping one means work shown to nobody, so this errs
+	// toward the first every time.
+	//
+	// A row that overtakes rows you have ALREADY been handed waits for your next read.
+	// It now sorts behind them, and returning it would mean re-serving that whole prefix
+	// — the walk that never ends. Opening the queue again leads with it, so the delay is
+	// bounded and corrects itself.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Owner Whose queue to answer, when it is somebody else's. A manager reading a team

@@ -17,13 +17,9 @@ package attention
 
 import (
 	"context"
-	"errors"
-	"log/slog"
 	"sort"
-	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -142,52 +138,6 @@ func (s *Service) Worklist(
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	return out, nil
-}
-
-// waitingCustomers reads who is waiting, or names why it could not.
-//
-// A refusal is reported as a withheld source; any other failure as a failed
-// one. Neither takes the rest of the day down with it — a page that answered
-// nothing because one source stumbled is less useful than a page that says
-// which part it could not read.
-func (s *Service) waitingCustomers(
-	ctx context.Context, asOf time.Time,
-) (waitingRead, *crmcontracts.WorklistSourceUnavailable) {
-	if s.waiting == nil {
-		return waitingRead{}, nil
-	}
-	rows, cut, err := s.waiting.Unanswered(ctx, asOf)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
-		}
-	case err != nil:
-		// Named on the page AND recorded here. A source reported as failed with
-		// nothing in the log leaves an operator with a warning they cannot act
-		// on — which is how this one went a whole verification round without
-		// anybody being able to say what broke.
-		slog.ErrorContext(ctx, "the who-is-waiting read failed", "error", err)
-		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
-		}
-	default:
-		return waitingRead{rows: rows, read: true, cut: cut}, nil
-	}
-}
-
-// waitingRead is what the who-is-waiting source answered, and whether it ran.
-//
-// `read` tells an empty answer from an absent lane, the way the lead read's own
-// wrapper does: reach publishes a row for every source it is told about, so
-// recording a source that never ran would report it as successfully read and
-// empty. `cut` is the lane's own scan depth, which the row count cannot
-// recover — the seam drops machine senders and folds duplicate threads AFTER
-// the SQL cap, so a short answer is what a truncated scan looks like.
-type waitingRead struct {
-	rows []WaitingCustomer
-	read bool
-	cut  bool
 }
 
 // worklistFrom projects an already-assembled day, so a test can drive the
@@ -352,8 +302,13 @@ func (s *Service) worklistFrom(
 	// Fingerprinted with `s.taskOwner`, the same resolved owner the two
 	// narrowing passes above read. Taking it from the request instead would let
 	// the token and the rows it continues disagree about whose queue this is.
+	//
+	// The served count runs from the START of the walk, not of this page: it is
+	// what the incoming token already accounted for plus what this page adds,
+	// so it stays a position in the ranking rather than a page size.
 	if more && len(shown) > 0 {
-		token := encodeCursor(shown[len(shown)-1], scope, filter, s.taskOwner)
+		token := encodeCursor(
+			shown[len(shown)-1], cursor.Served+len(shown), scope, filter, s.taskOwner)
 		out.NextCursor = &token
 	}
 	return out

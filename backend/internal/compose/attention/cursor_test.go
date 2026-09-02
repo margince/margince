@@ -14,7 +14,7 @@ import (
 )
 
 // A day of `n` plain tasks, which classify into one level and therefore exercise
-// the id tie-break that makes the ranking total.
+// the id tie-break that makes the ranking deterministic.
 func tasksDay(n int) crmcontracts.Attention {
 	planned := make([]crmcontracts.AttentionItem, 0, n)
 	for i := range n {
@@ -126,7 +126,7 @@ func TestTheFinalPageOffersNoCursor(t *testing.T) {
 func TestACursorIsRefusedWhenTheQuestionChanged(t *testing.T) {
 	someone := ids.UUID(mustUUID(t, "11111111-1111-4111-8111-111111111111"))
 	minted := encodeCursor(
-		ranked{item: crmcontracts.WorklistItem{Source: "task", Id: "t1"}},
+		ranked{item: crmcontracts.WorklistItem{Source: "task", Id: "t1"}}, 1,
 		scopeMine, "", ids.UUID{})
 
 	for _, tc := range []struct {
@@ -152,7 +152,7 @@ func TestACursorIsRefusedWhenTheQuestionChanged(t *testing.T) {
 // carries, not which rows exist. Refusing it would be a lie about what changed.
 func TestChangingTheLimitDoesNotInvalidateACursor(t *testing.T) {
 	minted := encodeCursor(
-		ranked{item: crmcontracts.WorklistItem{Source: "task", Id: "t1"}},
+		ranked{item: crmcontracts.WorklistItem{Source: "task", Id: "t1"}}, 1,
 		scopeMine, "", ids.UUID{})
 	if _, err := decodeCursor(minted, scopeMine, "", ids.UUID{}); err != nil {
 		t.Errorf("a cursor was refused although only the page size changed: %v", err)
@@ -198,7 +198,7 @@ func TestACursorRoundTripsEveryRowShapeTheQueueCanCarry(t *testing.T) {
 		"approval", "bounce", "meeting_prep", "duplicate",
 	} {
 		row := ranked{item: crmcontracts.WorklistItem{Source: source, Id: "some-record-id"}}
-		token := encodeCursor(row, scopeMine, "", ids.UUID{})
+		token := encodeCursor(row, 1, scopeMine, "", ids.UUID{})
 		if token == "" {
 			t.Fatalf("source %q minted an empty cursor", source)
 		}
@@ -212,32 +212,38 @@ func TestACursorRoundTripsEveryRowShapeTheQueueCanCarry(t *testing.T) {
 	}
 }
 
-// A row that vanishes between pages ends the walk. Restarting from the top
-// instead would hand a client paging to exhaustion the same first page forever,
-// each pass looking like ordinary progress.
-func TestAWalkEndsWhenItsAnchorIsGone(t *testing.T) {
+// A vanished anchor must NOT end the walk. The position carries it, so the
+// caller continues from where they had got to rather than being told, wrongly,
+// that they had reached the end with work still owed.
+func TestAVanishedAnchorDoesNotEndTheWalk(t *testing.T) {
 	rows := []ranked{
 		{item: crmcontracts.WorklistItem{Source: "task", Id: "a"}},
 		{item: crmcontracts.WorklistItem{Source: "task", Id: "b"}},
 	}
-	left := resume(rows, worklistCursor{Source: "task", Row: "answered-and-gone"})
-	if len(left) != 0 {
-		t.Errorf("a vanished anchor left %d rows; the walk must end rather than restart", len(left))
+	left := resume(rows, worklistCursor{Source: "task", Row: "answered-and-gone", Served: 1})
+	if len(left) != 1 || left[0].item.Id != "b" {
+		t.Errorf("a vanished anchor left %v; the position should have carried the walk to b",
+			rowIDsOf(left))
 	}
 }
 
-// The anchor is found by identity, never by position. Positions move whenever
-// the day moves, so an index would resume at whatever row slid into that slot —
-// skipping work silently, which is the direction this queue must never fail in.
-func TestTheAnchorIsFoundByIdentityNotPosition(t *testing.T) {
+// The identity half wins when it is EARLIER than the position, which is what
+// keeps a row that moved up from being stepped over.
+//
+// Here the anchor sits at index 1 because a row arrived above it, while the
+// token says one row was served. Position-only would resume at 1 and hand back
+// the anchor itself; identity-only would resume at 2 and skip the arrival. The
+// earlier of the two — index 1 — repeats the anchor rather than losing a row,
+// which is the trade this cursor makes deliberately.
+func TestTheEarlierOfPositionAndIdentityWins(t *testing.T) {
 	rows := []ranked{
 		{item: crmcontracts.WorklistItem{Source: "task", Id: "arrived-since"}},
 		{item: crmcontracts.WorklistItem{Source: "task", Id: "the-anchor"}},
 		{item: crmcontracts.WorklistItem{Source: "task", Id: "still-owed"}},
 	}
-	left := resume(rows, worklistCursor{Source: "task", Row: "the-anchor"})
-	if len(left) != 1 || left[0].item.Id != "still-owed" {
-		t.Fatalf("resume returned %v, want exactly the row after the anchor", rowIDsOf(left))
+	left := resume(rows, worklistCursor{Source: "task", Row: "the-anchor", Served: 1})
+	if len(left) != 2 || left[0].item.Id != "the-anchor" {
+		t.Fatalf("resume returned %v, want the anchor and everything after it", rowIDsOf(left))
 	}
 }
 
@@ -247,15 +253,15 @@ func TestTheAnchorIsFoundByIdentityNotPosition(t *testing.T) {
 // The anchor is the SECOND of the pair on purpose. Anchoring on the first would
 // pass under either rule: a match on the id alone finds that same row, so the
 // two implementations agree and the test proves nothing. Only a cursor naming
-// the later one tells them apart — matching on the id alone stops at the
-// earlier row and hands back work the caller has already been given.
+// the later one tells them apart — matching on the id alone resolves the anchor
+// one row too early and hands back a row the caller already has.
 func TestTwoSourcesSharingARecordIdAreDifferentRows(t *testing.T) {
 	rows := []ranked{
 		{item: crmcontracts.WorklistItem{Source: "deal_at_risk", Id: "same-deal"}},
 		{item: crmcontracts.WorklistItem{Source: sourceWaiting, Id: "same-deal"}},
 		{item: crmcontracts.WorklistItem{Source: "task", Id: "still-owed"}},
 	}
-	left := resume(rows, worklistCursor{Source: sourceWaiting, Row: "same-deal"})
+	left := resume(rows, worklistCursor{Source: sourceWaiting, Row: "same-deal", Served: 2})
 	if len(left) != 1 || left[0].item.Id != "still-owed" {
 		t.Errorf("resume returned %v; matching the id alone stops at the wrong row and repeats work",
 			rowIDsOf(left))
@@ -378,5 +384,210 @@ func TestAFoldedRowIsAStableAnchorAcrossReads(t *testing.T) {
 			t.Errorf("a folded row changed identity between reads: %q then %q; "+
 				"a cursor naming it would find nothing and end the walk early", one[i], two[i])
 		}
+	}
+}
+
+// A day that moves between pages must not lose a row.
+//
+// These two are the reason the token carries a position AND an identity. Each
+// half alone fails one of them, in opposite directions, and the failure is
+// silent either way: the reader is simply never shown work they are owed.
+func TestALiveDayDoesNotLoseRowsBetweenPages(t *testing.T) {
+	svc := &Service{}
+	at := func(id string, due time.Duration) crmcontracts.AttentionItem {
+		return item(id, "task", withDue(rankInstant.Add(due)))
+	}
+	page := func(day crmcontracts.Attention, cursor worklistCursor) crmcontracts.Worklist {
+		return svc.worklistFrom(t.Context(), day, scopeAll, "", 1,
+			waitingRead{}, leadRead{}, cursor)
+	}
+	shown := func(out crmcontracts.Worklist) []string {
+		got := []string{}
+		for _, row := range out.Queue {
+			got = append(got, row.Id)
+		}
+		return got
+	}
+
+	t.Run("a row that moves up but stays behind the reader is still reached", func(t *testing.T) {
+		// aa, bb, cc, dd by deadline. Page one hands out aa.
+		before := crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
+			at("aa", time.Hour), at("bb", 2*time.Hour),
+			at("cc", 3*time.Hour), at("dd", 4*time.Hour),
+		}}
+		first := page(before, worklistCursor{})
+		cursor, err := decodeCursor(*first.NextCursor, scopeAll, "", ids.UUID{})
+		if err != nil {
+			t.Fatalf("decoding page one's cursor: %v", err)
+		}
+		// dd overtakes bb and cc but still sorts behind the already-served aa.
+		// A position-only resume would step over whatever landed on the old
+		// offset; taking the earlier of position and identity keeps it.
+		after := crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
+			at("aa", time.Hour), at("bb", 2*time.Hour),
+			at("cc", 3*time.Hour), at("dd", 90*time.Minute),
+		}}
+		reached := map[string]bool{}
+		for _, id := range shown(first) {
+			reached[id] = true
+		}
+		for range 8 {
+			out := page(after, cursor)
+			for _, id := range shown(out) {
+				reached[id] = true
+			}
+			if out.NextCursor == nil {
+				break
+			}
+			cursor, err = decodeCursor(*out.NextCursor, scopeAll, "", ids.UUID{})
+			if err != nil {
+				t.Fatalf("decoding a later cursor: %v", err)
+			}
+		}
+		for _, want := range []string{"aa", "bb", "cc", "dd"} {
+			if !reached[want] {
+				t.Errorf("row %q was never shown to the reader; the walk stepped over it", want)
+			}
+		}
+	})
+
+	// The limit of ANY forward-only cursor over a live re-ranked set, pinned
+	// here so it is a known property rather than a surprise.
+	//
+	// A row that overtakes rows the caller has already been handed now sorts
+	// behind them. Returning it would mean re-serving that whole prefix, which
+	// is the walk that never terminates. So this read does not show it, and the
+	// next read of the day — the rep opening their queue again — leads with it.
+	//
+	// That loss is bounded and self-correcting, and it is the only one accepted
+	// here. It is not the same as the defects the cases above cover, where a
+	// row went missing from an unchanged part of the day.
+	t.Run("a row that overtakes what the reader already has waits for the next read", func(t *testing.T) {
+		before := crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
+			at("aa", time.Hour), at("bb", 2*time.Hour), at("cc", 3*time.Hour),
+		}}
+		first := page(before, worklistCursor{})
+		cursor, err := decodeCursor(*first.NextCursor, scopeAll, "", ids.UUID{})
+		if err != nil {
+			t.Fatalf("decoding page one's cursor: %v", err)
+		}
+		// cc becomes the most urgent thing on the day, ahead of the served aa.
+		after := crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
+			at("aa", time.Hour), at("bb", 2*time.Hour), at("cc", -5*time.Hour),
+		}}
+		out := page(after, cursor)
+		if len(out.Queue) == 0 {
+			t.Fatal("the walk ended although rows behind the anchor were still owed")
+		}
+		// A fresh read leads with it, so the row is delayed rather than lost.
+		fresh := page(after, worklistCursor{})
+		if len(fresh.Queue) == 0 || fresh.Queue[0].Id != "cc" {
+			t.Errorf("a fresh read did not lead with the newly urgent row: %v", shown(fresh))
+		}
+	})
+
+	t.Run("an anchor that slides to last does not end the walk", func(t *testing.T) {
+		before := crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
+			at("aa", time.Hour), at("bb", 2*time.Hour), at("cc", 3*time.Hour),
+		}}
+		first := page(before, worklistCursor{})
+		cursor, err := decodeCursor(*first.NextCursor, scopeAll, "", ids.UUID{})
+		if err != nil {
+			t.Fatalf("decoding page one's cursor: %v", err)
+		}
+		// The anchor itself is deprioritised to the very end. An identity-only
+		// resume returns nothing at all — "after aa" is empty — and the reader
+		// is told their day is finished with two rows still owed.
+		after := crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
+			at("aa", 99*time.Hour), at("bb", 2*time.Hour), at("cc", 3*time.Hour),
+		}}
+		out := page(after, cursor)
+		if len(out.Queue) == 0 {
+			t.Fatal("the walk reported itself finished while two rows were still owed")
+		}
+	})
+
+	t.Run("an anchor that vanishes does not end the walk", func(t *testing.T) {
+		before := crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
+			at("aa", time.Hour), at("bb", 2*time.Hour), at("cc", 3*time.Hour),
+		}}
+		first := page(before, worklistCursor{})
+		cursor, err := decodeCursor(*first.NextCursor, scopeAll, "", ids.UUID{})
+		if err != nil {
+			t.Fatalf("decoding page one's cursor: %v", err)
+		}
+		// aa is answered between pages. The position carries the walk.
+		after := crmcontracts.Attention{AsOf: rankInstant, Planned: []crmcontracts.AttentionItem{
+			at("bb", 2*time.Hour), at("cc", 3*time.Hour),
+		}}
+		out := page(after, cursor)
+		if len(out.Queue) == 0 {
+			t.Fatal("answering the anchor ended the walk; the rows behind it became unreachable")
+		}
+	})
+}
+
+// The two spellings of one question must fingerprint alike, or a walk breaks on
+// a difference the caller cannot see. Both are cases the contract itself calls
+// the same question.
+func TestEquivalentSpellingsOfOneQuestionShareACursor(t *testing.T) {
+	t.Parallel()
+
+	t.Run("an omitted filter and filter=all", func(t *testing.T) {
+		minted := encodeCursor(
+			ranked{item: crmcontracts.WorklistItem{Source: "task", Id: "t1"}}, 1,
+			scopeMine, "", ids.UUID{})
+		if _, err := decodeCursor(minted, scopeMine, "all", ids.UUID{}); err != nil {
+			t.Errorf("a client sending its documented `all` default on page two was refused: %v", err)
+		}
+	})
+
+	t.Run("an omitted owner and naming yourself", func(t *testing.T) {
+		svc := NewService(
+			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
+			stubBriefing{}, nil, nil, nil, nil,
+			nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		waits := []WaitingCustomer{}
+		for i := range 3 {
+			waits = append(waits, WaitingCustomer{
+				ActivityID: ids.NewV7(), Subject: "a customer",
+				Since: readInstant.Add(-time.Duration(i+2) * 24 * time.Hour), OwnerID: theManager,
+			})
+		}
+		svc.waiting = waitingOwnedBy(waits)
+		svc.teammates = teammatesSaying(true)
+
+		first, err := svc.Worklist(managerReading(), "", "", ids.UUID{}, 2, "")
+		if err != nil {
+			t.Fatalf("reading own queue: %v", err)
+		}
+		if first.NextCursor == nil {
+			t.Fatal("a page of two over three rows offered no cursor")
+		}
+		// The same reader, naming themselves — which the contract calls the
+		// question the default already answers.
+		if _, err := svc.Worklist(managerReading(), "", "", theManager, 2, *first.NextCursor); err != nil {
+			t.Errorf("naming yourself on page two was refused as a different question: %v", err)
+		}
+	})
+}
+
+// Two rows that are indistinguishable as anchors must not stall a walk.
+//
+// less() ends at the id, so rows sharing one tie there and their (source, id)
+// anchors cannot be told apart: resume() finds the first every time. The
+// position half of the token is what carries the walk past them — without it a
+// cursor naming the second would resolve to the first and the same page would
+// be served forever.
+func TestIndistinguishableAnchorsDoNotStallAWalk(t *testing.T) {
+	rows := []ranked{
+		{item: crmcontracts.WorklistItem{Source: "task", Id: "twin"}},
+		{item: crmcontracts.WorklistItem{Source: "task", Id: "twin"}},
+		{item: crmcontracts.WorklistItem{Source: "task", Id: "after"}},
+	}
+	// The caller has had both twins; the identity resolves to the first.
+	left := resume(rows, worklistCursor{Source: "task", Row: "twin", Served: 2})
+	if len(left) == len(rows) {
+		t.Fatal("the walk made no progress; a cursor on a duplicated id would repeat forever")
 	}
 }
