@@ -102,7 +102,18 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 		row.DueAt = &at
 		stampDeadline(&row, &at, asOf)
 	}
-	return ranked{item: row, deadlineAt: deadlineOf(deadline), occurredAt: asOf}
+	return ranked{
+		item: row, deadlineAt: deadlineOf(deadline), occurredAt: asOf,
+		// Who owes the first reply, so the scope filters can judge this row the
+		// way they judge every other.
+		//
+		// keepOwnedBy used to carry a case for this source, because it read only
+		// the DEAL's owner and a lead row carries a lead subject and no deal —
+		// so without the case every lead was dropped from a named owner's queue.
+		// Saying who owns the row is the general answer, and it costs the next
+		// source no case of its own.
+		owner: lead.OwnerID,
+	}
 }
 
 // leadStanding reads the state the people module derived, and says what it

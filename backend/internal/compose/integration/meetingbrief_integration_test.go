@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,9 +36,26 @@ import (
 )
 
 func meetingBriefService(e *Env) *meetingbrief.Service {
+	// Bound to the same membership seam compose binds, so the coaching rule is
+	// under test here rather than switched off by the fixture.
+	return meetingBriefServiceWithoutTeammates(e).
+		WithTeammates(identityTeammates{svc: identity.NewService(e.Pool)})
+}
+
+// meetingBriefServiceWithoutTeammates is the same service with no membership
+// seam — the composition a deployment that never wired coaching gets.
+func meetingBriefServiceWithoutTeammates(e *Env) *meetingbrief.Service {
 	view := person360.NewService(e.Pool, e.People, e.Deals, e.Projects, consent.NewStore(e.DB()),
 		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
 	return meetingbrief.NewService(e.Pool, view, e.People, func() time.Time { return roomFixedNow })
+}
+
+// identityTeammates is the membership reader, in the shape the brief takes.
+// The typed id stays inside identity, exactly as compose's own seam does.
+type identityTeammates struct{ svc *identity.Service }
+
+func (t identityTeammates) SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error) {
+	return t.svc.SharesLiveTeamWithCaller(ctx, ids.From[ids.UserKind](other))
 }
 
 // The object grant is checked before any row is read. Without it a reader whose

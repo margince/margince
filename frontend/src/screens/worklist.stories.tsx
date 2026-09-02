@@ -7,10 +7,42 @@ import { WorklistScreen } from "./worklist";
 // and one the page could not read the whole of.
 
 type Worklist = components["schemas"]["Worklist"];
+type TeamBoard = components["schemas"]["TeamBoard"];
 
-function stubDay(day: Worklist) {
+// A team with somebody carrying more than the rest, which is what a lead opens
+// the board to find.
+const aLoadedTeam: TeamBoard = {
+  as_of: "2026-08-31T09:00:00Z",
+  members: [
+    {
+      user_id: "00000000-0000-4000-8000-000000000001",
+      display_name: "Lena Fischer",
+      counts: { waiting: 14, at_risk: 3, overdue: 6 },
+    },
+    {
+      user_id: "00000000-0000-4000-8000-000000000002",
+      display_name: "Marc Weber",
+      counts: { waiting: 2, at_risk: 0, overdue: 0 },
+    },
+    {
+      user_id: "00000000-0000-4000-8000-000000000003",
+      display_name: "Sofia Ruiz",
+      counts: { waiting: 0, at_risk: 1, overdue: 0 },
+    },
+  ],
+  unassigned: { waiting: 3, at_risk: 0, overdue: 1 },
+  truncated: false,
+};
+
+// The board is fetched by the screen whenever the reader's scope reaches
+// `team`, so the day stub has to answer it: matching /worklist alone would hand
+// the board a Worklist and the table would draw from a shape it does not have.
+function stubDay(day: Worklist, board: TeamBoard = aLoadedTeam) {
   globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
     const url = String(input instanceof Request ? input.url : input);
+    if (url.includes("/worklist/team")) {
+      return jsonResponse(board);
+    }
     if (url.includes("/worklist")) {
       return jsonResponse(day);
     }
@@ -173,6 +205,74 @@ export const PartlyUnread: Story = {
       // pretend otherwise.
       counts: [],
     });
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// A lead's own morning, with the team above it.
+//
+// The board is the second question, which is why it is behind a disclosure: the
+// lead's own day is still what they came for. Lena is carrying fourteen waiting
+// customers to Marc's two, which is the reading the whole surface exists for —
+// and the unassigned row under them is work nobody is looking at at all.
+export const ALeadsDay: Story = {
+  render: () => {
+    stubDay({
+      as_of: "2026-08-31T09:00:00Z",
+      scope: "mine",
+      scope_options: ["mine", "unassigned", "team", "all"],
+      summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+      sources_unavailable: [],
+      reach: [],
+      counts: [
+        { category: "tasks", considered: 1, shown: 1, more_available: false },
+      ],
+      queue: [
+        {
+          id: "task-1",
+          source: "task",
+          category: "tasks",
+          level: 4,
+          consequence: "task_slips",
+          title: "Confirm the workshop date",
+          because: [{ kind: "due_today" }],
+          actions: [],
+        },
+      ],
+    });
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// The board reporting FLOORS rather than totals.
+//
+// A count read to its source's bound cannot say how much sits past it, so the
+// line under the table says the figures are a floor. Without it a lead told
+// "50" over a number that is really 50-or-more would not go looking, which is
+// the one direction this surface must not get wrong.
+export const ATeamBiggerThanTheBoardCanCount: Story = {
+  render: () => {
+    stubDay(
+      {
+        as_of: "2026-08-31T09:00:00Z",
+        scope: "mine",
+        scope_options: ["mine", "unassigned", "team", "all"],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+        sources_unavailable: [],
+        reach: [],
+        counts: [],
+        queue: [],
+      },
+      { ...aLoadedTeam, truncated: true },
+    );
     return (
       <StoryProviders>
         <WorklistScreen />

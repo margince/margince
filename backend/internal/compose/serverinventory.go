@@ -436,3 +436,8 @@ func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
 func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmcontracts.GetWorklistParams) {
 	s.attentionHandlers.GetWorklist(w, r, params)
 }
+
+// GetTeamBoard forwards the manager's read of the same work.
+func (s Server) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+	s.attentionHandlers.GetTeamBoard(w, r)
+}

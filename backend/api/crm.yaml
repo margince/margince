@@ -9572,8 +9572,15 @@ paths:
             it at any tier: nothing in it belongs to a colleague, which is what unassigned
             means. It exists because `mine` is exact — a task with no assignee is no
             longer folded into every reader's own queue, so it needs a queue of its own or
-            the product would have stopped mentioning it. Tasks only: a message has no
-            assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
+            the product would have stopped mentioning it.
+
+            It carries unanswered mail too, and that is the case it matters most for. A
+            message has no assignee, so its owner is the owner of the record it is filed
+            under — deal, then lead, then person, then organization, first owner found. A
+            thread no owned record attributes to anybody is the customer nobody is looking
+            at, which is exactly what this queue is opened to find. Such a message stays
+            reachable from `mine` as well, on the ground that an unowned customer writing
+            in is everybody's until somebody takes them.
 
             WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
             going quiet, meetings and duplicate pairs are read under the caller's row
@@ -9627,6 +9634,44 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /worklist/team:
+    get:
+      tags: [Brief]
+      operationId: getTeamBoard
+      summary: One row per teammate — who is carrying what, so a lead can see where to help.
+      description: |
+        The manager's read of the same work `/worklist` ranks for one person. It answers
+        "who on my team is drowning", which the ranked queue structurally cannot: that
+        queue assembles ONE person's day, so widening its scope cannot produce rows for
+        sources that were never read for anybody else.
+
+        So this is COUNTS, not rows. Three per teammate — customers waiting on a reply,
+        deals at risk, tasks already past due — chosen because each is work somebody is
+        answerable for rather than a volume of activity. A lead reads the board to pick
+        who to talk to, then opens that person's own day with `GET /worklist?owner=`,
+        which is the drill-down this board exists to route to.
+
+        Every count is read under the CALLER's visibility, never the teammate's. A number
+        summing rows the reader may not open would publish a colleague's volume to
+        somebody with no access to any of it, so what this reports is "how much of their
+        load you can see" — the only honest answer available without giving one person a
+        licence to read another's records.
+
+        Requires a row scope of `team` or `all`; an own-scoped reader is refused with 403
+        rather than shown a board of one. The teammates listed are the live human seats
+        sharing a live team with the caller, the caller included — a lead who also sells
+        needs their own row beside their team's. A caller on no team gets themselves
+        alone, which says plainly that nobody has been put on a team with them; an empty
+        board would read as an outage.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The team's load.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamBoard' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /digest:
     get:
       tags: [Capture]
@@ -23998,6 +24043,57 @@ components:
             from absence, so an empty list means the record answered everything this plan asks
             of it — not that nobody looked.
           items: { $ref: '#/components/schemas/MeetingPlanUnknown' }
+        manager_coaching:
+          $ref: '#/components/schemas/MeetingPlanCoaching'
+          description: >-
+            Present only for a lead reading a teammate's meeting. Absent for everybody else,
+            including the rep whose meeting it is — a rep reading their own brief is preparing,
+            not being coached.
+
+    MeetingPlanCoaching:
+      type: object
+      description: |
+        The coaching layer, for a lead reading a teammate's meeting.
+
+        It adds a READING of how this meeting could go wrong for this rep. It adds no account
+        fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+        and this is attached over it — so a lead and their rep are looking at the same meeting,
+        and the lead is looking at one more thing.
+
+        Who gets it is decided by the server, never asked for by a client. The rule is the
+        same one that governs raising a coaching notice: a seat that may coach at all, and a
+        live team shared with somebody in the room.
+      required: [focus, failure_mode, listen_for, watch_for, intervene_if, paths]
+      properties:
+        focus:
+          type: string
+          description: The ONE thing to coach on. A list of five is a list nobody coaches from.
+        failure_mode:
+          type: string
+          description: How this meeting most plausibly goes wrong for this rep, given this account.
+        listen_for:
+          type: string
+          description: What a good version of this conversation sounds like.
+        watch_for:
+          type: string
+          description: The move that says it is going wrong.
+        intervene_if:
+          type: string
+          description: >-
+            The narrow condition under which a lead should step in. Narrow on purpose: a lead
+            who takes over a rep's meeting has coached nobody.
+        paths:
+          type: array
+          maxItems: 3
+          description: The ways this meeting can go, for a lead to rehearse against.
+          items: { $ref: '#/components/schemas/MeetingPlanCoachingPath' }
+
+    MeetingPlanCoachingPath:
+      type: object
+      required: [label, play]
+      properties:
+        label: { type: string }
+        play: { type: string }
 
     MeetingPlanReadiness:
       type: string
@@ -33617,12 +33713,76 @@ components:
             The deals the week is about, won and lost first. Capped for reading — the counts stay
             complete, so a busy week reads "12 moved" beside the most recent of them rather than
             a truncated number.
+        pipeline:
+          description: |
+            What the week did to the pipeline, in the installation's base currency at the rate that
+            applied when the review was written.
+
+            ABSENT when the week held a deal that could not be converted — an open deal freezes no
+            rate, so a currency with no usable rate makes the whole figure unanswerable. A total
+            covering three of four deals would be a confident number that is quietly short, and
+            nothing is ever converted at an invented rate of 1. Absent is also the answer when the
+            installation names no base currency.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPipeline' }]
+        prior:
+          description: |
+            The same rep's previous review, so a reader can see what CHANGED rather than only what
+            happened. Absent for their first week.
+
+            The counts of a frozen earlier row, not a stored delta: two frozen rows and one
+            subtraction cannot disagree, and a stored delta could. It is their most recent earlier
+            review rather than "last week" — a rep with a gap has a previous week that is not seven
+            days back.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPrior' }]
+
+    WeeklyReviewPipeline:
+      type: object
+      additionalProperties: false
+      description: Money the week added to and took out of the pipeline, in one currency.
+      required: [created_minor, won_minor, lost_minor, currency]
+      properties:
+        created_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            Value of the deals opened in the week, converted at the latest rate on or before the
+            week's end and frozen here.
+        won_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            Value of the deals won in the week, at each deal's own close-time rate — the honest
+            figure for money that has already moved.
+        lost_minor: { type: integer, format: int64, minimum: 0, description: 'The same, for deals lost.' }
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: |
+            The currency the three figures are in, stored beside them: the installation's base
+            currency is an operator-mutable setting, and re-reading it later would re-label old
+            reviews with a currency their numbers were never in.
+
+    WeeklyReviewPrior:
+      type: object
+      additionalProperties: false
+      description: The week before this one, for comparison.
+      required: [local_week_start, counts]
+      properties:
+        local_week_start: { type: string, format: date }
+        counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
+        pipeline:
+          description: Absent under the same rule as the current week's.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPipeline' }]
 
     WeeklyReviewCounts:
       type: object
       additionalProperties: false
       required: [tasks_due, tasks_done, tasks_carried_over, deals_moved, deals_won, deals_lost,
-                 proposals_accepted, proposals_rejected, brief_items_acted, brief_items_dismissed]
+                 proposals_accepted, proposals_rejected, brief_items_acted, brief_items_dismissed,
+                 leads_routed, leads_answered_in_target, leads_breached,
+                 meetings_held, meetings_with_next_step]
       properties:
         tasks_due: { type: integer, minimum: 0, description: 'Tasks assigned to this rep that fell due in the week.' }
         tasks_done: { type: integer, minimum: 0, description: 'And were finished inside it.' }
@@ -33640,6 +33800,28 @@ components:
         proposals_rejected: { type: integer, minimum: 0, description: 'The same, rejected.' }
         brief_items_acted: { type: integer, minimum: 0, description: 'Morning-brief items this rep acted on in the week.' }
         brief_items_dismissed: { type: integer, minimum: 0, description: 'And dismissed.' }
+        leads_routed: { type: integer, minimum: 0, description: 'Inbound leads routed to this rep during the week.' }
+        leads_answered_in_target:
+          type: integer
+          minimum: 0
+          description: |
+            Of those, the ones answered before the first-response target ran out. Read from the
+            stamps the SLA writer maintained at the time, never recomputed from today's policy —
+            a week is judged by the target that applied to it.
+        leads_breached: { type: integer, minimum: 0, description: 'And the ones whose target ran out.' }
+        meetings_held:
+          type: integer
+          minimum: 0
+          description: |
+            Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+            week can be judged by, and counting it would credit a conversation that never occurred.
+        meetings_with_next_step:
+          type: integer
+          minimum: 0
+          description: |
+            Of those, the ones that left a task behind against a record the meeting was also filed
+            under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
+            is the pattern this figure exists to make visible.
 
     WeeklyReviewDeal:
       type: object
@@ -34365,6 +34547,73 @@ components:
             page that stopped one short of more, and it says the cautious thing rather than
             claiming a source is complete when it is not. The client renders `considered` as
             "200+" rather than "200".
+
+    TeamBoard:
+      type: object
+      description: |
+        Who on the team is carrying what. One row per live teammate, plus the work that
+        reached nobody.
+      required: [as_of, members, unassigned, truncated]
+      properties:
+        as_of: { type: string, format: date-time, description: 'The instant every count below was read at.' }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/TeamBoardMember' }
+          description: |
+            The live human seats sharing a live team with the caller, the caller included,
+            ordered by display name. Never empty: a caller on no team is their own single
+            row, because "only you" and "nobody" are different answers and the second reads
+            as an outage.
+        unassigned:
+          $ref: '#/components/schemas/TeamBoardCounts'
+          description: |
+            The same three counts over work that names nobody — an unowned customer writing
+            in, a deal with no owner, a task nobody was assigned.
+
+            Its own figure rather than a member row, because there is no person to open. A
+            board that dropped it would report a clean team while the work nobody is looking
+            at is exactly the work that goes missing.
+        truncated:
+          type: boolean
+          description: |
+            True when a count was read to its work bound, so the real figure may be higher
+            than what is shown. The waiting-customer read scans a bounded number of threads
+            across the whole installation, so a busy installation reports a floor — and says
+            so here rather than presenting a floor as a total.
+
+    TeamBoardMember:
+      type: object
+      description: One teammate and the work they are answerable for.
+      required: [user_id, display_name, counts]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: |
+            Whose row this is. It is what `GET /worklist?owner=` takes, which is the
+            drill-down the board routes to.
+        display_name: { type: string, description: 'The teammate, as the roster names them.' }
+        counts: { $ref: '#/components/schemas/TeamBoardCounts' }
+
+    TeamBoardCounts:
+      type: object
+      description: |
+        Three counts of work somebody owes, all read under the CALLER's visibility rather
+        than the teammate's — so this is how much of their load the reader can see.
+      required: [waiting, at_risk, overdue]
+      properties:
+        waiting:
+          type: integer
+          description: |
+            Customers who wrote and have had no reply, attributed by the record the thread is
+            filed under: deal, then lead, then person, then organization, first owner found.
+            The same eligibility the ranked queue applies, so the board and the day agree.
+        at_risk:
+          type: integer
+          description: 'Open deals gone quiet or already past their expected close date.'
+        overdue:
+          type: integer
+          description: 'Open tasks whose due moment has already passed.'
 
     WorklistBand:
       type: object

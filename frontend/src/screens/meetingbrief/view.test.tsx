@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StoryProviders } from "../story-utils";
 import {
+  briefManager,
   briefModel,
   briefOmitted,
   briefReady,
@@ -226,6 +227,69 @@ describe("the preparation plan", () => {
     // The plan says a composition wrote it, so the objective must not wear the
     // band that means Margince did.
     expect(container.querySelector(".panel-ai")).toBeNull();
+  });
+});
+
+describe("the coaching layer", () => {
+  it("is absent for the rep whose meeting it is", () => {
+    mount({ kind: "ready", brief: briefWithPlan });
+    expect(screen.queryByText("Coach the rep on one thing")).toBeNull();
+  });
+
+  it("leads the page for a lead, and says which view this is", () => {
+    mount({ kind: "ready", brief: briefManager });
+    const headings = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((h) => h.textContent);
+    expect(headings[0]).toBe("Coach the rep on one thing");
+    expect(screen.getByText("Manager view")).toBeTruthy();
+  });
+
+  it("shows the lead the same facts as the rep, plus the coaching", () => {
+    // The invariant the server holds structurally: the two briefs differ by one
+    // object. If this surface ever renders a lead something the rep's own page
+    // does not carry, that difference came from here rather than from the API.
+    const repView = render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: briefWithPlan }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+        />
+      </StoryProviders>,
+    );
+    const repHeadings = new Set(
+      Array.from(repView.container.querySelectorAll("h3")).map(
+        (h) => h.textContent,
+      ),
+    );
+    cleanup();
+
+    const leadView = render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: briefManager }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+        />
+      </StoryProviders>,
+    );
+    const leadHeadings = new Set(
+      Array.from(leadView.container.querySelectorAll("h3")).map(
+        (h) => h.textContent,
+      ),
+    );
+    for (const heading of repHeadings) {
+      expect(leadHeadings.has(heading)).toBe(true);
+    }
+  });
+
+  it("gives the lead the branches the rep's own plan carries", () => {
+    mount({ kind: "ready", brief: briefManager });
+    expect(screen.getByText("How this meeting can go")).toBeTruthy();
+    expect(screen.getByText("It becomes a price negotiation")).toBeTruthy();
   });
 });
 

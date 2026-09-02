@@ -372,7 +372,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// behind it keeps its own integration test — what is NOT tested is
 		// the seam wiring itself, because nothing wires it.
 		nil,
-		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
+		attentionAtRisk{lister: quietDealScan(pool, deals.QuietThresholdDays)},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
@@ -441,5 +441,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		WithLeadResponses(attentionLeadResponses{
 			store:     people.NewStore(db),
 			teammates: newTeammatesSeam(pool),
-		})
+		}).
+		// How many promises each teammate has already missed, for the team
+		// board. Counted rather than listed, because the task lane above stops
+		// at a dozen and a board built from it would call every loaded rep
+		// equally loaded.
+		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
 }

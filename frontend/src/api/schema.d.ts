@@ -6509,6 +6509,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One row per teammate — who is carrying what, so a lead can see where to help.
+         * @description The manager's read of the same work `/worklist` ranks for one person. It answers
+         *     "who on my team is drowning", which the ranked queue structurally cannot: that
+         *     queue assembles ONE person's day, so widening its scope cannot produce rows for
+         *     sources that were never read for anybody else.
+         *
+         *     So this is COUNTS, not rows. Three per teammate — customers waiting on a reply,
+         *     deals at risk, tasks already past due — chosen because each is work somebody is
+         *     answerable for rather than a volume of activity. A lead reads the board to pick
+         *     who to talk to, then opens that person's own day with `GET /worklist?owner=`,
+         *     which is the drill-down this board exists to route to.
+         *
+         *     Every count is read under the CALLER's visibility, never the teammate's. A number
+         *     summing rows the reader may not open would publish a colleague's volume to
+         *     somebody with no access to any of it, so what this reports is "how much of their
+         *     load you can see" — the only honest answer available without giving one person a
+         *     licence to read another's records.
+         *
+         *     Requires a row scope of `team` or `all`; an own-scoped reader is refused with 403
+         *     rather than shown a board of one. The teammates listed are the live human seats
+         *     sharing a live team with the caller, the caller included — a lead who also sells
+         *     needs their own row beside their team's. A caller on no team gets themselves
+         *     alone, which says plainly that nobody has been put on a team with them; an empty
+         *     board would read as an outage.
+         */
+        get: operations["getTeamBoard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/digest": {
         parameters: {
             query?: never;
@@ -16650,6 +16692,38 @@ export interface components {
             advance: components["schemas"]["MeetingPlanAdvance"];
             /** @description What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked. */
             unknowns: components["schemas"]["MeetingPlanUnknown"][];
+            /** @description Present only for a lead reading a teammate's meeting. Absent for everybody else, including the rep whose meeting it is — a rep reading their own brief is preparing, not being coached. */
+            manager_coaching?: components["schemas"]["MeetingPlanCoaching"];
+        };
+        /**
+         * @description The coaching layer, for a lead reading a teammate's meeting.
+         *
+         *     It adds a READING of how this meeting could go wrong for this rep. It adds no account
+         *     fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+         *     and this is attached over it — so a lead and their rep are looking at the same meeting,
+         *     and the lead is looking at one more thing.
+         *
+         *     Who gets it is decided by the server, never asked for by a client. The rule is the
+         *     same one that governs raising a coaching notice: a seat that may coach at all, and a
+         *     live team shared with somebody in the room.
+         */
+        MeetingPlanCoaching: {
+            /** @description The ONE thing to coach on. A list of five is a list nobody coaches from. */
+            focus: string;
+            /** @description How this meeting most plausibly goes wrong for this rep, given this account. */
+            failure_mode: string;
+            /** @description What a good version of this conversation sounds like. */
+            listen_for: string;
+            /** @description The move that says it is going wrong. */
+            watch_for: string;
+            /** @description The narrow condition under which a lead should step in. Narrow on purpose: a lead who takes over a rep's meeting has coached nobody. */
+            intervene_if: string;
+            /** @description The ways this meeting can go, for a lead to rehearse against. */
+            paths: components["schemas"]["MeetingPlanCoachingPath"][];
+        };
+        MeetingPlanCoachingPath: {
+            label: string;
+            play: string;
         };
         /**
          * @description How much of a preparation this plan actually is, so a surface can decide whether to lead
@@ -25159,6 +25233,61 @@ export interface components {
              *     a truncated number.
              */
             deals: components["schemas"]["WeeklyReviewDeal"][];
+            /**
+             * @description What the week did to the pipeline, in the installation's base currency at the rate that
+             *     applied when the review was written.
+             *
+             *     ABSENT when the week held a deal that could not be converted — an open deal freezes no
+             *     rate, so a currency with no usable rate makes the whole figure unanswerable. A total
+             *     covering three of four deals would be a confident number that is quietly short, and
+             *     nothing is ever converted at an invented rate of 1. Absent is also the answer when the
+             *     installation names no base currency.
+             */
+            pipeline?: components["schemas"]["WeeklyReviewPipeline"];
+            /**
+             * @description The same rep's previous review, so a reader can see what CHANGED rather than only what
+             *     happened. Absent for their first week.
+             *
+             *     The counts of a frozen earlier row, not a stored delta: two frozen rows and one
+             *     subtraction cannot disagree, and a stored delta could. It is their most recent earlier
+             *     review rather than "last week" — a rep with a gap has a previous week that is not seven
+             *     days back.
+             */
+            prior?: components["schemas"]["WeeklyReviewPrior"];
+        };
+        /** @description Money the week added to and took out of the pipeline, in one currency. */
+        WeeklyReviewPipeline: {
+            /**
+             * Format: int64
+             * @description Value of the deals opened in the week, converted at the latest rate on or before the
+             *     week's end and frozen here.
+             */
+            created_minor: number;
+            /**
+             * Format: int64
+             * @description Value of the deals won in the week, at each deal's own close-time rate — the honest
+             *     figure for money that has already moved.
+             */
+            won_minor: number;
+            /**
+             * Format: int64
+             * @description The same, for deals lost.
+             */
+            lost_minor: number;
+            /**
+             * @description The currency the three figures are in, stored beside them: the installation's base
+             *     currency is an operator-mutable setting, and re-reading it later would re-label old
+             *     reviews with a currency their numbers were never in.
+             */
+            currency: string;
+        };
+        /** @description The week before this one, for comparison. */
+        WeeklyReviewPrior: {
+            /** Format: date */
+            local_week_start: string;
+            counts: components["schemas"]["WeeklyReviewCounts"];
+            /** @description Absent under the same rule as the current week's. */
+            pipeline?: components["schemas"]["WeeklyReviewPipeline"];
         };
         WeeklyReviewCounts: {
             /** @description Tasks assigned to this rep that fell due in the week. */
@@ -25183,6 +25312,27 @@ export interface components {
             brief_items_acted: number;
             /** @description And dismissed. */
             brief_items_dismissed: number;
+            /** @description Inbound leads routed to this rep during the week. */
+            leads_routed: number;
+            /**
+             * @description Of those, the ones answered before the first-response target ran out. Read from the
+             *     stamps the SLA writer maintained at the time, never recomputed from today's policy —
+             *     a week is judged by the target that applied to it.
+             */
+            leads_answered_in_target: number;
+            /** @description And the ones whose target ran out. */
+            leads_breached: number;
+            /**
+             * @description Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+             *     week can be judged by, and counting it would credit a conversation that never occurred.
+             */
+            meetings_held: number;
+            /**
+             * @description Of those, the ones that left a task behind against a record the meeting was also filed
+             *     under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
+             *     is the pattern this figure exists to make visible.
+             */
+            meetings_with_next_step: number;
         };
         /**
          * @description One deal the week is about, FROZEN. Every word was written when the review was, so a deal
@@ -25827,6 +25977,68 @@ export interface components {
              *     "200+" rather than "200".
              */
             more_available: boolean;
+        };
+        /**
+         * @description Who on the team is carrying what. One row per live teammate, plus the work that
+         *     reached nobody.
+         */
+        TeamBoard: {
+            /**
+             * Format: date-time
+             * @description The instant every count below was read at.
+             */
+            as_of: string;
+            /**
+             * @description The live human seats sharing a live team with the caller, the caller included,
+             *     ordered by display name. Never empty: a caller on no team is their own single
+             *     row, because "only you" and "nobody" are different answers and the second reads
+             *     as an outage.
+             */
+            members: components["schemas"]["TeamBoardMember"][];
+            /**
+             * @description The same three counts over work that names nobody — an unowned customer writing
+             *     in, a deal with no owner, a task nobody was assigned.
+             *
+             *     Its own figure rather than a member row, because there is no person to open. A
+             *     board that dropped it would report a clean team while the work nobody is looking
+             *     at is exactly the work that goes missing.
+             */
+            unassigned: components["schemas"]["TeamBoardCounts"];
+            /**
+             * @description True when a count was read to its work bound, so the real figure may be higher
+             *     than what is shown. The waiting-customer read scans a bounded number of threads
+             *     across the whole installation, so a busy installation reports a floor — and says
+             *     so here rather than presenting a floor as a total.
+             */
+            truncated: boolean;
+        };
+        /** @description One teammate and the work they are answerable for. */
+        TeamBoardMember: {
+            /**
+             * Format: uuid
+             * @description Whose row this is. It is what `GET /worklist?owner=` takes, which is the
+             *     drill-down the board routes to.
+             */
+            user_id: string;
+            /** @description The teammate, as the roster names them. */
+            display_name: string;
+            counts: components["schemas"]["TeamBoardCounts"];
+        };
+        /**
+         * @description Three counts of work somebody owes, all read under the CALLER's visibility rather
+         *     than the teammate's — so this is how much of their load the reader can see.
+         */
+        TeamBoardCounts: {
+            /**
+             * @description Customers who wrote and have had no reply, attributed by the record the thread is
+             *     filed under: deal, then lead, then person, then organization, first owner found.
+             *     The same eligibility the ranked queue applies, so the board and the day agree.
+             */
+            waiting: number;
+            /** @description Open deals gone quiet or already past their expected close date. */
+            at_risk: number;
+            /** @description Open tasks whose due moment has already passed. */
+            overdue: number;
         };
         /**
          * @description One outcome band and how much of it this page is showing — the headings a client draws,
@@ -37258,8 +37470,15 @@ export interface operations {
                  *     it at any tier: nothing in it belongs to a colleague, which is what unassigned
                  *     means. It exists because `mine` is exact — a task with no assignee is no
                  *     longer folded into every reader's own queue, so it needs a queue of its own or
-                 *     the product would have stopped mentioning it. Tasks only: a message has no
-                 *     assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
+                 *     the product would have stopped mentioning it.
+                 *
+                 *     It carries unanswered mail too, and that is the case it matters most for. A
+                 *     message has no assignee, so its owner is the owner of the record it is filed
+                 *     under — deal, then lead, then person, then organization, first owner found. A
+                 *     thread no owned record attributes to anybody is the customer nobody is looking
+                 *     at, which is exactly what this queue is opened to find. Such a message stays
+                 *     reachable from `mine` as well, on the ground that an unowned customer writing
+                 *     in is everybody's until somebody takes them.
                  *
                  *     WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
                  *     going quiet, meetings and duplicate pairs are read under the caller's row
@@ -37320,6 +37539,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getTeamBoard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The team's load. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamBoard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getMorningDigest: {

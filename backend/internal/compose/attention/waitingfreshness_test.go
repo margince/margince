@@ -176,7 +176,7 @@ func TestAnAncientWaitNoLongerOutranksTodaysDeal(t *testing.T) {
 		Since:      rankInstant.Add(-182 * 24 * time.Hour),
 	}}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waiting, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{})
 
 	if out.Queue[0].Source == sourceWaiting {
 		t.Fatal("a 182-day unanswered thread still led the day over a deal at risk")
@@ -198,7 +198,7 @@ func TestTheSummaryStatesTheMaterialBar(t *testing.T) {
 		),
 	}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, nil, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{}, leadRead{})
 
 	if out.Summary.MaterialThresholdMinor == nil {
 		t.Fatal("a day with priced deals stated no material bar, so every material reason on it is unverifiable")
@@ -217,7 +217,7 @@ func TestTheSummaryStatesTheMaterialBar(t *testing.T) {
 func TestADayWithNoPricedDealsStatesNoBar(t *testing.T) {
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: lane(item("unpriced", "deal_at_risk"))}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, nil, leadRead{})
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{}, leadRead{})
 
 	if out.Summary.MaterialThresholdMinor != nil {
 		t.Fatalf("a pipeline with no prices stated a bar of %d", *out.Summary.MaterialThresholdMinor)
