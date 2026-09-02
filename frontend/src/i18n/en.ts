@@ -4005,6 +4005,8 @@ export const en = {
     "There is no message left to share — this thread\u2019s first message was erased, and the hold stays so a later reply does not arrive open.",
   "heldThreads.pending": "Waiting on a verdict",
   "heldThreads.attempts": "asked {count} time(s)",
+  "heldThreads.backlogStalled":
+    "{count} thread(s) have been asked about repeatedly with no answer. Mail stays withheld while this lasts — nothing is lost, and it clears on its own once the classifier answers again.",
   "heldThreads.heldByOthers":
     "Still held: {count} other mailbox imported this message and has not shared it. A thread opens only when everyone who received it agrees.",
   "heldThreads.kind.legal": "Legal",
@@ -6483,6 +6485,26 @@ export const en = {
     "Takes effect from the next message. Messages already captured stay.",
   "captureExclusions.current": "Rules in effect",
   "captureExclusions.empty": "No exclusions.",
+  "ownerIdentities.title": "Your other addresses",
+  "ownerIdentities.sub":
+    "Addresses that are also you: a send-as alias, a private domain you read, an address you forward from. Mail between your own addresses is not correspondence with anybody, so it is not captured and never becomes a contact.",
+  "ownerIdentities.add": "Add address",
+  "ownerIdentities.addLabel": "Declare another address as your own",
+  "ownerIdentities.addDescription":
+    "Yours alone. A colleague never sees what you list here.",
+  "ownerIdentities.current": "Declared",
+  "ownerIdentities.notRetroactive":
+    "Applies from the next message on. Mail already captured stays, and a contact already made from an alias stays until you merge or remove it.",
+  "ownerIdentities.empty": "You have declared no other addresses.",
+  "ownerIdentities.remove": "Withdraw this address",
+  "ownerIdentities.added": "Address added.",
+  "ownerIdentities.confirm": "Add",
+  "ownerIdentities.kindLabel": "What are you declaring?",
+  "ownerIdentities.kind.address": "One address",
+  "ownerIdentities.kind.domain": "A whole domain",
+  "ownerIdentities.valueLabel": "Address or domain",
+  "ownerIdentities.addressPlaceholder": "you@example.com",
+  "ownerIdentities.domainPlaceholder": "example.com",
   "captureExclusions.scope.user": "Only me",
   "captureExclusions.scope.workspace": "Whole organization",
   "captureExclusions.kind.address": "Address",
