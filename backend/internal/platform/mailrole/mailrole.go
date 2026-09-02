@@ -88,6 +88,21 @@ func DisplayName(name string) bool {
 	return false
 }
 
+// PromptExamples are the role words the AI verdict's prompt names as examples.
+//
+// The prompt is a second statement of this rule — it tells the model which local
+// parts make a role mailbox — and it disagreed with this list about `service@`
+// for exactly as long as the two were written independently. A reviewer found
+// that; nothing in the tree would have.
+//
+// It returns words rather than a sentence: the prompt owns its own phrasing, and
+// only the vocabulary has to be one answer.
+//
+// Held by: TestThePromptsRoleExamplesAreAllRoleTokens (backend/internal/platform/mailrole/mailrole_test.go)
+func PromptExamples() []string {
+	return []string{"support", "info", "sales", "office", "service", "kontakt"}
+}
+
 // Tokens returns the role vocabulary, sorted for a stable gate corpus. The
 // fitness function that forbids a second spelling of this list derives its
 // subject from here rather than from a sample of its own.

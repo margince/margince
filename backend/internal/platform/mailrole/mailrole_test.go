@@ -136,3 +136,22 @@ func TestAnUnreadableAddressIsNotARoleMailbox(t *testing.T) {
 		}
 	}
 }
+
+// The AI verdict's prompt names example role words, and it is a second
+// statement of the same rule this package holds. The two were written
+// independently and disagreed about `service@`: the prompt called it a role
+// mailbox, the list did not, so an address the model would have refused was
+// created as a contact by the tier ladder before the model ever saw it.
+//
+// Every example the prompt gives must be a word this list actually matches.
+func TestThePromptsRoleExamplesAreAllRoleTokens(t *testing.T) {
+	t.Parallel()
+	for _, word := range mailrole.PromptExamples() {
+		if !mailrole.IsRoleLocalPart(word) {
+			t.Errorf("the prompt offers %q as a role mailbox and this list does not match it", word)
+		}
+		if _, role := mailrole.Match(word + "@acme.example"); !role {
+			t.Errorf("%q@ is a prompt example that Match refuses", word)
+		}
+	}
+}

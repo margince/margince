@@ -269,6 +269,15 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// verdict answers, and ORing that back on would mint the contact on the very
 	// next message the queue sends.
 	decision.create = (decision.create || alreadyKnown) && !roleMailbox
+	if roleMailbox && settled {
+		// The queue has been judged. Falling through would defer it again on
+		// every later message — the ledger's live-row index absorbs the write,
+		// so nothing looks wrong, and the verdict pass re-answers a settled
+		// question for as long as the mailbox keeps writing. The early return
+		// above cannot cover this: reaching it needs !corresponded, and a role
+		// mailbox the owner writes to is corresponded by definition.
+		return decision.traced(TraceCaptured, TraceReasonRoleMailbox), nil
+	}
 
 	// T3 free-mail (CAP-PARAM-5). A consumer mailbox says what it is not — an
 	// organization — so the org is suppressed either way. What it does NOT say

@@ -86,7 +86,7 @@ func looksLikeARoleToken(value string) bool {
 
 func TestOnlyOnePackageDeclaresRoleMailboxes(t *testing.T) {
 	t.Parallel()
-	found := roleMailboxListsIn(t, "internal")
+	found := roleMailboxListsIn(t, "internal", "../extensions", "cmd", "tools", "pkg")
 	if len(found) > 0 {
 		t.Fatalf("a second role-mailbox list — ask platform/mailrole instead:\n%s",
 			strings.Join(found, "\n"))
@@ -148,18 +148,37 @@ var fixtures = []string{"support@acme.com", "billing@acme.com", "info@acme.com"}
 	}
 }
 
-func roleMailboxListsIn(t *testing.T, root string) []string {
+// roleMailboxListsIn scans every root that compiles into a shipped binary, not
+// just `internal`. A second vocabulary is no less a second answer for living in
+// `pkg` or under `extensions`, and a census that reads a smaller tree than its
+// subject reports PASS with the defect in front of it.
+//
+// A missing root is skipped rather than fatal: the roots differ by checkout
+// (extensions is its own module tree), and a hard failure there would make the
+// gate a checkout-layout test. The roots that DO exist are all read.
+func roleMailboxListsIn(t *testing.T, roots ...string) []string {
 	t.Helper()
 	var found []string
-	for _, path := range goSourceFiles(t, root) {
-		if strings.Contains(filepath.ToSlash(path), roleMailboxOwner) {
+	scanned := 0
+	for _, root := range roots {
+		if _, err := os.Stat(root); err != nil {
 			continue
 		}
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("read %s: %v", path, err)
+		for _, path := range goSourceFiles(t, root) {
+			if strings.Contains(filepath.ToSlash(path), roleMailboxOwner) {
+				continue
+			}
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read %s: %v", path, err)
+			}
+			scanned++
+			found = append(found, roleMailboxListsInSource(t, path, string(raw))...)
 		}
-		found = append(found, roleMailboxListsInSource(t, path, string(raw))...)
+	}
+	// A census that read nothing cannot tell a clean tree from a broken walk.
+	if scanned == 0 {
+		t.Fatal("the role-mailbox census read no files — it would pass vacuously")
 	}
 	sort.Strings(found)
 	return found

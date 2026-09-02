@@ -43,7 +43,7 @@ var roleTokens = map[string]struct{}{
 	"mail": {}, "post": {},
 
 	// Answering a customer
-	"support": {}, "helpdesk": {}, "servicedesk": {}, "customercare": {},
+	"support": {}, "helpdesk": {}, "service": {}, "servicedesk": {}, "customercare": {},
 	"hotline": {}, "kundenservice": {},
 
 	// Money

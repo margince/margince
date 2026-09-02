@@ -283,6 +283,55 @@ func TestCaptureTierGateMintsNoPersonForARoleMailbox(t *testing.T) {
 	}
 }
 
+// A judged queue is not re-judged. The refusal above leaves the address on the
+// ordinary path so a FIRST sighting opens the ledger question — and once that
+// question is answered, later mail must stop asking it.
+//
+// The ladder's settled early return cannot cover this case: reaching it needs
+// !corresponded, and a role mailbox the owner writes to is corresponded by
+// definition. Without a second arm the queue re-defers on every message, the
+// live-row index quietly absorbs each write, and the verdict pass re-answers a
+// settled question for as long as the mailbox keeps writing.
+func TestCaptureTierGateAsksAboutARoleMailboxOnlyOnce(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync, syncSent := env.e, env.sync, env.syncSent
+	const addr = "billing@recur.example"
+
+	syncSent(t, map[string]bool{"rr1@myco.example": true},
+		email(captureOwner, "", addr, "rr1@myco.example", ""))
+	sync(t, email(addr, "Billing", captureOwner, "rr2@recur.example", ""))
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		WHERE email = 'billing@recur.example'`); n != 1 {
+		t.Fatalf("%d ledger rows after first contact, want exactly 1 — the queue must be asked about once", n)
+	}
+
+	// The ledger as the verdict engine leaves it.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_pending_counterparty
+			   SET status = 'real', kind = 'role_mailbox',
+			       disposition_reason = 'capture_counterparty_verdict', resolved_at = now()
+			 WHERE email = $1`, addr)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sync(t, email(addr, "Billing", captureOwner, "rr3@recur.example", ""))
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		WHERE email = 'billing@recur.example' AND resolved_at IS NULL`); n != 0 {
+		t.Fatalf("%d re-opened questions for a settled role mailbox, want 0 — decided means decided", n)
+	}
+	if n := countRows(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = 'billing@recur.example'`); n != 0 {
+		t.Fatalf("%d persons for a settled role mailbox, want 0", n)
+	}
+}
+
 func TestCaptureTierGateSuppressesAMachineLocalpartWithoutLosingTheMessage(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
