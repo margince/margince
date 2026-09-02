@@ -877,6 +877,8 @@ public.brief_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/mar
 public.brief_run.annotated_at timestamp with time zone gen=- def=-
 public.brief_run.as_of timestamp with time zone NOT NULL gen=- def=-
 public.brief_run.brief_run_candidate_count_check CHECK ((candidate_count >= 0))
+public.brief_run.brief_run_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))
+public.brief_run.brief_run_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL)))
 public.brief_run.brief_run_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))
 public.brief_run.brief_run_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (annotated_at IS NOT NULL)))
 public.brief_run.brief_run_pkey PRIMARY KEY (id)
@@ -887,6 +889,8 @@ public.brief_run.candidate_count integer NOT NULL gen=- def=-
 public.brief_run.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.brief_run.id uuid NOT NULL gen=- def=uuidv7()
 public.brief_run.local_day date NOT NULL gen=- def=-
+public.brief_run.mail_attempted_at timestamp with time zone gen=- def=-
+public.brief_run.mail_error text gen=- def=-
 public.brief_run.narrative text gen=- def=-
 public.brief_run.revenue_norm_currency text NOT NULL gen=- def=''::text
 public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
