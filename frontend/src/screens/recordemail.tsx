@@ -20,7 +20,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Mail } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -73,6 +73,81 @@ function useWaitingReply(
     enabled,
   });
   return enabled && !query.isError ? query.data?.data?.[0]?.id : undefined;
+}
+
+/**
+ * EmailVerb is the ONE way a record header offers writing: the mail glyph and
+ * the word, as an ordinary verb among the header's others. Every record page
+ * draws it, so a reader moving from a company to the contact on it finds the
+ * same button in the same place. A page whose composer can open on another
+ * transport hands in the label and glyph it resolved; the default is mail.
+ */
+export function EmailVerb({
+  label,
+  icon,
+  onClick,
+  disabled,
+  reason,
+  reasonId,
+}: Readonly<{
+  label?: string;
+  icon?: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  reason?: string;
+  reasonId?: string;
+}>) {
+  const t = useT();
+  return (
+    <Button
+      disabled={disabled}
+      reason={reason}
+      reasonId={reasonId}
+      onClick={onClick}
+    >
+      {icon ?? <Mail size={15} aria-hidden="true" />}{" "}
+      {label ?? t("person.action.email")}
+    </Button>
+  );
+}
+
+/**
+ * RecordEmailVerb is the header's Email verb with its own composer, for a
+ * record whose page keeps no composer state of its own: the deal and the lead.
+ */
+export function RecordEmailVerb({
+  entityType,
+  entityId,
+  personId,
+  disabledReasonId,
+}: Readonly<{
+  entityType: RelinkKind;
+  entityId: string;
+  personId?: string;
+  disabledReasonId?: string;
+}>) {
+  const [composing, setComposing] = useState(false);
+  return (
+    <>
+      <EmailVerb
+        reasonId={disabledReasonId}
+        onClick={() => setComposing(true)}
+      />
+      {composing && (
+        // Keyed by the record, so navigating to another one while the
+        // composer is open remounts it rather than re-pointing it.
+        <ComposeModal
+          key={entityId}
+          entityType={entityType}
+          entityId={entityId}
+          personId={personId}
+          kind="email"
+          open={composing}
+          onClose={() => setComposing(false)}
+        />
+      )}
+    </>
+  );
 }
 
 export function RecordEmailAside({

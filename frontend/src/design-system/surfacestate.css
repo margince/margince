@@ -70,3 +70,17 @@
 .surfacestate-part + .surfacestate-part {
   margin-top: var(--space-3);
 }
+
+/* A state sentence set straight into a panel, with no PanelBody around it.
+   A section whose rows draw themselves edge to edge has nothing to wrap the
+   sentence that stands in for them, so the sentence takes the body's own
+   inset here rather than printing against the panel's border. */
+.panel > .surfacestate-empty,
+.panel > .surfacestate-withheld,
+.panel > .surfacestate-failed,
+.panel > .surfacestate-stale {
+  padding: var(--space-5);
+}
+.panel > .surfacestate-empty + .surfacestate-empty-detail {
+  padding: 0 var(--space-5) var(--space-5);
+}

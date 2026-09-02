@@ -300,14 +300,14 @@ function readingClass(label: string): string {
 // so an exact match would find the section only while the capability probe was
 // still in flight.
 function section(heading: string): HTMLElement {
-  const summaries = document.querySelectorAll<HTMLElement>(
-    "details.pe-sect > summary",
+  const titles = document.querySelectorAll<HTMLElement>(
+    ".pe-rail > .panel > .panel-head h2",
   );
-  for (const summary of summaries) {
-    if ((summary.textContent ?? "").startsWith(heading)) {
-      const details = summary.closest<HTMLElement>("details.pe-sect");
-      if (details) {
-        return details;
+  for (const title of titles) {
+    if ((title.textContent ?? "").startsWith(heading)) {
+      const panel = title.closest<HTMLElement>(".panel");
+      if (panel) {
+        return panel;
       }
     }
   }

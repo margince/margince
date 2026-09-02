@@ -300,6 +300,13 @@
 .record-actions .btn-with-reason {
   max-inline-size: 22ch;
 }
+/* The caption hangs BELOW its button, so a row centred on its tallest item
+   lifts every explained verb above its neighbours and the row reads as two
+   rungs. Once any verb carries a caption the row aligns to its top edge: the
+   buttons share one line and the sentences hang under them. */
+.record-actions:has(.btn-with-reason) {
+  align-items: flex-start;
+}
 
 /* On a phone the record's verbs stick to the bottom of the viewport (plan
  * §10.3). A rep scrolling an account's story is several screens from the
@@ -417,10 +424,14 @@
    column is: every panel in it is read top to bottom once rather than compared
    with the one beside it, and a panel whose body is prose gets a measure too
    narrow to read in a half-width column. */
+/* The page's rhythm between its bodies: the readings, the reading in parts,
+   the reference cards. A full step, because these are the breaks a scanning
+   reader uses to find their place; the groups inside keep the tighter 16px,
+   so the page reads as a few bodies rather than one long stack of cards. */
 .record-stack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-6);
   min-width: 0;
 }
 
@@ -491,6 +502,13 @@
   align-items: stretch;
   column-gap: var(--space-3);
   padding: 0;
+}
+
+/* A record's CHANGE history carries its date inside the body, under the
+   sentence, and draws no rail: its rows are the body alone, across the whole
+   grid, rather than a body squeezed into the date gutter. */
+.timeline li > .tl-body:first-child {
+  grid-column: 1 / -1;
 }
 
 /* Set on the first line's own baseline, so the date reads level with the kind
@@ -693,6 +711,10 @@
   padding: 0;
   border: 0;
   min-inline-size: 0;
+}
+/* In a record stack the stack's own gap is the interval. */
+.record-stack > .stepper {
+  margin: 0;
 }
 .stepper .step {
   font-size: 12.5px;

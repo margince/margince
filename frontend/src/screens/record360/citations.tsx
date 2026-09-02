@@ -332,7 +332,13 @@ export function SentenceList({
   // record, and a chip after every clause turned three sentences into a wall
   // of "fact fact fact". The sources are the same, gathered once underneath —
   // every claim stays checkable, and the prose stays readable.
-  citations?: "per-sentence" | "collected";
+  //
+  // "none" is for a caller that draws the sources ITSELF, under the prose —
+  // the contact's brief names the transport each cited conversation was
+  // carried on, which a citation chip cannot know. The prose still reads as
+  // grounded because that caller owes the chips; this mode only keeps the
+  // list from drawing a second, blinder set beside them.
+  citations?: "per-sentence" | "collected" | "none";
   // Whether the block's own judgement is pulled out and set as its opening
   // claim. The facts under it are already on the cards above, so what the
   // block ADDS is what the agent makes of them — and four sentences at one

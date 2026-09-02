@@ -13,6 +13,19 @@ cap — and eighteen other modules imported from it. `person360.tsx` and
 `dealstatus.tsx` reached in for `SentenceList`. Every one of those imports was
 a shared component wearing one entity's name.
 
+## The reading, in parts
+
+Every record page now reads in the same order, and the parts are here:
+`reading.tsx` holds the group (`RecordReading`, `RecordReadingPair`) and THE
+CALL (`CallCard`: the head that says a machine read the record, the standing
+with the sentence it rests on, and whatever the call was read from under it);
+`today.tsx` holds WHAT NEEDS A PERSON TODAY (`TodayPanel`) and its two row
+shapes — the move the agent found (`FoundMove`) and a to-do the record already
+carries (`TodoRow`); `spine.tsx` is the thread, and `timelinespine.ts` reads
+its source off a bare timeline page for the records that have no composite
+read. A record page hands in its own answers — which standing, which rows —
+and owes the reader the same shape as the record beside it.
+
 ## What belongs here
 
 A part belongs in the kit when it holds no opinion about WHICH record it is

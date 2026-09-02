@@ -20,7 +20,7 @@ import { FieldGuard } from "../../design-system/rbac";
 import { formatMoney } from "../../format/format";
 import type { Locale } from "../../i18n";
 import { useT } from "../../i18n";
-import { rosterMissLabel, useRoster, useRosterPartial } from "../entityref";
+import { rosterOwnerName, useRoster, useRosterPartial } from "../entityref";
 import "./dealfacts.css";
 
 type Deal = {
@@ -72,7 +72,15 @@ export function DealFacts({
       </div>
       <div className="deal-facts-item">
         <dt>{t("list.owner")}</dt>
-        <dd>{owner(deal, roster, partial, t)}</dd>
+        <dd>
+          {rosterOwnerName(
+            deal.owner_id,
+            roster,
+            partial,
+            t,
+            t("co.pulse.unowned"),
+          )}
+        </dd>
       </div>
     </dl>
   );
@@ -98,22 +106,3 @@ function amount(
 // Who owns it. An unowned deal says so rather than showing a blank, and a
 // roster that has not answered says which of the three silences it is —
 // still reading, read failed, or walked short of this user.
-function owner(
-  deal: Deal,
-  roster: ReturnType<typeof useRoster>,
-  partial: boolean,
-  t: ReturnType<typeof useT>,
-): string {
-  if (!deal.owner_id) {
-    return t("co.pulse.unowned");
-  }
-  // `"display_name" in entry` is the roster's own discriminant: the list is
-  // users AND teams, and a deal is owned by a user.
-  const found = (roster.data ?? []).find(
-    (entry) => "display_name" in entry && entry.id === deal.owner_id,
-  );
-  if (found && "display_name" in found) {
-    return found.display_name;
-  }
-  return rosterMissLabel(roster, partial, t, t("ref.notInRoster"));
-}
