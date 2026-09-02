@@ -149,6 +149,8 @@ func (e *BriefEngine) MailFailed(ctx context.Context, runID ids.UUID, cause stri
 		if tag.RowsAffected() == 0 {
 			return apperrors.ErrNotFound
 		}
-		return nil
+		_, err = storekit.Audit(ctx, tx, "update", "brief_run", runID,
+			map[string]any{"mail_error": nil}, map[string]any{"mail_error": cause})
+		return err
 	})
 }

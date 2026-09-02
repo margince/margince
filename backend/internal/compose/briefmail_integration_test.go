@@ -19,7 +19,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // errRelayRefused is a relay saying no — the ordinary transport failure this
@@ -198,5 +200,37 @@ func TestARefusedRelaySpendsTheAttemptAndSaysWhy(t *testing.T) {
 	}
 	if got := relay.count(); got != before {
 		t.Fatalf("a failed send was retried on the next tick: %d attempts, want the %d already made", got, before)
+	}
+}
+
+func TestADepartedSeatIsNotAFailedRead(t *testing.T) {
+	relay := &countingMailer{}
+	b := setupBriefJob(t).withMailer(relay)
+	pipeline, open, _ := integration.DealFixture(t, b.Env)
+	b.SeedDeal(t, "Globex Renewal", pipeline, open, &b.Rep1)
+	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	b.now = morning
+	if err := b.run(t); err != nil {
+		t.Fatalf("the overnight pass failed: %v", err)
+	}
+
+	// The lane asks wantsMorningMail under the rep's own principal, and
+	// MyDelivery gates on live membership — so a seat that is no longer live
+	// answers NOT-FOUND rather than a preference.
+	//
+	// This drives that read directly, because the assembly around it never gets
+	// there: deactivating a seat mid-tick fails the rep's authority resolution
+	// first, one layer above this. The distinction still has to hold, because
+	// not-found reaching the error arm would fail OPEN — claiming a departed
+	// rep's one attempt for the day and recording "the seat has no email
+	// address", which is false. They have one; they are not live.
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, b.Rep1); err != nil {
+		t.Fatal(err)
+	}
+	_, err := identity.NewService(b.Pool).MyDelivery(b.As(b.Rep1, nil, principal.Permissions{}))
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a departed seat's delivery read answered %v, want ErrNotFound — the lane tells "+
+			"those apart, and any other error fails open and burns their attempt", err)
 	}
 }

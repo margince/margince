@@ -14,12 +14,14 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -149,9 +151,19 @@ func (w *briefGenerateWorkspaceWorker) wantsMorningMail(
 	ctx context.Context, run briefs.BriefRun,
 ) bool {
 	settings, err := w.users.MyDelivery(ctx)
-	if err != nil {
+	switch {
+	case errors.Is(err, apperrors.ErrNotFound):
+		// NOT a read failure: MyDelivery gates on LiveMemberSQL, so this is the
+		// seat having been deactivated or archived between the roster read and
+		// now. Failing open here would claim a departed rep's one attempt for
+		// the day and then record "the seat has no email address", which is
+		// false — the seat has one and is not live. Reinstating them the same
+		// morning could then never deliver, and the row would point an operator
+		// at the wrong problem.
+		return false
+	case err != nil:
 		w.log.WarnContext(ctx, "the morning delivery preference could not be read; sending anyway",
-			"cause", err)
+			"user", run.UserID, "cause", err)
 		return true
 	}
 	if settings.MorningBrief != nil && *settings.MorningBrief == identity.DeliveryNone {
