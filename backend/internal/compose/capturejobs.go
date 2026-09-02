@@ -431,7 +431,10 @@ type counterpartyVerdictWorkspaceWorker struct {
 	// purger destroys personal mail past its window. Nil in a role with no
 	// object store, and the stage is then skipped rather than half-done.
 	purger *CapturePurger
-	log    *slog.Logger
+	// backlogNotice tells a seat their capture backlog stopped moving. Nil in a
+	// role composed without notices, and the stage is then skipped.
+	backlogNotice BacklogNotifier
+	log           *slog.Logger
 }
 
 func (w *counterpartyVerdictWorkspaceWorker) Work(ctx context.Context, job *river.Job[CounterpartyVerdictWorkspaceArgs]) error {
@@ -465,6 +468,11 @@ func (w *counterpartyVerdictWorkspaceWorker) Work(ctx context.Context, job *rive
 		return jobs.FaultContext(ctx, err)
 	}
 	if err := w.engine.RedactNoiseWorkspace(wsCtx, capture.NoiseUndoWindow, 0); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	// After the stages that MOVE the ledger, so a backlog this pass just cleared
+	// is not reported as stalled on its way out.
+	if err := w.engine.NoticeBacklogStalledWorkspace(wsCtx, w.backlogNotice); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	// Last, and after redaction: a `personal` verdict destroys rather than

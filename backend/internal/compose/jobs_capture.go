@@ -20,6 +20,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -137,7 +138,11 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// report mail as gone while it is not, which is the same reason the
 		// HTTP purge is built at the store and not at assembly.
 		purger: capturePurgerFor(pool, cfg.Blobstore, log),
-		log:    log,
+		// The stall notice, which is the only thing that tells a seat their
+		// backlog stopped moving: an outage refunds the attempt rather than
+		// spending it, so nothing retires and nothing else surfaces it.
+		backlogNotice: NewBacklogStallNotifier(notices.NewStore(InstallationDB(pool)), time.Now),
+		log:           log,
 	})
 	// The confidentiality verdict, registered unconditionally for a related but
 	// distinct reason: a deployment with no model bound holds every thread, and

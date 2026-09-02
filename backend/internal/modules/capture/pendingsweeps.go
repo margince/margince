@@ -436,3 +436,54 @@ func (s *PendingStore) noiseMail(ctx context.Context, extra string, limit int) (
 func quoteInterval(d time.Duration) string {
 	return "interval '" + strconv.Itoa(int(d.Seconds())) + " seconds'"
 }
+
+// StalledBacklogSeats lists the seats whose pending dispositions have never been
+// resolved, with how many each is waiting on.
+//
+// The gap this fills is one the retire path deliberately leaves open. A row that
+// SPENDS its attempts retires to `unsure` and reaches a human through the review
+// queue — but an outage REFUNDS the attempt rather than spending it, precisely
+// so a provider being down does not retire rows for reasons that had nothing to
+// do with the question. So during a real stall nothing exhausts, nothing
+// retires, and nothing tells the seat their mail is sitting.
+//
+// Keyed on created_at, which is the ONE column an outage does not move. Every
+// other candidate is stamped by the retry loop itself: ClaimDue and Defer both
+// set updated_at = now() and Defer pushes next_attempt_at forward by the backoff,
+// so during an outage each row is re-claimed and re-deferred hourly and looks
+// freshly touched. A predicate on either of those cannot fire for the case this
+// exists for, and fires instead when the workspace is HEALTHY and a row is
+// quietly waiting out a long backoff — exactly backwards, which is what it did
+// before review caught it.
+//
+// A row still pending `quiet` after it arrived is one the lane never answered.
+// A healthy pass resolves a row within a cycle or two, so this reads as "your
+// mail has been waiting since it got here", which is the sentence the seat needs.
+func (s *PendingStore) StalledBacklogSeats(ctx context.Context, quiet time.Duration) (map[ids.UUID]int, error) {
+	out := map[ids.UUID]int{}
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT owner_id, count(*)
+			  FROM capture_pending_counterparty
+			 WHERE status = 'pending'
+			   AND created_at <= now() - `+quoteInterval(quiet)+`
+			 GROUP BY owner_id`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var owner ids.UUID
+			var waiting int
+			if err := rows.Scan(&owner, &waiting); err != nil {
+				return err
+			}
+			out[owner] = waiting
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("capture: finding seats whose backlog never resolved: %w", err)
+	}
+	return out, nil
+}

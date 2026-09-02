@@ -3972,6 +3972,8 @@ export const de = {
     "Es ist keine Nachricht mehr da, die geteilt werden könnte — die erste Nachricht dieser Konversation wurde gelöscht. Die Zurückhaltung bleibt, damit eine spätere Antwort nicht offen eintrifft.",
   "heldThreads.pending": "Wartet auf Beurteilung",
   "heldThreads.attempts": "{count}-mal angefragt",
+  "heldThreads.backlogStalled":
+    "Zu {count} Threads wurde mehrfach angefragt, ohne Antwort. Solange das anhält, bleibt Post zurückgehalten — nichts geht verloren, und es löst sich von selbst, sobald die Klassifikation wieder antwortet.",
   "heldThreads.heldByOthers":
     "Weiterhin zurückgehalten: {count} weiteres Postfach hat diese Nachricht ebenfalls importiert und nicht freigegeben. Eine Konversation wird erst geöffnet, wenn alle Empfänger zustimmen.",
   "heldThreads.kind.legal": "Rechtliches",
@@ -6442,6 +6444,26 @@ export const de = {
     "Wirkt ab der nächsten Nachricht. Bereits erfasste Nachrichten bleiben.",
   "captureExclusions.current": "Geltende Regeln",
   "captureExclusions.empty": "Keine Ausschlüsse.",
+  "ownerIdentities.title": "Ihre weiteren Adressen",
+  "ownerIdentities.sub":
+    "Adressen, die auch Sie sind: ein Alias zum Senden, eine private Domain, die Sie lesen, eine Adresse, von der Sie weiterleiten. Post zwischen Ihren eigenen Adressen ist keine Korrespondenz mit jemandem — sie wird nicht erfasst und wird nie ein Kontakt.",
+  "ownerIdentities.add": "Adresse hinzufügen",
+  "ownerIdentities.addLabel": "Eine weitere Adresse als Ihre eigene angeben",
+  "ownerIdentities.addDescription":
+    "Nur Ihre. Kolleginnen und Kollegen sehen nie, was Sie hier eintragen.",
+  "ownerIdentities.current": "Angegeben",
+  "ownerIdentities.notRetroactive":
+    "Gilt ab der nächsten Nachricht. Bereits erfasste Post bleibt, und ein aus einem Alias entstandener Kontakt bleibt, bis Sie ihn zusammenführen oder entfernen.",
+  "ownerIdentities.empty": "Sie haben keine weiteren Adressen angegeben.",
+  "ownerIdentities.remove": "Diese Adresse zurückziehen",
+  "ownerIdentities.added": "Adresse hinzugefügt.",
+  "ownerIdentities.confirm": "Hinzufügen",
+  "ownerIdentities.kindLabel": "Was geben Sie an?",
+  "ownerIdentities.kind.address": "Eine Adresse",
+  "ownerIdentities.kind.domain": "Eine ganze Domain",
+  "ownerIdentities.valueLabel": "Adresse oder Domain",
+  "ownerIdentities.addressPlaceholder": "sie@beispiel.de",
+  "ownerIdentities.domainPlaceholder": "beispiel.de",
   "captureExclusions.scope.user": "Nur ich",
   "captureExclusions.scope.workspace": "Ganze Organisation",
   "captureExclusions.kind.address": "Adresse",

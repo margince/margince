@@ -141,7 +141,13 @@ func (s *Store) RestoreProfileField(ctx context.Context, personID ids.PersonID, 
 		landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
 			Field: field, Value: superseded,
 			EvidenceSnippet: restoredEvidence(superseded, supersededBy),
-			SourceRef:       sourceRef,
+			// The ref is REPLACED for the same reason the evidence just above
+			// it is: the row no longer came from what that ref names. Carrying
+			// it made a restored value indistinguishable from the enrichment it
+			// replaced, and anything keyed on the ref then acted on a human's
+			// decision as though a machine had made it — the audience
+			// retraction did exactly that, and deleted the restore.
+			SourceRef: restoreSource + ":" + sourceRef,
 			// captured_by is the authenticated restorer, like every other
 			// mutation's. Who ORIGINALLY said this is a fact about the past and
 			// belongs in the evidence line, not in the provenance stamp of a

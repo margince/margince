@@ -3934,6 +3934,8 @@ export const vi = {
     "Không còn thư nào để chia sẻ — thư đầu tiên của chuỗi này đã bị xóa. Việc giữ lại vẫn tiếp tục để một thư trả lời sau không đến ở trạng thái mở.",
   "heldThreads.pending": "Đang chờ phán quyết",
   "heldThreads.attempts": "đã hỏi {count} lần",
+  "heldThreads.backlogStalled":
+    "{count} chuỗi thư đã được hỏi nhiều lần mà chưa có trả lời. Trong lúc này thư vẫn được giữ lại — không mất gì cả, và sẽ tự hết khi bộ phân loại trả lời trở lại.",
   "heldThreads.heldByOthers":
     "Vẫn bị giữ lại: {count} hộp thư khác cũng đã nhập thư này và chưa chia sẻ. Một chuỗi chỉ mở khi mọi người nhận đều đồng ý.",
   "heldThreads.kind.legal": "Pháp lý",
@@ -6379,6 +6381,26 @@ export const vi = {
     "Có hiệu lực từ tin nhắn tiếp theo. Tin nhắn đã thu thập vẫn giữ nguyên.",
   "captureExclusions.current": "Quy tắc đang áp dụng",
   "captureExclusions.empty": "Không có loại trừ.",
+  "ownerIdentities.title": "Các địa chỉ khác của bạn",
+  "ownerIdentities.sub":
+    "Những địa chỉ cũng là bạn: một bí danh gửi thay, một tên miền riêng bạn đọc, một địa chỉ bạn chuyển tiếp. Thư giữa các địa chỉ của chính bạn không phải là trao đổi với ai cả, nên không được thu thập và không bao giờ thành liên hệ.",
+  "ownerIdentities.add": "Thêm địa chỉ",
+  "ownerIdentities.addLabel": "Khai báo một địa chỉ khác là của bạn",
+  "ownerIdentities.addDescription":
+    "Chỉ của riêng bạn. Đồng nghiệp không bao giờ thấy những gì bạn liệt kê ở đây.",
+  "ownerIdentities.current": "Đã khai báo",
+  "ownerIdentities.notRetroactive":
+    "Áp dụng từ thư kế tiếp. Thư đã thu thập vẫn giữ nguyên, và liên hệ đã tạo từ một bí danh vẫn còn cho đến khi bạn gộp hoặc xoá.",
+  "ownerIdentities.empty": "Bạn chưa khai báo địa chỉ nào khác.",
+  "ownerIdentities.remove": "Rút lại địa chỉ này",
+  "ownerIdentities.added": "Đã thêm địa chỉ.",
+  "ownerIdentities.confirm": "Thêm",
+  "ownerIdentities.kindLabel": "Bạn đang khai báo gì?",
+  "ownerIdentities.kind.address": "Một địa chỉ",
+  "ownerIdentities.kind.domain": "Cả một tên miền",
+  "ownerIdentities.valueLabel": "Địa chỉ hoặc tên miền",
+  "ownerIdentities.addressPlaceholder": "ban@vidu.com",
+  "ownerIdentities.domainPlaceholder": "vidu.com",
   "captureExclusions.scope.user": "Chỉ tôi",
   "captureExclusions.scope.workspace": "Toàn tổ chức",
   "captureExclusions.kind.address": "Địa chỉ",

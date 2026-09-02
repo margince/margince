@@ -154,6 +154,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiv
 	"internal/modules/capture:NoiseMailForTx":                 "sweep read inside the caller's transaction, selecting the loop's own claimed activities",
 	"internal/modules/capture:NoiseMailToHide":                "retention sweep read: noise mail eligible for hiding",
 	"internal/modules/capture:NoiseMailToRedact":              "retention sweep read: noise mail past its redaction window",
+	"internal/modules/capture:StalledBacklogSeats":            "sweep read: which seats have pending dispositions nothing has touched. It answers seat ids and counts, never an address or a subject, and its only caller runs under the verdict pass's system principal to tell each seat their own backlog stopped moving",
 	"internal/modules/capture:PurgeRawCaptureTx":              "retention sweep purge inside the caller's transaction, over activities the same sweep selected",
 	"internal/modules/capture:ReconcileDeclined":              "sweep reconciling declined proposals back onto their pending rows",
 	"internal/modules/capture:ReleaseBudget":                  "returns the slot ReserveBudget took, same sweep",

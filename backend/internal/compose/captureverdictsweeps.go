@@ -265,3 +265,47 @@ func (e *CounterpartyVerdictEngine) inWorkspace(ctx context.Context, fn func(con
 	}
 	return fn(e.workspaceCtx(ctx), ws)
 }
+
+// backlogQuiet is how long a pending row must sit untouched before its seat is
+// told. Two verdict cycles' worth: one quiet cycle is a pass that found no
+// budget or lost a race, and telling somebody their mail is stuck over that
+// would cry wolf every day.
+const backlogQuiet = 6 * time.Hour
+
+// NoticeBacklogStalledWorkspace tells each seat whose capture backlog has
+// stopped moving that it has.
+//
+// It is the only thing that says so. A row that spends its attempts retires to
+// `unsure` and reaches a human through the review queue, but an outage REFUNDS
+// the attempt rather than spending it — deliberately, so a provider being down
+// does not retire rows for reasons that had nothing to do with the question. The
+// consequence is that during a real stall nothing exhausts and nothing surfaces,
+// and the seat's mail sits withheld with no sign of it anywhere.
+//
+// Written through notices.Store.Create with a DedupeKey rather than through the
+// Notifier seam, which carries no key: a stall is a standing condition, and a
+// pass that ran hourly against a seam that cannot dedupe would write one line
+// per sweep forever. The key names the seat and the DAY, so a stall that lasts a
+// week is one line a day rather than one line an hour — enough to be noticed
+// again, not enough to bury the inbox it is written into.
+func (e *CounterpartyVerdictEngine) NoticeBacklogStalledWorkspace(ctx context.Context, notify BacklogNotifier) error {
+	if notify == nil {
+		return nil
+	}
+	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
+		stalled, err := e.pending.StalledBacklogSeats(wsCtx, backlogQuiet)
+		if err != nil {
+			return err
+		}
+		for seat, waiting := range stalled {
+			if err := notify(wsCtx, seat, waiting); err != nil {
+				return fmt.Errorf("verdict: telling a seat their backlog stopped moving: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// BacklogNotifier raises the stall notice for one seat. notices owns the table,
+// so compose injects the edge.
+type BacklogNotifier func(ctx context.Context, seat ids.UUID, waiting int) error
