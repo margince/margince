@@ -46,6 +46,8 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "organization_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
 		{Name: "owner_team_id", Type: "string"},
+		{Name: "tag_id", Type: "array"},
+		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
 	},
 	"organization": {
@@ -56,6 +58,8 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "owner_team_id", Type: "string"},
 		{Name: "relationship_type", Type: "string", Enum: []string{"customer", "partner", "supplier", "investor", "portfolio_company", "competitor", "other"}},
 		{Name: "size_band", Type: "string", Enum: []string{"1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"}},
+		{Name: "tag_id", Type: "array"},
+		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
 	},
 	"deal": {
@@ -69,6 +73,8 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "stage_id", Type: "string"},
 		{Name: "stalled", Type: "boolean"},
 		{Name: "status", Type: "string", Enum: []string{"open", "won", "lost"}},
+		{Name: "tag_id", Type: "array"},
+		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 	},
 	"lead": {
 		{Name: "min_score", Type: "integer"},

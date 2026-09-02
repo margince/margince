@@ -24,15 +24,15 @@ feature is expected to argue with.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1661 | 6% | 15339 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2509 | 10% | 14491 | 15 | 8 |
-| _whole served catalog, for scale_ | 61 | 19253 | 80% | — | — | — |
+| `morning_brief` | 5 | 1666 | 6% | 15334 | 6 | 5 |
+| `overnight_at_risk_sweep` | 7 | 2514 | 10% | 14486 | 15 | 8 |
+| _whole served catalog, for scale_ | 61 | 19258 | 80% | — | — | — |
 
 ### `morning_brief`
 
 > Assemble the Morning Brief for this workspace: enumerate open deals, read the ones with recent activity, and produce a ranked list (at most 7) of deals the team can win this week. For each: why it is on the list, what changed recently, and one recommended next move — every claim grounded in a record you actually read, citing its id. A quiet day yields a short list; never pad it.
 
-Attaches 5 tools for 1661 tokens, leaving 15339 of its budget and 22339 tokens of the
+Attaches 5 tools for 1666 tokens, leaving 15334 of its budget and 22334 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -55,7 +55,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2509 tokens, leaving 14491 of its budget and 21491 tokens of the
+Attaches 7 tools for 2514 tokens, leaving 14486 of its budget and 21486 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -139,7 +139,7 @@ a term in an addition.
 | `send_account_email` | 545 | — |
 | `resolve_entities` | 513 | — |
 | `query_workspace` | 491 | 3 scenarios |
-| `list_records` | 475 | — |
+| `list_records` | 480 | — |
 | `advance_deal` | 474 | 1 scenario |
 | `send_email` | 471 | 1 scenario |
 | `annotate_brief` | 456 | — |

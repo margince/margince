@@ -63,8 +63,8 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 type ListDealsInput struct {
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the person and account lists.
-	TagIDs  []ids.UUID
-	TagMode storekit.TagMode
+	TagIDs         []ids.UUID
+	TagMode        storekit.TagMode
 	Cursor         *string
 	Limit          *int
 	Query          *string

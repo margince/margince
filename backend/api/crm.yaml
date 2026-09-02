@@ -767,8 +767,27 @@ paths:
           in: query
           schema: { type: string }
           description: Full-text query over name/title (tsvector).
-        - $ref: '#/components/parameters/TagIDs'
-        - $ref: '#/components/parameters/TagMode'
+        - name: tag_id
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a person types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
         - name: organization_id
           in: query
           schema: { type: string, format: uuid }
@@ -2204,8 +2223,27 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-        - $ref: '#/components/parameters/TagIDs'
-        - $ref: '#/components/parameters/TagMode'
+        - name: tag_id
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a person types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
       responses:
         '200':
           description: A page of organizations.
@@ -3835,8 +3873,27 @@ paths:
           in: query
           schema: { type: string, enum: [sourced, influenced] }
           description: Deals a partner brought (`sourced`) or merely helped (`influenced`).
-        - $ref: '#/components/parameters/TagIDs'
-        - $ref: '#/components/parameters/TagMode'
+        - name: tag_id
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to the records carrying these tags. Repeat the parameter for several.
+
+            By ID, not by name: a name is what a person types and an admin can rename, so a
+            saved view holding one would silently start selecting a different slice the day
+            somebody corrects a spelling.
+        - name: tag_mode
+          in: query
+          schema: { type: string, enum: [any, all, none], default: any }
+          description: |
+            How several `tag_id` values combine. `any` selects a record carrying at least one
+            of them, `all` a record carrying every one, `none` a record carrying not one.
+
+            Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
       responses:
         '200':
           description: A page of deals.
@@ -18536,29 +18593,6 @@ components:
         enumerated in data-model.md §13 (Sort/filter vocabulary) plus the workspace's active `cf_`
         columns (custom columns carry no index in V1 — a `cf_` sort runs as a tenant-scoped scan);
         an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
-    TagIDs:
-      name: tag_id
-      in: query
-      schema:
-        type: array
-        items: { type: string, format: uuid }
-      style: form
-      explode: true
-      description: |
-        Narrow to the records carrying these tags. Repeat the parameter for several.
-
-        By ID, not by name: a name is what a person types and an admin can rename, so a saved
-        view holding one would silently start selecting a different slice the day somebody
-        corrects a spelling.
-    TagMode:
-      name: tag_mode
-      in: query
-      schema: { type: string, enum: [any, all, none], default: any }
-      description: |
-        How several `tag_id` values combine. `any` selects a record carrying at least one of
-        them, `all` a record carrying every one, `none` a record carrying not one.
-
-        Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
     IncludeArchived:
       name: include_archived
       in: query

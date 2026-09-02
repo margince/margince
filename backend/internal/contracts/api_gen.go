@@ -12844,27 +12844,6 @@ func (e ProfileFieldKey) Valid() bool {
 	}
 }
 
-// Defines values for TagMode.
-const (
-	TagModeAll  TagMode = "all"
-	TagModeAny  TagMode = "any"
-	TagModeNone TagMode = "none"
-)
-
-// Valid indicates whether the value is a known member of the TagMode enum.
-func (e TagMode) Valid() bool {
-	switch e {
-	case TagModeAll:
-		return true
-	case TagModeAny:
-		return true
-	case TagModeNone:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListActivitiesParamsKind.
 const (
 	ListActivitiesParamsKindCall    ListActivitiesParamsKind = "call"
@@ -13908,19 +13887,19 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	All  ListPeopleParamsTagMode = "all"
-	Any  ListPeopleParamsTagMode = "any"
-	None ListPeopleParamsTagMode = "none"
+	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
+	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
+	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case All:
+	case ListPeopleParamsTagModeAll:
 		return true
-	case Any:
+	case ListPeopleParamsTagModeAny:
 		return true
-	case None:
+	case ListPeopleParamsTagModeNone:
 		return true
 	default:
 		return false
@@ -30680,12 +30659,6 @@ type ProfileFieldKey string
 // Sort defines model for Sort.
 type Sort = string
 
-// TagIDs defines model for TagIDs.
-type TagIDs = []openapi_types.UUID
-
-// TagMode defines model for TagMode.
-type TagMode string
-
 // VoiceProfileVersionNumber defines model for VoiceProfileVersionNumber.
 type VoiceProfileVersionNumber = int
 
@@ -31911,13 +31884,13 @@ type ListDealsParams struct {
 
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
 	//
-	// By ID, not by name: a name is what a person types and an admin can rename, so a saved
-	// view holding one would silently start selecting a different slice the day somebody
-	// corrects a spelling.
-	TagId *TagIDs `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+	// By ID, not by name: a name is what a person types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
 
-	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one of
-	// them, `all` a record carrying every one, `none` a record carrying not one.
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListDealsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
@@ -32902,13 +32875,13 @@ type ListOrganizationsParams struct {
 
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
 	//
-	// By ID, not by name: a name is what a person types and an admin can rename, so a saved
-	// view holding one would silently start selecting a different slice the day somebody
-	// corrects a spelling.
-	TagId *TagIDs `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+	// By ID, not by name: a name is what a person types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
 
-	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one of
-	// them, `all` a record carrying every one, `none` a record carrying not one.
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListOrganizationsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
@@ -33556,13 +33529,13 @@ type ListPeopleParams struct {
 
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
 	//
-	// By ID, not by name: a name is what a person types and an admin can rename, so a saved
-	// view holding one would silently start selecting a different slice the day somebody
-	// corrects a spelling.
-	TagId *TagIDs `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+	// By ID, not by name: a name is what a person types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
 
-	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one of
-	// them, `all` a record carrying every one, `none` a record carrying not one.
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListPeopleParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`

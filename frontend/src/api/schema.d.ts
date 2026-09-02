@@ -27552,21 +27552,6 @@ export interface components {
          *     an out-of-vocabulary field returns `422 code: sort_field_not_allowed`.
          */
         Sort: string;
-        /**
-         * @description Narrow to the records carrying these tags. Repeat the parameter for several.
-         *
-         *     By ID, not by name: a name is what a person types and an admin can rename, so a saved
-         *     view holding one would silently start selecting a different slice the day somebody
-         *     corrects a spelling.
-         */
-        TagIDs: string[];
-        /**
-         * @description How several `tag_id` values combine. `any` selects a record carrying at least one of
-         *     them, `all` a record carrying every one, `none` a record carrying not one.
-         *
-         *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
-         */
-        TagMode: "any" | "all" | "none";
         /** @description Include soft-deleted (archived) rows. Default false. */
         IncludeArchived: boolean;
         /**
@@ -28280,18 +28265,18 @@ export interface operations {
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
                  *
-                 *     By ID, not by name: a name is what a person types and an admin can rename, so a saved
-                 *     view holding one would silently start selecting a different slice the day somebody
-                 *     corrects a spelling.
+                 *     By ID, not by name: a name is what a person types and an admin can rename, so a
+                 *     saved view holding one would silently start selecting a different slice the day
+                 *     somebody corrects a spelling.
                  */
-                tag_id?: components["parameters"]["TagIDs"];
+                tag_id?: string[];
                 /**
-                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one of
-                 *     them, `all` a record carrying every one, `none` a record carrying not one.
+                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one
+                 *     of them, `all` a record carrying every one, `none` a record carrying not one.
                  *
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
-                tag_mode?: components["parameters"]["TagMode"];
+                tag_mode?: "any" | "all" | "none";
                 /**
                  * @description People who work at this account, by their CURRENT PRIMARY employment edge
                  *     (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
@@ -29713,18 +29698,18 @@ export interface operations {
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
                  *
-                 *     By ID, not by name: a name is what a person types and an admin can rename, so a saved
-                 *     view holding one would silently start selecting a different slice the day somebody
-                 *     corrects a spelling.
+                 *     By ID, not by name: a name is what a person types and an admin can rename, so a
+                 *     saved view holding one would silently start selecting a different slice the day
+                 *     somebody corrects a spelling.
                  */
-                tag_id?: components["parameters"]["TagIDs"];
+                tag_id?: string[];
                 /**
-                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one of
-                 *     them, `all` a record carrying every one, `none` a record carrying not one.
+                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one
+                 *     of them, `all` a record carrying every one, `none` a record carrying not one.
                  *
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
-                tag_mode?: components["parameters"]["TagMode"];
+                tag_mode?: "any" | "all" | "none";
             };
             header?: never;
             path?: never;
@@ -31325,18 +31310,18 @@ export interface operations {
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
                  *
-                 *     By ID, not by name: a name is what a person types and an admin can rename, so a saved
-                 *     view holding one would silently start selecting a different slice the day somebody
-                 *     corrects a spelling.
+                 *     By ID, not by name: a name is what a person types and an admin can rename, so a
+                 *     saved view holding one would silently start selecting a different slice the day
+                 *     somebody corrects a spelling.
                  */
-                tag_id?: components["parameters"]["TagIDs"];
+                tag_id?: string[];
                 /**
-                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one of
-                 *     them, `all` a record carrying every one, `none` a record carrying not one.
+                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one
+                 *     of them, `all` a record carrying every one, `none` a record carrying not one.
                  *
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
-                tag_mode?: components["parameters"]["TagMode"];
+                tag_mode?: "any" | "all" | "none";
             };
             header?: never;
             path?: never;
