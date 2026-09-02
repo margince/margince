@@ -19080,7 +19080,7 @@ type Deal struct {
 	FxRateToBase *string            `json:"fx_rate_to_base,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
-	// LastActivityAt Drives the deterministic stalled flag.
+	// LastActivityAt Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LostReason Required when status=lost.
@@ -22926,7 +22926,8 @@ type Organization struct {
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
 	IsAnchor *bool `json:"is_anchor,omitempty"`
 
-	// LastActivityAt When something last happened with this account — the newest `occurred_at` of an activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first linked activity. Sortable (DM-VOCAB-2).
+	// LastActivityAt When something last happened with this account — the newest `occurred_at` of a WORKSPACE-AUDIENCE activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	LegalName      *string    `json:"legal_name,omitempty"`
 
@@ -26039,7 +26040,7 @@ type Project struct {
 	// Key The short handle a human writes in a subject line. Letter-led and bounded so it can never be a bare number, which would match dates, amounts and order numbers. Unique among LIVE projects; archiving frees it.
 	Key *string `json:"key,omitempty"`
 
-	// LastActivityAt Maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly.
+	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// MaskedFields The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
@@ -26213,7 +26214,7 @@ type Project360Rollups struct {
 	// ActivityCount Every live activity filed under the project.
 	ActivityCount int `json:"activity_count"`
 
-	// LastActivityAt The newest activity filed under the project; null when nothing is filed yet.
+	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
 	LastActivityAt *time.Time `json:"last_activity_at"`
 
 	// OpenCommitments Open tasks filed under the project, whole lifecycle.
