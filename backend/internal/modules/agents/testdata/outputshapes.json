@@ -4604,11 +4604,25 @@
                 "assignee_name": {
                   "type": "string"
                 },
+                "claim_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "days_overdue": {
                   "type": "integer"
                 },
                 "due_at": {
                   "type": "string"
+                },
+                "quote": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_activity_id": {
+                  "type": "string",
+                  "format": "uuid"
                 },
                 "state": {
                   "type": "string"
@@ -4623,9 +4637,9 @@
               },
               "required": [
                 "about",
+                "source",
                 "state",
-                "subject",
-                "task_id"
+                "subject"
               ]
             }
           },
@@ -6298,11 +6312,25 @@
                     "assignee_name": {
                       "type": "string"
                     },
+                    "claim_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "days_overdue": {
                       "type": "integer"
                     },
                     "due_at": {
                       "type": "string"
+                    },
+                    "quote": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "source_activity_id": {
+                      "type": "string",
+                      "format": "uuid"
                     },
                     "state": {
                       "type": "string"
@@ -6317,9 +6345,9 @@
                   },
                   "required": [
                     "about",
+                    "source",
                     "state",
-                    "subject",
-                    "task_id"
+                    "subject"
                   ]
                 }
               },
@@ -7453,11 +7481,25 @@
                 "assignee_name": {
                   "type": "string"
                 },
+                "claim_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "days_overdue": {
                   "type": "integer"
                 },
                 "due_at": {
                   "type": "string"
+                },
+                "quote": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_activity_id": {
+                  "type": "string",
+                  "format": "uuid"
                 },
                 "state": {
                   "type": "string"
@@ -7472,9 +7514,9 @@
               },
               "required": [
                 "about",
+                "source",
                 "state",
-                "subject",
-                "task_id"
+                "subject"
               ]
             }
           }
