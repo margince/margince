@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -179,7 +180,9 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvo
 		// nothing about the request's shape.
 		req.Messages[len(req.Messages)-1].Content += correction
 	}
-	res, err := lane.Complete(ctx, req)
+	// Named for the rail: the reader pressed "draft" on this person, so the
+	// line under the orb says whom the draft is to rather than that one exists.
+	res, err := lane.Complete(principal.WithWorkSubject(ctx, in.Recipient.Name), req)
 	if err != nil {
 		return Draft{}, err
 	}

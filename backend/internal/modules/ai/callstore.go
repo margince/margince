@@ -58,8 +58,15 @@ type Call struct {
 	AttemptReason string
 	// Kind distinguishes a chat-ladder attempt from an embed-lane call —
 	// callKindCompletion or callKindEmbedding.
-	Kind                  string
-	CorrelationID         *ids.UUID
+	Kind          string
+	CorrelationID *ids.UUID
+	// SubjectLabel is what the call is ABOUT, as the caller bound it
+	// (principal.WithWorkSubject): the person a reply is drafted to, the
+	// company being read up on. Carried to the AI-activity occurrence the
+	// router announces and to nothing else — ai_call has no column for it,
+	// because the trace records what a call cost and the rail records what it
+	// was for. Empty for work about no single record.
+	SubjectLabel          string
 	Task                  Task
 	Tier                  Tier
 	Provider              string

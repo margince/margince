@@ -166,11 +166,34 @@ func TestOurOwnSenderIsNeverTheAddressOnOurOutboundMail(t *testing.T) {
 	if got.Address != "dietmar@buyer.test" {
 		t.Errorf("address = %q, want the counterparty dietmar@buyer.test", got.Address)
 	}
-	// The GREETING still names the sender, and that is correct rather than a
-	// mismatch: the two fields answer different questions, and only the
-	// address is constrained to a counterparty.
-	if got.FullName != "Sofia Meier" {
-		t.Errorf("full name = %q, want the greeted sender Sofia Meier", got.FullName)
+	// The GREETING names the same counterparty the address does. A draft that
+	// opens "Hi Sofia" over an envelope to Dietmar greets the rep in their own
+	// mail, and the activity rail, which names the reply for the greeted
+	// person, would say the reply is to them.
+	if got.FullName != "Dietmar Rietsch" {
+		t.Errorf("full name = %q, want the counterparty Dietmar Rietsch, never our own sender", got.FullName)
+	}
+}
+
+// With nobody else on the message, the link fallback must not hand the
+// greeting to our own sender either: the rep is linked to their own mail like
+// any participant, and a reply with no counterparty greets nobody rather than
+// them.
+func TestOurOwnSenderIsNotGreetedThroughTheLinkFallback(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	if _, err := e.owner.Exec(context.Background(), `UPDATE activity SET direction = 'outbound' WHERE id = $1`, anchor); err != nil {
+		t.Fatalf("marking the anchor outbound: %v", err)
+	}
+
+	us := e.linkPerson(t, anchor, "Sofia Meier")
+	e.seedPersonEmail(t, us, "sofia.private@gmail.test")
+	e.participate(t, anchor, us, "from", &e.rep)
+
+	got := recipientOf(e.as(principal.RowScopeAll), t,
+		e.handlers(ourDomain{suffix: "@demo.test"}), anchor)
+	if got.FullName != "" {
+		t.Errorf("full name = %q, want nobody: the only person on this mail is our own sender", got.FullName)
 	}
 }
 

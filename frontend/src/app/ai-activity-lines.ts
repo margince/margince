@@ -20,43 +20,74 @@ type NotDisplayed = Readonly<{ notDisplayed: string }>;
 /** The (state -> message key) table of a kind the rail narrates. */
 type LineSet = Readonly<Record<ActivityState, MessageKey>>;
 
+/**
+ * A stem the catalog spells out under `agent.activity.` for every state.
+ *
+ * Derived from the catalog rather than listed, so the compiler refuses a stem
+ * with no copy: `lineSet` builds all six keys from it, and each of the six has
+ * to be a MessageKey, which means a stem missing one state fails the build
+ * rather than rendering a raw key to a reader.
+ */
+type LineStem = {
+  [K in MessageKey]: K extends `agent.activity.${infer S}.queued` ? S : never;
+}[MessageKey];
+
+/**
+ * The six lines of one kind, from the one stem they share.
+ *
+ * One spelling of the state axis, rather than six literal keys per kind: the
+ * table is nineteen sets long, and a stem is the only thing that varies
+ * between them.
+ */
+function lineSet(stem: LineStem): LineSet {
+  return {
+    queued: `agent.activity.${stem}.queued`,
+    running: `agent.activity.${stem}.running`,
+    stalled: `agent.activity.${stem}.stalled`,
+    done: `agent.activity.${stem}.done`,
+    degraded: `agent.activity.${stem}.degraded`,
+    failed: `agent.activity.${stem}.failed`,
+  };
+}
+
 const notDisplayed = (reason: string): NotDisplayed => ({
   notDisplayed: reason,
 });
 
-const WATCHED_BY_THE_ASKER = notDisplayed(
-  "the work lands on the surface that asked for it and changes it when it arrives, so a line here would narrate what the reader is already looking at. growth_fit renders the band it returns on the panel that asked. cold_start runs behind TWO product surfaces and the reason has to cover both (it declares four invocation SITES in aitaskregistry.go — a different count, and not the one that decides whether a line can be drawn): during onboarding the screen is deliberately RAILLESS — `onboarding` is a member of RAIL_LESS_SCREENS (nav.ts), which shell.tsx reads to drop the whole chrome — so there is no rail on screen for its line to appear on — and the organization page's Enrich card runs it too (cmd/api/modelwiring.go wires WithScrape with the cold_start brain), where a rail DOES exist and the card itself renders the proposal. Naming only the onboarding half would leave the org-page site looking like an oversight. A task-level map cannot separate those arms and does not have to, because neither is drawn where the task runs",
-);
 const SYSTEM_SWEEP = notDisplayed(
   "background workspace work that belongs to nobody in particular, so it has no personal line to draw",
 );
 
-// The site-read lanes, which do NOT belong above however much they look like it.
+// Two of the three site-read lanes, which are STEPS of a read the third lane
+// already narrates.
 //
-// Their attribution is a property of the READ, not of the task: compose binds
-// the requester as OnBehalfOf when a human asked (deepreadprincipal.go), so
-// those occurrences resolve to that person and land in their personal feed —
-// while a read requested by domain triage or the auto-enrich sweep names no
-// human, yields the zero uuid, and is workspace-scoped like any sweep. Calling
-// all three "work that belongs to nobody" is therefore false for the commonest
-// case, and a kind-level map cannot say "sometimes personal" in the SYSTEM_SWEEP
-// sentence — which is why they get their own reason instead of sharing one.
-const SITE_READ_WATCHED_WHERE_IT_RUNS = notDisplayed(
-  "the site-read lanes, whose attribution is a fact about the READ rather than the task: a human-requested read carries that person as on_behalf_of and IS personal to them, while a domain-triage or auto-enrich read names no human and is workspace-scoped. Neither wants a line here. The human's read is already narrated where it was started — the organization page polls the read's own status and draws it live (SiteReadPanel), and the taskbar carries a `site-read` key for the same action — so a rail line would be a third telling of one thing. The system's read belongs to nobody, exactly like the sweeps above. There is also a grain the rail could not render honestly: the occurrence key is correlation+task and one read's correlation is its site_read row id, so a single read files one occurrence PER LANE it runs — the extract lanes for an ordinary read, and site_triage on top for a domain-triage one, which is the only read that reaches all three",
+// One website read files one occurrence per lane it runs, because the
+// occurrence key is correlation+task and a read's correlation is its site_read
+// row id. `site_extract` is the profile lane every human-requested read runs,
+// and it is the one drawn: "I'm reading the zenloop.com website" is the whole
+// of what a reader wants to know. `site_fact_extract` is that same read's
+// page-parallel fact pass, and `site_triage` fires only for a domain-triage read
+// nobody asked for (isDomainTriageRequest) — drawing either would list one read
+// two or three times over, under two or three sentences, for one afternoon's
+// work.
+const SITE_READ_STEP = notDisplayed(
+  "a step inside one website read that `site_extract` already narrates: a read files one occurrence per lane it runs under its own correlation id, so drawing this lane too would list the same read twice. site_fact_extract is the read's page-parallel fact pass; site_triage runs only for a domain-triage read no human requested, which is workspace-scoped and reaches nobody's feed anyway",
 );
 /**
- * The line for one (kind, state), by literal key — or the reason there is none.
+ * The line for one (kind, state), by key, or the reason there is none.
  *
- * LITERAL, not `t(`agent.activity.${kind}.${state}`)`. The orphan guard in
- * i18n.test.ts counts a key as rendered when it starts with a template STEM,
- * and its regex stops at the first `${` — so an interpolated key would vouch
- * for the whole `agent.activity.` namespace forever, and a retired kind's copy
- * would sit in three catalogs with nothing to flag it.
+ * Each set is BUILT from one stem by `lineSet`, so the orphan guard in
+ * i18n.test.ts cannot hold this namespace: it counts a key as rendered when
+ * the key starts with a template stem, and `lineSet`'s template vouches for
+ * all of `agent.activity.` at once. What holds it instead is the copy-set spec
+ * in ai-activity-lines.test.ts, which asserts the catalog's `agent.activity.`
+ * keys are EXACTLY the keys these maps name, in both directions, so a retired
+ * kind's copy fails there rather than sitting in three catalogs unflagged.
  *
  * TOTAL over the contract's kinds, and the compiler is what holds it there: a
  * new kind fails the build until somebody either writes its copy in every
  * locale or says, here, why it is not shown. The second branch exists because
- * every AI task now reports — nineteen of them, most narrating work no rep
+ * every AI task now reports — twenty-seven of them, most narrating work no rep
  * asked to watch — and forcing copy for all of them would have bought 300
  * strings nobody reads and taught the next author that the answer to a new kind
  * is boilerplate.
@@ -73,76 +104,41 @@ export const ACTIVITY_LINE: Readonly<
     Readonly<Record<ActivityState, MessageKey>> | NotDisplayed
   >
 > = {
-  morning_brief: {
-    queued: "agent.activity.morningBrief.queued",
-    running: "agent.activity.morningBrief.running",
-    stalled: "agent.activity.morningBrief.stalled",
-    done: "agent.activity.morningBrief.done",
-    degraded: "agent.activity.morningBrief.degraded",
-    failed: "agent.activity.morningBrief.failed",
-  },
-  overnight_at_risk_sweep: {
-    queued: "agent.activity.riskSweep.queued",
-    running: "agent.activity.riskSweep.running",
-    stalled: "agent.activity.riskSweep.stalled",
-    done: "agent.activity.riskSweep.done",
-    degraded: "agent.activity.riskSweep.degraded",
-    failed: "agent.activity.riskSweep.failed",
-  },
-  document_extract: {
-    queued: "agent.activity.documentExtract.queued",
-    running: "agent.activity.documentExtract.running",
-    stalled: "agent.activity.documentExtract.stalled",
-    done: "agent.activity.documentExtract.done",
-    degraded: "agent.activity.documentExtract.degraded",
-    failed: "agent.activity.documentExtract.failed",
-  },
+  morning_brief: lineSet("morningBrief"),
+  overnight_at_risk_sweep: lineSet("riskSweep"),
+  document_extract: lineSet("documentExtract"),
 
   // `queued` is written for all three and reachable by none of them: the router
   // announces a call it is ABOUT to serve, never one waiting, and no carrier
   // owns these tasks. The LineSet type is total over the state axis, so the key
   // exists because the compiler requires it — not because a producer is
   // missing. Saying so here saves the next reader the hunt.
-  summarize: {
-    queued: "agent.activity.summarize.queued",
-    running: "agent.activity.summarize.running",
-    stalled: "agent.activity.summarize.stalled",
-    done: "agent.activity.summarize.done",
-    degraded: "agent.activity.summarize.degraded",
-    failed: "agent.activity.summarize.failed",
-  },
-  draft_reply: {
-    queued: "agent.activity.draftReply.queued",
-    running: "agent.activity.draftReply.running",
-    stalled: "agent.activity.draftReply.stalled",
-    done: "agent.activity.draftReply.done",
-    degraded: "agent.activity.draftReply.degraded",
-    failed: "agent.activity.draftReply.failed",
-  },
-  offer_draft: {
-    queued: "agent.activity.offerDraft.queued",
-    running: "agent.activity.offerDraft.running",
-    stalled: "agent.activity.offerDraft.stalled",
-    done: "agent.activity.offerDraft.done",
-    degraded: "agent.activity.offerDraft.degraded",
-    failed: "agent.activity.offerDraft.failed",
-  },
+  summarize: lineSet("summarize"),
+  draft_reply: lineSet("draftReply"),
+  offer_draft: lineSet("offerDraft"),
 
-  growth_fit: WATCHED_BY_THE_ASKER,
-  cold_start: WATCHED_BY_THE_ASKER,
-  corpus_ask: WATCHED_BY_THE_ASKER,
+  // The AI reading up on a company for the person who asked. Each lands its
+  // result on the surface that asked, and each is ALSO drawn here, because the
+  // orb is the one place a reader looks to learn the AI is at work at all —
+  // a card that fills in forty seconds later tells nobody what was happening
+  // during the forty seconds.
+  growth_fit: lineSet("growthFit"),
+  corpus_ask: lineSet("corpusAsk"),
+  // The website read behind the organization page's Enrich card, and behind
+  // onboarding — where the screen is railless (`onboarding` is in
+  // RAIL_LESS_SCREENS, nav.ts), so this copy is only ever seen for the card.
+  cold_start: lineSet("coldStart"),
+  // The deep website read a person starts from the organization page. Its
+  // attribution is a fact about the READ: compose binds the requester as
+  // on_behalf_of (deepreadprincipal.go), so a human's read lands in their own
+  // feed, while a domain-triage or auto-enrich read names nobody and reaches
+  // nobody's rail.
+  site_extract: lineSet("siteExtract"),
 
   // The weekly retrospective's sentence. A per-rep occurrence a rep can see —
   // it runs under their own principal over their own week — so it gets real
   // copy rather than the system-sweep line.
-  weekly_review: {
-    queued: "agent.activity.weeklyReview.queued",
-    running: "agent.activity.weeklyReview.running",
-    stalled: "agent.activity.weeklyReview.stalled",
-    done: "agent.activity.weeklyReview.done",
-    degraded: "agent.activity.weeklyReview.degraded",
-    failed: "agent.activity.weeklyReview.failed",
-  },
+  weekly_review: lineSet("weeklyReview"),
   brief_ranking: SYSTEM_SWEEP,
   capture_classify: SYSTEM_SWEEP,
   capture_confidentiality_verdict: SYSTEM_SWEEP,
@@ -152,9 +148,8 @@ export const ACTIVITY_LINE: Readonly<
   ),
   rate_extract: SYSTEM_SWEEP,
   signal_extract: SYSTEM_SWEEP,
-  site_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
-  site_fact_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
-  site_triage: SITE_READ_WATCHED_WHERE_IT_RUNS,
+  site_fact_extract: SITE_READ_STEP,
+  site_triage: SITE_READ_STEP,
   propose_roles: SYSTEM_SWEEP,
   transcript_propose: SYSTEM_SWEEP,
   voice_build: SYSTEM_SWEEP,
@@ -180,8 +175,11 @@ export const ACTIVITY_LINE: Readonly<
  * state) table its test holds to exactly, and a heading in it would be a key no
  * state could reach.
  */
-export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
+export const PANEL_HEADING: Readonly<
+  Record<"running" | "wentWrong", MessageKey>
+> = {
   running: "agent.panel.runningNow",
+  wentWrong: "agent.panel.wentWrong",
 };
 
 /**
@@ -189,11 +187,15 @@ export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
  * name.
  *
  * PARTIAL on purpose, where `ACTIVITY_LINE` is total: a named variant is not
- * something every kind can have. Most occurrences are about no single record,
- * and the ones that are only carry a name when their emitter sends
- * `subject_label` — which today is the document reading and nothing else. A
- * total map here would demand copy for sentences no server can produce, which
- * is the boilerplate the notDisplayed branch exists to avoid.
+ * something every kind can have. The scheduled runs are about no single record
+ * — a morning brief is about the morning — and demanding copy for them would be
+ * the boilerplate the notDisplayed branch exists to avoid. Every kind a person
+ * asks for about ONE record is here, because that is the line the reader is
+ * actually waiting on: "I'm drafting your reply to Anna Berg" is a sentence
+ * about their afternoon, and "I'm drafting your reply" is a sentence about
+ * software. The name is the source's own snapshot (`subject_label`): the
+ * document reader resolves the document's title, and every router-served task
+ * carries the name its caller bound (principal.WithWorkSubject).
  *
  * Each entry is a strict alternative to the unnamed line, never a suffix: "I'm
  * reading Q3-offer.pdf" is one sentence in every locale this ships in, and
@@ -201,15 +203,66 @@ export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
  * true.
  */
 export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
-  document_extract: {
-    queued: "agent.activity.documentExtractNamed.queued",
-    running: "agent.activity.documentExtractNamed.running",
-    stalled: "agent.activity.documentExtractNamed.stalled",
-    done: "agent.activity.documentExtractNamed.done",
-    degraded: "agent.activity.documentExtractNamed.degraded",
-    failed: "agent.activity.documentExtractNamed.failed",
-  },
+  document_extract: lineSet("documentExtractNamed"),
+  summarize: lineSet("summarizeNamed"),
+  draft_reply: lineSet("draftReplyNamed"),
+  offer_draft: lineSet("offerDraftNamed"),
+  growth_fit: lineSet("growthFitNamed"),
+  corpus_ask: lineSet("corpusAskNamed"),
+  cold_start: lineSet("coldStartNamed"),
+  site_extract: lineSet("siteExtractNamed"),
 };
+
+/**
+ * Why a run stopped, and what the reader can do about it — one sentence per
+ * value of the router's closed `degrade_reason` vocabulary.
+ *
+ * `degrade_reason` is server-authored operator vocabulary: a sentinel like
+ * `provider_quota`, never a provider's own message. It reaches the reader ONLY
+ * through this table, in their locale, as a cause paired with a repair — "the
+ * provider's quota is used up; top it up or bind another model under Settings"
+ * — because a stopped run with no reason is a fault the reader can only
+ * shrug at, and a raw token is a fault they cannot read. A value with no entry
+ * draws nothing, which is how a carrier's own prose (the scheduled runner
+ * writes full sentences here, in English) and any vocabulary this build has not
+ * heard of stay off the reader's screen rather than appearing verbatim.
+ *
+ * The keys are the sentinels `classifyError` and the attempt reasons the router
+ * writes (ai/callstore.go, ai/logicalcall.go). PARTIAL over strings by
+ * construction — the wire types the field as free text — so this is the one
+ * map here the compiler cannot hold total; its test holds every key to real
+ * copy instead.
+ */
+export const REASON_LINE: Readonly<Record<string, MessageKey>> = {
+  budget_deferred: "agent.activity.reason.budgetDeferred",
+  budget_degrade: "agent.activity.reason.budgetDegrade",
+  budget_unavailable: "agent.activity.reason.budgetUnavailable",
+  metering_failed: "agent.activity.reason.meteringFailed",
+  request_failed: "agent.activity.reason.requestFailed",
+  schema_invalid: "agent.activity.reason.schemaInvalid",
+  provider_quota: "agent.activity.reason.providerQuota",
+  provider_throttled: "agent.activity.reason.providerThrottled",
+  provider_refused: "agent.activity.reason.providerRefused",
+  provider_error: "agent.activity.reason.providerError",
+};
+
+/**
+ * The reader's sentence for why a run stopped, or null when the run stopped
+ * for no reason this build can put into words.
+ *
+ * `Object.hasOwn`, not a bare lookup: the value comes off the wire, and
+ * `constructor` would otherwise answer from the prototype with a function.
+ */
+export function reasonFor(
+  item: Readonly<{ degrade_reason?: string | null }>,
+  t: (key: MessageKey) => string,
+): string | null {
+  const reason = item.degrade_reason ?? "";
+  if (reason === "" || !Object.hasOwn(REASON_LINE, reason)) {
+    return null;
+  }
+  return t(REASON_LINE[reason]);
+}
 
 /**
  * What to say about one item, or nothing at all.
@@ -282,7 +335,7 @@ function isActivityKind(kind: string): kind is ActivityKind {
  * DERIVED from ACTIVITY_LINE rather than listed, and that is the whole point:
  * the server reports every AI task, and `recent` is bounded at ten. A client
  * that asked for everything and drew three kinds would be handed the newest ten
- * of twenty-three — ten it renders nothing for — and the rail would go blank on
+ * of twenty-seven — ten it renders nothing for — and the rail would go blank on
  * the day a rep used the composer a lot, while the projection was right the
  * whole time. Naming the kinds moves the bound inside this list; deriving it
  * means the list cannot fall out of step with the copy that decides it.

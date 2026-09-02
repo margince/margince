@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func floorFor(in Input) Plan {
@@ -73,6 +74,37 @@ func TestASparseReplyKeepsTheFloorsCoveragePerField(t *testing.T) {
 	}
 	if got.Advance.Minimum.Text != floor.Advance.Minimum.Text {
 		t.Error("the advance was rewritten; it is not a field the model is asked for")
+	}
+}
+
+// A meeting with no employer on record must still be named on the AI-activity
+// rail, rather than falling back to a generic label: the meeting's own
+// subject is the next best thing this input carries.
+func TestAPlanRunIsNamedForTheMeetingWhenNoCompanyIsKnown(t *testing.T) {
+	in := fullInput()
+	in.Company = ""
+	in.Subject = "Kickoff with Zenloop"
+	lane := &laneReturning{reply: `{"opening":{"text":"Open on the security pack.",
+		"nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + activityID + `"}]}}`}
+	WritePlan(context.Background(), lane, in, floorFor(in), "en")
+	label, ok := principal.WorkSubject(lane.ctx)
+	if !ok || label != in.Subject {
+		t.Errorf("work subject = %q, ok=%v, want %q: no company on record, so the meeting names itself", label, ok, in.Subject)
+	}
+}
+
+// A meeting's employer, when known, still leads over the meeting's own
+// subject, because the company is the more specific label a reader recognises.
+func TestAPlanRunIsNamedForTheCompanyWhenOneIsKnown(t *testing.T) {
+	in := fullInput()
+	in.Company = "Zenloop"
+	in.Subject = "Kickoff with Zenloop"
+	lane := &laneReturning{reply: `{"opening":{"text":"Open on the security pack.",
+		"nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + activityID + `"}]}}`}
+	WritePlan(context.Background(), lane, in, floorFor(in), "en")
+	label, ok := principal.WorkSubject(lane.ctx)
+	if !ok || label != in.Company {
+		t.Errorf("work subject = %q, ok=%v, want the company %q", label, ok, in.Company)
 	}
 }
 

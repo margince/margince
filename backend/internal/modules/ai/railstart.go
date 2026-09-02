@@ -137,6 +137,13 @@ func (lc *logicalCall) announceRailStartOnce(ctx context.Context, r *Router, tas
 	if cid, ok := principal.CorrelationID(ctx); ok {
 		c.CorrelationID = &cid
 	}
+	// The subject rides the start as well as the settle: the start is the line
+	// a waiting reader actually watches, and an occurrence named only once it
+	// was over would say "I'm drafting your reply" for the whole of the work
+	// and "to Anna Berg" only after it.
+	if subject, ok := principal.WorkSubject(ctx); ok {
+		c.SubjectLabel = subject
+	}
 	starter.AnnounceRailStart(ctx, c, railLease(ladder))
 }
 
@@ -224,6 +231,7 @@ func (m *CallMeter) announceRailStartTx(ctx context.Context, tx pgx.Tx, c Call, 
 		// requires a non-queued state to carry one.
 		StartedAt:    &started,
 		LeaseSeconds: &seconds,
+		SubjectLabel: railSubject(c),
 	}
 	if err := storekit.EmitPipelinePayload(ctx, tx, ledgerID, payload); err != nil {
 		return fmt.Errorf("ai: publish rail start: %w", err)

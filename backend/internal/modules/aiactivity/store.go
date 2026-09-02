@@ -85,6 +85,13 @@ func NewStore(db *database.DB) *Store {
 // occurrence must LOSE the previous attempt's finished_at, degrade_reason and
 // summary, and a partial update is how a row ends up reading as live and failed
 // at once.
+//
+// The subject is the one exception, because it is the occurrence's identity
+// rather than an attempt's state: what the work is ABOUT does not change when
+// the work is retried or settles. A source names it on whichever event holds
+// the name, so an event that carries none keeps what an earlier one said,
+// where writing it from EXCLUDED would have a settle without a label blank the
+// name the rail had already shown for the run.
 const applyStateChangeSQL = `
 INSERT INTO ai_task_run (
   source, occurrence_key, kind, ai_task, attempt,
@@ -100,8 +107,9 @@ ON CONFLICT (source, occurrence_key) DO UPDATE SET
   state = EXCLUDED.state, queued_at = EXCLUDED.queued_at,
   started_at = EXCLUDED.started_at, finished_at = EXCLUDED.finished_at,
   stale_after = EXCLUDED.stale_after,
-  subject_type = EXCLUDED.subject_type, subject_id = EXCLUDED.subject_id,
-  subject_label = EXCLUDED.subject_label,
+  subject_type = COALESCE(EXCLUDED.subject_type, ai_task_run.subject_type),
+  subject_id = COALESCE(EXCLUDED.subject_id, ai_task_run.subject_id),
+  subject_label = COALESCE(EXCLUDED.subject_label, ai_task_run.subject_label),
   quantity = EXCLUDED.quantity, quantity_unit = EXCLUDED.quantity_unit,
   degrade_reason = EXCLUDED.degrade_reason, summary = EXCLUDED.summary,
   last_event_id = EXCLUDED.last_event_id,

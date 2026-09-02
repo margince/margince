@@ -16,6 +16,7 @@ import (
 	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // WritePlan produces the plan. lane may be nil, which is not an error: it is
@@ -40,7 +41,7 @@ func WritePlan(
 func writePlanWithModel(
 	ctx context.Context, lane Completer, in Input, floor Plan, lang string,
 ) (Plan, error) {
-	reply, err := lane.Complete(ctx, PlanRequest(planPromptOf(in, floor), lang))
+	reply, err := lane.Complete(principal.WithWorkSubject(ctx, workSubjectOf(in)), PlanRequest(planPromptOf(in, floor), lang))
 	if err != nil {
 		return Plan{}, err
 	}

@@ -12,13 +12,16 @@ import {
   displayedLines,
   lineFor,
   NAMED_LINE,
+  REASON_LINE,
+  reasonFor,
 } from "./ai-activity-lines";
 
-/** Every message key either map names, which is the whole reachable set. */
+/** Every message key the three maps name, which is the whole reachable set. */
 function namedKeys(): Set<string> {
   return new Set<string>([
     ...displayedLines().flatMap(([, byState]) => Object.values(byState)),
     ...Object.values(NAMED_LINE).flatMap((byState) => Object.values(byState)),
+    ...Object.values(REASON_LINE),
   ]);
 }
 
@@ -125,6 +128,33 @@ describe("the activity copy set", () => {
     expect(displayedLines().length).toBeGreaterThan(0);
   });
 
+  // Every kind a person asks for ABOUT ONE RECORD has a named variant, because
+  // that is the line the reader is waiting on: the rail exists to say what the
+  // AI is drafting or reading, and "your reply" is not an answer to whom. The
+  // scheduled runs are about no single record and are rightly absent here.
+  // Listed rather than derived, because which kinds are "about one record" is a
+  // fact about the product that no type carries.
+  it("names the subject for every kind a person asks for about one record", () => {
+    const aboutOneRecord = [
+      "summarize",
+      "draft_reply",
+      "offer_draft",
+      "growth_fit",
+      "corpus_ask",
+      "cold_start",
+      "site_extract",
+      "document_extract",
+    ] as const;
+    for (const kind of aboutOneRecord) {
+      expect(NAMED_LINE[kind], kind).toBeDefined();
+    }
+    // The list above is also the CEILING, not only the floor: a kind added to
+    // NAMED_LINE without a matching entry here would otherwise pass unnoticed,
+    // and this list is the product's own statement of which kinds are about
+    // one record.
+    expect(Object.keys(NAMED_LINE).sort()).toEqual([...aboutOneRecord].sort());
+  });
+
   // A kind that is not narrated says why, in a sentence a reader of this file
   // can weigh. An empty reason is the same silence the rail's totality exists
   // to prevent, one level further in: it records that somebody chose, without
@@ -183,64 +213,85 @@ describe("lineFor", () => {
     // becomes displayed can no longer stand here, which is what this shape
     // catches.
     ["a background sweep", { kind: "brief_ranking", state: "done" }],
-    ["work the asker is watching", { kind: "cold_start", state: "done" }],
     ["a task nothing has built", { kind: "nl_search", state: "done" }],
     ["the lane grading this build", { kind: "cert_judge", state: "done" }],
     // The two reasons carried by an entry of its own rather than a shared
     // constant, which is the pairing a hand-kept list drops first.
     ["a pass that reaches nobody", { kind: "enrich", state: "done" }],
-    ["a site-read lane", { kind: "site_triage", state: "running" }],
+    ["a step of a website read", { kind: "site_triage", state: "running" }],
   ])("renders nothing at all for %s", (_name, item) => {
     expect(lineFor(item, (key) => en[key])).toBeNull();
   });
 });
 
-// The site-read lanes carry ONE reason of their own, shared with nothing else.
+// One website read is ONE line. The read files an occurrence per lane it runs
+// under its own correlation id, so the profile lane is drawn and the other two
+// are steps of the same read: drawing all three would list one afternoon's read
+// three times under three sentences.
 //
-// A prose reason cannot be checked by reading it, but the OBJECT a kind carries
-// can be. These three sat on SYSTEM_SWEEP, whose sentence says the work belongs
-// to nobody in particular — false whenever a human asked for the read, because
-// compose binds that person as on_behalf_of and the occurrence lands in their
-// own feed. A reader who trusted the shared sentence would conclude no site read
-// can reach a person, and stop looking.
-//
-// Identity, not text: the reason may be reworded freely and only re-pointing a
-// lane at another entry fails. Three assertions, because each catches a
-// different way to be wrong and the obvious one-liner catches only the first:
-//
-//   same object   — the three cannot drift into three near-copies
-//   notDisplayed  — a lane given a real LINE TABLE fails here. The version of
-//                   this gate that compared reason STRINGS passed happily when
-//                   two of the three were displayed, because the absent reason
-//                   read as "" and "" is not the sweep's sentence. That is the
-//                   inverse of the documented decision passing its own guard.
-//   unshared      — "not the sweep's" is not "its own". Pointing all three at
-//                   WATCHED_BY_THE_ASKER, or at any new shared sentence, is
-//                   still the bug this exists to prevent.
-describe("the site-read lanes carry one reason of their own", () => {
-  const LANES = ["site_extract", "site_fact_extract", "site_triage"] as const;
-  const entryFor = (kind: (typeof LANES)[number] | string) =>
-    ACTIVITY_LINE[kind as (typeof LANES)[number]];
+// Identity, not text: the two steps share one reason OBJECT and it is theirs
+// alone, so re-pointing a step at the sweeps' sentence — false whenever a human
+// asked for the read, since compose binds that person as on_behalf_of and the
+// occurrence lands in their own feed — fails here rather than passing on a
+// reworded string. And the drawn lane is held drawn, because the version of this
+// file that kept all three silent left a reader who started a deep read watching
+// an orb at rest for the whole of it.
+describe("a website read is narrated once", () => {
+  const STEPS = ["site_fact_extract", "site_triage"] as const;
+  const entryFor = (kind: (typeof STEPS)[number] | "site_extract" | string) =>
+    ACTIVITY_LINE[kind as (typeof STEPS)[number]];
 
-  it("is one entry object, not three near-copies", () => {
-    expect(new Set(LANES.map(entryFor)).size).toBe(1);
+  it("draws the profile lane every human-requested read runs", () => {
+    expect("notDisplayed" in entryFor("site_extract")).toBe(false);
+    expect(NAMED_LINE.site_extract).toBeDefined();
   });
 
-  it.each(LANES)("%s is undisplayed and says why", (kind) => {
-    const entry = entryFor(kind);
-    expect("notDisplayed" in entry).toBe(true);
-    expect("notDisplayed" in entry ? entry.notDisplayed.trim() : "").not.toBe(
+  it("keeps the two steps on one reason object of their own", () => {
+    expect(new Set(STEPS.map(entryFor)).size).toBe(1);
+    const theirs = entryFor(STEPS[0]);
+    expect("notDisplayed" in theirs).toBe(true);
+    expect("notDisplayed" in theirs ? theirs.notDisplayed.trim() : "").not.toBe(
       "",
     );
-  });
-
-  it("shares that entry with no other kind", () => {
-    const lanes = new Set<string>(LANES);
-    const theirs = entryFor(LANES[0]);
+    const steps = new Set<string>(STEPS);
     const trespassers = Object.entries(ACTIVITY_LINE)
-      .filter(([kind, entry]) => !lanes.has(kind) && entry === theirs)
+      .filter(([kind, entry]) => !steps.has(kind) && entry === theirs)
       .map(([kind]) => kind);
     expect(trespassers).toEqual([]);
+  });
+});
+
+// Why a run stopped reaches the reader ONLY through REASON_LINE, translated and
+// paired with a repair. Two directions: every sentinel the router can write has
+// copy in every locale, and a value off the vocabulary draws nothing — never the
+// raw token, never a message key.
+describe("the reason a run stopped", () => {
+  it.each([
+    { locale: "en", catalog: en },
+    { locale: "de", catalog: de },
+    { locale: "vi", catalog: vi },
+  ])("has copy for every sentinel ($locale)", ({ catalog }) => {
+    expect(Object.keys(REASON_LINE).length).toBeGreaterThan(0);
+    for (const [sentinel, key] of Object.entries(REASON_LINE)) {
+      expect(catalog[key], sentinel).toBeTruthy();
+    }
+  });
+
+  it("renders the sentence for a known sentinel and nothing for the rest", () => {
+    expect(
+      reasonFor({ degrade_reason: "provider_quota" }, (key) => en[key]),
+    ).toBe(en["agent.activity.reason.providerQuota"]);
+    expect(reasonFor({ degrade_reason: null }, (key) => en[key])).toBeNull();
+    expect(
+      reasonFor(
+        { degrade_reason: "brief_partial: crm_read_timeout" },
+        (key) => en[key],
+      ),
+    ).toBeNull();
+    // Off the wire, a bare lookup would answer from the prototype.
+    expect(
+      reasonFor({ degrade_reason: "constructor" }, (key) => en[key]),
+    ).toBeNull();
   });
 });
 
@@ -259,11 +310,20 @@ describe("the site-read lanes carry one reason of their own", () => {
 describe("the kinds the rail asks for", () => {
   it("is exactly the reviewed set", () => {
     expect([...displayedKinds()].sort()).toEqual([
+      // The AI reading up on a company for the person who asked: the website
+      // behind the Enrich card, the answer to a corpus question, the growth
+      // fit, the deep website read. Each is personal — the handler runs under
+      // the asker's own principal, or compose binds them as on_behalf_of — and
+      // each names its record, so the line says WHICH company or corpus.
+      "cold_start",
+      "corpus_ask",
       "document_extract",
       "draft_reply",
+      "growth_fit",
       "morning_brief",
       "offer_draft",
       "overnight_at_risk_sweep",
+      "site_extract",
       "summarize",
       // The weekly retrospective's sentence. It reaches one person's feed —
       // the pass runs under that rep's own principal over their own week, so
@@ -299,6 +359,10 @@ describe("the ticker and the rail never narrate one action twice", () => {
     // question, and deleting the shared entry silenced the sends — the split is
     // what lets each be narrated exactly once.
     ["email-draft", "draft_reply"],
+    // The deep read: the ticker used to narrate the click that started it, and
+    // the rail now narrates the reading itself, named for the site, for as
+    // long as the AI is at it.
+    ["site-read", "site_extract"],
   ];
 
   it.each(COLLISIONS)(

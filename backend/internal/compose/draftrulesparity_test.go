@@ -337,8 +337,8 @@ func TestTheReplyPayloadStaysAFlatStringMap(t *testing.T) {
 func TestADrafterWithNoLoggerSurvivesItsDegradePaths(t *testing.T) {
 	drafter := replyDrafter{}
 
-	if got, surname := drafter.recipientName(context.Background(), ids.New[ids.ActivityKind]()); got != "" || surname != "" {
-		t.Errorf("a drafter with no store should resolve no recipient, got %q %q", got, surname)
+	if got, surname, full := drafter.recipientName(context.Background(), ids.New[ids.ActivityKind]()); got != "" || surname != "" || full != "" {
+		t.Errorf("a drafter with no store should resolve no recipient, got %q %q %q", got, surname, full)
 	}
 	if drafter.logger() == nil {
 		t.Error("the logger accessor must never return nil")

@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -60,7 +61,7 @@ func writeIntroNote(
 func noteFromModel(
 	ctx context.Context, lane Completer, facts noteFacts,
 ) (introNote, error) {
-	res, err := lane.Complete(ctx, noteRequest(facts))
+	res, err := lane.Complete(principal.WithWorkSubject(ctx, facts.contact), noteRequest(facts))
 	if err != nil {
 		return introNote{}, fmt.Errorf("network: drafting the introduction note: %w", err)
 	}

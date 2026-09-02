@@ -39,7 +39,7 @@ import {
 import { type DemoRun, useDemoRun } from "./agentrail-demo";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
-import { lineFor, PANEL_HEADING } from "./ai-activity-lines";
+import { lineFor, PANEL_HEADING, reasonFor } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { useAgentTierMap } from "./autonomy";
 import { useCan } from "./capability";
@@ -481,24 +481,34 @@ function RuntimeRows({
 type AiActivityItem = components["schemas"]["AiActivityItem"];
 
 /**
- * One list of scheduled runs, in the reader's words, under its own heading.
+ * One list of runs, in the reader's words, under its own heading.
  *
  * A kind or state the copy map has no line for draws NOTHING — not a fallback
  * sentence, not the message key. `lineFor` returning null is the map saying it
  * has never heard of this run, and a surface that answers that with an invented
  * sentence is a surface a reader cannot trust about the runs it DOES name. When
  * that empties the section, the section is absent too.
+ *
+ * `detail` is the second line a run can carry under its first — for the runs
+ * that went wrong, why and what to do about it. Null draws no second line, so a
+ * run that stopped for a reason this build has no words for still says that it
+ * stopped, and never a raw token.
  */
 function RunSection({
   heading,
   items,
-}: Readonly<{ heading: MessageKey; items: readonly AiActivityItem[] }>) {
+  detail,
+}: Readonly<{
+  heading: MessageKey;
+  items: readonly AiActivityItem[];
+  detail?: (item: AiActivityItem) => string | null;
+}>) {
   const t = useT();
   // flatMap rather than map+filter: the empty array drops the run AND narrows
   // the line to a string, where a filtered predicate would only have claimed it.
   const said = items.flatMap((item) => {
     const line = lineFor(item, t);
-    return line === null ? [] : [{ item, line }];
+    return line === null ? [] : [{ item, line, why: detail?.(item) ?? null }];
   });
   if (said.length === 0) {
     return null;
@@ -507,9 +517,10 @@ function RunSection({
     <div className="arsect">
       <h4>{t(heading)}</h4>
       <ul className="arruns">
-        {said.map(({ item, line }) => (
+        {said.map(({ item, line, why }) => (
           <li className="arbox arrun" key={item.id}>
             <span className="arrunline">{line}</span>
+            {why !== null && <span className="arrunwhy">{why}</span>}
           </li>
         ))}
       </ul>
@@ -517,11 +528,17 @@ function RunSection({
   );
 }
 
+/** A settled run that did not finish cleanly. */
+function wentWrong(item: AiActivityItem): boolean {
+  return item.state === "failed" || item.state === "degraded";
+}
+
 function AgentPanel({
   state,
   setState,
   line,
   running,
+  recent,
   signals,
   model,
   spend,
@@ -535,6 +552,8 @@ function AgentPanel({
   line: string;
   /** The scheduled runs the server reports as live. */
   running: readonly AiActivityItem[];
+  /** What settled since local midnight, newest first. */
+  recent: readonly AiActivityItem[];
   signals: Signals;
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
   spend: Readonly<{
@@ -547,6 +566,7 @@ function AgentPanel({
   demo: DemoRun;
 }>) {
   const { locale } = useLocale();
+  const t = useT();
   const states = VOCABULARY;
   return (
     <section
@@ -589,6 +609,19 @@ function AgentPanel({
           as a list here. The section is absent when its list is, rather than
           drawn empty. */}
       <RunSection heading={PANEL_HEADING.running} items={running} />
+
+      {/* The runs that broke or stopped early today, each with WHY and what to
+          do about it where the source said so in a vocabulary this build can
+          translate. This is where a fault is delivered: the orb only says that
+          one happened, and a reader who opens the panel over a red orb owes
+          themselves more than the same sentence again. A clean finish is not
+          listed — it reaches the reader through the resting rotation on the
+          card, and a day of finished runs is not a list anybody reads. */}
+      <RunSection
+        heading={PANEL_HEADING.wentWrong}
+        items={recent.filter(wentWrong)}
+        detail={(item) => reasonFor(item, t)}
+      />
 
       {/* The one count somebody opens this panel to act on, as a tile rather
           than a row: a number in a list of rows reads as one more line of text.
@@ -1244,6 +1277,7 @@ export function AgentRail({
               demo={demo}
               line={line}
               running={server.running}
+              recent={server.recent}
               spend={spend}
             />
           </div>,

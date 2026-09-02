@@ -221,6 +221,7 @@ const (
 	correlationKey
 	causationKey
 	agentRunKey
+	workSubjectKey
 	sendingHumanKey
 )
 
@@ -279,6 +280,31 @@ func WithCausationEvent(ctx context.Context, eventID ids.UUID) context.Context {
 func CausationEvent(ctx context.Context) (ids.UUID, bool) {
 	id, ok := ctx.Value(causationKey).(ids.UUID)
 	return id, ok
+}
+
+// WithWorkSubject binds what the current operation is ABOUT, in the words
+// the product already shows the reader for it: the person a reply is drafted
+// to, the company being read up on, the website being crawled. The model
+// router stamps it onto the AI-activity occurrence it announces, so the rail
+// can say "I'm drafting your reply to Anna Berg" rather than that a reply is
+// being drafted. It is a display name and never an id, and it is the record
+// the caller has already loaded under its own visibility gate — the
+// occurrence's actor is the person that record was shown to. An empty label
+// binds nothing, so a caller with no name to give leaves the generic sentence
+// standing rather than an empty pair of quotes.
+func WithWorkSubject(ctx context.Context, label string) context.Context {
+	if strings.TrimSpace(label) == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, workSubjectKey, label)
+}
+
+// WorkSubject returns the bound subject label; ok is false when the current
+// operation named none, which is the ordinary case for work about no single
+// record.
+func WorkSubject(ctx context.Context) (string, bool) {
+	label, ok := ctx.Value(workSubjectKey).(string)
+	return label, ok
 }
 
 // WithAgentRunID binds the current Surface-B run's id so the model router

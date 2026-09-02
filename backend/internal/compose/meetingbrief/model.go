@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -150,8 +151,18 @@ func floorSection(floor []Section, kind crmcontracts.MeetingBriefSectionKind) (S
 	return Section{}, false
 }
 
+// workSubjectOf names what a brief or plan run is about for the AI-activity
+// rail: the company when the meeting has one, else the meeting's own subject,
+// so a meeting with no employer on record is still named rather than generic.
+func workSubjectOf(in Input) string {
+	if in.Company != "" {
+		return in.Company
+	}
+	return in.Subject
+}
+
 func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) ([]Section, error) {
-	resp, err := lane.Complete(ctx, BriefRequest(in, lang))
+	resp, err := lane.Complete(principal.WithWorkSubject(ctx, workSubjectOf(in)), BriefRequest(in, lang))
 	if err != nil {
 		return nil, err
 	}
