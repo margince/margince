@@ -81,6 +81,7 @@ func agentMeetingPlan(plan *crmcontracts.MeetingPlan) *agents.MeetingPlanResult 
 			Summary: agentBriefLine(moment.Summary),
 		})
 	}
+	out.Coaching = agentCoaching(plan.ManagerCoaching)
 	for _, unknown := range plan.Unknowns {
 		out.Unknowns = append(out.Unknowns, agents.MeetingPlanGap{
 			Kind: string(unknown.Kind), Question: unknown.Question,
@@ -98,4 +99,26 @@ func agentCites(evidence []crmcontracts.OrganizationBriefEvidence) []agents.Meet
 		})
 	}
 	return out
+}
+
+// agentCoaching maps the coaching layer. Its own function because it is its own
+// concept — a reading of the REP rather than of the account — and because the
+// plan mapping beside it is already as long as a reader should have to hold.
+func agentCoaching(coaching *crmcontracts.MeetingPlanCoaching) *agents.MeetingPlanCoachingPart {
+	if coaching == nil {
+		return nil
+	}
+	part := &agents.MeetingPlanCoachingPart{
+		Focus:       coaching.Focus,
+		FailureMode: coaching.FailureMode,
+		ListenFor:   coaching.ListenFor,
+		WatchFor:    coaching.WatchFor,
+		InterveneIf: coaching.InterveneIf,
+	}
+	for _, path := range coaching.Paths {
+		part.Paths = append(part.Paths, agents.MeetingPlanBranch{
+			Label: path.Label, Play: path.Play,
+		})
+	}
+	return part
 }

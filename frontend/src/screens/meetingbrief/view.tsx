@@ -11,6 +11,7 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import { CoachPanel, MeetingPaths } from "./coaching";
 import { BriefHeader, type MeetingFacts, type PreparedFor } from "./header";
 import {
   AccountArc,
@@ -125,6 +126,15 @@ export function MeetingBriefView({
                     place of them: a half-built plan that hid the risks and
                     talking points a reader already had would be a regression
                     wearing new panels. */}
+                {brief.plan?.manager_coaching && (
+                  <>
+                    <CoachPanel
+                      coaching={brief.plan.manager_coaching}
+                      writtenByModel={brief.plan.generated_by === "model"}
+                    />
+                    <MeetingPaths coaching={brief.plan.manager_coaching} />
+                  </>
+                )}
                 {brief.plan && (
                   <>
                     <ObjectivePanel

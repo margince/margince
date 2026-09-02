@@ -243,6 +243,36 @@ func TestARevocationHoldsAgainstALaterSweepAndReplay(t *testing.T) {
 	}
 }
 
+// assertHTTPReplayActuallyAttempted checks that the API's replay endpoint did
+// more than answer 200.
+//
+// The api role builds its deliverer through a different constructor from the one
+// these suites inject, and a replay that refuses before attempting anything
+// returns the unchanged delivery with exactly that status code — a missing
+// principal resolver is how that happens, now that the visibility re-check needs
+// one. So the assertion is on the ROW: the guarded client cannot reach a
+// loopback receiver, so the attempt fails, but a delivery that was ATTEMPTED is
+// no longer dead_lettered.
+//
+// It lives here rather than beside its caller because the property it defends
+// belongs to the re-check, and nothing else would fail if the wiring regressed.
+func (we *webhookEnv) assertHTTPReplayActuallyAttempted(t *testing.T, subID string) {
+	t.Helper()
+	var deliveries struct {
+		Data []struct {
+			Status string `json:"status"`
+		} `json:"data"`
+	}
+	we.Call(t, "GET", "/v1/webhook-subscriptions/"+subID+"/deliveries", nil, nil, &deliveries)
+	if len(deliveries.Data) != 1 {
+		t.Fatalf("delivery list after the http replay: %+v", deliveries.Data)
+	}
+	if deliveries.Data[0].Status == "dead_lettered" {
+		t.Error("the http replay answered 200 and left the delivery dead_lettered, so it " +
+			"recorded a replay it never attempted")
+	}
+}
+
 // activityEnvelope names an activity subject, whose visibility is the row's own
 // audience rather than anybody's grants.
 func activityEnvelope(wsID ids.UUID, activity ids.UUID) kevents.Envelope {

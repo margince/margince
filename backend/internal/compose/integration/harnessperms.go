@@ -36,6 +36,7 @@ import (
 const (
 	roleAdmin    = "admin"
 	roleRep      = "rep"
+	roleManager  = "manager"
 	roleReadOnly = "read_only"
 	roleOps      = "ops"
 )

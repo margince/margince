@@ -16692,6 +16692,38 @@ export interface components {
             advance: components["schemas"]["MeetingPlanAdvance"];
             /** @description What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked. */
             unknowns: components["schemas"]["MeetingPlanUnknown"][];
+            /** @description Present only for a lead reading a teammate's meeting. Absent for everybody else, including the rep whose meeting it is — a rep reading their own brief is preparing, not being coached. */
+            manager_coaching?: components["schemas"]["MeetingPlanCoaching"];
+        };
+        /**
+         * @description The coaching layer, for a lead reading a teammate's meeting.
+         *
+         *     It adds a READING of how this meeting could go wrong for this rep. It adds no account
+         *     fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+         *     and this is attached over it — so a lead and their rep are looking at the same meeting,
+         *     and the lead is looking at one more thing.
+         *
+         *     Who gets it is decided by the server, never asked for by a client. The rule is the
+         *     same one that governs raising a coaching notice: a seat that may coach at all, and a
+         *     live team shared with somebody in the room.
+         */
+        MeetingPlanCoaching: {
+            /** @description The ONE thing to coach on. A list of five is a list nobody coaches from. */
+            focus: string;
+            /** @description How this meeting most plausibly goes wrong for this rep, given this account. */
+            failure_mode: string;
+            /** @description What a good version of this conversation sounds like. */
+            listen_for: string;
+            /** @description The move that says it is going wrong. */
+            watch_for: string;
+            /** @description The narrow condition under which a lead should step in. Narrow on purpose: a lead who takes over a rep's meeting has coached nobody. */
+            intervene_if: string;
+            /** @description The ways this meeting can go, for a lead to rehearse against. */
+            paths: components["schemas"]["MeetingPlanCoachingPath"][];
+        };
+        MeetingPlanCoachingPath: {
+            label: string;
+            play: string;
         };
         /**
          * @description How much of a preparation this plan actually is, so a surface can decide whether to lead

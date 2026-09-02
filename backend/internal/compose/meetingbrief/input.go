@@ -67,6 +67,11 @@ type Input struct {
 	// bounded and audience-gated. Also out of the sections prompt: the plan is
 	// what reads them.
 	Excerpts []ExcerptIn `json:"-"`
+	// Seats are the COLLEAGUES in this room, as against the attendees, who are
+	// the counterparty. The coaching projection reads them to ask whether this
+	// reader is a lead looking at somebody else's meeting. Out of the prompt:
+	// who on our side is in the room is not a fact about the account.
+	Seats []ids.UUID `json:"-"`
 	// RoomHidden says this reader holds no deal_room grant, so whatever the
 	// buyer did in the room is missing from DealMoves. Rendered as an omission
 	// rather than left silent: a brief that cannot see the room reads exactly

@@ -21852,8 +21852,20 @@ type MeetingPlan struct {
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// LikelyAsks What the other side is likely to ask, each an assessment with the record behind it.
-	LikelyAsks  []MeetingPlanAsk `json:"likely_asks"`
-	MeetingType MeetingPlanType  `json:"meeting_type"`
+	LikelyAsks []MeetingPlanAsk `json:"likely_asks"`
+
+	// ManagerCoaching The coaching layer, for a lead reading a teammate's meeting.
+	//
+	// It adds a READING of how this meeting could go wrong for this rep. It adds no account
+	// fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+	// and this is attached over it — so a lead and their rep are looking at the same meeting,
+	// and the lead is looking at one more thing.
+	//
+	// Who gets it is decided by the server, never asked for by a client. The rule is the
+	// same one that governs raising a coaching notice: a seat that may coach at all, and a
+	// live team shared with somebody in the room.
+	ManagerCoaching *MeetingPlanCoaching `json:"manager_coaching,omitempty"`
+	MeetingType     MeetingPlanType      `json:"meeting_type"`
 
 	// Objective The outcome to earn, and the reminder not to force it.
 	Objective *MeetingPlanObjective      `json:"objective,omitempty"`
@@ -21907,6 +21919,42 @@ type MeetingPlanAsk struct {
 
 	// Relevance A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
 	Relevance MeetingPlanTier `json:"relevance"`
+}
+
+// MeetingPlanCoaching The coaching layer, for a lead reading a teammate's meeting.
+//
+// It adds a READING of how this meeting could go wrong for this rep. It adds no account
+// fact the rep's own plan does not carry: the base plan is built once, coaching-blind,
+// and this is attached over it — so a lead and their rep are looking at the same meeting,
+// and the lead is looking at one more thing.
+//
+// Who gets it is decided by the server, never asked for by a client. The rule is the
+// same one that governs raising a coaching notice: a seat that may coach at all, and a
+// live team shared with somebody in the room.
+type MeetingPlanCoaching struct {
+	// FailureMode How this meeting most plausibly goes wrong for this rep, given this account.
+	FailureMode string `json:"failure_mode"`
+
+	// Focus The ONE thing to coach on. A list of five is a list nobody coaches from.
+	Focus string `json:"focus"`
+
+	// InterveneIf The narrow condition under which a lead should step in. Narrow on purpose: a lead who takes over a rep's meeting has coached nobody.
+	InterveneIf string `json:"intervene_if"`
+
+	// ListenFor What a good version of this conversation sounds like.
+	ListenFor string `json:"listen_for"`
+
+	// Paths The ways this meeting can go, for a lead to rehearse against.
+	Paths []MeetingPlanCoachingPath `json:"paths"`
+
+	// WatchFor The move that says it is going wrong.
+	WatchFor string `json:"watch_for"`
+}
+
+// MeetingPlanCoachingPath defines model for MeetingPlanCoachingPath.
+type MeetingPlanCoachingPath struct {
+	Label string `json:"label"`
+	Play  string `json:"play"`
 }
 
 // MeetingPlanObjective The outcome to earn, and the reminder not to force it.

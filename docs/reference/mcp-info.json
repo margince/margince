@@ -10,15 +10,15 @@
   "totals": {
     "tools": 59,
     "resources": 9,
-    "tool_catalog_bytes": 172433,
+    "tool_catalog_bytes": 173056,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 43986,
-    "largest_tool_bytes": 8357,
+    "approx_wire_tokens_total": 44142,
+    "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 39998,
       "input_schema_bytes": 37376,
-      "output_schema_bytes": 82234,
+      "output_schema_bytes": 82857,
       "description_plus_input_schema_bytes": 77374
     }
   },
@@ -5247,6 +5247,71 @@
                             "type": "object"
                           },
                           "type": "array"
+                        },
+                        "manager_coaching": {
+                          "properties": {
+                            "failure_mode": {
+                              "type": "string"
+                            },
+                            "focus": {
+                              "type": "string"
+                            },
+                            "intervene_if": {
+                              "type": "string"
+                            },
+                            "listen_for": {
+                              "type": "string"
+                            },
+                            "paths": {
+                              "items": {
+                                "properties": {
+                                  "evidence": {
+                                    "items": {
+                                      "properties": {
+                                        "record_id": {
+                                          "format": "uuid",
+                                          "type": "string"
+                                        },
+                                        "record_type": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "record_id",
+                                        "record_type"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "play": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "evidence",
+                                  "label",
+                                  "play"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "watch_for": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "failure_mode",
+                            "focus",
+                            "intervene_if",
+                            "listen_for",
+                            "watch_for"
+                          ],
+                          "type": "object"
                         },
                         "meeting_type": {
                           "type": "string"
