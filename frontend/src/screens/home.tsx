@@ -11,6 +11,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
+import { PlanSection } from "./brief.plan";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
 import { DecisionsSection } from "./home.decisions";
@@ -225,9 +226,13 @@ function HomeWork({
   // Monday, after the work that is waiting on them today. Ordering it above
   // either of those would put last week ahead of this morning.
   const lastWeek = <WeeklySection key="weekly" />;
+  // The plan goes UNDER the retrospective, never above it. A rep decides what
+  // next week holds by reading what this one did, so the frozen past leads and
+  // the live future follows.
+  const nextWeek = <PlanSection key="plan" />;
   return items.length > 0
-    ? [decisions, today, lastWeek]
-    : [today, decisions, lastWeek];
+    ? [decisions, today, lastWeek, nextWeek]
+    : [today, decisions, lastWeek, nextWeek];
 }
 
 /**
