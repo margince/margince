@@ -10,6 +10,7 @@ package meetingbrief
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -175,10 +176,26 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	both.Add(2)
 	go func() {
 		defer both.Done()
+		// A panic in a goroutine takes the PROCESS down, not the request. The
+		// whole posture of both writers is that a model failure degrades to
+		// the floor, and a nil map or a bad index in a rewrite path would
+		// otherwise be the one model failure that ends the server.
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				slog.ErrorContext(ctx, "meeting brief: the sections writer panicked; serving the deterministic floor", "panic", recovered)
+				sections, writtenBy = Deterministic(in), crmcontracts.Deterministic
+			}
+		}()
 		sections, writtenBy = Write(ctx, s.lane, in, lang)
 	}()
 	go func() {
 		defer both.Done()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				slog.ErrorContext(ctx, "meeting brief: the plan writer panicked; serving the deterministic floor", "panic", recovered)
+				planWritten, planBy = floor, crmcontracts.Deterministic
+			}
+		}()
 		planWritten, planBy = WritePlan(ctx, s.lane, in, floor, lang)
 	}()
 	both.Wait()

@@ -180,6 +180,14 @@ func TestTheMeetingPlanCaseRefusesAFixtureThatMeasuresNothing(t *testing.T) {
 			wants:    "which the fixture does not carry",
 		},
 		{
+			name:    "a token the floor already says would pass on an empty reply",
+			fixture: planFixture,
+			// The deterministic plan quotes the captured claim verbatim, so a
+			// token drawn from it is in the prose whatever the model returns.
+			expected: `{"cites_label":"wish_list","names_token":"How do we get started?"}`,
+			wants:    "already in the deterministic plan's own prose",
+		},
+		{
 			name:     "no token at all would accept a generic plan",
 			fixture:  planFixture,
 			expected: `{"cites_label":"wish_list","names_token":""}`,

@@ -30,6 +30,22 @@ func groundedLine(sentence Sentence, known map[Evidence]bool) bool {
 	return claims.Grounded(sentence, known)
 }
 
+// spellsAnID reports whether any of these lines puts a record id in front of a
+// reader.
+//
+// The free-text fields — what to say, how to prepare, what to listen for — carry
+// no citations of their own and ride on the object's. Nothing else checks them,
+// so an id leaked there reaches the page as developer output in the middle of a
+// sentence, which is what claims.Grounded refuses for every cited line.
+func spellsAnID(lines ...string) bool {
+	for _, line := range lines {
+		if claims.SpellsRecordID(line) {
+			return true
+		}
+	}
+	return false
+}
+
 // groundedEvidenceOnly is the same rule for a field that carries citations
 // without prose of its own: at least one, and every one a record the reader
 // can open.
@@ -68,6 +84,7 @@ type replySentence struct {
 
 type replyRisk struct {
 	Text     string          `json:"text"`
+	Nature   string          `json:"nature"`
 	Evidence []replyEvidence `json:"evidence"`
 	Say      string          `json:"say"`
 	Show     string          `json:"show"`
@@ -77,6 +94,7 @@ type replyRisk struct {
 type replyAsk struct {
 	Question  string          `json:"question"`
 	Basis     string          `json:"basis"`
+	Nature    string          `json:"nature"`
 	Evidence  []replyEvidence `json:"evidence"`
 	Relevance string          `json:"relevance"`
 	Prepare   string          `json:"prepare"`
@@ -178,11 +196,18 @@ func keptRisk(raw *replyRisk, known map[Evidence]bool) *Risk {
 	if raw == nil {
 		return nil
 	}
-	sentence, ok := keptLine(raw.Text, natureAssessment, raw.Evidence, "top_risk", known)
+	sentence, ok := keptLine(raw.Text, raw.Nature, raw.Evidence, "top_risk", known)
 	if !ok {
 		return nil
 	}
-	response := Response{Say: raw.Say, Show: raw.Show, Avoid: raw.Avoid}
+	response := Response{
+		Say:   strings.TrimSpace(raw.Say),
+		Show:  strings.TrimSpace(raw.Show),
+		Avoid: strings.TrimSpace(raw.Avoid),
+	}
+	if spellsAnID(response.Say, response.Show, response.Avoid) {
+		return nil
+	}
 	if response.Say == "" || response.Show == "" || response.Avoid == "" {
 		// The contract requires all three. A risk with two thirds of a response
 		// is a warning with no plan, which is what the reader already had.
@@ -197,8 +222,11 @@ func keptAsks(raw []replyAsk, known map[Evidence]bool) []Ask {
 		if len(out) == askCap {
 			break
 		}
-		basis, ok := keptLine(ask.Basis, natureAssessment, ask.Evidence, "likely_asks", known)
+		basis, ok := keptLine(ask.Basis, ask.Nature, ask.Evidence, "likely_asks", known)
 		if !ok || strings.TrimSpace(ask.Question) == "" || strings.TrimSpace(ask.Prepare) == "" {
+			continue
+		}
+		if spellsAnID(ask.Question, ask.Prepare) {
 			continue
 		}
 		out = append(out, Ask{
@@ -230,7 +258,12 @@ func keptQuestions(raw []replyQuestion, known map[Evidence]bool) []Question {
 		if len(out) == questionCap {
 			break
 		}
-		if strings.TrimSpace(question.Ask) == "" || strings.TrimSpace(question.ListenFor) == "" {
+		if strings.TrimSpace(question.Ask) == "" ||
+			strings.TrimSpace(question.Why) == "" ||
+			strings.TrimSpace(question.ListenFor) == "" {
+			continue
+		}
+		if spellsAnID(question.Ask, question.Why, question.ListenFor) {
 			continue
 		}
 		cited := citedRecords(question.Evidence)
@@ -252,6 +285,9 @@ func keptScenarios(raw []replyScenario, known map[Evidence]bool) []Scenario {
 			break
 		}
 		if strings.TrimSpace(scenario.Label) == "" || strings.TrimSpace(scenario.Play) == "" {
+			continue
+		}
+		if spellsAnID(scenario.Label, scenario.Play) {
 			continue
 		}
 		cited := citedRecords(scenario.Evidence)

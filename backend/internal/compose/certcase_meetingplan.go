@@ -150,6 +150,17 @@ func refuseUnpreparableMeeting(f meetingPlanFixture, want meetingPlanExpectation
 			"summarize/meeting_plan: the expectation's token %q appears in no message, so only an invented plan could name it",
 			want.NamesToken)
 	}
+	// And the token must be something the FLOOR does not already say. The
+	// deterministic plan quotes captured claims, so a token drawn from one
+	// would be in the prose whatever the model returned — the scenario would
+	// pass forever without the model contributing anything, which is the one
+	// way a certification case fails silently.
+	in, _ := meetingPlanInput(f)
+	if strings.Contains(meetingbrief.PlanProse(meetingbrief.DeterministicPlanFor(in)), want.NamesToken) {
+		return fmt.Errorf(
+			"summarize/meeting_plan: the token %q is already in the deterministic plan's own prose, so a reply saying nothing would satisfy this scenario",
+			want.NamesToken)
+	}
 	return nil
 }
 

@@ -67,14 +67,69 @@ func withPlanFloor(written, floor Plan) Plan {
 	if merged.TopRisk == nil {
 		merged.TopRisk = floor.TopRisk
 	}
-	if len(merged.LikelyAsks) == 0 {
-		merged.LikelyAsks = floor.LikelyAsks
-	}
-	if len(merged.Questions) == 0 {
-		merged.Questions = floor.Questions
-	}
-	if len(merged.Scenarios) == 0 {
-		merged.Scenarios = floor.Scenarios
-	}
+	// A list is TOPPED UP from the floor, not merely replaced when empty.
+	//
+	// Restoring only an empty list read as coverage and was not: a floor with
+	// five questions and a model that answered one left the reader with one,
+	// which is a shorter plan than the same deployment would have produced
+	// with no model at all. The model's own entries lead — they are the
+	// better-written ones — and the floor's fill the rest of the room.
+	merged.LikelyAsks = topUpAsks(merged.LikelyAsks, floor.LikelyAsks, askCap)
+	merged.Questions = topUpQuestions(merged.Questions, floor.Questions, questionCap)
+	merged.Scenarios = topUpScenarios(merged.Scenarios, floor.Scenarios, scenarioCap)
 	return merged
+}
+
+// topUpAsks appends the floor's asks the model did not already cover, up to the
+// cap. Sameness is the QUESTION: two hypotheses about the same buyer question
+// are one hypothesis however differently they are worded.
+func topUpAsks(written, floor []Ask, bound int) []Ask {
+	seen := map[string]bool{}
+	for _, ask := range written {
+		seen[normalisedSubject(ask.Question)] = true
+	}
+	for _, ask := range floor {
+		if len(written) >= bound {
+			break
+		}
+		if seen[normalisedSubject(ask.Question)] {
+			continue
+		}
+		written = append(written, ask)
+	}
+	return written
+}
+
+func topUpQuestions(written, floor []Question, bound int) []Question {
+	seen := map[string]bool{}
+	for _, question := range written {
+		seen[normalisedSubject(question.Ask)] = true
+	}
+	for _, question := range floor {
+		if len(written) >= bound {
+			break
+		}
+		if seen[normalisedSubject(question.Ask)] {
+			continue
+		}
+		written = append(written, question)
+	}
+	return written
+}
+
+func topUpScenarios(written, floor []Scenario, bound int) []Scenario {
+	seen := map[string]bool{}
+	for _, scenario := range written {
+		seen[normalisedSubject(scenario.Label)] = true
+	}
+	for _, scenario := range floor {
+		if len(written) >= bound {
+			break
+		}
+		if seen[normalisedSubject(scenario.Label)] {
+			continue
+		}
+		written = append(written, scenario)
+	}
+	return written
 }

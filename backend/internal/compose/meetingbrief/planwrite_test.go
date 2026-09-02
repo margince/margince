@@ -76,6 +76,64 @@ func TestASparseReplyKeepsTheFloorsCoveragePerField(t *testing.T) {
 	}
 }
 
+// The coverage rule applies to LISTS, not only to missing fields. A model that
+// answers one question where the floor had several must not leave the reader
+// with one: that is a shorter plan than the same deployment produces with no
+// model at all.
+func TestAShortModelListIsToppedUpFromTheFloor(t *testing.T) {
+	in := fullInput()
+	// A record with enough in it that the floor writes several questions.
+	in.Company = "Northwind"
+	in.Commitments = append(in.Commitments,
+		ClaimIn{PersonName: "Ana Roth", Kind: kindPriority, Body: "cut onboarding time",
+			Status: statusOpen, SourceID: activityID},
+		ClaimIn{PersonName: "Ana Roth", Kind: kindSuccessCriterion, Body: "one dashboard for ops",
+			Status: statusOpen, SourceID: activityID})
+	floor := floorFor(in)
+	if len(floor.Questions) < 2 {
+		t.Fatalf("the fixture gives the floor %d questions; this test needs at least 2", len(floor.Questions))
+	}
+	got, _ := writtenPlan(t, `{"questions":[{"ask":"What changed since July?",
+		"why":"The plan should rest on what is true now.","listen_for":"A date or a name.",
+		"evidence":[{"entity_type":"activity","entity_id":"`+activityID+`"}]}]}`, in)
+	if len(got.Questions) < len(floor.Questions) {
+		t.Errorf("questions = %d, want at least the floor's %d — the model's answer shortened the plan",
+			len(got.Questions), len(floor.Questions))
+	}
+	if got.Questions[0].Ask != "What changed since July?" {
+		t.Errorf("the model's own question does not lead: %q", got.Questions[0].Ask)
+	}
+}
+
+// The free-text fields carry no citations of their own and ride on the object's,
+// so nothing else checks them. A record id leaked there reaches the page as
+// developer output mid-sentence.
+func TestAFreeTextFieldMayNotSpellARecordID(t *testing.T) {
+	in := fullInput()
+	got, _ := writtenPlan(t, `{"questions":[{"ask":"What about `+activityID+`?",
+		"why":"Because.","listen_for":"Anything.",
+		"evidence":[{"entity_type":"activity","entity_id":"`+activityID+`"}]}],
+		"scenarios":[{"label":"Fine","play":"Carry on.",
+		"evidence":[{"entity_type":"activity","entity_id":"`+activityID+`"}]}]}`, in)
+	for _, question := range got.Questions {
+		if strings.Contains(question.Ask, activityID) {
+			t.Error("a record id reached the reader through a question's free text")
+		}
+	}
+}
+
+// A nature the field does not allow is dropped rather than relabelled, on every
+// field that carries one — including the two that used to hard-code it.
+func TestARiskMayNotBeFiledAsARecommendation(t *testing.T) {
+	in := fullInput()
+	got, _ := writtenPlan(t, `{"top_risk":{"text":"Send the pack today.","nature":"recommendation",
+		"evidence":[{"entity_type":"activity","entity_id":"`+activityID+`"}],
+		"say":"a","show":"b","avoid":"c"}}`, in)
+	if got.TopRisk != nil && got.TopRisk.Text.Text == "Send the pack today." {
+		t.Error("a recommendation was accepted where the risk must read the account")
+	}
+}
+
 // A gap is a fact about the RECORD. A model must not be able to invent one.
 func TestTheModelCannotWriteAnUnknown(t *testing.T) {
 	in := fullInput()
