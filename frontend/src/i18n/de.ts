@@ -3921,8 +3921,10 @@ export const de = {
   "overnightGrant.renewScope":
     "Du hast zugestimmt, aber Margince kann inzwischen mehr, und die erteilte Vollmacht deckt die neue Arbeit nicht ab. Schalte die Option aus und wieder ein, um sie zu erweitern — bis dahin wird dein Überblick nicht vorbereitet.",
   "aiCert.title": "Wie gut die KI arbeitet",
-  "aiCert.sub": "Wir prüfen jede KI-Aufgabe gegen eine feste Sammlung realistischer Beispiele und halten fest, wie oft sie richtig antwortet. Jedes Ergebnis wurde an dem Modell gemessen, das diese Organisation für die Aufgabe gebunden hat — nicht an einem Modell, das irgendwann mal jemand ausprobiert hat.",
-  "aiCert.unbound": "es sind noch keine Modelle gebunden, also gibt es nichts zu berichten. Wähle oben Modelle aus, dann erscheinen die Prüfungen dafür hier.",
+  "aiCert.sub":
+    "Wir prüfen jede KI-Aufgabe gegen eine feste Sammlung realistischer Beispiele und halten fest, wie oft sie richtig antwortet. Jedes Ergebnis wurde an dem Modell gemessen, das diese Organisation für die Aufgabe gebunden hat — nicht an einem Modell, das irgendwann mal jemand ausprobiert hat.",
+  "aiCert.unbound":
+    "es sind noch keine Modelle gebunden, also gibt es nichts zu berichten. Wähle oben Modelle aus, dann erscheinen die Prüfungen dafür hier.",
   "aiCert.colJob": "Aufgabe",
   "aiCert.colModel": "Genutztes Modell",
   "aiCert.colResult": "Ergebnis",
@@ -3934,36 +3936,55 @@ export const de = {
   "aiCert.result.not_checked": "Noch nicht geprüft",
   "aiCert.result.no_model": "Kein Modell ausgewählt",
   "aiCert.runCounts": "{passed} von {runs} Testläufen bestanden",
-  "aiCert.oneKindFails": "eine Art von Beispiel scheitert jedes Mal — deshalb liest sich auch ein hoher Wert als nicht verlässlich",
-  "aiCert.pendingExamples": "{measured} von {total} Beispielen geprüft; die übrigen kamen später dazu und wurden nie gelaufen",
-  "aiCert.measuredOn": "gemessen am {date}; die Anweisungen oder Beispiele der Aufgabe haben sich seitdem geändert, das hier beschreibt also eine ältere Fassung",
-  "aiCert.otherProfile": "wir haben dieses Modell auf einem anderen Hosting-Setup geprüft, das überträgt sich nicht",
-  "aiCert.narrowScope": "es wurde nur ein Teil der Aufgabe geprüft — eine Antwort, nicht der ganze Verlauf",
-  "aiCert.unmeasuredFallback": "unter Last kann diese Aufgabe auf {model} zurückfallen, das wir nicht geprüft haben",
+  "aiCert.oneKindFails":
+    "eine Art von Beispiel scheitert jedes Mal — deshalb liest sich auch ein hoher Wert als nicht verlässlich",
+  "aiCert.pendingExamples":
+    "{measured} von {total} Beispielen geprüft; die übrigen kamen später dazu und wurden nie gelaufen",
+  "aiCert.measuredOn":
+    "gemessen am {date}; die Anweisungen oder Beispiele der Aufgabe haben sich seitdem geändert, das hier beschreibt also eine ältere Fassung",
+  "aiCert.otherProfile":
+    "wir haben dieses Modell auf einem anderen Hosting-Setup geprüft, das überträgt sich nicht",
+  "aiCert.narrowScope":
+    "es wurde nur ein Teil der Aufgabe geprüft — eine Antwort, nicht der ganze Verlauf",
+  "aiCert.unmeasuredFallback":
+    "unter Last kann diese Aufgabe auf {model} zurückfallen, das wir nicht geprüft haben",
   "aiCert.worstSite": "ausschlaggebend: {site}",
-  "aiCert.unnamedJobs": "{count} neuere Aufgabe(n), für die diese App-Version noch keinen Namen hat — aktualisiere sie, um sie zu sehen.",
+  "aiCert.unnamedJobs":
+    "{count} neuere Aufgabe(n), für die diese App-Version noch keinen Namen hat — aktualisiere sie, um sie zu sehen.",
+  "aiCert.explainClose": "Schließen",
   "aiCert.explainOpen": "Was bedeutet das?",
   "aiCert.explainTitle": "Wie die KI geprüft wird",
-  "aiCert.explainWhat": "Zu jeder KI-Aufgabe in Margince gehört eine feste Sammlung realistischer Beispiele, die neben dem Code liegt — E-Mails, Seiten und Transkripte der Art, die die Aufgabe im echten Betrieb trifft, jedes mit einer schriftlichen Notiz, was eine richtige Antwort ausmacht.",
-  "aiCert.explainHow": "Jedes Beispiel läuft {runs}-mal durch das Modell, das deine Organisation für die Aufgabe gebunden hat, und ein separates Modell bewertet jede Antwort gegen diese Notiz. Verlässlich heißt eine Aufgabe nur, wenn jeder Lauf jedes Beispiels richtig war — ein Modell, das meistens, aber nicht immer richtig liegt, gilt daher als meistens verlässlich.",
-  "aiCert.explainMeaning": "Verlässlich heißt: die Aufgabe kann unbeaufsichtigt laufen. Meistens verlässlich heißt: sie funktioniert, aber schau bei den wichtigen Fällen hin. Nicht verlässlich genug heißt: ein Mensch sollte jede Antwort prüfen. Noch nicht geprüft heißt: für das gewählte Modell liegt uns keine Messung vor — es ist keine Aussage darüber, dass das Modell schlecht wäre.",
-  "aiCert.explainStale": "Veraltet und teilweise geprüft betreffen unsere Beispiele, nicht dein Setup. Veraltet heißt, die Anweisungen der Aufgabe haben sich seit der Messung geändert, die Zahl beschreibt also eine ältere Fassung. Teilweise geprüft heißt, wir haben Beispiele ergänzt, die die Messung nie gesehen hat. In beiden Fällen ist die gezeigte Zahl ein echtes Ergebnis; ihr Alter oder ihre Abdeckung steht daneben.",
+  "aiCert.explainWhat":
+    "Zu jeder KI-Aufgabe in Margince gehört eine feste Sammlung realistischer Beispiele, die neben dem Code liegt — E-Mails, Seiten und Transkripte der Art, die die Aufgabe im echten Betrieb trifft, jedes mit einer schriftlichen Notiz, was eine richtige Antwort ausmacht.",
+  "aiCert.explainHow":
+    "Jedes Beispiel läuft {runs}-mal durch das Modell, das deine Organisation für die Aufgabe gebunden hat, und ein separates Modell bewertet jede Antwort gegen diese Notiz. Verlässlich heißt eine Aufgabe nur, wenn jeder Lauf jedes Beispiels richtig war — ein Modell, das meistens, aber nicht immer richtig liegt, gilt daher als meistens verlässlich.",
+  "aiCert.explainMeaning":
+    "Verlässlich heißt: die Aufgabe kann unbeaufsichtigt laufen. Meistens verlässlich heißt: sie funktioniert, aber schau bei den wichtigen Fällen hin. Nicht verlässlich genug heißt: ein Mensch sollte jede Antwort prüfen. Noch nicht geprüft heißt: für das gewählte Modell liegt uns keine Messung vor — es ist keine Aussage darüber, dass das Modell schlecht wäre.",
+  "aiCert.explainStale":
+    "Veraltet und teilweise geprüft betreffen unsere Beispiele, nicht dein Setup. Veraltet heißt, die Anweisungen der Aufgabe haben sich seit der Messung geändert, die Zahl beschreibt also eine ältere Fassung. Teilweise geprüft heißt, wir haben Beispiele ergänzt, die die Messung nie gesehen hat. In beiden Fällen ist die gezeigte Zahl ein echtes Ergebnis; ihr Alter oder ihre Abdeckung steht daneben.",
   "aiCert.job.agent_loop": "Eine Aufgabe Schritt für Schritt abarbeiten",
-  "aiCert.job.brief_ranking": "Entscheiden, was in einem Briefing am wichtigsten ist",
+  "aiCert.job.brief_ranking":
+    "Entscheiden, was in einem Briefing am wichtigsten ist",
   "aiCert.job.capture_classify": "Eingehende Mail einordnen",
-  "aiCert.job.capture_confidentiality_verdict": "Entscheiden, ob ein Mail-Verlauf vertraulich ist",
-  "aiCert.job.capture_counterparty_verdict": "Entscheiden, von wem eine Mail kommt",
+  "aiCert.job.capture_confidentiality_verdict":
+    "Entscheiden, ob ein Mail-Verlauf vertraulich ist",
+  "aiCert.job.capture_counterparty_verdict":
+    "Entscheiden, von wem eine Mail kommt",
   "aiCert.job.cold_start": "Deine Organisation einrichten",
-  "aiCert.job.corpus_ask": "Fragen aus deinen abgelegten Dokumenten beantworten",
+  "aiCert.job.corpus_ask":
+    "Fragen aus deinen abgelegten Dokumenten beantworten",
   "aiCert.job.deal_health": "Sagen, wo ein Deal steht",
   "aiCert.job.document_extract": "Ein angehängtes Dokument lesen",
   "aiCert.job.draft_reply": "Eine Antwort entwerfen",
   "aiCert.job.enrich": "Angaben zu einem Kontakt ergänzen",
-  "aiCert.job.growth_fit": "Einschätzen, wie gut eine Firma zu deinem Angebot passt",
+  "aiCert.job.growth_fit":
+    "Einschätzen, wie gut eine Firma zu deinem Angebot passt",
   "aiCert.job.offer_draft": "Ein Angebot entwerfen",
-  "aiCert.job.propose_roles": "Herausfinden, wer auf der anderen Seite entscheidet",
+  "aiCert.job.propose_roles":
+    "Herausfinden, wer auf der anderen Seite entscheidet",
   "aiCert.job.rate_extract": "Preise von einer Preisseite lesen",
-  "aiCert.job.signal_extract": "Erkennen, was sich in einem abgeschlossenen Verlauf geändert hat",
+  "aiCert.job.signal_extract":
+    "Erkennen, was sich in einem abgeschlossenen Verlauf geändert hat",
   "aiCert.job.site_extract": "Die Website einer Firma lesen",
   "aiCert.job.site_fact_extract": "Fakten von einer Webseite aufnehmen",
   "aiCert.job.site_triage": "Herausfinden, was eine Website ist",
@@ -3974,8 +3995,10 @@ export const de = {
   "aiCert.site.agent_loop.loop": "eine Aufgabe abarbeiten",
   "aiCert.site.brief_ranking.rank": "ein Briefing ordnen",
   "aiCert.site.capture_classify.classify": "Mail einordnen",
-  "aiCert.site.capture_confidentiality_verdict.thread": "einen Verlauf beurteilen",
-  "aiCert.site.capture_counterparty_verdict.verdict": "einen Absender beurteilen",
+  "aiCert.site.capture_confidentiality_verdict.thread":
+    "einen Verlauf beurteilen",
+  "aiCert.site.capture_counterparty_verdict.verdict":
+    "einen Absender beurteilen",
   "aiCert.site.cold_start.acts": "das Einrichtungsgespräch",
   "aiCert.site.cold_start.company_message": "nach deiner Firma fragen",
   "aiCert.site.cold_start.field_extract": "zurücklesen, was du gesagt hast",
@@ -3994,18 +4017,22 @@ export const de = {
   "aiCert.site.propose_roles.committee": "die Kaufrollen benennen",
   "aiCert.site.rate_extract.fx": "Wechselkurse lesen",
   "aiCert.site.rate_extract.pricing": "Modellpreise lesen",
-  "aiCert.site.signal_extract.thread_events": "Ereignisse in einem Verlauf erkennen",
+  "aiCert.site.signal_extract.thread_events":
+    "Ereignisse in einem Verlauf erkennen",
   "aiCert.site.site_extract.profile": "eine Firmenseite lesen",
-  "aiCert.site.site_fact_extract.page_facts": "Fakten von einer Seite aufnehmen",
+  "aiCert.site.site_fact_extract.page_facts":
+    "Fakten von einer Seite aufnehmen",
   "aiCert.site.site_triage.triage": "eine Website einordnen",
   "aiCert.site.summarize.meeting_plan": "einen Meeting-Plan zusammenfassen",
   "aiCert.site.summarize.org_ask": "zu einer Firma antworten",
   "aiCert.site.summarize.org_brief": "zu einer Firma briefen",
   "aiCert.site.summarize.org_dossier": "ein Firmendossier",
-  "aiCert.site.transcript_propose.next_steps": "nächste Schritte aus einem Transkript",
+  "aiCert.site.transcript_propose.next_steps":
+    "nächste Schritte aus einem Transkript",
   "aiCert.site.voice_build.derive": "deine Stimme lernen",
   "aiCert.site.voice_build.eval_draft": "einen Entwurf in deiner Stimme prüfen",
-  "aiCert.site.voice_build.eval_scores": "einen Entwurf in deiner Stimme bewerten",
+  "aiCert.site.voice_build.eval_scores":
+    "einen Entwurf in deiner Stimme bewerten",
   "aiCert.site.weekly_review.narrative": "deine Woche im Rückblick",
   "aiHealth.title": "Modell-Lanes",
   "aiHealth.sub":

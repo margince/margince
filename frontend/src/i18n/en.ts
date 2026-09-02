@@ -3955,8 +3955,10 @@ export const en = {
   "overnightGrant.renewScope":
     "You said yes, but Margince has learned to do more since, and the authority you gave does not cover the new work. Turn this off and on again to widen it — until then your brief is not being prepared.",
   "aiCert.title": "How well the AI performs",
-  "aiCert.sub": "We check each AI job against a fixed set of realistic examples and record how often it answers correctly. Each result is measured on the model this organization has bound to that job — not on a model somebody once tried.",
-  "aiCert.unbound": "no models are bound yet, so there is nothing to report. Choose models above and the checks for them will appear here.",
+  "aiCert.sub":
+    "We check each AI job against a fixed set of realistic examples and record how often it answers correctly. Each result is measured on the model this organization has bound to that job — not on a model somebody once tried.",
+  "aiCert.unbound":
+    "no models are bound yet, so there is nothing to report. Choose models above and the checks for them will appear here.",
   "aiCert.colJob": "Job",
   "aiCert.colModel": "Model in use",
   "aiCert.colResult": "Result",
@@ -3968,20 +3970,32 @@ export const en = {
   "aiCert.result.not_checked": "Not checked yet",
   "aiCert.result.no_model": "No model selected",
   "aiCert.runCounts": "{passed} of {runs} test runs passed",
-  "aiCert.oneKindFails": "one kind of example fails every time, which is why a high score still reads as unreliable",
-  "aiCert.pendingExamples": "{measured} of {total} examples checked; the rest were added since and have not been run",
-  "aiCert.measuredOn": "measured {date}; the job’s instructions or examples have changed since, so this describes an older version of it",
-  "aiCert.otherProfile": "we have checked this model on a different hosting setup, which does not carry over",
-  "aiCert.narrowScope": "only part of the job was checked — one reply, not the whole exchange",
-  "aiCert.unmeasuredFallback": "under heavy load this job can fall back to {model}, which we have not checked",
+  "aiCert.oneKindFails":
+    "one kind of example fails every time, which is why a high score still reads as unreliable",
+  "aiCert.pendingExamples":
+    "{measured} of {total} examples checked; the rest were added since and have not been run",
+  "aiCert.measuredOn":
+    "measured {date}; the job’s instructions or examples have changed since, so this describes an older version of it",
+  "aiCert.otherProfile":
+    "we have checked this model on a different hosting setup, which does not carry over",
+  "aiCert.narrowScope":
+    "only part of the job was checked — one reply, not the whole exchange",
+  "aiCert.unmeasuredFallback":
+    "under heavy load this job can fall back to {model}, which we have not checked",
   "aiCert.worstSite": "set by: {site}",
-  "aiCert.unnamedJobs": "{count} newer job(s) this version of the app cannot name yet — update it to see them.",
+  "aiCert.unnamedJobs":
+    "{count} newer job(s) this version of the app cannot name yet — update it to see them.",
+  "aiCert.explainClose": "Close",
   "aiCert.explainOpen": "What do these mean?",
   "aiCert.explainTitle": "How the AI is checked",
-  "aiCert.explainWhat": "Every AI job in Margince has a fixed set of realistic examples kept alongside the code — emails, pages and transcripts of the kind the job meets in real use, each with a written note saying what a correct answer looks like.",
-  "aiCert.explainHow": "Each example is run {runs} times through the model your organization has bound to that job, and a separate model grades every answer against that written note. A job counts as reliable only when every run of every example is correct — so a model that is usually right, but not always, is reported as mostly reliable rather than reliable.",
-  "aiCert.explainMeaning": "Reliable means the job is safe to leave unattended. Mostly reliable means it works, but check the ones that matter. Not reliable enough means a person should review every answer. Not checked yet means we have no measurement for the model you have chosen — it is not a claim that the model is bad.",
-  "aiCert.explainStale": "Out of date and partly checked are about our examples, not about your setup. Out of date means the job’s instructions have changed since it was measured, so the number describes an older version of the job. Partly checked means we have added examples the measurement has never seen. In both cases the number shown is still a real result; its age or its coverage is stated beside it.",
+  "aiCert.explainWhat":
+    "Every AI job in Margince has a fixed set of realistic examples kept alongside the code — emails, pages and transcripts of the kind the job meets in real use, each with a written note saying what a correct answer looks like.",
+  "aiCert.explainHow":
+    "Each example is run {runs} times through the model your organization has bound to that job, and a separate model grades every answer against that written note. A job counts as reliable only when every run of every example is correct — so a model that is usually right, but not always, is reported as mostly reliable rather than reliable.",
+  "aiCert.explainMeaning":
+    "Reliable means the job is safe to leave unattended. Mostly reliable means it works, but check the ones that matter. Not reliable enough means a person should review every answer. Not checked yet means we have no measurement for the model you have chosen — it is not a claim that the model is bad.",
+  "aiCert.explainStale":
+    "Out of date and partly checked are about our examples, not about your setup. Out of date means the job’s instructions have changed since it was measured, so the number describes an older version of the job. Partly checked means we have added examples the measurement has never seen. In both cases the number shown is still a real result; its age or its coverage is stated beside it.",
   // One plain-language name per shipped job. Not derivable: a reader must never
   // meet `capture_confidentiality_verdict` on a card whose whole purpose is that
   // they do not have to know what it means. Held by
@@ -3990,7 +4004,8 @@ export const en = {
   "aiCert.job.agent_loop": "Working through a task step by step",
   "aiCert.job.brief_ranking": "Deciding what matters most in a briefing",
   "aiCert.job.capture_classify": "Sorting incoming mail",
-  "aiCert.job.capture_confidentiality_verdict": "Deciding if an email thread is confidential",
+  "aiCert.job.capture_confidentiality_verdict":
+    "Deciding if an email thread is confidential",
   "aiCert.job.capture_counterparty_verdict": "Deciding who an email is from",
   "aiCert.job.cold_start": "Setting up your organization",
   "aiCert.job.corpus_ask": "Answering questions from your filed documents",
@@ -4002,7 +4017,8 @@ export const en = {
   "aiCert.job.offer_draft": "Drafting an offer",
   "aiCert.job.propose_roles": "Working out who decides on the other side",
   "aiCert.job.rate_extract": "Reading prices off a pricing page",
-  "aiCert.job.signal_extract": "Spotting what changed in a finished conversation",
+  "aiCert.job.signal_extract":
+    "Spotting what changed in a finished conversation",
   "aiCert.job.site_extract": "Reading a company’s own website",
   "aiCert.job.site_fact_extract": "Picking facts off a web page",
   "aiCert.job.site_triage": "Working out what a website is",

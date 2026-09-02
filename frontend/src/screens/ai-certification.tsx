@@ -1,14 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
-import { Badge, Button, DataTable, EmptyState, Modal } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  DataTable,
+  EmptyState,
+  Modal,
+} from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
 import { QueryGate, throwProblem } from "./common";
 
 // How well the models this workspace is bound to actually do each AI job.
@@ -37,6 +43,7 @@ type Result = components["schemas"]["AiCertificationResult"];
 
 export function AiCertificationCard() {
   const t = useT();
+  const { locale } = useLocale();
   const canSee = useCan("ai_routing", "read");
   const [explaining, setExplaining] = useState(false);
   const titleId = useId();
@@ -76,7 +83,7 @@ export function AiCertificationCard() {
                 <p>{t("aiCert.explainWhat")}</p>
                 <p>
                   {t("aiCert.explainHow", {
-                    runs: String(cert.runs_per_example),
+                    runs: formatNumber(cert.runs_per_example, locale),
                   })}
                 </p>
                 <p>{t("aiCert.explainMeaning")}</p>
@@ -146,7 +153,9 @@ function JobTable({ cert }: Readonly<{ cert: Certification }>) {
         // to know what `site_fact_extract` is, and printing it would be worse
         // than saying nothing. Counted, so the omission is visible.
         <p className="t-meta">
-          {t("aiCert.unnamedJobs", { count: formatNumber(unnamedCount, locale) })}
+          {t("aiCert.unnamedJobs", {
+            count: formatNumber(unnamedCount, locale),
+          })}
         </p>
       ) : null}
     </>
@@ -246,7 +255,9 @@ function ResultCell({ job }: Readonly<{ job: Job }>) {
       ) : null}
       {job.worst_site ? (
         <span className="t-meta">
-          {t("aiCert.worstSite", { site: siteName(t, job.task, job.worst_site) })}
+          {t("aiCert.worstSite", {
+            site: siteName(t, job.task, job.worst_site),
+          })}
         </span>
       ) : null}
     </span>
@@ -331,8 +342,10 @@ const SITE_NAME: Readonly<Record<string, MessageKey>> = {
   "agent_loop.loop": "aiCert.site.agent_loop.loop",
   "brief_ranking.rank": "aiCert.site.brief_ranking.rank",
   "capture_classify.classify": "aiCert.site.capture_classify.classify",
-  "capture_confidentiality_verdict.thread": "aiCert.site.capture_confidentiality_verdict.thread",
-  "capture_counterparty_verdict.verdict": "aiCert.site.capture_counterparty_verdict.verdict",
+  "capture_confidentiality_verdict.thread":
+    "aiCert.site.capture_confidentiality_verdict.thread",
+  "capture_counterparty_verdict.verdict":
+    "aiCert.site.capture_counterparty_verdict.verdict",
   "cold_start.acts": "aiCert.site.cold_start.acts",
   "cold_start.company_message": "aiCert.site.cold_start.company_message",
   "cold_start.field_extract": "aiCert.site.cold_start.field_extract",

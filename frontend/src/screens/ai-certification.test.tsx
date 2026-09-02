@@ -174,7 +174,9 @@ describe("how well the AI performs", () => {
 
   it("qualifies a reliable job whose run covered only part of it", async () => {
     renderCard(
-      cert([job({ task: "agent_loop", result: "reliable", scope: "single_turn" })]),
+      cert([
+        job({ task: "agent_loop", result: "reliable", scope: "single_turn" }),
+      ]),
     );
 
     expect(await screen.findByText("Reliable")).toBeInTheDocument();
@@ -238,7 +240,9 @@ describe("how well the AI performs", () => {
     // help them; what they need is to pick a model.
     renderCard(cert([job({})], { binding_state: "unbound" }));
 
-    expect(await screen.findByText(/no models are bound yet/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/no models are bound yet/),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Not checked yet")).not.toBeInTheDocument();
   });
 
@@ -254,7 +258,9 @@ describe("how well the AI performs", () => {
     );
 
     expect(
-      await screen.findByText(/2 newer job\(s\) this version of the app cannot name/),
+      await screen.findByText(
+        /2 newer job\(s\) this version of the app cannot name/,
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/some_new_job/)).not.toBeInTheDocument();
   });
@@ -266,16 +272,16 @@ describe("how well the AI performs", () => {
       await screen.findByRole("button", { name: /what do these mean/i }),
     );
     expect(
-      screen.getByText(/fixed set of realistic examples kept alongside the code/),
+      screen.getByText(
+        /fixed set of realistic examples kept alongside the code/,
+      ),
     ).toBeInTheDocument();
     // The sample size is stated, because "20 of 21" means different things at
     // three runs per example and at thirty.
     expect(
       screen.getByText(/run 3 times through the model/),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/safe to leave unattended/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/safe to leave unattended/)).toBeInTheDocument();
   });
 
   it("shows nothing at all to a seat that may not see the binding", async () => {

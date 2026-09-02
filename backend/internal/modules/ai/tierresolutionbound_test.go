@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package ai_test
+package ai
 
-import (
-	"testing"
-
-	"github.com/margince/margince/backend/internal/modules/ai"
-)
+import "testing"
 
 // The rung a deployment actually serves a task on, which is the first rung of
 // its ladder that the deployment BINDS — not the first rung of its ladder.
@@ -18,21 +14,21 @@ import (
 func TestFirstBoundTierServesTheLeadingBoundRung(t *testing.T) {
 	t.Parallel()
 
-	local := ai.ProviderConfig{Provider: "openai_compatible", Model: "gpt-oss-120b"}
-	premium := ai.ProviderConfig{Provider: "anthropic", Model: "claude-haiku-4.5"}
+	local := ProviderConfig{Provider: "openai_compatible", Model: "gpt-oss-120b"}
+	premium := ProviderConfig{Provider: "anthropic", Model: "claude-haiku-4.5"}
 
 	// draft_reply's ladder is [cheap_cloud, premium].
 	for _, tc := range []struct {
 		name     string
-		tiers    map[ai.Tier]ai.ProviderConfig
-		wantTier ai.Tier
-		want     ai.ProviderConfig
+		tiers    map[Tier]ProviderConfig
+		wantTier Tier
+		want     ProviderConfig
 		wantOK   bool
 	}{
 		{
 			name:     "the leading rung is bound",
-			tiers:    map[ai.Tier]ai.ProviderConfig{ai.TierCheapCloud: local, ai.TierPremium: premium},
-			wantTier: ai.TierCheapCloud,
+			tiers:    map[Tier]ProviderConfig{TierCheapCloud: local, TierPremium: premium},
+			wantTier: TierCheapCloud,
 			want:     local,
 			wantOK:   true,
 		},
@@ -40,8 +36,8 @@ func TestFirstBoundTierServesTheLeadingBoundRung(t *testing.T) {
 			// The case the ladder head cannot answer: production falls past an
 			// unbound rung and serves the survivor, so certification must too.
 			name:     "the leading rung is unbound and a lower one is not",
-			tiers:    map[ai.Tier]ai.ProviderConfig{ai.TierPremium: premium},
-			wantTier: ai.TierPremium,
+			tiers:    map[Tier]ProviderConfig{TierPremium: premium},
+			wantTier: TierPremium,
 			want:     premium,
 			wantOK:   true,
 		},
@@ -49,20 +45,20 @@ func TestFirstBoundTierServesTheLeadingBoundRung(t *testing.T) {
 			// A tier present in the map with nothing behind it is not a binding.
 			// The router builds no client for it, so neither may this.
 			name:     "a rung bound to an empty model is unbound",
-			tiers:    map[ai.Tier]ai.ProviderConfig{ai.TierCheapCloud: {Provider: "openai_compatible"}, ai.TierPremium: premium},
-			wantTier: ai.TierPremium,
+			tiers:    map[Tier]ProviderConfig{TierCheapCloud: {Provider: "openai_compatible"}, TierPremium: premium},
+			wantTier: TierPremium,
 			want:     premium,
 			wantOK:   true,
 		},
 		{
 			name:   "nothing is bound",
-			tiers:  map[ai.Tier]ai.ProviderConfig{},
+			tiers:  map[Tier]ProviderConfig{},
 			wantOK: false,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got, tier, ok := ai.FirstBoundTier(ai.RoutingConfig{Tiers: tc.tiers}, ai.TaskDraftReply)
+			got, tier, ok := FirstBoundTier(RoutingConfig{Tiers: tc.tiers}, TaskDraftReply)
 			if ok != tc.wantOK {
 				t.Fatalf("bound = %v, want %v", ok, tc.wantOK)
 			}
@@ -87,10 +83,10 @@ func TestFirstBoundTierServesTheLeadingBoundRung(t *testing.T) {
 func TestFirstBoundTierRefusesATaskWithNoLadder(t *testing.T) {
 	t.Parallel()
 
-	routing := ai.RoutingConfig{Tiers: map[ai.Tier]ai.ProviderConfig{
-		ai.TierPremium: {Provider: "anthropic", Model: "claude-haiku-4.5"},
+	routing := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierPremium: {Provider: "anthropic", Model: "claude-haiku-4.5"},
 	}}
-	if _, _, ok := ai.FirstBoundTier(routing, ai.Task("not_a_task")); ok {
+	if _, _, ok := FirstBoundTier(routing, Task("not_a_task")); ok {
 		t.Fatal("a task with no ladder resolved to a binding")
 	}
 }

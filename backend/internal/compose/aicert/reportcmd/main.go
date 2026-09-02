@@ -82,8 +82,8 @@ func main() {
 	fmt.Print(renderReadiness(shipped, stamps, perScenario, records)) //nolint:forbidigo // this IS the report — reportcmd's whole job is printing it to stdout, not application logging
 }
 
-// The two things -format can be. Named so the flag's help, its validation and
-// its branch cannot drift into disagreeing about the spelling.
+// The two things -format can be. Named rather than spelled three times, so the
+// flag's help, its validation and its branch all read one word.
 const (
 	formatText = "text"
 	formatJSON = "json"

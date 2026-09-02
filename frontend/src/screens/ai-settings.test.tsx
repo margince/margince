@@ -101,6 +101,15 @@ function backendFor(
     if (req.url.includes("/ai/routing")) {
       return jsonResponse(ROUTING);
     }
+    if (req.url.includes("/ai/certification")) {
+      // Its own shape too, for the same reason /ai/health has one: the card
+      // reads `jobs`, and the generic list envelope below would crash it.
+      return jsonResponse({
+        binding_state: "bound",
+        runs_per_example: 3,
+        jobs: [],
+      });
+    }
     if (req.url.includes("/ai/health")) {
       // Its own shape: the card reads `rungs`, and a catch-all that answered
       // the generic list envelope crashed it mid-render.

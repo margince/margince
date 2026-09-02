@@ -82,9 +82,7 @@ const EVERY_RESULT: Certification = {
 const NOTHING_BOUND: Certification = {
   binding_state: "unbound",
   runs_per_example: 3,
-  jobs: [
-    job({ task: "draft_reply", result: "no_model", model: undefined }),
-  ],
+  jobs: [job({ task: "draft_reply", result: "no_model", model: undefined })],
 };
 
 const CAVEATS: Certification = {
@@ -119,7 +117,7 @@ function Fixture({ cert }: Readonly<{ cert: Certification }>) {
 }
 
 const meta: Meta<typeof AiCertificationCard> = {
-  title: "Screens/AI certification",
+  title: "Settings/Admin/AI certification",
   component: AiCertificationCard,
 };
 export default meta;

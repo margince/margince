@@ -18,12 +18,12 @@ const (
 	testEnv      = "eu_hosted"
 )
 
-// boundTo binds one model to every rung, which is the ordinary shape of a
-// routing that has been configured at all.
-func boundTo(model string) ai.RoutingConfig {
+// boundEverywhere binds the test model to every rung, which is the ordinary
+// shape of a routing that has been configured at all.
+func boundEverywhere() ai.RoutingConfig {
 	tiers := map[ai.Tier]ai.ProviderConfig{}
 	for _, tier := range ai.AllTiers() {
-		tiers[tier] = ai.ProviderConfig{Provider: testProvider, Model: model}
+		tiers[tier] = ai.ProviderConfig{Provider: testProvider, Model: testModel}
 	}
 	return ai.RoutingConfig{Tiers: tiers, Profile: ai.Profile(testEnv)}
 }
@@ -139,7 +139,7 @@ func TestEachStatusAndBandBecomesItsOwnWord(t *testing.T) {
 			t.Parallel()
 			sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
 			snap := snapOf(t, rowOf("draft_reply", "reply", tc.status, tc.band, tc.runs, tc.passed, tc.measured, tc.pend))
-			job := jobNamed(t, certificationView(boundTo(testModel), sites, snap), ai.TaskDraftReply)
+			job := jobNamed(t, certificationView(boundEverywhere(), sites, snap), ai.TaskDraftReply)
 			if job.Result != tc.want {
 				t.Errorf("result = %q, want %q", job.Result, tc.want)
 			}
@@ -172,7 +172,7 @@ func TestAJobFoldsToItsWorstSiteAndNamesIt(t *testing.T) {
 		rowOf("cold_start", "company_message", snapshot.StatusCurrent, "certified", 9, 9, 3, 0),
 		rowOf("cold_start", "sitereadmessage", snapshot.StatusCurrent, "not_supported", 9, 6, 3, 0),
 	)
-	job := jobNamed(t, certificationView(boundTo(testModel), sites, snap), ai.TaskColdStart)
+	job := jobNamed(t, certificationView(boundEverywhere(), sites, snap), ai.TaskColdStart)
 
 	if job.Result != resultNotReliable {
 		t.Errorf("result = %q, want %q — one failing site sets the job", job.Result, resultNotReliable)
@@ -197,7 +197,7 @@ func TestAMeasurementUnderAnotherProfileIsNamedRatherThanCountedOrHidden(t *test
 	elsewhere := rowOf("draft_reply", "reply", snapshot.StatusCurrent, "certified", 9, 9, 3, 0)
 	elsewhere.EnvClass = "cloud_frontier"
 	sites := []aitasks.Site{siteOf(ai.TaskDraftReply, "reply")}
-	job := jobNamed(t, certificationView(boundTo(testModel), sites, snapOf(t, elsewhere)), ai.TaskDraftReply)
+	job := jobNamed(t, certificationView(boundEverywhere(), sites, snapOf(t, elsewhere)), ai.TaskDraftReply)
 
 	if job.Result != resultNotChecked {
 		t.Errorf("result = %q — another posture's number must not certify this binding", job.Result)
@@ -263,7 +263,7 @@ func TestTheGraderIsNotOnTheCard(t *testing.T) {
 	t.Parallel()
 
 	sites := []aitasks.Site{siteOf(ai.TaskCertJudge, "judge"), siteOf(ai.TaskDraftReply, "reply")}
-	view := certificationView(boundTo(testModel), sites, snapOf(t))
+	view := certificationView(boundEverywhere(), sites, snapOf(t))
 	for _, job := range view.Jobs {
 		if job.Task == string(ai.TaskCertJudge) {
 			t.Fatal("cert_judge is on the card")
@@ -285,7 +285,7 @@ func TestTheOnlyExcludedJobIsTheGrader(t *testing.T) {
 		t.Fatalf("building the census: %v", err)
 	}
 	sites := census.All()
-	view := certificationView(boundTo(testModel), sites, snapOf(t))
+	view := certificationView(boundEverywhere(), sites, snapOf(t))
 
 	shipped := map[ai.Task]bool{}
 	for _, site := range sites {

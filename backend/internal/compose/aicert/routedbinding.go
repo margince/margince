@@ -22,10 +22,10 @@ import (
 // resolveBinding is the model a routed run certifies a task against: the rung
 // the deployment would actually serve it on.
 //
-// The rule itself lives in ai.FirstBoundTier, because this lane is no longer its
-// only reader — the settings card resolves the same question against the stored
-// binding, and two copies of "which rung answers" would drift into a card and a
-// report disagreeing about the same deployment.
+// The rule itself lives in ai.FirstBoundTier. The settings card resolves the
+// same question against the stored binding, and two copies of "which rung
+// answers" would drift into a card and a report describing the same deployment
+// differently.
 //
 // What is local to certification is what follows from it: the rungs BELOW the
 // one measured are reachable too, under budget pressure (ai.ServableTiers walks

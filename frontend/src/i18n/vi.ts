@@ -3884,8 +3884,10 @@ export const vi = {
   "overnightGrant.renewScope":
     "Bạn đã đồng ý, nhưng Margince nay làm được nhiều hơn, và quyền bạn đã cấp không bao gồm phần việc mới. Tắt rồi bật lại tùy chọn này để mở rộng — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
   "aiCert.title": "AI hoạt động tốt đến đâu",
-  "aiCert.sub": "Chúng tôi kiểm tra từng việc AI làm dựa trên một bộ ví dụ thực tế cố định và ghi lại tần suất nó trả lời đúng. Mỗi kết quả được đo trên đúng mô hình mà tổ chức này đã gán cho việc đó — không phải một mô hình ai đó từng thử qua.",
-  "aiCert.unbound": "chưa gán mô hình nào nên chưa có gì để báo cáo. Hãy chọn mô hình ở trên, rồi kết quả kiểm tra sẽ xuất hiện ở đây.",
+  "aiCert.sub":
+    "Chúng tôi kiểm tra từng việc AI làm dựa trên một bộ ví dụ thực tế cố định và ghi lại tần suất nó trả lời đúng. Mỗi kết quả được đo trên đúng mô hình mà tổ chức này đã gán cho việc đó — không phải một mô hình ai đó từng thử qua.",
+  "aiCert.unbound":
+    "chưa gán mô hình nào nên chưa có gì để báo cáo. Hãy chọn mô hình ở trên, rồi kết quả kiểm tra sẽ xuất hiện ở đây.",
   "aiCert.colJob": "Việc",
   "aiCert.colModel": "Mô hình đang dùng",
   "aiCert.colResult": "Kết quả",
@@ -3897,24 +3899,38 @@ export const vi = {
   "aiCert.result.not_checked": "Chưa kiểm tra",
   "aiCert.result.no_model": "Chưa chọn mô hình",
   "aiCert.runCounts": "{passed} trong {runs} lần chạy thử đã đạt",
-  "aiCert.oneKindFails": "có một loại ví dụ luôn sai, nên điểm cao vẫn bị coi là chưa đủ tin cậy",
-  "aiCert.pendingExamples": "đã kiểm tra {measured} trong {total} ví dụ; số còn lại thêm vào sau và chưa từng được chạy",
-  "aiCert.measuredOn": "đo ngày {date}; hướng dẫn hoặc ví dụ của việc này đã đổi từ đó, nên con số này nói về một phiên bản cũ hơn",
-  "aiCert.otherProfile": "chúng tôi đã kiểm tra mô hình này trên một hạ tầng khác, và điều đó không suy ra được cho hạ tầng hiện tại",
-  "aiCert.narrowScope": "chỉ một phần của việc này được kiểm tra — một câu trả lời, không phải cả cuộc trao đổi",
-  "aiCert.unmeasuredFallback": "khi tải cao, việc này có thể chuyển sang {model} — mô hình chúng tôi chưa kiểm tra",
+  "aiCert.oneKindFails":
+    "có một loại ví dụ luôn sai, nên điểm cao vẫn bị coi là chưa đủ tin cậy",
+  "aiCert.pendingExamples":
+    "đã kiểm tra {measured} trong {total} ví dụ; số còn lại thêm vào sau và chưa từng được chạy",
+  "aiCert.measuredOn":
+    "đo ngày {date}; hướng dẫn hoặc ví dụ của việc này đã đổi từ đó, nên con số này nói về một phiên bản cũ hơn",
+  "aiCert.otherProfile":
+    "chúng tôi đã kiểm tra mô hình này trên một hạ tầng khác, và điều đó không suy ra được cho hạ tầng hiện tại",
+  "aiCert.narrowScope":
+    "chỉ một phần của việc này được kiểm tra — một câu trả lời, không phải cả cuộc trao đổi",
+  "aiCert.unmeasuredFallback":
+    "khi tải cao, việc này có thể chuyển sang {model} — mô hình chúng tôi chưa kiểm tra",
   "aiCert.worstSite": "quyết định bởi: {site}",
-  "aiCert.unnamedJobs": "{count} việc mới hơn mà bản ứng dụng này chưa có tên — hãy cập nhật để xem.",
+  "aiCert.unnamedJobs":
+    "{count} việc mới hơn mà bản ứng dụng này chưa có tên — hãy cập nhật để xem.",
+  "aiCert.explainClose": "Đóng",
   "aiCert.explainOpen": "Những mục này nghĩa là gì?",
   "aiCert.explainTitle": "AI được kiểm tra thế nào",
-  "aiCert.explainWhat": "Mỗi việc AI trong Margince đều có một bộ ví dụ thực tế cố định lưu cùng mã nguồn — email, trang web và bản ghi thuộc đúng loại mà việc đó gặp khi dùng thật, mỗi ví dụ kèm một ghi chú nói rõ thế nào là trả lời đúng.",
-  "aiCert.explainHow": "Mỗi ví dụ được chạy {runs} lần qua mô hình mà tổ chức của bạn đã gán cho việc đó, và một mô hình riêng biệt sẽ chấm từng câu trả lời theo ghi chú ấy. Một việc chỉ được coi là đáng tin cậy khi mọi lần chạy của mọi ví dụ đều đúng — nên mô hình thường đúng nhưng không phải luôn đúng sẽ được báo là phần lớn đáng tin.",
-  "aiCert.explainMeaning": "Đáng tin cậy nghĩa là có thể để việc đó tự chạy. Phần lớn đáng tin nghĩa là nó dùng được, nhưng hãy xem lại những trường hợp quan trọng. Chưa đủ tin cậy nghĩa là cần người xem lại từng câu trả lời. Chưa kiểm tra nghĩa là chúng tôi không có số đo cho mô hình bạn chọn — đó không phải lời nói rằng mô hình đó tệ.",
-  "aiCert.explainStale": "Đã lỗi thời và mới kiểm tra một phần là chuyện của bộ ví dụ bên chúng tôi, không phải của hệ thống bạn. Lỗi thời nghĩa là hướng dẫn của việc đó đã đổi sau khi đo, nên con số nói về một phiên bản cũ hơn. Mới kiểm tra một phần nghĩa là chúng tôi đã thêm ví dụ mà lần đo chưa từng thấy. Cả hai trường hợp con số vẫn là kết quả thật; tuổi của nó hoặc mức phủ được ghi ngay bên cạnh.",
+  "aiCert.explainWhat":
+    "Mỗi việc AI trong Margince đều có một bộ ví dụ thực tế cố định lưu cùng mã nguồn — email, trang web và bản ghi thuộc đúng loại mà việc đó gặp khi dùng thật, mỗi ví dụ kèm một ghi chú nói rõ thế nào là trả lời đúng.",
+  "aiCert.explainHow":
+    "Mỗi ví dụ được chạy {runs} lần qua mô hình mà tổ chức của bạn đã gán cho việc đó, và một mô hình riêng biệt sẽ chấm từng câu trả lời theo ghi chú ấy. Một việc chỉ được coi là đáng tin cậy khi mọi lần chạy của mọi ví dụ đều đúng — nên mô hình thường đúng nhưng không phải luôn đúng sẽ được báo là phần lớn đáng tin.",
+  "aiCert.explainMeaning":
+    "Đáng tin cậy nghĩa là có thể để việc đó tự chạy. Phần lớn đáng tin nghĩa là nó dùng được, nhưng hãy xem lại những trường hợp quan trọng. Chưa đủ tin cậy nghĩa là cần người xem lại từng câu trả lời. Chưa kiểm tra nghĩa là chúng tôi không có số đo cho mô hình bạn chọn — đó không phải lời nói rằng mô hình đó tệ.",
+  "aiCert.explainStale":
+    "Đã lỗi thời và mới kiểm tra một phần là chuyện của bộ ví dụ bên chúng tôi, không phải của hệ thống bạn. Lỗi thời nghĩa là hướng dẫn của việc đó đã đổi sau khi đo, nên con số nói về một phiên bản cũ hơn. Mới kiểm tra một phần nghĩa là chúng tôi đã thêm ví dụ mà lần đo chưa từng thấy. Cả hai trường hợp con số vẫn là kết quả thật; tuổi của nó hoặc mức phủ được ghi ngay bên cạnh.",
   "aiCert.job.agent_loop": "Làm từng bước cho xong một việc",
-  "aiCert.job.brief_ranking": "Quyết định điều gì quan trọng nhất trong bản tóm tin",
+  "aiCert.job.brief_ranking":
+    "Quyết định điều gì quan trọng nhất trong bản tóm tin",
   "aiCert.job.capture_classify": "Phân loại thư đến",
-  "aiCert.job.capture_confidentiality_verdict": "Quyết định một chuỗi email có bảo mật hay không",
+  "aiCert.job.capture_confidentiality_verdict":
+    "Quyết định một chuỗi email có bảo mật hay không",
   "aiCert.job.capture_counterparty_verdict": "Quyết định email đến từ ai",
   "aiCert.job.cold_start": "Thiết lập tổ chức của bạn",
   "aiCert.job.corpus_ask": "Trả lời câu hỏi từ tài liệu bạn đã lưu",
@@ -3922,11 +3938,13 @@ export const vi = {
   "aiCert.job.document_extract": "Đọc tài liệu đính kèm",
   "aiCert.job.draft_reply": "Soạn thư trả lời",
   "aiCert.job.enrich": "Bổ sung thông tin về một liên hệ",
-  "aiCert.job.growth_fit": "Đánh giá một công ty phù hợp đến đâu với thứ bạn bán",
+  "aiCert.job.growth_fit":
+    "Đánh giá một công ty phù hợp đến đâu với thứ bạn bán",
   "aiCert.job.offer_draft": "Soạn báo giá",
   "aiCert.job.propose_roles": "Tìm ra ai là người quyết định ở phía bên kia",
   "aiCert.job.rate_extract": "Đọc giá từ trang báo giá",
-  "aiCert.job.signal_extract": "Nhận ra điều gì đã thay đổi trong một cuộc trao đổi đã xong",
+  "aiCert.job.signal_extract":
+    "Nhận ra điều gì đã thay đổi trong một cuộc trao đổi đã xong",
   "aiCert.job.site_extract": "Đọc website của một công ty",
   "aiCert.job.site_fact_extract": "Lấy dữ kiện từ một trang web",
   "aiCert.job.site_triage": "Xác định một website là gì",
@@ -3937,7 +3955,8 @@ export const vi = {
   "aiCert.site.agent_loop.loop": "làm cho xong một việc",
   "aiCert.site.brief_ranking.rank": "sắp thứ tự bản tóm tin",
   "aiCert.site.capture_classify.classify": "phân loại thư",
-  "aiCert.site.capture_confidentiality_verdict.thread": "đánh giá một chuỗi thư",
+  "aiCert.site.capture_confidentiality_verdict.thread":
+    "đánh giá một chuỗi thư",
   "aiCert.site.capture_counterparty_verdict.verdict": "đánh giá người gửi",
   "aiCert.site.cold_start.acts": "cuộc trò chuyện thiết lập",
   "aiCert.site.cold_start.company_message": "hỏi về công ty của bạn",
@@ -3957,7 +3976,8 @@ export const vi = {
   "aiCert.site.propose_roles.committee": "gọi tên các vai trò mua",
   "aiCert.site.rate_extract.fx": "đọc tỷ giá",
   "aiCert.site.rate_extract.pricing": "đọc giá mô hình",
-  "aiCert.site.signal_extract.thread_events": "nhận ra sự kiện trong một chuỗi thư",
+  "aiCert.site.signal_extract.thread_events":
+    "nhận ra sự kiện trong một chuỗi thư",
   "aiCert.site.site_extract.profile": "đọc trang của một công ty",
   "aiCert.site.site_fact_extract.page_facts": "lấy dữ kiện từ một trang",
   "aiCert.site.site_triage.triage": "phân loại một website",
