@@ -175,8 +175,8 @@ func TestLastActivityAudience_AMessageBornHeldNeverMovesTheClock(t *testing.T) {
 func TestLastActivityAudience_AClockMoveIsNotAnEdit(t *testing.T) {
 	// A narrowing moves four stored dates, and moving one must not look like
 	// somebody edited the record. set_updated_at_bump_version() fires on all
-	// four tables and suppresses itself only while margince.last_activity_move
-	// is on — which move_last_activity sets and a bare UPDATE does not. A
+	// four tables and suppresses itself only inside a clock move's own guard
+	// setting, which move_last_activity sets and a bare UPDATE does not. A
 	// recompute written as a plain UPDATE would bump version on every deal,
 	// organization, person and project in the installation, invalidating every
 	// If-Match a client holds.
