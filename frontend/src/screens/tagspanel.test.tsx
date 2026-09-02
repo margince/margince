@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
+import { CompanyTagsSection } from "./companyrailtags";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { TagsPanel } from "./tagspanel";
 
@@ -156,5 +157,47 @@ describe("the tags panel", () => {
     expect(
       screen.getByText(en["tags.visibleWorkspaceWide"]),
     ).toBeInTheDocument();
+  });
+});
+
+// The add-tag verb and the panel answer to ONE read. The panel draws nothing
+// until it lands and says "hidden" when the vocabulary is withheld, so a button
+// gated on permission alone floated above no panel and opened a picker whose
+// apply the server refuses.
+describe("the company mount's add-tag verb", () => {
+  const ORG_ROW = {
+    id: ORG,
+    name: "Aurora GmbH",
+    writable: true,
+  };
+
+  function mountCompany(withheld: boolean) {
+    installFetchStub({
+      [`GET /records/organization/${ORG}/tags`]: () =>
+        jsonResponse({ data: [], withheld }),
+    });
+    render(
+      <StoryProviders>
+        <CompanyTagsSection
+          organization={ORG_ROW as never}
+          orgId={ORG}
+        />
+      </StoryProviders>,
+    );
+  }
+
+  // The control: without it, a verb that never renders would pass the test
+  // below for the wrong reason.
+  it("offers the verb once the read lands and the words are visible", async () => {
+    mountCompany(false);
+    expect(
+      await screen.findByRole("button", { name: en["tags.add"] }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no verb when the vocabulary is withheld", async () => {
+    mountCompany(true);
+    expect(await screen.findByText(en["tags.withheld"])).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
   });
 });

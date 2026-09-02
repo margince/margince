@@ -41,7 +41,11 @@ function CompanyTags({
   const readOnlyReason = useCompanyReadOnlyReason(organization);
   const [adding, setAdding] = useState(false);
   const read = useRecordTags("organization", orgId);
-  const canEdit = !readOnlyReason;
+  // The verb answers to the same read the panel does. The panel draws nothing
+  // until the read lands, and says "hidden" when the vocabulary is withheld —
+  // so a button gated on permission alone floats above no panel at all, and on
+  // a withheld record it opens a picker whose apply the server refuses.
+  const canEdit = !readOnlyReason && read.isSuccess && !read.data.withheld;
 
   return (
     <>
