@@ -649,6 +649,57 @@ func (e AiActivityKind) Valid() bool {
 	}
 }
 
+// Defines values for AiCertificationBindingState.
+const (
+	Bound   AiCertificationBindingState = "bound"
+	Unbound AiCertificationBindingState = "unbound"
+)
+
+// Valid indicates whether the value is a known member of the AiCertificationBindingState enum.
+func (e AiCertificationBindingState) Valid() bool {
+	switch e {
+	case Bound:
+		return true
+	case Unbound:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiCertificationResult.
+const (
+	MostlyReliable AiCertificationResult = "mostly_reliable"
+	NoModel        AiCertificationResult = "no_model"
+	NotChecked     AiCertificationResult = "not_checked"
+	NotReliable    AiCertificationResult = "not_reliable"
+	OutOfDate      AiCertificationResult = "out_of_date"
+	PartlyChecked  AiCertificationResult = "partly_checked"
+	Reliable       AiCertificationResult = "reliable"
+)
+
+// Valid indicates whether the value is a known member of the AiCertificationResult enum.
+func (e AiCertificationResult) Valid() bool {
+	switch e {
+	case MostlyReliable:
+		return true
+	case NoModel:
+		return true
+	case NotChecked:
+		return true
+	case NotReliable:
+		return true
+	case OutOfDate:
+		return true
+	case PartlyChecked:
+		return true
+	case Reliable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiModelRateLane.
 const (
 	AiModelRateLaneChat       AiModelRateLane = "chat"
@@ -14867,6 +14918,128 @@ type AiCallSummary struct {
 	Tier      string `json:"tier"`
 	TokensIn  int    `json:"tokens_in"`
 	TokensOut int    `json:"tokens_out"`
+}
+
+// AiCertification How well the models THIS installation is bound to perform each AI job, resolved against
+// the stored binding rather than against whichever model somebody once measured.
+//
+// The certification lane grades each job against a fixed corpus of realistic examples and
+// commits the outcome; this joins those outcomes to the tier→model binding the workspace
+// actually runs. A job is reported on the model that would answer it today — the first
+// rung of its ladder the installation BINDS, which is what the router serves — so an
+// operator reads about their own deployment and not about a candidate.
+type AiCertification struct {
+	// BindingState `unbound` means no tier has a model — the state every installation starts in.
+	// Reported as its own word because it is a choice nobody has made yet, not a
+	// measurement anybody is missing, and calling it "unchecked" would blame the
+	// certification lane for an empty settings page.
+	BindingState AiCertificationBindingState `json:"binding_state"`
+	Jobs         []AiCertificationJob        `json:"jobs"`
+
+	// RunsPerExample How many times each example was run. It qualifies every count below: a job counts as
+	// reliable only when EVERY run of every example answered correctly, so on a small
+	// sample a model that is right most of the time reads worse than one that is right
+	// always — which is the intended reading, not an artefact.
+	RunsPerExample int `json:"runs_per_example"`
+}
+
+// AiCertificationBindingState `unbound` means no tier has a model — the state every installation starts in.
+// Reported as its own word because it is a choice nobody has made yet, not a
+// measurement anybody is missing, and calling it "unchecked" would blame the
+// certification lane for an empty settings page.
+type AiCertificationBindingState string
+
+// AiCertificationJob One AI job, folded from the invocation sites it ships.
+//
+// Folded to the WORST site, never averaged: a job is as trustworthy as its weakest part,
+// and averaging would let three sound sites carry one that fails every time. `worst_site`
+// names which one set the result, and `sites` carries the breakdown.
+type AiCertificationJob struct {
+	// MeasuredAt When the runs happened. Absent when nothing measured this job.
+	MeasuredAt *time.Time `json:"measured_at,omitempty"`
+
+	// MeasuredExamples How many of the worst site's current examples the measurement covers.
+	MeasuredExamples *int `json:"measured_examples,omitempty"`
+
+	// MeasuredUnderOtherProfile A measurement exists for this same model under a DIFFERENT environment class. It does
+	// not carry over — a cloud-frontier number says nothing about an EU-hosted binding — but
+	// it is evidence a reader can go and look at, and reporting it as nothing throws that
+	// away.
+	MeasuredUnderOtherProfile *bool `json:"measured_under_other_profile,omitempty"`
+
+	// Model The model serving this job today. Absent when `result` is `no_model`.
+	Model *string `json:"model,omitempty"`
+
+	// Passed Runs that did what their example asked. Carried beside `runs` rather than as a
+	// percentage because a verdict folds to the worst example: a job can pass 23 of 24 runs
+	// and still be `not_reliable` because one kind of example fails every time. A bare
+	// percentage next to that verdict reads as a contradiction.
+	Passed *int `json:"passed,omitempty"`
+
+	// PendingExamples How many it has never seen. Above zero on a current record is what makes a job `partly_checked`.
+	PendingExamples *int `json:"pending_examples,omitempty"`
+
+	// Provider The vendor serving this job today. Absent when `result` is `no_model`.
+	Provider *string `json:"provider,omitempty"`
+
+	// Result Seven states, and none collapses into another.
+	//
+	// `reliable` — every run of every example passed. `mostly_reliable` — measured and
+	// usable, with failures. `not_reliable` — a human should review every answer.
+	// `partly_checked` — current about everything it measured, and the corpus has grown
+	// examples it has never seen. `out_of_date` — measured against prompts this build no
+	// longer sends, so the number describes an older version of the job. `not_checked` —
+	// no measurement for the bound model. `no_model` — the job's ladder has no bound rung.
+	//
+	// `not_checked` is not a claim that the model is bad, and `out_of_date` is not
+	// `not_checked`: a real measurement whose age is stated is worth more to a reader than
+	// silence.
+	Result AiCertificationResult `json:"result"`
+
+	// Runs Runs attempted on the worst site. Reported as a count, never only as a rate — see `passed`.
+	Runs *int `json:"runs,omitempty"`
+
+	// Scope How much of the job the runs actually covered. A case that grades one reply of a
+	// multi-turn path certifies less than the path, so a screen must qualify its claim
+	// rather than say a narrowed measurement makes the whole job safe to leave alone.
+	Scope *string               `json:"scope,omitempty"`
+	Sites []AiCertificationSite `json:"sites"`
+
+	// Task The job's contract identifier. A screen shows a human name for it, never this.
+	Task string `json:"task"`
+
+	// Tier The rung the job resolves to — the first one its ladder binds, which is what the router serves.
+	Tier *string `json:"tier,omitempty"`
+
+	// UnmeasuredFallbacks Models this job can fall back to under budget pressure that nothing has graded. A
+	// job's servable set is its ladder plus the transitive degrade closure, and an answer a
+	// deployment can actually reach from a model nobody measured is a gap worth naming —
+	// without demoting a job whose everyday model is sound.
+	UnmeasuredFallbacks *[]string `json:"unmeasured_fallbacks,omitempty"`
+
+	// WorstSite Which invocation site set `result`. Absent when the job ships one site or nothing was measured.
+	WorstSite *string `json:"worst_site,omitempty"`
+}
+
+// AiCertificationResult How a job or one of its sites reads. Declared once and referenced by both, so the two can
+// never grow apart into a job that reports a word its own sites cannot.
+type AiCertificationResult string
+
+// AiCertificationSite One invocation site of a job, as the certification records measured it.
+type AiCertificationSite struct {
+	MeasuredAt       *time.Time `json:"measured_at,omitempty"`
+	MeasuredExamples *int       `json:"measured_examples,omitempty"`
+	Passed           *int       `json:"passed,omitempty"`
+	PendingExamples  *int       `json:"pending_examples,omitempty"`
+
+	// Result How a job or one of its sites reads. Declared once and referenced by both, so the two can
+	// never grow apart into a job that reports a word its own sites cannot.
+	Result AiCertificationResult `json:"result"`
+	Runs   *int                  `json:"runs,omitempty"`
+	Scope  *string               `json:"scope,omitempty"`
+
+	// Site The site's variant name within the job.
+	Site string `json:"site"`
 }
 
 // AiEmbeddingsBinding defines model for AiEmbeddingsBinding.
@@ -43378,6 +43551,9 @@ type ServerInterface interface {
 	// One call — attempt ladder, routing identity, context provenance, captured payload.
 	// (GET /ai/calls/{id})
 	GetAiCall(w http.ResponseWriter, r *http.Request, id Id)
+	// How well the bound models perform each AI job (admin/ops).
+	// (GET /ai/certification)
+	GetAiCertification(w http.ResponseWriter, r *http.Request)
 	// Record a human's verdict on a claim the system derived — the correction the next re-derivation must respect.
 	// (POST /ai/feedback)
 	RecordAIFeedback(w http.ResponseWriter, r *http.Request)
@@ -45127,6 +45303,12 @@ func (_ Unimplemented) ListAiCalls(w http.ResponseWriter, r *http.Request, param
 // One call — attempt ladder, routing identity, context provenance, captured payload.
 // (GET /ai/calls/{id})
 func (_ Unimplemented) GetAiCall(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How well the bound models perform each AI job (admin/ops).
+// (GET /ai/certification)
+func (_ Unimplemented) GetAiCertification(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -49758,6 +49940,26 @@ func (siw *ServerInterfaceWrapper) GetAiCall(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiCall(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiCertification operation middleware
+func (siw *ServerInterfaceWrapper) GetAiCertification(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiCertification(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -72356,6 +72558,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls/{id}", wrapper.GetAiCall)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/certification", wrapper.GetAiCertification)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai/feedback", wrapper.RecordAIFeedback)

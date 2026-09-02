@@ -143,6 +143,10 @@ func (stubs) GetAiCall(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontr
 	httperr.NotImplemented(w, r, "GetAiCall")
 }
 
+func (stubs) GetAiCertification(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiCertification")
+}
+
 func (stubs) RecordAIFeedback(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RecordAIFeedback")
 }

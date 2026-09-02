@@ -68,8 +68,11 @@ func (r readinessRow) snapshotRow() snapshot.Row {
 
 func lessRow(a, b snapshot.Row) bool {
 	for _, pair := range [][2]string{
-		{a.Task, b.Task}, {a.Site, b.Site},
-		{a.Provider, b.Provider}, {a.Model, b.Model}, {a.EnvClass, b.EnvClass},
+		{a.Task, b.Task},
+		{a.Site, b.Site},
+		{a.Provider, b.Provider},
+		{a.Model, b.Model},
+		{a.EnvClass, b.EnvClass},
 	} {
 		if pair[0] != pair[1] {
 			return pair[0] < pair[1]

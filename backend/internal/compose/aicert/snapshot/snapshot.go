@@ -94,11 +94,24 @@ func Load() (Snapshot, error) {
 	return decode(embedded)
 }
 
+// FromRows indexes rows that did not arrive as a file.
+//
+// It exists so a caller building a snapshot in a test goes through the same
+// indexing and the same duplicate refusal the product does. A test that assembled
+// the map itself would prove nothing about the lookup the binary performs.
+func FromRows(rows []Row) (Snapshot, error) {
+	return index(Snapshot{Rows: rows})
+}
+
 func decode(raw []byte) (Snapshot, error) {
 	var snap Snapshot
 	if err := json.Unmarshal(raw, &snap); err != nil {
 		return Snapshot{}, fmt.Errorf("decoding the certification snapshot: %w", err)
 	}
+	return index(snap)
+}
+
+func index(snap Snapshot) (Snapshot, error) {
 	snap.byKey = make(map[string]Row, len(snap.Rows))
 	for _, row := range snap.Rows {
 		key, err := row.key()
@@ -109,7 +122,8 @@ func decode(raw []byte) (Snapshot, error) {
 			return Snapshot{}, fmt.Errorf(
 				"the certification snapshot carries two rows for %s/%s on %s:%s under %s; "+
 					"the key admits one measurement, so regenerate it with `make gen`",
-				row.Task, row.Site, row.Provider, row.Model, row.EnvClass)
+				row.Task, row.Site, row.Provider, row.Model, row.EnvClass,
+			)
 		}
 		snap.byKey[key] = row
 	}

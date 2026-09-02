@@ -10730,6 +10730,38 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/certification:
+    get:
+      tags: [AI]
+      operationId: getAiCertification
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How well the bound models perform each AI job (admin/ops).
+      description: |
+        The certification lane's committed results, resolved against the binding this workspace
+        actually runs. Governed by the same `ai_routing` object the binding is: a seat that may
+        not see which models are bound has no use for how those models score.
+
+        Each job is reported on the model that would answer it today — the first rung of its
+        ladder this installation binds, which is what the router serves. A job that resolves to
+        no bound rung says so rather than reporting an absent measurement, because an empty
+        settings page is a choice nobody has made and not a gap in the evidence.
+
+        The results are a build artifact, not a live reading: they come from a snapshot generated
+        with the records and the corpus and committed alongside them. Nothing here calls a model
+        or costs anything, and the numbers change when a certification run is committed, not when
+        this endpoint is polled.
+
+        Human session only, matching the binding it reports on.
+      responses:
+        '200':
+          description: Per-job certification, resolved against the stored binding.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiCertification' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /ai/provider-keys:
     get:
       tags: [AI]
@@ -20449,6 +20481,147 @@ components:
         median_latency_ms:
           type: integer
           description: The window's middle latency, which tells a slow lane from a dead one.
+
+    AiCertificationResult:
+      type: string
+      enum: [reliable, mostly_reliable, not_reliable, partly_checked, out_of_date, not_checked, no_model]
+      description: |
+        How a job or one of its sites reads. Declared once and referenced by both, so the two can
+        never grow apart into a job that reports a word its own sites cannot.
+
+    AiCertification:
+      type: object
+      description: |
+        How well the models THIS installation is bound to perform each AI job, resolved against
+        the stored binding rather than against whichever model somebody once measured.
+
+        The certification lane grades each job against a fixed corpus of realistic examples and
+        commits the outcome; this joins those outcomes to the tier→model binding the workspace
+        actually runs. A job is reported on the model that would answer it today — the first
+        rung of its ladder the installation BINDS, which is what the router serves — so an
+        operator reads about their own deployment and not about a candidate.
+      required: [binding_state, runs_per_example, jobs]
+      properties:
+        binding_state:
+          type: string
+          enum: [bound, unbound]
+          description: |
+            `unbound` means no tier has a model — the state every installation starts in.
+            Reported as its own word because it is a choice nobody has made yet, not a
+            measurement anybody is missing, and calling it "unchecked" would blame the
+            certification lane for an empty settings page.
+        runs_per_example:
+          type: integer
+          description: |
+            How many times each example was run. It qualifies every count below: a job counts as
+            reliable only when EVERY run of every example answered correctly, so on a small
+            sample a model that is right most of the time reads worse than one that is right
+            always — which is the intended reading, not an artefact.
+        jobs:
+          type: array
+          items: { $ref: '#/components/schemas/AiCertificationJob' }
+
+    AiCertificationJob:
+      type: object
+      description: |
+        One AI job, folded from the invocation sites it ships.
+
+        Folded to the WORST site, never averaged: a job is as trustworthy as its weakest part,
+        and averaging would let three sound sites carry one that fails every time. `worst_site`
+        names which one set the result, and `sites` carries the breakdown.
+      required: [task, result, sites]
+      properties:
+        task:
+          type: string
+          description: The job's contract identifier. A screen shows a human name for it, never this.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/AiCertificationResult'
+          description: |
+            Seven states, and none collapses into another.
+
+            `reliable` — every run of every example passed. `mostly_reliable` — measured and
+            usable, with failures. `not_reliable` — a human should review every answer.
+            `partly_checked` — current about everything it measured, and the corpus has grown
+            examples it has never seen. `out_of_date` — measured against prompts this build no
+            longer sends, so the number describes an older version of the job. `not_checked` —
+            no measurement for the bound model. `no_model` — the job's ladder has no bound rung.
+
+            `not_checked` is not a claim that the model is bad, and `out_of_date` is not
+            `not_checked`: a real measurement whose age is stated is worth more to a reader than
+            silence.
+        provider:
+          type: string
+          description: The vendor serving this job today. Absent when `result` is `no_model`.
+        model:
+          type: string
+          description: The model serving this job today. Absent when `result` is `no_model`.
+        tier:
+          type: string
+          description: The rung the job resolves to — the first one its ladder binds, which is what the router serves.
+        runs:
+          type: integer
+          description: Runs attempted on the worst site. Reported as a count, never only as a rate — see `passed`.
+        passed:
+          type: integer
+          description: |
+            Runs that did what their example asked. Carried beside `runs` rather than as a
+            percentage because a verdict folds to the worst example: a job can pass 23 of 24 runs
+            and still be `not_reliable` because one kind of example fails every time. A bare
+            percentage next to that verdict reads as a contradiction.
+        measured_examples:
+          type: integer
+          description: How many of the worst site's current examples the measurement covers.
+        pending_examples:
+          type: integer
+          description: How many it has never seen. Above zero on a current record is what makes a job `partly_checked`.
+        scope:
+          type: string
+          description: |
+            How much of the job the runs actually covered. A case that grades one reply of a
+            multi-turn path certifies less than the path, so a screen must qualify its claim
+            rather than say a narrowed measurement makes the whole job safe to leave alone.
+        measured_at:
+          type: string
+          format: date-time
+          description: When the runs happened. Absent when nothing measured this job.
+        worst_site:
+          type: string
+          description: Which invocation site set `result`. Absent when the job ships one site or nothing was measured.
+        measured_under_other_profile:
+          type: boolean
+          description: |
+            A measurement exists for this same model under a DIFFERENT environment class. It does
+            not carry over — a cloud-frontier number says nothing about an EU-hosted binding — but
+            it is evidence a reader can go and look at, and reporting it as nothing throws that
+            away.
+        unmeasured_fallbacks:
+          type: array
+          items: { type: string }
+          description: |
+            Models this job can fall back to under budget pressure that nothing has graded. A
+            job's servable set is its ladder plus the transitive degrade closure, and an answer a
+            deployment can actually reach from a model nobody measured is a gap worth naming —
+            without demoting a job whose everyday model is sound.
+        sites:
+          type: array
+          items: { $ref: '#/components/schemas/AiCertificationSite' }
+
+    AiCertificationSite:
+      type: object
+      description: One invocation site of a job, as the certification records measured it.
+      required: [site, result]
+      properties:
+        site:
+          type: string
+          description: The site's variant name within the job.
+        result: { $ref: '#/components/schemas/AiCertificationResult' }
+        runs: { type: integer }
+        passed: { type: integer }
+        measured_examples: { type: integer }
+        pending_examples: { type: integer }
+        scope: { type: string }
+        measured_at: { type: string, format: date-time }
 
     AiUsage:
       type: object
