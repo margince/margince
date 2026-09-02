@@ -2471,6 +2471,8 @@ export const vi = {
   "home.weekly.outcome.moved": "đã chuyển",
   "home.weekly.outcome.won": "thắng",
   "home.weekly.outcome.lost": "thua",
+  "home.focus.allAbove":
+    "Mọi gợi ý từ đêm qua đã nằm ở trên, trong phần đang chờ bạn.",
   "home.quietRun":
     "Sáng nay không có gì vượt ngưỡng. Không bịa ra việc gấp — hãy tận hưởng sự yên tĩnh.",
   "home.act": "Đánh dấu xong",
@@ -2528,7 +2530,7 @@ export const vi = {
   "home.glance.goDuplicates": "Đến hàng chờ bản trùng",
   "home.glance.goWatch": "Đến các giao dịch đã im ắng",
   "home.panel.decisions": "Đang chờ bạn",
-  "home.panel.today": "Hôm nay",
+  "home.panel.focus": "Khi có thời gian",
   "home.panel.overnight": "Qua đêm",
   "home.panel.position": "Vị thế",
   "home.panel.watch": "Đã im ắng",

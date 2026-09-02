@@ -2494,6 +2494,8 @@ export const de = {
   "home.weekly.outcome.moved": "bewegt",
   "home.weekly.outcome.won": "gewonnen",
   "home.weekly.outcome.lost": "verloren",
+  "home.focus.allAbove":
+    "Alles aus der Nacht steht schon oben, bei dem, was auf dich wartet.",
   "home.quietRun":
     "Heute Morgen hat nichts die Schwelle geschafft. Keine erfundene Dringlichkeit — genieß die Ruhe.",
   "home.act": "Erledigt",
@@ -2551,7 +2553,7 @@ export const de = {
   "home.glance.goDuplicates": "Zur Duplikate-Warteschlange",
   "home.glance.goWatch": "Zu den Deals, die still geworden sind",
   "home.panel.decisions": "Wartet auf dich",
-  "home.panel.today": "Heute",
+  "home.panel.focus": "Wenn Zeit bleibt",
   "home.panel.overnight": "Über Nacht",
   "home.panel.position": "Bestand",
   "home.panel.watch": "Still geworden",

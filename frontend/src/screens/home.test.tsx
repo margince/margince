@@ -12,6 +12,7 @@ import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
+import { overnightRow, readingsDay } from "./home.fixtures";
 import { HomeGlance } from "./home.glance";
 import {
   fleetDeal,
@@ -22,6 +23,7 @@ import {
   render,
   run,
   stubApi,
+  threeRanked,
   workOrder,
   writeRoutes,
   writes,
@@ -295,7 +297,7 @@ describe("HomeScreen — the order of the page follows the day", () => {
     render(<HomeScreen />);
 
     await screen.findByText("Send the Weber follow-up");
-    expect(workOrder()).toEqual(["home-decisions", "home-today"]);
+    expect(workOrder()).toEqual(["home-decisions", "home-focus"]);
   });
 
   it("leads with the ranked queue once the deck is clear", async () => {
@@ -306,7 +308,7 @@ describe("HomeScreen — the order of the page follows the day", () => {
     render(<HomeScreen />);
 
     await screen.findByText("Fleet retrofit");
-    expect(workOrder()).toEqual(["home-today", "home-decisions"]);
+    expect(workOrder()).toEqual(["home-focus", "home-decisions"]);
   });
 });
 
@@ -547,6 +549,70 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
 // ── The ranked queue ──
 
 describe("HomeScreen — the ranked queue", () => {
+  // ONE brief run reaches this page through TWO endpoints: `GET /worklist`
+  // ranks each suggestion into the one order as a `brief_item` row, and
+  // `GET /brief` serves the same records with the factors behind them, under the
+  // same ids. So a suggestion that ranks into "Do next" is on the page twice
+  // unless "Focus when time opens" leaves out what the lead already drew — once
+  // as a worklist row and once as a card, each offering its own controls over
+  // the same deal.
+  it("draws an overnight suggestion once, even when it also leads the page", async () => {
+    stubApi({
+      "GET /brief": () => jsonResponse(threeRanked),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "GET /worklist": () =>
+        jsonResponse(readingsDay({}, [overnightRow("bi-1", "d-1")])),
+    });
+    render(<HomeScreen />);
+
+    // The suggestions that did not lead are drawn as cards, so the section is
+    // skipping ONE record rather than going quiet. Awaited first: it is the
+    // slowest of the reads this assertion depends on.
+    expect(await screen.findByTestId("brief-item-bi-2")).toBeTruthy();
+    expect(screen.getByTestId("brief-item-bi-3")).toBeTruthy();
+    // The one that leads is drawn ONCE — as a worklist row, not again as a card.
+    const lead = screen.getByRole("region", {
+      name: en["brief.donext.title"],
+    });
+    expect(within(lead).getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.queryByTestId("brief-item-bi-1")).toBeNull();
+  });
+
+  // The other half of the same rule. Nothing led the page, so the section below
+  // owns every suggestion — a filter that dropped one here would hide work.
+  it("draws every suggestion when none of them leads the page", async () => {
+    stubApi({
+      "GET /brief": () => jsonResponse(threeRanked),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    expect(await screen.findByTestId("brief-item-bi-1")).toBeTruthy();
+    expect(screen.getByTestId("brief-item-bi-2")).toBeTruthy();
+    expect(screen.getByTestId("brief-item-bi-3")).toBeTruthy();
+  });
+
+  // A morning whose every suggestion already leads. "Nothing cleared the bar"
+  // would contradict the rows the reader can see directly above.
+  it("says the work is above rather than that the night found nothing", async () => {
+    stubApi({
+      "GET /brief": () => jsonResponse(threeRanked),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "GET /worklist": () =>
+        jsonResponse(
+          readingsDay({}, [
+            overnightRow("bi-1", "d-1"),
+            overnightRow("bi-2", "d-2"),
+            overnightRow("bi-3", "d-3"),
+          ]),
+        ),
+    });
+    render(<HomeScreen />);
+
+    expect(await screen.findByText(en["home.focus.allAbove"])).toBeTruthy();
+    expect(screen.queryByText(en["home.quietRun"])).toBeNull();
+  });
+
   it("renders the run: the deal, its money, the decomposition, the evidence and the honest-short line", async () => {
     stubApi({
       "GET /brief": () => jsonResponse(run),

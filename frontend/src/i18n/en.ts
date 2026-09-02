@@ -2541,6 +2541,8 @@ export const en = {
   "home.weekly.outcome.moved": "moved",
   "home.weekly.outcome.won": "won",
   "home.weekly.outcome.lost": "lost",
+  "home.focus.allAbove":
+    "Everything the night suggested is already above, in what waits on you.",
   "home.quietRun":
     "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
   "home.act": "Done",
@@ -2598,7 +2600,7 @@ export const en = {
   "home.glance.goDuplicates": "Go to the duplicates queue",
   "home.glance.goWatch": "Go to the deals that have gone quiet",
   "home.panel.decisions": "Waiting on you",
-  "home.panel.today": "Today",
+  "home.panel.focus": "Focus when time opens",
   "home.panel.overnight": "Overnight",
   "home.panel.position": "Position",
   "home.panel.watch": "Gone quiet",

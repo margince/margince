@@ -266,6 +266,26 @@ export function meetingRow(id: string, prepared: boolean): WorklistItem {
 
 type WorklistItem = components["schemas"]["WorklistItem"];
 
+/**
+ * The overnight run's suggestion as the WORKLIST carries it.
+ *
+ * Same id as the `MorningBrief` item it came from — `briefItem` in
+ * `attention/render.go` sends the entry's own id — which is what lets the Focus
+ * section leave out whatever Do next already drew.
+ */
+export function overnightRow(id: string, dealId: string): WorklistItem {
+  return {
+    id,
+    source: "brief_item",
+    level: 3,
+    category: "deals_at_risk",
+    because: [],
+    consequence: "deal_drifts",
+    actions: ["act", "set_aside", "dismiss"],
+    subject: { type: "deal", id: dealId },
+  };
+}
+
 /** One customer waiting on an answer — the row Do next leads with. */
 export function waitingRow(): WorklistItem {
   return {
