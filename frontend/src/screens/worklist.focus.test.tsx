@@ -114,6 +114,25 @@ describe("the queue's top row, drawn as the one thing to do next", () => {
     expect(request?.method ?? init?.method).toBe("PATCH");
   });
 
+  // The card draws ONE control. TaskQuickActions would add Snooze beside Done
+  // for any dated task — and every task the queue carries is dated — which is
+  // the list again in a bigger box.
+  it("offers the completion alone, not a menu", () => {
+    renderCard(taskItem({ due_at: "2026-09-04T09:00:00Z" }));
+    expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Snooze/ })).toBeNull();
+  });
+
+  // A hand-written task linked to nothing is completable where it stands, so
+  // the card draws it. Requiring a record address would hide the one row a rep
+  // can finish without opening anything.
+  it("promotes a completable task that points at no record", () => {
+    const unlinked = taskItem({ subject: undefined });
+    expect(focusOf([unlinked])).toBe(unlinked);
+    renderCard(unlinked);
+    expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+  });
+
   it("draws nothing for a notice's acknowledge, even with a record to name", () => {
     const { container } = renderCard(
       dealItem({

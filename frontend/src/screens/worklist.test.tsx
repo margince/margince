@@ -715,15 +715,21 @@ describe("the one thing to do next", () => {
   it("promotes no card when the row has nowhere for its verb to go", async () => {
     stub(
       day({
-        // A task filed under nothing: no subject, so rowHref falls through
-        // SOURCE_QUEUE and finds no address. The server named a verb, and the
-        // page has nowhere to send it.
+        // Filed under nothing, so rowHref falls through SOURCE_QUEUE and finds
+        // no address. The server named a verb and the page has nowhere to send
+        // it.
+        //
+        // Deliberately NOT a task: a task's `complete` acts on the row itself
+        // and needs no address, so this case would be asserting the opposite
+        // rule with a task fixture.
         queue: [
           row({
             id: "unfiled",
+            source: "sync_health",
+            category: "system",
             title: "Something to do",
             band: "keep_momentum",
-            primary_action: "complete",
+            primary_action: "open",
           }),
         ],
         summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },

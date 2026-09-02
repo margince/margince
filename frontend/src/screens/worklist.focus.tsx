@@ -13,11 +13,12 @@
 // verb the server named. The row stays in the queue below it, because removing
 // it would make the rank numbers lie and the counts disagree with the page.
 
-import { Badge } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Panel } from "../design-system/panel";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { TaskQuickActions, useTaskUpdate } from "./taskactions";
+import { problemMessageOf } from "./common";
+import { useTaskUpdate } from "./taskactions";
 import {
   consequenceText,
   dealFactsText,
@@ -104,12 +105,32 @@ function FocusVerb({
   const t = useT();
   const update = useTaskUpdate([worklistKey]);
   if (item.source === "task" && item.primary_action === "complete") {
+    // The completion alone, not TaskQuickActions — that draws Snooze beside it
+    // for any dated task, and every task the queue carries is dated. Two
+    // controls here would be the list again in a bigger box, which is the one
+    // thing this card exists not to be. Snooze stays on the row below, where
+    // the server's own `actions` list already offers it.
     return (
-      <TaskQuickActions
-        activityId={item.id}
-        dueAt={item.due_at}
-        update={update}
-      />
+      <>
+        <Button
+          small
+          variant="primary"
+          disabled={update.isPending}
+          onClick={() =>
+            update.mutate({ id: item.id, body: { is_done: true } })
+          }
+        >
+          {t("tasks.complete")}
+        </Button>
+        {/* A rejected PATCH otherwise leaves the card rendering exactly as a
+            click that did nothing would, and the reader has no reason to try
+            again — the same reason NoticeAcknowledge says so. */}
+        {update.isError && (
+          <span className="co-part-error" role="alert">
+            {problemMessageOf(update.error, t)}
+          </span>
+        )}
+      </>
     );
   }
   if (move) {
@@ -158,11 +179,17 @@ export function worthActingOn(item: WorklistItem): boolean {
   if (item.primary_action === "acknowledge") {
     return false;
   }
-  // And somewhere for the verb to GO. A row filed under no record — a task
-  // nobody linked to anything — has no address at all: rowHref falls through
-  // the subject and the source-queue map and finds none. The card would then
-  // be a headline with no way to act, occupying the one place a reader looks
-  // for their next step.
+  // A completable task needs no address: the verb acts on the row itself.
+  // The backend mints exactly this — a hand-written task linked to nothing,
+  // "readable, completable, and pointing nowhere" — and requiring an href
+  // would hide the one row a rep can finish without opening anything.
+  if (item.source === "task" && item.primary_action === "complete") {
+    return true;
+  }
+  // Otherwise the verb needs somewhere to GO. A row filed under no record has
+  // no address at all: rowHref falls through the subject and the source-queue
+  // map and finds none. The card would then be a headline with no way to act,
+  // occupying the one place a reader looks for their next step.
   return rowHref(item) !== undefined || moveHref(item) !== undefined;
 }
 
