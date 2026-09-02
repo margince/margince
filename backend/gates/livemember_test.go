@@ -76,15 +76,16 @@ const (
 // keying on statement text, which changes with every whitespace edit and
 // ratifies nothing stable.
 var cannotReachIdentity = gatekit.Waive(map[string]string{
-	"internal/modules/activities/audience.go":     "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/activities/lifecycle.go":    "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/dealrooms/store_public.go":  "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/people/counterpartyname.go": "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/people/leadrouting.go":      "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/people/linkedinmatch.go":    "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/surface.go":        "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/transfer.go":       "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/search/graphedge.go":        "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/activities/audience.go":        "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/activities/lifecycle.go":       "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/dealrooms/store_public.go":     "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/capture/owneridentitystore.go": "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/people/counterpartyname.go":    "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/people/leadrouting.go":         "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/people/linkedinmatch.go":       "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/projects/surface.go":           "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/projects/transfer.go":          "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/search/graphedge.go":           "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
 })
 
 // deliberatelyNotLiveness ratifies the half-spellings that are not answering

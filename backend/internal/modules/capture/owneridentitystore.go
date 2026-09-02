@@ -262,11 +262,22 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	// SQL: a display-form label compared as a whole address matches no header,
 	// and the seat's primary address would be missing from the set with nothing
 	// to say so.
+	// The seat's LOGIN address belongs to the set for the same reason the
+	// connection label does, and it is a different address in the ordinary case:
+	// somebody signs in as themselves and connects a mailbox that is also
+	// theirs, and the two agree — but a seat who signs in with a work address
+	// and connects a second mailbox has two addresses, both of them their own,
+	// and only one of them was known here. The other stood in as a counterparty
+	// to itself, and a founder's own address became a contact in his workspace.
+	//
+	// It is read rather than declared because nobody should have to declare who
+	// they are to the product they are signed in to.
 	rows, err := tx.Query(ctx, `
 		SELECT kind, value FROM capture_owner_identity WHERE user_id = $1
 		 UNION ALL
 		SELECT 'address', account_label FROM capture_connection
-		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL`, user)
+		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
+`, user)
 	if err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
 	}
@@ -289,7 +300,49 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	if err := rows.Err(); err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
 	}
+	login, err := seatLoginAddressTx(ctx, tx, user)
+	if err != nil {
+		return SelfSet{}, err
+	}
+	if login != "" {
+		addresses = append(addresses, login)
+	}
 	return NewSelfSet(addresses, domains), nil
+}
+
+// seatLoginAddressTx is the address this seat signs in with.
+//
+// It is read on its own rather than UNIONed into the query above, because it
+// asks a different question of a different table: that query is about what a
+// seat has DECLARED and what their connection reports, and neither has a
+// liveness condition. This one reads app_user, where "still works here" is
+// status AND archived_at together — deactivation sets the status and leaves
+// archived_at NULL, so either half alone goes on offering a departed
+// colleague's address as somebody's own.
+//
+// A seat whose account is no longer live yields nothing, which is the safe
+// direction: their address then falls to the ordinary ladder, where it is
+// judged like any other rather than silently treated as the caller's. In
+// practice a deactivated seat cannot reach the sink at all — the grant dies
+// with them, and capture refuses the message before this is read — so the
+// liveness condition here is a second lock on a door that is already shut, and
+// it is spelled correctly so that it stays one if that ever changes.
+//
+// The liveness predicate is spelled out rather than calling identity's helper:
+// identity owns app_user and capture may not import a sibling module. Both
+// halves are named, which is the thing that matters — either alone would go on
+// offering a departed colleague's address.
+func seatLoginAddressTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (string, error) {
+	var email string
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(email, '') FROM app_user
+		 WHERE id = $1 AND status = 'active' AND archived_at IS NULL`, user).Scan(&email); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		}
+		return "", fmt.Errorf("capture: reading the seat's own login address: %w", err)
+	}
+	return bareAddress(email), nil
 }
 
 // retirePendingForIdentityTx settles the seat's own open questions about an
