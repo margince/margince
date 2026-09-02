@@ -23,14 +23,35 @@ func LeadingTier(task Task) Tier {
 	return ladder[0]
 }
 
-// IsBound says whether a tier binding has a model behind it.
+// EffectiveModel is the model a binding actually serves with, including the
+// defaults the client builder supplies for the providers that have one.
 //
-// A tier present in a routing map with no provider or no model is NOT bound: the
-// router builds no client from it. It is a function rather than two comparisons
-// at each call site because three callers reasoning about what answers had each
-// written the same pair, and a fourth would have written it again.
+// It exists because "no model in the routing document" does NOT mean "no model
+// serves": SelectBrain defaults ollama to defaultOllamaModel and vLLM to
+// defaultVLLMModel, so a tier written `{provider: ollama}` is served — and a
+// caller that read Model directly would report a task the router runs every day
+// as having no model bound. The defaults are read from the same constants the
+// client builder uses, so the two cannot drift.
+func EffectiveModel(binding ProviderConfig) string {
+	switch binding.Provider {
+	case providerOllama:
+		return defaulted(binding.Model, defaultOllamaModel)
+	case providerVLLM:
+		return defaulted(binding.Model, defaultVLLMModel)
+	default:
+		return binding.Model
+	}
+}
+
+// IsBound says whether a tier binding serves anything.
+//
+// A tier present in a routing map with no provider, or with no model AND no
+// provider default, is NOT bound: the router builds no client from it. It is a
+// function rather than two comparisons at each call site because three callers
+// reasoning about what answers had each written the same pair, and a fourth
+// would have written it again.
 func IsBound(binding ProviderConfig) bool {
-	return binding.Provider != "" && binding.Model != ""
+	return binding.Provider != "" && EffectiveModel(binding) != ""
 }
 
 // FirstBoundTier is the rung a deployment actually serves a task on: the first
@@ -48,9 +69,15 @@ func IsBound(binding ProviderConfig) bool {
 // answers.
 func FirstBoundTier(routing RoutingConfig, task Task) (ProviderConfig, Tier, bool) {
 	for _, tier := range taskLadders[task] {
-		if binding, bound := routing.Tiers[tier]; bound && IsBound(binding) {
-			return binding, tier, true
+		binding, bound := routing.Tiers[tier]
+		if !bound || !IsBound(binding) {
+			continue
 		}
+		// The effective model, not the document's: a caller joining certification
+		// records on the model must look up what ANSWERED, and for ollama and
+		// vLLM that can be a default the routing file never spells.
+		binding.Model = EffectiveModel(binding)
+		return binding, tier, true
 	}
 	return ProviderConfig{}, "", false
 }

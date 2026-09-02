@@ -98,6 +98,11 @@ function useReplaceRouting() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["ai-routing"], data);
+      // The certification card sits directly below this one and reports on
+      // whichever models are bound. Left alone it keeps answering for the
+      // binding that was just replaced — the same page showing a reader a
+      // reliability figure for a model they have stopped using.
+      queryClient.invalidateQueries({ queryKey: ["ai-certification"] });
     },
   });
 }

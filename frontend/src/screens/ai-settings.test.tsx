@@ -232,6 +232,42 @@ describe("AiSettingsTab", () => {
   // the server returned. Without that, the page went on offering to discard
   // edits that had already landed — the worst shape this question can take,
   // because a reader who says yes loses nothing and learns to distrust it.
+  it("refreshes how-well-it-performs when the binding is saved", async () => {
+    // Both cards sit in this tab, and the lower one reports on whichever models
+    // are bound. Without invalidation it keeps answering for the binding that
+    // was just replaced — a reliability figure for a model the reader has
+    // stopped using, on the same screen where they stopped using it.
+    const user = userEvent.setup({ delay: null });
+    let certReads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req = new Request(input, init);
+        if (req.url.includes("/ai/certification")) {
+          certReads += 1;
+          return jsonResponse({
+            binding_state: "bound",
+            jobs: [],
+          });
+        }
+        if (req.url.includes("/ai/routing")) {
+          return jsonResponse(ROUTING);
+        }
+        return backendFor(OPERATOR)(input, init);
+      }),
+    );
+    render(<AiSettingsTab />);
+
+    const lane = await screen.findByTestId("ai-routing-tier-premium");
+    await waitFor(() => expect(certReads).toBeGreaterThan(0));
+    const before = certReads;
+
+    await user.click(within(lane).getByRole("button", { name: /change/i }));
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(certReads).toBeGreaterThan(before));
+  });
+
   it("stops asking once the edits have been saved", async () => {
     const user = userEvent.setup();
     const saved = {

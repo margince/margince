@@ -47,10 +47,20 @@ func catalogueKeys(t *testing.T) map[string]bool {
 	// next line is one statement, and a line-wise scan would miss its
 	// neighbours. Under-recognition is the one way this gate must not break —
 	// it would read a smaller catalogue and report PASS.
-	keyed := regexp.MustCompile(`"(aiCert\.(?:job|site)\.[a-z0-9_.]+)"\s*:`)
+	// The VALUE as well as the key: a translation added as "" — or as the
+	// identifier repeated — would satisfy a presence check while shipping exactly
+	// the "no wording" this gate exists to prevent.
+	keyed := regexp.MustCompile(`"(aiCert\.(?:job|site)\.[a-z0-9_.]+)"\s*:\s*\n?\s*"([^"]*)"`)
 	found := map[string]bool{}
 	for _, m := range keyed.FindAllStringSubmatch(string(raw), -1) {
-		found[m[1]] = true
+		key, name := m[1], strings.TrimSpace(m[2])
+		if name == "" {
+			continue // present but unnamed is the same as absent to a reader
+		}
+		if strings.HasSuffix(key, "."+name) {
+			continue // the identifier as its own name is not a human name
+		}
+		found[key] = true
 	}
 	if len(found) == 0 {
 		t.Fatalf("no aiCert.job/site keys found in %s — the pattern has stopped matching the catalogue, "+

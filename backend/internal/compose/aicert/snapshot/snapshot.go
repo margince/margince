@@ -150,6 +150,18 @@ func (s Snapshot) For(task, site, provider, model, envClass string) (Row, bool) 
 	if err != nil {
 		return Row{}, false
 	}
+	// Rows is exported and the index is not, so a caller can decode JSON straight
+	// into a Snapshot and hold every row with no index at all. Left alone, that
+	// reads the nil map and answers "not measured" about a table that has the
+	// answer — the one failure mode of this type that looks like data rather
+	// than a bug. Indexing on demand makes the two paths agree.
+	if s.byKey == nil && len(s.Rows) > 0 {
+		indexed, err := index(s)
+		if err != nil {
+			return Row{}, false
+		}
+		s = indexed
+	}
 	row, found := s.byKey[key]
 	return row, found
 }

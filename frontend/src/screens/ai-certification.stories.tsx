@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { components } from "../api/schema";
-import { LocaleProvider } from "../i18n";
+import { meFixture } from "../app/mefixture";
 import { AiCertificationCard } from "./ai-certification";
+import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type Certification = components["schemas"]["AiCertification"];
 type Job = components["schemas"]["AiCertificationJob"];
@@ -96,21 +96,24 @@ const CAVEATS: Certification = {
   ],
 };
 
-function Fixture({ cert }: Readonly<{ cert: Certification }>) {
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, queryFn: async () => cert },
-    },
-  });
-  return (
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <div style={{ maxWidth: 720 }}>
-          <AiCertificationCard />
-        </div>
-      </LocaleProvider>
-    </QueryClientProvider>
-  );
+// Stubbed at the FETCH boundary, not at the query client: the card owns its own
+// queryFn, so a default queryFn on the client never reaches it, and it gates on
+// useCan("ai_routing","read") which reads GET /me — unstubbed, that fails closed
+// and the card renders nothing at all. Both mistakes render an empty surface
+// that the story-render gate cannot tell from a working one.
+function fixture(cert: Certification) {
+  return () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { ai_routing: ["read"] } })),
+      "GET /ai/certification": () => jsonResponse(cert),
+    });
+    return (
+      <StoryProviders>
+        <AiCertificationCard />
+      </StoryProviders>
+    );
+  };
 }
 
 const meta: Meta<typeof AiCertificationCard> = {
@@ -122,13 +125,21 @@ export default meta;
 type Story = StoryObj<typeof AiCertificationCard>;
 
 export const EveryResult: Story = {
-  render: () => <Fixture cert={EVERY_RESULT} />,
+  render: fixture(EVERY_RESULT),
+};
+
+// The result states are carried by Badge tones that are color-mix() derived and
+// can flatten against the dark panel, so the palette is verified in both themes
+// the way every other AI screen story does it.
+export const EveryResultDark: Story = {
+  render: fixture(EVERY_RESULT),
+  globals: { theme: "dark" },
 };
 
 export const NothingBound: Story = {
-  render: () => <Fixture cert={NOTHING_BOUND} />,
+  render: fixture(NOTHING_BOUND),
 };
 
 export const Caveats: Story = {
-  render: () => <Fixture cert={CAVEATS} />,
+  render: fixture(CAVEATS),
 };

@@ -285,6 +285,10 @@ func TestTheOnlyExcludedJobIsTheGrader(t *testing.T) {
 		t.Fatalf("building the census: %v", err)
 	}
 	sites := census.All()
+	if len(sites) == 0 {
+		t.Fatal("the census is empty, so the verification below would report a pass " +
+			"having checked nothing — which is the exact failure this test defends against")
+	}
 	view := certificationView(boundEverywhere(), sites, snapOf(t))
 
 	shipped := map[ai.Task]bool{}

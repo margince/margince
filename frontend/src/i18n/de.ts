@@ -3941,7 +3941,7 @@ export const de = {
   "aiCert.oneKindFails":
     "eine Art von Beispiel scheitert jedes Mal — deshalb liest sich auch ein hoher Wert als nicht verlässlich",
   "aiCert.pendingExamples":
-    "{measured} von {total} Beispielen geprüft; die übrigen kamen später dazu und wurden nie gelaufen",
+    "{measured} von {total} Beispielen geprüft; die übrigen kamen später dazu und sind nie gelaufen",
   "aiCert.measuredOn":
     "gemessen am {date}; die Anweisungen oder Beispiele der Aufgabe haben sich seitdem geändert, das hier beschreibt also eine ältere Fassung",
   "aiCert.otherProfile":

@@ -88,15 +88,13 @@ func lessRow(a, b snapshot.Row) bool {
 // key admits exactly one row per (task, site, provider, model, env), so two here
 // mean two record files claiming the same measurement — a generation fault worth
 // naming, never a silent last-writer-wins.
+//
+// Delegated to the snapshot's own index rather than rebuilt here. A key joined
+// with "/" would be WRONG: a model id contains slashes (openai/gpt-oss-120b), so
+// two distinct rows can produce one joined string and read as a duplicate that
+// the binary indexes separately. Asking the indexer is also the only way this
+// check and the load-time one cannot disagree.
 func refuseDuplicates(rows []snapshot.Row) error {
-	seen := make(map[string]bool, len(rows))
-	for _, row := range rows {
-		key := fmt.Sprintf("%s/%s/%s/%s/%s", row.Task, row.Site, row.Provider, row.Model, row.EnvClass)
-		if seen[key] {
-			return fmt.Errorf("two certification rows share the key %s; "+
-				"the snapshot admits one measurement per site and binding, so remove the duplicate record", key)
-		}
-		seen[key] = true
-	}
-	return nil
+	_, err := snapshot.FromRows(rows)
+	return err
 }

@@ -598,6 +598,11 @@ drift: gen ## Fail when any generated file drifted from the contract
 	# the binary would ship a page no reviewer read.
 	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md')"; \
 		[ -z "$$u" ] || { echo "drift: uncommitted embedded handbook page(s):" >&2; echo "$$u" >&2; exit 1; }
+	# Same blind spot again: the certification snapshot deleted from git and
+	# recreated by gen is UNTRACKED, so the diff above sees nothing while the
+	# binary embeds a table no reviewer read.
+	@u="$$(git ls-files --others --exclude-standard -- internal/compose/aicert/snapshot/certification.json)"; \
+		[ -z "$$u" ] || { echo "drift: uncommitted certification snapshot:" >&2; echo "$$u" >&2; exit 1; }
 
 # The MCP App admission vocabulary is AUTHORED in frontend/src/mcp-apps, where
 # the build-time validator imports it, and copied here because go:embed cannot

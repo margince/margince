@@ -11,9 +11,13 @@
 //
 // It is a go-run-only developer tool, not a shipped process role:
 // `make e2e-ai-report` invokes it directly with `go run`, so it never gets a
-// cmd/<role> entry of its own. It always exits 0 — the certification lane is
-// paid and manual, and a report that failed a build would make every prompt
-// edit wait on a paid run.
+// cmd/<role> entry of its own.
+//
+// The TEXT report always exits 0 — the certification lane is paid and manual,
+// and a report that failed a build would make every prompt edit wait on a paid
+// run. `-format=json` is the opposite: it feeds `make gen`, so a snapshot it
+// could not build exits non-zero rather than leaving the previous file in place
+// looking freshly generated.
 package main
 
 import (
@@ -112,8 +116,17 @@ func writeSnapshot(census shippedCensus, stamps map[string]string, perScenario m
 		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
 		os.Exit(1)
 	}
-	if err := os.WriteFile(out, encoded, 0o600); err != nil {
-		fmt.Fprintf(os.Stderr, "reportcmd: writing %s: %v\n", out, err)
+	// Written beside the target and renamed, because os.WriteFile truncates
+	// first: a failure part-way leaves a half-written file that the next build
+	// cannot embed, and `make gen` would have to be diagnosed from a compile
+	// error in a generated artifact. The rename is atomic within the directory.
+	tmp := out + ".tmp"
+	if err := os.WriteFile(tmp, encoded, 0o600); err != nil {
+		fmt.Fprintf(os.Stderr, "reportcmd: writing %s: %v\n", tmp, err)
+		os.Exit(1)
+	}
+	if err := os.Rename(tmp, out); err != nil {
+		fmt.Fprintf(os.Stderr, "reportcmd: renaming %s to %s: %v\n", tmp, out, err)
 		os.Exit(1)
 	}
 }
