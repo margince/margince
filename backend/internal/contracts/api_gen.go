@@ -27356,6 +27356,46 @@ type RescheduleSendRequest struct {
 	ScheduledTz string    `json:"scheduled_tz"`
 }
 
+// ResponseMetrics What the workspace did with its waiting work over one window. Two questions: how
+// fast it answered what it answered, and how much it put down instead.
+type ResponseMetrics struct {
+	// Answered How many inbound sales messages got a reply in the window. It is the
+	// denominator `median_minutes` is worth reading against: a fast median over three
+	// answered messages says less about the workspace than a slower one over three
+	// hundred.
+	Answered int `json:"answered"`
+
+	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
+	// judged not sales.
+	//
+	// Counted from the audit record rather than from what is set aside now. A snooze
+	// that lifted and a not_mine somebody withdrew leave no trace in the current
+	// state, so a figure read from there would FALL as readers tidied up — reporting
+	// less judgement the more of it happened.
+	Disposed int `json:"disposed"`
+
+	// DisposedNotSales How many of those were the workspace-wide judgement. Its own figure because it
+	// is the one that costs everybody: the other two hide a row from one reader, this
+	// one hides the conversation from all of them and does not lift.
+	DisposedNotSales int `json:"disposed_not_sales"`
+
+	// From The start of the window, inclusive.
+	From time.Time `json:"from"`
+
+	// MedianMinutes How long the middle answered message waited, in minutes.
+	//
+	// The MEDIAN rather than the mean, for the reason the material bar takes one: a
+	// single message answered after three weeks drags an average past every figure a
+	// reader would recognise, and the question is what a customer TYPICALLY waits.
+	//
+	// Zero when nothing was answered, which `answered` tells apart from a genuine
+	// zero-minute median.
+	MedianMinutes int `json:"median_minutes"`
+
+	// To The end of the window, exclusive — so consecutive windows partition time and a message on a boundary is counted once.
+	To time.Time `json:"to"`
+}
+
 // RestrictedRecord defines model for RestrictedRecord.
 type RestrictedRecord struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
@@ -35252,6 +35292,14 @@ type GetWorklistParamsScope string
 
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
+
+// GetResponseMetricsParams defines parameters for GetResponseMetrics.
+type GetResponseMetricsParams struct {
+	// Days How many days back the window reaches. Capped at 90: past that the figure stops
+	// describing how the workspace works now and starts averaging over a change in
+	// how it works.
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
 
 // LogActivityJSONRequestBody defines body for LogActivity for application/json ContentType.
 type LogActivityJSONRequestBody = CreateActivityRequest
@@ -45290,6 +45338,9 @@ type ServerInterface interface {
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
+	// How fast the workspace answers, and how much of the queue it puts down.
+	// (GET /worklist/response)
+	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
 	// (GET /worklist/team)
 	GetTeamBoard(w http.ResponseWriter, r *http.Request)
@@ -48620,6 +48671,12 @@ func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, param
 // What the queue is not showing, and which rule is holding it back.
 // (GET /worklist/hidden)
 func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How fast the workspace answers, and how much of the queue it puts down.
+// (GET /worklist/response)
+func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72661,6 +72718,47 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetResponseMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetResponseMetricsParams
+
+	// ------------- Optional query parameter "days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "days", r.URL.Query(), &params.Days, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetResponseMetrics(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTeamBoard operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 
@@ -74457,6 +74555,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/response", wrapper.GetResponseMetrics)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)
