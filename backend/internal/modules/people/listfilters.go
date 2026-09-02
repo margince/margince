@@ -42,6 +42,7 @@ const (
 	filterRelationshipType = "relationship_type"
 	filterStatus           = "status"
 	filterTag              = "tag"
+	filterTagMode          = "tag_mode"
 	filterDomain           = "domain"
 	filterMinScore         = "min_score"
 	filterPartnerRole      = "partner_role"
@@ -50,7 +51,17 @@ const (
 
 var personListFilters = storekit.FilterSet[ListPeopleInput]{
 	filterOwnerID: storekit.FilterID(func(in *ListPeopleInput, id *ids.UserID) { in.OwnerID = id }),
-	filterTag:     storekit.FilterWord(func(in *ListPeopleInput, v *string) { in.Tag = v }),
+	filterTag:     storekit.FilterIDList[ids.TagKind](func(in *ListPeopleInput, v []ids.UUID) { in.TagIDs = v }),
+	filterTagMode: storekit.FilterWord(func(in *ListPeopleInput, v *string) {
+		// A stored mode the enum does not admit selects `any`, the default the
+		// contract gives an absent one: a saved view is not a request and has
+		// no caller to refuse to.
+		mode, err := storekit.ParseTagMode(v)
+		if err != nil {
+			mode = storekit.TagModeAny
+		}
+		in.TagMode = mode
+	}),
 }
 
 var organizationListFilters = storekit.FilterSet[ListOrganizationsInput]{

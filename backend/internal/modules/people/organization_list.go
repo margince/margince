@@ -32,6 +32,10 @@ const orgNameColumn = "display_name"
 // ListOrganizationsInput carries the organization list's contract
 // parameters.
 type ListOrganizationsInput struct {
+	// TagIDs narrows to the accounts carrying these tags, combined by TagMode.
+	// The predicate is storekit's, shared with the person and deal lists.
+	TagIDs  []ids.UUID
+	TagMode storekit.TagMode
 	// IncludeAnchor admits the installation's own company (ADR-0082/A127).
 	IncludeAnchor bool
 	Cursor        *string
@@ -167,6 +171,9 @@ func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput
 				where = append(where, storekit.SQLf("classification = $%d", arg(*in.Classification)))
 			}
 			if clause := organizationDomainClause(in.Domain, in.IncludeArchived, arg); clause != "" {
+				where = append(where, clause)
+			}
+			if clause := storekit.TagFilterClause(organizationEntity, "organization.id", in.TagIDs, in.TagMode, arg); clause != "" {
 				where = append(where, clause)
 			}
 			// A value outside the enum is a client mistake, not a selection

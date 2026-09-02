@@ -57,7 +57,7 @@ const (
 	paramOrganizationID = "organization_id"
 	paramStatus         = "status"
 	paramKind           = "kind"
-	paramTag            = "tag"
+	paramTag            = "tag_id"
 	// paramCapturedByKind is refused in overlay mode rather than ignored:
 	// captured_by is OUR provenance column, stamped from the principal that
 	// wrote the row. Mirror rows are the incumbent's records, created in the
@@ -216,7 +216,7 @@ func (s Server) ListPeople(w http.ResponseWriter, r *http.Request, params crmcon
 			{paramOwnerID, params.OwnerId != nil},
 			{paramOwnerTeamID, params.OwnerTeamId != nil},
 			{paramUnassigned, params.Unassigned != nil && *params.Unassigned},
-			{paramTag, params.Tag != nil},
+			{paramTag, params.TagId != nil && len(*params.TagId) > 0},
 			// Employment is OUR edge: the mirror holds the incumbent's own
 			// contact-to-company links, under their ids, so a margince
 			// organization id names nothing there.

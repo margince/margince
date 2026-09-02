@@ -1,0 +1,94 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package storekit
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// The tag filter every list surface shares.
+//
+// People, companies and deals all narrow by tag, and the three predicates are
+// the same shape over one polymorphic table. Written once here, in the layer
+// each module already depends on, because three copies of a NOT EXISTS is
+// three chances for one of them to mean something subtly different — and the
+// mode that would drift first is `none`, the one nobody notices is wrong until
+// a rep is looking at a record they filtered out.
+
+// TagMode says how several tag ids combine.
+type TagMode string
+
+const (
+	// TagModeAny selects a record carrying at least one of the named tags.
+	TagModeAny TagMode = "any"
+	// TagModeAll selects a record carrying every one of them.
+	TagModeAll TagMode = "all"
+	// TagModeNone selects a record carrying not one of them.
+	TagModeNone TagMode = "none"
+)
+
+// ParseTagMode reads a wire value, defaulting an absent one to `any`.
+//
+// An unknown mode is refused rather than defaulted: silently treating a typo
+// as `any` would hand back a wider slice than the caller asked for, and a
+// filter that quietly widens is worse than one that fails.
+func ParseTagMode(raw *string) (TagMode, error) {
+	if raw == nil || *raw == "" {
+		return TagModeAny, nil
+	}
+	switch TagMode(*raw) {
+	case TagModeAny, TagModeAll, TagModeNone:
+		return TagMode(*raw), nil
+	default:
+		return "", fmt.Errorf("tag_mode %q: want any, all or none", *raw)
+	}
+}
+
+// TagFilterClause renders the predicate narrowing one entity's rows by tag,
+// or "" when no tag was named.
+//
+// `idColumn` is how the outer query names the record's own id — "person.id",
+// "o.id" — because each list builds its own FROM and this has to attach to it.
+//
+// EXISTS rather than a join, in every mode: a record carries many tags, and a
+// join would return it once per matching link — rows a keyset cursor would
+// then page over as if they were distinct records.
+//
+// Archived tags are excluded. A word somebody retired is not in the picker, so
+// a filter naming it selects a slice no reader can construct or explain; and
+// after a merge releases a name, a re-coined word would otherwise drag along
+// the records carrying the older retired tag of the same spelling.
+func TagFilterClause(entityType, idColumn string, tagIDs []ids.UUID, mode TagMode, arg func(any) int) string {
+	if len(tagIDs) == 0 {
+		return ""
+	}
+	switch mode {
+	case TagModeAll:
+		// One EXISTS per tag: a single subquery cannot say "carries all of
+		// these" without counting, and counting reads worse than the shape a
+		// reader can check tag by tag.
+		parts := make([]string, 0, len(tagIDs))
+		for _, id := range tagIDs {
+			parts = append(parts, tagExists(entityType, idColumn, []ids.UUID{id}, arg))
+		}
+		return "(" + strings.Join(parts, " AND ") + ")"
+	case TagModeNone:
+		return "NOT " + tagExists(entityType, idColumn, tagIDs, arg)
+	default:
+		return tagExists(entityType, idColumn, tagIDs, arg)
+	}
+}
+
+// tagExists renders one EXISTS over the taggable link for these ids.
+func tagExists(entityType, idColumn string, tagIDs []ids.UUID, arg func(any) int) string {
+	return fmt.Sprintf(`EXISTS (
+		SELECT 1 FROM taggable tg
+		  JOIN tag t ON t.id = tg.tag_id
+		WHERE tg.entity_type = $%d AND tg.entity_id = %s
+		  AND tg.tag_id = ANY($%d) AND t.archived_at IS NULL)`,
+		arg(entityType), idColumn, arg(tagIDs))
+}

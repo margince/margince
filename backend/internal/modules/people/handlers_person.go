@@ -35,6 +35,19 @@ func (h Handlers) MergePerson(w http.ResponseWriter, r *http.Request, id crmcont
 	httperr.WriteJSON(w, http.StatusOK, survivor)
 }
 
+// uuidArgs widens a repeated uuid query parameter to the store's own shape.
+// An absent parameter and an empty list are the same thing here: no filter.
+func uuidArgs(in *[]openapi_types.UUID) []ids.UUID {
+	if in == nil {
+		return nil
+	}
+	out := make([]ids.UUID, 0, len(*in))
+	for _, v := range *in {
+		out = append(out, ids.UUID(v))
+	}
+	return out
+}
+
 func (h Handlers) ListPeople(w http.ResponseWriter, r *http.Request, params crmcontracts.ListPeopleParams) {
 	in := ListPeopleInput{
 		Cursor:          params.Cursor,
@@ -45,8 +58,14 @@ func (h Handlers) ListPeople(w http.ResponseWriter, r *http.Request, params crmc
 		AiWritten:       params.AiWritten,
 		Sort:            params.Sort,
 		CustomFilters:   httperr.CustomFieldFilters(r),
-		Tag:             params.Tag,
+		TagIDs:          uuidArgs(params.TagId),
 	}
+	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
+	if err != nil {
+		httperr.Write(w, r, httperr.Validation("tag_mode", "invalid", err.Error()))
+		return
+	}
+	in.TagMode = mode
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned

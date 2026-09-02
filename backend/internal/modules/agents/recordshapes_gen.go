@@ -46,7 +46,6 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "organization_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
 		{Name: "owner_team_id", Type: "string"},
-		{Name: "tag", Type: "string"},
 		{Name: "unassigned", Type: "boolean"},
 	},
 	"organization": {
