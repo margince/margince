@@ -5100,8 +5100,9 @@ export interface paths {
         /**
          * List tags.
          * @description The workspace's tag vocabulary. Read it before applying one: apply_tag takes a tag_name and
-         *     creates the word when there is none, so a caller who cannot see the existing words invents a
-         *     near-duplicate — "K5 Conference" beside "K5 Conference 2026" — and the vocabulary stops being one.
+         *     REFUSES a word the workspace does not hold, so a caller who cannot see the existing words
+         *     asks for a near-duplicate — "K5 Conference" beside "K5 Conference 2026" — and an admin
+         *     coins it, and the vocabulary stops being one.
          */
         get: operations["listTags"];
         put?: never;
@@ -5123,11 +5124,81 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Read one tag, with how much of the workspace carries it.
+         * @description The word and its weight. `usage` counts the records this caller may see — an admin
+         *     deciding whether to retire a tag needs to know what retiring it costs, and a count
+         *     that included rows they cannot read would be a number they cannot act on.
+         *
+         *     Counts cover the three advertised record types. Lead and project taggings exist in
+         *     storage and are not advertised, so they are not counted here either.
+         */
+        get: operations["getTag"];
         put?: never;
         post?: never;
-        /** Archive a tag. */
+        /**
+         * Archive a tag.
+         * @description Retiring a word leaves every record that carries it alone: the taggings stay, so a
+         *     history that says "this was a Key Account in March" is still true. What changes is
+         *     that nobody can apply it again.
+         */
         delete: operations["archiveTag"];
+        options?: never;
+        head?: never;
+        /** Rename, recolour or describe a tag. */
+        patch: operations["updateTag"];
+        trace?: never;
+    };
+    "/tags/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring an archived tag back into the vocabulary.
+         * @description The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
+         *     name in the meantime: two words a reader cannot tell apart is the exact state the
+         *     vocabulary exists to prevent, and the caller has to rename one of them first.
+         */
+        post: operations["restoreTag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fold this tag into another, moving every record that carries it.
+         * @description The fix for a vocabulary that grew two words for one idea. Every record carrying the
+         *     source ends up carrying the target, the source is archived, and its NAME IS RELEASED
+         *     — a later create may reuse it, and links to the old tag stop working.
+         *
+         *     The answer separates `moved` from `collapsed` because they are different facts: a
+         *     record that carried only the source is moved, and one that already carried both
+         *     collapses into a single tagging. An admin reading "12 moved, 3 collapsed" knows the
+         *     target grew by 12, which a single total would not tell them.
+         */
+        post: operations["mergeTags"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -21199,6 +21270,8 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | null;
             description?: string | null;
+            /** Format: int64 */
+            version?: number;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -21211,6 +21284,70 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | null;
             description?: string | null;
+        };
+        /** @description One tag with how much of the workspace carries it. */
+        TagDetail: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+            description?: string | null;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: date-time */
+            archived_at?: string | null;
+            usage: components["schemas"]["TagUsage"];
+        };
+        /**
+         * @description How many records of each advertised type carry this tag, counted within what the
+         *     reader may see. Lead and project taggings are storage the product does not advertise
+         *     and are not counted.
+         */
+        TagUsage: {
+            people: number;
+            companies: number;
+            deals: number;
+        };
+        /**
+         * @description A partial update: an omitted field is left alone.
+         *
+         *     Clearing is spelled as a VALUE, not as null. `color: "none"` removes the colour and
+         *     `description: ""` removes the text, because a decoded absent field and a decoded null
+         *     are the same thing in the generated request type — a contract that promised the two
+         *     meant different things would be promising something no server can honour.
+         *
+         *     The name cannot be cleared. A tag without one cannot be applied or read.
+         */
+        UpdateTagRequest: {
+            name?: string;
+            /** @enum {string} */
+            color?: "teal" | "amber" | "rose" | "slate" | "none";
+            description?: string;
+        };
+        MergeTagsRequest: {
+            /**
+             * Format: uuid
+             * @description The tag that survives. Must be live, and must not be this tag.
+             */
+            into_tag_id: string;
+        };
+        /** @description What the merge did, in the two numbers that differ. */
+        MergeTagsResult: {
+            /** Format: uuid */
+            into_tag_id: string;
+            /** @description Records that carried only the source and now carry the target. */
+            moved: number;
+            /**
+             * @description Records that already carried both. Their duplicate tagging is dropped rather than
+             *     moved, so the target gains nothing from them — which is why this is not folded
+             *     into `moved`.
+             */
+            collapsed: number;
         };
         Taggable: {
             /** Format: uuid */
@@ -36055,6 +36192,31 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tag. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     archiveTag: {
         parameters: {
             query?: never;
@@ -36077,6 +36239,106 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    updateTag: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTagRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated tag. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tag"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored tag. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tag"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    mergeTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeTagsRequest"];
+            };
+        };
+        responses: {
+            /** @description What the merge moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeTagsResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     applyTag: {

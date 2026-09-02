@@ -58,6 +58,31 @@ func (a tagAdapter) ResolveTag(ctx context.Context, name string) (ids.UUID, erro
 		name, apperrors.ErrNotFound)
 }
 
+// GetTag hands one word and its weight across. The counts come from the store
+// so the tool surface and the web surface report the same number — a tool that
+// counted for itself would be a second answer to the question the admin screen
+// already asks.
+func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetail, error) {
+	row, usage, err := a.store.GetTag(ctx, ids.From[ids.TagKind](tagID))
+	if err != nil {
+		return agents.TagDetail{}, err
+	}
+	out := agents.TagDetail{
+		Tag: agents.Tag{
+			TagID:    row.ID.UUID,
+			Name:     row.Name,
+			Archived: row.ArchivedAt != nil,
+		},
+		People:    usage.People,
+		Companies: usage.Companies,
+		Deals:     usage.Deals,
+	}
+	if row.Color != nil {
+		out.Color = *row.Color
+	}
+	return out, nil
+}
+
 // ListTags hands the collections module's own cross-module shape straight
 // through: TagVocabulary was written for a caller outside that module and
 // this is the first one, so there is nothing here to translate beyond the
