@@ -2281,6 +2281,14 @@ export const vi = {
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
   "brief.eyebrow": "Buổi sáng của bạn",
+  "brief.eyebrow.weekly": "Tuần của bạn",
+  // Hai nút chuyển của bản tóm tắt: bản nào, và của ai.
+  "brief.view.label": "Bản tóm tắt nào",
+  "brief.view.morning": "Buổi sáng",
+  "brief.view.weekly": "Tuần",
+  "brief.scope.label": "Bản tóm tắt của ai",
+  "brief.scope.mine": "Của tôi",
+  "brief.scope.team": "Nhóm",
   "brief.sentence.clear": "Sáng nay không có gì đang chờ bạn.",
   "brief.sentence.one": "Trước tiên: {lead}",
   "brief.sentence.oneWithCost": "Trước tiên: {lead} — {consequence}",

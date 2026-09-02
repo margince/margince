@@ -16,10 +16,6 @@ func (h hidingWork) Unanswered(context.Context, time.Time) ([]WaitingCustomer, b
 	return nil, false, nil
 }
 
-func (h hidingWork) Answered(context.Context, time.Time, time.Time) (AnsweredWork, error) {
-	return AnsweredWork{}, nil
-}
-
 func (h hidingWork) Hidden(context.Context, time.Time) (HiddenWork, error) {
 	return HiddenWork(h), nil
 }

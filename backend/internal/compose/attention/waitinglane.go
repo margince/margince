@@ -46,21 +46,6 @@ type Waiting interface {
 	// so a second seam would let an installation bind a queue and a guardrail
 	// that disagree about who is waiting.
 	Hidden(ctx context.Context, asOf time.Time) (HiddenWork, error)
-	// Answered says how fast the workspace replied over a window, and how much
-	// of the queue it put down instead.
-	//
-	// On this seam for the reason Hidden is: both are questions about the same
-	// waiting work, and a seam of their own would let an installation bind a
-	// queue and a measurement that disagree about which threads are sales.
-	Answered(ctx context.Context, from, to time.Time) (AnsweredWork, error)
-}
-
-// AnsweredWork is what the workspace did with its waiting work over a window.
-type AnsweredWork struct {
-	Answered         int
-	MedianMinutes    int
-	Disposed         int
-	DisposedNotSales int
 }
 
 // HiddenWork is how much waiting work each rule is holding back, and whether
@@ -189,59 +174,4 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 		// non-zero counts is the one lie this endpoint must not tell.
 		Clear: work.Clear(),
 	}, nil
-}
-
-// responseWindowDays is how far back the reading looks when a caller names no
-// window. A fortnight: long enough that one slow afternoon does not decide the
-// figure, short enough that it still describes how the workspace works now.
-const responseWindowDays = 14
-
-// responseWindowMaxDays is the widest window this reading answers.
-//
-// Clamped HERE and not only in the contract. The generated parameter is a bare
-// *int — OpenAPI's `maximum` is documentation the router does not enforce — so a
-// caller asking for a hundred thousand days would reach the store and scan every
-// message the workspace has ever held. Past ninety days the figure also stops
-// describing how the workspace works now and starts averaging over a change in
-// how it works, so the bound is the same number for both reasons.
-//
-// The HANDLER refuses a window outside 1..this, which is the tree's convention
-// for a published range. This constant is also the service's own last line: a
-// caller reaching the service directly — a future job, a seam — gets the widest
-// honest window rather than an unbounded scan.
-const responseWindowMaxDays = 90
-
-// ResponseMetrics answers how fast the workspace replies, over a window.
-//
-// A projection over the seam, like HiddenBacklog: the arithmetic is a median
-// and a filtered count in SQL, and computing either here would need this
-// package to hold a second definition of what a sales thread is.
-//
-// An unbound seam answers an empty window rather than an error, for the reason
-// the guardrail does: an installation that reads no mail has nothing to have
-// answered slowly.
-func (s *Service) ResponseMetrics(
-	ctx context.Context, days int,
-) (crmcontracts.ResponseMetrics, error) {
-	if days <= 0 {
-		days = responseWindowDays
-	}
-	if days > responseWindowMaxDays {
-		days = responseWindowMaxDays
-	}
-	to := s.now()
-	from := to.AddDate(0, 0, -days)
-	out := crmcontracts.ResponseMetrics{From: from, To: to}
-	if s.waiting == nil {
-		return out, nil
-	}
-	work, err := s.waiting.Answered(ctx, from, to)
-	if err != nil {
-		return crmcontracts.ResponseMetrics{}, err
-	}
-	out.Answered = work.Answered
-	out.MedianMinutes = work.MedianMinutes
-	out.Disposed = work.Disposed
-	out.DisposedNotSales = work.DisposedNotSales
-	return out, nil
 }

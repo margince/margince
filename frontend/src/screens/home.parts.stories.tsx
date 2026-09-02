@@ -132,6 +132,7 @@ const GLANCE_DAY = {
 export const Glance: Story = {
   render: part(
     <HomeGlance
+      view="morning"
       day={GLANCE_DAY}
       firstName="Lena"
       now={NOW_DATE}
@@ -153,6 +154,7 @@ export const Glance: Story = {
 export const GlanceCalm: Story = {
   render: part(
     <HomeGlance
+      view="morning"
       day={GLANCE_DAY}
       firstName="Lena"
       now={NOW_DATE}
@@ -170,6 +172,7 @@ export const GlanceCalm: Story = {
 export const GlanceCapped: Story = {
   render: part(
     <HomeGlance
+      view="morning"
       day={GLANCE_DAY}
       firstName="Lena"
       now={NOW_DATE}
@@ -192,6 +195,7 @@ export const GlanceCapped: Story = {
 export const GlanceUnread: Story = {
   render: part(
     <HomeGlance
+      view="morning"
       day={GLANCE_DAY}
       firstName={null}
       now={NOW_DATE}

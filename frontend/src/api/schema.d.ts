@@ -6732,46 +6732,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/worklist/response": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * How fast the workspace answers, and how much of the queue it puts down.
-         * @description The hidden-backlog guardrail says what the queue is NOT showing. This says what
-         *     happens to the work it does show, which is the other half of the same question: a
-         *     queue can be honest about its contents and still be a queue nobody answers.
-         *
-         *     Read over a WINDOW rather than at an instant, because neither figure is a fact
-         *     about right now — "we answer in four hours" is a claim about a fortnight, and a
-         *     number taken from today would swing on one slow afternoon. The window defaults to
-         *     the last 14 days.
-         *
-         *     Counted under the CALLER's own visibility — but only on the INBOUND side, and the
-         *     difference is worth stating rather than glossing. A message the caller may not read
-         *     contributes to no figure here. The REPLY that answered it is not gated: the waiting
-         *     lane deliberately ignores the audience arm on its own reply anti-join, because a
-         *     reply somebody else may see still answered the customer, and skipping it would
-         *     report an answered message as waiting.
-         *
-         *     So a caller who can read an inbound but not the audience-limited reply to it learns
-         *     WHEN a colleague answered, to the minute, folded into the median. That is a
-         *     timestamp rather than content, and it is the price of the two readers agreeing
-         *     about which threads were answered — but it is a real disclosure and this is where
-         *     it is written down.
-         */
-        get: operations["getResponseMetrics"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/digest": {
         parameters: {
             query?: never;
@@ -27040,56 +27000,6 @@ export interface components {
             clear: boolean;
         };
         /**
-         * @description What the workspace did with its waiting work over one window. Two questions: how
-         *     fast it answered what it answered, and how much it put down instead.
-         */
-        ResponseMetrics: {
-            /**
-             * Format: date-time
-             * @description The start of the window, inclusive.
-             */
-            from: string;
-            /**
-             * Format: date-time
-             * @description The end of the window, exclusive — so consecutive windows partition time and a message on a boundary is counted once.
-             */
-            to: string;
-            /**
-             * @description How many inbound sales messages got a reply in the window. It is the
-             *     denominator `median_minutes` is worth reading against: a fast median over three
-             *     answered messages says less about the workspace than a slower one over three
-             *     hundred.
-             */
-            answered: number;
-            /**
-             * @description How long the middle answered message waited, in minutes.
-             *
-             *     The MEDIAN rather than the mean, for the reason the material bar takes one: a
-             *     single message answered after three weeks drags an average past every figure a
-             *     reader would recognise, and the question is what a customer TYPICALLY waits.
-             *
-             *     Zero when nothing was answered, which `answered` tells apart from a genuine
-             *     zero-minute median.
-             */
-            median_minutes: number;
-            /**
-             * @description How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
-             *     judged not sales.
-             *
-             *     Counted from the audit record rather than from what is set aside now. A snooze
-             *     that lifted and a not_mine somebody withdrew leave no trace in the current
-             *     state, so a figure read from there would FALL as readers tidied up — reporting
-             *     less judgement the more of it happened.
-             */
-            disposed: number;
-            /**
-             * @description How many of those were the workspace-wide judgement. Its own figure because it
-             *     is the one that costs everybody: the other two hide a row from one reader, this
-             *     one hides the conversation from all of them and does not lift.
-             */
-            disposed_not_sales: number;
-        };
-        /**
          * @description One thing to do, with the reason it sits where it sits.
          *
          *     `level` is the hard product rule and `score` orders inside it; a client renders
@@ -38587,36 +38497,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-        };
-    };
-    getResponseMetrics: {
-        parameters: {
-            query?: {
-                /**
-                 * @description How many days back the window reaches. Capped at 90: past that the figure stops
-                 *     describing how the workspace works now and starts averaging over a change in
-                 *     how it works.
-                 */
-                days?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description What the workspace did with its waiting work. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResponseMetrics"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
         };
     };
     getMorningDigest: {
