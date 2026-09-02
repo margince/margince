@@ -145,6 +145,7 @@ import { FxRatesCard } from "./rates";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
 import { SignInMethodsCard } from "./sign-in-methods";
+import { TagVocabularyCard } from "./tagadmin";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
@@ -489,6 +490,7 @@ function DataModelTab() {
   return (
     <>
       <CustomFieldsAdmin />
+      <TagVocabularyCard />
       <PipelinesCard />
       <LeadSourcesCard />
       <LeadDisqualifyReasonsCard />
@@ -595,6 +597,7 @@ export function useSettingsEntryVisibility(
   const offerTemplate = useCan("offer_template", "read");
   const knowledgeCorpus = useCan("knowledge_corpus", "read");
   const customField = useCan("custom_field", "read");
+  const tag = useCan("tag", "read");
   const fxRate = useCan("fx_rate", "read");
   const aiModelRate = useCan("ai_model_rate", "read");
   const embeddingReindex = useCan("embedding_reindex", "read");
@@ -689,7 +692,10 @@ export function useSettingsEntryVisibility(
     // pipeline designer, the product list, the offer templates. Any one of their
     // reads opens the page; the authoring controls inside each ask for their own
     // write.
-    "data-model": customField || pipeline || product || offerTemplate,
+    // Tags joined this entry, so the union widens: a seat holding `tag:read`
+    // and none of the other three must still find the vocabulary. A merged
+    // entry takes the union of what its parts ask for, never the intersection.
+    "data-model": customField || pipeline || product || offerTemplate || tag,
     // The automations the installation runs, what it spent, and what it charges
     // per model. The automations read is the one every seeded role holds, and it
     // is what keeps this page reachable for manager, rep and read_only — the

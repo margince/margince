@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+.tagadmin-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The word, then how much of the workspace carries it, then the verbs. The
+   usage column takes the free space so the verbs line up down the list rather
+   than sitting at a different offset per row length. */
+.tagadmin-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tagadmin-usage {
+  flex: 1;
+  color: var(--textMeta);
+}
+
+.tagadmin-verbs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.tagadmin-note {
+  color: var(--textMeta);
+  margin: 0;
+}
+
+.tagadmin-merged {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
