@@ -8067,7 +8067,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Taggable' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Tags]
       operationId: removeTag
@@ -8084,8 +8088,10 @@ paths:
             schema: { $ref: '#/components/schemas/ApplyTagRequest' }
       responses:
         '204': { description: Removed (or was not applied). }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ----------------------------- /reports -----------------------------------
   /reports/{report}:

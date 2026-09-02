@@ -160,7 +160,12 @@ func (s *Store) AddMember(ctx context.Context, listID ids.ListID, entityType str
 		if entityType != listEntityType {
 			return &BadInputError{Field: entityTypeField, Reason: "must match the list's entity_type " + listEntityType}
 		}
-		// The member reference is a READ of a row-scoped record (H1).
+		// The member reference is a READ of a row-scoped record (H1) — unlike
+		// applyTagTx's EnsureWritableLive, because membership is not rendered
+		// as an attribute of the record itself: adding it to this caller's own
+		// list does not change what a colleague reading the record sees, the
+		// way a tag on it would. list.update plus this caller's own row scope
+		// on the LIST already governs who may curate it.
 		if err := auth.EnsureLinkTarget(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}

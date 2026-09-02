@@ -296,6 +296,11 @@ type MergeResult struct {
 // deliberate product decision and it has a cost the caller has to be told
 // about: links to the old tag stop working, searching its name finds nothing,
 // and somebody can coin the same word again next month.
+// It carries no per-record row gate, unlike applyTagTx/RemoveTag: it rewrites
+// every taggable row across the workspace as one vocabulary operation, and
+// tag.update — the vocabulary-authoring grant — is Admin/Ops-only and always
+// unbounded row scope. A merge is not reachable by a caller whose row scope
+// could refuse one of the records it touches.
 func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID) (MergeResult, error) {
 	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
 		return MergeResult{}, err
