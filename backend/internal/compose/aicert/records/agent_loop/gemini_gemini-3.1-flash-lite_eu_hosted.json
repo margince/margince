@@ -3,14 +3,14 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "eu_hosted",
-  "prompt_version": "pc4d1f8d04f0f890d84711e1a8819d0ed",
+  "prompt_version": "pa64bee01dec1ecedcd9aaa019ba9d884",
   "corpus_version": "v1",
   "verdict": "not_supported",
   "runs": 69,
-  "passed": 61,
-  "reliability": 0.8840579710144928,
-  "reported_accepted": 61,
-  "reported_wrong_answer": 8,
+  "passed": 59,
+  "reliability": 0.855072463768116,
+  "reported_accepted": 59,
+  "reported_wrong_answer": 10,
   "reported_invalid": 0,
   "reported_abstained": 0,
   "certified_scope": "single_turn",
@@ -23,44 +23,47 @@
   ],
   "score_p50": 100,
   "score_min": 0,
-  "latency_p50": 884,
-  "latency_p95": 1381,
-  "mean_tokens": 12200,
-  "mean_tokens_in": 12149,
-  "mean_tokens_out": 51,
+  "latency_p50": 955,
+  "latency_p95": 1314,
+  "mean_tokens": 16530,
+  "mean_tokens_in": 16482,
+  "mean_tokens_out": 48,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 3113,
-  "judge_served_model": "gemini-3.5-flash",
+  "est_cost_microusd": 4192,
+  "judge_served_model": "mistralai/mistral-large-2512",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-08-15T02:51:01Z",
+  "ran_at": "2026-09-02T02:16:40Z",
   "scenarios": [
     {
       "scenario": "a_description_is_not_a_name",
       "site": "loop",
-      "verdict": "certified",
+      "stamp": "1bd55b5d1c9087efb2d426a4ca67c993fa773b8249e90063c0a244d878fd5a3ddaa0d01a0ed31958384e66f5b56039f3009f822a76c77319cd6b9ffdb8ccb5f51b99e78b3f44eede8299fa4c6bcbf5245be551a8c82f8e744e1ddc96f4caa8af",
+      "verdict": "supported_degraded",
       "runs": 3,
-      "passed": 3,
-      "reported_accepted": 3,
-      "reported_wrong_answer": 0,
+      "passed": 2,
+      "reported_accepted": 2,
+      "reported_wrong_answer": 1,
       "reported_invalid": 0,
       "reported_abstained": 0
     },
     {
       "scenario": "a_draft_precedes_a_send",
       "site": "loop",
+      "stamp": "74848b7c803e596bab3b75dbddbbc253089eb97b87c6fe275a4088908547483d211b77192856084fd901e8c4f25cde64a93edeba2fb5ad2ddd62cbb4871de6920d4dc7df62164257fe77e89a8c248eb497e41b99fd56f0bca1ba93c6c80d2c33",
       "verdict": "not_supported",
       "runs": 3,
-      "passed": 1,
-      "reported_accepted": 1,
-      "reported_wrong_answer": 2,
+      "passed": 0,
+      "reported_accepted": 0,
+      "reported_wrong_answer": 3,
       "reported_invalid": 0,
       "reported_abstained": 0
     },
     {
       "scenario": "a_goal_no_tool_can_serve_ends_the_turn",
       "site": "loop",
+      "stamp": "9cf9fe2fe9f1fc65ac47ba1a9f25949b6fce15413bf1a5983cdc7229c917dbeb28857453bff561830be13d3dab4e64e291220695089399994ec636865a1b0a17c920d6da359f79fa41df9b559dd10e3729b62eebf40362ae08b576a0350c7d06",
       "verdict": "not_supported",
       "runs": 3,
       "passed": 0,
@@ -72,6 +75,7 @@
     {
       "scenario": "a_name_alone_is_still_a_search",
       "site": "loop",
+      "stamp": "bcc61ebb2836d3658d2400c5f2e65c497013d7d85050293bc10294b76ab7004e0b495fad1a4fb045581889c46af6e67a141170fe78a8b87589ef5b6e33729f0fa03f663dab11d90f7d5f0904ddab64ecb6581d03e6cbf2867373cf8ddbed5a55",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -83,6 +87,7 @@
     {
       "scenario": "a_promise_is_not_a_slipping_deal",
       "site": "loop",
+      "stamp": "be936194331f0b110f00a6a92af12c273427f4ea644753360cac83bc2b79e9fc0af99e414c3db83698707cf2063067cd4451138ebd4fdf78cc5ad1d7c2a6243ef1764b2da3d5614ee5983e10634b4d0e8d5e442ec205776310f7f3e9de069f12",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -94,6 +99,7 @@
     {
       "scenario": "a_structured_question_is_not_a_text_search",
       "site": "loop",
+      "stamp": "375a5838c960bc5109720b39f4411e97246bfddecf191c0fd277e55253ae0cc74c37d0cdba05a333618f10ec848430af534e81aface980fbaa005eb611c22feb86798144642d33fad74881a42f96456d5762d5167ff3340bd310269bc5dac76e",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -105,6 +111,7 @@
     {
       "scenario": "a_thin_relationship_is_not_a_slipping_deal",
       "site": "loop",
+      "stamp": "b0e0f5d92060eef3a3cf502e6e50d75d2fc7c4a9fdff44564f1fd0ffa580e1f44fa20acb5ffe608ef2f4091b1a1983c35419c7a9793d579b0e2b16f9d95acf9ccaaa03ee44e54ae3255420580de53f9ebc7f19d8bf95321565b944866346cb80",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -116,6 +123,7 @@
     {
       "scenario": "a_total_is_still_a_report",
       "site": "loop",
+      "stamp": "e8b25b4649cdb010893e07245eab0aaa80f5a56738c76fa08b277f0cb957366f204df344ec8b065b03ad84f146eb4527d6a128e663688dc81d020d2797816ff41ffbb5cc0e78bb83252a2c0d58eada0da26b8bb1f3d95669f2b457b53c3f499c",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -127,6 +135,7 @@
     {
       "scenario": "a_warm_path_is_not_a_search",
       "site": "loop",
+      "stamp": "bc2cc4482f5f419600ccf6defd55aac562dbea5775842ac9449e137db4f044a3b1ce8a8be15c415428c85f9089c0a3b74088486ff694e46c52bfba048072279e11d77c4515bde777f7a30cffea99feb80e506eb22d9e04342de6a542a91ab018",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -138,6 +147,7 @@
     {
       "scenario": "ambiguity_ends_the_turn",
       "site": "loop",
+      "stamp": "c05d90ef16efeb41e901804a096f419d2d9af30c09bba4b9b66a40bceb193937969a8892be20d6a2033ed603553ccdaf626f5531b1885ee0ca7442f3b2789bc90cf31c3a751440e741a9a468b647b46947fefc333d2136171941a0778a4243d4",
       "verdict": "not_supported",
       "runs": 3,
       "passed": 0,
@@ -149,6 +159,7 @@
     {
       "scenario": "goal_needs_a_tool_call",
       "site": "loop",
+      "stamp": "a55dcbcf0a66264cedac77213b296f17ce1b4ea562f05d0476a881cdebf17a9833a80d63eb1ef3ad5753dd940b1514e354b91e4b6d742161c80f34dd12a8ce33fe9404d063b29646b2cd8cde77f23d38fb3040dd7ca8e90824dbe9f725af5270",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -160,6 +171,7 @@
     {
       "scenario": "goal_already_answered_by_seed_context",
       "site": "loop",
+      "stamp": "e5a04760dd7919ac80592e923e7ba08b51699d295265eb94b1dce1009f870e0e5c4a2743f9013a72685aef4891715980c4e567d04b9640f560cef14812cde1ca9d0fd5733668ef5e0dd95c87480140e243108a37a1b33ca3d3615a5cef062be0",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -171,6 +183,7 @@
     {
       "scenario": "catchup_over_raw_reads",
       "site": "loop",
+      "stamp": "04609bb841c673ee6d111ded8e182c0413474b814418f8eb09ff89a5942cfe2061b33c1cb2877290d3864ecaafe4bfa35312d6b755ba88f381a1893c44db8bdcc111881bf99caea0c63e0a66a99b23e8444034b85be9ea274f43b5cdce0a95f4",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -182,6 +195,7 @@
     {
       "scenario": "coverage_names_the_gap",
       "site": "loop",
+      "stamp": "77991b4eecdfc2382f172459a24533f82fe945d7f469ba36470ed7427502dd362f548e58d248591dc6891af49ce3ed1200d96ce807a7813f4ea562cabc016d59ffbf059e24539104192aae16e818d1654848839ecabd3f5d79e5fdc7f24f8ab3",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -193,6 +207,7 @@
     {
       "scenario": "enrichment_is_not_search",
       "site": "loop",
+      "stamp": "47ba218ea72399f0e152bc93a886c397e33d07faec20bb53daee32e92bf3ba320d62502f75500b649f2d7538fba839b3c1648afd7695c6224f19ec4195e6da492335c359dc27df5f6639a347c646a1075060a49f99fd1d4d5812591a749be7f6",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -204,6 +219,7 @@
     {
       "scenario": "identity_is_checked_before_a_record_is_created",
       "site": "loop",
+      "stamp": "3a0929ae207404c4789eb9bcdea1eb24521ae6d8a4be082d9baed899b5dc4f46b393eae21a4abd9cefc30439354c846b553d555a49cdf59159490a66d1947fd477716e23565e82d3ad768e4a60c5badb77d6930118e6c3099970d6613f058cde",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -215,6 +231,7 @@
     {
       "scenario": "logging_what_happened_changes_nothing_else",
       "site": "loop",
+      "stamp": "8f91812c12beb2e461a55a7b9be41ae55dc8bca8b8813f0b2b230a0eb66d1a92657a3bb1e199481af77b6574b2606671d2903b6a0d20402e09001552233f77ce4b14cb93b35b8a01803642db25b0d91729789140c0a2991366b250893d22c686",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -226,6 +243,7 @@
     {
       "scenario": "meeting_prep_is_not_a_catchup",
       "site": "loop",
+      "stamp": "e9a6b6b5e2c24b926d5cbcdd0aead24880eeda08adf58250acfdbbf151c589afc9c671db40246d6cbfcee03cd23188a7308f5942da4a35f1d0f2bc95b327b2221b3d2c08bbb1c198a369553f11957bab361d4d1e5c755473df1be53a5079da0e",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -237,6 +255,7 @@
     {
       "scenario": "slipping_is_its_own_question",
       "site": "loop",
+      "stamp": "a79535b4f4a5dbccf15beaa3232aeb0a86f1cf85323cfbe54759a3481a119952cf30f5b0f3b26836bf390cdce3e3f4826231d3851275af4dd64376dfb54d449ca0690407d6abba3cc1381e579f6f84db9ec2a6349824f7df9548ef56eaa96c05",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -248,6 +267,7 @@
     {
       "scenario": "the_calendar_event_is_the_anchor",
       "site": "loop",
+      "stamp": "b79ebfd712ffb49f152aa957555374a9f905da792448baba27b08813da429966e76efb3c00c9599e4bdb1ec8d6a17501d1f15d1d3fae12f9d67bff881f7abbb2080303f435553512a28c15b964cc6f34d49864542984af18ac55fee6f05d4a59",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -259,6 +279,7 @@
     {
       "scenario": "the_record_is_found_before_it_is_changed",
       "site": "loop",
+      "stamp": "3d1a546a659706826d2f0a4c6fca20ea08a9244632585873bdf779a7ddd6971a824f04cff1d8cc3d5f9bfd2e235f0f6b309c423e42850c97162cae90f04ba29ef61dae78ee5c2d333633254d52cef48635dab89b0234d3c2e7d0ded4bdfbab18",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -270,6 +291,7 @@
     {
       "scenario": "the_stage_id_comes_from_the_pipeline",
       "site": "loop",
+      "stamp": "bf2d131def5cf7109e6e68f30b886cc7d937ce7662f549e392d9c5a85b4a9ff58c16684bd7ddf572b1a99a1a2c94001b916d73e1008ac89ef114d22ecb3c465f09312396a2280f3853610b4ba266808d333ccbdd8b1feeeb24bc912cb1df9ed3",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
@@ -281,6 +303,7 @@
     {
       "scenario": "who_knows_needs_the_person",
       "site": "loop",
+      "stamp": "de79c068c4b561a4d4fe856ab79facd0e40b02ef0bdfed230ec2f743e470326507f18b00dcf43154c24739c935583750660d066eafffb0d6222ff6b76d440a21af61ae8510c4f2a17511df1f1cb808ca415054879ae33fe5ac099d4a1e10db46",
       "verdict": "certified",
       "runs": 3,
       "passed": 3,
