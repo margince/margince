@@ -55,8 +55,12 @@ type TagDetail struct {
 // read the record and not the vocabulary, which is not the same as a record
 // with no tags — a model told "no tags" would report a fact nobody established.
 type RecordTagsResult struct {
-	Tags     []RecordTagOnRecord `json:"tags"`
-	Withheld bool                `json:"withheld,omitempty"`
+	Tags []RecordTagOnRecord `json:"tags"`
+	// NOT omitempty. The whole point of this field is that a model can tell a
+	// withheld answer from a record with no tags, and omitting it when false
+	// makes the two serialize identically — the same defect the HTTP shape is
+	// built to avoid.
+	Withheld bool `json:"withheld"`
 }
 
 // RecordTagOnRecord is one tag as it sits on one record.

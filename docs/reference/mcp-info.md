@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 61 |
 | Resources | 9 |
-| Tool catalog | 173.5 KB |
+| Tool catalog | 173.6 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 45305 |
+| Approx. wire tokens | 45308 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -4069,7 +4069,8 @@ Read the tags on one person, company or deal, with who applied each and when. Th
         }
       },
       "required": [
-        "tags"
+        "tags",
+        "withheld"
       ],
       "type": "object"
     },
