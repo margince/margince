@@ -10,9 +10,22 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
+
+// ownedFiring is the context an OWNED automation's Apply runs under: the system
+// actor with the owner bound, which is what withSendingOwner builds.
+//
+// A bare context is not that. It models a firing no human owns, which
+// draft_email refuses — so a drafting test written on one would stop at that
+// refusal and prove nothing about the case it is named for.
+func ownedFiring() context.Context {
+	ctx := principal.WithActor(context.Background(),
+		principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
+	return principal.WithSendingHuman(ctx, ids.NewV7())
+}
 
 // fakeComms is a DB-free stand-in for the Comms seam: records every
 // DraftEmail call. The seam declares no send verb at all, so "draft_email
@@ -224,7 +237,7 @@ func TestApplyActionsDraftEmailCapturesTheDraftInTheAppliedRecord(t *testing.T) 
 		Args:   json.RawMessage(`{"intent":"nudge toward a decision","consent_purpose":"business_correspondence"}`),
 	}
 
-	applied, err := ApplyActions(context.Background(),
+	applied, err := ApplyActions(ownedFiring(),
 		Executors{Comms: comms, Approvals: approvals},
 		workflow.Effect{Actions: []workflow.Action{action}})
 	// Drafting composes AND stages, so the firing suspends. The artifact below
@@ -304,7 +317,7 @@ func TestApplyActionsDraftEmailNeverSwallowsADraftFailure(t *testing.T) {
 		Args:   json.RawMessage(`{"consent_purpose":"business_correspondence"}`),
 	}
 
-	_, err := ApplyActions(context.Background(),
+	_, err := ApplyActions(ownedFiring(),
 		Executors{Comms: comms, Approvals: approvals},
 		workflow.Effect{Actions: []workflow.Action{action}})
 
@@ -329,7 +342,7 @@ func TestApplyActionsDraftEmailRefusesWithoutAConsentPurpose(t *testing.T) {
 		Args:   json.RawMessage(`{"intent":"nudge toward a decision"}`),
 	}
 
-	_, err := ApplyActions(context.Background(),
+	_, err := ApplyActions(ownedFiring(),
 		Executors{Comms: comms, Approvals: approvals},
 		workflow.Effect{Actions: []workflow.Action{action}})
 
@@ -358,7 +371,7 @@ func TestApplyActionsDraftEmailRefusesWhenTheThreadHasNoAddress(t *testing.T) {
 		Args:   json.RawMessage(`{"consent_purpose":"business_correspondence"}`),
 	}
 
-	_, err := ApplyActions(context.Background(),
+	_, err := ApplyActions(ownedFiring(),
 		Executors{Comms: comms, Approvals: approvals},
 		workflow.Effect{Actions: []workflow.Action{action}})
 
@@ -382,7 +395,7 @@ func TestApplyActionsDraftEmailRefusesWithNoStagingSeam(t *testing.T) {
 		Args:   json.RawMessage(`{"consent_purpose":"business_correspondence"}`),
 	}
 
-	_, err := ApplyActions(context.Background(), Executors{Comms: comms},
+	_, err := ApplyActions(ownedFiring(), Executors{Comms: comms},
 		workflow.Effect{Actions: []workflow.Action{action}})
 
 	if !errors.Is(err, ErrNoApprovalStaging) {
@@ -434,5 +447,49 @@ func TestApplyAssignOwnerAtScaleStagesInsteadOfWriting(t *testing.T) {
 	}
 	if len(fake.calls) != 1 {
 		t.Fatalf("Stage called %d times, want exactly 1", len(fake.calls))
+	}
+}
+
+// An automation nobody owns refuses to draft, rather than staging a card
+// nobody can decide.
+//
+// Releasing a held draft SENDS it from the approving human's own mailbox, so
+// approvals narrows the card to the person it goes out as. A firing with no
+// owner names nobody, and the three things it could do are: stage a card
+// decidable by nobody, which rots in the inbox; stage one decidable by anyone,
+// which is the defect that narrowing removes; or refuse where an operator can
+// see it.
+//
+// This is not hypothetical. The seeded post_meeting_recap starter drafts email
+// and catalog templates are seeded with no owner_id, so this is the shipped
+// configuration until somebody assigns one.
+func TestApplyActionsDraftEmailRefusesForAnAutomationWithNoOwner(t *testing.T) {
+	comms := &fakeComms{subject: "Re: hello", body: "following up"}
+	approvals := &fakeApprovals{id: ids.New[ids.ApprovalKind]()}
+	action := workflow.Action{
+		Kind:   workflow.ActionDraftEmail,
+		Target: datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.NewV7()},
+		Args:   json.RawMessage(`{"intent":"recap the meeting","consent_purpose":"business_correspondence"}`),
+	}
+
+	// The system actor with NO owner bound — what withSendingOwner leaves for a
+	// firing whose automation has no owner_id.
+	ctx := principal.WithActor(context.Background(),
+		principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
+
+	_, err := ApplyActions(ctx,
+		Executors{Comms: comms, Approvals: approvals},
+		workflow.Effect{Actions: []workflow.Action{action}})
+
+	var missing *MissingDraftOwnerError
+	if !errors.As(err, &missing) {
+		t.Fatalf("ApplyActions err = %v, want MissingDraftOwnerError", err)
+	}
+	if len(approvals.calls) != 0 {
+		t.Errorf("staged %d approvals for a draft nobody could release", len(approvals.calls))
+	}
+	if len(comms.calls) != 0 {
+		t.Error("composed a draft before checking the owner — the certain refusal must run before the " +
+			"model call, the same order the consent-purpose check keeps")
 	}
 }
