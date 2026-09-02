@@ -47,6 +47,7 @@ import {
   listFetchLimit,
   useListQuery,
   useOwnerChips,
+  useTagChips,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import { MergeAction } from "./merge";
@@ -69,11 +70,13 @@ import {
   mineEmptyNote,
   ownerColumn,
   standardViews,
+  tagsColumn,
 } from "./recordlist";
 import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
+import { listQueryParams } from "./tagfilter";
 import { groupChronology } from "./timelinegroups";
 import { VCardImport } from "./vcard-import";
 
@@ -100,7 +103,7 @@ async function fetchPeoplePage(
         include_archived: query.includeArchived || undefined,
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        ...query.filters,
+        ...listQueryParams(query.filters),
       },
     },
   });
@@ -395,6 +398,7 @@ export function ContactsScreen() {
   // as "clear this filter", so a half-built owner dial narrows nothing.
   const viewerId = useViewerId();
   const ownerChips = useOwnerChips();
+  const tagChips = useTagChips();
   const savedViews = useSavedViewTabs("people");
   const cf = useObjectCustomFields("person");
   // The form that never closes gives no other feedback: without this, six
@@ -476,6 +480,7 @@ export function ContactsScreen() {
               </span>
             ),
           },
+          tagsColumn<Person>(t),
           ownerColumn<Person>(t),
           lastActivityColumn<Person>(t, locale, recordZone),
           createdColumn<Person>(t, locale, recordZone),
@@ -483,7 +488,7 @@ export function ContactsScreen() {
         tools={<SaveViewAction resource="people" query={state.query} />}
         rowKey={(person) => person.id}
         rowRoute={(person) => ({ screen: "contacts", id: person.id })}
-        dataChips={ownerChips}
+        dataChips={[...ownerChips, ...tagChips]}
         dataViews={savedViews}
         views={[
           ...standardViews(viewerId),

@@ -1,0 +1,17 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* The row's chip strip does NOT wrap. A table cell that grows a second line
+   pushes every row below it down, and a page of fifty rows stops being a
+   scannable grid — the "+N" is what keeps one row one line high. */
+.rowtags {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+}
+
+.rowtags-rest {
+  color: var(--textMeta);
+  white-space: nowrap;
+}

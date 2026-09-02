@@ -26,6 +26,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, useMe, useSorMode } from "./common";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
+import { useTagVocabulary } from "./tags.queries";
 
 // The shared list foundation (P-14): every list screen sends the rich
 // q/sort/cursor/include_archived/filter vocabulary instead of a flat
@@ -1216,6 +1217,51 @@ function matchesView(
  * team rather than a guess about which of them was meant; `viewerTeamOptions`
  * builds those.
  */
+/**
+ * The tag dials: which word narrows this list, and how several combine.
+ *
+ * Two chips rather than one control, because they answer two questions and a
+ * reader sets them at different moments — a word first, and the mode only when
+ * a second word makes the question ambiguous. Both write into
+ * `ListQuery.filters` under the wire's own names, so the address, the request
+ * and the saved view all say the same thing.
+ *
+ * By ID, never by name. A name is what a person types and an admin can rename,
+ * so a saved view holding one would quietly start selecting a different slice
+ * the day somebody corrects a spelling.
+ *
+ * The mode chip is drawn whatever is selected. Hiding it until a second tag is
+ * picked would make a dial appear under the reader's cursor as a side effect of
+ * choosing a word, and its value is already in the address either way.
+ */
+export function useTagChips(): readonly ListChip[] {
+  const t = useT();
+  const vocabulary = useTagVocabulary();
+  const words = vocabulary.data?.tags ?? [];
+  if (words.length === 0) {
+    // No vocabulary to filter by — or none this caller may read. Either way a
+    // dial whose every option is "all" is a control that cannot answer.
+    return [];
+  }
+  return [
+    {
+      key: "tag_id",
+      label: t("tags.columnHeader"),
+      allLabel: t("tags.filterAll"),
+      options: words.map((tag) => ({ value: tag.id, label: tag.name })),
+    },
+    {
+      key: "tag_mode",
+      label: t("tags.filterModeLabel"),
+      allLabel: t("tags.filterModeAny"),
+      options: [
+        { value: "all", label: t("tags.filterModeAll") },
+        { value: "none", label: t("tags.filterModeNone") },
+      ],
+    },
+  ];
+}
+
 export function useOwnerChips(): readonly ListChip[] {
   const t = useT();
   const me = useMe();

@@ -126,6 +126,7 @@ import {
   listQueryFromParams,
   mergeScreenDials,
   paramsFromListQuery,
+  useTagChips,
   withListPage,
   withoutScreenDials,
 } from "./listquery";
@@ -135,6 +136,7 @@ import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
+import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
 import { groupChronology } from "./timelinegroups";
 
@@ -270,6 +272,13 @@ function dealsQueryParams(f: DealFilters) {
     partner_org_id: filters.partner_org_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
+    // Several ids and their mode, out of the one comma-joined string the
+    // address carries them in. Spelled by the shared encoder rather than here,
+    // so this board and the three lists cannot read one address two ways.
+    ...tagQueryParams(
+      parseTagIDs(filters.tag_id),
+      parseTagMode(filters.tag_mode),
+    ),
   };
 }
 
@@ -499,6 +508,7 @@ export function toBoardDeal(deal: Deal, naming: CompanyNaming): BoardDeal {
     ageMs: Math.max(0, Date.now() - new Date(since).getTime()),
     stalled: deal.stalled ?? false,
     archived: deal.archived_at != null,
+    tags: deal.tags,
   };
 }
 
@@ -2454,6 +2464,7 @@ export function DealsScreen({
     />
   );
   const dealChips = dealFilterChips(stages, t);
+  const tagChips = useTagChips();
   const rowSelection = dealRowSelection({
     view,
     liveSelection,
@@ -2517,7 +2528,7 @@ export function DealsScreen({
         // changes every row without touching `filters`. Naming it here is
         // what puts the reader back on page 1.
         scopeKey={effectivePipeline?.id ?? ""}
-        dataChips={dealChips}
+        dataChips={[...dealChips, ...tagChips]}
         dataViews={savedViews}
         selection={rowSelection}
         chips={dealSurfaceChips({
