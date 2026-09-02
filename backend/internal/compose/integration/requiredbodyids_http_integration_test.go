@@ -63,7 +63,7 @@ func namesField(problem problemBody, field string) bool {
 // nothing about the body.
 type requiredIDFixtures struct {
 	person, organization, activity string
-	list, tag, project             string
+	tag, project                   string
 	deal, subjectUser              string
 }
 

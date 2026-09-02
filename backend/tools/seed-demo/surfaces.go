@@ -137,27 +137,6 @@ func tagsByName(c *client, mode runMode) (map[string]string, error) {
 	return out, nil
 }
 
-// demoLists are the saved collections a team works from. One static and one
-// dynamic, because they are different features: a static list holds the rows
-// somebody put in it, and a dynamic one re-answers its own question.
-var demoLists = []struct {
-	Name       string
-	EntityType string
-	ListType   string
-	Definition jsonBody
-}{
-	{
-		Name: "Kunden", EntityType: "organization", ListType: "dynamic",
-		// A predicate over the allow-listed organization fields, so the list
-		// answers itself as the lifecycle changes.
-		Definition: jsonBody{"and": []jsonBody{{"field": "lifecycle", "op": "eq", "value": "customer"}}},
-	},
-	{
-		Name: "Abgesprungen", EntityType: "organization", ListType: "dynamic",
-		Definition: jsonBody{"and": []jsonBody{{"field": "lifecycle", "op": "eq", "value": "former_customer"}}},
-	},
-}
-
 // Custom fields are NOT seeded, and cannot be.
 //
 // POST /v1/custom-fields answers 501:
