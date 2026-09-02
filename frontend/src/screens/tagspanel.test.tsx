@@ -9,8 +9,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
-import { TagsPanel } from "./tagspanel";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import { TagsPanel } from "./tagspanel";
 
 // What the panel SAYS in each state. Three of them answer 200 with a list, so
 // the wire cannot tell them apart — only the words on screen can, which is

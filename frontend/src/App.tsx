@@ -231,9 +231,8 @@ const ScheduledSendsScreen = lazy(
     })),
   ),
 );
-const TagResultScreen = lazy(
-  () =>
-    import("./screens/tagresult").then((m) => ({ default: m.TagResultScreen })),
+const TagResultScreen = lazy(() =>
+  import("./screens/tagresult").then((m) => ({ default: m.TagResultScreen })),
 );
 
 const SearchScreen = lazy(

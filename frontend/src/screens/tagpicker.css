@@ -1,7 +1,7 @@
 .tagpicker {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 22rem;
 }
 
@@ -11,7 +11,7 @@
 .tagpicker-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   max-height: 18rem;
   overflow-y: auto;
 }
@@ -24,7 +24,7 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .tagpicker-option:disabled {

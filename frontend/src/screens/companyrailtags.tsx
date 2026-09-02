@@ -6,8 +6,8 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { AddTagDialog } from "./tagpicker";
-import { AddTagButton, TagsPanel } from "./tagspanel";
 import { useRecordTags } from "./tags.queries";
+import { AddTagButton, TagsPanel } from "./tagspanel";
 import "./company360.css";
 
 type Organization = components["schemas"]["Organization"];

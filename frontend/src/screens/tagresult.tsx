@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Building2, Contact, Handshake } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import type { LucideIcon } from "lucide-react";
+import { Building2, Contact, Handshake } from "lucide-react";
 
 import { api } from "../api/client";
 import { Badge, Button } from "../design-system/atoms";
@@ -112,7 +112,11 @@ function ResultGroup({
       titleAction={<Badge>{String(count)}</Badge>}
       footer={
         count > 0 ? (
-          <Button small variant="ghost" onClick={() => (window.location.hash = href.slice(1))}>
+          <Button
+            small
+            variant="ghost"
+            onClick={() => (window.location.hash = href.slice(1))}
+          >
             {t("tagResult.viewAll", { count: String(count), kind: title })}
           </Button>
         ) : undefined

@@ -4,7 +4,7 @@
 .tagspanel-set {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
   align-items: center;
 }
 
@@ -18,7 +18,7 @@
 .tagspanel-open {
   text-decoration: none;
   color: inherit;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-md);
 }
 
 .tagspanel-open:focus-visible {
@@ -38,9 +38,9 @@
 .tagspanel-menu {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
   min-width: 15rem;
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .tagspanel-note {
@@ -53,7 +53,7 @@
 .tagspanel-empty {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .tagspanel-empty-title {
