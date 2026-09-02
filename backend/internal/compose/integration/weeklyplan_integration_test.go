@@ -3,9 +3,14 @@
 
 //go:build integration
 
-package weeklyplan_test
+package integration_test
 
 // The plan over real migrated Postgres.
+//
+// HERE rather than in the module, because it drives the compose harness and a
+// module may never import the composition layer — depguard says so, and every
+// other module test needing a seeded workspace already lives beside the
+// harness for the same reason.
 //
 // What these defend is the access model and the settle, neither of which a unit
 // test can see: a plan is one person's, its second reader is gated on a live
