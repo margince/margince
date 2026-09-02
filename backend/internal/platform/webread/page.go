@@ -44,6 +44,24 @@ type Page struct {
 	// the one page that runs it and nowhere else, and the crawl has already
 	// paid for that page.
 	Fingerprint Fingerprint
+	// Refresh is the <meta http-equiv="refresh"> target this page declared
+	// (absolute), or "" when it declared none, none that resolves, or one
+	// leaving the page's own registrable domain. A caller follows it only
+	// after finding nothing else to read — see MetaRefreshOnly.
+	Refresh string
+}
+
+// MetaRefreshOnly reports whether this page is a redirect trampoline: it
+// declares a refresh target and carries no readable text of its own.
+//
+// This is a real shape, not a defensive one. A site can announce its language
+// choice this way — an empty document whose whole content is
+// `<meta http-equiv="refresh" content="0; URL=/de">` — and a browser lands on
+// the real site without the person ever seeing the shell. A reader that stops
+// at the shell sees a page with nothing on it, which is indistinguishable from
+// a parked domain and gets judged as one.
+func (p Page) MetaRefreshOnly() bool {
+	return p.Refresh != "" && strings.TrimSpace(p.Text) == ""
 }
 
 // Icon rel kinds a page can declare. Callers rank by kind rather than by
@@ -107,33 +125,43 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		base = parsed
 	}
 	body := string(got.body)
-	ogImage, icons := extractHeadAssets(body, base)
+	head := extractHeadAssets(body, base)
 	return Page{
 		URL:         rawURL,
 		FinalURL:    base.String(),
 		Text:        StripTags(body),
 		Links:       extractLinks(body, base),
 		Bytes:       len(body),
-		OGImage:     ogImage,
-		Icons:       icons,
+		OGImage:     head.ogImage,
+		Icons:       head.icons,
+		Refresh:     head.refresh,
 		Fingerprint: fingerprintOf(got.header, body, base),
 	}, nil
 }
 
-// extractHeadAssets harvests the visual identity a page declares: its
-// og:image and every <link rel> naming an icon. Both live in attributes
-// StripTags destroys, so — like extractLinks — the harvest runs on the raw
-// HTML. URLs come back absolute; a candidate whose href does not resolve to
-// an http(s) URL is dropped rather than guessed at.
-func extractHeadAssets(rawHTML string, base *url.URL) (ogImage string, icons []IconRef) {
+// headAssets is what a page's <head> declared about itself: its visual
+// identity, and where it says the reader should go instead.
+type headAssets struct {
+	ogImage string
+	icons   []IconRef
+	refresh string
+}
+
+// extractHeadAssets harvests what a page's <head> declares about itself: its
+// og:image, every <link rel> naming an icon, and any meta-refresh target. All
+// live in attributes StripTags destroys, so — like extractLinks — the harvest
+// runs on the raw HTML. URLs come back absolute; a candidate whose href does
+// not resolve to an http(s) URL is dropped rather than guessed at.
+func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 	tokenizer := html.NewTokenizer(strings.NewReader(rawHTML))
+	var head headAssets
 	seen := map[string]bool{}
 	for {
 		tokenType := tokenizer.Next()
 		if tokenType == html.ErrorToken {
 			// io.EOF or a malformed tail: the parseable prefix has been
 			// harvested, which is all a best-effort discovery aid owes.
-			return ogImage, icons
+			return head
 		}
 		name, hasAttr := tokenizer.TagName()
 		// The harvest stops at </head>, because that is where a site declares
@@ -142,23 +170,31 @@ func extractHeadAssets(rawHTML string, base *url.URL) (ogImage string, icons []I
 		// wrote the tags around it, and a <link rel="icon"> down there would
 		// let them choose the company's face.
 		if tokenType == html.EndTagToken && string(name) == "head" {
-			return ogImage, icons
+			return head
 		}
 		if !hasAttr {
 			continue
 		}
 		switch string(name) {
 		case "meta":
-			if found, ok := ogImageFrom(tokenizer, base); ok && ogImage == "" {
+			// A <meta> is at most one of these, but which one is only known
+			// after its attributes are read, and the tokenizer yields those
+			// once — so both readings take the attribute set, not the
+			// tokenizer.
+			attrs := tagAttrs(tokenizer)
+			if found, ok := ogImageFrom(attrs, base); ok && head.ogImage == "" {
 				// First declaration wins: a page repeating og:image offers no
 				// basis to rank the repeats, and the first is conventionally
 				// the canonical one.
-				ogImage = found
+				head.ogImage = found
+			}
+			if found, ok := refreshFrom(attrs, base); ok && head.refresh == "" {
+				head.refresh = found
 			}
 		case "link":
 			if icon, ok := iconFrom(tokenizer, base); ok && !seen[icon.URL] {
 				seen[icon.URL] = true
-				icons = append(icons, icon)
+				head.icons = append(head.icons, icon)
 			}
 		}
 	}
@@ -179,14 +215,66 @@ func tagAttrs(tokenizer *html.Tokenizer) map[string]string {
 	}
 }
 
-// ogImageFrom reads one <meta> as an og:image declaration. Open Graph names
-// the field in `property`; some CMSs emit it in `name`, so both are accepted.
-func ogImageFrom(tokenizer *html.Tokenizer, base *url.URL) (string, bool) {
-	attrs := tagAttrs(tokenizer)
+// ogImageFrom reads one <meta>'s attributes as an og:image declaration. Open
+// Graph names the field in `property`; some CMSs emit it in `name`, so both
+// are accepted.
+func ogImageFrom(attrs map[string]string, base *url.URL) (string, bool) {
 	if attrs["property"] != "og:image" && attrs["name"] != "og:image" {
 		return "", false
 	}
 	return resolveAsset(base, attrs["content"])
+}
+
+// refreshFrom reads one <meta>'s attributes as a refresh declaration, and
+// returns the absolute URL it points at.
+//
+// The target must stay on the page's own registrable domain. A refresh is
+// markup, so whoever writes the page chooses it, and following one off-site
+// would let any page we read redirect the crawl at a host we never decided to
+// visit — including one chosen to be read as the company's own site. Staying
+// on-domain keeps the follow within the site we already resolved to read, so
+// it can reach `/de` on the same host but never someone else's server.
+//
+// Only a same-document `URL=` target is refused too: a refresh that names no
+// URL is a page telling itself to reload, which is not somewhere else to go.
+func refreshFrom(attrs map[string]string, base *url.URL) (string, bool) {
+	if !strings.EqualFold(strings.TrimSpace(attrs["http-equiv"]), "refresh") {
+		return "", false
+	}
+	target, ok := refreshTarget(attrs["content"])
+	if !ok {
+		return "", false
+	}
+	resolved, ok := resolveAsset(base, target)
+	if !ok {
+		return "", false
+	}
+	if !SameRegistrableDomain(base.String(), resolved) {
+		return "", false
+	}
+	return resolved, true
+}
+
+// refreshTarget pulls the URL out of a refresh content attribute. The value is
+// a delay, optionally followed by `; url=<target>` — `0; URL=/de` is the
+// ordinary spelling. The delay is not read: a site that says to leave after
+// ten seconds is still naming somewhere else as its real address, and the
+// crawler is not a browser waiting out a countdown.
+func refreshTarget(content string) (string, bool) {
+	_, after, found := strings.Cut(content, ";")
+	if !found {
+		return "", false
+	}
+	rest := strings.TrimSpace(after)
+	if !strings.HasPrefix(strings.ToLower(rest), "url") {
+		return "", false
+	}
+	_, target, found := strings.Cut(rest, "=")
+	if !found {
+		return "", false
+	}
+	// Quotes are common in hand-written markup and are not part of the URL.
+	return strings.Trim(strings.TrimSpace(target), `"'`), true
 }
 
 // iconFrom reads one <link> as an icon declaration.

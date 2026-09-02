@@ -37,7 +37,13 @@ func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL s
 		// crawl's wall deadline still bounds the attempt.
 		page, err = c.fetchPaced(ctx, pacer, seedURL)
 	}
-	if err == nil || errors.Is(err, webread.ErrRobotsDisallowed) {
+	if err == nil {
+		answered, landed := c.settleSeed(ctx, pacer, seedURL, page)
+		return answered, landed, nil
+	}
+	if errors.Is(err, webread.ErrRobotsDisallowed) {
+		// A refused seed carries no body, so there is nothing to follow and
+		// nothing to read: the refusal itself is the answer.
 		answered := answeredSeedURL(seedURL, page)
 		c.applyCrawlDelay(pacer, answered)
 		return answered, page, err
@@ -54,9 +60,8 @@ func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL s
 			retryPage, retryErr = c.fetchPaced(ctx, pacer, candidate)
 		}
 		if retryErr == nil {
-			answered := answeredSeedURL(candidate, retryPage)
-			c.applyCrawlDelay(pacer, answered)
-			return answered, retryPage, nil
+			answered, landed := c.settleSeed(ctx, pacer, candidate, retryPage)
+			return answered, landed, nil
 		}
 		// A refusal is the site's answer, not a spelling that failed to
 		// resolve. Every remaining candidate is the SAME site under another
@@ -67,6 +72,42 @@ func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL s
 		}
 	}
 	return seedURL, webread.Page{}, err
+}
+
+// settleSeed turns a seed that answered into the page the crawl should treat
+// as the landing page, following a meta-refresh trampoline once if that is
+// what answered.
+//
+// A site can publish its real address in markup instead of an HTTP redirect —
+// an empty document whose whole content is
+// `<meta http-equiv="refresh" content="0; URL=/de">`. The fetcher follows HTTP
+// redirects and never sees this one, so the crawl reads a page with no text on
+// it. That is indistinguishable from a parked domain, and the domain triage
+// judges it as one: anwr-group.com was refused a company on exactly this
+// shape, and every language-gateway site of that vintage has it.
+//
+// Followed ONCE, never in a loop. One hop reaches the site a browser would
+// land on, which is the whole gap; chaining them would let a site walk the
+// crawler through as many fetches as it cares to write, and a cycle of two
+// pages pointing at each other would never end. A refresh that leaves the
+// site's own registrable domain was already dropped at parse time
+// (webread.refreshFrom), so the hop stays on the site we resolved to read.
+func (c *siteCrawler) settleSeed(ctx context.Context, pacer crawlPacer, requested string, page webread.Page) (string, webread.Page) {
+	answered := answeredSeedURL(requested, page)
+	c.applyCrawlDelay(pacer, answered)
+	if !page.MetaRefreshOnly() {
+		return answered, page
+	}
+	landed, err := c.fetchPaced(ctx, pacer, page.Refresh)
+	if err != nil {
+		// The trampoline is all this site gave us. Returning it unchanged
+		// leaves the triage exactly the evidence it had before — an empty
+		// landing page — rather than inventing a read that did not happen.
+		return answered, page
+	}
+	followed := answeredSeedURL(page.Refresh, landed)
+	c.applyCrawlDelay(pacer, followed)
+	return followed, landed
 }
 
 // answeredSeedURL is the URL the seed's body actually came from. The fetch
