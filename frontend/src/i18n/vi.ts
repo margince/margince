@@ -5526,6 +5526,8 @@ export const vi = {
     "bước tạo liên hệ thất bại; bản thân tin nhắn không bị ảnh hưởng",
   "captureActivity.reason.no_counterparty":
     "không có người gửi nào CRM có thể ghi nhận",
+  "captureActivity.reason.role_mailbox":
+    "hộp thư dùng chung, không phải một người — vẫn lưu, nhưng không tạo liên hệ",
   "captureActivity.reason.transactional_infra":
     "người gửi là hạ tầng thư, không phải công ty bạn làm việc cùng",
   "captureActivity.reason.transactional_prefix":
@@ -5585,6 +5587,8 @@ export const vi = {
   "pipeline.reason.decided_prior": "người gửi này đã được quyết định trước đó",
   "pipeline.reason.no_counterparty":
     "không có người gửi nào CRM này ghi nhận được",
+  "pipeline.reason.role_mailbox":
+    "hộp thư dùng chung, không phải một người — vẫn lưu, nhưng không tạo liên hệ",
   "pipeline.reason.no_granting_human":
     "kết nối không chỉ định thành viên nào để thay mặt",
   "pipeline.reason.derivation_failed":

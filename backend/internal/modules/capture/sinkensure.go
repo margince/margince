@@ -208,7 +208,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// sender, not only those a suppression rule matched — since T4 defers the
 	// ambiguous class, the answer now decides create-versus-defer for ordinary
 	// senders too, which is worth a query per captured message.
-	corresponded, err := correspondencePositiveTx(ctx, tx, cp.Email)
+	corresponded, correspondedRepeatedly, err := correspondenceDepthTx(ctx, tx, cp.Email)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -219,6 +219,10 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// second question T1 always assumed: is this an address a person could be
 	// reached at?
 	decision.create = corresponded && s.recordWorthy(cp)
+	roleMailbox := refusesToNameAPerson(cp.Email, correspondedRepeatedly)
+	if roleMailbox {
+		decision.create = false
+	}
 
 	// T2 transactional / ESP infrastructure, which T1 outranks.
 	suppressed, suppressReason, err := s.registrySuppresses(ctx, tx, rec, cp, row, corresponded)
@@ -261,7 +265,10 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		// by this point.
 		return decision.traced(TraceCaptured, priorReason), nil
 	}
-	decision.create = decision.create || alreadyKnown
+	// A role mailbox stays refused: `alreadyKnown` is true for it the moment the
+	// verdict answers, and ORing that back on would mint the contact on the very
+	// next message the queue sends.
+	decision.create = (decision.create || alreadyKnown) && !roleMailbox
 
 	// T3 free-mail (CAP-PARAM-5). A consumer mailbox says what it is not — an
 	// organization — so the org is suppressed either way. What it does NOT say

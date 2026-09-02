@@ -168,6 +168,7 @@ const REASON_KEYS: Partial<Record<string, MessageKey>> = {
   "tier_ladder.noise_prior": "pipeline.reason.noise_prior",
   "tier_ladder.decided_prior": "pipeline.reason.decided_prior",
   "tier_ladder.no_counterparty": "pipeline.reason.no_counterparty",
+  "tier_ladder.role_mailbox": "pipeline.reason.role_mailbox",
   "tier_ladder.no_granting_human": "pipeline.reason.no_granting_human",
   "tier_ladder.derivation_failed": "pipeline.reason.derivation_failed",
   "person_create.not_linked_yet": "pipeline.reason.not_linked_yet",
