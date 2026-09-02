@@ -100,10 +100,14 @@ func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, personID ids
 	if err != nil {
 		return err
 	}
+	page, err := sectionPage(rows, hasMore)
+	if err != nil {
+		return err
+	}
 	out.Activities = &struct {
 		Data []crmcontracts.Activity `json:"data"`
 		Page crmcontracts.PageInfo   `json:"page"`
-	}{Data: rows, Page: sectionPage(rows, hasMore)}
+	}{Data: rows, Page: page}
 	return nil
 }
 
@@ -151,14 +155,17 @@ const (
 // vocabulary: the same (occurred_at, id) keyset GET /activities orders by, so
 // the record page continues from this page's last row rather than fetching
 // page one again and showing every row twice.
-func sectionPage(rows []crmcontracts.Activity, hasMore bool) crmcontracts.PageInfo {
+func sectionPage(rows []crmcontracts.Activity, hasMore bool) (crmcontracts.PageInfo, error) {
 	info := crmcontracts.PageInfo{HasMore: hasMore}
 	if hasMore && len(rows) > 0 {
 		last := rows[len(rows)-1]
-		cursor := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
+		cursor, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
+		if err != nil {
+			return crmcontracts.PageInfo{}, err
+		}
 		info.NextCursor = &cursor
 	}
-	return info
+	return info, nil
 }
 
 // readActivities is the shared body of the timeline and next-step reads.

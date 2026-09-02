@@ -327,7 +327,10 @@ func TestRecordHistoryHonestEmptyPageBeyondTheFinalRow(t *testing.T) {
 		t.Fatal("SeedPerson must have audited its own create — harness drift")
 	}
 	last := full.Entries[len(full.Entries)-1]
-	pastTheEnd := storekit.EncodeCursor(last.OccurredAt, last.ID)
+	pastTheEnd, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+	if err != nil {
+		t.Fatalf("minting a cursor past the end: %v", err)
+	}
 
 	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
 		EntityType: "person", EntityID: personID, Cursor: &pastTheEnd,

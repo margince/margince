@@ -102,7 +102,10 @@ func (s *Store) ExplainLeadScore(ctx context.Context, leadID ids.LeadID, in Expl
 		page := crmcontracts.PageInfo{HasMore: hasMore}
 		if hasMore {
 			last := rows[len(rows)-1]
-			next := storekit.EncodeCursor(last.ComputedAt, last.ID)
+			next, err := storekit.EncodeCursor(last.ComputedAt, last.ID)
+			if err != nil {
+				return err
+			}
 			page.NextCursor = &next
 		}
 		out.Page = &page

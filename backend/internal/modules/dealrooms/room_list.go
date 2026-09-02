@@ -106,7 +106,11 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 	if len(out) > size {
 		out = out[:size]
 		createdAt, id := roomKey(out[len(out)-1])
-		page = storekit.Page{HasMore: true, NextCursor: storekit.EncodeCursor(createdAt, id)}
+		next, err := storekit.EncodeCursor(createdAt, id)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		page = storekit.Page{HasMore: true, NextCursor: next}
 	}
 	return out, page, nil
 }
