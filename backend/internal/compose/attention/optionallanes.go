@@ -65,19 +65,28 @@ func (l optionalLane) collect(
 		return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
 	case err != nil:
 		return omitted, err
-	default:
-		*l.into = &items
-		count := len(items)
-		if l.total != nil {
-			// Asked AFTER the page, so a lane this reader may not see is
-			// withheld by the read above rather than counted here.
-			if count, err = l.total(); err != nil {
-				return omitted, err
-			}
-		}
-		*l.count = &count
-		return omitted, nil
 	}
+	count := len(items)
+	if l.total != nil {
+		// The SAME refusal reading the page gets, and asked BEFORE either field
+		// is filed. A count is a read of the rows it counts, so a reader refused
+		// by it is refused by the page too — answering the lane's error one way
+		// and its badge's another would fail the whole feed over a lane the page
+		// would simply have withheld, and filing the items first would leave a
+		// lane both present and named as omitted.
+		count, err = l.total()
+		switch {
+		case errors.Is(err, apperrors.ErrModeNotOverlay):
+			return omitted, nil
+		case errors.Is(err, apperrors.ErrPermissionDenied):
+			return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
+		case err != nil:
+			return omitted, err
+		}
+	}
+	*l.into = &items
+	*l.count = &count
+	return omitted, nil
 }
 
 // optionalLanes describes the optional lanes, in the order they are read.

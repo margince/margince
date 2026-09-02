@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -89,5 +90,39 @@ func TestACountThatWillNotAnswerIsNotReplacedByThePageLength(t *testing.T) {
 
 	if _, err := s.Assemble(context.Background()); err == nil {
 		t.Error("the day assembled with a count that failed, so the badge came from somewhere else")
+	}
+}
+
+// A COUNT THIS READER MAY NOT MAKE WITHHOLDS THE LANE, as the page's own
+// refusal does — rather than failing the whole feed over one lane.
+//
+// The two answers have to match: a count is a read of the rows it counts, so a
+// reader refused by it is refused by the page beside it, and reporting one as
+// withheld and the other as broken would take the morning down with it.
+func TestACountThisReaderMayNotMakeWithholdsItsLane(t *testing.T) {
+	promises := &stubCommitments{rows: promisesDue(2), countErr: apperrors.ErrPermissionDenied}
+	s := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
+		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+
+	day, err := s.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v — a lane the reader may not count must be withheld, not fatal", err)
+	}
+	if day.Commitments != nil {
+		t.Errorf("the lane carries %v, want it absent", day.Commitments)
+	}
+	var named bool
+	if day.LanesOmitted == nil {
+		t.Fatal("lanes_omitted is absent, so the withheld lane is reported as nothing at all")
+	}
+	for _, lane := range *day.LanesOmitted {
+		if lane == "commitments" {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("lanes_omitted = %v, want commitments named: a withheld lane the reader is not "+
+			"told about reads as a lane with nothing in it", day.LanesOmitted)
 	}
 }
