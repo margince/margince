@@ -105,8 +105,21 @@ trap 'rm -f "$log"' EXIT
 # files stay next to the findings they belong to. The stated cost of reading
 # what golangci printed is that it now prints into a pipe, so its `--color auto`
 # resolves to none where a bare terminal run used to be coloured.
+# golangci refuses to start while another instance runs ANYWHERE on the
+# machine — the lock is machine-wide and independent of the cache directory, so
+# with several worktrees gating at once a run died with "parallel golangci-lint
+# is running" (exit 3) even on a private cache (measured 2026-09-01). That lock
+# exists to keep two runners out of one analysis cache, and the partitioning
+# above is what makes waiving it sound: each checkout writes its own cache, so
+# a `run` here has nothing to collide with. Only `run` takes the flag — the
+# other subcommands (cache, version) do not know it.
+parallel_ok=()
+if [[ "${1:-}" == "run" ]]; then
+  parallel_ok=(--allow-parallel-runners)
+fi
+
 set +e
-"$golangci" "$@" 2>&1 | tee "$log"
+"$golangci" "$@" ${parallel_ok[@]+"${parallel_ok[@]}"} 2>&1 | tee "$log"
 status=${PIPESTATUS[0]}
 set -e
 
