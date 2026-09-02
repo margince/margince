@@ -169,6 +169,19 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 		faults = append(faults, fmt.Sprintf("--oauth-access-token-ttl %s is out of range: 0 (the default) or up to %s",
 			cfg.oauthAccessTokenTTL, identity.MaxOAuthAccessTokenTTL))
 	}
+	// ONE authority, because capture builds a URL out of it. --graph-tenant is
+	// spliced straight into login.microsoftonline.com/%s/oauth2/..., so a list
+	// there produces an authority no directory answers for and a consent screen
+	// that fails with Microsoft's own opaque error.
+	//
+	// Worth naming now that its SIBLING takes a list:
+	// --microsoft-signin-tenant accepts several directories and falls back to
+	// this flag, so an operator configuring multi-directory sign-in has a
+	// reason to reach for the more prominent variable and break capture with it.
+	if strings.Contains(cfg.graphTenant, ",") {
+		faults = append(faults, "--graph-tenant takes ONE authority (a directory id, or common) and got a list: "+
+			cfg.graphTenant+" — several directories is a SIGN-IN posture, so put them in --microsoft-signin-tenant")
+	}
 	if len(faults) == 1 {
 		return apiConfig{}, errors.New("api: " + faults[0])
 	}
