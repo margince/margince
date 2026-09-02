@@ -304,10 +304,17 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	if err != nil {
 		return SelfSet{}, err
 	}
+	// The login address goes in IDENTITY-ONLY, never among the proven ones. It
+	// says who the seat is; it does not say that their mailbox received
+	// anything, and one reader of this set treats an exact address as proof of
+	// delivery in order to grant read access to an incumbent message. Proving
+	// identity and proving delivery are two questions and this address answers
+	// only the first.
+	var identityOnly []string
 	if login != "" {
-		addresses = append(addresses, login)
+		identityOnly = append(identityOnly, login)
 	}
-	return NewSelfSet(addresses, domains), nil
+	return NewSelfSetWithIdentityOnly(addresses, identityOnly, domains), nil
 }
 
 // seatLoginAddressTx is the address this seat signs in with.
