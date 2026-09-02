@@ -16354,6 +16354,11 @@ export interface components {
              */
             as_of: string;
             organization: components["schemas"]["Organization"];
+            /**
+             * @description The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's people — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
+             *     The schema is `PersonMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
+             */
+            moment?: components["schemas"]["PersonMoment"];
             /** @description The project this was narrowed to, when the request named one. */
             scope?: components["schemas"]["ProjectScope"];
             /**
@@ -16370,7 +16375,7 @@ export interface components {
             next_meeting?: components["schemas"]["Organization360NextMeeting"];
             health?: components["schemas"]["Organization360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("people" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting")[];
+            sections_omitted: ("people" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments")[];
             people?: {
                 data: components["schemas"]["Organization360Contact"][];
                 page: components["schemas"]["PageInfo"];

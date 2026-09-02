@@ -6821,6 +6821,7 @@ const (
 	Organization360SectionsOmittedHealth           Organization360SectionsOmitted = "health"
 	Organization360SectionsOmittedLastTouch        Organization360SectionsOmitted = "last_touch"
 	Organization360SectionsOmittedListMemberships  Organization360SectionsOmitted = "list_memberships"
+	Organization360SectionsOmittedMoments          Organization360SectionsOmitted = "moments"
 	Organization360SectionsOmittedNextMeeting      Organization360SectionsOmitted = "next_meeting"
 	Organization360SectionsOmittedNextSteps        Organization360SectionsOmitted = "next_steps"
 	Organization360SectionsOmittedPendingApprovals Organization360SectionsOmitted = "pending_approvals"
@@ -6845,6 +6846,8 @@ func (e Organization360SectionsOmitted) Valid() bool {
 	case Organization360SectionsOmittedLastTouch:
 		return true
 	case Organization360SectionsOmittedListMemberships:
+		return true
+	case Organization360SectionsOmittedMoments:
 		return true
 	case Organization360SectionsOmittedNextMeeting:
 		return true
@@ -23029,6 +23032,10 @@ type Organization360 struct {
 	// LastOutboundAt When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
 	LastOutboundAt  *time.Time `json:"last_outbound_at,omitempty"`
 	ListMemberships *[]List    `json:"list_memberships,omitempty"`
+
+	// Moment The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's people — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
+	// The schema is `PersonMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
+	Moment *PersonMoment `json:"moment,omitempty"`
 
 	// NextMeeting The next meeting with this account that has not happened yet, and who is in it.
 	//
