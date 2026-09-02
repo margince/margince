@@ -33,9 +33,12 @@ function mapKeys(mapName: string): Set<string> {
   for (const match of body.matchAll(/"(aiCert\.(?:job|site)\.[a-z0-9_.]+)"/g)) {
     keys.add(match[1]);
   }
-  expect(keys.size, `${mapName} yielded no keys — the pattern has stopped
+  expect(
+    keys.size,
+    `${mapName} yielded no keys — the pattern has stopped
     matching the map, which would let this test pass while every name was
-    missing`).toBeGreaterThan(0);
+    missing`,
+  ).toBeGreaterThan(0);
   return keys;
 }
 

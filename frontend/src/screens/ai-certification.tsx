@@ -44,7 +44,6 @@ type Result = components["schemas"]["AiCertificationResult"];
 
 export function AiCertificationCard() {
   const t = useT();
-  const { locale } = useLocale();
   const canSee = useCan("ai_routing", "read");
   const [explaining, setExplaining] = useState(false);
   const titleId = useId();
@@ -248,78 +247,95 @@ function ResultCell({ job }: Readonly<{ job: Job }>) {
           })}
         </span>
       ) : null}
-      {/* A failing verdict beside a high count reads as a contradiction, so the
-          row says which of the two reasons produced it rather than leaving a
-          reader to guess — or, worse, being told something untrue.
-
-          A verdict is not decided by the pass rate alone: certification also
-          requires the grader's median quality score to clear a bar, so a job
-          can pass every run and still fail. Saying "one kind of example fails
-          every time" about THAT job would be false, and it is a real case —
-          draft_reply passes 12 of 12 and is not_supported. */}
-      {job.result === "not_reliable" && failedSomeRuns(job) ? (
-        <span className="t-meta">{t("aiCert.oneKindFails")}</span>
-      ) : null}
-      {job.result === "not_reliable" && passedEveryRun(job) ? (
-        <span className="t-meta">{t("aiCert.gradedBelowBar")}</span>
-      ) : null}
-      {job.result === "partly_checked" && job.pending_examples ? (
-        <span className="t-meta">
-          {t("aiCert.pendingExamples", {
-            measured: formatNumber(job.measured_examples ?? 0, locale),
-            total: formatNumber(
-              (job.measured_examples ?? 0) + job.pending_examples,
-              locale,
-            ),
-          })}
-        </span>
-      ) : null}
-      {job.result === "out_of_date" && job.measured_at ? (
-        <span className="t-meta">
-          {t("aiCert.measuredOn", {
-            date: formatDate(job.measured_at, locale, viewerZone()),
-          })}
-        </span>
-      ) : null}
-      {/* What the measurement FOUND. "Out of date" and "partly checked"
-          describe a measurement's standing, not its finding, so without this a
-          stale failure and a stale success render identically — keeping the
-          reassuring counts and dropping the unflattering verdict. Two committed
-          rows are stale not_supported at 12 of 12 runs passed. */}
-      {job.measured_result ? (
-        <span className="t-meta">
-          {t("aiCert.whenMeasuredItRead", {
-            finding: t(RESULT_KEY[job.measured_result]),
-          })}
-        </span>
-      ) : null}
-      {/* A measurement exists under a different hosting posture. It does not
-          carry over, and saying nothing would throw away evidence the reader
-          could go and look at. */}
-      {job.measured_under_other_profile ? (
-        <span className="t-meta">{t("aiCert.otherProfile")}</span>
-      ) : null}
-      {/* Narrowed scope: a run that graded one reply of a longer exchange
-          certifies less than the exchange, so the claim is qualified rather
-          than stated whole. */}
-      {isNarrow(job.scope) ? (
-        <span className="t-meta">{t("aiCert.narrowScope")}</span>
-      ) : null}
-      {job.unmeasured_fallbacks?.length ? (
-        <span className="t-meta">
-          {t("aiCert.unmeasuredFallback", {
-            model: job.unmeasured_fallbacks.join(", "),
-          })}
-        </span>
-      ) : null}
-      {job.worst_site ? (
-        <span className="t-meta">
-          {t("aiCert.worstSite", {
-            site: siteName(t, job.task, job.worst_site),
-          })}
-        </span>
-      ) : null}
+      <Caveats job={job} />
     </span>
+  );
+}
+
+// Everything a verdict alone would overstate.
+//
+// Split from the badge and counts above because each line below exists to stop
+// one specific misreading, and they are easier to audit as a list than folded
+// into the cell that draws the badge.
+function Caveats({ job }: Readonly<{ job: Job }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const lines: string[] = [];
+
+  // A failing verdict beside a high count reads as a contradiction, so the row
+  // says WHICH of the two reasons produced it rather than leaving a reader to
+  // guess — or, worse, being told something untrue. A verdict is not decided by
+  // the pass rate alone: certification also requires the grader's median score
+  // to clear a bar, so a job can pass every run and still fail. Saying "one
+  // kind of example fails every time" about that job would be false, and it is
+  // a real case — draft_reply passes 12 of 12 and is not_supported.
+  if (job.result === "not_reliable" && failedSomeRuns(job)) {
+    lines.push(t("aiCert.oneKindFails"));
+  }
+  if (job.result === "not_reliable" && passedEveryRun(job)) {
+    lines.push(t("aiCert.gradedBelowBar"));
+  }
+  if (job.result === "partly_checked" && job.pending_examples) {
+    lines.push(
+      t("aiCert.pendingExamples", {
+        measured: formatNumber(job.measured_examples ?? 0, locale),
+        total: formatNumber(
+          (job.measured_examples ?? 0) + job.pending_examples,
+          locale,
+        ),
+      }),
+    );
+  }
+  if (job.result === "out_of_date" && job.measured_at) {
+    lines.push(
+      t("aiCert.measuredOn", {
+        date: formatDate(job.measured_at, locale, viewerZone()),
+      }),
+    );
+  }
+  // What the measurement FOUND. "Out of date" and "partly checked" describe a
+  // measurement's standing, not its finding, so without this a stale failure
+  // and a stale success render identically — keeping the reassuring counts and
+  // dropping the unflattering verdict. Two committed rows are stale
+  // not_supported at 12 of 12 runs passed.
+  if (job.measured_result) {
+    lines.push(
+      t("aiCert.whenMeasuredItRead", {
+        finding: t(RESULT_KEY[job.measured_result]),
+      }),
+    );
+  }
+  // A measurement exists under a different hosting posture. It does not carry
+  // over, and saying nothing would throw away evidence a reader could chase.
+  if (job.measured_under_other_profile) {
+    lines.push(t("aiCert.otherProfile"));
+  }
+  // A run that graded one reply of a longer exchange certifies less than the
+  // exchange, so the claim is qualified rather than stated whole.
+  if (isNarrow(job.scope)) {
+    lines.push(t("aiCert.narrowScope"));
+  }
+  if (job.unmeasured_fallbacks?.length) {
+    lines.push(
+      t("aiCert.unmeasuredFallback", {
+        model: job.unmeasured_fallbacks.join(", "),
+      }),
+    );
+  }
+  if (job.worst_site) {
+    lines.push(
+      t("aiCert.worstSite", { site: siteName(t, job.task, job.worst_site) }),
+    );
+  }
+
+  return (
+    <>
+      {lines.map((line) => (
+        <span key={line} className="t-meta">
+          {line}
+        </span>
+      ))}
+    </>
   );
 }
 

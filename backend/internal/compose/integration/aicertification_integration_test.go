@@ -54,10 +54,14 @@ func TestAiCertificationReportsAFreshInstallationAsUnbound(t *testing.T) {
 			t.Errorf("%s reads %q with nothing bound, want no_model", job.Task, job.Result)
 		}
 	}
-	// The sample size qualifies every count the card shows, so it travels with
-	// the answer rather than being assumed by the screen.
-	if got.RunsPerExample <= 0 {
-		t.Errorf("runs_per_example = %d, want the lane's actual sample size", got.RunsPerExample)
+	// The sample size travels per JOB, derived from that job's own counts — the
+	// lane's repeat count is configurable per run, so one figure for the whole
+	// page would be a claim about runs it never saw. With nothing bound there
+	// are no counts to derive it from, and it is absent rather than guessed.
+	for _, job := range got.Jobs {
+		if job.RunsPerExample != nil {
+			t.Errorf("%s reports a sample size with nothing bound: %d", job.Task, *job.RunsPerExample)
+		}
 	}
 }
 

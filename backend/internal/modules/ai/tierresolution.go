@@ -26,9 +26,9 @@ func LeadingTier(task Task) Tier {
 // IsBound says whether a tier binding has a model behind it.
 //
 // A tier present in a routing map with no provider or no model is NOT bound: the
-// router builds no client from it. Spelled once because three callers reasoning
-// about what answers had each written the same two comparisons, and a fourth
-// would have written it again.
+// router builds no client from it. It is a function rather than two comparisons
+// at each call site because three callers reasoning about what answers had each
+// written the same pair, and a fourth would have written it again.
 func IsBound(binding ProviderConfig) bool {
 	return binding.Provider != "" && binding.Model != ""
 }
