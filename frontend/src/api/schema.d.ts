@@ -5204,6 +5204,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/records/{entity_type}/{entity_id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "person" | "organization" | "deal";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The tags on one record, and who put them there.
+         * @description ONE read for all three record types, because the panel that draws them is one
+         *     component: a per-type block on each record response would be three copies of one
+         *     shape, and they would drift.
+         *
+         *     Each assignment carries who applied it and when, which the record page shows beside
+         *     the tag. `assigned_by` is absent for assignments made before the product recorded
+         *     it — absent means unknown, never "the system".
+         *
+         *     The three advertised types only. `taggable` admits lead and project, and this route
+         *     refuses them: a read that answered for a type no screen offers would be a surface
+         *     nobody meant to ship.
+         *
+         *     Withheld is not empty. A caller who may read the record but not the tag vocabulary
+         *     gets `withheld: true` and no assignments — distinguishable from a record that simply
+         *     carries none, because "no tags" is a claim about the record and this caller cannot
+         *     make it.
+         */
+        get: operations["getRecordTags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tags/{id}/apply": {
         parameters: {
             query?: never;
@@ -21305,6 +21343,36 @@ export interface components {
             color?: "teal" | "amber" | "rose" | "slate" | null;
             description?: string | null;
         };
+        /**
+         * @description What one record carries. `withheld` says the caller could not read the vocabulary,
+         *     which is why `data` is empty — a reader has to be able to tell that from a record
+         *     with no tags on it.
+         */
+        RecordTagsResponse: {
+            data: components["schemas"]["RecordTag"][];
+            withheld: boolean;
+        };
+        /** @description One tag on one record, with the assignment that put it there. */
+        RecordTag: {
+            /** Format: uuid */
+            tag_id: string;
+            name: string;
+            /** @enum {string|null} */
+            color?: "teal" | "amber" | "rose" | "slate" | null;
+            description?: string | null;
+            archived: boolean;
+            /** Format: date-time */
+            assigned_at: string;
+            assigned_by?: components["schemas"]["RecordTagAssigner"];
+        };
+        /** @description Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's. */
+        RecordTagAssigner: {
+            /** Format: uuid */
+            user_id?: string | null;
+            display_name?: string | null;
+            /** @enum {string} */
+            kind: "human" | "agent" | "import";
+        };
         /** @description One tag with how much of the workspace carries it. */
         TagDetail: {
             /** Format: uuid */
@@ -36364,6 +36432,33 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getRecordTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "person" | "organization" | "deal";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record's tags. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordTagsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

@@ -17,6 +17,13 @@ var getTagCopy = toolCopy{
 		"merging the word would touch; the records themselves come from list_records.",
 }
 
+var getRecordTagsCopy = toolCopy{
+	Purpose: "Read the tags on one person, company or deal, with who applied each and when.",
+	Limits: "Those three record types only. `withheld` true means the vocabulary is not visible " +
+		"to this caller, so the list is empty for that reason — NOT because the record carries no " +
+		"tags, and it must not be reported as none. An archived tag stays on whatever carries it.",
+}
+
 var applyTagCopy = toolCopy{
 	Purpose: "Tag a person, company, deal, lead or project by tag_id, or by tag_name, which must " +
 		"name a tag the workspace already has.",

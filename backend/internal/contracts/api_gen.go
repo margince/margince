@@ -9289,6 +9289,51 @@ func (e RecordQualifyingEventRequestKind) Valid() bool {
 	}
 }
 
+// Defines values for RecordTagColor.
+const (
+	RecordTagColorAmber RecordTagColor = "amber"
+	RecordTagColorRose  RecordTagColor = "rose"
+	RecordTagColorSlate RecordTagColor = "slate"
+	RecordTagColorTeal  RecordTagColor = "teal"
+)
+
+// Valid indicates whether the value is a known member of the RecordTagColor enum.
+func (e RecordTagColor) Valid() bool {
+	switch e {
+	case RecordTagColorAmber:
+		return true
+	case RecordTagColorRose:
+		return true
+	case RecordTagColorSlate:
+		return true
+	case RecordTagColorTeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordTagAssignerKind.
+const (
+	RecordTagAssignerKindAgent  RecordTagAssignerKind = "agent"
+	RecordTagAssignerKindHuman  RecordTagAssignerKind = "human"
+	RecordTagAssignerKindImport RecordTagAssignerKind = "import"
+)
+
+// Valid indicates whether the value is a known member of the RecordTagAssignerKind enum.
+func (e RecordTagAssignerKind) Valid() bool {
+	switch e {
+	case RecordTagAssignerKindAgent:
+		return true
+	case RecordTagAssignerKindHuman:
+		return true
+	case RecordTagAssignerKindImport:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordViewAckEntityType.
 const (
 	RecordViewAckEntityTypeOrganization RecordViewAckEntityType = "organization"
@@ -10431,22 +10476,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	Amber TagDetailColor = "amber"
-	Rose  TagDetailColor = "rose"
-	Slate TagDetailColor = "slate"
-	Teal  TagDetailColor = "teal"
+	TagDetailColorAmber TagDetailColor = "amber"
+	TagDetailColorRose  TagDetailColor = "rose"
+	TagDetailColorSlate TagDetailColor = "slate"
+	TagDetailColorTeal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case Amber:
+	case TagDetailColorAmber:
 		return true
-	case Rose:
+	case TagDetailColorRose:
 		return true
-	case Slate:
+	case TagDetailColorSlate:
 		return true
-	case Teal:
+	case TagDetailColorTeal:
 		return true
 	default:
 		return false
@@ -14190,34 +14235,34 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	All             GetWorklistParamsFilter = "all"
-	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	Decisions       GetWorklistParamsFilter = "decisions"
-	Leads           GetWorklistParamsFilter = "leads"
-	Meetings        GetWorklistParamsFilter = "meetings"
-	System          GetWorklistParamsFilter = "system"
-	Tasks           GetWorklistParamsFilter = "tasks"
+	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
+	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
+	GetWorklistParamsFilterLeads           GetWorklistParamsFilter = "leads"
+	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
+	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case All:
+	case GetWorklistParamsFilterAll:
 		return true
-	case CustomerWaiting:
+	case GetWorklistParamsFilterCustomerWaiting:
 		return true
-	case DealsAtRisk:
+	case GetWorklistParamsFilterDealsAtRisk:
 		return true
-	case Decisions:
+	case GetWorklistParamsFilterDecisions:
 		return true
-	case Leads:
+	case GetWorklistParamsFilterLeads:
 		return true
-	case Meetings:
+	case GetWorklistParamsFilterMeetings:
 		return true
-	case System:
+	case GetWorklistParamsFilterSystem:
 		return true
-	case Tasks:
+	case GetWorklistParamsFilterTasks:
 		return true
 	default:
 		return false
@@ -26835,6 +26880,40 @@ type RecordQualifyingEventRequest struct {
 // active_deal — are DERIVED from records the product already holds, and a hand-written
 // one would be a second, unbacked answer to a question the data already settles.
 type RecordQualifyingEventRequestKind string
+
+// RecordTag One tag on one record, with the assignment that put it there.
+type RecordTag struct {
+	Archived   bool      `json:"archived"`
+	AssignedAt time.Time `json:"assigned_at"`
+
+	// AssignedBy Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's.
+	AssignedBy  *RecordTagAssigner `json:"assigned_by,omitempty"`
+	Color       *RecordTagColor    `json:"color,omitempty"`
+	Description *string            `json:"description,omitempty"`
+	Name        string             `json:"name"`
+	TagId       openapi_types.UUID `json:"tag_id"`
+}
+
+// RecordTagColor defines model for RecordTag.Color.
+type RecordTagColor string
+
+// RecordTagAssigner Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's.
+type RecordTagAssigner struct {
+	DisplayName *string               `json:"display_name,omitempty"`
+	Kind        RecordTagAssignerKind `json:"kind"`
+	UserId      *openapi_types.UUID   `json:"user_id,omitempty"`
+}
+
+// RecordTagAssignerKind defines model for RecordTagAssigner.Kind.
+type RecordTagAssignerKind string
+
+// RecordTagsResponse What one record carries. `withheld` says the caller could not read the vocabulary,
+// which is why `data` is empty — a reader has to be able to tell that from a record
+// with no tags on it.
+type RecordTagsResponse struct {
+	Data     []RecordTag `json:"data"`
+	Withheld bool        `json:"withheld"`
+}
 
 // RecordViewAck The per-user "I have seen this record" baseline, after an acknowledgment.
 type RecordViewAck struct {
@@ -44623,6 +44702,9 @@ type ServerInterface interface {
 	// Revoke a manual record grant (human-only).
 	// (DELETE /record-grants/{id})
 	RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams)
+	// The tags on one record, and who put them there.
+	// (GET /records/{entity_type}/{entity_id}/tags)
+	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
 	// Assembled context (related evidence) for one record.
 	// (GET /records/{entity_type}/{id}/context)
 	GetRecordContext(w http.ResponseWriter, r *http.Request, entityType string, id Id, params GetRecordContextParams)
@@ -47617,6 +47699,12 @@ func (_ Unimplemented) CreateRecordGrant(w http.ResponseWriter, r *http.Request,
 // Revoke a manual record grant (human-only).
 // (DELETE /record-grants/{id})
 func (_ Unimplemented) RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The tags on one record, and who put them there.
+// (GET /records/{entity_type}/{entity_id}/tags)
+func (_ Unimplemented) GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67235,6 +67323,49 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetRecordTags operation middleware
+func (siw *ServerInterfaceWrapper) GetRecordTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type" -------------
+	var entityType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type", chi.URLParam(r, "entity_type"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", chi.URLParam(r, "entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecordTags(w, r, entityType, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetRecordContext operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordContext(w http.ResponseWriter, r *http.Request) {
 
@@ -73601,6 +73732,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/record-grants/{id}", wrapper.RevokeRecordGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{id}/context", wrapper.GetRecordContext)

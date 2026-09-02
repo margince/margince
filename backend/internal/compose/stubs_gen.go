@@ -1803,6 +1803,10 @@ func (stubs) RevokeRecordGrant(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "RevokeRecordGrant")
 }
 
+func (stubs) GetRecordTags(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetRecordTags")
+}
+
 func (stubs) GetRecordContext(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, id crmcontracts.Id, params crmcontracts.GetRecordContextParams) {
 	httperr.NotImplemented(w, r, "GetRecordContext")
 }

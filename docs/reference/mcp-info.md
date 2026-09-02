@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 60 |
+| Tools | 61 |
 | Resources | 9 |
-| Tool catalog | 171.6 KB |
+| Tool catalog | 173.6 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 44813 |
+| Approx. wire tokens | 45308 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 82.4 KB | 48% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 39.9 KB | 23% | Yes, every step |
-| Input schemas | 36.7 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 12.7 KB | 7% | Partly |
-| **Description + input schema** | **76.5 KB** | **44%** | **the recurring cost** |
+| Output schemas | 83.5 KB | 48% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 40.2 KB | 23% | Yes, every step |
+| Input schemas | 36.9 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 12.9 KB | 7% | Partly |
+| **Description + input schema** | **77.1 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,7 +57,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (60)
+### Tools (61)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -82,6 +82,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
 | [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
+| [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
@@ -3905,6 +3906,172 @@ Learn about an organization by reading its public website, and propose what was 
 {
   "properties": {
     "data": {
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### get_record_tags
+
+**Get a record's tags**
+
+Read the tags on one person, company or deal, with who applied each and when. Those three record types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty for that reason — NOT because the record carries no tags, and it must not be reported as none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "record_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "record_type": {
+      "enum": [
+        "person",
+        "organization",
+        "deal"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "record_type",
+    "record_id"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "tags": {
+          "items": {
+            "properties": {
+              "archived": {
+                "type": "boolean"
+              },
+              "assigned_at": {
+                "type": "string"
+              },
+              "assigned_by": {
+                "type": "string"
+              },
+              "assigned_by_kind": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "tag_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "assigned_at",
+              "name",
+              "tag_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "withheld": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "tags",
+        "withheld"
+      ],
       "type": "object"
     },
     "evidence": {

@@ -4,10 +4,10 @@
   "per_agent_listing_budget": 17000,
   "whole_catalog_floor": 21000,
   "catalog": {
-    "tools": 60,
-    "tokens": 19104,
+    "tools": 61,
+    "tokens": 19253,
     "median_tool_tokens": 274,
-    "mean_tool_tokens": 318
+    "mean_tool_tokens": 315
   },
   "agents": [
     {
@@ -283,6 +283,10 @@
     },
     {
       "name": "commit_import",
+      "tokens": 149
+    },
+    {
+      "name": "get_record_tags",
       "tokens": 149
     },
     {

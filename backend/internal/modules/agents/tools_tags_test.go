@@ -71,6 +71,17 @@ func (s stubTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
 	}, nil
 }
 
+// RecordTags answers a fixed assignment: these tests are about the tool's
+// plumbing, and the read itself is proved against a real database in the
+// collections integration suite, where the permissions can be wrong.
+func (s stubTags) RecordTags(_ context.Context, _ string, _ ids.UUID) (RecordTagsResult, error) {
+	return RecordTagsResult{Tags: []RecordTagOnRecord{{
+		Name: knownTagName, AssignedByKind: "human", AssignedAt: "2026-03-03T10:00:00Z",
+	}}}, nil
+}
+
+func (s stubTags) RecordTagTypes() []string { return []string{"person", "organization", "deal"} }
+
 func (s stubTags) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
 	if s.ensured != nil {
 		*s.ensured = name
@@ -217,6 +228,14 @@ func (r refusingTaggable) EnsureTaggable(context.Context, string, ids.UUID) erro
 
 func (r refusingTaggable) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
 	return TagDetail{Tag: Tag{TagID: tagID, Name: knownTagName}}, nil
+}
+
+func (r refusingTaggable) RecordTags(_ context.Context, _ string, _ ids.UUID) (RecordTagsResult, error) {
+	return RecordTagsResult{}, nil
+}
+
+func (r refusingTaggable) RecordTagTypes() []string {
+	return []string{"person", "organization", "deal"}
 }
 
 func (r refusingTaggable) ResolveTag(_ context.Context, name string) (ids.UUID, error) {

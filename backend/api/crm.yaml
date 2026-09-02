@@ -7944,6 +7944,51 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /records/{entity_type}/{entity_id}/tags:
+    parameters:
+      - name: entity_type
+        in: path
+        required: true
+        schema: { type: string, enum: [person, organization, deal] }
+      - name: entity_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Tags]
+      operationId: getRecordTags
+      x-mcp-tool: { verb: get_record_tags, record_type: tag, tier: auto_execute, scope: read }
+      summary: The tags on one record, and who put them there.
+      description: |
+        ONE read for all three record types, because the panel that draws them is one
+        component: a per-type block on each record response would be three copies of one
+        shape, and they would drift.
+
+        Each assignment carries who applied it and when, which the record page shows beside
+        the tag. `assigned_by` is absent for assignments made before the product recorded
+        it — absent means unknown, never "the system".
+
+        The three advertised types only. `taggable` admits lead and project, and this route
+        refuses them: a read that answered for a type no screen offers would be a surface
+        nobody meant to ship.
+
+        Withheld is not empty. A caller who may read the record but not the tag vocabulary
+        gets `withheld: true` and no assignments — distinguishable from a record that simply
+        carries none, because "no tags" is a claim about the record and this caller cannot
+        make it.
+      responses:
+        '200':
+          description: The record's tags.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordTagsResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        # A caller lacking read on the RECORD type is refused outright. Lacking
+        # the tag vocabulary is not a refusal — that answers 200 with withheld.
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /tags/{id}/apply:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -29253,6 +29298,44 @@ components:
         name: { type: string, maxLength: 64 }
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
         description: { type: [string, 'null'] }
+
+    RecordTagsResponse:
+      type: object
+      description: |
+        What one record carries. `withheld` says the caller could not read the vocabulary,
+        which is why `data` is empty — a reader has to be able to tell that from a record
+        with no tags on it.
+      required: [data, withheld]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/RecordTag' } }
+        withheld: { type: boolean }
+
+    RecordTag:
+      type: object
+      description: One tag on one record, with the assignment that put it there.
+      required: [tag_id, name, archived, assigned_at]
+      properties:
+        tag_id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        description: { type: [string, 'null'] }
+        # Archived tags stay ON the records that carry them: retiring a word
+        # stops it being applied, it does not un-tag a history that was true.
+        # The panel draws them muted rather than hiding them.
+        archived: { type: boolean }
+        assigned_at: { type: string, format: date-time }
+        # Absent when the assignment predates the product recording it. A reader
+        # sees "added on 3 March" with no name rather than a name nobody chose.
+        assigned_by: { $ref: '#/components/schemas/RecordTagAssigner' }
+
+    RecordTagAssigner:
+      type: object
+      description: Who applied a tag. `kind` says by what hand, which a reader needs to tell a colleague's choice from an import's.
+      required: [kind]
+      properties:
+        user_id: { type: [string, 'null'], format: uuid }
+        display_name: { type: [string, 'null'] }
+        kind: { type: string, enum: [human, agent, import] }
 
     TagDetail:
       type: object

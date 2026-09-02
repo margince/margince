@@ -9,6 +9,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -82,6 +83,34 @@ func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetai
 	}
 	return out, nil
 }
+
+// RecordTags hands the record-tag read across. The tool and the record page
+// read the SAME store method, so a model and a person looking at one company
+// cannot be told different things about who tagged it.
+func (a tagAdapter) RecordTags(ctx context.Context, entityType string, entityID ids.UUID) (agents.RecordTagsResult, error) {
+	read, err := a.store.RecordTagsFor(ctx, entityType, entityID)
+	if err != nil {
+		return agents.RecordTagsResult{}, err
+	}
+	out := agents.RecordTagsResult{
+		Tags:     make([]agents.RecordTagOnRecord, 0, len(read.Data)),
+		Withheld: read.Withheld,
+	}
+	for _, t := range read.Data {
+		out.Tags = append(out.Tags, agents.RecordTagOnRecord{
+			TagID:          t.TagID,
+			Name:           t.Name,
+			Archived:       t.Archived,
+			AssignedBy:     t.AssignedByName,
+			AssignedByKind: t.AssignedByKind,
+			AssignedAt:     t.AssignedAt.Format(time.RFC3339),
+		})
+	}
+	return out, nil
+}
+
+// RecordTagTypes answers the store's own list of served types.
+func (a tagAdapter) RecordTagTypes() []string { return collections.RecordTagTypesServed() }
 
 // ListTags hands the collections module's own cross-module shape straight
 // through: TagVocabulary was written for a caller outside that module and
