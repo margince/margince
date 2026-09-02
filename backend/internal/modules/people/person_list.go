@@ -77,8 +77,8 @@ var personListFields = map[string]string{
 // The predicate is storekit's, shared with the company and deal lists: three
 // copies of a NOT EXISTS is three chances for `none` to mean something subtly
 // different on one surface.
-func personTagClause(tagIDs []ids.UUID, mode storekit.TagMode, arg func(any) int) string {
-	return storekit.TagFilterClause(personEntity, "person.id", tagIDs, mode, arg)
+func personTagClause(ctx context.Context, tagIDs []ids.UUID, mode storekit.TagMode, arg func(any) int) string {
+	return storekit.TagFilterClause(ctx, personEntity, "person.id", tagIDs, mode, arg)
 }
 
 // personEmployerClause narrows the page to the people who work at one account
@@ -148,7 +148,7 @@ func (s *Store) ListPeople(ctx context.Context, in ListPeopleInput) ([]crmcontra
 			if err != nil {
 				return nil, err
 			}
-			if clause := personTagClause(in.TagIDs, in.TagMode, arg); clause != "" {
+			if clause := personTagClause(ctx, in.TagIDs, in.TagMode, arg); clause != "" {
 				where = append(where, clause)
 			}
 			employer, err := personEmployerClause(ctx, in.OrganizationID, arg)

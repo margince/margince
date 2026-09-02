@@ -10,7 +10,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The tag filter every list surface shares.
@@ -69,9 +71,16 @@ func ParseTagMode(raw *string) (TagMode, error) {
 // a filter naming it selects a slice no reader can construct or explain; and
 // after a merge releases a name, a re-coined word would otherwise drag along
 // the records carrying the older retired tag of the same spelling.
-func TagFilterClause(taggableType, idColumn string, tagIDs []ids.UUID, mode TagMode, arg func(any) int) string {
+func TagFilterClause(ctx context.Context, taggableType, idColumn string, tagIDs []ids.UUID, mode TagMode, arg func(any) int) string {
 	if len(tagIDs) == 0 {
 		return ""
+	}
+	// Filtering by a tag reads the vocabulary: a caller who cannot see the
+	// words must not be able to learn which records carry one by watching a
+	// page shrink. Rendering nothing would WIDEN the answer, so the refusal is
+	// a predicate that selects no rows.
+	if auth.Require(ctx, "tag", principal.ActionRead) != nil {
+		return "FALSE"
 	}
 	switch mode {
 	case TagModeAll:
@@ -91,6 +100,18 @@ func TagFilterClause(taggableType, idColumn string, tagIDs []ids.UUID, mode TagM
 }
 
 // tagExists renders one EXISTS over the taggable link for these ids.
+//
+// An ARCHIVED id matches nothing here, and that reads differently per mode:
+// `any` and `all` narrow to nothing, `none` keeps every record. Both follow
+// from one rule — a retired word is not part of the vocabulary a filter can
+// name — and the alternative is worse. Honouring an archived id would let a
+// saved view keep selecting by a word an admin retired precisely to stop
+// people selecting by it, and after a merge releases a name the re-coined word
+// would drag the old tag's records along.
+//
+// The picker never offers a retired word, so reaching this state means a saved
+// view outlived the tag it names. That view then answers with nothing rather
+// than with a slice its reader cannot explain.
 func tagExists(taggableType, idColumn string, tagIDs []ids.UUID, arg func(any) int) string {
 	return fmt.Sprintf(`EXISTS (
 		SELECT 1 FROM taggable tg
@@ -132,6 +153,13 @@ func AttachRowTags[T any](
 	rows []T, id func(T) ids.UUID, set func(*T, []RowTag),
 ) error {
 	if len(rows) == 0 {
+		return nil
+	}
+	// The vocabulary is its own grant. A caller who may read these RECORDS and
+	// not the words gets rows with no chips — the same withholding the
+	// record's own tags read performs, which a list that handed the words out
+	// anyway would make pointless.
+	if auth.Require(ctx, "tag", principal.ActionRead) != nil {
 		return nil
 	}
 	recordIDs := make([]ids.UUID, len(rows))

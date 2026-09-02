@@ -238,7 +238,7 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	if in.OwnerID != nil {
 		where = append(where, storekit.SQLf("owner_id = $%d", arg(*in.OwnerID)))
 	}
-	if clause := storekit.TagFilterClause(dealTaggableType, "deal.id", in.TagIDs, in.TagMode, arg); clause != "" {
+	if clause := storekit.TagFilterClause(ctx, dealTaggableType, "deal.id", in.TagIDs, in.TagMode, arg); clause != "" {
 		where = append(where, clause)
 	}
 	for _, ref := range []struct {

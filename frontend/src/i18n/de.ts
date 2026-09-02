@@ -219,6 +219,7 @@ export const de = {
   "search.group.deal": "Deals",
   "search.group.activity": "Aktivitäten",
   "search.group.lead": "Leads",
+  "search.group.tag": "Tags",
   "search.tier.mirrored": "aus einem verbundenen System",
   "search.tier.unverified": "nicht verifiziert",
 

@@ -5,7 +5,7 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 61,
-    "tokens": 19258,
+    "tokens": 19280,
     "median_tool_tokens": 274,
     "mean_tool_tokens": 315
   },
@@ -20,9 +20,9 @@
         "read_brief",
         "read_record"
       ],
-      "tokens": 1666,
-      "percent_of_ceiling": 6,
-      "headroom_tokens": 15334,
+      "tokens": 1688,
+      "percent_of_ceiling": 7,
+      "headroom_tokens": 15312,
       "dangling_cross_references": [
         "annotate_brief → log_activity",
         "catch_me_up_on → prep_for_meeting",
@@ -45,9 +45,9 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "tokens": 2514,
+      "tokens": 2535,
       "percent_of_ceiling": 10,
-      "headroom_tokens": 14486,
+      "headroom_tokens": 14465,
       "dangling_cross_references": [
         "at_risk_relationships → account_coverage",
         "at_risk_relationships → intro_path_to",
@@ -94,12 +94,12 @@
       "tokens": 513
     },
     {
-      "name": "query_workspace",
-      "tokens": 491
+      "name": "list_records",
+      "tokens": 501
     },
     {
-      "name": "list_records",
-      "tokens": 480
+      "name": "query_workspace",
+      "tokens": 491
     },
     {
       "name": "advance_deal",

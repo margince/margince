@@ -224,6 +224,7 @@ export const vi = {
   "search.group.deal": "Deal",
   "search.group.activity": "Hoạt động",
   "search.group.lead": "Lead",
+  "search.group.tag": "Tag",
   "search.tier.mirrored": "từ hệ thống đã kết nối",
   "search.tier.unverified": "chưa xác minh",
 

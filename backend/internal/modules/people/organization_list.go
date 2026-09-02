@@ -173,7 +173,7 @@ func (s *Store) ListOrganizations(ctx context.Context, in ListOrganizationsInput
 			if clause := organizationDomainClause(in.Domain, in.IncludeArchived, arg); clause != "" {
 				where = append(where, clause)
 			}
-			if clause := storekit.TagFilterClause(organizationEntity, "organization.id", in.TagIDs, in.TagMode, arg); clause != "" {
+			if clause := storekit.TagFilterClause(ctx, organizationEntity, "organization.id", in.TagIDs, in.TagMode, arg); clause != "" {
 				where = append(where, clause)
 			}
 			// A value outside the enum is a client mistake, not a selection
