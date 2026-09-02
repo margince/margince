@@ -71,6 +71,7 @@ const REASONS = [
   "derivation_failed",
   "no_counterparty",
   "role_mailbox",
+  "private_thread",
   "transactional_infra",
   "transactional_prefix",
 ] as const;

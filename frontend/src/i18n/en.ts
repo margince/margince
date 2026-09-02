@@ -5709,6 +5709,8 @@ export const en = {
   "captureActivity.reason.no_counterparty": "no sender this CRM could record",
   "captureActivity.reason.role_mailbox":
     "a shared mailbox, not a person — kept, but no contact created",
+  "captureActivity.reason.private_thread":
+    "a private conversation — kept for you, but no contact created",
   "captureActivity.reason.transactional_infra":
     "the sender is mail infrastructure, not a company you work with",
   "captureActivity.reason.transactional_prefix":
@@ -5767,6 +5769,8 @@ export const en = {
   "pipeline.reason.no_counterparty": "no sender this CRM could record",
   "pipeline.reason.role_mailbox":
     "a shared mailbox, not a person — kept, but no contact created",
+  "pipeline.reason.private_thread":
+    "a private conversation — kept for you, but no contact created",
   "pipeline.reason.no_granting_human":
     "the connection named no member to act for",
   "pipeline.reason.derivation_failed":

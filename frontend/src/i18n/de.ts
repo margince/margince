@@ -5636,6 +5636,8 @@ export const de = {
     "kein Absender, den dieses CRM erfassen konnte",
   "captureActivity.reason.role_mailbox":
     "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
+  "captureActivity.reason.private_thread":
+    "ein privater Austausch — für Sie gespeichert, aber kein Kontakt angelegt",
   "captureActivity.reason.transactional_infra":
     "der Absender ist Mail-Infrastruktur, kein Unternehmen, mit dem Sie arbeiten",
   "captureActivity.reason.transactional_prefix":
@@ -5699,6 +5701,8 @@ export const de = {
     "kein Absender, den dieses CRM erfassen konnte",
   "pipeline.reason.role_mailbox":
     "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
+  "pipeline.reason.private_thread":
+    "ein privater Austausch — für Sie gespeichert, aber kein Kontakt angelegt",
   "pipeline.reason.no_granting_human":
     "die Verbindung nennt kein Mitglied, in dessen Namen gehandelt wird",
   "pipeline.reason.derivation_failed":

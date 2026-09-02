@@ -5581,6 +5581,8 @@ export const vi = {
     "không có người gửi nào CRM có thể ghi nhận",
   "captureActivity.reason.role_mailbox":
     "hộp thư dùng chung, không phải một người — vẫn lưu, nhưng không tạo liên hệ",
+  "captureActivity.reason.private_thread":
+    "một cuộc trao đổi riêng tư — vẫn lưu cho bạn, nhưng không tạo liên hệ",
   "captureActivity.reason.transactional_infra":
     "người gửi là hạ tầng thư, không phải công ty bạn làm việc cùng",
   "captureActivity.reason.transactional_prefix":
@@ -5642,6 +5644,8 @@ export const vi = {
     "không có người gửi nào CRM này ghi nhận được",
   "pipeline.reason.role_mailbox":
     "hộp thư dùng chung, không phải một người — vẫn lưu, nhưng không tạo liên hệ",
+  "pipeline.reason.private_thread":
+    "một cuộc trao đổi riêng tư — vẫn lưu cho bạn, nhưng không tạo liên hệ",
   "pipeline.reason.no_granting_human":
     "kết nối không chỉ định thành viên nào để thay mặt",
   "pipeline.reason.derivation_failed":
