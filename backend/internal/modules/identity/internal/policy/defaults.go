@@ -77,7 +77,7 @@ var (
 // and migrate-in screens are admin surfaces.
 // managerObjects is the grid a team lead (`manager`) and the whole-organization
 // `management` seat share; only their row scope differs.
-var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud, crud, readOnly, readOnly, writeNoDelete, crud)
+var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, readOnly, crud, crud, readOnly, crud, crud, crud, crud, crud, readOnly, readOnly, crud, readOnly, grant{}, readOnly, grant{}, grant{}, grant{Create: true, Read: true}, crud, readOnly, grant{}, readOnly, readOnly, readOnly, grant{}, readOnly, grant{}, crud, grant{}, crud, crud, readOnly, readOnly, writeNoDelete, crud)
 
 var defaults = map[string]Document{
 	"admin": {
@@ -131,7 +131,7 @@ var defaults = map[string]Document{
 			grant{Create: true, Read: true, Update: true},
 			readOnly,
 			grant{Create: true, Read: true, Update: true},
-			grant{Create: true, Read: true, Update: true},
+			readOnly,
 			grant{Create: true, Read: true, Update: true},
 			readOnly,
 			readOnly,

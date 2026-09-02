@@ -4420,19 +4420,25 @@ public.tag acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_
 public.tag.archived_at timestamp with time zone gen=- def=-
 public.tag.color text gen=- def=-
 public.tag.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.tag.description text gen=- def=-
 public.tag.id uuid NOT NULL gen=- def=uuidv7()
 public.tag.name text NOT NULL gen=- def=-
+public.tag.tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text]))))
 public.tag.tag_pkey PRIMARY KEY (id)
 public.tag.trg_tag_updated CREATE TRIGGER trg_tag_updated BEFORE UPDATE ON public.tag FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.tag.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.tag.version bigint NOT NULL gen=- def=1
 public.tag_pkey CREATE UNIQUE INDEX tag_pkey ON public.tag USING btree (id)
 public.taggable acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.taggable.assigned_at timestamp with time zone NOT NULL gen=- def=now()
+public.taggable.assigned_by uuid gen=- def=-
+public.taggable.assigned_by_kind text gen=- def=-
 public.taggable.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.taggable.entity_id uuid NOT NULL gen=- def=-
 public.taggable.entity_type text NOT NULL gen=- def=-
 public.taggable.id uuid NOT NULL gen=- def=uuidv7()
 public.taggable.tag_id uuid NOT NULL gen=- def=-
+public.taggable.taggable_assigned_by_kind_check CHECK (((assigned_by_kind IS NULL) OR (assigned_by_kind = ANY (ARRAY['human'::text, 'agent'::text, 'import'::text]))))
 public.taggable.taggable_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.taggable.taggable_pkey PRIMARY KEY (id)
 public.taggable.taggable_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE

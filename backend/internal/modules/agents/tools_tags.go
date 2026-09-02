@@ -55,10 +55,11 @@ type Tags interface {
 	// ok=false when there is none. Remove uses it: a name that names nothing
 	// means the tagging is already absent.
 	FindTag(ctx context.Context, name string) (ids.UUID, bool, error)
-	// EnsureTag answers the id of the workspace tag with this name, creating
-	// it only when no such word exists. Reuse is the default because a
-	// vocabulary that grows a near-duplicate per call stops being one.
-	EnsureTag(ctx context.Context, name string) (ids.UUID, error)
+	// ResolveTag answers the id of an EXISTING workspace tag with this name
+	// and refuses when there is none. It never creates: the vocabulary is
+	// governed, so a tool that coined a word on a name it did not recognise
+	// would hand every agent the authority only Admin and Ops hold.
+	ResolveTag(ctx context.Context, name string) (ids.UUID, error)
 	ApplyTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error
 	RemoveTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error
 	// TaggableTypes answers the record types a tagging may name — the store's
@@ -165,14 +166,13 @@ func (t applyTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessa
 		if args.TagName == "" {
 			return nil, &BadArgsError{Cause: errors.New("give tag_id, or tag_name to reuse or create one")}
 		}
-		// The TARGET is authorized before anything is created. Creating first
-		// left a live, audited tag behind when the record turned out not to
-		// exist or to be outside the caller's scope — a write nobody asked for,
-		// produced by a call that then failed.
+		// The TARGET is authorized first, so a caller naming a record they
+		// cannot reach is refused for that reason rather than learning which
+		// tags exist from the resolution error.
 		if err := t.tags.EnsureTaggable(ctx, args.RecordType, args.RecordID); err != nil {
 			return nil, err
 		}
-		resolved, err := t.tags.EnsureTag(ctx, args.TagName)
+		resolved, err := t.tags.ResolveTag(ctx, args.TagName)
 		if err != nil {
 			return nil, err
 		}

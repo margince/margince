@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -82,15 +83,16 @@ func (s *Store) CreateTag(ctx context.Context, name string, color *string) (tagR
 	if err := auth.Require(ctx, "tag", principal.ActionCreate); err != nil {
 		return tagRow{}, err
 	}
-	if strings.TrimSpace(name) == "" {
-		return tagRow{}, &BadInputError{Field: "name", Reason: "required"}
+	name, err := ValidateTagName(name)
+	if err != nil {
+		return tagRow{}, err
 	}
 	var out tagRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
 			INSERT INTO tag (name, color)
 			VALUES ($1, $2)
-			RETURNING `+tagColumns, strings.TrimSpace(name), color)
+			RETURNING `+tagColumns, name, color)
 		var err error
 		if out, err = scanTag(row); err != nil {
 			if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "uq_tag_name" {
@@ -136,25 +138,66 @@ type taggableRow struct {
 	CreatedAt  time.Time
 }
 
+// assigningPrincipal names who is putting this tag on this record, for the
+// taggable row's own columns. Both are nullable and both stay nil for a
+// principal the auth layer never bound: an assignment whose author is unknown
+// has to READ as unknown, because "system" would be a claim nobody made.
+//
+// The kind is the coarse one the record page shows — a reader needs to know a
+// tag arrived from an import rather than from a colleague, and does not need
+// the passport behind it. Connector and system principals are deliberately
+// unmapped: neither applies tags today, and inventing a name for a caller
+// that does not exist is how a wrong label gets believed later.
+func assigningPrincipal(ctx context.Context) (*ids.UUID, *string) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return nil, nil
+	}
+	var kind string
+	switch actor.Type {
+	case principal.PrincipalHuman:
+		kind = "human"
+	case principal.PrincipalAgent:
+		kind = "agent"
+	default:
+		return nil, nil
+	}
+	// OnBehalfOf is the human authority behind an agent action; an agent
+	// tagging a record is that human's reach, so the row names them and the
+	// kind says the hand was an agent's.
+	who := actor.UserID
+	if actor.Type == principal.PrincipalAgent && actor.OnBehalfOf != (ids.UUID{}) {
+		who = actor.OnBehalfOf
+	}
+	if who == (ids.UUID{}) {
+		return nil, &kind
+	}
+	return &who, &kind
+}
+
 func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string, entityID ids.UUID) (taggableRow, error) {
 	// Required by the contract, true only if checked: the zero UUID would reach
 	// the row-scope link gate and answer not-found for a record nobody named.
 	if err := httperr.RequireBodyID(entityIDField, entityID); err != nil {
 		return taggableRow{}, err
 	}
-	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
+	// READ on the vocabulary, not update: `tag` authority now governs the
+	// VOCABULARY — who may coin, rename or retire a word — and only Admin and
+	// Ops hold it. Applying an existing word is not a change to the
+	// vocabulary, so requiring tag.update here would have made every rep who
+	// tags a company also able to invent tags.
+	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
 		return taggableRow{}, err
 	}
 	if !memberEntityTables[entityType] {
 		return taggableRow{}, &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
-	// READ on the target's own object type, the same gate RemoveTag and
-	// EnsureTaggable hold: tagging a record is a read of it, and without this
-	// a role holding tag.update but not <type>.read could tag rows it may not
-	// see. Only the tag_name path went through EnsureTaggable, so a direct
-	// tag_id apply was the one door where the target's object type went
-	// unasked.
-	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
+	// UPDATE on the target, not merely read. A tag is part of the record: it
+	// steers who sees it in a filter and what an automation does with it, so
+	// writing one onto a record a caller may only READ would let them change
+	// a record they cannot edit. EnsureLinkTarget below still answers
+	// not-found for a row outside their scope, so existence stays hidden.
+	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
 		return taggableRow{}, err
 	}
 	var out taggableRow
@@ -172,12 +215,13 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 		if err := auth.EnsureLinkTarget(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
+		by, byKind := assigningPrincipal(ctx)
 		row := tx.QueryRow(ctx, `
-			INSERT INTO taggable (tag_id, entity_type, entity_id)
-			VALUES ($1, $2, $3)
+			INSERT INTO taggable (tag_id, entity_type, entity_id, assigned_by, assigned_by_kind)
+			VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT (tag_id, entity_type, entity_id) DO NOTHING
 			RETURNING id, tag_id, entity_type, entity_id, created_at`,
-			tagID, entityType, entityID)
+			tagID, entityType, entityID, by, byKind)
 		err = row.Scan(&out.ID, &out.TagID, &out.EntityType, &out.EntityID, &out.CreatedAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("already tagged: %w", apperrors.ErrConflict)
@@ -210,17 +254,17 @@ func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType strin
 	if err := httperr.RequireBodyID(entityIDField, entityID); err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
 		return err
 	}
 	if !memberEntityTables[entityType] {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
-	// READ on the target's own object type, not only tag.update. Without it a
-	// role holding tag.update and deal.read=false could take taggings off
-	// deals it may not see, and learn from the refusal whether a given deal id
-	// exists at all.
-	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
+	// UPDATE on the target, the same gate applying holds: taking a tag off a
+	// record changes the record, and a caller who may only read it must not be
+	// able to. EnsureLinkTarget still answers not-found for a row outside
+	// their scope, so a refusal never confirms a deal id exists.
+	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -276,27 +320,95 @@ func (s *Store) EnsureTaggable(ctx context.Context, entityType string, entityID 
 	})
 }
 
+// maxTagNameRunes bounds a tag name. Counted in RUNES, not bytes: the limit is
+// about what a person can read on a badge, and a byte cap would let an English
+// name run half again as long as a German one.
+const maxTagNameRunes = 64
+
+// NormalizeTagName is the ONE spelling rule every write path shares: create,
+// rename, and the name an agent resolves against. Trim the ends, collapse any
+// run of inner whitespace to one space.
+//
+// It exists because a vocabulary that holds "Key Account" and "Key  Account"
+// has stopped being one, and the two are indistinguishable to a reader. The
+// uniqueness index folds case; nothing folded spacing, so the collision it is
+// there to prevent could still be typed.
+//
+// Held by: TestNormalizeTagName (collections/tagname_test.go)
+func NormalizeTagName(name string) string {
+	return strings.Join(strings.Fields(name), " ")
+}
+
+// ValidateTagName applies the rule and says why a name is refused. An empty
+// name and an over-long one are the caller's to fix, so both name the field.
+func ValidateTagName(name string) (string, error) {
+	normalized := NormalizeTagName(name)
+	if normalized == "" {
+		return "", &BadInputError{Field: "name", Reason: "must not be empty"}
+	}
+	if utf8.RuneCountInString(normalized) > maxTagNameRunes {
+		return "", &BadInputError{
+			Field:  "name",
+			Reason: fmt.Sprintf("must be at most %d characters", maxTagNameRunes),
+		}
+	}
+	return normalized, nil
+}
+
 // FindTag answers the id of the LIVE tag with this name, or ok=false.
 //
 // Case-insensitive, matching the uq_tag_name index, and live-only: an archived
 // word was retired on purpose and is not what a caller naming it means.
 func (s *Store) FindTag(ctx context.Context, name string) (ids.UUID, bool, error) {
+	id, state, err := s.lookupTagByName(ctx, name)
+	return id, state == tagNameLive, err
+}
+
+// TagNameState says which of the three answers a name lookup gave, because a
+// caller that has to explain a refusal cannot tell them apart from an id and a
+// bool: an unknown word and a retired one need different sentences, and
+// collapsing them tells somebody their tag does not exist when an admin can
+// restore it.
+type TagNameState int
+
+const (
+	tagNameMissing TagNameState = iota
+	tagNameLive
+	tagNameArchived
+)
+
+// LookupTagName resolves a name to its id and which state it is in.
+func (s *Store) LookupTagName(ctx context.Context, name string) (ids.UUID, TagNameState, error) {
+	return s.lookupTagByName(ctx, name)
+}
+
+// Archived returns whether the name resolved to a retired tag.
+func (st TagNameState) Archived() bool { return st == tagNameArchived }
+
+// Live returns whether the name resolved to a tag that may be applied.
+func (st TagNameState) Live() bool { return st == tagNameLive }
+
+func (s *Store) lookupTagByName(ctx context.Context, name string) (ids.UUID, TagNameState, error) {
 	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
-		return ids.UUID{}, false, err
+		return ids.UUID{}, tagNameMissing, err
 	}
 	var id ids.TagID
+	var archived *time.Time
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT id FROM tag
-			 WHERE lower(name) = lower($1) AND archived_at IS NULL`, strings.TrimSpace(name)).Scan(&id)
+			SELECT id, archived_at FROM tag
+			 WHERE lower(name) = lower($1)`, NormalizeTagName(name)).Scan(&id, &archived)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.UUID{}, false, nil
+		return ids.UUID{}, tagNameMissing, nil
 	}
 	if err != nil {
-		return ids.UUID{}, false, fmt.Errorf("collections: finding tag by name: %w", err)
+		return ids.UUID{}, tagNameMissing, fmt.Errorf("collections: finding tag by name: %w", err)
 	}
-	return id.UUID, true, nil
+	if archived != nil {
+		return id.UUID, tagNameArchived, nil
+	}
+	return id.UUID, tagNameLive, nil
 }
 
 // TagSummary is the tag as another module sees it. tagRow is unexported
