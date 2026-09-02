@@ -44,7 +44,11 @@ import (
 type scriptedVerdictBrain struct {
 	verdicts   map[string]string  // by disposition id; default the person kind
 	confidence map[string]float64 // by disposition id; default 0.95
-	calls      int
+	// servedModel is which model the response says answered; default a stand-in
+	// name. The ledger records it, so a test can assert the provenance rather
+	// than only the answer.
+	servedModel string
+	calls       int
 }
 
 func (s *scriptedVerdictBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
@@ -69,7 +73,11 @@ func (s *scriptedVerdictBrain) Complete(_ context.Context, req model.Request) (m
 	if err != nil {
 		return model.Response{}, err
 	}
-	return model.Response{Text: string(payload)}, nil
+	served := s.servedModel
+	if served == "" {
+		served = "test-local-small"
+	}
+	return model.Response{Text: string(payload), ServedModel: served}, nil
 }
 
 // A `real` verdict creates the records capture withheld, and does so on the
@@ -677,4 +685,129 @@ func TestAnInstallationWithNoModelStillAnswersItsSenders(t *testing.T) {
 		t.Errorf("disposition = %q, want %q — a sender no model can judge is a question for a person",
 			got, capture.PendingStatusUnsure)
 	}
+}
+
+// The ledger records HOW SURE the answer was and WHICH MODEL gave it.
+//
+// Neither survived the decision before: the engine compared the confidence
+// against a floor and dropped it, so a 0.86 answer and a 0.99 one were
+// indistinguishable afterwards. An operator asking why a department was filed
+// as a person could see the answer and never how close it came to being
+// refused, nor which of the deployment's models to distrust.
+func TestTheLedgerRecordsHowSureTheVerdictWasAndWhoAnswered(t *testing.T) {
+	e := integration.Setup(t)
+	activityID := seedCapturedMail(t, e, "ada@realco.example", "quote request")
+	dispositionID := seedPendingDisposition(t, e, "ada@realco.example", "realco.example", activityID)
+	brain := &scriptedVerdictBrain{
+		verdicts:    map[string]string{dispositionID.String(): capture.KindPerson},
+		confidence:  map[string]float64{dispositionID.String(): 0.91},
+		servedModel: "some-local-model:8b",
+	}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	confidence, servedModel := dispositionProvenance(t, e, dispositionID)
+	if confidence == nil || *confidence != 0.91 {
+		t.Errorf("stored confidence = %v, want 0.91 — the floor comparison must not be the only thing that reads it", confidence)
+	}
+	if servedModel != "some-local-model:8b" {
+		t.Errorf("served model = %q, want the model that answered — a wrong answer is evidence "+
+			"about a model only if the model is named", servedModel)
+	}
+}
+
+// A deterministic answer records NO confidence, because no model was asked.
+//
+// A stored 0.0 would read as a model that was certain of nothing, and a stored
+// 1.0 as one that was certain — both are claims about a measurement that was
+// never taken. NULL is the honest record.
+func TestADeterministicAnswerRecordsNoConfidence(t *testing.T) {
+	e := integration.Setup(t)
+	// A role mailbox: settled from the address, with no model call at all.
+	activityID := seedCapturedMail(t, e, "billing@realco.example", "your invoice")
+	dispositionID := seedPendingDisposition(t, e, "billing@realco.example", "realco.example", activityID)
+	brain := &scriptedVerdictBrain{}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	if brain.calls != 0 {
+		t.Fatalf("%d model calls for a role mailbox, want 0 — the fixture never reaches the case under test", brain.calls)
+	}
+	confidence, servedModel := dispositionProvenance(t, e, dispositionID)
+	if confidence != nil {
+		t.Errorf("stored confidence = %v, want none — no model was asked", *confidence)
+	}
+	if servedModel != "" {
+		t.Errorf("served model = %q, want none — no model answered this", servedModel)
+	}
+}
+
+// A CREATING answer needs more confidence than a refusing one.
+//
+// The two mistakes are not the same size: refusing a contact leaves the mail
+// visible and the question answerable by a person, while creating one puts a
+// record in a shared CRM. Between the two floors the sender becomes a question
+// for a person rather than a contact — escalated, not dismissed.
+func TestAWeakPersonAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
+	e := integration.Setup(t)
+	t.Run("a person answer below the create floor escalates", func(t *testing.T) {
+		activityID := seedCapturedMail(t, e, "maybe@realco.example", "hello")
+		dispositionID := seedPendingDisposition(t, e, "maybe@realco.example", "realco.example", activityID)
+		// Above the ordinary floor, below the create floor — and the same on the
+		// re-ask, so the lane runs out of confidence rather than of attempts.
+		brain := &scriptedVerdictBrain{
+			verdicts:   map[string]string{dispositionID.String(): capture.KindPerson},
+			confidence: map[string]float64{dispositionID.String(): 0.75},
+		}
+		engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+		if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+			t.Fatalf("verdict pass: %v", err)
+		}
+		if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusUnsure {
+			t.Errorf("disposition = %q, want %q — a record in a shared CRM needs more than 0.75",
+				got, capture.PendingStatusUnsure)
+		}
+		if n := countIn(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = $1`, "maybe@realco.example"); n != 0 {
+			t.Errorf("%d persons for a weakly-judged sender, want 0", n)
+		}
+	})
+
+	t.Run("a spam answer at the same confidence stands", func(t *testing.T) {
+		activityID := seedCapturedMail(t, e, "blast@spam.example", "offer")
+		dispositionID := seedPendingDisposition(t, e, "blast@spam.example", "spam.example", activityID)
+		brain := &scriptedVerdictBrain{
+			verdicts:   map[string]string{dispositionID.String(): capture.KindSpam},
+			confidence: map[string]float64{dispositionID.String(): 0.75},
+		}
+		engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+		if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+			t.Fatalf("verdict pass: %v", err)
+		}
+		if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusNoise {
+			t.Errorf("disposition = %q, want %q — refusing a contact is the reversible direction "+
+				"and 0.75 is enough for it", got, capture.PendingStatusNoise)
+		}
+	})
+}
+
+// dispositionProvenance reads what the ledger kept about how an answer was
+// reached.
+func dispositionProvenance(t *testing.T, e *integration.Env, id ids.UUID) (*float64, string) {
+	t.Helper()
+	var confidence *float64
+	var served string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT confidence, COALESCE(served_model, '')
+			  FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&confidence, &served)
+	}); err != nil {
+		t.Fatalf("reading the verdict's provenance: %v", err)
+	}
+	return confidence, served
 }

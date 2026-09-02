@@ -328,7 +328,8 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 // concluding what kind of correspondent the address is. byOwner is false for the
 // same reason — none of these callers is a person deciding about a sender.
 func (s *PendingStore) Resolve(ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, reason string) (bool, error) {
-	return s.ResolveAs(ctx, tx, p, status, "", reason, false)
+	// No measurement: a registry rule and an erasure are not model answers.
+	return s.ResolveAs(ctx, tx, p, status, "", reason, false, VerdictMeasurement{})
 }
 
 // ResolveAs closes a claimed row with its verdict and the KIND of sender it
@@ -343,21 +344,28 @@ func (s *PendingStore) Resolve(ctx context.Context, tx pgx.Tx, p PendingCounterp
 // the verdict. It takes the claimed row rather than an id so the token cannot be
 // lost or mismatched on the way here.
 //
+// measured records HOW the answer was reached — a model's confidence and which
+// model served it. A deterministic answer has neither and passes the zero value,
+// which stores NULL: absent is the honest record for a decision no model made,
+// and a fabricated 1.0 would read as a model that was certain.
+//
 // byOwner records WHICH AUTHORITY answered. The purge of personal mail reads it
 // to decide how long to wait before destroying, so a caller that is not a person
 // acting deliberately passes false — the classifier, a sweep, a registry rule.
 func (s *PendingStore) ResolveAs(
 	ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, kind, reason string, byOwner bool,
+	measured VerdictMeasurement,
 ) (bool, error) {
 	tag, err := tx.Exec(ctx, `
 		UPDATE capture_pending_counterparty
 		   SET status = $2, disposition_reason = NULLIF($3, ''),
 		       kind = COALESCE(NULLIF($5, ''), kind),
 		       resolved_by_owner = $6,
+		       confidence = $7, served_model = NULLIF($8, ''),
 		       resolved_at = now(), next_attempt_at = NULL,
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
 		 WHERE id = $1 AND status = 'pending' AND claimed_by = $4`,
-		p.ID, status, reason, p.Claim, kind, byOwner)
+		p.ID, status, reason, p.Claim, kind, byOwner, measured.confidence(), measured.Model)
 	if err != nil {
 		return false, fmt.Errorf("capture: resolving disposition %s: %w", p.ID, err)
 	}

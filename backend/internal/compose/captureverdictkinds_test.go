@@ -186,3 +186,35 @@ func TestThePromptsRoleExamplesComeFromTheOneList(t *testing.T) {
 		}
 	}
 }
+
+// The kinds that CREATE a record must be the kinds that need the higher floor.
+//
+// createsARecord is a second statement of what apply's effect switch does, and
+// the switch is control flow rather than data — it cannot be read. A kind added
+// there that creates a contact, and not added to createsARecord, would keep the
+// lower floor: the record this lane exists to be careful about would be made on
+// the weaker evidence, and nothing would say so.
+//
+// The creating kinds are named here rather than derived for the same reason the
+// effect switch has no default: an exhaustive list somebody has to update is
+// what a test can hold, and a fall-through is what silently gets it wrong.
+func TestEveryCreatingKindNeedsTheHigherFloor(t *testing.T) {
+	t.Parallel()
+	creating := map[string]bool{
+		capture.KindPerson:  true,
+		capture.KindAdvisor: true,
+	}
+	for kind := range verdictKinds {
+		if got := createsARecord(kind); got != creating[kind] {
+			t.Errorf("createsARecord(%q) = %v, want %v — a kind that creates a contact "+
+				"must clear the create floor, and one that does not must not be held to it",
+				kind, got, creating[kind])
+		}
+	}
+	// And the two floors are actually different, or the distinction above is
+	// decoration: this test would pass for any pair of equal numbers.
+	if verdictCreateFloor <= verdictConfidenceFloor {
+		t.Fatalf("the create floor is %v and the ordinary floor is %v — creating a record "+
+			"has to need more confidence than refusing one", verdictCreateFloor, verdictConfidenceFloor)
+	}
+}

@@ -1,0 +1,47 @@
+name: a_trade_offices_city_mailbox_names_a_place_not_a_person
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5.1
+fixture:
+  display_name: Singapore AC
+  email: singapore@tradecouncil.example
+  subject: "Unresolved issues under service agreement"
+  body: |
+    Dear Sir or Madam,
+
+    We refer to the service agreement concluded between your company and our
+    office. Several points remain unresolved and we would ask you to respond
+    within fourteen days.
+
+    Enclosed you will find the correspondence to date.
+
+    Yours faithfully,
+    Advantage Trade Council
+    Singapore Office
+expect:
+  outcome: accepted
+  answer: organization_sender
+  rubric: >
+    A trade office's shared mailbox, named after the CITY it sits in. This is
+    the case a deterministic word list cannot reach and the model must:
+    "singapore" is not a role word — no vocabulary of functions can hold every
+    place name without also refusing people called Paris or Milan — so nothing
+    upstream catches it and the answer here is the only defence.
+    Both halves are present. The correspondence is genuine: it cites an
+    agreement this business signed and asks for a reply. And nobody is named
+    anywhere — the signature is an office, and "Sir or Madam" says the writer
+    does not know who they are writing to either.
+    "organization_sender" scores highest: the company is writing as itself.
+    "role_mailbox" is a near miss and scores nearly as high — the effect is the
+    same, real correspondence with no contact invented, and whether a city
+    office is a function or the organization speaking is a thin line.
+    "person" is the failure this exists to catch and scores zero above the
+    floor: it files a contact called "Singapore AC", which is what a founder
+    actually found in his CRM. "spam" scores zero — hiding a counterparty's
+    letter about a live contract is the expensive mistake in the other
+    direction.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

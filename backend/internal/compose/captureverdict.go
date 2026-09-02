@@ -52,6 +52,9 @@ const (
 	// re-asked SOLO once; still below, it is terminally `unsure` — never
 	// guessed into `noise`, which is the only verdict that hides anything.
 	verdictConfidenceFloor = 0.7
+	// verdictCreateFloor is what a CREATING answer needs, and it is higher —
+	// see clearsItsFloor for why the two mistakes are not the same size.
+	verdictCreateFloor = 0.85
 	// verdictRetryBackoff spaces a row that failed for a reason it may outlive
 	// (a provider fault, a malformed reply).
 	verdictRetryBackoff = 30 * time.Minute
@@ -236,7 +239,7 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 		return e.applyOwnerDecision(ctx, row, kind)
 	}
 	if addressIsARoleMailbox(row.Email) {
-		return e.applyJudged(ctx, row, capture.KindRoleMailbox)
+		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
 	}
 	// Everything above answers from the address and the ledger alone; what
 	// follows needs a model. An installation without one asks a human instead —
@@ -244,23 +247,25 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 	if !e.CanJudge() {
 		return e.askAHumanInstead(ctx, row)
 	}
-	answers, err := e.ask(ctx, row)
+	answers, servedModel, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err
 	}
-	if len(answers) == 1 && answers[0].Confidence >= verdictConfidenceFloor {
-		return e.applyJudged(ctx, row, answers[0].Verdict)
+	if len(answers) == 1 && clearsItsFloor(answers[0]) {
+		return e.applyJudged(ctx, row, answers[0].Verdict,
+			capture.MeasuredVerdict(float64(answers[0].Confidence), servedModel))
 	}
 	// One re-ask below the floor, then terminal (ADR-0072 §4). The retry is not
 	// a hope that the same question answers differently: an unbound structured
 	// call escalates the routing ladder, so the second attempt is a stronger
 	// model looking at the same message.
-	retry, err := e.ask(ctx, row)
+	retry, retryModel, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err
 	}
-	if len(retry) == 1 && retry[0].Confidence >= verdictConfidenceFloor {
-		return e.applyJudged(ctx, row, retry[0].Verdict)
+	if len(retry) == 1 && clearsItsFloor(retry[0]) {
+		return e.applyJudged(ctx, row, retry[0].Verdict,
+			capture.MeasuredVerdict(float64(retry[0].Confidence), retryModel))
 	}
 	// Terminally unsure: a human decides, and the ledger says so explicitly
 	// rather than by having quietly run out of attempts.
@@ -270,35 +275,6 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 	return 1, nil
 }
 
-// applyOwnerDecision commits what a PERSON said about a sender.
-//
-// Split from applyJudged rather than sharing a bool at the call site, so the
-// two authorities are visible as two entry points: a reader asking "what can an
-// owner's click do" finds one function and the answer beside it.
-func (e *CounterpartyVerdictEngine) applyOwnerDecision(ctx context.Context, row capture.PendingCounterparty, kind string) (int, error) {
-	done, err := e.apply(ctx, row, kind, true)
-	if err != nil {
-		return 0, err
-	}
-	if done {
-		return 1, nil
-	}
-	return 0, nil
-}
-
-// applyJudged commits one above-floor answer and reports whether this caller was
-// the one that resolved the row.
-func (e *CounterpartyVerdictEngine) applyJudged(ctx context.Context, row capture.PendingCounterparty, verdict string) (int, error) {
-	done, err := e.apply(ctx, row, verdict, false)
-	if err != nil {
-		return 0, err
-	}
-	if done {
-		return 1, nil
-	}
-	return 0, nil
-}
-
 // apply commits one verdict. The ledger resolution and whatever the verdict
 // causes share a transaction, so a row can never read `real` without the records
 // it promised, nor `noise` without the hiding it authorized.
@@ -306,7 +282,10 @@ func (e *CounterpartyVerdictEngine) applyJudged(ctx context.Context, row capture
 // Resolve's compare-and-set decides who acts: only the caller that actually
 // closed the row runs the effect, which makes a replayed job or a raced sibling
 // a no-op rather than a second creation.
-func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.PendingCounterparty, kind string, ownerSaidSo bool) (bool, error) {
+func (e *CounterpartyVerdictEngine) apply(
+	ctx context.Context, row capture.PendingCounterparty, kind string, ownerSaidSo bool,
+	measured capture.VerdictMeasurement,
+) (bool, error) {
 	verdict, known := statusForKind(kind)
 	if !known {
 		return false, fmt.Errorf("verdict: %q is not a sender kind", kind)
@@ -314,7 +293,7 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 	var acted bool
 	var triageDomain string
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		won, err := e.pending.ResolveAs(ctx, tx, row, verdict, kind, verdictReason, ownerSaidSo)
+		won, err := e.pending.ResolveAs(ctx, tx, row, verdict, kind, verdictReason, ownerSaidSo, measured)
 		if err != nil || !won {
 			return err
 		}
