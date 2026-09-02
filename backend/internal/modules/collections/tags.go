@@ -24,19 +24,22 @@ import (
 )
 
 type tagRow struct {
-	ID         ids.TagID
-	Name       string
-	Color      *string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	ArchivedAt *time.Time
+	ID          ids.TagID
+	Name        string
+	Color       *string
+	Description *string
+	Version     int64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ArchivedAt  *time.Time
 }
 
-const tagColumns = `id, name, color, created_at, updated_at, archived_at`
+const tagColumns = `id, name, color, description, version, created_at, updated_at, archived_at`
 
 func scanTag(r pgx.Row) (tagRow, error) {
 	var t tagRow
-	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt)
+	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.Description, &t.Version,
+		&t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt)
 	return t, err
 }
 
