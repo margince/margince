@@ -10290,6 +10290,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/weekly-reviews/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A team's week, frozen — what each member's week came to, and the one thing to raise.
+         * @description The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
+         *     live and recomputed on every open; this answers what last week WAS, written once when
+         *     the week closed, so two weeks can be compared and neither moves under the comparison.
+         *
+         *     WHY IT IS STORED RATHER THAN SUMMED. Every figure is a total over the member reviews.
+         *     Team membership moves, so a read-time sum would silently put a rep who joined in
+         *     October into last March's team week and drop one who left — and a lead comparing two
+         *     quarters would be comparing two different teams without being told. The membership is
+         *     frozen INTO the snapshot: the rep rows name who was on the team that week, with the
+         *     name they had then.
+         *
+         *     Every rep gets ONE focus, including the rep whose week went well — theirs names what
+         *     the team should copy. A page promising one focus per rep and delivering rows only for
+         *     the troubled ones reads as a team where only those people exist.
+         *
+         *     `reps_unread` counts the members whose week could not be read at all. Zero is the
+         *     claim that every member's week was counted; a snapshot silently covering four of six
+         *     reps reads exactly like a team of four.
+         *
+         *     403 for a reader whose row scope reaches only their own rows: a team snapshot is a
+         *     team question. 404 before the first Monday the team's week closed on.
+         */
+        get: operations["getTeamWeeklyReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/weekly-reviews/latest": {
         parameters: {
             query?: never;
@@ -25520,6 +25560,81 @@ export interface components {
         WeeklyReviewIndex: {
             /** @description The Monday of each week with a review, newest first. */
             weeks: string[];
+        };
+        /** @description One team's week, as it was measured when the week closed. */
+        TeamWeeklyReview: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            team_id: string;
+            /**
+             * @description What the team was called that week. Frozen, so a team renamed in June does not
+             *     relabel March's snapshot.
+             */
+            team_name: string;
+            /** Format: date */
+            local_week_start: string;
+            /** Format: date-time */
+            generated_at: string;
+            /** Format: date-time */
+            as_of: string;
+            counts: components["schemas"]["TeamWeeklyCounts"];
+            /**
+             * @description What the team's week did to the pipeline. ABSENT when any member's week could not
+             *     be converted — summing only the ones that did would be a confident number quietly
+             *     missing a rep.
+             */
+            pipeline?: components["schemas"]["WeeklyReviewPipeline"];
+            /**
+             * @description Members whose week could not be read at all. Zero is the claim that every member's
+             *     week was counted.
+             */
+            reps_unread?: number;
+            /**
+             * @description Who was on the team that week — the frozen membership, which a join against the
+             *     live team could never answer.
+             */
+            reps: components["schemas"]["TeamWeeklyRep"][];
+        };
+        TeamWeeklyCounts: {
+            /** @description Members whose week was read and totalled. */
+            reps_counted: number;
+            deals_won: number;
+            deals_lost: number;
+            leads_routed: number;
+            leads_answered_in_target: number;
+            leads_breached: number;
+            meetings_held: number;
+            meetings_with_next_step: number;
+            commitments_due: number;
+            commitments_kept: number;
+        };
+        /** @description One member's week as their lead reads it, with the one thing to raise. */
+        TeamWeeklyRep: {
+            /** Format: uuid */
+            user_id: string;
+            /** @description What they were called that week — frozen, and it survives the seat being deleted. */
+            display_name: string;
+            deals_won: number;
+            leads_breached: number;
+            meetings_held: number;
+            commitments_due: number;
+            commitments_kept: number;
+            /** @description Commitments they asked for help on. */
+            help_requested: number;
+            /**
+             * @description Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
+             *     celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
+             *     outranks any metric, because walking past a request to raise a number is the
+             *     fastest way to teach them not to ask.
+             * @enum {string}
+             */
+            focus_kind: "help_requested" | "leads_breached" | "commitments_missed" | "meetings_without_next_step" | "strong_week" | "quiet_week";
+            /**
+             * @description The focus in words, composed from the stored figures — never model-written, so it
+             *     cannot say something the snapshot does not hold.
+             */
+            focus_label: string;
         };
         /**
          * @description One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
@@ -44198,6 +44313,37 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getTeamWeeklyReview: {
+        parameters: {
+            query: {
+                /** @description Which team's week to read. */
+                team: string;
+                /**
+                 * @description The Monday of the week wanted. Omitted means the most recent snapshot this team
+                 *     has.
+                 */
+                week?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The team's frozen week. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamWeeklyReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getLatestWeeklyReview: {

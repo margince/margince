@@ -10537,6 +10537,36 @@ func (e TaggableEntityType) Valid() bool {
 	}
 }
 
+// Defines values for TeamWeeklyRepFocusKind.
+const (
+	CommitmentsMissed       TeamWeeklyRepFocusKind = "commitments_missed"
+	HelpRequested           TeamWeeklyRepFocusKind = "help_requested"
+	LeadsBreached           TeamWeeklyRepFocusKind = "leads_breached"
+	MeetingsWithoutNextStep TeamWeeklyRepFocusKind = "meetings_without_next_step"
+	QuietWeek               TeamWeeklyRepFocusKind = "quiet_week"
+	StrongWeek              TeamWeeklyRepFocusKind = "strong_week"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyRepFocusKind enum.
+func (e TeamWeeklyRepFocusKind) Valid() bool {
+	switch e {
+	case CommitmentsMissed:
+		return true
+	case HelpRequested:
+		return true
+	case LeadsBreached:
+		return true
+	case MeetingsWithoutNextStep:
+		return true
+	case QuietWeek:
+		return true
+	case StrongWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TechnicalEnrichLaneLane.
 const (
 	TechnicalEnrichLaneCertLog  TechnicalEnrichLaneLane = "certlog"
@@ -28406,6 +28436,81 @@ type TeamListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
+// TeamWeeklyCounts defines model for TeamWeeklyCounts.
+type TeamWeeklyCounts struct {
+	CommitmentsDue        int `json:"commitments_due"`
+	CommitmentsKept       int `json:"commitments_kept"`
+	DealsLost             int `json:"deals_lost"`
+	DealsWon              int `json:"deals_won"`
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+	LeadsBreached         int `json:"leads_breached"`
+	LeadsRouted           int `json:"leads_routed"`
+	MeetingsHeld          int `json:"meetings_held"`
+	MeetingsWithNextStep  int `json:"meetings_with_next_step"`
+
+	// RepsCounted Members whose week was read and totalled.
+	RepsCounted int `json:"reps_counted"`
+}
+
+// TeamWeeklyRep One member's week as their lead reads it, with the one thing to raise.
+type TeamWeeklyRep struct {
+	CommitmentsDue  int `json:"commitments_due"`
+	CommitmentsKept int `json:"commitments_kept"`
+	DealsWon        int `json:"deals_won"`
+
+	// DisplayName What they were called that week — frozen, and it survives the seat being deleted.
+	DisplayName string `json:"display_name"`
+
+	// FocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
+	// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
+	// outranks any metric, because walking past a request to raise a number is the
+	// fastest way to teach them not to ask.
+	FocusKind TeamWeeklyRepFocusKind `json:"focus_kind"`
+
+	// FocusLabel The focus in words, composed from the stored figures — never model-written, so it
+	// cannot say something the snapshot does not hold.
+	FocusLabel string `json:"focus_label"`
+
+	// HelpRequested Commitments they asked for help on.
+	HelpRequested int                `json:"help_requested"`
+	LeadsBreached int                `json:"leads_breached"`
+	MeetingsHeld  int                `json:"meetings_held"`
+	UserId        openapi_types.UUID `json:"user_id"`
+}
+
+// TeamWeeklyRepFocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
+// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
+// outranks any metric, because walking past a request to raise a number is the
+// fastest way to teach them not to ask.
+type TeamWeeklyRepFocusKind string
+
+// TeamWeeklyReview One team's week, as it was measured when the week closed.
+type TeamWeeklyReview struct {
+	AsOf           time.Time          `json:"as_of"`
+	Counts         TeamWeeklyCounts   `json:"counts"`
+	GeneratedAt    time.Time          `json:"generated_at"`
+	Id             openapi_types.UUID `json:"id"`
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
+	// be converted — summing only the ones that did would be a confident number quietly
+	// missing a rep.
+	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// Reps Who was on the team that week — the frozen membership, which a join against the
+	// live team could never answer.
+	Reps []TeamWeeklyRep `json:"reps"`
+
+	// RepsUnread Members whose week could not be read at all. Zero is the claim that every member's
+	// week was counted.
+	RepsUnread *int               `json:"reps_unread,omitempty"`
+	TeamId     openapi_types.UUID `json:"team_id"`
+
+	// TeamName What the team was called that week. Frozen, so a team renamed in June does not
+	// relabel March's snapshot.
+	TeamName string `json:"team_name"`
+}
+
 // TechnicalEnrichLane What one public source last did.
 type TechnicalEnrichLane struct {
 	// Attempts How many times this lane has been tried since it last succeeded.
@@ -34810,6 +34915,16 @@ type SetWeeklyPlanCommitmentStateJSONBodyState string
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
+	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
+}
+
+// GetTeamWeeklyReviewParams defines parameters for GetTeamWeeklyReview.
+type GetTeamWeeklyReviewParams struct {
+	// Team Which team's week to read.
+	Team openapi_types.UUID `form:"team" json:"team"`
+
+	// Week The Monday of the week wanted. Omitted means the most recent snapshot this team
+	// has.
 	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
 }
 
@@ -44881,6 +44996,9 @@ type ServerInterface interface {
 	// The acting rep's most recent weekly review, or a named week's.
 	// (GET /weekly-reviews/latest)
 	GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request, params GetLatestWeeklyReviewParams)
+	// A team's week, frozen — what each member's week came to, and the one thing to raise.
+	// (GET /weekly-reviews/team)
+	GetTeamWeeklyReview(w http.ResponseWriter, r *http.Request, params GetTeamWeeklyReviewParams)
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
@@ -48214,6 +48332,12 @@ func (_ Unimplemented) ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
 // The acting rep's most recent weekly review, or a named week's.
 // (GET /weekly-reviews/latest)
 func (_ Unimplemented) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request, params GetLatestWeeklyReviewParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A team's week, frozen — what each member's week came to, and the one thing to raise.
+// (GET /weekly-reviews/team)
+func (_ Unimplemented) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Request, params GetTeamWeeklyReviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72301,6 +72425,60 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetTeamWeeklyReview operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTeamWeeklyReviewParams
+
+	// ------------- Required query parameter "team" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "team", r.URL.Query(), &params.Team, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "week" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "week", r.URL.Query(), &params.Week, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "week"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "week", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamWeeklyReview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetWorklist operation middleware
 func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Request) {
 
@@ -74177,6 +74355,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-reviews/latest", wrapper.GetLatestWeeklyReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-reviews/team", wrapper.GetTeamWeeklyReview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)

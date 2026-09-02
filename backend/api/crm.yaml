@@ -15264,6 +15264,55 @@ paths:
               schema: { $ref: '#/components/schemas/WeeklyReviewIndex' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /weekly-reviews/team:
+    get:
+      tags: [Brief]
+      operationId: getTeamWeeklyReview
+      summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
+      description: |
+        The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
+        live and recomputed on every open; this answers what last week WAS, written once when
+        the week closed, so two weeks can be compared and neither moves under the comparison.
+
+        WHY IT IS STORED RATHER THAN SUMMED. Every figure is a total over the member reviews.
+        Team membership moves, so a read-time sum would silently put a rep who joined in
+        October into last March's team week and drop one who left — and a lead comparing two
+        quarters would be comparing two different teams without being told. The membership is
+        frozen INTO the snapshot: the rep rows name who was on the team that week, with the
+        name they had then.
+
+        Every rep gets ONE focus, including the rep whose week went well — theirs names what
+        the team should copy. A page promising one focus per rep and delivering rows only for
+        the troubled ones reads as a team where only those people exist.
+
+        `reps_unread` counts the members whose week could not be read at all. Zero is the
+        claim that every member's week was counted; a snapshot silently covering four of six
+        reps reads exactly like a team of four.
+
+        403 for a reader whose row scope reaches only their own rows: a team snapshot is a
+        team question. 404 before the first Monday the team's week closed on.
+      x-agent-access: human-only
+      parameters:
+        - name: team
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: Which team's week to read.
+        - name: week
+          in: query
+          schema: { type: string, format: date }
+          description: |
+            The Monday of the week wanted. Omitted means the most recent snapshot this team
+            has.
+      responses:
+        '200':
+          description: The team's frozen week.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamWeeklyReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /weekly-reviews/latest:
     get:
       tags: [Brief]
@@ -34162,6 +34211,90 @@ components:
           type: array
           items: { type: string, format: date }
           description: The Monday of each week with a review, newest first.
+
+    TeamWeeklyReview:
+      type: object
+      additionalProperties: false
+      description: One team's week, as it was measured when the week closed.
+      required: [id, team_id, team_name, local_week_start, generated_at, as_of, counts, reps]
+      properties:
+        id: { type: string, format: uuid }
+        team_id: { type: string, format: uuid }
+        team_name:
+          type: string
+          description: |
+            What the team was called that week. Frozen, so a team renamed in June does not
+            relabel March's snapshot.
+        local_week_start: { type: string, format: date }
+        generated_at: { type: string, format: date-time }
+        as_of: { type: string, format: date-time }
+        counts: { $ref: '#/components/schemas/TeamWeeklyCounts' }
+        pipeline:
+          description: |
+            What the team's week did to the pipeline. ABSENT when any member's week could not
+            be converted — summing only the ones that did would be a confident number quietly
+            missing a rep.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewPipeline' }]
+        reps_unread:
+          type: integer
+          minimum: 0
+          description: |
+            Members whose week could not be read at all. Zero is the claim that every member's
+            week was counted.
+        reps:
+          type: array
+          items: { $ref: '#/components/schemas/TeamWeeklyRep' }
+          description: |
+            Who was on the team that week — the frozen membership, which a join against the
+            live team could never answer.
+    TeamWeeklyCounts:
+      type: object
+      additionalProperties: false
+      required: [reps_counted, deals_won, deals_lost, leads_routed, leads_answered_in_target,
+                 leads_breached, meetings_held, meetings_with_next_step,
+                 commitments_due, commitments_kept]
+      properties:
+        reps_counted: { type: integer, minimum: 0, description: 'Members whose week was read and totalled.' }
+        deals_won: { type: integer, minimum: 0 }
+        deals_lost: { type: integer, minimum: 0 }
+        leads_routed: { type: integer, minimum: 0 }
+        leads_answered_in_target: { type: integer, minimum: 0 }
+        leads_breached: { type: integer, minimum: 0 }
+        meetings_held: { type: integer, minimum: 0 }
+        meetings_with_next_step: { type: integer, minimum: 0 }
+        commitments_due: { type: integer, minimum: 0 }
+        commitments_kept: { type: integer, minimum: 0 }
+    TeamWeeklyRep:
+      type: object
+      additionalProperties: false
+      description: One member's week as their lead reads it, with the one thing to raise.
+      required: [user_id, display_name, deals_won, leads_breached, meetings_held,
+                 commitments_due, commitments_kept, help_requested, focus_kind, focus_label]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name:
+          type: string
+          description: What they were called that week — frozen, and it survives the seat being deleted.
+        deals_won: { type: integer, minimum: 0 }
+        leads_breached: { type: integer, minimum: 0 }
+        meetings_held: { type: integer, minimum: 0 }
+        commitments_due: { type: integer, minimum: 0 }
+        commitments_kept: { type: integer, minimum: 0 }
+        help_requested: { type: integer, minimum: 0, description: 'Commitments they asked for help on.' }
+        focus_kind:
+          type: string
+          enum: [help_requested, leads_breached, commitments_missed,
+                 meetings_without_next_step, strong_week, quiet_week]
+          description: |
+            Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
+            celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
+            outranks any metric, because walking past a request to raise a number is the
+            fastest way to teach them not to ask.
+        focus_label:
+          type: string
+          description: |
+            The focus in words, composed from the stored figures — never model-written, so it
+            cannot say something the snapshot does not hold.
 
     WeeklyReview:
       type: object

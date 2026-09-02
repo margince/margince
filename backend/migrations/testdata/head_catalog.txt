@@ -2353,6 +2353,8 @@ public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable U
 public.idx_taggable_tag CREATE INDEX idx_taggable_tag ON public.taggable USING btree (tag_id)
 public.idx_team_membership_team CREATE INDEX idx_team_membership_team ON public.team_membership USING btree (team_id)
 public.idx_team_membership_user CREATE INDEX idx_team_membership_user ON public.team_membership USING btree (user_id)
+public.idx_team_weekly_review_rep_review CREATE INDEX idx_team_weekly_review_rep_review ON public.team_weekly_review_rep USING btree (team_weekly_review_id, display_name)
+public.idx_team_weekly_review_team CREATE INDEX idx_team_weekly_review_team ON public.team_weekly_review USING btree (team_id, local_week_start DESC)
 public.idx_technical_lookup_cache_expiry CREATE INDEX idx_technical_lookup_cache_expiry ON public.technical_lookup_cache USING btree (expires_at)
 public.idx_transcript_read_latest CREATE INDEX idx_transcript_read_latest ON public.transcript_read USING btree (activity_id, created_at DESC)
 public.idx_voice_corpus_profile CREATE INDEX idx_voice_corpus_profile ON public.voice_corpus_source USING btree (voice_profile_id, created_at DESC)
@@ -4478,6 +4480,57 @@ public.team_membership_pkey CREATE UNIQUE INDEX team_membership_pkey ON public.t
 public.team_membership_unique CREATE UNIQUE INDEX team_membership_unique ON public.team_membership USING btree (team_id, user_id)
 public.team_name_unique CREATE UNIQUE INDEX team_name_unique ON public.team USING btree (name)
 public.team_pkey CREATE UNIQUE INDEX team_pkey ON public.team USING btree (id)
+public.team_weekly_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.team_weekly_review.as_of timestamp with time zone NOT NULL gen=- def=-
+public.team_weekly_review.base_currency text gen=- def=-
+public.team_weekly_review.commitments_due integer NOT NULL gen=- def=0
+public.team_weekly_review.commitments_kept integer NOT NULL gen=- def=0
+public.team_weekly_review.deals_lost integer NOT NULL gen=- def=0
+public.team_weekly_review.deals_won integer NOT NULL gen=- def=0
+public.team_weekly_review.generated_at timestamp with time zone NOT NULL gen=- def=now()
+public.team_weekly_review.id uuid NOT NULL gen=- def=uuidv7()
+public.team_weekly_review.leads_answered_in_target integer NOT NULL gen=- def=0
+public.team_weekly_review.leads_breached integer NOT NULL gen=- def=0
+public.team_weekly_review.leads_routed integer NOT NULL gen=- def=0
+public.team_weekly_review.local_week_start date NOT NULL gen=- def=-
+public.team_weekly_review.meetings_held integer NOT NULL gen=- def=0
+public.team_weekly_review.meetings_with_next_step integer NOT NULL gen=- def=0
+public.team_weekly_review.pipeline_created_minor bigint gen=- def=-
+public.team_weekly_review.pipeline_lost_minor bigint gen=- def=-
+public.team_weekly_review.pipeline_won_minor bigint gen=- def=-
+public.team_weekly_review.reps_counted integer NOT NULL gen=- def=0
+public.team_weekly_review.reps_unread integer NOT NULL gen=- def=0
+public.team_weekly_review.team_id uuid NOT NULL gen=- def=-
+public.team_weekly_review.team_name text NOT NULL gen=- def=-
+public.team_weekly_review.team_weekly_review_counts_are_tallies CHECK (((reps_counted >= 0) AND (reps_unread >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0))))
+public.team_weekly_review.team_weekly_review_currency_check CHECK (((base_currency IS NULL) OR (base_currency ~ '^[A-Z]{3}$'::text)))
+public.team_weekly_review.team_weekly_review_money_names_its_currency CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL))))
+public.team_weekly_review.team_weekly_review_name_present CHECK ((btrim(team_name) <> ''::text))
+public.team_weekly_review.team_weekly_review_pkey PRIMARY KEY (id)
+public.team_weekly_review.team_weekly_review_subsets CHECK (((meetings_with_next_step <= meetings_held) AND (commitments_kept <= commitments_due) AND ((leads_answered_in_target + leads_breached) <= leads_routed)))
+public.team_weekly_review.uq_team_weekly_review_team_week UNIQUE (team_id, local_week_start)
+public.team_weekly_review_pkey CREATE UNIQUE INDEX team_weekly_review_pkey ON public.team_weekly_review USING btree (id)
+public.team_weekly_review_rep acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.team_weekly_review_rep.commitments_due integer NOT NULL gen=- def=0
+public.team_weekly_review_rep.commitments_kept integer NOT NULL gen=- def=0
+public.team_weekly_review_rep.deals_won integer NOT NULL gen=- def=0
+public.team_weekly_review_rep.display_name text NOT NULL gen=- def=-
+public.team_weekly_review_rep.focus_kind text NOT NULL gen=- def=-
+public.team_weekly_review_rep.focus_label text NOT NULL gen=- def=-
+public.team_weekly_review_rep.help_requested integer NOT NULL gen=- def=0
+public.team_weekly_review_rep.id uuid NOT NULL gen=- def=uuidv7()
+public.team_weekly_review_rep.leads_breached integer NOT NULL gen=- def=0
+public.team_weekly_review_rep.meetings_held integer NOT NULL gen=- def=0
+public.team_weekly_review_rep.team_weekly_review_id uuid NOT NULL gen=- def=-
+public.team_weekly_review_rep.team_weekly_review_rep_counts_are_tallies CHECK (((deals_won >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND (help_requested >= 0) AND (commitments_kept <= commitments_due)))
+public.team_weekly_review_rep.team_weekly_review_rep_focus_kind_check CHECK ((focus_kind = ANY (ARRAY['help_requested'::text, 'leads_breached'::text, 'commitments_missed'::text, 'meetings_without_next_step'::text, 'strong_week'::text, 'quiet_week'::text])))
+public.team_weekly_review_rep.team_weekly_review_rep_focus_present CHECK ((btrim(focus_label) <> ''::text))
+public.team_weekly_review_rep.team_weekly_review_rep_name_present CHECK ((btrim(display_name) <> ''::text))
+public.team_weekly_review_rep.team_weekly_review_rep_pkey PRIMARY KEY (id)
+public.team_weekly_review_rep.team_weekly_review_rep_review_fkey FOREIGN KEY (team_weekly_review_id) REFERENCES team_weekly_review(id) ON DELETE CASCADE
+public.team_weekly_review_rep.uq_team_weekly_review_rep UNIQUE (team_weekly_review_id, user_id)
+public.team_weekly_review_rep.user_id uuid NOT NULL gen=- def=-
+public.team_weekly_review_rep_pkey CREATE UNIQUE INDEX team_weekly_review_rep_pkey ON public.team_weekly_review_rep USING btree (id)
 public.technical_lookup_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.technical_lookup_cache.answer jsonb NOT NULL gen=- def=-
 public.technical_lookup_cache.expires_at timestamp with time zone NOT NULL gen=- def=-
@@ -4639,6 +4692,8 @@ public.uq_site_read_triage_inflight CREATE UNIQUE INDEX uq_site_read_triage_infl
 public.uq_site_read_ws_id CREATE UNIQUE INDEX uq_site_read_ws_id ON public.site_read USING btree (id)
 public.uq_stage_position CREATE UNIQUE INDEX uq_stage_position ON public.stage USING btree (pipeline_id, "position") WHERE (archived_at IS NULL)
 public.uq_tag_name CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name))
+public.uq_team_weekly_review_rep CREATE UNIQUE INDEX uq_team_weekly_review_rep ON public.team_weekly_review_rep USING btree (team_weekly_review_id, user_id)
+public.uq_team_weekly_review_team_week CREATE UNIQUE INDEX uq_team_weekly_review_team_week ON public.team_weekly_review USING btree (team_id, local_week_start)
 public.uq_transcript_read_inflight CREATE UNIQUE INDEX uq_transcript_read_inflight ON public.transcript_read USING btree (activity_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.uq_voice_corpus_source_ref CREATE UNIQUE INDEX uq_voice_corpus_source_ref ON public.voice_corpus_source USING btree (voice_profile_id, source_ref)
 public.uq_voice_learning_signal_draft CREATE UNIQUE INDEX uq_voice_learning_signal_draft ON public.voice_learning_signal USING btree (draft_ref_hash)
