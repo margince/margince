@@ -147,7 +147,12 @@ func openCommitmentsDue(
 		  JOIN person pr ON pr.id = c.person_id AND pr.archived_at IS NULL
 		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
 		   AND c.archived_at IS NULL
-		   AND c.due_at IS NOT NULL AND c.due_at <= $%[2]d
+		   -- STRICTLY before, which is what the caller's bound means: it is the
+		   -- END of the day, so an inclusive test put a promise due at exactly
+		   -- tomorrow's midnight on today's list — reported late a day early,
+		   -- and again tomorrow. The task lane beside this one reads it the
+		   -- same way, and the two decide the same afternoon.
+		   AND c.due_at IS NOT NULL AND c.due_at < $%[2]d
 		   AND pr.owner_id = $%[1]d
 		   AND (%[3]s) AND (%[4]s)
 		 ORDER BY c.due_at ASC, c.id

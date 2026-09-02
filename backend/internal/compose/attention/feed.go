@@ -50,6 +50,31 @@ const doneCap = 8
 // are the ones it set.
 type Clock func() time.Time
 
+// Zone answers the installation's timezone, which is what decides when "today"
+// ends for this feed.
+//
+// A SEAM rather than a read of its own: this package binds no module and opens
+// no transaction, and the installation's timezone is a fact the composition
+// root already resolves for the morning brief through identity.TimezoneOf.
+type Zone func(ctx context.Context) (*time.Location, error)
+
+// Option adjusts a service after its seams are bound.
+//
+// Variadic rather than a nineteenth parameter: the constructor already takes
+// every lane, and a reader counting arguments to find the one that decides the
+// day is a reader who will bind it wrong.
+type Option func(*Service)
+
+// WithZone binds the installation timezone the day boundary is measured in.
+//
+// UNBOUND MEANS UTC, and that is the honest default rather than a hidden one: a
+// composition with no installation to ask — every unit test in this package —
+// has no local day, and UTC is the only answer that does not invent one. The
+// shipped wiring binds it, which is what makes the difference visible.
+func WithZone(z Zone) Option {
+	return func(s *Service) { s.zone = z }
+}
+
 // Service assembles the feed. Every dependency is an interface a compose seam
 // binds to the owning module, so this package imports no module directly.
 type Service struct {
@@ -72,7 +97,10 @@ type Service struct {
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
 	meetings Meetings
-	failed   FailedEffects
+	// zone resolves the installation timezone the day boundary is measured in;
+	// nil is UTC, for the reason WithZone gives.
+	zone   Zone
+	failed FailedEffects
 	// dsrs is OPTIONAL like the lanes above it, and withheld-by-grant on top:
 	// even where it is bound, only a DSR admin's read succeeds.
 	dsrs DSRs
@@ -179,11 +207,16 @@ func (s *Service) forUnowned() *Service {
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
 	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, u AutomationHealth, e Notices, n Names, now Clock,
+	opts ...Option,
 ) *Service {
-	return &Service{
+	svc := &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
 		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
 	}
+	for _, opt := range opts {
+		opt(svc)
+	}
+	return svc
 }
 
 // countingDecisions returns a copy of this service that reads decisions to
@@ -388,15 +421,37 @@ func interleave(first, second []crmcontracts.AttentionItem, limit int) []crmcont
 	return out
 }
 
-// endOfDay is the boundary both due-dated lanes stop at, so a promise and a
-// task falling on the same afternoon are judged against the same instant.
-func endOfDay(asOf time.Time) time.Time {
-	return asOf.Truncate(24 * time.Hour).Add(24 * time.Hour)
+// endOfDay is the boundary every due-dated lane stops at, so a promise, a task
+// and a meeting falling on the same afternoon are judged against one instant.
+//
+// THE INSTALLATION'S midnight, not UTC's. Truncating the clock to 24 hours
+// answers UTC midnight wherever the installation is, which put a UTC+7 seat's
+// "today" through 07:00 tomorrow and cut a UTC-4 seat's short at 20:00 — the
+// same convention error the morning brief's local_day exists to avoid.
+//
+// AddDate over the local date, not Add(24h) over the instant: a day is 23 or 25
+// hours where clocks change, and adding a fixed span lands an hour off on those
+// two mornings a year — in the direction that drops work the reader is owed.
+func (s *Service) endOfDay(ctx context.Context, asOf time.Time) (time.Time, error) {
+	loc := time.UTC
+	if s.zone != nil {
+		resolved, err := s.zone(ctx)
+		if err != nil {
+			return time.Time{}, err
+		}
+		loc = resolved
+	}
+	local := asOf.In(loc)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1), nil
 }
 
 // planned is today's agreed work, overdue first.
 func (s *Service) planned(ctx context.Context, asOf time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
-	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, scope, s.taskOwner)
+	until, err := s.endOfDay(ctx, asOf)
+	if err != nil {
+		return nil, err
+	}
+	open, err := s.tasks.OpenForViewer(ctx, until, plannedCap, scope, s.taskOwner)
 	if err != nil {
 		return nil, err
 	}

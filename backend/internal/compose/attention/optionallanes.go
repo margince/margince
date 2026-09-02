@@ -78,7 +78,11 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetings.Today(ctx, asOf, endOfDay(asOf), plannedCap)
+				until, err := s.endOfDay(ctx, asOf)
+				if err != nil {
+					return nil, err
+				}
+				booked, err := s.meetings.Today(ctx, asOf, until, plannedCap)
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,
@@ -99,7 +103,11 @@ func (s *Service) optionalLanes(
 		{
 			name: "commitments", bound: s.commitments != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				due, err := s.commitments.DueBy(ctx, endOfDay(asOf), plannedCap)
+				until, err := s.endOfDay(ctx, asOf)
+				if err != nil {
+					return nil, err
+				}
+				due, err := s.commitments.DueBy(ctx, until, plannedCap)
 				return renderEach(due, func(promise Commitment) crmcontracts.AttentionItem {
 					return commitmentItem(promise, asOf)
 				}), err
