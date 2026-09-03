@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
 import { ShareViewButton } from "./analytics.share";
@@ -340,8 +340,13 @@ export const ShareDialogLinkShownOnce: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "Share view" }),
     );
+    // `screen`, not `canvas`, for anything inside the dialog: Modal portals to
+    // document.body, so the dialog is a sibling of the canvas rather than a
+    // descendant of it, and a canvas-scoped query for its confirm waits out its
+    // full budget for a button that is on screen the whole time. The TRIGGER
+    // stays canvas-scoped, because that one really is in the story's own tree.
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Create link" }),
+      await screen.findByRole("button", { name: "Create link" }),
     );
   },
 };

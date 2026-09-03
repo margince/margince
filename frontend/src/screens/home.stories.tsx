@@ -15,10 +15,12 @@ import {
   pipelineRows,
   quietRun,
   ranked,
+  readingsDay,
   report,
   singles,
   WEEK_START,
   type WeeklyReview,
+  type Worklist,
 } from "./home.fixtures";
 import type { MorningBrief, MorningDigest } from "./home.queries";
 import {
@@ -69,6 +71,13 @@ type Frame = {
   weekly?: WeeklyReview | null;
   /** What the pipeline report answers. A refusal is a state of its own. */
   pipeline?: () => Response;
+  /** The morning as the worklist answers it. Stated rather than left to the
+   *  stub's fallback, because the fallback is a LIST page — `{data, page}` —
+   *  and `/worklist` answers a `Worklist`, whose `queue` the walk reads to
+   *  decide whether to ask for a second page. A fallback of the wrong envelope
+   *  therefore did not render an empty Home, it crashed every frame in this
+   *  file on `queue.length` of undefined. */
+  day?: Worklist;
   /** Extra routes a frame's own play() needs. */
   extra?: RouteMap;
 };
@@ -86,6 +95,7 @@ function home({
   digest: overnight = digest,
   weekly = narratedWeek,
   pipeline = () => report(pipelineRows),
+  day = readingsDay(),
   extra = {},
 }: Frame) {
   return () => {
@@ -130,6 +140,9 @@ function home({
           id: "01a00000-0000-7000-8000-000000000002",
           name: "Depot rollout",
         }),
+      // The screen reads this before it draws anything: the team toggle, the
+      // coverage line and the readings strip are all cuts of this one answer.
+      "GET /worklist": () => jsonResponse(day),
       "POST /reports/deals-by-stage": () => pipeline(),
       ...extra,
     });
