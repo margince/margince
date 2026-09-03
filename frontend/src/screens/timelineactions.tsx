@@ -91,8 +91,13 @@ export function TimelineActions({
           — `connector:<name>:<uuid>`, never `human:<uuid>` or `agent:<id>` —
           so it is the one signal correct in every direction.
 
-          This inference is display code holding a backend ownership rule, and
-          it goes when the server's own change_mode reaches this cluster. */}
+          This inference is display code holding a backend ownership rule. The
+          server answers the same question properly as `change_mode`, but on
+          the email PRESENTATION rather than on the summary a list row carries
+          — so the honest place to spend it is the drawer's own access editor,
+          where the presentation is already loaded. Deleting the inference here
+          before that editor exists would take the audience control off every
+          timeline row and give nothing back (margince#3811). */}
       {(activity.captured_by ?? "").startsWith("connector:") ? (
         <ThreadAudienceAction
           activity={activity}

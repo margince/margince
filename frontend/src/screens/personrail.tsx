@@ -19,6 +19,7 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ContactLink } from "../design-system/contactlink";
+import { EmailReference } from "../design-system/emailreference";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineText } from "../design-system/inlinechoice";
 import { OffsiteLink } from "../design-system/offsitelink";
@@ -134,11 +135,15 @@ export function PersonRail({
   guard,
   firstName,
   onExplain,
+  onOpenEmail,
 }: Readonly<{
   view: Person360;
   guard: PersonConsentGuard | undefined;
   firstName: string;
   onExplain: () => void;
+  /** Opens one message in the record's drawer. The page owns the drawer, so
+   * the rail is handed the opener rather than mounting a second one. */
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   // A plain div: RecordView's own <aside> is the landmark around this, and a
   // second labelled region inside it would give a reader two names for one
@@ -156,7 +161,7 @@ export function PersonRail({
           says what the seat is willing for colleagues to read. */}
       <PersonHoldSection view={view} />
       <PersonTagsSection view={view} />
-      <RecentActivity view={view} />
+      <RecentActivity view={view} onOpenEmail={onOpenEmail} />
     </div>
   );
 }
@@ -1414,7 +1419,10 @@ function verdictClass(verdict: string | undefined): string {
 
 // Three condensed items. It never duplicates the raw timeline visible beside
 // it — this is the glance, the Activity tab is the ledger.
-function RecentActivity({ view }: Readonly<{ view: Person360 }>) {
+function RecentActivity({
+  view,
+  onOpenEmail,
+}: Readonly<{ view: Person360; onOpenEmail?: (activityId: string) => void }>) {
   const t = useT();
   const { locale } = useLocale();
   // The section's own emptiness is decided BEFORE the rows are defaulted: an
@@ -1445,7 +1453,20 @@ function RecentActivity({ view }: Readonly<{ view: Person360 }>) {
         >
           {rows.map((row) => (
             <div className="pe-rail-row" key={row.id}>
-              <span className="pe-rail-label">{row.subject ?? row.kind}</span>
+              {/* An email is CITED here rather than drawn: the rail is a
+                  glance at what happened lately, and a full row with its
+                  preview and access badge would make the aside compete with
+                  the timeline beside it. The citation opens the same drawer
+                  the timeline's row does, so both lead to one place. */}
+              {row.kind === "email" ? (
+                <EmailReference
+                  subject={row.subject}
+                  withheld={row.content_state === "withheld"}
+                  onOpen={onOpenEmail ? () => onOpenEmail(row.id) : undefined}
+                />
+              ) : (
+                <span className="pe-rail-label">{row.subject ?? row.kind}</span>
+              )}
               <span className="pe-rail-value pe-rail-value-muted">
                 {sinceWords(row.occurred_at, t, locale)}
               </span>

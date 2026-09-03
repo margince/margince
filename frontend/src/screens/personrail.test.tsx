@@ -485,6 +485,43 @@ describe("recent activity", () => {
     ).toBeTruthy();
   });
 
+  // A withheld email in the rail is CITED, and the citation says nothing. The
+  // rail draws its own rows rather than going through the timeline, so it owns
+  // this promise separately — and the section-level withholding test below
+  // covers a different case: the whole list refused, not one row in it.
+  it("cites a withheld email without naming it, and does not open it", () => {
+    mount({
+      ...emptyButGranted,
+      activities: {
+        data: [
+          {
+            id: "a-withheld",
+            kind: "email",
+            subject: "Angebot Q4",
+            occurred_at: "2026-08-30T09:12:00Z",
+            content_state: "withheld",
+            source: "capture",
+            captured_by: "connector:gmail:u1",
+            created_at: "2026-08-30T09:12:00Z",
+            updated_at: "2026-08-30T09:12:00Z",
+            is_done: false,
+          },
+        ],
+        page,
+      },
+    } as Person360);
+
+    const recent = section("Recent activity");
+    expect(within(recent).queryByText("Angebot Q4")).toBeNull();
+    expect(within(recent).getByText("Not shared with you")).toBeTruthy();
+    // Nothing to open ON THE CITATION: a control that leads to a message the
+    // reader may not read teaches them the product does not work. The panel's
+    // own "View all activity" is a different affordance and stays.
+    expect(
+      within(recent).queryByRole("button", { name: /Not shared with you/ }),
+    ).toBeNull();
+  });
+
   it("says the timeline is withheld rather than empty", () => {
     mount(withheld);
 

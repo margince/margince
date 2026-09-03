@@ -67,8 +67,11 @@ export function PersonTimelineTab({
   view,
   loading = false,
   onBriefMeeting,
+  onOpenEmail,
 }: Readonly<{
   personId: string;
+  /** Opens one message in the record's drawer, which the page owns. */
+  onOpenEmail?: (activityId: string) => void;
   view?: Person360;
   loading?: boolean;
   // Opens the pre-meeting brief for one meeting row. The drawer lives on the
@@ -88,6 +91,7 @@ export function PersonTimelineTab({
     firstPage: view?.activities,
   });
   const chronology = useRecordChronology({
+    onOpenEmail,
     kind: "person",
     recordId: personId,
     filter,

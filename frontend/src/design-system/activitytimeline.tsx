@@ -121,6 +121,10 @@ export function activityTimeline(
     // chronology of an account runs several deals through one list, and the
     // row that does not say which one is a row a reader has to open to place.
     via: who ? dealChip(activity, who.nameOf) : undefined,
+    // The server's own row model, carried rather than re-derived. Present
+    // exactly when kind=email, so the row branches on the field and every
+    // other kind keeps the reading it had.
+    emailSummary: activity.email_summary ?? undefined,
     withheld: activity.content_state === "withheld",
     threadKey: activity.thread_key,
     bulkAttested: activity.bulk_mail_attested,

@@ -10,7 +10,7 @@ import {
   Search,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
@@ -21,12 +21,14 @@ import { useUrlParams } from "../app/urlstate";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { ContactLink } from "../design-system/contactlink";
+import { EmailDetail } from "../design-system/emaildetail";
 import { IconAction } from "../design-system/iconaction";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
+import { formatDateTime } from "../format/format";
 import { linkedinUrl } from "../format/weburl";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem, useMe, useSorMode } from "./common";
 import { ComposeModal } from "./compose";
@@ -152,6 +154,7 @@ function ProfileLink({ href }: Readonly<{ href: string }>) {
  * owns one for the same reason — its ACTIVITIES half is the 360's own section.
  */
 function PersonTabPanel({
+  onOpenEmail,
   tab,
   personId,
   view,
@@ -161,11 +164,14 @@ function PersonTabPanel({
   personId: string;
   view: Person360;
   onBriefMeeting: (activityId: string) => void;
+  /** Opens one message in the record's drawer, which the page owns. */
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   switch (tab) {
     case "timeline":
       return (
         <PersonTimelineTab
+          onOpenEmail={onOpenEmail}
           personId={personId}
           view={view}
           onBriefMeeting={onBriefMeeting}
@@ -255,6 +261,23 @@ export function PersonPageV2({
   id,
   tab,
 }: Readonly<{ id: string; tab: PersonTab }>) {
+  // Which message the drawer is showing. One drawer over the record, owned by
+  // the page: the timeline and the rail both open into it, so a citation in
+  // the aside and a row in the body lead to the same place.
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
+  const { locale } = useLocale();
+  // The page is not keyed by the contact it shows, so React keeps this state
+  // across a move from one contact to the next. A drawer left open would
+  // reopen the previous person's message over the new person's record — the
+  // reader sees somebody else's mail filed under a contact it was never on.
+  // The id is the identity here, so a change in it closes what was open.
+  const shownFor = useRef(id);
+  if (shownFor.current !== id) {
+    shownFor.current = id;
+    if (openEmail) {
+      setOpenEmail(null);
+    }
+  }
   const t = useT();
   const recordZone = useRecordZone();
   const view = useQuery({
@@ -425,6 +448,7 @@ export function PersonPageV2({
             guard={guard.data}
             firstName={firstName}
             onExplain={() => navigate({ screen: "contacts", id })}
+            onOpenEmail={setOpenEmail}
           />
           <PersonEmailPanel
             personId={id}
@@ -495,6 +519,7 @@ export function PersonPageV2({
           personId={id}
           view={view.data}
           onBriefMeeting={openBrief}
+          onOpenEmail={setOpenEmail}
         />
         <PersonComposer
           personId={id}
@@ -504,6 +529,16 @@ export function PersonPageV2({
           intent={composer.intent}
           onClose={composer.close}
         />
+        {/* One drawer over the record. The timeline's rows and the rail's
+            citations both open into it, so a reader who finds a message in the
+            aside and one who finds it in the body land in the same place. */}
+        {openEmail && (
+          <EmailDetail
+            activityId={openEmail}
+            onClose={() => setOpenEmail(null)}
+            formatWhen={(iso) => formatDateTime(iso, locale, recordZone)}
+          />
+        )}
         <PersonMailDrawer
           personId={id}
           open={drawer === "mail"}
