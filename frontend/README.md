@@ -149,7 +149,7 @@ default.
 ## The gates (all run by `pnpm check` / `pnpm e2e`)
 
 1. Token canon — every §2 Ledger-Green value pinned to the design canon.
-2. Three type families only (Outfit / DM Sans / JetBrains Mono).
+2. Three type families only (Bricolage Grotesque / Geist / Geist Mono).
 3. Literal colours live only in `tokens.css`.
 4. No hard-coded user-facing copy — JSX text and user-facing attributes
    must come from the i18n catalogs (TS AST walk).
