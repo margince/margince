@@ -52,6 +52,10 @@ type restCommandDeps struct {
 	// that cannot say what the import does asks somebody to approve a bulk
 	// write to their estate sight unseen.
 	imports agents.Imports
+	// tags reads the two words a merge names, which is what its summary is
+	// written from. Same reason `stages` and `imports` are here: a human
+	// deciding "fold X into Y" cannot be shown the ids and asked to mean it.
+	tags agents.Tags
 }
 
 // restCommands maps a crm.yaml operationId to the decoder that turns an HTTP
@@ -188,16 +192,20 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// Four of the fourteen are 🟢 today and stage nothing, so their entries are
 	// unreached until a tier floor tightens them; agentcommandauto.go's own doc
 	// says why they are registered anyway.
-	"sendEmail":              sendEmailCommand,
-	"sendMessage":            sendMessageCommand,
-	"sendAccountEmail":       sendAccountEmailCommand,
-	"bookMeeting":            bookMeetingCommand,
-	"promoteLead":            promoteLeadCommand,
-	"disqualifyLead":         disqualifyLeadCommand,
-	"advanceProjectPhase":    advanceProjectPhaseCommand,
-	"advanceDeal":            advanceDealCommand,
-	"mergePerson":            mergeCommand,
-	"mergeOrganization":      mergeCommand,
+	"sendEmail":           sendEmailCommand,
+	"sendMessage":         sendMessageCommand,
+	"sendAccountEmail":    sendAccountEmailCommand,
+	"bookMeeting":         bookMeetingCommand,
+	"promoteLead":         promoteLeadCommand,
+	"disqualifyLead":      disqualifyLeadCommand,
+	"advanceProjectPhase": advanceProjectPhaseCommand,
+	"advanceDeal":         advanceDealCommand,
+	"mergePerson":         mergeCommand,
+	"mergeOrganization":   mergeCommand,
+	// mergeTags is NOT one of those two. They fold a record into another
+	// record through the SoR provider; this folds a vocabulary word, which no
+	// provider serves, so it resolves against the tag seam instead.
+	"mergeTags":              mergeTagsCommand,
 	"scrapeCompany":          scrapeCompanyCommand,
 	"deepReadCompany":        deepReadCompanyCommand,
 	"technicalEnrichCompany": technicalEnrichCompanyCommand,

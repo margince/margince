@@ -64,7 +64,43 @@ const outputValidatorSource = "output_validator"
 // gives way to it — the tool listing is in the system prompt and is never
 // elided — so it is exported for the composition that knows how large the real
 // catalog is to hold that listing against it.
-const PromptTokenCeiling = 24_000
+//
+// The number is DERIVED from the tightest provider this runner speaks to, not
+// chosen. Ollama's num_ctx bounds prompt and completion together, the adapter
+// will not ask for more than ollamaMaxContext (32,768) — an uncapped window
+// lets whoever wrote a crawled page pick the host's KV-cache allocation — and
+// one completion may take perCallOutputCeiling (4,096).
+//
+// That leaves ONE BUCKET of slack rather than every token arithmetic allows,
+// and the slack is the point. Two facts eat into it, and neither is visible
+// from here:
+//
+//   - ollamaWindowFor rounds a request UP by adding a whole bucket, so the
+//     largest estimate that is not clamped back to the cap is 32,767, not
+//     32,768. Subtracting alone gives a ceiling one token too high.
+//   - The adapter's estimate is BIGGER than this package's for the same
+//     prompt. estimateTokens counts system + content; contextWindow also
+//     counts each message's role, an 8-byte per-message frame, and the
+//     response schema in `Format`. A long transcript with a schema is several
+//     hundred tokens heavier over there than it looks here.
+//
+// So the ceiling is the largest value whose worst case still clears the cap:
+// 24,576 + 4,096 = 28,672, which rounds to exactly 32,768 and fits, with a
+// bucket to absorb what this side cannot count. Trimming that slack to make
+// the catalog floor roomier trades a silent truncation — the completion cut
+// inside a reasoning model's thinking, which returns well-formed empty content
+// and reads as a bad model — for a few more tool descriptions.
+//
+// It was 24,000, a round number with no derivation at all, and it had stopped
+// being only a runner concern: the catalog floor below is a fraction of this,
+// and at 24,000 that floor left 63 tokens of headroom for a 67-tool catalog, so
+// the next verb anyone added failed a gate that was never meant to ration
+// features (margince/margince#3882). Tying the number to ollamaMaxContext is
+// what stops it drifting back into a round one.
+//
+// A cloud provider's window dwarfs this and is not the binding constraint. If
+// the local cap moves, this moves with it.
+const PromptTokenCeiling = 24_576
 
 // roleUser is the wire role every window message carries: the goal, each
 // observation, and the elision notice are all things the runner SAYS to the

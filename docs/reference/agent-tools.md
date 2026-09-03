@@ -118,6 +118,7 @@ Columns:
 | `list_records` | 🟢 | `read` | — | Mirror-backed unfiltered; a FILTERED call is `unsupported_by_sor` (see below) |
 | `log_activity` | 🟢 | `write` | — | Seam-routed: write-back through the incumbent |
 | `merge_records` | 🟢 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |
+| `merge_tags` | 🟡 | `write` | — | Folds one vocabulary word into another; native, not mode-routed. 🟡 where `merge_records` is 🟢 because it releases the source's name and keeps no pointer home. Needs `tag.update`, and a human releases it |
 | `prep_for_meeting` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `progress_deal` | dynamic | `write` | — | `unsupported_by_sor` (shares `advance_deal`'s seam) |
 | `promote_lead` | 🟢 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |

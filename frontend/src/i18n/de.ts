@@ -1279,6 +1279,7 @@ export const de = {
   "approval.kind.deal_follow_up": "Wiedervorlage zum Deal anlegen",
   "approval.kind.archive_record": "Datensatz archivieren",
   "approval.kind.merge_records": "Datensätze zusammenführen",
+  "approval.kind.merge_tags": "Ein Schlagwort in ein anderes überführen",
   "approval.kind.update_record": "Datensatz ändern",
   "approval.kind.create_record": "Datensatz anlegen",
   "approval.kind.send_email": "E-Mail senden",
@@ -1508,6 +1509,8 @@ export const de = {
   "email.move.waitingForThem": "Warten auf Antwort",
   "email.detail.loading": "Nachricht wird geöffnet",
   "email.detail.none": "Diese Nachricht",
+  "email.detail.attachments_one": "{count} Anhang",
+  "email.detail.attachments_other": "{count} Anhänge",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "email.detail.close": "Schließen",
   "email.detail.withheldReason":

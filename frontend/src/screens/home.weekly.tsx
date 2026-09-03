@@ -9,8 +9,13 @@ import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
-import { formatDate, formatNumber, formatSignedNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import {
+  formatDate,
+  formatMoney,
+  formatNumber,
+  formatSignedNumber,
+} from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   useWeeklyReview,
@@ -207,6 +212,27 @@ function readState(
   return query.isPending ? "loading" : "ready";
 }
 
+/**
+ * What the week's wins were worth, or nothing.
+ *
+ * NOTHING, not a zero, when the review carries no pipeline block. That block is
+ * optional on the wire: a week assembled before the money columns existed, or
+ * one where an FX rate was missing, has no honest figure — and "€0 won" is a
+ * claim about a week nobody measured, which is the opposite of what happened.
+ *
+ * The currency comes from the review, never from the installation's current
+ * setting. Base currency is operator-mutable, so re-reading it later would
+ * re-label an old week with a currency its numbers were never in. The contract
+ * stores it beside the figures for exactly this reason.
+ */
+function wonValue(review: WeeklyReview, locale: Locale): string | undefined {
+  const pipeline = review.pipeline;
+  if (pipeline === undefined) {
+    return undefined;
+  }
+  return formatMoney(pipeline.won_minor, pipeline.currency, locale);
+}
+
 function WeeklyBody({
   review,
   state,
@@ -276,7 +302,21 @@ function WeeklyBody({
         <StatCard
           label={t("home.weekly.dealsWon")}
           value={formatNumber(c.deals_won, locale)}
-          detail={since(c.deals_won, prior?.deals_won)}
+          // What those wins were WORTH, at each deal's own close-time rate.
+          //
+          // The count alone says a week of five small renewals and a week of
+          // one company-making deal are the same week. The money was computed,
+          // FX-converted, stored with the currency it is in, and served — and
+          // read by nothing until now.
+          //
+          // It rides the won slot rather than taking a sixth: five is what a
+          // strip can be read across as one comparison, and a tenth slot folded
+          // the row into two ranks at 1280 (#3709). The delta line gives way to
+          // it, because "what it was worth" is the fact a reader wants first
+          // and the strip has one detail line to give.
+          detail={
+            wonValue(review, locale) ?? since(c.deals_won, prior?.deals_won)
+          }
         />
         <StatCard
           label={t("home.weekly.leadsAnswered")}

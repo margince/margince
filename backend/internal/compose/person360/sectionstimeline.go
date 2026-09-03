@@ -283,6 +283,14 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 	if hasMore {
 		out = out[:sectionCap]
 	}
+	// AFTER the cap, so the statement counts the rows this page returns rather
+	// than the extra one read to detect hasMore. Same reason the summary above
+	// is composed from the shared helper: a person page whose mail showed no
+	// paperclip while the same rows off /activities showed one is the drift
+	// this twin exists to avoid.
+	if err := activities.WithAttachmentCounts(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
 	return out, hasMore, nil
 }
 

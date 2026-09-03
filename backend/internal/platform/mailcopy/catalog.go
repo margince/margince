@@ -163,6 +163,10 @@ func weeklyLines(line writeLine) {
 		"… and %d more, on Home",
 		"… weitere auf Home: %d",
 		"… và %d mục nữa, trên Home")
+	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
+		"Plan next week",
+		"Nächste Woche planen",
+		"Lập kế hoạch tuần tới")
 	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
 		"The full week, and the ones before it:",
 		"Die ganze Woche, und die davor:",
