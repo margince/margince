@@ -154,11 +154,11 @@ func TestTheSummaryCountsTheSameItemsTheQueueCarries(t *testing.T) {
 		Commitments: lane(item("c1", "conversation_claim", withDue(rankInstant.Add(-24*time.Hour)))),
 	}
 
-	ordered := rankAll(classifyDay(day, rankInstant, dayMoney{}))
-	summary := summarize(ordered, materialBar{})
+	candidates := classifyDay(day, rankInstant, dayMoney{})
+	summary := summarize(candidates, materialBar{})
 
-	if summary.Total != len(ordered) {
-		t.Fatalf("summary totals %d over a queue of %d", summary.Total, len(ordered))
+	if summary.Total != len(candidates) {
+		t.Fatalf("summary totals %d over a day of %d", summary.Total, len(candidates))
 	}
 	if summary.Urgent != 1 {
 		t.Fatalf("counted %d urgent, wanted the one promise", summary.Urgent)
@@ -195,15 +195,15 @@ func TestTheMiddleOfTheDayReachesAFigure(t *testing.T) {
 		AtRisk: lane(item("d1", "deal_at_risk"), item("d2", "deal_at_risk")),
 	}
 
-	ordered := rankAll(classifyDay(day, rankInstant, dayMoney{}))
-	summary := summarize(ordered, materialBar{})
+	candidates := classifyDay(day, rankInstant, dayMoney{})
+	summary := summarize(candidates, materialBar{})
 
-	if len(ordered) == 0 {
+	if len(candidates) == 0 {
 		t.Fatal("the fixture produced no rows, so this proves nothing")
 	}
-	if inPlayOf(summary) != len(ordered) {
+	if inPlayOf(summary) != len(candidates) {
 		t.Fatalf("counted %d in play over a queue of %d at-risk deals",
-			inPlayOf(summary), len(ordered))
+			inPlayOf(summary), len(candidates))
 	}
 	if summary.Urgent != 0 || summary.LowerPriority != 0 {
 		t.Fatalf("an at-risk deal is neither an interruption nor hygiene: urgent=%d routine=%d",
@@ -270,7 +270,7 @@ func TestADecisionsExpiryIsNotCountedAsWorkDue(t *testing.T) {
 		Planned: []crmcontracts.AttentionItem{item("real-task", "task", withDue(rankInstant.Add(-time.Hour)))},
 	}
 
-	summary := summarize(rankAll(classifyDay(day, rankInstant, dayMoney{})), materialBarOf(day, dayMoney{}))
+	summary := summarize(classifyDay(day, rankInstant, dayMoney{}), materialBarOf(day, dayMoney{}))
 
 	if summary.Due != 1 {
 		t.Fatalf("counted %d due, wanted only the task — a proposal's expiry is not the reader's deadline", summary.Due)
@@ -363,24 +363,76 @@ func TestTheOvernightBriefingReachesTheQueue(t *testing.T) {
 	}
 }
 
-// The summary and the last row must describe the page the caller RECEIVED.
-// Ranking the whole set and slicing afterwards left the final row comparing
-// itself against a row nobody got, and a total longer than the list.
-func TestThePageIsSummarisedAndExplainedAgainstItself(t *testing.T) {
-	tasks := []crmcontracts.AttentionItem{}
-	for i := 0; i < 5; i++ {
-		tasks = append(tasks, item(string(rune('a'+i)), "task", withDue(rankInstant.Add(time.Duration(i)*time.Hour))))
-	}
-	day := crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
+// The last row must be explained against the page the caller RECEIVED. Ranking
+// the whole set and slicing afterwards left the final row comparing itself
+// against a row nobody got.
+func TestThePagesLastRowIsExplainedAgainstThePageItIsOn(t *testing.T) {
+	out := (&Service{}).worklistFrom(context.Background(), summaryScopeDay(5), scopeAll, "", 3,
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3, waitingRead{}, leadRead{}, worklistCursor{}, nil)
-
-	if out.Summary.Total != len(out.Queue) {
-		t.Fatalf("summary totals %d over a page of %d", out.Summary.Total, len(out.Queue))
+	if len(out.Queue) != 3 {
+		t.Fatalf("the page holds %d rows, and this test needs the cut to have happened", len(out.Queue))
 	}
 	if out.Queue[len(out.Queue)-1].AboveNext != nil {
 		t.Fatal("the last row on the page compares itself with a row the caller never received")
 	}
+}
+
+// The header's five figures are ONE scope, and it is the day.
+//
+// `total` has always been the day's — the browser sums `counts[].considered`
+// for it — while the four bands counted the page, so a reader was handed a
+// sentence shaped like a breakdown of the total in which four of the five
+// figures described the first twenty-five rows. On a real queue that read
+// "11 urgent … 165 in all" over 118 urgent items, and "0 routine" three rows
+// above a folded group labelled routine tidying.
+//
+// The bands must therefore count what the reader can page to, not what arrived
+// in the first response — and stay still while they page, which is what the
+// component's own docstring already promises.
+func TestTheSummaryCountsTheDayAndNotThePage(t *testing.T) {
+	day := summaryScopeDay(5)
+
+	page := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3,
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	whole := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 50,
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+
+	if len(page.Queue) != 3 || len(whole.Queue) != 5 {
+		t.Fatalf("the fixture paged %d of %d rows, and this test needs a cut to compare across",
+			len(page.Queue), len(whole.Queue))
+	}
+	if page.Summary.Total != 5 {
+		t.Errorf("summary totals %d on a page of 3 over a day of 5", page.Summary.Total)
+	}
+	// The figure the browser prints as "in all" is the sum of the per-category
+	// `considered`. One sentence, one scope: the total it states and the bands
+	// beside it have to be counts of the same population.
+	considered := 0
+	for _, count := range page.Counts {
+		considered += count.Considered
+	}
+	if considered != page.Summary.Total {
+		t.Errorf("the categories weighed %d candidates and the summary totals %d — the sentence "+
+			"would state two populations", considered, page.Summary.Total)
+	}
+	// And every band is still, which is the promise a paging reader relies on.
+	if page.Summary.Urgent != whole.Summary.Urgent ||
+		inPlayOf(page.Summary) != inPlayOf(whole.Summary) ||
+		page.Summary.LowerPriority != whole.Summary.LowerPriority ||
+		page.Summary.Due != whole.Summary.Due {
+		t.Errorf("the bands move as the reader pages: page=%+v whole=%+v", page.Summary, whole.Summary)
+	}
+}
+
+// summaryScopeDay is n agreed tasks, each with its own deadline so the ranking
+// has something to order by. Enough rows that a page can cut it.
+func summaryScopeDay(n int) crmcontracts.Attention {
+	tasks := make([]crmcontracts.AttentionItem, 0, n)
+	for i := 0; i < n; i++ {
+		tasks = append(tasks, item(string(rune('a'+i)), "task", withDue(rankInstant.Add(time.Duration(i)*time.Hour))))
+	}
+	return crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
 }
 
 // An outbound send blocks a customer whichever door staged it. Treating one
@@ -412,7 +464,7 @@ func TestOnlyAnArrivedDateCountsAsDue(t *testing.T) {
 		},
 	}
 
-	summary := summarize(rankAll(classifyDay(day, rankInstant, dayMoney{})), materialBarOf(day, dayMoney{}))
+	summary := summarize(classifyDay(day, rankInstant, dayMoney{}), materialBarOf(day, dayMoney{}))
 
 	if summary.Due != 1 {
 		t.Fatalf("counted %d due, wanted only the one whose date has passed", summary.Due)
@@ -642,7 +694,7 @@ func TestASendersOwnDisplayNameIsNotACompanyMatch(t *testing.T) {
 
 	item := approvalItem(approval, func(string) bool { return false })
 
-	if item.Detail != nil && strings.Contains(*item.Detail, stagedKnownCompany) {
+	if item.Staged != nil && item.Staged.KnownCompany != nil && *item.Staged.KnownCompany {
 		t.Fatal("a sender's own display name was taken for a company we know")
 	}
 }

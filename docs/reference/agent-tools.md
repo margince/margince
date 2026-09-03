@@ -55,11 +55,15 @@ the credential: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).
 
 ## The catalog
 
-The **35 core tools**, listed in the order `Registry.Specs()` sorts them — which
-is the order `tools/list` returns. An enabled extension unit adds its own verbs
-to the same listing, so a vanilla install answers 42: these plus
-`openchannel`'s seven verbs, which are not tabled here because the catalog
+Every core verb the surface serves. An enabled extension unit adds its own to
+the same listing — `openchannel`'s seven are not tabled here, because this page
 tracks the core surface.
+
+The count is deliberately not written down. It said 35 while the surface served
+69, and a number in prose that nothing checks is one more thing to go quietly
+wrong; `TestTheToolCatalogsTiersAreTheContractsTiers` holds the membership
+instead, in both directions. For the live figure read
+[reference/mcp-info.md](mcp-info.md), which is generated.
 
 This table and `api/crm.yaml` cannot disagree: every operation carrying
 `x-mcp-tool` has a registered tool of that verb, and every registered tool is
@@ -102,11 +106,19 @@ Columns:
 | `advance_project_phase` | 🟢 | `write` | — | Runs: a project is native-only, so its table is the live one in either mode |
 | `archive_record` | 🟢 | `write` | — | Seam-routed: write-back through the incumbent |
 | `at_risk_relationships` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
+| `annotate_brief` | 🟢 | `write` | — | `unsupported_by_sor` (native-only guard): the brief is Margince's own, and the incumbent holds nothing to annotate |
+| `apply_tag` | 🟢 | `write` | — | Writes the native tag-application table; `tag` is not a mirrored type, so it runs in either mode |
 | `book_meeting` | 🟢 | `send` | yes | Staging refuses a mirror-held link |
 | `catch_me_up_on` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `check_availability` | 🟢 | `read` | — | Calendar seam; not mode-routed |
-| `create_record` | 🟢 / 🟡 | `write` | — | Seam-routed: write-back through the incumbent |
+| `check_location_support` | 🟢 | `read` | — | Constant metadata about the host's geolocation permission; no store, no mode guard |
+| `commit_import` | 🟢 | `write` | — | Margince's own import tables. Deliberately mode-independent: import is the machinery that flips an overlay installation to native |
+| `create_record` | 🟢 / 🟡 | `write` | — | `unsupported_by_sor`: `overlay.SupportsWrite` serves no CREATE for any type, so a create never reaches the incumbent |
 | `create_tag` | 🟢 | `write` | — | Coins a word in the workspace vocabulary; native, not mode-routed. Needs `tag.create`, which the seeded roles give Admin and Ops alone |
+| `create_task` | 🟢 | `write` | — | `unsupported_by_sor`: the provider serves no CREATE for any type, so a task cannot be written to the incumbent |
+| `decide_approval` | 🟢 | `write` | — | Decides a row in Margince's own approvals queue; the incumbent holds none |
+| `decide_approval_bundle` | 🟢 | `write` | — | As `decide_approval`, for several at once |
+| `describe_query_vocabulary` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): it describes the native query surface, which is not what a mirrored read answers |
 | `disqualify_lead` | 🟢 | `write` | — | `unsupported_by_sor`: a lead is mirrored and the provider cannot serve this write, so the native table is empty |
 | `draft_email` | 🟢 | `draft` | — | Activities seam; not mode-routed |
 | `draft_follow_ups_for` | 🟢 | `draft` | — | `unsupported_by_sor` (native-only guard) |
@@ -115,30 +127,49 @@ Columns:
 | `get_tag` | 🟢 | `read` | — | Reads one tag and how much of the workspace carries it; native vocabulary, not mode-routed |
 | `intro_path_to` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `list_pipelines` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
+| `list_approvals` | 🟢 | `read` | — | Reads Margince's own approvals queue; carries no mode guard |
+| `list_channel_providers` | 🟢 | `read` | — | Reads the installation's composed transport directory, not workspace data |
+| `list_colleagues` | 🟢 | `read` | — | Reads the seat roster; a seat is not a record, so no seam is involved |
 | `list_records` | 🟢 | `read` | — | Mirror-backed unfiltered; a FILTERED call is `unsupported_by_sor` (see below) |
-| `log_activity` | 🟢 | `write` | — | Seam-routed: write-back through the incumbent |
+| `log_activity` | 🟢 | `write` | — | `unsupported_by_sor`: it creates an activity, and CREATE is the verb the provider serves for no type |
 | `merge_records` | 🟢 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |
+| `list_tags` | 🟢 | `read` | — | Reads the tag vocabulary; `tag` is not a mirrored type |
+| `merge_tags` | 🟡 | `write` | — | Folds one vocabulary word into another; native, not mode-routed. 🟡 where `merge_records` is 🟢 because it releases the source's name and keeps no pointer home. Needs `tag.update`, and a human releases it |
 | `prep_for_meeting` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `progress_deal` | dynamic | `write` | — | `unsupported_by_sor` (shares `advance_deal`'s seam) |
+| `prepare_handoff` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): a project has no incumbent analogue |
+| `preview_import` | 🟢 | `write` | — | Margince's own import tables; mode-independent for the reason `commit_import` gives |
 | `promote_lead` | 🟢 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |
 | `qualify_lead` | 🟢 | `write` | — | Seam-routed: read + patch through the provider |
 | `read_brief` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `read_record` | 🟢 | `read` | — | Mirror-backed; result carries `trust_tier: external` |
+| `read_approval` | 🟢 | `read` | — | Reads one row of Margince's own approvals queue |
+| `read_import_report` | 🟢 | `read` | — | Margince's own import tables |
+| `read_import_run` | 🟢 | `read` | — | Margince's own import tables |
+| `read_project_360` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard). The REST twin refuses too, but answers `unsupported_in_overlay_mode` — a different code for the same fact |
 | `query_workspace` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `relink_activity` | dynamic | `write` | — | Runs: a link row is not an SoR record write, so it is available in either mode |
 | `resolve_entities` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
+| `relink_activities` | dynamic | `write` | — | Native activity-link write, carrying no mode guard — see the note below |
+| `relink_thread` | dynamic | `write` | — | Native activity-link write, carrying no mode guard — see the note below |
+| `remove_tag` | 🟢 | `write` | — | Takes a tag off a record; native, for the reason `apply_tag` gives |
+| `review_commitments` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): the mirror holds no task projection |
 | `run_report` | 🟢 | `read` | — | `unsupported_by_sor` (no incumbent analogue) |
 | `forecast_readings` | 🟢 | `read` | — | Reads deals, stages and the installation's fiscal settings, so it answers only where those live |
 | `forecast_movement` | 🟢 | `read` | — | Diffs two stored snapshots, so it answers only where snapshots exist |
 | `forecast_input_checks` | 🟢 | `read` | — | Reads the nightly run's own record, so it answers only where a run has completed |
+| `list_input_checks` | 🟢 | `read` | — | Scoped to the deals the caller can open, through the deal's own visibility |
+| `data_coverage` | 🟢 | `read` | — | Needs the data_coverage grant: operators hold it, sellers do not, so a refusal is a seat boundary rather than a missing run |
 | `search_context` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `search_records` | 🟢 | `read` | — | Mirror-backed; results carry `trust_tier: external` |
 | `send_email` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |
+| `send_account_email` | 🟢 | `send` | yes | `unsupported_by_sor`: its required record links are held in the incumbent, and staging refuses a link it cannot govern |
 | `send_message` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |
 | `update_record` | 🟢 / 🟡 | `write` | — | Seam-routed; see the per-field split below |
 | `update_tag` | 🟢 | `write` | — | Renames, recolours or describes an existing word; native, not mode-routed |
 | `whats_slipping_this_week` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `who_knows` | 🟢 | `read` | — | Native relationship read; carries no mode guard |
+| `whoami` | 🟢 | `read` | — | Identity metadata about the passport itself; no record, no seam, no guard |
 
 Five rows deserve their footnote:
 
@@ -183,6 +214,24 @@ Five rows deserve their footnote:
   rival survives, because collapsing it would settle a disagreement using the
   caller's own blindness. The narrowing is reported once per call, without a
   count.
+
+### The relink verbs carry no overlay guard
+
+`relink_activities` and `relink_thread` write the native activity-link tables
+directly: `compose/registry.go` wires the bare relinker, with none of the
+`nativeOnly*` wrappers the other native-only capabilities get, and neither verb
+is named in `overlayRecordWriteTools`.
+
+For a `project` destination that is moot — the tier resolves to confirm-first,
+and staging refuses a destination the seam does not hold. For the auto-execute
+destinations it is not: in overlay mode the activity rows live in the incumbent,
+so the write lands on native tables that are empty and answers successfully
+having moved nothing. That is the well-formed-but-meaningless answer the
+native-only guards exist to prevent, and the two verbs do not have one.
+
+Recorded rather than fixed: whether these should refuse, or should route to the
+seam, is a question about what a link row means in overlay mode, and the answer
+belongs with whoever owns the overlay contract.
 
 ## What each scope buys
 

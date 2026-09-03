@@ -4,6 +4,7 @@ import {
   dealWinKeys,
   derivedRecordKeys,
   entityTimelineKeys,
+  showsAMessage,
   taskWriteKeys,
 } from "./activitykeys";
 
@@ -87,5 +88,51 @@ describe("which reads a write to the record itself invalidates", () => {
 
   it("names nothing for a record kind with no derived read", () => {
     expect(derivedRecordKeys("person", "p1")).toEqual([]);
+  });
+});
+
+// A message is filed against several records, and the client is never told
+// which: the audience answer names activities, not the records they hang off.
+// So the reads that could be drawing a changed message are found by SHAPE, and
+// the shape has to be wide enough to catch every timeline and narrow enough not
+// to re-read the whole app.
+describe("which reads could be showing a message", () => {
+  const matches = (key: unknown[]) => showsAMessage({ queryKey: key });
+
+  it("matches every record's timeline, not only the one on screen", () => {
+    expect(matches(["activities", "deal", "d1"])).toBe(true);
+    expect(matches(["activities", "person", "p1"])).toBe(true);
+    // Narrowed and paged reads hang further keys off the same prefix, and they
+    // draw the same messages.
+    expect(matches(["activities", "person", "p1", { kind: "email" }])).toBe(
+      true,
+    );
+  });
+
+  it("matches the composite reads that carry a timeline's first page", () => {
+    expect(matches(["organization360", "o1"])).toBe(true);
+    expect(matches(["person360", "p1"])).toBe(true);
+    expect(matches(["project", "j1", "360"])).toBe(true);
+  });
+
+  it("matches the canonical email read, which a drawer's thread page also carries", () => {
+    // The anchor message may not be the one that changed: a presentation
+    // embeds a page of thread-member summaries, and one of those can be.
+    expect(matches(["email-presentation", "a1"])).toBe(true);
+  });
+
+  it("matches what a timeline is derived into", () => {
+    expect(matches(["deal-status", "d1"])).toBe(true);
+  });
+
+  it("leaves reads that carry no message alone", () => {
+    // The project RECORD, which is the same head as its 360 payload and two
+    // segments long. Matching it would re-read every project page in the cache
+    // for a change that cannot have touched one.
+    expect(matches(["project", "j1"])).toBe(false);
+    expect(matches(["deal", "d1"])).toBe(false);
+    expect(matches(["deals"])).toBe(false);
+    expect(matches(["tasks"])).toBe(false);
+    expect(matches(["held-threads"])).toBe(false);
   });
 });

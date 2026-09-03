@@ -126,7 +126,33 @@ func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws id
 		total += n
 	}
 	replayed, err := w.replayWorkspace(wsCtx)
-	return total + replayed, err
+	if err != nil {
+		return total + replayed, err
+	}
+	// Last, because it reads what the two passes above write: an attendee row
+	// that does not exist yet cannot be given the name its invitation used.
+	named, err := w.recoverNamesWorkspace(wsCtx)
+	return total + replayed + named, err
+}
+
+// recoverNamesWorkspace fills in the names calendar invitations gave, on the
+// attendee rows written before those names were carried.
+//
+// Same drain shape as the replay above: it stops the moment a batch finds
+// nothing, so a workspace with no such rows left costs one probe a tick.
+func (w *participantBackfillWorker) recoverNamesWorkspace(wsCtx context.Context) (int, error) {
+	total := 0
+	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+		n, err := recoverAttendeeNamesBatch(wsCtx, w.pool, participantReplayBatch, w.log)
+		if err != nil {
+			return total, err
+		}
+		if n == 0 {
+			return total, nil
+		}
+		total += n
+	}
+	return total, nil
 }
 
 // participantReplayBatch is smaller than the two-end batch because this pass does

@@ -17,12 +17,14 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -177,7 +179,21 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 		if err != nil {
 			return err
 		}
-		lapsed = quietRelationships(quiet, changed)
+		// Which of them still carries money, read once for the whole candidate
+		// set. In the SAME transaction as the derivation above, so a deal
+		// closing mid-read cannot make the lane say a contact is worth chasing
+		// for a reason that stopped being true between two statements.
+		//
+		// A reader without the edge grant NARROWS rather than fails. This lane
+		// answers "who have you stopped talking to", and the deal behind a
+		// silence is one fact on that answer, not the answer: failing here
+		// would take a rep's whole decay lane away over a grant that governs
+		// something else. They lose the ranking bump and keep the row.
+		funded, err := deals.OpenDealPeople(ctx, tx, candidates)
+		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+			return err
+		}
+		lapsed = quietRelationships(quiet, changed, funded, now)
 		return nil
 	})
 	if err != nil {
@@ -201,6 +217,8 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 func quietRelationships(
 	quiet []search.InteractionEdge,
 	changed []people.PersonChanges,
+	funded map[ids.UUID]bool,
+	now time.Time,
 ) []attention.QuietRelationship {
 	byPerson := make(map[ids.UUID]people.PersonChanges, len(changed))
 	for _, row := range changed {
@@ -225,11 +243,18 @@ func quietRelationships(
 			// <120 days ago>": a card disagreeing with itself, and with the
 			// contact's own page. `change.At` is the touch `change.Days`
 			// counts from, so the two agree by construction.
+			// The strength comes off the EDGE, scored at the read instant, and
+			// the edge is the one the projection already loaded. Scoring it
+			// here rather than storing a band means the lane and the contact's
+			// own page answer from the same arithmetic at the same moment,
+			// which is the property §4 is pure for.
 			lapsed = append(lapsed, attention.QuietRelationship{
-				PersonID:  row.PersonID.UUID,
-				Name:      row.DisplayName,
-				QuietDays: change.Days,
-				LastAt:    change.At,
+				PersonID:    row.PersonID.UUID,
+				Name:        row.DisplayName,
+				QuietDays:   change.Days,
+				LastAt:      change.At,
+				Strength:    edge.StrengthOf(now),
+				HasOpenDeal: funded[edge.PersonID],
 			})
 			break
 		}
@@ -257,6 +282,7 @@ func (f attentionDealFacts) Figures(
 			AmountMinor:       figures.AmountMinor,
 			Currency:          figures.Currency,
 			ExpectedCloseDate: figures.ExpectedCloseDate,
+			CloseOverdue:      figures.CloseOverdue,
 		}
 	}
 	return out, nil
@@ -337,17 +363,36 @@ func (t attentionTasks) OpenForViewer(
 		if row.DueAt == nil {
 			continue
 		}
-		due := *row.DueAt
-		linkType, linkID := primaryLink(row)
-		open = append(open, attention.Task{
-			ID:       ids.UUID(row.Id),
-			Subject:  subjectOfActivity(row),
-			DueAt:    &due,
-			LinkType: linkType,
-			LinkID:   linkID,
-		})
+		open = append(open, taskFromActivity(row))
 	}
 	return open, nil
+}
+
+// taskFromActivity carries one stored activity across the seam as a task.
+//
+// A function rather than a loop body so the crossing can be tested without a
+// store: every field here is one the activity already held and this seam once
+// dropped, and a copy that stops happening is invisible — the lane still
+// returns the right NUMBER of rows, each one just quietly missing a fact.
+func taskFromActivity(row crmcontracts.Activity) attention.Task {
+	due := *row.DueAt
+	linkType, linkID := primaryLink(row)
+	task := attention.Task{
+		ID:       ids.UUID(row.Id),
+		Subject:  subjectOfActivity(row),
+		DueAt:    &due,
+		LinkType: linkType,
+		LinkID:   linkID,
+	}
+	// Who holds it, already on the row the store returned and dropped here.
+	// Two of this lane's three scopes put somebody else's task in front of the
+	// reader, and one of them exists precisely to surface the tasks nobody has
+	// taken.
+	if row.AssigneeId != nil {
+		assignee := ids.UUID(*row.AssigneeId)
+		task.AssigneeID = &assignee
+	}
+	return task
 }
 
 // attentionOverdue counts overdue tasks per assignee for the team board.

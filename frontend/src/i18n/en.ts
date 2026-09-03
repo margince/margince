@@ -1333,6 +1333,7 @@ export const en = {
   "approval.kind.promote_lead": "Promote a lead",
   "approval.kind.archive_record": "Archive a record",
   "approval.kind.merge_records": "Merge two records",
+  "approval.kind.merge_tags": "Fold one tag into another",
   "approval.kind.update_record": "Update a record",
   "approval.kind.create_record": "Create a record",
   "approval.kind.send_email": "Send an email",
@@ -1562,6 +1563,8 @@ export const en = {
   "email.move.waitingForThem": "Waiting for them",
   "email.detail.loading": "Opening the message",
   "email.detail.none": "This message",
+  "email.detail.attachments_one": "{count} attachment",
+  "email.detail.attachments_other": "{count} attachments",
   "email.detail.showQuoted": "Show quoted history",
   "email.detail.close": "Close",
   "email.detail.withheldReason": "This message is not shared with you",
@@ -1576,6 +1579,11 @@ export const en = {
   "compose.audienceParticipants": "Participants only",
   "compose.audienceParticipantsHint":
     "Only the people on this message read its subject and body. Others see that a message was exchanged that day, nothing more.",
+  "compose.audienceSelected": "Named people",
+  "compose.audienceSelectedHint":
+    "only the people and teams you name, plus anyone already on the message.",
+  "compose.audienceMembersLegend": "Who may read it",
+  "compose.audienceMembersLoading": "Reading the list of people…",
   "compose.audienceConfirm": "Save visibility",
   "compose.audienceNote":
     "Applies to this message only \u2014 not to the thread and not to the contact.",
@@ -2421,7 +2429,7 @@ export const en = {
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
   "home.asOf": "as of {at}",
-  "home.refreshing": "Ranking…",
+  "home.generating": "Assembling…",
   "home.generate": "Get today's brief now",
   "home.noneBody":
     "Your morning brief ranks the deals worth your first hour — winnability, revenue, timing, momentum, and warmth, each factor with its evidence. It is assembled overnight, so it is waiting for you tomorrow morning once you have open deals.",
@@ -2463,6 +2471,16 @@ export const en = {
   "brief.sentence.manyWithCost":
     "First: {lead} — {consequence} Then {rest} more.",
 
+  // The weekly Brief's opening sentence, composed from the counts the week was
+  // frozen with. Result first, then what carried — the outcome before the debt.
+  "brief.week.won": "You closed {count} deals.",
+  "brief.week.moved": "You moved {count} deals forward.",
+  "brief.week.met": "You held {count} meetings.",
+  "brief.week.carryPromises": "{count} promises carried over.",
+  "brief.week.carryTasks": "{count} tasks carried over.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
+
   "brief.donext.sub": "One order, from your worklist.",
   "brief.donext.loading": "Reading what waits on you",
   "brief.donext.clear": "Nothing is waiting on you right now.",
@@ -2491,12 +2509,12 @@ export const en = {
     "{reading} is not, at {pct}% against a bar of {bar}%.",
   "teamweekly.reading.firstResponse": "First response",
   "teamweekly.reading.nextStep": "Meetings with a next step",
-  "teamweekly.reading.commitments": "Promises kept",
+  "teamweekly.reading.commitments": "Plan commitments kept",
   "teamweekly.card.firstResponse": "Answered in time",
   "teamweekly.card.firstResponseBasis": "{breached} breached",
   "teamweekly.card.meetings": "Meetings with a next step",
   "teamweekly.card.meetingsBasis": "of the meetings held",
-  "teamweekly.card.commitments": "Promises kept",
+  "teamweekly.card.commitments": "Plan commitments kept",
   "teamweekly.card.commitmentsBasis": "of what was owed",
   "teamweekly.card.won": "Won",
   "teamweekly.card.wonBasis": "{lost} lost",
@@ -2513,7 +2531,7 @@ export const en = {
   "teamweekly.coach.empty": "Nobody was on this team that week.",
   "teamweekly.focus.help_requested": "Asked for help",
   "teamweekly.focus.leads_breached": "Leads went unanswered",
-  "teamweekly.focus.commitments_missed": "Promises missed",
+  "teamweekly.focus.commitments_missed": "Plan commitments missed",
   "teamweekly.focus.meetings_without_next_step":
     "Meetings left without a next step",
   "teamweekly.focus.strong_week": "Worth copying",
@@ -2525,6 +2543,10 @@ export const en = {
   "plan.none": "You have not planned this week yet.",
   "plan.start": "Plan my week",
   "plan.add": "Add commitment",
+  "plan.saveRefused_one":
+    "One commitment could not be saved. It is still ticked — try again.",
+  "plan.saveRefused_other":
+    "{count} commitments could not be saved. They are still ticked — try again.",
   "plan.save_one": "Save {count} change",
   "plan.save_other": "Save {count} changes",
   "plan.due": "due {day}",
@@ -2544,10 +2566,12 @@ export const en = {
   "plan.new.save": "Add",
   "plan.new.cancel": "Cancel",
 
+  "home.weekly.frozen": "Frozen",
+  "home.weekly.written": "written {at}",
   "home.weekly.pickWeek": "Open another week",
   "home.weekly.none":
     "No weekly review yet — the first one is written on the Monday after your first full week.",
-  "home.weekly.promised": "Promised, delivered",
+  "home.weekly.tasksDelivered": "Tasks delivered",
   "home.weekly.ofDue": "{done} of {due}",
   "home.weekly.dealsWon": "Won",
   "home.weekly.dealsLost": "Lost",
@@ -2561,7 +2585,7 @@ export const en = {
   "home.weekly.sincePrior": "{delta} vs last week",
   "home.weekly.leadsAnswered": "Leads answered in time",
   "home.weekly.ofRouted": "{answered} of {routed}",
-  "home.weekly.promisesKept": "Promises kept",
+  "home.weekly.planCommitmentsKept": "Plan commitments kept",
   "home.weekly.meetingsHeld": "Meetings with a next step",
   "home.weekly.ofMeetings": "{withStep} of {held}",
   "home.weekly.carriedOver": "Carried over",
@@ -3191,7 +3215,69 @@ export const en = {
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.share.open": "Share view",
+  "analytics.share.title": "Share this view",
+  "analytics.share.kindLegend": "What the link shows",
+  "analytics.share.liveLabel": "Live view",
+  "analytics.share.liveHelp":
+    "Recomputed each time it is opened, under what the reader may see. The numbers move as the pipeline does.",
+  "analytics.share.snapshotLabel": "Frozen state",
+  "analytics.share.snapshotHelp":
+    "The figures as they stood when the state was taken. They do not change, so the link says which moment it describes.",
+  "analytics.share.snapshotUnavailable":
+    "No state has been frozen for this period yet.",
+  "analytics.share.expiryNote":
+    "The link stops working after 30 days. You can close it sooner.",
+  "analytics.share.create": "Create link",
+  "analytics.share.linkTitle": "Your link",
+  "analytics.share.linkWarning":
+    "This is the only time the link is shown. Copy it now — it cannot be read back.",
+  "analytics.share.leaveWarning":
+    "Leaving without copying discards the link. You would have to create another.",
+  "analytics.share.copy": "Copy link",
+  "analytics.share.copied": "Copied",
+  "analytics.share.copyFailed":
+    "The link could not be copied. Select it above and copy it by hand.",
+  "analytics.share.done": "Done",
   "analytics.frame": "As of {asOf} · {zone} · {currency}",
+  "review.title": "What should be checked before the call?",
+  "review.ready": "Ready",
+  "review.readyWithExceptions": "Ready, with notes",
+  "review.needsReview": "Needs review",
+  "review.checksIncomplete": "Checks incomplete",
+  "review.allSourcesRead": "Every source was read.",
+  "review.sourcesUnread":
+    "Not read: {sources}. Findings below cover only what could be checked.",
+  "review.nothingToCheck": "Nothing to check.",
+  "review.answer": "Answer",
+  "review.closePast": "Close date has passed",
+  "review.closeUnconfirmed": "Close date not confirmed",
+  "review.closePushed": "Close date keeps moving",
+  "review.amountVsOffer": "Amount disagrees with the offer",
+  "review.amountVsContract": "Amount disagrees with the contract",
+  "review.noNextStep": "No next step",
+  "review.noEconomicBuyer": "Nobody identified who can sign",
+  "review.buyerSilent": "Buyer has gone quiet",
+  "review.commitUnpriced": "Committed with no amount",
+  "review.unknownCheck": "Something to check",
+  "review.sheetTitle": "Answer this check",
+  "review.outcomeLegend": "What kind of answer is this?",
+  "review.fixedRecord": "I corrected the record",
+  "review.addedEvidence": "I added the evidence",
+  "review.valueCorrect": "The value is correct",
+  "review.notRelevant": "Not relevant to this deal",
+  "review.remindLater": "Not now",
+  "review.reassign": "Somebody else's to answer",
+  "review.hidesUntilExpiry": "Hides this check until it expires.",
+  "review.reason": "Why",
+  "review.reasonHelp":
+    "The next person to see this number is owed the reason it is not flagged.",
+  "review.remindAt": "Bring it back on",
+  "review.expiresAt": "Stops holding on",
+  "review.expiresHelp":
+    "At most 90 days: a value that was correct in May is a claim about May.",
+  "review.cancel": "Cancel",
+  "review.submit": "Save answer",
   "forecast.question": "Where will we land this quarter?",
   "forecast.answerWithCall":
     "The current call is {call}. Evidence supports {evidence}.",
@@ -7918,7 +8004,7 @@ export const en = {
   "worklist.because.overdue": "overdue",
   "worklist.because.due_today": "due today",
   "worklist.because.closing_soon": "has a close date",
-  "worklist.because.expected_revenue": "expected revenue",
+  "worklist.because.expected_revenue": "an open deal rests on this",
   "worklist.because.expected_revenue.value": "worth {value}",
   "worklist.because.material": "above the typical open deal",
   "worklist.because.material.value":

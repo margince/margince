@@ -156,6 +156,14 @@ type Server struct {
 	// it. The week just gone is weeklyHandlers, which shares no table with it.
 	weeklyPlanHandlers
 	forecastHandlers
+	// The share routes. In compose rather than in forecasting because
+	// analytics_share is a compose-owned table and the recompute a snapshot
+	// share serves reads deals, which forecasting owns nothing of.
+	analyticsShareHandlers
+	// The generic analytics surface: the vocabulary, and a question asked in
+	// it. In compose because the vocabulary is derived from the report catalog
+	// and narrowed by the caller's grants, both of which live here.
+	analyticsQueryHandlers
 	assuranceHandlers
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.

@@ -55,6 +55,10 @@ type graphActor struct {
 	Type         string `json:"type"`
 	EmailAddress struct {
 		Address string `json:"address"`
+		// Name is what the organizer typed for this party. Carried for the
+		// same reason Google's displayName is: it is the only full name an
+		// attendee-only contact ever gets.
+		Name string `json:"name"`
 	} `json:"emailAddress"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 }
 
@@ -74,6 +78,7 @@ func decode(ev rawEvent) meetingmap.Event {
 	for _, a := range ev.Attendees {
 		attendees = append(attendees, meetingmap.Actor{
 			Email: a.EmailAddress.Address,
+			Name:  a.EmailAddress.Name,
 			Room:  strings.EqualFold(strings.TrimSpace(a.Type), "resource"),
 		})
 	}
@@ -83,7 +88,7 @@ func decode(ev rawEvent) meetingmap.Event {
 		Subject:     ev.Subject,
 		Description: ev.BodyPreview,
 		StartsAt:    parseStart(ev.Start, ev.IsAllDay),
-		Organizer:   meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address},
+		Organizer:   meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
 		Attendees:   attendees,
 	}
 }

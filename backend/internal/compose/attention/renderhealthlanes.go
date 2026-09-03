@@ -67,6 +67,11 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		item.Detail = &mailbox
 		cause := "capture_health:" + kind + ":" + mailbox
 		item.CauseRef = &cause
+		// The mailbox is the condition's NAME as well as part of its identity,
+		// and both travel. A group formed on the identity draws from the label;
+		// a reader shown the identity reads "capture_health:disconnected:…".
+		label := mailbox
+		item.CauseLabel = &label
 	}
 	return item
 }
@@ -92,6 +97,23 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 	if run.Kind != "" {
 		cause := "ai_work_health:" + run.Kind
 		item.CauseRef = &cause
+		// And NO label. This lane has no reader-facing name for its condition,
+		// so it mints none rather than a plausible-looking one.
+		//
+		// The task kind is the obvious candidate and it is a generated enum key
+		// — `site_triage`, `signal_extract`, a hundred and sixty of them. A rep
+		// reading "site_triage failed 8 times" is being shown the vocabulary,
+		// which is the defect the label exists to remove; sending it would move
+		// the leak rather than close it. Translating them client-side would be a
+		// hand-kept list of 162 keys in three languages, silently rotting as the
+		// generator adds more.
+		//
+		// The run's own summary is not it either: it is written per run, so a
+		// group of twelve failures would be named after whichever was sampled.
+		//
+		// So the group says what KIND of thing broke and how often, which is
+		// what a row with no named condition is supposed to say. Naming the AI
+		// task properly is issue #3870.
 	}
 	if run.Summary != "" {
 		summary := run.Summary
@@ -182,6 +204,14 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 	if !run.AutomationID.IsZero() {
 		cause := "automation_run:" + run.AutomationID.String()
 		item.CauseRef = &cause
+		// And the NAME travels beside it, for the reader. This is the case the
+		// split exists for: the identity a group is formed on has to be the id
+		// for the reason above, and a rep shown "automation_run:01a0…" learns
+		// nothing about which rule stopped working.
+		if name != "" {
+			label := name
+			item.CauseLabel = &label
+		}
 	}
 	if run.Reason != "" {
 		reason := run.Reason

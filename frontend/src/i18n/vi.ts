@@ -1277,6 +1277,7 @@ export const vi = {
   "approval.kind.promote_lead": "Chuyển đổi một lead",
   "approval.kind.archive_record": "Lưu trữ một bản ghi",
   "approval.kind.merge_records": "Gộp hai bản ghi",
+  "approval.kind.merge_tags": "Gộp một thẻ vào thẻ khác",
   "approval.kind.update_record": "Cập nhật một bản ghi",
   "approval.kind.create_record": "Tạo một bản ghi",
   "approval.kind.send_email": "Gửi một email",
@@ -1502,6 +1503,8 @@ export const vi = {
   "email.move.waitingForThem": "Đang chờ họ",
   "email.detail.loading": "Đang mở thư",
   "email.detail.none": "Thư này",
+  "email.detail.attachments_one": "{count} tệp đính kèm",
+  "email.detail.attachments_other": "{count} tệp đính kèm",
   "email.detail.showQuoted": "Hiện phần trích dẫn",
   "email.detail.close": "Đóng",
   "email.detail.withheldReason": "Thư này không được chia sẻ với bạn",
@@ -1516,6 +1519,11 @@ export const vi = {
   "compose.audienceParticipants": "Chỉ người tham gia",
   "compose.audienceParticipantsHint":
     "Chỉ những người có trên tin nhắn này đọc được tiêu đề và nội dung. Người khác chỉ thấy rằng có một tin nhắn được trao đổi vào ngày đó.",
+  "compose.audienceSelected": "Những người được nêu tên",
+  "compose.audienceSelectedHint":
+    "chỉ những người và nhóm bạn nêu tên, cùng những ai đã có trong thư.",
+  "compose.audienceMembersLegend": "Ai được đọc",
+  "compose.audienceMembersLoading": "Đang đọc danh sách người…",
   "compose.audienceConfirm": "Lưu hiển thị",
   "compose.audienceNote":
     "Chỉ áp dụng cho tin nhắn này — không cho chuỗi hội thoại và không cho liên hệ.",
@@ -2353,7 +2361,7 @@ export const vi = {
     "{count} deal không nằm trong các số này — quyền của bạn không bao gồm chúng.",
   "home.pipelineUnavailable": "Không tải được số liệu này.",
   "home.asOf": "tính đến {at}",
-  "home.refreshing": "Đang xếp hạng…",
+  "home.generating": "Đang tổng hợp…",
   "home.generate": "Lấy tóm tắt hôm nay",
   "home.noneBody":
     "Tóm tắt buổi sáng xếp hạng những deal đáng dành giờ đầu tiên — khả năng thắng, doanh thu, thời điểm, đà tiến và độ thân thiết, mỗi yếu tố kèm bằng chứng của nó. Bản tóm tắt được dựng qua đêm nên sẽ sẵn sàng vào sáng mai, khi bạn đã có deal đang mở.",
@@ -2390,6 +2398,16 @@ export const vi = {
   "brief.sentence.manyWithCost":
     "Trước tiên: {lead} — {consequence} Rồi {rest} mục nữa.",
 
+  // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
+  "brief.week.won": "Bạn đã chốt {count} giao dịch.",
+  "brief.week.moved": "Bạn đã đẩy {count} giao dịch tiến lên.",
+  "brief.week.met": "Bạn đã có {count} cuộc họp.",
+  "brief.week.carryPromises": "{count} cam kết còn dang dở.",
+  "brief.week.carryTasks": "{count} công việc còn dang dở.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet":
+    "Một tuần yên ắng — không chốt được gì và không có gì chuyển động.",
+
   "brief.donext.sub": "Một thứ tự, từ danh sách công việc của bạn.",
   "brief.donext.loading": "Đang đọc những gì đang chờ bạn",
   "brief.donext.clear": "Hiện không có gì đang chờ bạn.",
@@ -2418,12 +2436,12 @@ export const vi = {
     "{reading} thì không, ở {pct}% so với ngưỡng {bar}%.",
   "teamweekly.reading.firstResponse": "Phản hồi đầu tiên",
   "teamweekly.reading.nextStep": "Cuộc họp có bước tiếp theo",
-  "teamweekly.reading.commitments": "Cam kết đã giữ",
+  "teamweekly.reading.commitments": "Cam kết kế hoạch đã giữ",
   "teamweekly.card.firstResponse": "Trả lời đúng hạn",
   "teamweekly.card.firstResponseBasis": "{breached} quá hạn",
   "teamweekly.card.meetings": "Cuộc họp có bước tiếp theo",
   "teamweekly.card.meetingsBasis": "trên số cuộc họp đã diễn ra",
-  "teamweekly.card.commitments": "Cam kết đã giữ",
+  "teamweekly.card.commitments": "Cam kết kế hoạch đã giữ",
   "teamweekly.card.commitmentsBasis": "trên số đã cam kết",
   "teamweekly.card.won": "Thắng",
   "teamweekly.card.wonBasis": "{lost} thua",
@@ -2440,7 +2458,7 @@ export const vi = {
   "teamweekly.coach.empty": "Tuần đó không có ai trong nhóm này.",
   "teamweekly.focus.help_requested": "Đã nhờ giúp đỡ",
   "teamweekly.focus.leads_breached": "Lead không được trả lời",
-  "teamweekly.focus.commitments_missed": "Cam kết bị bỏ lỡ",
+  "teamweekly.focus.commitments_missed": "Cam kết kế hoạch bị bỏ lỡ",
   "teamweekly.focus.meetings_without_next_step":
     "Cuộc họp không có bước tiếp theo",
   "teamweekly.focus.strong_week": "Đáng để học theo",
@@ -2452,6 +2470,10 @@ export const vi = {
   "plan.none": "Bạn chưa lập kế hoạch cho tuần này.",
   "plan.start": "Lập kế hoạch tuần của tôi",
   "plan.add": "Thêm cam kết",
+  "plan.saveRefused_one":
+    "Không lưu được một cam kết. Mục này vẫn được tick — hãy thử lại.",
+  "plan.saveRefused_other":
+    "Không lưu được {count} cam kết. Các mục này vẫn được tick — hãy thử lại.",
   "plan.save_one": "Lưu {count} thay đổi",
   "plan.save_other": "Lưu {count} thay đổi",
   "plan.due": "hạn {day}",
@@ -2471,10 +2493,12 @@ export const vi = {
   "plan.new.save": "Thêm",
   "plan.new.cancel": "Huỷ",
 
+  "home.weekly.frozen": "Đã chốt",
+  "home.weekly.written": "ghi lúc {at}",
   "home.weekly.pickWeek": "Mở tuần khác",
   "home.weekly.none":
     "Chưa có bản đánh giá tuần — bản đầu tiên được viết vào thứ Hai sau tuần đầy đủ đầu tiên của bạn.",
-  "home.weekly.promised": "Đã hứa, đã xong",
+  "home.weekly.tasksDelivered": "Công việc đã hoàn thành",
   "home.weekly.ofDue": "{done} trên {due}",
   "home.weekly.dealsWon": "Thắng",
   "home.weekly.dealsLost": "Thua",
@@ -2488,7 +2512,7 @@ export const vi = {
   "home.weekly.sincePrior": "{delta} so với tuần trước",
   "home.weekly.leadsAnswered": "Lead được trả lời đúng hạn",
   "home.weekly.ofRouted": "{answered} trên {routed}",
-  "home.weekly.promisesKept": "Cam kết đã giữ",
+  "home.weekly.planCommitmentsKept": "Cam kết kế hoạch đã giữ",
   "home.weekly.meetingsHeld": "Cuộc họp có bước tiếp theo",
   "home.weekly.ofMeetings": "{withStep} trên {held}",
   "home.weekly.carriedOver": "Chuyển tiếp",
@@ -3108,7 +3132,69 @@ export const vi = {
   "analytics.sections": "Các mục phân tích",
   "analytics.sectionForecast": "Dự báo",
   "analytics.sectionPipeline": "Kênh bán",
+  "analytics.share.open": "Chia sẻ chế độ xem",
+  "analytics.share.title": "Chia sẻ chế độ xem này",
+  "analytics.share.kindLegend": "Liên kết hiển thị điều gì",
+  "analytics.share.liveLabel": "Chế độ xem trực tiếp",
+  "analytics.share.liveHelp":
+    "Được tính lại mỗi lần mở, giới hạn ở những gì người đọc được phép xem. Các con số thay đổi theo pipeline.",
+  "analytics.share.snapshotLabel": "Trạng thái đã đóng băng",
+  "analytics.share.snapshotHelp":
+    "Các con số như khi trạng thái được lưu lại. Chúng không thay đổi, nên liên kết nêu rõ thời điểm.",
+  "analytics.share.snapshotUnavailable":
+    "Chưa có trạng thái nào được đóng băng cho kỳ này.",
+  "analytics.share.expiryNote":
+    "Liên kết ngừng hoạt động sau 30 ngày. Bạn có thể đóng sớm hơn.",
+  "analytics.share.create": "Tạo liên kết",
+  "analytics.share.linkTitle": "Liên kết của bạn",
+  "analytics.share.linkWarning":
+    "Đây là lần duy nhất liên kết được hiển thị. Hãy sao chép ngay — không thể đọc lại.",
+  "analytics.share.leaveWarning":
+    "Rời đi mà không sao chép sẽ làm mất liên kết. Bạn sẽ phải tạo liên kết khác.",
+  "analytics.share.copy": "Sao chép liên kết",
+  "analytics.share.copied": "Đã sao chép",
+  "analytics.share.copyFailed":
+    "Không thể sao chép liên kết. Hãy chọn ở trên và sao chép thủ công.",
+  "analytics.share.done": "Xong",
   "analytics.frame": "Tính đến {asOf} · {zone} · {currency}",
+  "review.title": "Cần kiểm tra gì trước cuộc gọi?",
+  "review.ready": "Sẵn sàng",
+  "review.readyWithExceptions": "Sẵn sàng, có lưu ý",
+  "review.needsReview": "Cần xem lại",
+  "review.checksIncomplete": "Kiểm tra chưa đầy đủ",
+  "review.allSourcesRead": "Đã đọc mọi nguồn.",
+  "review.sourcesUnread":
+    "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",
+  "review.nothingToCheck": "Không có gì để kiểm tra.",
+  "review.answer": "Trả lời",
+  "review.closePast": "Ngày chốt đã qua",
+  "review.closeUnconfirmed": "Ngày chốt chưa được xác nhận",
+  "review.closePushed": "Ngày chốt liên tục dời",
+  "review.amountVsOffer": "Số tiền lệch với báo giá",
+  "review.amountVsContract": "Số tiền lệch với hợp đồng",
+  "review.noNextStep": "Không có bước tiếp theo",
+  "review.noEconomicBuyer": "Chưa xác định ai có quyền ký",
+  "review.buyerSilent": "Khách hàng đã im lặng",
+  "review.commitUnpriced": "Cam kết nhưng không có số tiền",
+  "review.unknownCheck": "Có điều cần kiểm tra",
+  "review.sheetTitle": "Trả lời kiểm tra này",
+  "review.outcomeLegend": "Đây là loại trả lời nào?",
+  "review.fixedRecord": "Tôi đã sửa bản ghi",
+  "review.addedEvidence": "Tôi đã bổ sung bằng chứng",
+  "review.valueCorrect": "Giá trị hiện tại là đúng",
+  "review.notRelevant": "Không liên quan tới deal này",
+  "review.remindLater": "Chưa phải lúc",
+  "review.reassign": "Người khác sẽ trả lời",
+  "review.hidesUntilExpiry": "Ẩn kiểm tra này cho tới khi hết hạn.",
+  "review.reason": "Lý do",
+  "review.reasonHelp":
+    "Người tiếp theo nhìn con số này xứng đáng biết vì sao nó không bị đánh dấu.",
+  "review.remindAt": "Nhắc lại vào",
+  "review.expiresAt": "Hết hiệu lực từ",
+  "review.expiresHelp":
+    "Tối đa 90 ngày: một giá trị đúng vào tháng Năm là khẳng định về tháng Năm.",
+  "review.cancel": "Hủy",
+  "review.submit": "Lưu câu trả lời",
   "forecast.question": "Quý này chúng ta sẽ đạt bao nhiêu?",
   "forecast.answerWithCall":
     "Cam kết hiện tại là {call}. Bằng chứng hỗ trợ {evidence}.",
@@ -7749,7 +7835,8 @@ export const vi = {
   "worklist.because.overdue": "quá hạn",
   "worklist.because.due_today": "đến hạn hôm nay",
   "worklist.because.closing_soon": "có ngày chốt",
-  "worklist.because.expected_revenue": "doanh thu dự kiến",
+  "worklist.because.expected_revenue":
+    "một giao dịch đang mở phụ thuộc vào người này",
   "worklist.because.expected_revenue.value": "trị giá {value}",
   "worklist.because.material": "trên mức giao dịch mở thông thường",
   "worklist.because.material.value": "trị giá {value}, trên mức thông thường",

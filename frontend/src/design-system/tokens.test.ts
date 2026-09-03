@@ -34,11 +34,12 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 // are the ordering and the contrast pairs further down, which a wrong tint
 // fails whether or not the arithmetic is repeated.
 const canonical: Record<string, string> = {
-  "--bgPage": "#f4f8f6",
-  "--bgSidebar": "#e5ebe8",
-  "--bgElevated": "#fafffd",
-  "--bgCard": "#e6ece9",
-  "--bgHover": "#e9efec",
+  "--bgPage": "#f1f5f2",
+  "--bgSidebar": "#e6eae7",
+  "--bgElevated": "#fbfcfb",
+  "--bgCard": "#eaedeb",
+  "--bgHover": "#edf0ee",
+  "--bgSidebarHover": "#dde1de",
   "--accent": "#0B7A53",
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
@@ -69,6 +70,7 @@ const canonical: Record<string, string> = {
   "--danger": "#b91c1c",
   "--dangerBg": "rgba(239,68,68,.1)",
   "--r-sm": "8px",
+  "--r-control": "10px",
   "--r-md": "14px",
   "--r-lg": "18px",
   "--r-full": "9999px",
@@ -473,6 +475,13 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       for (const name of Object.keys(dark)) {
         expect(light[name], `${name} exists only in dark`).toBeDefined();
       }
+    });
+
+    it("pins the dark grounds the ladder is measured from", () => {
+      const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
+      expect(normalize(dark["--bgPage"])).toBe("#0c1311");
+      expect(normalize(dark["--bgSidebar"])).toBe("#030504");
+      expect(normalize(dark["--bgSidebarHover"])).toBe("#0a100e");
     });
 
     it("keeps the rail on the shared ink-green field (§2b: the rail is not themed)", () => {

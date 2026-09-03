@@ -198,6 +198,11 @@ func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
 	} else if d == 0 {
 		cfg.Embeddings.Dimensions = defaultEmbedDimensions
 	}
+	// Before validate() and before the digest: the default is part of the
+	// BINDING, so a config that inherited it and one that wrote it out by hand
+	// must hash the same. Defaulting after the digest would make the two
+	// different configs to every cache key and trace that reads it.
+	cfg.applyUpstreamDefaults()
 	if err := cfg.validate(); err != nil {
 		return RoutingConfig{}, err
 	}
@@ -296,6 +301,9 @@ func (cfg RoutingConfig) validate() error {
 		if err := ValidateTierBinding(cfg.Profile, tier, binding); err != nil {
 			return err
 		}
+		if err := validateUpstreamPreferences(string(tier), binding); err != nil {
+			return err
+		}
 	}
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
@@ -306,6 +314,9 @@ func (cfg RoutingConfig) validate() error {
 	// — refuse it here, where the parser is the gate. The generated schema omits
 	// it from embeddingsBinding for the same reason, but the schema is editor
 	// tooling and cannot be the thing that holds this.
+	if cfg.Embeddings.Routing != nil {
+		return fmt.Errorf("ai: routing config: the embeddings lane takes no `routing` — upstream selection bounds a completion's tail, and an embedding is one forward pass; declare it on the chat tier that needs it")
+	}
 	if cfg.Embeddings.Input != nil {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
 	}

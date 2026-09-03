@@ -1,0 +1,257 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { Badge, Button } from "../design-system/atoms";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import {
+  type ResolveAnswer,
+  ResolveSheet,
+  type ResolveSheetLabels,
+} from "../design-system/resolvesheet";
+import { formatMoneyOrAbsent } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
+import { QueryGate, throwProblem } from "./common";
+
+type InputCheck = components["schemas"]["InputCheck"];
+type Assurance = components["schemas"]["ForecastAssurance"];
+
+// What should be checked before the call.
+//
+// Two different statements sit here and must not be read as one. The RECORD
+// problems are things the pipeline got wrong; the COVERAGE line is how much of
+// the pipeline could be looked at. A run that could not open the mailbox and
+// found nothing is not a clean pipeline, and folding the two into one count is
+// the misreading this panel exists to prevent.
+export function ForecastReview() {
+  const t = useT();
+  const { locale } = useLocale();
+
+  const assurance = useQuery({
+    queryKey: ["forecast-assurance"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/forecast/assurance", {});
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+
+  return (
+    <QueryGate query={assurance}>
+      {(run) => (
+        <ReviewPanel run={run} locale={locale} title={t("review.title")} />
+      )}
+    </QueryGate>
+  );
+}
+
+function ReviewPanel({
+  run,
+  locale,
+  title,
+}: Readonly<{ run: Assurance; locale: Locale; title: string }>) {
+  const t = useT();
+
+  const checks = useQuery({
+    queryKey: ["input-checks"],
+    queryFn: async () => {
+      const { data, error } = await api.GET(
+        "/forecast/assurance/exceptions",
+        {},
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data.data;
+    },
+  });
+
+  return (
+    <Panel title={title} titleAction={<ReadinessBadge run={run} />}>
+      <PanelBody>
+        {/* Coverage first and SEPARATE. A reader who takes "no findings" for a
+            clean pipeline when nobody could look has been told the opposite of
+            what happened. */}
+        <CoverageLine run={run} />
+      </PanelBody>
+      <QueryGate query={checks}>
+        {(found) =>
+          found.length === 0 ? (
+            <PanelBody>
+              <p className="sub">{t("review.nothingToCheck")}</p>
+            </PanelBody>
+          ) : (
+            found.map((check) => (
+              <CheckRow key={check.id} check={check} locale={locale} />
+            ))
+          )
+        }
+      </QueryGate>
+    </Panel>
+  );
+}
+
+// The verdict, as a word rather than a count.
+//
+// `checks_incomplete` is not a worse `needs_review`: one says the pipeline has
+// problems, the other says we could not look, and they take different tones
+// because they ask for different things.
+function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
+  const t = useT();
+  if (!run.readiness) {
+    return null;
+  }
+  const tone = {
+    ready: "success",
+    ready_with_exceptions: "accent",
+    needs_review: "warn",
+    checks_incomplete: "warn",
+  } as const;
+  const label = {
+    ready: "review.ready",
+    ready_with_exceptions: "review.readyWithExceptions",
+    needs_review: "review.needsReview",
+    checks_incomplete: "review.checksIncomplete",
+  } as const;
+  return <Badge tone={tone[run.readiness]}>{t(label[run.readiness])}</Badge>;
+}
+
+// How much of the pipeline the run could read.
+//
+// Named sources rather than a count: "2 of 6 sources" tells a reader a number,
+// and which two is what they need to fix it.
+function CoverageLine({ run }: Readonly<{ run: Assurance }>) {
+  const t = useT();
+  const unread = (run.sources ?? []).filter(
+    (source) => source.state !== "checked",
+  );
+  if (unread.length === 0) {
+    return <p className="sub">{t("review.allSourcesRead")}</p>;
+  }
+  return (
+    <p className="sub">
+      {t("review.sourcesUnread", {
+        sources: unread.map((source) => source.source).join(", "),
+      })}
+    </p>
+  );
+}
+
+// One finding, and the way to answer it.
+function CheckRow({
+  check,
+  locale,
+}: Readonly<{ check: InputCheck; locale: Locale }>) {
+  const t = useT();
+  const client = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const resolve = useMutation({
+    // The answer travels as a VARIABLE. Read from the closure it would be
+    // whatever the last render saw, which is the wrong answer exactly when a
+    // save races a refetch.
+    mutationFn: async (answer: ResolveAnswer) => {
+      const { error } = await api.POST(
+        "/forecast/assurance/exceptions/{id}/resolve",
+        {
+          params: { path: { id: check.id } },
+          body: {
+            outcome: answer.outcome,
+            reason: answer.reason,
+            remind_at: answer.remindAt,
+            expires_at: answer.expiresAt,
+          },
+        },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: async () => {
+      // Both lists move: the finding leaves this one, and the run's readiness
+      // may change with it.
+      await client.invalidateQueries({ queryKey: ["input-checks"] });
+      await client.invalidateQueries({ queryKey: ["forecast-assurance"] });
+      setOpen(false);
+    },
+  });
+
+  return (
+    <>
+      <PanelRow>
+        <span>{t(checkLabel(check.type))}</span>
+        <span className="num">
+          {formatMoneyOrAbsent(
+            check.affected_minor ?? null,
+            check.currency ?? "",
+            locale,
+          )}
+        </span>
+        <Button small onClick={() => setOpen(true)}>
+          {t("review.answer")}
+        </Button>
+      </PanelRow>
+      <ResolveSheet
+        open={open}
+        pending={resolve.isPending}
+        labels={sheetLabels(t)}
+        onSubmit={(answer) => resolve.mutate(answer)}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
+// A finding's own name, keyed by the check that noticed it.
+//
+// An unknown type falls back to a generic line rather than rendering the raw
+// key: a server that grew a tenth rule before this screen learned its name
+// should show a finding a reader can still act on, not `close_pushed_v2`.
+function checkLabel(type: string): Parameters<ReturnType<typeof useT>>[0] {
+  const known: Record<string, string> = {
+    close_past: "review.closePast",
+    close_unconfirmed: "review.closeUnconfirmed",
+    close_pushed: "review.closePushed",
+    amount_vs_offer: "review.amountVsOffer",
+    amount_vs_contract: "review.amountVsContract",
+    no_next_step: "review.noNextStep",
+    no_economic_buyer: "review.noEconomicBuyer",
+    buyer_silent: "review.buyerSilent",
+    commit_unpriced: "review.commitUnpriced",
+  };
+  return (known[type] ?? "review.unknownCheck") as Parameters<
+    ReturnType<typeof useT>
+  >[0];
+}
+
+function sheetLabels(t: ReturnType<typeof useT>): ResolveSheetLabels {
+  return {
+    title: t("review.sheetTitle"),
+    outcomeLegend: t("review.outcomeLegend"),
+    outcomes: [
+      { value: "fixed_record", label: t("review.fixedRecord") },
+      { value: "added_evidence", label: t("review.addedEvidence") },
+      {
+        value: "value_correct",
+        label: t("review.valueCorrect"),
+        description: t("review.hidesUntilExpiry"),
+      },
+      {
+        value: "not_relevant",
+        label: t("review.notRelevant"),
+        description: t("review.hidesUntilExpiry"),
+      },
+      { value: "remind_later", label: t("review.remindLater") },
+      { value: "reassign", label: t("review.reassign") },
+    ],
+    reason: t("review.reason"),
+    reasonHelp: t("review.reasonHelp"),
+    remindAt: t("review.remindAt"),
+    expiresAt: t("review.expiresAt"),
+    expiresHelp: t("review.expiresHelp"),
+    cancel: t("review.cancel"),
+    submit: t("review.submit"),
+  };
+}

@@ -48,6 +48,9 @@ type Sink struct {
 	// mailbox that imported it. Nil derives nothing and leaves the audience the
 	// capture was born with.
 	recomputeAudience AudienceRecomputer
+	// nameParticipants completes a resolved attendee's name from the name the
+	// invitation gave them. Nil names nobody.
+	nameParticipants ParticipantNamer
 }
 
 // fieldSourceSystem / fieldSourceID are the shared system_log detail keys for

@@ -183,6 +183,22 @@ func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
 
+func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetDataCoverage")
+}
+
+func (stubs) ExplainAnalyticsCell(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ExplainAnalyticsCell")
+}
+
+func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
+}
+
+func (stubs) GetAnalyticsSchema(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAnalyticsSchema")
+}
+
 func (stubs) ApproveApprovalBundle(w nethttp.ResponseWriter, r *nethttp.Request, bundleId crmcontracts.BundleId) {
 	httperr.NotImplemented(w, r, "ApproveApprovalBundle")
 }
@@ -887,6 +903,10 @@ func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetForecastAssurance")
 }
 
+func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListInputChecks")
+}
+
 func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ResolveInputCheck")
 }
@@ -897,6 +917,22 @@ func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) GetForecastMovement(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastMovementParams) {
 	httperr.NotImplemented(w, r, "GetForecastMovement")
+}
+
+func (stubs) OpenForecastShare(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "OpenForecastShare")
+}
+
+func (stubs) ExportForecastShare(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "ExportForecastShare")
+}
+
+func (stubs) CreateForecastShare(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateForecastShare")
+}
+
+func (stubs) RevokeForecastShare(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RevokeForecastShare")
 }
 
 func (stubs) ListFxRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListFxRatesParams) {
@@ -2217,6 +2253,10 @@ func (stubs) RotateWebhookSecret(w nethttp.ResponseWriter, r *nethttp.Request, i
 
 func (stubs) AddWeeklyPlanCommitment(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "AddWeeklyPlanCommitment")
+}
+
+func (stubs) EditWeeklyPlanCommitment(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "EditWeeklyPlanCommitment")
 }
 
 func (stubs) AskForWeeklyPlanHelp(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {

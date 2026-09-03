@@ -22,6 +22,9 @@ package aicert_test
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"io"
 	"log/slog"
 	"os"
 	"strconv"
@@ -104,6 +107,11 @@ func TestE2ECertify(t *testing.T) {
 		t.Fatalf("both ROUTING=%s and MODEL=%s were given — the first certifies the models a deployment binds, "+
 			"the second one model you name; a run cannot report both, so pass one", routingPath, modelSpec)
 	}
+	if routingPath != "" && os.Getenv("MARGINCE_AICERT_UPSTREAM") != "" {
+		t.Fatal("MARGINCE_AICERT_UPSTREAM is only read alongside MODEL=, and ROUTING= was given — " +
+			"a deployment's tiers carry their own bindings, so the preferences would have been " +
+			"accepted and then applied to nothing")
+	}
 	if routingPath != "" {
 		resolved, rerr := compose.RoutingFromDeployConfig(routingPath, runtimeenv.Development)
 		if rerr != nil {
@@ -116,6 +124,7 @@ func TestE2ECertify(t *testing.T) {
 		if perr != nil {
 			t.Fatalf("MARGINCE_AICERT_MODEL: %v", perr)
 		}
+		parsed.Routing = candidateRouting(t)
 		binding = parsed
 	}
 
@@ -185,4 +194,58 @@ func TestE2ECertify(t *testing.T) {
 		t.Logf("%s: %s (reliability=%.2f score_p50=%d self_judged=%v)",
 			r.Task, r.Verdict, r.Reliability, r.ScoreP50, r.SelfJudged)
 	}
+}
+
+// candidateRouting reads MARGINCE_AICERT_UPSTREAM: the broker upstream-selection
+// preferences to certify the candidate under, as the JSON of one
+// ai.OpenRouterRouting. Nil when unset, which measures the broker's own default
+// choice — the baseline every tuned run is compared against.
+//
+// An env var rather than a config field because that is exactly what is being
+// decided: the field set worth making operator-facing is the OUTPUT of these
+// runs, and freezing it into the routing schema first would be committing to a
+// shape before measuring whether it is the right one.
+//
+// Unknown keys are refused. A misspelt preference would otherwise be dropped in
+// silence and the run would report the baseline's numbers under a tuned run's
+// name, which is the one way this measurement can lie without failing.
+func candidateRouting(t *testing.T) *ai.OpenRouterRouting {
+	t.Helper()
+	raw := os.Getenv("MARGINCE_AICERT_UPSTREAM")
+	if raw == "" {
+		return nil
+	}
+	decoder := json.NewDecoder(strings.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	// Decoded through a POINTER so `null` is distinguishable. Into a value it
+	// decodes happily and leaves the struct zero, and this function would then
+	// hand back a non-nil pointer to an empty block — which is the deliberate
+	// "take the broker's own price-weighted routing" opt-out. A run asking for
+	// the default and silently getting the opposite is the same lie this
+	// function's unknown-key refusal exists to prevent.
+	var routing *ai.OpenRouterRouting
+	if err := decoder.Decode(&routing); err != nil {
+		t.Fatalf("MARGINCE_AICERT_UPSTREAM=%s is not one ai.OpenRouterRouting as JSON: %v", raw, err)
+	}
+	if routing == nil {
+		t.Fatalf("MARGINCE_AICERT_UPSTREAM=%s decodes to null; unset the variable to measure the "+
+			"broker's own choice, or write {} to say explicitly that this run wants no preferences", raw)
+	}
+	// And exactly ONE value. A second is otherwise ignored, so
+	// `{"sort":"throughput"} {"sort":"price"}` would run under the first and
+	// read as though both had been considered.
+	if err := decoder.Decode(new(json.RawMessage)); !errors.Is(err, io.EOF) {
+		t.Fatalf("MARGINCE_AICERT_UPSTREAM=%s carries more than one JSON value; pass exactly one object", raw)
+	}
+	// Unknown keys are refused above; the VALUES have to be checked too, and by
+	// the same reasoning. A misspelt sort ("thruput") or quantization ("fp5")
+	// decodes cleanly, the broker drops what it does not recognise in silence,
+	// and the run then reports the baseline's numbers under a tuned run's name —
+	// the exact way this measurement can lie without failing. ai.ParseRouting
+	// applies the same check to a config file; this is the env var's door to it.
+	if err := routing.Validate(); err != nil {
+		t.Fatalf("MARGINCE_AICERT_UPSTREAM=%s: %v", raw, err)
+	}
+	t.Logf("candidate upstream preferences: %s", raw)
+	return routing
 }

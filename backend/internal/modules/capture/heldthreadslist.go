@@ -49,6 +49,15 @@ type HeldThread struct {
 	// tell a reader their evidence was destroyed when it is sitting there
 	// unnamed.
 	HasActivity bool
+	// ActivityID is the message that opened the thread, for a reader who wants
+	// to read it rather than only be told it is held.
+	//
+	// Taken from the JOINED row rather than from the ledger's own
+	// first_activity_id, and that is the whole point: the join carries the
+	// content clause, so this is nil exactly when the message is gone OR when
+	// its content is not this caller's. Reading the ledger column instead would
+	// hand out an id for a message the caller may not open.
+	ActivityID *ids.UUID
 	// Attempts is how many times a verdict has been asked for. It is the
 	// outage signal: a pending row whose attempts stop climbing is a model
 	// that stopped answering, not a thread that is merely slow.
@@ -111,6 +120,7 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 			SELECT v.thread_key,
 			       v.status,
 			       coalesce(v.kind, '')    AS kind,
+			       a.id                    AS activity_id,
 			       a.subject,
 			       a.occurred_at,
 			       v.attempts
@@ -131,7 +141,7 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 		for rows.Next() {
 			var t HeldThread
 			var subject *string
-			if err := rows.Scan(&t.ThreadKey, &t.Status, &t.Kind,
+			if err := rows.Scan(&t.ThreadKey, &t.Status, &t.Kind, &t.ActivityID,
 				&subject, &t.OccurredAt, &t.Attempts); err != nil {
 				return fmt.Errorf("capture: listing a seat's held threads: %w", err)
 			}

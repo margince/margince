@@ -45,11 +45,22 @@ type tracedCall struct {
 	// call — a site retries, falls back, or turns a loop, and the judge is
 	// asked twice on a parse failure — so without it a reader cannot tell the
 	// draft that was served from the attempt it replaced.
-	Call            int             `json:"call"`
-	Tier            string          `json:"tier"`
-	Provider        string          `json:"provider"`
-	ModelID         string          `json:"model_id"`
-	ServedModel     string          `json:"served_model"`
+	Call     int    `json:"call"`
+	Tier     string `json:"tier"`
+	Provider string `json:"provider"`
+	ModelID  string `json:"model_id"`
+	// ServedModel is what the provider reported serving, and ServedProvider the
+	// UPSTREAM that served it when a broker sat in between. On the OpenAI-compat
+	// wire the first is only our own request echoed back, so ServedProvider is
+	// the field that actually attributes a row: one model id is served by hosts
+	// differing in quantization, output ceiling and tail latency, and a run that
+	// cannot name the host is pooling measurements of different things.
+	ServedModel    string `json:"served_model"`
+	ServedProvider string `json:"served_provider"`
+	// FinishReason separates a truncated answer from a complete one — the
+	// difference between a model that wrote the wrong shape and one that was cut
+	// off before it could finish writing the right one.
+	FinishReason    string          `json:"finish_reason"`
 	TokensIn        int             `json:"tokens_in"`
 	TokensOut       int             `json:"tokens_out"`
 	ReasoningTokens int             `json:"reasoning_tokens"`
@@ -101,6 +112,8 @@ func (t *payloadTrace) record(role string, task ai.Task, sc Scenario, run, attem
 		Provider:        c.Provider,
 		ModelID:         c.ModelID,
 		ServedModel:     c.ServedModel,
+		ServedProvider:  c.ServedProvider,
+		FinishReason:    c.FinishReason,
 		TokensIn:        c.TokensIn,
 		TokensOut:       c.TokensOut,
 		ReasoningTokens: c.ReasoningTokens,

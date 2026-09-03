@@ -16,6 +16,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys } from "./activitykeys";
+import { AudienceMembers, useAudienceCandidates } from "./audiencemembers";
 import { useMessageAudience, useThreadAudience } from "./audienceservice";
 import { problemMessageOf } from "./common";
 // Reply and Relink stay in compose.tsx for now: they are the composer's own
@@ -26,6 +27,7 @@ import { ChannelReplyAction, type RelinkKind, RelinkModal } from "./compose";
 
 type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];
+type AudienceMember = components["schemas"]["AudienceMember"];
 
 // The per-row action cluster the 360 timelines mount in each entry's action
 // slot.
@@ -126,13 +128,28 @@ export function TimelineActions({
   );
 }
 
-// The audiences the dialog offers. `selected` (named users and teams) is the
-// API's third value and waits for a member picker; offering it without one
-// would be a choice the reader cannot complete.
+// The audiences the dialog offers — all three the API takes. `selected` waited
+// for a member picker, because offering it without one would be a choice the
+// reader cannot complete; AudienceMembers is that picker.
 const AUDIENCE_CHOICES: readonly ActivityAudience[] = [
   "workspace",
   "participants",
+  "selected",
 ];
+
+// What each audience is called and what it means, in one place: the label and
+// the hint were a pair of ternaries that a third value would have made a pair
+// of nested ones.
+const AUDIENCE_LABEL: Record<ActivityAudience, MessageKey> = {
+  workspace: "compose.audienceWorkspace",
+  participants: "compose.audienceParticipants",
+  selected: "compose.audienceSelected",
+};
+const AUDIENCE_HINT: Record<ActivityAudience, MessageKey> = {
+  workspace: "compose.audienceWorkspaceHint",
+  participants: "compose.audienceParticipantsHint",
+  selected: "compose.audienceSelectedHint",
+};
 
 // Why a captured message is held, in the reader's words. A reason the server
 // learned to give and this map has not falls back to nothing rather than to the
@@ -226,6 +243,21 @@ export function AudienceAction({
   const [open, setOpen] = useState(false);
   const current: ActivityAudience = activity.audience ?? "workspace";
   const [choice, setChoice] = useState<ActivityAudience>(current);
+  // The set the reader is building. Read only when `selected` is the choice,
+  // and submitted as the FULL replacement set, which is what the write takes.
+  //
+  // It starts EMPTY even on a message that is already limited, and that is a
+  // boundary rather than an oversight: `selected_members` rides EmailAccess,
+  // gated on `can_change`, and a timeline row carries no access block — reading
+  // one per row would be a detail fetch per visible line. So this dialog names
+  // a new set rather than editing the standing one, and the confirm below
+  // refuses an empty set so nobody narrows a message to nobody by pressing it
+  // twice. Editing an existing set in place belongs in the drawer, which
+  // already holds the access block it would start from.
+  const [members, setMembers] = useState<AudienceMember[]>([]);
+  // Fetched only while the dialog is open: the roster is two reads, and a
+  // timeline of twenty rows would otherwise fire them per row on mount.
+  const candidates = useAudienceCandidates(open && choice === "selected");
   const mutation = useMessageAudience({
     invalidate: () => entityTimelineKeys(entityType, entityId),
     onSettled: () => setOpen(false),
@@ -250,12 +282,16 @@ export function AudienceAction({
           onClose={() => setOpen(false)}
           title={t("compose.audienceTitle")}
           confirmLabel={t("compose.audienceConfirm")}
-          confirmDisabled={choice === current}
+          confirmDisabled={
+            choice === current ||
+            (choice === "selected" && members.length === 0)
+          }
           onConfirm={() =>
             mutation.mutate({
               activityId: activity.id,
               version: activity.version,
               audience: choice,
+              members: choice === "selected" ? members : undefined,
             })
           }
           pending={mutation.isPending}
@@ -268,16 +304,20 @@ export function AudienceAction({
               onChange={setChoice}
               choices={AUDIENCE_CHOICES.map((value) => ({
                 value,
-                label:
-                  value === "workspace"
-                    ? t("compose.audienceWorkspace")
-                    : t("compose.audienceParticipants"),
-                description:
-                  value === "workspace"
-                    ? t("compose.audienceWorkspaceHint")
-                    : t("compose.audienceParticipantsHint"),
+                label: t(AUDIENCE_LABEL[value]),
+                description: t(AUDIENCE_HINT[value]),
               }))}
             />
+            {/* The picker only where the choice needs one. A limited-to-nobody
+                audience is not a limit anybody meant, so the confirm below
+                refuses an empty set rather than writing it. */}
+            {choice === "selected" && (
+              <AudienceMembers
+                candidates={candidates}
+                chosen={members}
+                onChange={setMembers}
+              />
+            )}
             <p className="t-caption">{t("compose.audienceNote")}</p>
           </div>
         </ConfirmModal>

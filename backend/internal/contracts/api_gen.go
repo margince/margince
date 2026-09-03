@@ -832,6 +832,72 @@ func (e AiUsageBudgetBand) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsFilterOp.
+const (
+	AnalyticsOpEq        AnalyticsFilterOp = "eq"
+	AnalyticsOpGt        AnalyticsFilterOp = "gt"
+	AnalyticsOpGte       AnalyticsFilterOp = "gte"
+	AnalyticsOpIsNotNull AnalyticsFilterOp = "is_not_null"
+	AnalyticsOpIsNull    AnalyticsFilterOp = "is_null"
+	AnalyticsOpLt        AnalyticsFilterOp = "lt"
+	AnalyticsOpLte       AnalyticsFilterOp = "lte"
+	AnalyticsOpNe        AnalyticsFilterOp = "ne"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsFilterOp enum.
+func (e AnalyticsFilterOp) Valid() bool {
+	switch e {
+	case AnalyticsOpEq:
+		return true
+	case AnalyticsOpGt:
+		return true
+	case AnalyticsOpGte:
+		return true
+	case AnalyticsOpIsNotNull:
+		return true
+	case AnalyticsOpIsNull:
+		return true
+	case AnalyticsOpLt:
+		return true
+	case AnalyticsOpLte:
+		return true
+	case AnalyticsOpNe:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AnalyticsMeasureFn.
+const (
+	AnalyticsAvg           AnalyticsMeasureFn = "avg"
+	AnalyticsCount         AnalyticsMeasureFn = "count"
+	AnalyticsCountDistinct AnalyticsMeasureFn = "count_distinct"
+	AnalyticsMax           AnalyticsMeasureFn = "max"
+	AnalyticsMin           AnalyticsMeasureFn = "min"
+	AnalyticsSum           AnalyticsMeasureFn = "sum"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsMeasureFn enum.
+func (e AnalyticsMeasureFn) Valid() bool {
+	switch e {
+	case AnalyticsAvg:
+		return true
+	case AnalyticsCount:
+		return true
+	case AnalyticsCountDistinct:
+		return true
+	case AnalyticsMax:
+		return true
+	case AnalyticsMin:
+		return true
+	case AnalyticsSum:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApplyTagRequestEntityType.
 const (
 	ApplyTagRequestEntityTypeDeal         ApplyTagRequestEntityType = "deal"
@@ -1471,6 +1537,30 @@ func (e AttentionPairEvidenceSignal) Valid() bool {
 	case ExactConflict:
 		return true
 	case OneSided:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttentionRelationshipFactsStrength.
+const (
+	AttentionRelationshipFactsStrengthModerate AttentionRelationshipFactsStrength = "moderate"
+	AttentionRelationshipFactsStrengthNone     AttentionRelationshipFactsStrength = "none"
+	AttentionRelationshipFactsStrengthStrong   AttentionRelationshipFactsStrength = "strong"
+	AttentionRelationshipFactsStrengthWeak     AttentionRelationshipFactsStrength = "weak"
+)
+
+// Valid indicates whether the value is a known member of the AttentionRelationshipFactsStrength enum.
+func (e AttentionRelationshipFactsStrength) Valid() bool {
+	switch e {
+	case AttentionRelationshipFactsStrengthModerate:
+		return true
+	case AttentionRelationshipFactsStrengthNone:
+		return true
+	case AttentionRelationshipFactsStrengthStrong:
+		return true
+	case AttentionRelationshipFactsStrengthWeak:
 		return true
 	default:
 		return false
@@ -5950,6 +6040,72 @@ func (e IngestVoiceCorpusSourceRequestRegister) Valid() bool {
 	}
 }
 
+// Defines values for InputCheckSeverity.
+const (
+	InputCheckSeverityHigh   InputCheckSeverity = "high"
+	InputCheckSeverityLow    InputCheckSeverity = "low"
+	InputCheckSeverityMedium InputCheckSeverity = "medium"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckSeverity enum.
+func (e InputCheckSeverity) Valid() bool {
+	switch e {
+	case InputCheckSeverityHigh:
+		return true
+	case InputCheckSeverityLow:
+		return true
+	case InputCheckSeverityMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputCheckStatus.
+const (
+	InputCheckStatusExpired  InputCheckStatus = "expired"
+	InputCheckStatusOpen     InputCheckStatus = "open"
+	InputCheckStatusResolved InputCheckStatus = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckStatus enum.
+func (e InputCheckStatus) Valid() bool {
+	switch e {
+	case InputCheckStatusExpired:
+		return true
+	case InputCheckStatusOpen:
+		return true
+	case InputCheckStatusResolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputCheckSubjectKind.
+const (
+	InputCheckSubjectKindContract InputCheckSubjectKind = "contract"
+	InputCheckSubjectKindDeal     InputCheckSubjectKind = "deal"
+	InputCheckSubjectKindOffer    InputCheckSubjectKind = "offer"
+	InputCheckSubjectKindSignal   InputCheckSubjectKind = "signal"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckSubjectKind enum.
+func (e InputCheckSubjectKind) Valid() bool {
+	switch e {
+	case InputCheckSubjectKindContract:
+		return true
+	case InputCheckSubjectKindDeal:
+		return true
+	case InputCheckSubjectKindOffer:
+		return true
+	case InputCheckSubjectKindSignal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InstallationSettingsBaseLanguage.
 const (
 	InstallationSettingsBaseLanguageDe InstallationSettingsBaseLanguage = "de"
@@ -6148,6 +6304,45 @@ func (e IssuePassportRequestScopes) Valid() bool {
 	case IssuePassportRequestScopesSend:
 		return true
 	case IssuePassportRequestScopesWrite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssuedForecastShareKind.
+const (
+	IssuedForecastShareKindLive     IssuedForecastShareKind = "live"
+	IssuedForecastShareKindSnapshot IssuedForecastShareKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the IssuedForecastShareKind enum.
+func (e IssuedForecastShareKind) Valid() bool {
+	switch e {
+	case IssuedForecastShareKindLive:
+		return true
+	case IssuedForecastShareKindSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssuedForecastShareScopeKind.
+const (
+	IssuedForecastShareScopeKindOwner     IssuedForecastShareScopeKind = "owner"
+	IssuedForecastShareScopeKindTeam      IssuedForecastShareScopeKind = "team"
+	IssuedForecastShareScopeKindWorkspace IssuedForecastShareScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the IssuedForecastShareScopeKind enum.
+func (e IssuedForecastShareScopeKind) Valid() bool {
+	switch e {
+	case IssuedForecastShareScopeKindOwner:
+		return true
+	case IssuedForecastShareScopeKindTeam:
+		return true
+	case IssuedForecastShareScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -6739,6 +6934,45 @@ func (e NewForecastCallScopeKind) Valid() bool {
 	case NewForecastCallScopeKindTeam:
 		return true
 	case NewForecastCallScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NewForecastShareKind.
+const (
+	ForecastShareLive     NewForecastShareKind = "live"
+	ForecastShareSnapshot NewForecastShareKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the NewForecastShareKind enum.
+func (e NewForecastShareKind) Valid() bool {
+	switch e {
+	case ForecastShareLive:
+		return true
+	case ForecastShareSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NewForecastShareScopeKind.
+const (
+	NewForecastShareScopeKindOwner     NewForecastShareScopeKind = "owner"
+	NewForecastShareScopeKindTeam      NewForecastShareScopeKind = "team"
+	NewForecastShareScopeKindWorkspace NewForecastShareScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the NewForecastShareScopeKind enum.
+func (e NewForecastShareScopeKind) Valid() bool {
+	switch e {
+	case NewForecastShareScopeKindOwner:
+		return true
+	case NewForecastShareScopeKindTeam:
+		return true
+	case NewForecastShareScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -7758,22 +7992,22 @@ func (e OrganizationFactSuspectReason) Valid() bool {
 
 // Defines values for OrganizationGraphGroupsOmitted.
 const (
-	Contacts  OrganizationGraphGroupsOmitted = "contacts"
-	Deals     OrganizationGraphGroupsOmitted = "deals"
-	IntroPath OrganizationGraphGroupsOmitted = "intro_path"
-	OurSide   OrganizationGraphGroupsOmitted = "our_side"
+	OrganizationGraphGroupsOmittedContacts  OrganizationGraphGroupsOmitted = "contacts"
+	OrganizationGraphGroupsOmittedDeals     OrganizationGraphGroupsOmitted = "deals"
+	OrganizationGraphGroupsOmittedIntroPath OrganizationGraphGroupsOmitted = "intro_path"
+	OrganizationGraphGroupsOmittedOurSide   OrganizationGraphGroupsOmitted = "our_side"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationGraphGroupsOmitted enum.
 func (e OrganizationGraphGroupsOmitted) Valid() bool {
 	switch e {
-	case Contacts:
+	case OrganizationGraphGroupsOmittedContacts:
 		return true
-	case Deals:
+	case OrganizationGraphGroupsOmittedDeals:
 		return true
-	case IntroPath:
+	case OrganizationGraphGroupsOmittedIntroPath:
 		return true
-	case OurSide:
+	case OrganizationGraphGroupsOmittedOurSide:
 		return true
 	default:
 		return false
@@ -8376,22 +8610,22 @@ func (e PersonConsentGuardEntryChannel) Valid() bool {
 
 // Defines values for PersonConsentGuardEntryPurposeClass.
 const (
-	BusinessCorrespondence PersonConsentGuardEntryPurposeClass = "business_correspondence"
-	Marketing              PersonConsentGuardEntryPurposeClass = "marketing"
-	PhoneOutreach          PersonConsentGuardEntryPurposeClass = "phone_outreach"
-	Transactional          PersonConsentGuardEntryPurposeClass = "transactional"
+	PersonConsentGuardEntryPurposeClassBusinessCorrespondence PersonConsentGuardEntryPurposeClass = "business_correspondence"
+	PersonConsentGuardEntryPurposeClassMarketing              PersonConsentGuardEntryPurposeClass = "marketing"
+	PersonConsentGuardEntryPurposeClassPhoneOutreach          PersonConsentGuardEntryPurposeClass = "phone_outreach"
+	PersonConsentGuardEntryPurposeClassTransactional          PersonConsentGuardEntryPurposeClass = "transactional"
 )
 
 // Valid indicates whether the value is a known member of the PersonConsentGuardEntryPurposeClass enum.
 func (e PersonConsentGuardEntryPurposeClass) Valid() bool {
 	switch e {
-	case BusinessCorrespondence:
+	case PersonConsentGuardEntryPurposeClassBusinessCorrespondence:
 		return true
-	case Marketing:
+	case PersonConsentGuardEntryPurposeClassMarketing:
 		return true
-	case PhoneOutreach:
+	case PersonConsentGuardEntryPurposeClassPhoneOutreach:
 		return true
-	case Transactional:
+	case PersonConsentGuardEntryPurposeClassTransactional:
 		return true
 	default:
 		return false
@@ -9108,19 +9342,19 @@ func (e PersonRelationshipChangeToBucket) Valid() bool {
 
 // Defines values for PersonResearchClaimConfidence.
 const (
-	High     PersonResearchClaimConfidence = "high"
-	Medium   PersonResearchClaimConfidence = "medium"
-	Unstated PersonResearchClaimConfidence = "unstated"
+	PersonResearchClaimConfidenceHigh     PersonResearchClaimConfidence = "high"
+	PersonResearchClaimConfidenceMedium   PersonResearchClaimConfidence = "medium"
+	PersonResearchClaimConfidenceUnstated PersonResearchClaimConfidence = "unstated"
 )
 
 // Valid indicates whether the value is a known member of the PersonResearchClaimConfidence enum.
 func (e PersonResearchClaimConfidence) Valid() bool {
 	switch e {
-	case High:
+	case PersonResearchClaimConfidenceHigh:
 		return true
-	case Medium:
+	case PersonResearchClaimConfidenceMedium:
 		return true
-	case Unstated:
+	case PersonResearchClaimConfidenceUnstated:
 		return true
 	default:
 		return false
@@ -10017,11 +10251,13 @@ func (e RowTagColor) Valid() bool {
 
 // Defines values for RunReportRequestAggregatesFn.
 const (
-	RunReportRequestAggregatesFnAvg   RunReportRequestAggregatesFn = "avg"
-	RunReportRequestAggregatesFnCount RunReportRequestAggregatesFn = "count"
-	RunReportRequestAggregatesFnMax   RunReportRequestAggregatesFn = "max"
-	RunReportRequestAggregatesFnMin   RunReportRequestAggregatesFn = "min"
-	RunReportRequestAggregatesFnSum   RunReportRequestAggregatesFn = "sum"
+	RunReportRequestAggregatesFnAvg    RunReportRequestAggregatesFn = "avg"
+	RunReportRequestAggregatesFnCount  RunReportRequestAggregatesFn = "count"
+	RunReportRequestAggregatesFnMax    RunReportRequestAggregatesFn = "max"
+	RunReportRequestAggregatesFnMedian RunReportRequestAggregatesFn = "median"
+	RunReportRequestAggregatesFnMin    RunReportRequestAggregatesFn = "min"
+	RunReportRequestAggregatesFnP75    RunReportRequestAggregatesFn = "p75"
+	RunReportRequestAggregatesFnSum    RunReportRequestAggregatesFn = "sum"
 )
 
 // Valid indicates whether the value is a known member of the RunReportRequestAggregatesFn enum.
@@ -10033,7 +10269,11 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 		return true
 	case RunReportRequestAggregatesFnMax:
 		return true
+	case RunReportRequestAggregatesFnMedian:
+		return true
 	case RunReportRequestAggregatesFnMin:
+		return true
+	case RunReportRequestAggregatesFnP75:
 		return true
 	case RunReportRequestAggregatesFnSum:
 		return true
@@ -10276,6 +10516,168 @@ func (e SearchResultType) Valid() bool {
 	}
 }
 
+// Defines values for SendAccountEmailRequestCommunicationContext.
+const (
+	SendAccountEmailRequestCommunicationContextAccountNotice       SendAccountEmailRequestCommunicationContext = "account_notice"
+	SendAccountEmailRequestCommunicationContextActiveDealFollowup  SendAccountEmailRequestCommunicationContext = "active_deal_followup"
+	SendAccountEmailRequestCommunicationContextConsentConfirmation SendAccountEmailRequestCommunicationContext = "consent_confirmation"
+	SendAccountEmailRequestCommunicationContextContractNotice      SendAccountEmailRequestCommunicationContext = "contract_notice"
+	SendAccountEmailRequestCommunicationContextCustomerService     SendAccountEmailRequestCommunicationContext = "customer_service"
+	SendAccountEmailRequestCommunicationContextInvoiceOrPayment    SendAccountEmailRequestCommunicationContext = "invoice_or_payment"
+	SendAccountEmailRequestCommunicationContextMarketing           SendAccountEmailRequestCommunicationContext = "marketing"
+	SendAccountEmailRequestCommunicationContextOptoutConfirmation  SendAccountEmailRequestCommunicationContext = "optout_confirmation"
+	SendAccountEmailRequestCommunicationContextPrecontractQuote    SendAccountEmailRequestCommunicationContext = "precontract_quote"
+	SendAccountEmailRequestCommunicationContextPrivacyNotice       SendAccountEmailRequestCommunicationContext = "privacy_notice"
+	SendAccountEmailRequestCommunicationContextRecordConfirmation  SendAccountEmailRequestCommunicationContext = "record_confirmation"
+	SendAccountEmailRequestCommunicationContextReplyToInbound      SendAccountEmailRequestCommunicationContext = "reply_to_inbound"
+	SendAccountEmailRequestCommunicationContextRequestedFollowup   SendAccountEmailRequestCommunicationContext = "requested_followup"
+	SendAccountEmailRequestCommunicationContextSecurityNotice      SendAccountEmailRequestCommunicationContext = "security_notice"
+)
+
+// Valid indicates whether the value is a known member of the SendAccountEmailRequestCommunicationContext enum.
+func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendAccountEmailRequestCommunicationContextAccountNotice:
+		return true
+	case SendAccountEmailRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendAccountEmailRequestCommunicationContextConsentConfirmation:
+		return true
+	case SendAccountEmailRequestCommunicationContextContractNotice:
+		return true
+	case SendAccountEmailRequestCommunicationContextCustomerService:
+		return true
+	case SendAccountEmailRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendAccountEmailRequestCommunicationContextMarketing:
+		return true
+	case SendAccountEmailRequestCommunicationContextOptoutConfirmation:
+		return true
+	case SendAccountEmailRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendAccountEmailRequestCommunicationContextPrivacyNotice:
+		return true
+	case SendAccountEmailRequestCommunicationContextRecordConfirmation:
+		return true
+	case SendAccountEmailRequestCommunicationContextReplyToInbound:
+		return true
+	case SendAccountEmailRequestCommunicationContextRequestedFollowup:
+		return true
+	case SendAccountEmailRequestCommunicationContextSecurityNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendEmailRequestCommunicationContext.
+const (
+	SendEmailRequestCommunicationContextAccountNotice       SendEmailRequestCommunicationContext = "account_notice"
+	SendEmailRequestCommunicationContextActiveDealFollowup  SendEmailRequestCommunicationContext = "active_deal_followup"
+	SendEmailRequestCommunicationContextConsentConfirmation SendEmailRequestCommunicationContext = "consent_confirmation"
+	SendEmailRequestCommunicationContextContractNotice      SendEmailRequestCommunicationContext = "contract_notice"
+	SendEmailRequestCommunicationContextCustomerService     SendEmailRequestCommunicationContext = "customer_service"
+	SendEmailRequestCommunicationContextInvoiceOrPayment    SendEmailRequestCommunicationContext = "invoice_or_payment"
+	SendEmailRequestCommunicationContextMarketing           SendEmailRequestCommunicationContext = "marketing"
+	SendEmailRequestCommunicationContextOptoutConfirmation  SendEmailRequestCommunicationContext = "optout_confirmation"
+	SendEmailRequestCommunicationContextPrecontractQuote    SendEmailRequestCommunicationContext = "precontract_quote"
+	SendEmailRequestCommunicationContextPrivacyNotice       SendEmailRequestCommunicationContext = "privacy_notice"
+	SendEmailRequestCommunicationContextRecordConfirmation  SendEmailRequestCommunicationContext = "record_confirmation"
+	SendEmailRequestCommunicationContextReplyToInbound      SendEmailRequestCommunicationContext = "reply_to_inbound"
+	SendEmailRequestCommunicationContextRequestedFollowup   SendEmailRequestCommunicationContext = "requested_followup"
+	SendEmailRequestCommunicationContextSecurityNotice      SendEmailRequestCommunicationContext = "security_notice"
+)
+
+// Valid indicates whether the value is a known member of the SendEmailRequestCommunicationContext enum.
+func (e SendEmailRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendEmailRequestCommunicationContextAccountNotice:
+		return true
+	case SendEmailRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendEmailRequestCommunicationContextConsentConfirmation:
+		return true
+	case SendEmailRequestCommunicationContextContractNotice:
+		return true
+	case SendEmailRequestCommunicationContextCustomerService:
+		return true
+	case SendEmailRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendEmailRequestCommunicationContextMarketing:
+		return true
+	case SendEmailRequestCommunicationContextOptoutConfirmation:
+		return true
+	case SendEmailRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendEmailRequestCommunicationContextPrivacyNotice:
+		return true
+	case SendEmailRequestCommunicationContextRecordConfirmation:
+		return true
+	case SendEmailRequestCommunicationContextReplyToInbound:
+		return true
+	case SendEmailRequestCommunicationContextRequestedFollowup:
+		return true
+	case SendEmailRequestCommunicationContextSecurityNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendMessageRequestCommunicationContext.
+const (
+	SendMessageRequestCommunicationContextAccountNotice       SendMessageRequestCommunicationContext = "account_notice"
+	SendMessageRequestCommunicationContextActiveDealFollowup  SendMessageRequestCommunicationContext = "active_deal_followup"
+	SendMessageRequestCommunicationContextConsentConfirmation SendMessageRequestCommunicationContext = "consent_confirmation"
+	SendMessageRequestCommunicationContextContractNotice      SendMessageRequestCommunicationContext = "contract_notice"
+	SendMessageRequestCommunicationContextCustomerService     SendMessageRequestCommunicationContext = "customer_service"
+	SendMessageRequestCommunicationContextInvoiceOrPayment    SendMessageRequestCommunicationContext = "invoice_or_payment"
+	SendMessageRequestCommunicationContextMarketing           SendMessageRequestCommunicationContext = "marketing"
+	SendMessageRequestCommunicationContextOptoutConfirmation  SendMessageRequestCommunicationContext = "optout_confirmation"
+	SendMessageRequestCommunicationContextPrecontractQuote    SendMessageRequestCommunicationContext = "precontract_quote"
+	SendMessageRequestCommunicationContextPrivacyNotice       SendMessageRequestCommunicationContext = "privacy_notice"
+	SendMessageRequestCommunicationContextRecordConfirmation  SendMessageRequestCommunicationContext = "record_confirmation"
+	SendMessageRequestCommunicationContextReplyToInbound      SendMessageRequestCommunicationContext = "reply_to_inbound"
+	SendMessageRequestCommunicationContextRequestedFollowup   SendMessageRequestCommunicationContext = "requested_followup"
+	SendMessageRequestCommunicationContextSecurityNotice      SendMessageRequestCommunicationContext = "security_notice"
+)
+
+// Valid indicates whether the value is a known member of the SendMessageRequestCommunicationContext enum.
+func (e SendMessageRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendMessageRequestCommunicationContextAccountNotice:
+		return true
+	case SendMessageRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendMessageRequestCommunicationContextConsentConfirmation:
+		return true
+	case SendMessageRequestCommunicationContextContractNotice:
+		return true
+	case SendMessageRequestCommunicationContextCustomerService:
+		return true
+	case SendMessageRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendMessageRequestCommunicationContextMarketing:
+		return true
+	case SendMessageRequestCommunicationContextOptoutConfirmation:
+		return true
+	case SendMessageRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendMessageRequestCommunicationContextPrivacyNotice:
+		return true
+	case SendMessageRequestCommunicationContextRecordConfirmation:
+		return true
+	case SendMessageRequestCommunicationContextReplyToInbound:
+		return true
+	case SendMessageRequestCommunicationContextRequestedFollowup:
+		return true
+	case SendMessageRequestCommunicationContextSecurityNotice:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
 	SetActivityDispositionRequestDispositionNotMine  SetActivityDispositionRequestDisposition = "not_mine"
@@ -10408,6 +10810,24 @@ func (e SetProjectStakeholderRequestRole) Valid() bool {
 	case SetProjectStakeholderRequestRoleSubjectMatterExpert:
 		return true
 	case SetProjectStakeholderRequestRoleUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SharedForecastViewKind.
+const (
+	SharedForecastViewKindLive     SharedForecastViewKind = "live"
+	SharedForecastViewKindSnapshot SharedForecastViewKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the SharedForecastViewKind enum.
+func (e SharedForecastViewKind) Valid() bool {
+	switch e {
+	case SharedForecastViewKindLive:
+		return true
+	case SharedForecastViewKindSnapshot:
 		return true
 	default:
 		return false
@@ -10947,22 +11367,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	Amber TagDetailColor = "amber"
-	Rose  TagDetailColor = "rose"
-	Slate TagDetailColor = "slate"
-	Teal  TagDetailColor = "teal"
+	TagDetailColorAmber TagDetailColor = "amber"
+	TagDetailColorRose  TagDetailColor = "rose"
+	TagDetailColorSlate TagDetailColor = "slate"
+	TagDetailColorTeal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case Amber:
+	case TagDetailColorAmber:
 		return true
-	case Rose:
+	case TagDetailColorRose:
 		return true
-	case Slate:
+	case TagDetailColorSlate:
 		return true
-	case Teal:
+	case TagDetailColorTeal:
 		return true
 	default:
 		return false
@@ -11820,22 +12240,22 @@ func (e VoiceBuildReason) Valid() bool {
 
 // Defines values for VoiceBuildStage.
 const (
-	Activate VoiceBuildStage = "activate"
-	Evaluate VoiceBuildStage = "evaluate"
-	Extract  VoiceBuildStage = "extract"
-	Snapshot VoiceBuildStage = "snapshot"
+	VoiceBuildStageActivate VoiceBuildStage = "activate"
+	VoiceBuildStageEvaluate VoiceBuildStage = "evaluate"
+	VoiceBuildStageExtract  VoiceBuildStage = "extract"
+	VoiceBuildStageSnapshot VoiceBuildStage = "snapshot"
 )
 
 // Valid indicates whether the value is a known member of the VoiceBuildStage enum.
 func (e VoiceBuildStage) Valid() bool {
 	switch e {
-	case Activate:
+	case VoiceBuildStageActivate:
 		return true
-	case Evaluate:
+	case VoiceBuildStageEvaluate:
 		return true
-	case Extract:
+	case VoiceBuildStageExtract:
 		return true
-	case Snapshot:
+	case VoiceBuildStageSnapshot:
 		return true
 	default:
 		return false
@@ -12777,19 +13197,19 @@ func (e WorklistItemConsequence) Valid() bool {
 
 // Defines values for WorklistItemDispositions.
 const (
-	WorklistItemDispositionsNotMine  WorklistItemDispositions = "not_mine"
-	WorklistItemDispositionsNotSales WorklistItemDispositions = "not_sales"
-	WorklistItemDispositionsSnooze   WorklistItemDispositions = "snooze"
+	WorklistDispositionNotMine  WorklistItemDispositions = "not_mine"
+	WorklistDispositionNotSales WorklistItemDispositions = "not_sales"
+	WorklistDispositionSnooze   WorklistItemDispositions = "snooze"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemDispositions enum.
 func (e WorklistItemDispositions) Valid() bool {
 	switch e {
-	case WorklistItemDispositionsNotMine:
+	case WorklistDispositionNotMine:
 		return true
-	case WorklistItemDispositionsNotSales:
+	case WorklistDispositionNotSales:
 		return true
-	case WorklistItemDispositionsSnooze:
+	case WorklistDispositionSnooze:
 		return true
 	default:
 		return false
@@ -15788,6 +16208,110 @@ type AiUsage struct {
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
 type AiUsageBudgetBand string
 
+// AnalyticsAnswer defines model for AnalyticsAnswer.
+type AnalyticsAnswer struct {
+	// Columns What each value in a row means, in order.
+	Columns []string `json:"columns"`
+
+	// Rows One object per group. A row the floor withheld keeps its group keys, carries null for every measure, and is marked `_withheld` — dropping it entirely would make the answer's row count a signal of its own.
+	Rows []map[string]interface{} `json:"rows"`
+
+	// SchemaVersion The vocabulary this was asked in.
+	SchemaVersion string `json:"schema_version"`
+
+	// TotalSafe Whether a total over these rows may be shown. False once anything is withheld, because the total minus the shown groups is the withheld remainder.
+	TotalSafe bool `json:"total_safe"`
+
+	// Withheld Whether anything was kept back. A boolean and never a count: a count of what somebody may not see states how much of it there is.
+	Withheld bool `json:"withheld"`
+}
+
+// AnalyticsEntity defines model for AnalyticsEntity.
+type AnalyticsEntity struct {
+	// GroupBy The fields this population can be grouped by.
+	GroupBy []string `json:"group_by"`
+
+	// Measures The fields this population can be aggregated over.
+	Measures []string `json:"measures"`
+
+	// Name The population, by name.
+	Name string `json:"name"`
+}
+
+// AnalyticsExplainRequest One cell of an answer, named by the question and its group keys.
+type AnalyticsExplainRequest struct {
+	// Group The cell's group key values, one per grouping in the question and in the same order. Omitted for an ungrouped answer, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none.
+	Group *[]interface{} `json:"group,omitempty"`
+
+	// Query One question, in the vocabulary the schema returned.
+	Query AnalyticsQuery `json:"query"`
+}
+
+// AnalyticsExplanation defines model for AnalyticsExplanation.
+type AnalyticsExplanation struct {
+	Columns []string `json:"columns"`
+
+	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over.
+	Rows []map[string]interface{} `json:"rows"`
+
+	// Truncated The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why.
+	Truncated bool `json:"truncated"`
+
+	// Withheld The cell itself was withheld, so there is nothing to open. Different from an empty list, which would mean the group had no records at all.
+	Withheld bool `json:"withheld"`
+}
+
+// AnalyticsFilter defines model for AnalyticsFilter.
+type AnalyticsFilter struct {
+	Field string            `json:"field"`
+	Op    AnalyticsFilterOp `json:"op"`
+
+	// Value The value to compare against, bound as a parameter. Omitted exactly for `is_null` and `is_not_null`; given to either, the query is refused rather than having it silently dropped.
+	Value interface{} `json:"value,omitempty"`
+}
+
+// AnalyticsFilterOp defines model for AnalyticsFilter.Op.
+type AnalyticsFilterOp string
+
+// AnalyticsMeasure defines model for AnalyticsMeasure.
+type AnalyticsMeasure struct {
+	// As The caller's name for the result column. It never reaches the statement — results map by position — so it cannot carry anything into SQL.
+	As *string `json:"as,omitempty"`
+
+	// Field What to aggregate. Required for every fn but `count`.
+	Field *string `json:"field,omitempty"`
+
+	// Fn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+	Fn AnalyticsMeasureFn `json:"fn"`
+}
+
+// AnalyticsMeasureFn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+type AnalyticsMeasureFn string
+
+// AnalyticsQuery One question, in the vocabulary the schema returned.
+type AnalyticsQuery struct {
+	// Entity The population, by name.
+	Entity  string             `json:"entity"`
+	Filters *[]AnalyticsFilter `json:"filters,omitempty"`
+
+	// GroupBy The dimensions. Omitted is a single-row answer over the whole population, which is a real question rather than a missing one.
+	GroupBy *[]string `json:"group_by,omitempty"`
+
+	// Limit How many groups at most. Omitted takes the default; a grouping by a high-cardinality field would otherwise return a row per record.
+	Limit *int `json:"limit,omitempty"`
+
+	// Measures What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question.
+	Measures []AnalyticsMeasure `json:"measures"`
+}
+
+// AnalyticsSchema The populations and fields one caller may ask about.
+type AnalyticsSchema struct {
+	Entities []AnalyticsEntity `json:"entities"`
+
+	// Version Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run.
+	Version string `json:"version"`
+}
+
 // AnnotateBriefItem One finding about one queued deal.
 type AnnotateBriefItem struct {
 	// CitedEvidence What this finding rests on. REQUIRED and non-empty: an empty list is not "a claim with
@@ -16161,8 +16685,9 @@ type Attention struct {
 	//
 	// The idle window here is DELIBERATELY shorter than the product-wide `stalled`
 	// threshold: a queue that only speaks once a deal meets the stalled bar is
-	// reporting a two-month-old fact rather than warning. `detail` names the window
-	// actually used, so the card never implies a patience the server did not apply.
+	// reporting a two-month-old fact rather than warning. `quiet_days` carries the
+	// window actually used, so the card never implies a patience the server did not
+	// apply.
 	//
 	// Absent — not empty — on an installation whose feed does not read deals.
 	AtRisk *[]AttentionItem `json:"at_risk,omitempty"`
@@ -16326,9 +16851,9 @@ type Attention struct {
 	//
 	// A fact about a PERSON rather than a deal, which is why it is not on `at_risk`:
 	// a contact carrying no open deal never reaches that lane, and those are exactly
-	// the relationships that lapse unnoticed. `detail` carries the silence in days,
-	// from the same §4 derivation the contact's own page shows, so the two surfaces
-	// cannot come to disagree about when somebody went quiet.
+	// the relationships that lapse unnoticed. `quiet_days` carries the silence, from
+	// the same §4 derivation the contact's own page shows, so the two surfaces cannot
+	// come to disagree about when somebody went quiet.
 	//
 	// Only relationships this reader actually had: a contact nobody here ever spoke
 	// to has not gone quiet, and a lane that said otherwise would report every
@@ -16501,6 +17026,30 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
+	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
+	//
+	// The lane serves three scopes and only one is the reader's own queue: an
+	// unassigned sweep and a named colleague's queue both put work on the page that
+	// is not the reader's. Without this those rows read identically to their own,
+	// and the row nobody owns — the whole point of that scope — cannot say so.
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+
+	// CauseLabel What `cause_ref` identifies, in words — the automation's name, the mailbox that
+	// stopped.
+	//
+	// Minted by the LANE that mints the cause, because only that lane knows which of
+	// the records it read is the condition's name. It is deliberately not derived from
+	// a sampled member's title: the members of a group are alike, not identical, and
+	// one member's subject describes that member rather than the thing they share.
+	//
+	// ABSENT is a real answer, not a gap. A lane whose only candidate is a vocabulary
+	// key sends nothing rather than a plausible-looking one — the AI-work lane is that
+	// case, since its task kinds are generated enum keys, and a rep reading
+	// "site_triage failed 8 times" is being shown the vocabulary this field exists to
+	// replace. A group with no words is named by its kind alone, and a client never
+	// falls back to rendering `cause_ref`.
+	CauseLabel *string `json:"cause_label,omitempty"`
+
 	// CauseRef Which underlying CONDITION this row reports, for a surface that groups repeated
 	// failures of one thing into one row. Two failures of one broken automation carry
 	// the same value; a failure of a different rule carries a different one.
@@ -16509,6 +17058,11 @@ type AttentionItem struct {
 	// meaning. A row that reports no shared condition omits it. Present only on the
 	// system-health sources, where "the same thing broke again" is a question a reader
 	// has.
+	//
+	// `cause_label` is the half a reader sees. The two are separate because they must
+	// be able to disagree: a rule's NAME is mutable and not unique, so an identity
+	// built from it would merge two rules that happen to share a name and split one
+	// that was renamed, while a reader shown `automation_run:01a0…` learns nothing.
 	CauseRef *string `json:"cause_ref,omitempty"`
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
@@ -16521,7 +17075,24 @@ type AttentionItem struct {
 	// reader's own language; a label composed server-side would not be.
 	Deal *AttentionDealFacts `json:"deal,omitempty"`
 
-	// Detail One supporting line: what changed, or what the evidence said.
+	// Detail One supporting line: what changed, or what the evidence said. PROSE, in a
+	// language a reader reads — a bounce reason, a park reason, the mailbox that
+	// stopped syncing, what an AI task was about.
+	//
+	// It is not a channel for anything else. Three producers used the field as one,
+	// each with its own reader parsing the value back out: two wrote a bare day count
+	// and one wrote internal marker words. So the field meant "a sentence" on twelve
+	// sources and something else on three, and a client drawing it faithfully printed
+	// a naked "90" under one title and "machine_sender" under another.
+	//
+	// Both now travel typed — `quiet_days` and `staged` below — and the client writes
+	// the sentence in the reader's own language.
+	//
+	// ONE source is still an exception, and a client must know it: `sync_health` fills
+	// this field with its own vocabulary — the affected object classes, the failure
+	// class, or the budget band — for a client to write a sentence from. Those are
+	// words like `shed` and `deal, person`. A client that has not written that
+	// sentence draws nothing for that source rather than the value.
 	Detail *string `json:"detail,omitempty"`
 
 	// DueAt When this is due (tasks), or when it lapses (approvals).
@@ -16549,11 +17120,46 @@ type AttentionItem struct {
 	// item the reader may not fully see is not offered as a decision at all.
 	Pair *AttentionPair `json:"pair,omitempty"`
 
+	// QuietDays How many days a deal or a relationship has been idle, where the producing lane
+	// measures one. Sent by `deal_at_risk` and `relationship_decay`.
+	//
+	// Typed rather than written into `detail` because it is a number the queue READS
+	// and not only something it shows: it becomes the row's `quiet_days` reason, the
+	// deal card's own figure, and the age each row carries into the ordering. A number
+	// parsed back out of a sentence reads as zero the day somebody rewords the
+	// sentence, and every one of those uses would go quietly wrong together.
+	QuietDays *int `json:"quiet_days,omitempty"`
+
 	// Rank Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first.
 	Rank *int `json:"rank,omitempty"`
 
+	// Relationship What the lapsed relationship behind a `relationship_decay` item was WORTH before
+	// it went quiet. Sent only for `source: relationship_decay`.
+	//
+	// Without it every lapsed contact reads alike, and the rep's strongest relationship
+	// going quiet is the row that most deserves to be told apart from a cc who has
+	// drifted. Both facts were already in the lane's hand and discarded: the band is
+	// scored from the edge the lane loads, and the deal is one batched read over the
+	// candidates it already narrowed to.
+	//
+	// The band travels rather than the raw score, because a number between 0 and 100
+	// invites a client to draw a precision the §4 arithmetic does not claim.
+	Relationship *AttentionRelationshipFacts `json:"relationship,omitempty"`
+
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
+
+	// Staged What the verdict engine already worked out about a staged contact decision, so a
+	// surface can group alike questions without reading the proposal a second time.
+	//
+	// Read from the payload the engine staged rather than re-derived, because a second
+	// opinion would put one decision in two groups across two reads.
+	//
+	// Typed because these are FLAGS a client tests, not words a reader sees. They used to
+	// ride inside `detail` as the marker words `machine_sender` and `known_company`, with
+	// a reader doing a substring match to get them back — which made the supporting line
+	// undrawable on this source and would have shown a rep an internal token.
+	Staged *AttentionStagedFacts `json:"staged,omitempty"`
 
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
 	Subject *AttentionSubject `json:"subject,omitempty"`
@@ -16632,6 +17238,52 @@ type AttentionPairSide struct {
 	// send none today. Zero would claim the side carries nothing, which is a
 	// different fact from not having asked.
 	RelatedCount *int `json:"related_count,omitempty"`
+}
+
+// AttentionRelationshipFacts What the lapsed relationship behind a `relationship_decay` item was WORTH before
+// it went quiet. Sent only for `source: relationship_decay`.
+//
+// Without it every lapsed contact reads alike, and the rep's strongest relationship
+// going quiet is the row that most deserves to be told apart from a cc who has
+// drifted. Both facts were already in the lane's hand and discarded: the band is
+// scored from the edge the lane loads, and the deal is one batched read over the
+// candidates it already narrowed to.
+//
+// The band travels rather than the raw score, because a number between 0 and 100
+// invites a client to draw a precision the §4 arithmetic does not claim.
+type AttentionRelationshipFacts struct {
+	// HasOpenDeal Whether money this reader can see still rests on this contact. Absent is not
+	// "no": a contact with an open deal the reader may not see reads the same as one
+	// with none, which is the answer every row-scoped read gives.
+	HasOpenDeal *bool `json:"has_open_deal,omitempty"`
+
+	// Strength The relationship's band at the read instant, from the same §4 scoring the
+	// contact's own page shows — computed on read rather than stored, so the two
+	// surfaces cannot come to disagree about who this person is.
+	Strength *AttentionRelationshipFactsStrength `json:"strength,omitempty"`
+}
+
+// AttentionRelationshipFactsStrength The relationship's band at the read instant, from the same §4 scoring the
+// contact's own page shows — computed on read rather than stored, so the two
+// surfaces cannot come to disagree about who this person is.
+type AttentionRelationshipFactsStrength string
+
+// AttentionStagedFacts What the verdict engine already worked out about a staged contact decision, so a
+// surface can group alike questions without reading the proposal a second time.
+//
+// Read from the payload the engine staged rather than re-derived, because a second
+// opinion would put one decision in two groups across two reads.
+//
+// Typed because these are FLAGS a client tests, not words a reader sees. They used to
+// ride inside `detail` as the marker words `machine_sender` and `known_company`, with
+// a reader doing a substring match to get them back — which made the supporting line
+// undrawable on this source and would have shown a rep an internal token.
+type AttentionStagedFacts struct {
+	// KnownCompany The address's domain already names a company in this workspace.
+	KnownCompany *bool `json:"known_company,omitempty"`
+
+	// MachineSender The address is a sending system rather than a person.
+	MachineSender *bool `json:"machine_sender,omitempty"`
 }
 
 // AttentionSubject The record this item is about, named so a reader knows who it concerns before opening anything.
@@ -17940,6 +18592,34 @@ type CommissionSummaryRow struct {
 
 	// Status accrued → approved → paid, with void as the exit at any point.
 	Status CommissionStatus `json:"status"`
+}
+
+// CommunicationEvidence Records the caller can name in support of a send, each by id. Evidence is
+// CHECKED, never trusted: the engine reads the named record and asks whether it
+// actually supports the category claimed — a deal id that is closed, an invoice
+// belonging to another organization, or a record the caller cannot see supports
+// nothing. Naming a record therefore never widens what a caller may do.
+//
+// Every field is optional. A caller that can name nothing says nothing, and the
+// engine resolves the send from its origin instead.
+type CommunicationEvidence struct {
+	// ActivityId The inbound message this send answers.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// BasisId A recorded communication basis this send relies on.
+	BasisId *openapi_types.UUID `json:"basis_id,omitempty"`
+
+	// ConsentEventId The recorded consent this send relies on.
+	ConsentEventId *openapi_types.UUID `json:"consent_event_id,omitempty"`
+
+	// ContractId The live contract whose notice this send carries.
+	ContractId *openapi_types.UUID `json:"contract_id,omitempty"`
+
+	// DealId The live opportunity this send moves along.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
+	// InvoiceId The invoice or payment event this send is about.
+	InvoiceId *openapi_types.UUID `json:"invoice_id,omitempty"`
 }
 
 // CompanyContext defines model for CompanyContext.
@@ -19702,6 +20382,15 @@ type DataCompleteness struct {
 	Present int `json:"present"`
 }
 
+// DataCoverage How current the sources behind the forecast's numbers are.
+type DataCoverage struct {
+	AsOf  time.Time          `json:"as_of"`
+	RunId openapi_types.UUID `json:"run_id"`
+
+	// Sources The sources the run tried, and how far it reached into each. A source absent from this list is one the run did not attempt — different from one it attempted and could not read, which the state field says.
+	Sources []ForecastAssuranceSource `json:"sources"`
+}
+
 // DataSubjectRequest A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
 type DataSubjectRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -21307,6 +21996,15 @@ type HealthDimensionRating string
 
 // HeldThread One thread your mailbox is withholding, and what is known about why.
 type HeldThread struct {
+	// ActivityId The message that opened this thread, where this caller may read it — what a
+	// client opens to show the correspondence rather than only naming it.
+	//
+	// Null when the message was erased while the hold stood (the ledger deliberately
+	// outlives it) AND null when the content is not this caller's: it is read from the
+	// joined activity row, which carries the content gate, rather than from the
+	// ledger's own column. `has_message` says which of the two it is.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
 	// Attempts How many times a verdict has been asked for. This is the outage signal: a pending row
 	// whose attempts stop climbing is a model that stopped answering.
 	Attempts int `json:"attempts"`
@@ -21849,6 +22547,41 @@ type IngestVoiceCorpusSourceRequestKind string
 // IngestVoiceCorpusSourceRequestRegister defines model for IngestVoiceCorpusSourceRequest.Register.
 type IngestVoiceCorpusSourceRequestRegister string
 
+// InputCheck One finding from the nightly input check.
+type InputCheck struct {
+	// AffectedMinor How much money the finding puts in question. Absent where that cannot be said — which is different from zero, and zero would claim nothing is at stake.
+	AffectedMinor *int64 `json:"affected_minor,omitempty"`
+
+	// Claim What the record says, as structured values only.
+	Claim       *map[string]interface{} `json:"claim,omitempty"`
+	Currency    *string                 `json:"currency,omitempty"`
+	FirstSeenAt time.Time               `json:"first_seen_at"`
+	Id          openapi_types.UUID      `json:"id"`
+
+	// LastSeenAt The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
+	LastSeenAt time.Time `json:"last_seen_at"`
+
+	// Observed What the check found, as structured values only.
+	Observed    *map[string]interface{} `json:"observed,omitempty"`
+	OwnerId     *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Severity    InputCheckSeverity      `json:"severity"`
+	Status      InputCheckStatus        `json:"status"`
+	SubjectId   openapi_types.UUID      `json:"subject_id"`
+	SubjectKind InputCheckSubjectKind   `json:"subject_kind"`
+
+	// Type Which question noticed it. The key set in `claim` and `observed` depends on this.
+	Type string `json:"type"`
+}
+
+// InputCheckSeverity defines model for InputCheck.Severity.
+type InputCheckSeverity string
+
+// InputCheckStatus defines model for InputCheck.Status.
+type InputCheckStatus string
+
+// InputCheckSubjectKind defines model for InputCheck.SubjectKind.
+type InputCheckSubjectKind string
+
 // InstallationSettings The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
 // changed only by admin/ops.
 type InstallationSettings struct {
@@ -22202,6 +22935,27 @@ type IssuePasswordLinkResponse struct {
 	// SetPasswordUrl The full link to hand to the member. The token rides in the URL FRAGMENT, which a browser never puts on the wire — keeping it out of access logs, `Referer` headers, and service-worker cache keys. Deliver it over a channel the member controls.
 	SetPasswordUrl string `json:"set_password_url"`
 }
+
+// IssuedForecastShare A share as issued, carrying its token for the only time.
+type IssuedForecastShare struct {
+	CreatedAt  time.Time                     `json:"created_at"`
+	ExpiresAt  time.Time                     `json:"expires_at"`
+	Id         openapi_types.UUID            `json:"id"`
+	Kind       IssuedForecastShareKind       `json:"kind"`
+	ScopeId    *openapi_types.UUID           `json:"scope_id,omitempty"`
+	ScopeKind  *IssuedForecastShareScopeKind `json:"scope_kind,omitempty"`
+	SnapshotId *openapi_types.UUID           `json:"snapshot_id,omitempty"`
+	Target     string                        `json:"target"`
+
+	// Token Shown ONCE. The table holds only its digest, so this value cannot be recovered — a caller that loses it issues another share.
+	Token string `json:"token"`
+}
+
+// IssuedForecastShareKind defines model for IssuedForecastShare.Kind.
+type IssuedForecastShareKind string
+
+// IssuedForecastShareScopeKind defines model for IssuedForecastShare.ScopeKind.
+type IssuedForecastShareScopeKind string
 
 // JobFailure defines model for JobFailure.
 type JobFailure struct {
@@ -23545,6 +24299,31 @@ type NewForecastCallPeriod string
 
 // NewForecastCallScopeKind defines model for NewForecastCall.ScopeKind.
 type NewForecastCallScopeKind string
+
+// NewForecastShare A request to issue a share link.
+type NewForecastShare struct {
+	// ExpiresAt When it stops serving. Capped server-side; an expiry beyond the ceiling is refused rather than shortened. Omitted takes the ceiling.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// Kind `live` re-runs the reading under whoever opens it. `snapshot` serves a frozen state, re-summed over the rows that reader may see.
+	Kind NewForecastShareKind `json:"kind"`
+
+	// ScopeId Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+	ScopeId   *openapi_types.UUID        `json:"scope_id,omitempty"`
+	ScopeKind *NewForecastShareScopeKind `json:"scope_kind,omitempty"`
+
+	// SnapshotId The frozen state a snapshot share serves. Required for `snapshot` and refused for `live`, which has none — a snapshot share with no snapshot would fall back to serving live data, a different promise from the one its kind makes.
+	SnapshotId *openapi_types.UUID `json:"snapshot_id,omitempty"`
+
+	// Target Which reading the link opens.
+	Target string `json:"target"`
+}
+
+// NewForecastShareKind `live` re-runs the reading under whoever opens it. `snapshot` serves a frozen state, re-summed over the rows that reader may see.
+type NewForecastShareKind string
+
+// NewForecastShareScopeKind defines model for NewForecastShare.ScopeKind.
+type NewForecastShareScopeKind string
 
 // NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
 type NewWeeklyPlanCommitment struct {
@@ -28519,9 +29298,11 @@ type RowVersion = int64
 // reports"). Saved reports are not served; a UUID here is refused.
 type RunReportRequest struct {
 	Aggregates *[]struct {
-		As    *string                      `json:"as,omitempty"`
-		Field *string                      `json:"field,omitempty"`
-		Fn    RunReportRequestAggregatesFn `json:"fn"`
+		As    *string `json:"as,omitempty"`
+		Field *string `json:"field,omitempty"`
+
+		// Fn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
+		Fn RunReportRequestAggregatesFn `json:"fn"`
 	} `json:"aggregates,omitempty"`
 
 	// Filters Typed predicates (period, status, owner, ...) — keys must be in the report vocabulary.
@@ -28529,7 +29310,7 @@ type RunReportRequest struct {
 	GroupBy *[]string               `json:"group_by,omitempty"`
 }
 
-// RunReportRequestAggregatesFn defines model for RunReportRequest.Aggregates.Fn.
+// RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
 type RunReportRequestAggregatesFn string
 
 // SaveEmailSignatureRequest defines model for SaveEmailSignatureRequest.
@@ -28691,8 +29472,11 @@ type SearchResponse struct {
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
 	// CarriedBy For a `tag` hit only: how many people, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
-	CarriedBy *int               `json:"carried_by,omitempty"`
-	Id        openapi_types.UUID `json:"id"`
+	CarriedBy *int `json:"carried_by,omitempty"`
+
+	// EmailSummary The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not.
+	EmailSummary *EmailSummary      `json:"email_summary,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
 
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
@@ -28747,6 +29531,23 @@ type SendAccountEmailRequest struct {
 	Body string                 `json:"body"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
 
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories exist to serve the recipient — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation` — and are refused (422 `invalid`) from an
+	// ordinary send. They are reserved for the installation's own controller mail,
+	// which rides a registered template; a caller that could claim one could dress
+	// marketing as a security warning and reach somebody who has objected.
+	CommunicationContext *SendAccountEmailRequestCommunicationContext `json:"communication_context,omitempty"`
+
 	// ConsentPurpose The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
 	// suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
 	// `person_consent` for THIS purpose.
@@ -28755,6 +29556,9 @@ type SendAccountEmailRequest struct {
 	// DraftRef Opaque reference returned by the drafting operation, exactly as on `send_email`.
 	// Omit for independently composed mail.
 	DraftRef *string `json:"draft_ref,omitempty"`
+
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
@@ -28770,6 +29574,18 @@ type SendAccountEmailRequest struct {
 	// cannot see is refused 404 — and each probe is its own query, so the list is bounded
 	// at 25 (a message about more records than that is about none of them).
 	Links []ActivityLinkInput `json:"links"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 
 	// ScheduledAt Send this message at this instant instead of now (ADR-0104/A155). Absolute
 	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
@@ -28798,6 +29614,23 @@ type SendAccountEmailRequest struct {
 	// anything is staged — `cc` alone does not make a message addressed to anyone.
 	To []openapi_types.Email `json:"to"`
 }
+
+// SendAccountEmailRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories exist to serve the recipient — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation` — and are refused (422 `invalid`) from an
+// ordinary send. They are reserved for the installation's own controller mail,
+// which rides a registered template; a caller that could claim one could dress
+// marketing as a security warning and reach somebody who has objected.
+type SendAccountEmailRequestCommunicationContext string
 
 // SendEmailRequest defines model for SendEmailRequest.
 type SendEmailRequest struct {
@@ -28861,6 +29694,23 @@ type SendEmailRequest struct {
 	Body string                 `json:"body"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
 
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories exist to serve the recipient — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation` — and are refused (422 `invalid`) from an
+	// ordinary send. They are reserved for the installation's own controller mail,
+	// which rides a registered template; a caller that could claim one could dress
+	// marketing as a security warning and reach somebody who has objected.
+	CommunicationContext *SendEmailRequestCommunicationContext `json:"communication_context,omitempty"`
+
 	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
 	// The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
 	// `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
@@ -28873,12 +29723,27 @@ type SendEmailRequest struct {
 	// outcome is inferred without a valid reference.
 	DraftRef *string `json:"draft_ref,omitempty"`
 
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
 	// with the plain part first, so a client that cannot render HTML still
 	// receives the words. The sender's signature and the unsubscribe footer are
 	// appended to BOTH parts by the server, in each part's own syntax.
 	HtmlBody *string `json:"html_body,omitempty"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 
 	// ScheduledAt Send this message at this instant instead of now (ADR-0104/A155). Absolute
 	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
@@ -28904,6 +29769,23 @@ type SendEmailRequest struct {
 	Subject     string                `json:"subject"`
 	To          []openapi_types.Email `json:"to"`
 }
+
+// SendEmailRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories exist to serve the recipient — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation` — and are refused (422 `invalid`) from an
+// ordinary send. They are reserved for the installation's own controller mail,
+// which rides a registered template; a caller that could claim one could dress
+// marketing as a security warning and reach somebody who has objected.
+type SendEmailRequestCommunicationContext string
 
 // SendMessageRequest One channel reply. It carries no subject and no addressee list, and that absence is the
 // shape of the transport rather than an omission: a messaging channel has no subject line
@@ -28936,11 +29818,60 @@ type SendMessageRequest struct {
 	// (422 `empty_message_body`) rather than staged for a delivery that could only park.
 	Body string `json:"body"`
 
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories exist to serve the recipient — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation` — and are refused (422 `invalid`) from an
+	// ordinary send. They are reserved for the installation's own controller mail,
+	// which rides a registered template; a caller that could claim one could dress
+	// marketing as a security warning and reach somebody who has objected.
+	CommunicationContext *SendMessageRequestCommunicationContext `json:"communication_context,omitempty"`
+
 	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`). The send is
 	// suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
 	// `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
 	ConsentPurpose string `json:"consent_purpose"`
+
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 }
+
+// SendMessageRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories exist to serve the recipient — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation` — and are refused (422 `invalid`) from an
+// ordinary send. They are reserved for the installation's own controller mail,
+// which rides a registered template; a caller that could claim one could dress
+// marketing as a security warning and reach somebody who has objected.
+type SendMessageRequestCommunicationContext string
 
 // SetActivityAudienceRequest defines model for SetActivityAudienceRequest.
 type SetActivityAudienceRequest struct {
@@ -29125,6 +30056,29 @@ type ShareCaptureHoldHistoryResponse struct {
 	// other reason too, or was captured before the product recorded more than one reason.
 	Released int `json:"released"`
 }
+
+// SharedForecastView What one caller reads through a share.
+//
+// The numbers are about THEM. A snapshot share re-sums the frozen contributions this
+// caller may read rather than serving the stored totals, so two colleagues opening
+// the same link can correctly see different figures.
+type SharedForecastView struct {
+	// AsOf The instant a snapshot share's state describes. Absent on a live share.
+	AsOf *time.Time `json:"as_of,omitempty"`
+
+	// Kind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
+	Kind SharedForecastViewKind `json:"kind"`
+
+	// Readings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
+	Readings ForecastReadings `json:"readings"`
+	Target   string           `json:"target"`
+
+	// Withheld Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is.
+	Withheld bool `json:"withheld"`
+}
+
+// SharedForecastViewKind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
+type SharedForecastViewKind string
 
 // SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
 type SignInProvider struct {
@@ -30812,6 +31766,19 @@ type WeeklyPlanCommitment struct {
 // deciding a thing is not worth doing is not failing to do it.
 type WeeklyPlanCommitmentState string
 
+// WeeklyPlanCommitmentEdit What a rep may correct about their own commitment. Only the fields PRESENT change —
+// an absent field is left alone, which is what lets a client send a new label without
+// also having to restate the due date it is not touching.
+type WeeklyPlanCommitmentEdit struct {
+	// DueOn Null clears the date — something to do this week, rather than by a day.
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+	Label *string             `json:"label,omitempty"`
+
+	// LinkedRecord Both halves or neither, as on create. Null unlinks the record, which is how a
+	// commitment stops being about one without being rewritten.
+	LinkedRecord *WeeklyPlanLink `json:"linked_record,omitempty"`
+}
+
 // WeeklyPlanLink defines model for WeeklyPlanLink.
 type WeeklyPlanLink struct {
 	Id   openapi_types.UUID `json:"id"`
@@ -31080,8 +32047,11 @@ type Worklist struct {
 	// SourcesUnavailable Sources that could not be included, and why. Empty is the honest common case.
 	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
 
-	// Summary The day in figures, for the one line above the queue. Each count is of items the
-	// queue actually CARRIES, so a number here and the rows below it cannot disagree.
+	// Summary The day in figures, for the one line above the queue. Every count is over the
+	// candidates this read WEIGHED — the whole assembled day, before the page cut and
+	// before any category narrowing — so the sentence is one scope and does not move as
+	// the reader pages. A page-scoped band beside a day-scoped `total` read as a
+	// breakdown of that total and was not one.
 	//
 	// These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
 	// `due` is asked of every item whatever its level, so an overdue promise counts in
@@ -31131,9 +32101,13 @@ type WorklistBatch struct {
 	// bound printed as a total is a wrong number rather than a bounded one.
 	AtLeast *bool `json:"at_least,omitempty"`
 
-	// Cause What the members have in common, for a `system_incident`: the rule's name,
-	// the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
-	// rather than only how often.
+	// Cause WHICH condition the members share, for a `system_incident` — the identity the
+	// group was formed on, carried so a client can tell two groups apart and find
+	// the same row again on a re-read.
+	//
+	// An opaque identity, never rendered. It is a `cause_ref` and reads like one
+	// (`automation_run:<uuid>`), so a client that put it on screen would show a rep
+	// "automation_run:01a0… failed 12 times". `label` is the half to draw.
 	Cause *string `json:"cause,omitempty"`
 
 	// Count How many decisions this row stands for.
@@ -31151,6 +32125,15 @@ type WorklistBatch struct {
 	// is broken, and repeating it eight times is aggregation failure rather than
 	// urgency.
 	Key WorklistBatchKey `json:"key"`
+
+	// Label What `cause` identifies, in words — the automation's name, the mailbox that
+	// stopped. This is what a row says.
+	//
+	// Absent where the lane that formed the group minted no name for the condition.
+	// A client then names the group by its kind alone and NEVER falls back to
+	// `cause`, because an identity on screen is worse than a vaguer sentence: the
+	// reader cannot act on it and cannot tell it from a bug.
+	Label *string `json:"label,omitempty"`
 
 	// Sample A few members, named, so the group can be checked before it is answered.
 	Sample *[]string `json:"sample,omitempty"`
@@ -31245,14 +32228,18 @@ type WorklistCount struct {
 type WorklistCountCategory string
 
 // WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
-// `amount_minor × win_probability`, converted to the installation's base currency —
-// the only figure by which two deals in different currencies may be compared.
+// `amount_minor` converted to the installation's base currency — the only figure by
+// which two deals in different currencies may be compared. It does not yet weight by
+// `win_probability`: the pipeline this row comes from does not read a deal's stage
+// today, so the two fields are independent facts rather than one computed from the
+// other, and a reader must not multiply them together expecting the product to equal
+// a risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
 	AmountMinor       *int64              `json:"amount_minor,omitempty"`
 	Currency          *string             `json:"currency,omitempty"`
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
 
-	// ExpectedMinorBase Expected revenue in the base currency. Null when the amount or the rate is unknown.
+	// ExpectedMinorBase The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
 	ExpectedMinorBase *int64              `json:"expected_minor_base,omitempty"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
 	QuietDays         *int                `json:"quiet_days,omitempty"`
@@ -31306,6 +32293,13 @@ type WorklistItem struct {
 	// Category The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 	Category WorklistItemCategory `json:"category"`
 
+	// CauseLabel What `cause_ref` identifies, in words — the automation's name, the mailbox that
+	// stopped. This is the half a reader sees; the identity beside it is not drawable.
+	//
+	// Present wherever the producing lane named the condition. A row whose lane named
+	// none is described by its kind alone.
+	CauseLabel *string `json:"cause_label,omitempty"`
+
 	// CauseRef Which underlying CONDITION this row reports, so a surface can group repeated
 	// failures of one thing into one row. Opaque identity, never rendered and never
 	// parsed. Absent on a row that reports no shared condition.
@@ -31317,11 +32311,25 @@ type WorklistItem struct {
 	Consequence WorklistItemConsequence `json:"consequence"`
 
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
-	// `amount_minor × win_probability`, converted to the installation's base currency —
-	// the only figure by which two deals in different currencies may be compared.
+	// `amount_minor` converted to the installation's base currency — the only figure by
+	// which two deals in different currencies may be compared. It does not yet weight by
+	// `win_probability`: the pipeline this row comes from does not read a deal's stage
+	// today, so the two fields are independent facts rather than one computed from the
+	// other, and a reader must not multiply them together expecting the product to equal
+	// a risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
-	// Detail One supporting line.
+	// Detail One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
+	// stopped, what an AI task was about.
+	//
+	// Not a channel for anything else. A value the queue itself reads travels typed
+	// beside this field, never inside it: a figure parsed back out of a sentence reads
+	// as zero the day somebody rewords the sentence.
+	//
+	// ONE source is an exception a client must know: `sync_health` fills this with its
+	// own vocabulary — the affected object classes, the failure class, the budget band
+	// — for a client to write a sentence from. Those are words like `shed`. A client
+	// that has not written that sentence draws nothing for that source.
 	Detail *string `json:"detail,omitempty"`
 
 	// Dispositions The ways this row can be PUT DOWN, as the server declares them. A client
@@ -31335,6 +32343,9 @@ type WorklistItem struct {
 
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
 	// Id The owning record's id, as its own endpoint spells it.
 	Id string `json:"id"`
@@ -31659,8 +32670,11 @@ type WorklistSourceUnavailable struct {
 // WorklistSourceUnavailableReason defines model for WorklistSourceUnavailable.Reason.
 type WorklistSourceUnavailableReason string
 
-// WorklistSummary The day in figures, for the one line above the queue. Each count is of items the
-// queue actually CARRIES, so a number here and the rows below it cannot disagree.
+// WorklistSummary The day in figures, for the one line above the queue. Every count is over the
+// candidates this read WEIGHED — the whole assembled day, before the page cut and
+// before any category narrowing — so the sentence is one scope and does not move as
+// the reader pages. A page-scoped band beside a day-scoped `total` read as a
+// breakdown of that total and was not one.
 //
 // These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
 // `due` is asked of every item whatever its level, so an overdue promise counts in
@@ -31690,7 +32704,7 @@ type WorklistSummary struct {
 	// no open deals to take a median of.
 	MaterialThresholdMinor *int64 `json:"material_threshold_minor,omitempty"`
 
-	// Total How many items the queue carries.
+	// Total How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree.
 	Total int `json:"total"`
 
 	// Urgent Items at the top two levels: somebody is waiting, or a promise is breaking.
@@ -36443,6 +37457,12 @@ type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
 
+// ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
+type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
+
+// RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
+type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
+
 // ApproveApprovalBundleJSONRequestBody defines body for ApproveApprovalBundle for application/json ContentType.
 type ApproveApprovalBundleJSONRequestBody = ApprovalBundleDecisionRequest
 
@@ -36658,6 +37678,9 @@ type ResolveInputCheckJSONRequestBody = ResolveInputCheck
 
 // RecordForecastCallJSONRequestBody defines body for RecordForecastCall for application/json ContentType.
 type RecordForecastCallJSONRequestBody = NewForecastCall
+
+// CreateForecastShareJSONRequestBody defines body for CreateForecastShare for application/json ContentType.
+type CreateForecastShareJSONRequestBody = NewForecastShare
 
 // SetFxRateJSONRequestBody defines body for SetFxRate for application/json ContentType.
 type SetFxRateJSONRequestBody = SetFxRateRequest
@@ -37051,6 +38074,9 @@ type UpdateWebhookSubscriptionJSONRequestBody = UpdateWebhookSubscriptionRequest
 
 // AddWeeklyPlanCommitmentJSONRequestBody defines body for AddWeeklyPlanCommitment for application/json ContentType.
 type AddWeeklyPlanCommitmentJSONRequestBody = NewWeeklyPlanCommitment
+
+// EditWeeklyPlanCommitmentJSONRequestBody defines body for EditWeeklyPlanCommitment for application/json ContentType.
+type EditWeeklyPlanCommitmentJSONRequestBody = WeeklyPlanCommitmentEdit
 
 // AskForWeeklyPlanHelpJSONRequestBody defines body for AskForWeeklyPlanHelp for application/json ContentType.
 type AskForWeeklyPlanHelpJSONRequestBody AskForWeeklyPlanHelpJSONBody
@@ -44896,6 +45922,18 @@ type ServerInterface interface {
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
+	// How current the sources behind the numbers are.
+	// (GET /analytics/coverage)
+	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	// The records one cell of an analytics answer was computed from.
+	// (POST /analytics/explain)
+	ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request)
+	// Answer a question nobody wrote a report for.
+	// (POST /analytics/query)
+	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
+	// What questions this caller may ask, and in what words.
+	// (GET /analytics/schema)
+	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
 	// Approve every still-pending member of one bundle.
 	// (POST /approval-bundles/{bundle_id}/approve)
 	ApproveApprovalBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId)
@@ -45424,6 +46462,9 @@ type ServerInterface interface {
 	// What last night's input check found, and how much of the pipeline it reached.
 	// (GET /forecast/assurance)
 	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
+	// The open findings this caller can see.
+	// (GET /forecast/assurance/exceptions)
+	ListInputChecks(w http.ResponseWriter, r *http.Request)
 	// Answer a finding from the nightly input check.
 	// (POST /forecast/assurance/exceptions/{id}/resolve)
 	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -45433,6 +46474,18 @@ type ServerInterface interface {
 	// What moved the forecast between two snapshots, and which deals moved it.
 	// (GET /forecast/movement)
 	GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams)
+	// Open a shared forecast view.
+	// (GET /forecast/shared/{token})
+	OpenForecastShare(w http.ResponseWriter, r *http.Request, token string)
+	// The rows behind a shared reading, as CSV.
+	// (GET /forecast/shared/{token}/export.csv)
+	ExportForecastShare(w http.ResponseWriter, r *http.Request, token string)
+	// Issue a link that shows a forecast reading to a colleague.
+	// (POST /forecast/shares)
+	CreateForecastShare(w http.ResponseWriter, r *http.Request)
+	// Close a share link before it expires.
+	// (DELETE /forecast/shares/{id})
+	RevokeForecastShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
@@ -46423,6 +47476,9 @@ type ServerInterface interface {
 	// Write one thing onto this week's plan.
 	// (POST /weekly-plans/commitments)
 	AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request)
+	// Correct what a commitment says, when it is due, or what it is about.
+	// (PATCH /weekly-plans/commitments/{id})
+	EditWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Say what you need from your lead on one commitment.
 	// (PUT /weekly-plans/commitments/{id}/help)
 	AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -46705,6 +47761,30 @@ func (_ Unimplemented) ReplaceAiRouting(w http.ResponseWriter, r *http.Request) 
 // AI usage + budget — the spend is never invisible.
 // (GET /ai/usage)
 func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How current the sources behind the numbers are.
+// (GET /analytics/coverage)
+func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records one cell of an analytics answer was computed from.
+// (POST /analytics/explain)
+func (_ Unimplemented) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a question nobody wrote a report for.
+// (POST /analytics/query)
+func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What questions this caller may ask, and in what words.
+// (GET /analytics/schema)
+func (_ Unimplemented) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47764,6 +48844,12 @@ func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The open findings this caller can see.
+// (GET /forecast/assurance/exceptions)
+func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Answer a finding from the nightly input check.
 // (POST /forecast/assurance/exceptions/{id}/resolve)
 func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -47779,6 +48865,30 @@ func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request
 // What moved the forecast between two snapshots, and which deals moved it.
 // (GET /forecast/movement)
 func (_ Unimplemented) GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open a shared forecast view.
+// (GET /forecast/shared/{token})
+func (_ Unimplemented) OpenForecastShare(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The rows behind a shared reading, as CSV.
+// (GET /forecast/shared/{token}/export.csv)
+func (_ Unimplemented) ExportForecastShare(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Issue a link that shows a forecast reading to a colleague.
+// (POST /forecast/shares)
+func (_ Unimplemented) CreateForecastShare(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Close a share link before it expires.
+// (DELETE /forecast/shares/{id})
+func (_ Unimplemented) RevokeForecastShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -49762,6 +50872,12 @@ func (_ Unimplemented) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Correct what a commitment says, when it is due, or what it is about.
+// (PATCH /weekly-plans/commitments/{id})
+func (_ Unimplemented) EditWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Say what you need from your lead on one commitment.
 // (PUT /weekly-plans/commitments/{id}/help)
 func (_ Unimplemented) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -51622,6 +52738,94 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiUsage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDataCoverage operation middleware
+func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDataCoverage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainAnalyticsCell operation middleware
+func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainAnalyticsCell(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RunAnalyticsQuery operation middleware
+func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RunAnalyticsQuery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAnalyticsSchema operation middleware
+func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAnalyticsSchema(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -58837,6 +60041,28 @@ func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListInputChecks operation middleware
+func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListInputChecks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ResolveInputCheck operation middleware
 func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *http.Request) {
 
@@ -58951,6 +60177,130 @@ func (siw *ServerInterfaceWrapper) GetForecastMovement(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecastMovement(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// OpenForecastShare operation middleware
+func (siw *ServerInterfaceWrapper) OpenForecastShare(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OpenForecastShare(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportForecastShare operation middleware
+func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportForecastShare(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateForecastShare operation middleware
+func (siw *ServerInterfaceWrapper) CreateForecastShare(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateForecastShare(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeForecastShare operation middleware
+func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeForecastShare(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -73735,6 +75085,40 @@ func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// EditWeeklyPlanCommitment operation middleware
+func (siw *ServerInterfaceWrapper) EditWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EditWeeklyPlanCommitment(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AskForWeeklyPlanHelp operation middleware
 func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request) {
 
@@ -74444,6 +75828,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/explain", wrapper.ExplainAnalyticsCell)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/approval-bundles/{bundle_id}/approve", wrapper.ApproveApprovalBundle)
 	})
 	r.Group(func(r chi.Router) {
@@ -74972,6 +76368,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/forecast/assurance", wrapper.GetForecastAssurance)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/assurance/exceptions", wrapper.ListInputChecks)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
 	})
 	r.Group(func(r chi.Router) {
@@ -74979,6 +76378,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/movement", wrapper.GetForecastMovement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/shared/{token}", wrapper.OpenForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/shared/{token}/export.csv", wrapper.ExportForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/forecast/shares", wrapper.CreateForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/forecast/shares/{id}", wrapper.RevokeForecastShare)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/fx-rates", wrapper.ListFxRates)
@@ -75969,6 +77380,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/weekly-plans/commitments", wrapper.AddWeeklyPlanCommitment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/weekly-plans/commitments/{id}", wrapper.EditWeeklyPlanCommitment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/weekly-plans/commitments/{id}/help", wrapper.AskForWeeklyPlanHelp)

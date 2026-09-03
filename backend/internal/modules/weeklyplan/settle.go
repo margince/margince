@@ -78,7 +78,7 @@ func (s *Store) SetState(ctx context.Context, commitmentID ids.UUID, state strin
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, owner, crmcontracts.PublicEventWeeklyPlanUpdated{
 			PlanId: openapi_types.UUID(planID), OwnerUserId: openapi_types.UUID(owner),
-			ChangedFields: []string{"commitments"},
+			ChangedFields: []string{changedCommitments},
 		})
 	})
 }
@@ -155,7 +155,7 @@ func (s *Store) Respond(ctx context.Context, commitmentID ids.UUID, answer strin
 	}
 	if text == "" {
 		return &values.ParseError{
-			Field: "manager_response", Code: "required",
+			Field: "manager_response", Code: codeRequired,
 			Message: "an answer needs saying in words",
 		}
 	}
@@ -233,7 +233,7 @@ func ownCommitmentTx(
 	// A closed week is frozen into a review that has already been counted.
 	if status != "open" {
 		return ids.Nil, Commitment{}, &values.ParseError{
-			Field: "week", Code: "week_closed",
+			Field: fieldWeek, Code: codeWeekClosed,
 			Message: "that week is closed and its outcome is recorded",
 		}
 	}

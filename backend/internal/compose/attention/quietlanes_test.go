@@ -63,8 +63,17 @@ func TestAQuietDealSaysHowLongItHasBeenQuiet(t *testing.T) {
 	if items[0].Title == nil || *items[0].Title != "Fleet retrofit" {
 		t.Errorf("title = %v, want the deal name", items[0].Title)
 	}
-	if items[0].Detail == nil || *items[0].Detail != "19" {
-		t.Errorf("detail = %s, want the idle day count", stringOr(items[0].Detail))
+	// TYPED, and not in `detail`. The ordering READS this number, so it travels
+	// as one: parsed back out of a sentence it reads as zero the day somebody
+	// rewords the sentence, and the queue stops ranking by age with every test
+	// still green.
+	if items[0].QuietDays == nil || *items[0].QuietDays != 19 {
+		t.Errorf("quiet_days = %v, want the idle day count 19", items[0].QuietDays)
+	}
+	if items[0].Detail != nil {
+		t.Errorf("detail = %q, want no supporting sentence here — a bare number in this "+
+			"field is what made it mean prose on ten sources and an integer on two",
+			*items[0].Detail)
 	}
 	if items[0].Kind == nil || *items[0].Kind != "quiet" {
 		t.Errorf("kind = %s, want the ground it was admitted on", stringOr(items[0].Kind))
@@ -174,8 +183,13 @@ func TestALapsedRelationshipCarriesItsSpanAndItsLastExchange(t *testing.T) {
 	if item.Title == nil || *item.Title != "Dana Weiss" {
 		t.Errorf("title = %s, want the contact's name", stringOr(item.Title))
 	}
-	if item.Detail == nil || *item.Detail != "63" {
-		t.Errorf("detail = %s, want the derived silence in days", stringOr(item.Detail))
+	// Typed here for the reason the at-risk lane's is: the derived silence is a
+	// number the ordering weighs, not a sentence.
+	if item.QuietDays == nil || *item.QuietDays != 63 {
+		t.Errorf("quiet_days = %v, want the derived silence 63", item.QuietDays)
+	}
+	if item.Detail != nil {
+		t.Errorf("detail = %q, want no supporting sentence on a decay row", *item.Detail)
 	}
 	if item.OccurredAt == nil || !item.OccurredAt.Equal(spoke) {
 		t.Errorf("occurred_at = %v, want the last exchange %v", item.OccurredAt, spoke)

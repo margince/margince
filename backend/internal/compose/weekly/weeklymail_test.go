@@ -189,12 +189,12 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 		{
 			language: "de",
 			subject:  "Deine Woche",
-			labels:   []string{"Zugesagt, erledigt", "7 von 9", "Von dir entschieden", "Morgen-Liste", "Übernommen", "gewonnen"},
+			labels:   []string{"Aufgaben erledigt", "7 von 9", "Von dir entschieden", "Morgen-Liste", "Übernommen", "gewonnen"},
 		},
 		{
 			language: "vi",
 			subject:  "Tuần của bạn",
-			labels:   []string{"Đã hứa, đã xong", "7 trên 9", "Bạn đã quyết", "Danh sách buổi sáng", "Chuyển tiếp", "thắng"},
+			labels:   []string{"Công việc đã hoàn thành", "7 trên 9", "Bạn đã quyết", "Danh sách buổi sáng", "Chuyển tiếp", "thắng"},
 		},
 		{
 			// A language this build has no copy for is written in the fallback
@@ -202,7 +202,7 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 			// more to its reader than no summary.
 			language: "fr",
 			subject:  "Your week",
-			labels:   []string{"Promised, delivered", "You decided", "Morning queue", "Carried over", "won"},
+			labels:   []string{"Tasks delivered", "You decided", "Morning queue", "Carried over", "won"},
 		},
 	} {
 		t.Run(c.language, func(t *testing.T) {
@@ -255,4 +255,68 @@ func TestTheLabelColumnIsSizedToTheLabelsItHas(t *testing.T) {
 // countLeadingSpaces is how far a value sits from its label's colon.
 func countLeadingSpaces(s string) int {
 	return len(s) - len(strings.TrimLeft(s, " "))
+}
+
+// The link opens the WEEK, not the morning.
+//
+// The app is one hash-routed page, so the view a link means lives after the
+// '#'. This message sent the reader to the bare origin, which opens the Brief
+// on its default view — so a Monday summary of last week landed them on today's
+// queue, with nothing on either page saying they had been sent to the wrong one.
+//
+// Asserted as the WHOLE closing address rather than as a substring: the origin
+// alone appears in both the right answer and the wrong one, which is why the
+// test above passed either way.
+func TestTheWeeklyLinkOpensTheWeek(t *testing.T) {
+	body := MailBody(mailFixture(), "https://crm.example.test", english)
+
+	const want = "https://crm.example.test/#/home?view=weekly"
+	if !strings.Contains(body, want) {
+		t.Errorf("the weekly message does not link to %q:\n%s", want, body)
+	}
+}
+
+// A trailing slash on the configured origin does not become a double one.
+func TestTheWeeklyLinkSurvivesATrailingSlash(t *testing.T) {
+	body := MailBody(mailFixture(), "https://crm.example.test/", english)
+
+	if strings.Contains(body, "test//#/") {
+		t.Errorf("the weekly link doubled the separator:\n%s", body)
+	}
+}
+
+// No origin, no line. An installation that has not been told its own public
+// address cannot produce a working link, and a label over an empty indent reads
+// as one that failed to render.
+func TestTheWeeklyOmitsTheLinkLineWithNoOrigin(t *testing.T) {
+	body := MailBody(mailFixture(), "", english)
+
+	if strings.Contains(body, english.WeeklyFullWeek) {
+		t.Errorf("the weekly wrote its link label with no address under it:\n%s", body)
+	}
+}
+
+// The message closes by asking, not just reporting.
+//
+// Every line above it is a week that is over. Without the question the mail is
+// a receipt: a rep reads their numbers, agrees with them, and does nothing —
+// while the panel behind the link is asking them to plan the next week.
+//
+// Asserted ABOVE the link, because the order is the argument: the question is
+// what the reader is being asked to do, and the archive line is where they go
+// if they want the week before instead.
+func TestTheWeeklyAsksAboutTheWeekAhead(t *testing.T) {
+	body := MailBody(mailFixture(), "https://crm.example.test", english)
+
+	asked := strings.Index(body, english.WeeklyPlanAhead)
+	if asked < 0 {
+		t.Fatalf("the weekly message never asks about the week ahead:\n%s", body)
+	}
+	link := strings.Index(body, english.WeeklyFullWeek)
+	if link < 0 {
+		t.Fatalf("the weekly message lost its archive line:\n%s", body)
+	}
+	if asked > link {
+		t.Errorf("the planning question sits below the archive link:\n%s", body)
+	}
 }

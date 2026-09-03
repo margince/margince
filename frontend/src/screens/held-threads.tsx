@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -12,6 +13,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useThreadAudience } from "./audienceservice";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { useOpenEmail } from "./openemail";
 
 // What this mailbox is holding back from the team, and the one press that
 // releases a thread.
@@ -114,6 +116,9 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
   });
 
   const stillHeld = Object.entries(heldByOthers);
+  // The message a held row opens. This table is the one place a reader meets
+  // these threads, so the drawer belongs to it.
+  const [openEmail, setOpenEmail] = useOpenEmail();
   return (
     <>
       <DataTable<HeldThread>
@@ -133,11 +138,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               // a reader their evidence was destroyed when it is sitting there
               // unnamed.
               row.has_message ? (
-                (row.subject ?? (
-                  <span className="t-meta">
-                    {t("heldThreads.blankSubject")}
-                  </span>
-                ))
+                <ThreadSubject row={row} onOpen={setOpenEmail} />
               ) : (
                 <span className="t-meta">{t("heldThreads.noSubject")}</span>
               ),
@@ -198,6 +199,13 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
           })}
         </Callout>
       ))}
+      {/* One drawer over the table, at its level rather than inside a row:
+          two mounted dialogs would be two `aria-modal` elements. */}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={viewerZone()}
+        onClose={() => setOpenEmail(null)}
+      />
     </>
   );
 }
@@ -269,5 +277,42 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
     <span className="cell-stack">
       <Badge>{kindKey ? t(kindKey) : (row.kind ?? row.status)}</Badge>
     </span>
+  );
+}
+
+/**
+ * A held thread's subject, openable where the reader may read the message.
+ *
+ * Three states, unchanged from before plus one: a subject, a message carrying
+ * none, and — new — whether either is a control. `activity_id` is present only
+ * when the server's own content gate admitted the message, so a thread held
+ * because it is somebody else's personnel mail names itself and does not offer
+ * to open. A button that opened nothing would be worse than the plain text it
+ * replaced.
+ */
+function ThreadSubject({
+  row,
+  onOpen,
+}: Readonly<{ row: HeldThread; onOpen: (activityId: string) => void }>) {
+  const t = useT();
+  const label = row.subject ?? t("heldThreads.blankSubject");
+  const plain = row.subject ? (
+    <>{label}</>
+  ) : (
+    <span className="t-meta">{label}</span>
+  );
+  if (!row.activity_id) {
+    return plain;
+  }
+  const activityId = row.activity_id;
+  return (
+    <button
+      type="button"
+      className="entity-link"
+      aria-haspopup="dialog"
+      onClick={() => onOpen(activityId)}
+    >
+      {label}
+    </button>
   );
 }

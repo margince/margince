@@ -1,6 +1,8 @@
 /** @vitest-environment jsdom */
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RecordZoneProvider } from "../app/recordzone";
+import { formatDateTime } from "../format/format";
 import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
 import { fleetDeal, jsonResponse, render, run, stubApi } from "./home.testkit";
@@ -78,7 +80,105 @@ describe("HomeScreen — the weekly retrospective", () => {
     // row rather than looked up — which is why it renders although the review's
     // own deal is absent from the deals payload, where only Fleet retrofit is.
     await screen.findByText("Weber Rahmenvertrag");
-    expect(screen.getByText(en["home.weekly.promised"])).toBeTruthy();
+    expect(screen.getByText(en["home.weekly.tasksDelivered"])).toBeTruthy();
+  });
+
+  // What the wins were WORTH, beside how many there were.
+  //
+  // The count alone says a week of five small renewals and a week of one
+  // company-making deal are the same week. The money was computed, converted
+  // and stored — and read by no screen until now.
+  it("says what the week's wins were worth", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...review,
+          pipeline: {
+            created_minor: 4500000,
+            won_minor: 1250000,
+            lost_minor: 0,
+            currency: "EUR",
+          },
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // The review's OWN currency, not the installation's current setting: base
+    // currency is operator-mutable, and re-reading it would re-label an old
+    // week with a currency its numbers were never in.
+    expect(await screen.findByText(/12.500,00\s*€|€12,500\.00/)).toBeTruthy();
+  });
+
+  // And a week with no pipeline block draws no money at all.
+  //
+  // The block is optional on the wire — a week assembled before the money
+  // columns existed, or one whose FX rate was missing, has no honest figure.
+  // "0 €" is a claim about a week nobody measured.
+  it("draws no money for a week that carries none", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () => jsonResponse(review),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("Weber Rahmenvertrag");
+    const strip = document.querySelector('[data-testid="weekly-strip"]');
+    expect(strip).not.toBeNull();
+    expect(strip?.textContent ?? "").not.toMatch(/€|EUR/);
+  });
+
+  // The panel says its numbers can no longer move.
+  //
+  // That claim is what separates the weekly from every other panel on Home. A
+  // rep who reads it on Tuesday, acts, and re-reads on Thursday is looking at a
+  // record rather than a stale figure — and without the mark they have no way
+  // to tell those apart. The TEAM weekly has said so since it shipped; the
+  // rep's, which is the one a rep actually opens, did not.
+  it("marks the week frozen, and says when it was written", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () => jsonResponse(review),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    // A zone the TEST chooses, and not the product's fallback.
+    //
+    // The fallback is importable by its own reader alone (held by
+    // format/zone-by-purpose.test.ts), and rightly: a test asserting against it
+    // would be checking the component against the same constant the component
+    // reads, which passes however wrong the zone decision is. Naming one here
+    // means the assertion fails if the panel ever renders in the viewer's zone
+    // instead of the installation's.
+    const installationZone = "Asia/Ho_Chi_Minh";
+    render(
+      <RecordZoneProvider zone={installationZone}>
+        <HomeScreen />
+      </RecordZoneProvider>,
+    );
+
+    expect(await screen.findByText(en["home.weekly.frozen"])).toBeTruthy();
+    const written = en["home.weekly.written"].replace(
+      "{at}",
+      formatDateTime(review.generated_at, "en", installationZone),
+    );
+    expect(screen.getByText(written)).toBeTruthy();
+  });
+
+  // And nothing is certified when there is no review to certify. A badge over
+  // an absent week claims a record nobody wrote.
+  it("marks nothing frozen when there is no review", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({ title: "Not Found" }, 404),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText(en["home.weekly.none"]);
+    expect(screen.queryByText(en["home.weekly.frozen"])).toBeNull();
   });
 
   it("says there is no review yet rather than drawing a week of zeroes", async () => {
@@ -196,7 +296,7 @@ describe("HomeScreen — the week's sentence", () => {
     });
     render(<HomeScreen />);
 
-    await screen.findByText(en["home.weekly.promised"]);
+    await screen.findByText(en["home.weekly.tasksDelivered"]);
     // A pass that honestly found nothing is not a pass that never ran, and
     // claiming otherwise would tell the rep their week was never looked at.
     expect(screen.queryByText(en["home.weekly.noNarrative"])).toBeNull();
@@ -294,20 +394,53 @@ describe("HomeScreen — the week against the one before", () => {
     expect(strip.querySelectorAll(".stat-card")).toHaveLength(5);
   });
 
-  // The five are the week's OUTCOMES: what was promised and kept, what closed,
-  // how fast new business was answered, whether meetings led anywhere, and what
-  // did not get finished.
+  // The five are the week's OUTCOMES: what the rep planned and kept, what
+  // closed, how fast new business was answered, whether meetings led anywhere,
+  // and what did not get finished.
   it("gives the strip the week's outcomes", async () => {
     const strip = await mount(withPrior);
 
     for (const key of [
-      "home.weekly.promisesKept",
+      "home.weekly.planCommitmentsKept",
       "home.weekly.dealsWon",
       "home.weekly.leadsAnswered",
       "home.weekly.meetingsHeld",
       "home.weekly.carriedOver",
     ] as const) {
       expect(within(strip).getByText(en[key])).toBeTruthy();
+    }
+  });
+
+  // Two readings, two names — and neither of them a promise.
+  //
+  // commitments_* counts what a rep wrote into their weekly PLAN and settled;
+  // tasks_* counts tasks that fell due in the week. Both render through
+  // home.weekly.ofDue, so they arrive on one screen in the same "{n} of {m}"
+  // shape six lines apart, and they used to arrive under names one word apart
+  // too: "Promises kept" heading the strip, "Promised, delivered" in the list
+  // below. On a seat that keeps no weekly plan the first reads 0 of 0 for ever
+  // while the figure that reflects the week's delivered work sits under the
+  // near-synonym, and the likely reading of a leading 0 of 0 is "I kept
+  // nothing" rather than "I never wrote a plan".
+  //
+  // "Promise" is the wrong word for either. The Morning rail reserves it for
+  // something the product does not track yet and says so on screen, so a
+  // headline figure wearing it names a third thing again.
+  it("names the plan and the task figures apart, and neither as a promise", async () => {
+    await mount(withPrior);
+
+    const planned = en["home.weekly.planCommitmentsKept"];
+    const delivered = en["home.weekly.tasksDelivered"];
+    expect(planned).not.toBe(delivered);
+    expect(screen.getByText(planned)).toBeTruthy();
+    expect(screen.getByText(delivered)).toBeTruthy();
+
+    // Asserted rather than assumed: the reservation is what makes "promise"
+    // wrong here, so if the rail ever starts tracking them this rule wants
+    // rereading instead of quietly continuing to hold.
+    expect(en["home.promises.untracked"]).toContain("not tracked yet");
+    for (const label of [planned, delivered]) {
+      expect(label.toLowerCase()).not.toContain("promise");
     }
   });
 
@@ -319,7 +452,7 @@ describe("HomeScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     for (const key of [
-      "home.weekly.promised",
+      "home.weekly.tasksDelivered",
       "home.weekly.dealsMoved",
       "home.weekly.dealsLost",
       "home.weekly.decided",

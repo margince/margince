@@ -124,6 +124,63 @@ describe("the week ahead", () => {
     expect(writes(calls)[0].body).toEqual({ state: "done" });
   });
 
+  // A save that fails halfway must not leave the panel lying about it.
+  //
+  // Save settles each staged row in its own request, so a refusal on the second
+  // one leaves the first written and the rest not. What the reader must not be
+  // told is that nothing happened, or that everything did: the rows that landed
+  // have to stop being staged, and the one that failed has to still say so.
+  it("keeps the unsaved rows staged when one write is refused", async () => {
+    const calls = stubApi({
+      "GET /weekly-plans/current": () =>
+        jsonResponse(
+          plan({
+            commitments: [
+              commitment(),
+              commitment({ id: "c2", label: "Send the Weber quote" }),
+            ],
+          }),
+        ),
+      "PUT /weekly-plans/commitments/c1/state": () =>
+        new Response(null, { status: 204 }),
+      "PUT /weekly-plans/commitments/c2/state": () =>
+        jsonResponse({ title: "Conflict" }, 409),
+    });
+    render(<PlanSection />);
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Call the Aster buyer back",
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Send the Weber quote" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: en["plan.save_other"].replace("{count}", "2"),
+      }),
+    );
+
+    // BOTH are attempted. A loop that threw on the first refusal would leave
+    // the second row unwritten with nothing having asked it to stop.
+    await waitFor(() => expect(writes(calls)).toHaveLength(2));
+    // The refusal is SAID. A panel that swallows it tells a rep their week is
+    // recorded when half of it is not.
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    // And exactly ONE row is still staged: the refused one. Leaving both staged
+    // invites a second Save that re-sends a write which already succeeded;
+    // clearing both loses the reader's own unsaved intent. The Save button
+    // counts the staged set, so its label is where that count is readable.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: en["plan.save_one"].replace("{count}", "1"),
+        }),
+      ).toBeTruthy(),
+    );
+  });
+
   // `missed` is what the week's close writes over a commitment left open. A box
   // that reopened it would let one click undo the close, and the review's counts
   // would stop agreeing with the rows they were counted from.

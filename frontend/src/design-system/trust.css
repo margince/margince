@@ -151,20 +151,27 @@ button.evidence-chip:hover {
   font-style: italic;
 }
 
-/* A staged proposal is visibly NOT yet real: AI-tinted ground, dashed border. */
+/* The agent's row: a staged proposal is visibly NOT yet real — the agent's
+   tint for ground, a dashed indigo edge until a person accepts it, the
+   card's corner. Indigo is a fact about who wrote it, never a mood. */
 .staging-card {
   background: var(--aiLight);
   border: 1.5px dashed var(--aiMed);
   border-radius: var(--r-md);
-  padding: 14px 16px;
+  padding: var(--space-4) var(--space-5);
 }
 .staging-card .staged-value {
   color: var(--aiText);
   font-weight: 600;
 }
-/* The line a reader takes the row in by, set off from the meta above it. */
+/* The line a reader takes the row in by, set off from the meta above it and
+   in the display face: it is the row's one headline. */
 .staging-card .approval-headline {
   margin-top: var(--space-2);
+  font-family: var(--f-display);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
 }
 /* The sentence explaining the headline above it — why this is staged, not what
    it says. Close to what it explains: a full line's air between the two would
@@ -181,13 +188,13 @@ button.evidence-chip:hover {
   color: var(--textContent);
 }
 
-/* The persisted counterpart a resolved proposal settles into. */
+/* The persisted counterpart a resolved proposal settles into: a pane with a
+   hairline, no shadow, now that the proposal is as real as the rest. */
 .real-card {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
+  background: var(--pane);
+  border: 1px solid var(--paneEdge);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
-  padding: 14px 16px;
+  padding: var(--space-4) var(--space-5);
 }
 
 .approval-gate {

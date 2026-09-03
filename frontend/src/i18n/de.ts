@@ -1279,6 +1279,7 @@ export const de = {
   "approval.kind.deal_follow_up": "Wiedervorlage zum Deal anlegen",
   "approval.kind.archive_record": "Datensatz archivieren",
   "approval.kind.merge_records": "Datensätze zusammenführen",
+  "approval.kind.merge_tags": "Ein Schlagwort in ein anderes überführen",
   "approval.kind.update_record": "Datensatz ändern",
   "approval.kind.create_record": "Datensatz anlegen",
   "approval.kind.send_email": "E-Mail senden",
@@ -1508,6 +1509,8 @@ export const de = {
   "email.move.waitingForThem": "Warten auf Antwort",
   "email.detail.loading": "Nachricht wird geöffnet",
   "email.detail.none": "Diese Nachricht",
+  "email.detail.attachments_one": "{count} Anhang",
+  "email.detail.attachments_other": "{count} Anhänge",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "email.detail.close": "Schließen",
   "email.detail.withheldReason":
@@ -1523,6 +1526,11 @@ export const de = {
   "compose.audienceParticipants": "Nur Beteiligte",
   "compose.audienceParticipantsHint":
     "Nur die Personen auf dieser Nachricht lesen Betreff und Inhalt. Andere sehen nur, dass an diesem Tag eine Nachricht gewechselt wurde.",
+  "compose.audienceSelected": "Benannte Personen",
+  "compose.audienceSelectedHint":
+    "nur die Personen und Teams, die Sie benennen, sowie alle, die bereits auf der Nachricht stehen.",
+  "compose.audienceMembersLegend": "Wer sie lesen darf",
+  "compose.audienceMembersLoading": "Personenliste wird gelesen…",
   "compose.audienceConfirm": "Sichtbarkeit speichern",
   "compose.audienceNote":
     "Gilt nur f\u00fcr diese Nachricht \u2014 nicht f\u00fcr den Thread und nicht f\u00fcr den Kontakt.",
@@ -2377,7 +2385,7 @@ export const de = {
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.asOf": "Stand {at}",
-  "home.refreshing": "Sortiere neu…",
+  "home.generating": "Stelle zusammen…",
   "home.generate": "Briefing jetzt holen",
   "home.noneBody":
     "Dein Morgenbriefing sortiert die Deals, die deine erste Stunde verdienen — Gewinnchance, Umsatz, Timing, Momentum und Nähe, jeder Faktor mit Beleg. Es entsteht über Nacht und liegt morgen früh bereit, sobald offene Deals da sind.",
@@ -2414,6 +2422,16 @@ export const de = {
   "brief.sentence.manyWithCost":
     "Zuerst: {lead} — {consequence} Danach {rest} weitere.",
 
+  // Der Einstiegssatz des Wochen-Briefs, aus den eingefrorenen Zahlen gebaut.
+  "brief.week.won": "Sie haben {count} Abschlüsse gemacht.",
+  "brief.week.moved": "Sie haben {count} Deals vorangebracht.",
+  "brief.week.met": "Sie hatten {count} Termine.",
+  "brief.week.carryPromises": "{count} Zusagen sind offen geblieben.",
+  "brief.week.carryTasks": "{count} Aufgaben sind offen geblieben.",
+  "brief.week.andCarry": "{result} {carry}",
+  "brief.week.quiet":
+    "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
+
   "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
   "brief.donext.loading": "Was auf dich wartet, wird gelesen",
   "brief.donext.clear": "Gerade wartet nichts auf dich.",
@@ -2442,12 +2460,12 @@ export const de = {
     "{reading} ist es nicht, bei {pct}% gegen eine Schwelle von {bar}%.",
   "teamweekly.reading.firstResponse": "Erstreaktion",
   "teamweekly.reading.nextStep": "Termine mit nächstem Schritt",
-  "teamweekly.reading.commitments": "Eingehaltene Zusagen",
+  "teamweekly.reading.commitments": "Planzusagen eingehalten",
   "teamweekly.card.firstResponse": "Rechtzeitig beantwortet",
   "teamweekly.card.firstResponseBasis": "{breached} überschritten",
   "teamweekly.card.meetings": "Termine mit nächstem Schritt",
   "teamweekly.card.meetingsBasis": "der gehaltenen Termine",
-  "teamweekly.card.commitments": "Eingehaltene Zusagen",
+  "teamweekly.card.commitments": "Planzusagen eingehalten",
   "teamweekly.card.commitmentsBasis": "des Zugesagten",
   "teamweekly.card.won": "Gewonnen",
   "teamweekly.card.wonBasis": "{lost} verloren",
@@ -2464,7 +2482,7 @@ export const de = {
   "teamweekly.coach.empty": "In dieser Woche war niemand in diesem Team.",
   "teamweekly.focus.help_requested": "Hat um Hilfe gebeten",
   "teamweekly.focus.leads_breached": "Leads blieben unbeantwortet",
-  "teamweekly.focus.commitments_missed": "Zusagen verpasst",
+  "teamweekly.focus.commitments_missed": "Planzusagen verpasst",
   "teamweekly.focus.meetings_without_next_step":
     "Termine ohne nächsten Schritt",
   "teamweekly.focus.strong_week": "Zum Nachmachen",
@@ -2476,6 +2494,10 @@ export const de = {
   "plan.none": "Du hast diese Woche noch nicht geplant.",
   "plan.start": "Meine Woche planen",
   "plan.add": "Vorhaben hinzufügen",
+  "plan.saveRefused_one":
+    "Eine Zusage konnte nicht gespeichert werden. Sie ist weiterhin angehakt — bitte erneut versuchen.",
+  "plan.saveRefused_other":
+    "{count} Zusagen konnten nicht gespeichert werden. Sie sind weiterhin angehakt — bitte erneut versuchen.",
   "plan.save_one": "{count} Änderung speichern",
   "plan.save_other": "{count} Änderungen speichern",
   "plan.due": "bis {day}",
@@ -2495,10 +2517,12 @@ export const de = {
   "plan.new.save": "Hinzufügen",
   "plan.new.cancel": "Abbrechen",
 
+  "home.weekly.frozen": "Eingefroren",
+  "home.weekly.written": "geschrieben {at}",
   "home.weekly.pickWeek": "Andere Woche öffnen",
   "home.weekly.none":
     "Noch kein Wochenrückblick — der erste wird am Montag nach deiner ersten vollen Woche geschrieben.",
-  "home.weekly.promised": "Zugesagt, erledigt",
+  "home.weekly.tasksDelivered": "Aufgaben erledigt",
   "home.weekly.ofDue": "{done} von {due}",
   "home.weekly.dealsWon": "Gewonnen",
   "home.weekly.dealsLost": "Verloren",
@@ -2512,7 +2536,7 @@ export const de = {
   "home.weekly.sincePrior": "{delta} ggü. Vorwoche",
   "home.weekly.leadsAnswered": "Leads rechtzeitig beantwortet",
   "home.weekly.ofRouted": "{answered} von {routed}",
-  "home.weekly.promisesKept": "Zusagen eingehalten",
+  "home.weekly.planCommitmentsKept": "Planzusagen eingehalten",
   "home.weekly.meetingsHeld": "Meetings mit nächstem Schritt",
   "home.weekly.ofMeetings": "{withStep} von {held}",
   "home.weekly.carriedOver": "Übernommen",
@@ -3142,7 +3166,69 @@ export const de = {
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.share.open": "Ansicht teilen",
+  "analytics.share.title": "Diese Ansicht teilen",
+  "analytics.share.kindLegend": "Was der Link zeigt",
+  "analytics.share.liveLabel": "Live-Ansicht",
+  "analytics.share.liveHelp":
+    "Wird bei jedem Öffnen neu berechnet, begrenzt auf das, was die lesende Person sehen darf. Die Zahlen bewegen sich mit der Pipeline.",
+  "analytics.share.snapshotLabel": "Eingefrorener Stand",
+  "analytics.share.snapshotHelp":
+    "Die Zahlen, wie sie beim Einfrieren standen. Sie ändern sich nicht, deshalb nennt der Link den Zeitpunkt.",
+  "analytics.share.snapshotUnavailable":
+    "Für diesen Zeitraum wurde noch kein Stand eingefroren.",
+  "analytics.share.expiryNote":
+    "Der Link läuft nach 30 Tagen ab. Sie können ihn früher schließen.",
+  "analytics.share.create": "Link erstellen",
+  "analytics.share.linkTitle": "Ihr Link",
+  "analytics.share.linkWarning":
+    "Der Link wird nur dieses eine Mal angezeigt. Kopieren Sie ihn jetzt — er lässt sich nicht erneut auslesen.",
+  "analytics.share.leaveWarning":
+    "Wenn Sie ohne Kopieren schließen, ist der Link verloren. Sie müssten einen neuen erstellen.",
+  "analytics.share.copy": "Link kopieren",
+  "analytics.share.copied": "Kopiert",
+  "analytics.share.copyFailed":
+    "Der Link konnte nicht kopiert werden. Markieren Sie ihn oben und kopieren Sie ihn von Hand.",
+  "analytics.share.done": "Fertig",
   "analytics.frame": "Stand {asOf} · {zone} · {currency}",
+  "review.title": "Was sollte vor dem Call geprüft werden?",
+  "review.ready": "Bereit",
+  "review.readyWithExceptions": "Bereit, mit Anmerkungen",
+  "review.needsReview": "Prüfung nötig",
+  "review.checksIncomplete": "Prüfung unvollständig",
+  "review.allSourcesRead": "Alle Quellen wurden gelesen.",
+  "review.sourcesUnread":
+    "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",
+  "review.nothingToCheck": "Nichts zu prüfen.",
+  "review.answer": "Prüfen",
+  "review.closePast": "Abschlussdatum ist verstrichen",
+  "review.closeUnconfirmed": "Abschlussdatum nicht bestätigt",
+  "review.closePushed": "Abschlussdatum verschiebt sich laufend",
+  "review.amountVsOffer": "Betrag weicht vom Angebot ab",
+  "review.amountVsContract": "Betrag weicht vom Vertrag ab",
+  "review.noNextStep": "Kein nächster Schritt",
+  "review.noEconomicBuyer": "Niemand mit Unterschriftsbefugnis benannt",
+  "review.buyerSilent": "Käufer ist verstummt",
+  "review.commitUnpriced": "Commit ohne Betrag",
+  "review.unknownCheck": "Etwas zu prüfen",
+  "review.sheetTitle": "Diese Prüfung beantworten",
+  "review.outcomeLegend": "Was für eine Antwort ist das?",
+  "review.fixedRecord": "Ich habe den Datensatz korrigiert",
+  "review.addedEvidence": "Ich habe den Beleg ergänzt",
+  "review.valueCorrect": "Aktueller Wert ist korrekt",
+  "review.notRelevant": "Für diesen Deal nicht relevant",
+  "review.remindLater": "Jetzt nicht",
+  "review.reassign": "Jemand anderes beantwortet das",
+  "review.hidesUntilExpiry": "Blendet diese Prüfung bis zum Ablauf aus.",
+  "review.reason": "Begründung",
+  "review.reasonHelp":
+    "Wer diese Zahl als Nächstes sieht, hat ein Recht auf den Grund, warum sie nicht markiert ist.",
+  "review.remindAt": "Wieder vorlegen am",
+  "review.expiresAt": "Gilt nicht mehr ab",
+  "review.expiresHelp":
+    "Höchstens 90 Tage: Ein Wert, der im Mai korrekt war, ist eine Aussage über den Mai.",
+  "review.cancel": "Abbrechen",
+  "review.submit": "Antwort speichern",
   "forecast.question": "Wo landen wir dieses Quartal?",
   "forecast.answerWithCall":
     "Der aktuelle Call liegt bei {call}. Durch Belege gestützt sind {evidence}.",
@@ -7840,7 +7926,7 @@ export const de = {
   "worklist.because.overdue": "überfällig",
   "worklist.because.due_today": "heute fällig",
   "worklist.because.closing_soon": "hat ein Abschlussdatum",
-  "worklist.because.expected_revenue": "erwarteter Umsatz",
+  "worklist.because.expected_revenue": "ein offener Deal hängt daran",
   "worklist.because.expected_revenue.value": "Wert {value}",
   "worklist.because.material": "über dem üblichen offenen Deal",
   "worklist.because.material.value":

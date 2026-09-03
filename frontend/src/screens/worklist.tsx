@@ -4,11 +4,14 @@ import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { FilterPills } from "../design-system/filterpills";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useOpenEmail } from "./openemail";
 import { TeamBoard } from "./worklist.board";
 import {
   completenessText,
@@ -78,16 +81,6 @@ function rowIdentity(item: WorklistItem): string {
   return `${item.source}-${item.id}`;
 }
 
-// How much work the day holds, as opposed to how much one response carried.
-//
-// `summary.total` counts the rows in ONE page — it is computed after the page
-// cut — so it is the wrong number to print beside a queue the reader can page
-// through: it would stay at 25 while the list grew past it. `counts[].
-// considered` is the figure taken before the cut, which is what "in all" means.
-function dayTotal(day: Worklist): number {
-  return day.counts.reduce((total, count) => total + count.considered, 0);
-}
-
 // Whether this row opens its band — the first banded row, or the first after a
 // row of a DIFFERENT band.
 //
@@ -144,6 +137,11 @@ function WorklistHeader({
   const completeness = completenessText(day, filter, t, locale, loaded);
   return (
     <div className="worklist-header">
+      {/* Five figures, ONE scope: the whole assembled day. All five come off
+          `summary`, which the server counts over every candidate it weighed
+          rather than over the page it cut — so the sentence stays still as the
+          reader pages, and a total the browser derived a second way cannot
+          disagree with the bands beside it. */}
       <p className="t-h2 worklist-lead">
         {t(
           // `in_play` is optional, and a server that does not send it has not
@@ -158,10 +156,7 @@ function WorklistHeader({
             due: formatNumber(day.summary.due, locale),
             inPlay: formatNumber(day.summary.in_play ?? 0, locale),
             lower: formatNumber(day.summary.lower_priority, locale),
-            // The DAY's candidates, not this page's rows. `summary.total`
-            // counts what one response carried, so printing it beside a queue
-            // the reader has paged past would shrink as they read further in.
-            total: formatNumber(dayTotal(day), locale),
+            total: formatNumber(day.summary.total, locale),
           },
         )}
       </p>
@@ -231,6 +226,7 @@ function WorklistBody({
   onFilter,
   onOwner,
   onSelect,
+  onOpenEmail,
   hasMore,
   loadingMore,
   moreFailed,
@@ -246,6 +242,8 @@ function WorklistBody({
   onFilter: (next: WorklistFilter) => void;
   onOwner: (next: string) => void;
   onSelect: (next: string) => void;
+  // Opens a waiting email into the page's one drawer.
+  onOpenEmail: (activityId: string) => void;
   hasMore: boolean;
   loadingMore: boolean;
   moreFailed: boolean;
@@ -309,7 +307,7 @@ function WorklistBody({
       {/* The one thing to do next, said rather than implied. The row stays in
           the queue below: removing it would make the rank numbers lie and the
           counts disagree with the page. */}
-      {focus && <FocusCard item={focus} />}
+      {focus && <FocusCard item={focus} onOpenEmail={onOpenEmail} />}
       {/* And then? A finite list a reader can see the end of, so a morning has a
           shape rather than a backlog. Drawn only under a focus card: without
           one there is no "next", only the queue. */}
@@ -377,6 +375,7 @@ function WorklistBody({
                               )
                           : undefined
                       }
+                      onOpenEmail={onOpenEmail}
                       onReview={() => onFilter(reviewFilter(item))}
                     />
                   </li>
@@ -466,6 +465,7 @@ export function WorklistScreen({
   // would make the address describe a fraction of what the reader is looking
   // at. Moving them all there is its own change.
   const [selectedId, setSelectedId] = useState("");
+  const [openEmail, setOpenEmail] = useOpenEmail();
   // Changing a dial drops the selection. A row chosen under one question is
   // not a row the reader chose under the next one, and keeping the id means a
   // row that comes back — a filter switched away and back, a snooze that lifts
@@ -524,6 +524,7 @@ export function WorklistScreen({
             onFilter={answerWith(setFilter)}
             onOwner={answerWith(setOwner)}
             onSelect={setSelectedId}
+            onOpenEmail={setOpenEmail}
             hasMore={day.hasNextPage}
             loadingMore={day.isFetchingNextPage}
             moreFailed={day.isError && day.data !== undefined}
@@ -531,6 +532,14 @@ export function WorklistScreen({
           />
         )}
       </SurfaceState>
+      {/* One drawer over the whole queue, at page level rather than inside a
+          row: two mounted dialogs would be two `aria-modal` elements, and the
+          day stays legible behind the message being read. */}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={viewerZone()}
+        onClose={() => setOpenEmail(null)}
+      />
     </div>
   );
 }

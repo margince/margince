@@ -40,8 +40,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -93,6 +95,10 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 	if limit <= 0 {
 		return 0, fmt.Errorf("compose: the participant replay needs a positive batch limit, got %d", limit)
 	}
+	// One correlation id per batch. Naming an attendee is an audited write, and
+	// storekit refuses to emit its event without one — a refusal that would
+	// take the whole batch down with it and re-select the same rows forever.
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	var settled int
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		candidates, err := selectReplayCandidates(ctx, tx, limit)
@@ -215,6 +221,15 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 	}
 	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind,
 		c.ourHeaderIsTrusted, participants); err != nil {
+		return "", err
+	}
+	// The rows just written carry whatever name the original gave, so the
+	// people they resolved to are named here rather than left to the recovery
+	// pass beside this one. That pass selects on display_name IS NULL, which
+	// the stamp above has just filled in, and this pass is settled per activity
+	// and will not offer the meeting again — so a meeting replayed before the
+	// recovery ever ran would otherwise fall permanently between the two.
+	if err := people.FillParticipantNamesTx(ctx, tx, c.activityID); err != nil {
 		return "", err
 	}
 	return replayWroteParticipants, nil
