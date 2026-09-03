@@ -224,3 +224,50 @@ func TestReportPlanRefusesTrailingContent(t *testing.T) {
 		t.Fatal("a second JSON value after the plan was ignored")
 	}
 }
+
+// A misspelled THRESHOLD key is refused with a list that contains the threshold
+// names. `filters` is one object holding two families — the equality filters and
+// the thresholds — and the catalog advertises them as one list
+// (catalogFilterNames). A refusal built from the equality filters alone omits the
+// family the caller was reaching for, so they read the list, do not find what
+// they meant, and conclude the report cannot answer their question.
+//
+// Derived from every spec that declares a threshold rather than naming one, so a
+// report that grows a threshold family is held by this the day it lands.
+func TestAFilterRefusalNamesTheThresholdsToo(t *testing.T) {
+	thresholded := 0
+	for report, spec := range prebuiltReports {
+		if len(spec.thresholds) == 0 {
+			continue
+		}
+		thresholded++
+		req := reportRequest{Filters: map[string]any{"no_such_filter": "x"}}
+		_, err := buildReportWhere(t.Context(), spec, req, func(any) int { return 1 })
+		var refusal *FieldNotAllowedError
+		if !errors.As(err, &refusal) {
+			t.Fatalf("%s: err = %v, want a FieldNotAllowedError", report, err)
+		}
+		_, message := refusal.MessageFault()
+		for name := range spec.thresholds {
+			if !strings.Contains(message, name) {
+				t.Errorf("%s: the refusal omits the threshold key %q a caller may send in `filters`: %s",
+					report, name, message)
+			}
+		}
+		for name := range spec.filters {
+			if !strings.Contains(message, name) {
+				t.Errorf("%s: the refusal omits the equality filter %q: %s", report, name, message)
+			}
+		}
+		// The refusal and the catalog are one vocabulary or they are two, and two
+		// is what this test exists to prevent.
+		if got, want := refusal.Allowed, catalogFilterNames(spec); !slices.Equal(got, want) {
+			t.Errorf("%s: the refusal lists %v, the catalog advertises %v", report, got, want)
+		}
+	}
+	// Under-recognition is the one way this must not fail: a prebuilt catalog with
+	// no thresholds left would make every assertion above vacuous.
+	if thresholded == 0 {
+		t.Fatal("no prebuilt report declares a threshold, so this test proved nothing")
+	}
+}

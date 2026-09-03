@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1688 | 6% | 15720 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2535 | 10% | 14873 | 15 | 8 |
-| _whole served catalog, for scale_ | 69 | 21227 | 86% | — | — | — |
+| _whole served catalog, for scale_ | 70 | 20752 | 84% | — | — | — |
 
 ### `morning_brief`
 
@@ -123,7 +123,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 270 tokens, mean 307, across 69 served tools.
+Median 271 tokens, mean 296, across 70 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -132,13 +132,13 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1274 | 3 scenarios |
 | `preview_import` | 708 | — |
 | `log_activity` | 673 | 1 scenario |
 | `update_record` | 603 | 4 scenarios |
 | `send_account_email` | 545 | — |
 | `resolve_entities` | 513 | — |
 | `list_records` | 501 | — |
+| `run_report` | 499 | 3 scenarios |
 | `query_workspace` | 491 | 3 scenarios |
 | `advance_deal` | 474 | 1 scenario |
 | `send_email` | 471 | 1 scenario |
@@ -161,6 +161,7 @@ a term in an addition.
 | `draft_follow_ups_for` | 304 | — |
 | `decide_approval` | 303 | — |
 | `promote_lead` | 301 | — |
+| `describe_report_vocabulary` | 300 | — |
 | `archive_record` | 292 | — |
 | `catch_me_up_on` | 287 | 3 scenarios |
 | `prepare_handoff` | 275 | 1 scenario |

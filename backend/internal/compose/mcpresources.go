@@ -43,7 +43,18 @@ func mcpResourceProviders(capabilities mcp.ResourceProvider, vocabulary mcp.Reso
 	// Capabilities is unconditional for the same reason the write vocabulary is:
 	// it is derived from the registry this transport already holds, so there is
 	// no deployment that can serve tools and fail to describe them.
-	providers := []mcp.ResourceProvider{capabilities, vocabulary, agents.RecordFieldsResource{}}
+	// The report plan vocabulary is unconditional for the third time over: it is
+	// composed from the engine's prebuilt catalog, which is a compile-time table
+	// in this package, and run_report is registered on every build — an overlay
+	// system of record refuses it at CALL time, never by withholding the tool.
+	// So there is no installation that serves run_report and lacks the
+	// vocabulary it refuses against, and a conditionally-absent document would
+	// leave the tool naming a document some build does not publish.
+	providers := []mcp.ResourceProvider{
+		capabilities, vocabulary,
+		agents.RecordFieldsResource{},
+		agents.NewReportVocabularyResource(reportToolCatalog()),
+	}
 	// views is nil for a role that composes none — a worker, or an api whose
 	// connector gate is off. composeResources drops it, which is the same
 	// conditional wiring every other injected capability takes.

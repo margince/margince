@@ -4,10 +4,10 @@
   "per_agent_listing_budget": 17408,
   "whole_catalog_floor": 21504,
   "catalog": {
-    "tools": 69,
-    "tokens": 21227,
-    "median_tool_tokens": 270,
-    "mean_tool_tokens": 307
+    "tools": 70,
+    "tokens": 20752,
+    "median_tool_tokens": 271,
+    "mean_tool_tokens": 296
   },
   "agents": [
     {
@@ -70,10 +70,6 @@
   ],
   "tool_cost": [
     {
-      "name": "run_report",
-      "tokens": 1274
-    },
-    {
       "name": "preview_import",
       "tokens": 708
     },
@@ -96,6 +92,10 @@
     {
       "name": "list_records",
       "tokens": 501
+    },
+    {
+      "name": "run_report",
+      "tokens": 499
     },
     {
       "name": "query_workspace",
@@ -184,6 +184,10 @@
     {
       "name": "promote_lead",
       "tokens": 301
+    },
+    {
+      "name": "describe_report_vocabulary",
+      "tokens": 300
     },
     {
       "name": "archive_record",

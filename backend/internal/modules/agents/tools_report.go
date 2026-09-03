@@ -12,7 +12,6 @@ package agents
 import (
 	"context"
 	"encoding/json"
-	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -104,67 +103,35 @@ func reportProperty(catalog []ReportCatalogEntry) string {
 	return `{"enum":[` + strings.Join(keys, ",") + `],` + described + `}`
 }
 
-// describeReportCatalog renders each report's three vocabularies, because the
-// enum alone answers only the first of a caller's two questions. Knowing that
-// `deals-by-stage` exists does not tell them it groups by stage_id and filters
-// by pipeline_id, and there is no other tool on this surface that would.
+// describeReportCatalog names where the three plan vocabularies are, rather
+// than reciting them.
+//
+// It used to recite them: every report's group_by, filters, aggregates, default
+// and note, rendered into this one property. That was 3.4KB — 6% of the served
+// catalog in a single tool, held by every client for a whole session and
+// re-sent by every Surface-B run on every step, to answer a question one call
+// asks once. The recital moved to margince://schema/reports, with
+// describe_report_vocabulary as the door for a caller that reads no resources.
+//
+// What is NOT deferred is the enum: `report` stays closed to the catalog's own
+// keys, because that is what decides whether a call is well-formed and it
+// answers the first of a caller's two questions at zero round trips.
+//
+// The sentence NAMES the document and does not order a read. A binding told to
+// "read this first" obeyed on goals with no report in them and lost first-step
+// accuracy; TestNoToolOrdersTheModelToReadADocument holds the phrasing.
 func describeReportCatalog(catalog []ReportCatalogEntry) string {
 	if len(catalog) == 0 {
 		return "No prebuilt report is available on this installation."
 	}
 	var b strings.Builder
-	b.WriteString("The prebuilt report to run. Send `report` alone to get its defaults; the three ")
-	b.WriteString("plan arguments accept ONLY the names listed for that report. ")
-	for i, entry := range catalog {
-		if i > 0 {
-			b.WriteString(" ")
-		}
-		b.WriteString(entry.Report)
-		b.WriteString(" — group_by: ")
-		b.WriteString(vocabulary(entry.GroupBy))
-		b.WriteString("; filters: ")
-		b.WriteString(vocabulary(entry.Filters))
-		b.WriteString("; aggregates: ")
-		b.WriteString(vocabulary(entry.Aggregates))
-		if entry.Defaults != "" {
-			b.WriteString("; default: ")
-			b.WriteString(entry.Defaults)
-		}
-		if entry.Notes != "" {
-			b.WriteString("; note: ")
-			b.WriteString(entry.Notes)
-		}
-		b.WriteString(".")
-	}
-	writePipelineSource(&b, catalog)
+	b.WriteString("The prebuilt report to run. Send `report` alone to get its default answer. ")
+	b.WriteString("Each report's `group_by`, `filters` and `aggregates` accept ONLY that report's ")
+	b.WriteString("own names, published at ")
+	b.WriteString(ReportVocabularyURI)
+	b.WriteString(" and answered by describe_report_vocabulary. A name outside them is refused ")
+	b.WriteString("by name, with that argument's accepted list.")
 	return b.String()
-}
-
-// writePipelineSource closes the obligation the vocabularies open: several
-// reports filter and group by `pipeline_id` and `stage_id`, and naming an id a
-// caller cannot obtain is a correct refusal that dead-ends. Keyed on the
-// vocabularies actually rendered, so a catalog without those keys does not carry
-// advice about them.
-func writePipelineSource(b *strings.Builder, catalog []ReportCatalogEntry) {
-	for _, entry := range catalog {
-		for _, names := range [][]string{entry.GroupBy, entry.Filters, entry.Aggregates} {
-			if slices.Contains(names, "pipeline_id") || slices.Contains(names, "stage_id") {
-				b.WriteString(" A `pipeline_id` or `stage_id` used here comes from list_pipelines — ")
-				b.WriteString("no other tool on this surface yields one.")
-				return
-			}
-		}
-	}
-}
-
-// vocabulary renders one closed list, saying so explicitly when it is empty.
-// An empty rendering would read as an omission, and a caller who reads it that
-// way sends a plausible name into an argument that accepts none.
-func vocabulary(names []string) string {
-	if len(names) == 0 {
-		return "(none)"
-	}
-	return strings.Join(names, ", ")
 }
 
 func (t runReport) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

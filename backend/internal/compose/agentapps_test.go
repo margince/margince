@@ -285,14 +285,14 @@ func TestNoCapabilityLivesOnlyInsideAView(t *testing.T) {
 // unreachable with nothing reporting it, and the read would serve one provider's
 // bytes under the other's sandbox policy.
 func TestTheProductionProvidersClaimDisjointURIs(t *testing.T) {
-	// Derived from the transport's own list, so a FOURTH provider is measured the
+	// Derived from the transport's own list, so the NEXT provider is measured the
 	// commit it is wired rather than the commit somebody remembers this test.
 	wired := mcpResourceProviders(
 		agents.NewCapabilitiesResource(NewRegistry(nil, SendPath{})), nil, primedViews(t, everyDeclaredView()))
-	if len(wired) != 4 {
+	if len(wired) != 5 {
 		t.Fatalf("the transport composes %d resource providers; this gate knows how to reason about "+
-			"capabilities, the query vocabulary, the write vocabulary and the views. Add the new one's URI "+
-			"below before it can collide with one of them", len(wired))
+			"capabilities, the query vocabulary, the write vocabulary, the report vocabulary and the "+
+			"views. Add the new one's URI below before it can collide with one of them", len(wired))
 	}
 	for _, r := range primedViews(t, everyDeclaredView()).Resources(readerCtx()) {
 		if !strings.HasPrefix(r.URI, mcp.AppURIScheme) {
@@ -305,9 +305,10 @@ func TestTheProductionProvidersClaimDisjointURIs(t *testing.T) {
 	// wander into the view scheme, where a prefix is all that separates them
 	// from a document served under a sandbox policy.
 	schemas := map[string]string{
-		"the query vocabulary": search.QuerySchemaURI,
-		"the write vocabulary": agents.RecordFieldsURI,
-		"capabilities":         agents.CapabilitiesURI,
+		"the query vocabulary":  search.QuerySchemaURI,
+		"the write vocabulary":  agents.RecordFieldsURI,
+		"the report vocabulary": agents.ReportVocabularyURI,
+		"capabilities":          agents.CapabilitiesURI,
 	}
 	// A SET, not a pairwise comparison. Two documents could be checked against
 	// each other by hand; three cannot without three comparisons, and the
