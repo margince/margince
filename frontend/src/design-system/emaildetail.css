@@ -1,0 +1,72 @@
+/* The email drawer's own chrome. The Modal supplies the surface, the edge and
+ * the focus trap; this is only what a message needs inside one. */
+
+.emaildetail__title {
+  margin: 0 0 var(--space-3);
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-h3);
+}
+
+.emaildetail__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.emaildetail__parties {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--fs-sm);
+  color: var(--textContent);
+}
+
+.emaildetail__party {
+  margin: 0;
+}
+
+.emaildetail__partyLabel {
+  display: inline-block;
+  min-width: 3.5rem;
+  color: var(--textSecondary);
+}
+
+.emaildetail__party--withheld {
+  color: var(--textSecondary);
+  font-style: italic;
+}
+
+/* The sender's own words. Wrapped, not clamped: this is the reading surface,
+ * and the row is what had to stay one line. */
+.emaildetail__main {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.emaildetail__quoted > summary {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.emaildetail__quoted > p {
+  margin: var(--space-2) 0 0;
+  color: var(--textSecondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.emaildetail__when {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-meta);
+}
+
+/* The heading and the way out, on one line. */
+.emaildetail__head {
+  display: flex;
+  align-items: start;
+  gap: var(--space-2);
+  justify-content: space-between;
+}

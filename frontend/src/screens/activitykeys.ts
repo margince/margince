@@ -127,9 +127,8 @@ export function dealWinKeys(
   return keys;
 }
 
-// The canonical email read for one message, as its own key so a decision that
-// changed a message can refresh it wherever it is mounted — a drawer open over
-// one record, a row on another.
-export function emailPresentationKey(activityId: string): QueryKey {
-  return ["email-presentation", activityId];
-}
+// The canonical email read's key belongs to the component that reads under it,
+// so this is a re-export rather than a second spelling. Two copies of a cache
+// key do not fail loudly: they fail as a drawer that quietly stops refreshing
+// after somebody changes who may read the message.
+export { emailDetailKey as emailPresentationKey } from "../design-system/emaildetail";
