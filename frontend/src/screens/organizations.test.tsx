@@ -1393,15 +1393,11 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
     );
     render(<CompanyScreen id="o-1" />);
 
-    // The way in, and that the relationship is live. WHICH side wrote last is
-    // the daily brief's to say — acting on whose move it is belongs with the
-    // moves, and the header states only that contact happened and when. It
-    // says "either way" out loud, because the health card beside it counts
-    // inbound alone and the two numbers otherwise read as contradicting each
-    // other when a rep wrote recently and has had nothing back.
+    // The way in. WHEN contact last happened is the readings row's (Last
+    // touch), not the header's: one fact, one home.
     await waitFor(() => expect(screen.getByText(/Way in/)).toBeTruthy());
     expect(screen.getByText(/of 3 contacts here/)).toBeTruthy();
-    expect(screen.getByText(/Last contact .*either way/)).toBeTruthy();
+    expect(screen.queryByText(/Last contact/)).toBeNull();
     // The composite is gone: it was PO-F-3's MAX over contacts, so one
     // talkative contact spoke for the account and "41/100" read as a verdict.
     expect(screen.queryByText(/41\/100/)).toBeNull();
@@ -1420,8 +1416,9 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );
     // org360's backstop omits `strength` entirely, which is what an account
-    // with no readable contacts looks like: never contacted, no score.
-    expect(screen.getByText("Never contacted")).toBeTruthy();
+    // with no readable contacts looks like: no way in named, and no score
+    // standing in for one.
+    expect(screen.queryByText(/Way in/)).toBeNull();
     expect(screen.queryByText(/^0 ·/)).toBeNull();
   });
 });
@@ -1961,7 +1958,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // its place — whether to sell here at all is a different question from
     // what is running today.
     expect(stack?.textContent).toContain("What they are worth to you");
-    expect(stack?.textContent).toContain("What is in flight");
+    expect(stack?.textContent).toContain("No open deals");
 
     // What Margince spotted reads in the WORK column, beside the rest of what
     // wants a decision, rather than in the context column.

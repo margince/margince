@@ -177,6 +177,13 @@
   height: 46px;
   font-size: var(--fs-h2);
 }
+/* The mark of a record PAGE, the mock's 56px: the one picture in the head,
+   beside a display-size name. */
+.avatar-xl {
+  width: 56px;
+  height: 56px;
+  font-size: var(--fs-h2);
+}
 
 /* An avatar beside its label on one line — a list cell, a search hit, a node
    row. The label keeps the baseline it had before the mark joined it. */

@@ -432,7 +432,7 @@ export function Avatar({
    * table, `sm` in every list row and beside every name, `md` on a record
    * header, `lg` on a wide one.
    */
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   /**
    * What KIND of thing this chip stands for, which decides its shape.
    *

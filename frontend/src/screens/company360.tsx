@@ -355,11 +355,13 @@ export function CommercialPanel({
       <>
         {extra}
         {figures}
-        {/* `figures` covers `ready` alone. Every other state still owes the
-            reader a sentence — an empty section is a FACT about the account
-            and a withheld one is a fact about the reader, and a section that
-            fell silently blank would be read as neither. */}
-        {state !== "ready" && (
+        {/* `figures` covers `ready` alone, and the work group under these
+            figures says "no deals" with its own plate, so `empty` says nothing
+            here — twice is a pane that names one absence as two. Every other
+            state still owes the reader a sentence: a withheld section is a
+            fact about the reader, and one that fell silently blank would be
+            read as an empty account. */}
+        {state !== "ready" && state !== "empty" && (
           <PanelBody>
             <SurfaceState state={state} emptyLabel={t("co.deals.empty")}>
               {null}

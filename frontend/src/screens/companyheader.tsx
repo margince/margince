@@ -857,35 +857,12 @@ function companyWebsite(org: Organization): string | undefined {
   );
 }
 
-// CompanyIdentityLine is the header's two meta lines, under the name and its
-// lifecycle badge (which now sits on the name's own line — see RecordView's
-// `nameBadge`). The first names what the account is and who owns it — its
-// domain, its industry, its owner — as plain facts rather than pill chips;
-// the second, quieter, says when the record was made and when it was last
-// exchanged with. This replaces the four-row scatter the header used to draw
-// (name; a chip row; a "way in / they wrote / we wrote / agent: X" pulse
-// line; lifecycle and owner stranded in their own column at the top right),
-// which gave the reader four places to look for one fact each instead of two
-// lines to read in order: who this is, then when.
-//
-// Location and employee-band chips are dropped rather than moved: both
-// already have a home in the rail's Details grid (companyraildetails.tsx),
-// so drawing them here a second time would be the same fact stated twice
-// rather than a real loss.
-//
-// `agent: deepread`-style record provenance no longer renders here. It was
-// CompanyPulse's ProvenanceTag on `org.captured_by` — who/what wrote the
-// ORGANIZATION ROW itself, not a fact about any field on this line — and
-// nothing at this level of the mockup shows anything like it. There is
-// currently no rail section that owns record-level provenance to move it
-// to; removing it here is a real loss of that passive display (the fact
-// still lives in the record's full history), flagged rather than papered
-// over.
-//
-// The account's "way in" (the contact who carries the relationship,
-// previously StrengthPulse) is dropped for the same reason and the same
-// caveat: nothing in the identity line's mockup shape has room for it, and
-// no other surface on this page currently states it.
+// CompanyIdentityLine is the header's ONE line of facts under the name and
+// its standing, the mock's `gfacts`: the way in, where the account is, what it
+// does, how big it is, who owns it here, and the strongest contact. Facts
+// about the ACCOUNT, then, last and quietest, when the row itself was
+// written and by whom — the readings row under the tabs carries the pipeline
+// and the last touch, so neither is repeated here.
 export function CompanyIdentityLine({
   org,
   view,
@@ -893,65 +870,19 @@ export function CompanyIdentityLine({
 }: Readonly<{
   org: Organization;
   view?: Organization360View;
-  // Still fetching the composite read: the exchange date is withheld the
-  // same way it is when the section itself is withheld, so a page mid-load
-  // never reads as an account nobody has ever written to.
   loading?: boolean;
 }>) {
   const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
-  const viewerId = useViewerId();
-  const recordZone = useRecordZone();
-  // WHO wrote this record, by name. The roster is the page's existing one —
-  // CompanyOwnerControl on the line above already reads it, and both share
-  // react-query's `["users"]` entry, so this adds no request.
-  //
-  // Undefined on a roster miss, deliberately: `ProvenanceTag` falls back to
-  // "typed by a person", which is true. The roster walk is bounded, and an
-  // author it never reached — or one deactivated out of the list since — would
-  // otherwise be named with the raw uuid the generic reference renders, and
-  // "typed by 3f2b8c…" is worse than not claiming to know, not better.
   const roster = useRoster("user", true);
-  const authorName = (userId: string) => {
-    const entry = roster.data?.find((candidate) => candidate.id === userId);
-    return entry && "display_name" in entry ? entry.display_name : undefined;
-  };
-  // Withheld or still in flight, the line says nothing about it: naming no way
-  // in on an account that has one is worse than saying nothing.
+  const owner = org.owner_id
+    ? roster.data?.find((candidate) => candidate.id === org.owner_id)
+    : undefined;
+  const ownerName =
+    owner && "display_name" in owner ? owner.display_name : undefined;
   const wayIn = loading ? undefined : view?.strength;
-  const when = (at: string) => formatDateAbbrev(at, locale, recordZone);
-  // Withheld, absent, or still in flight, the line says nothing about it at
-  // all: "never contacted" read off data the page could not answer is a
-  // business conclusion it has no basis for, and it is the one a rep would
-  // act on.
-  const touchKnown = Boolean(
-    view && !loading && !view.sections_omitted?.includes("last_touch"),
-  );
-  // The two directions folded into the later of the two, now that acting on
-  // WHICH side wrote last belongs to the daily brief rather than the header
-  // (the brief's own detail line still names direction). The header states
-  // only that the relationship is or is not live.
-  //
-  // The COPY says "either way" for that reason. Read as "last exchange" the
-  // number looked like it disagreed with the health card beside it, which
-  // counts inbound alone: a rep who wrote yesterday and has had nothing back
-  // for a month sees one day here and a month there, both true and apparently
-  // contradictory. Naming the fold is what makes them read as two answers to
-  // two questions.
-  const inbound = view?.last_inbound_at;
-  const outbound = view?.last_outbound_at;
-  const lastExchange =
-    inbound && outbound
-      ? inbound > outbound
-        ? inbound
-        : outbound
-      : (inbound ?? outbound);
   const website = companyWebsite(org);
-  // What the account IS and who owns it, as plain facts rather than pill
-  // chips — built as a list rather than three fixed slots because website
-  // and industry are each legitimately absent, and a fixed "· ·" either
-  // side of a missing fact would leave a stray separator.
   const facts: ReactElement[] = [];
   if (website) {
     facts.push(
@@ -960,14 +891,26 @@ export function CompanyIdentityLine({
       </a>,
     );
   }
+  if (org.address?.city) {
+    facts.push(<span key="city">{org.address.city}</span>);
+  }
   if (org.industry) {
     facts.push(<span key="industry">{org.industry}</span>);
   }
-  // The way in joins the site and the industry: all three say what the account
-  // IS. The DATES — the last word exchanged, and when the row was written —
-  // read together on the quiet line under them, because a date is a different
-  // kind of fact from a name and mixing the two made one long run-on line that
-  // wrapped wherever the window happened to end.
+  if (org.size_band) {
+    facts.push(
+      <span key="size">{t("co.pulse.sizeBand", { band: org.size_band })}</span>,
+    );
+  }
+  // An owner named only once the roster can name them: "Unassigned" while the
+  // roster is still loading would call a real owner gone.
+  if (!org.owner_id || ownerName) {
+    facts.push(
+      <span key="owner">
+        {t("co.pulse.owner")} <b>{ownerName ?? t("co.pulse.unowned")}</b>
+      </span>,
+    );
+  }
   if (wayIn?.contributor_person_id) {
     facts.push(
       <span key="wayin">
@@ -979,6 +922,7 @@ export function CompanyIdentityLine({
       </span>,
     );
   }
+  facts.push(<CompanyRecordProvenance key="provenance" org={org} />);
   return (
     <div className="co-identity-meta">
       <div className="co-meta-line">
@@ -989,35 +933,36 @@ export function CompanyIdentityLine({
           </Fragment>
         ))}
       </div>
-      {/* When the ROW was written and by whom, which is a fact about the
-          record rather than about the account. It reads quieter and last,
-          under the account's own facts, because a reader chasing the account
-          is not chasing its audit trail. */}
-      <div className="co-meta-line co-meta-quiet">
-        {/* WHEN, on one line: the last word exchanged and the day the row was
-            written are both dates, and split across two lines they read as two
-            separate claims about the account rather than as its timeline. */}
-        {touchKnown && (
-          <>
-            <span>
-              {lastExchange
-                ? t("co.pulse.lastExchange", { when: when(lastExchange) })
-                : t("co.pulse.neverTouched")}
-            </span>
-            <span className="co-sep">·</span>
-          </>
-        )}
-        <span>{t("co.pulse.created", { when: when(org.created_at) })}</span>
-        {/* WHO wrote the record, beside WHEN it was written: a mark about the
-            row itself rather than about any field on it, so it belongs with
-            the record's own dates and not on the line that says what the
-            account is. */}
-        <ProvenanceTag
-          provenance={provenanceOf(org.captured_by, viewerId)}
-          renderUser={authorName}
-        />
-      </div>
     </div>
+  );
+}
+
+// When the record's row was written and by whom: the governance reading the
+// provenance tag exists for, on every record page. A fact about the ROW rather
+// than about the account, so it closes the line in the meta ink rather than
+// opening it.
+function CompanyRecordProvenance({ org }: Readonly<{ org: Organization }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const viewerId = useViewerId();
+  const recordZone = useRecordZone();
+  const roster = useRoster("user", true);
+  const authorName = (userId: string) => {
+    const entry = roster.data?.find((candidate) => candidate.id === userId);
+    return entry && "display_name" in entry ? entry.display_name : undefined;
+  };
+  return (
+    <span className="co-record-provenance">
+      <span>
+        {t("co.pulse.created", {
+          when: formatDateAbbrev(org.created_at, locale, recordZone),
+        })}
+      </span>
+      <ProvenanceTag
+        provenance={provenanceOf(org.captured_by, viewerId)}
+        renderUser={authorName}
+      />
+    </span>
   );
 }
 
