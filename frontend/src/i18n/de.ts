@@ -8067,6 +8067,8 @@ export const de = {
   "worklist.verb.draft_email": "Zum Schreiben öffnen",
   "worklist.verb.draft_email_now": "E-Mail entwerfen",
   "worklist.deal.closes": "Abschluss {date}",
+  "worklist.when.starts": "beginnt {when}",
+  "worklist.when.due": "fällig {when}",
   "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
   "worklist.batch.unnamedCause": "Etwas",
   "person.readings.title": "Wo dieser Kontakt steht",

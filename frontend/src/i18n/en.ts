@@ -8153,6 +8153,8 @@ export const en = {
   "worklist.verb.draft_email": "Open to write",
   "worklist.verb.draft_email_now": "Draft the email",
   "worklist.deal.closes": "closes {date}",
+  "worklist.when.starts": "starts {when}",
+  "worklist.when.due": "due {when}",
   "worklist.batch.system_incident": "{cause} failed {count} times",
   "worklist.batch.unnamedCause": "Something",
   "person.readings.title": "Where this contact stands",

@@ -7966,6 +7966,8 @@ export const vi = {
   "worklist.verb.draft_email": "Mở để viết",
   "worklist.verb.draft_email_now": "Soạn email",
   "worklist.deal.closes": "chốt {date}",
+  "worklist.when.starts": "bắt đầu {when}",
+  "worklist.when.due": "đến hạn {when}",
   "worklist.batch.system_incident": "{cause} đã lỗi {count} lần",
   "worklist.batch.unnamedCause": "Một tác vụ",
   "person.readings.title": "Vị thế của liên hệ này",

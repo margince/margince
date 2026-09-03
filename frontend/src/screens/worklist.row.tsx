@@ -27,6 +27,7 @@ import {
   phrasedReasons,
   reasonText,
   rowHref,
+  whenText,
 } from "./worklist.copy";
 import { DispositionVerbs } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
@@ -94,6 +95,10 @@ export function WorklistRow({
   const title = itemTitle(item, t, locale);
   const facts = dealFactsText(item, t, locale, zone);
   const sample = namedMembers(item);
+  // The clock this row is racing. A meeting said "starting shortly" whether it
+  // began in four minutes or in fifty, and a task said "Overdue" without saying
+  // by how long — on the two rows whose whole claim is a moment.
+  const when = whenText(item, t, locale, zone, new Date());
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers.
   const because = phrasedReasons(item)
@@ -172,6 +177,10 @@ export function WorklistRow({
           // untrusted group is worse than the pile it replaced.
           <p className="t-caption worklist-row-sample">{sample.join(" · ")}</p>
         )}
+        {/* When it starts, or when it is due. Above the reasons because it is
+            the fact those reasons are ABOUT: "starting shortly" explains a
+            rank, and this says what time. */}
+        {when && <p className="t-caption worklist-row-when">{when}</p>}
         {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
         {because && <p className="t-caption worklist-row-because">{because}</p>}
         {/* What it costs to do nothing. The question a queue exists to answer,
