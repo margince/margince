@@ -1201,6 +1201,25 @@ export const en = {
   "contracts.form.errTermOrder": "A term cannot end before it starts.",
   "contracts.add": "Add a contract",
   "contracts.rowMenu": "Contract actions",
+  "contracts.renew.title": "Renew this agreement",
+  "contracts.renew.hint":
+    "Creates a new agreement and marks this one superseded. Its own terms — nothing carries over but the counterparty.",
+  "contracts.renew.submit": "Renew",
+  "contracts.statusChange.title": "Change status",
+  "contracts.statusChange.label": "New status",
+  "contracts.statusChange.submit": "Change status",
+  "contracts.cancel.title": "Record cancellation",
+  "contracts.cancel.hint":
+    "The customer stays under contract until the effective date — this records notice, not a state change.",
+  "contracts.cancel.noticeOn": "Notice given",
+  "contracts.cancel.effectiveOn": "Takes effect",
+  "contracts.cancel.effectiveOnHint":
+    "Not after the term ends, and not before the notice date.",
+  "contracts.cancel.submit": "Record cancellation",
+  "contracts.cancel.menuLabel": "Cancel",
+  "contracts.cancel.errIncomplete": "Both dates are needed.",
+  "contracts.cancel.errOrder":
+    "Cancellation cannot take effect before notice was given.",
   "contracts.value.perYear": "per year",
   "contracts.value.total": "for the whole term",
   "contracts.files": "Files",

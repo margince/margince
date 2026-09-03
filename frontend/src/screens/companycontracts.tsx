@@ -19,6 +19,12 @@ import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import { ContractForm } from "./contractform";
+import {
+  ContractCancelModal,
+  ContractRenewModal,
+  ContractStatusModal,
+  isTerminalContractStatus,
+} from "./contractlifecycle";
 import { useContractPaper } from "./contractpaper";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -99,6 +105,12 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
   const mayAdd = useCanWrite("contract", "create");
   const mayEdit = useCanWrite("contract", "update");
   const mayArchive = useCanWrite("contract", "delete");
+  // Renew asserts BOTH grants at once (Store.Renew, contract_lifecycle.go: it
+  // requires contract_write's create AND contract_lifecycle's update in one
+  // call, because a renewal both creates the successor and supersedes the
+  // predecessor) — so a seat holding only one of them would see the verb and
+  // have every press refused.
+  const mayRenew = mayAdd && mayEdit;
   const [activeOnly, setActiveOnly] = useState(false);
   // `editing` carries the contract being corrected; undefined means the form is
   // adding a new one. One form serves both, because "record what we agreed" and
@@ -195,6 +207,7 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
                 orgId={orgId}
                 mayWrite={mayEdit}
                 mayArchive={mayArchive}
+                mayRenew={mayRenew}
                 onEdit={() => {
                   setEditing(contract);
                   setFormOpen(true);
@@ -219,19 +232,33 @@ function ContractRow({
   orgId,
   mayWrite,
   mayArchive,
+  mayRenew,
   onEdit,
 }: Readonly<{
   contract: Contract;
   orgId: string;
   mayWrite: boolean;
   mayArchive: boolean;
+  mayRenew: boolean;
   onEdit: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState(false);
+  const [renewing, setRenewing] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const basis = basisLabel(contract);
+  // refuseRenewalOfTerminal (contract_lifecycle.go): the ONE status renewal
+  // itself refuses is superseded — a chain must stay single-headed. Every
+  // other terminal status (expired, cancelled) is the normal way a lapsed
+  // agreement gets a successor, so renewal stays offered there.
+  const mayRenewThis = mayRenew && contract.status !== "superseded";
+  // A terminal status has no valid transition out of it but a same-status
+  // no-op (refuseInvalidTransition), so change-status and cancel are withheld
+  // rather than offered as controls that can only refuse.
+  const terminal = isTerminalContractStatus(contract.status);
 
   // The id is a VARIABLE, never closed over: a click landing before React
   // re-arms the mutation would otherwise archive whatever the previous render
@@ -292,7 +319,7 @@ function ContractRow({
             {t(STATUS_LABELS[contract.status])}
           </Badge>
         )}
-        {(mayWrite || mayArchive) && (
+        {(mayWrite || mayArchive || mayRenewThis) && (
           <OverflowMenu label={t("contracts.rowMenu")}>
             {/* Menu items are Buttons, like every other menu in the product.
                 A bare <button> here drew as centred unstyled text inside a
@@ -300,6 +327,21 @@ function ContractRow({
             {mayWrite && (
               <Button small onClick={onEdit}>
                 {t("contracts.edit")}
+              </Button>
+            )}
+            {mayRenewThis && (
+              <Button small onClick={() => setRenewing(true)}>
+                {t("contracts.renew.submit")}
+              </Button>
+            )}
+            {mayWrite && !terminal && (
+              <Button small onClick={() => setChangingStatus(true)}>
+                {t("contracts.statusChange.submit")}
+              </Button>
+            )}
+            {mayWrite && !terminal && (
+              <Button small onClick={() => setCancelling(true)}>
+                {t("contracts.cancel.menuLabel")}
               </Button>
             )}
             {mayArchive && (
@@ -310,6 +352,22 @@ function ContractRow({
           </OverflowMenu>
         )}
       </div>
+      <ContractRenewModal
+        orgId={orgId}
+        contract={contract}
+        open={renewing}
+        onClose={() => setRenewing(false)}
+      />
+      <ContractStatusModal
+        contract={contract}
+        open={changingStatus}
+        onClose={() => setChangingStatus(false)}
+      />
+      <ContractCancelModal
+        contract={contract}
+        open={cancelling}
+        onClose={() => setCancelling(false)}
+      />
       <ConfirmModal
         open={asking}
         onClose={() => setAsking(false)}
