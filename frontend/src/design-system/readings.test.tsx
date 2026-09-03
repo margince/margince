@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { Globe, MapPin } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
-import { Chip, Meter, Sparkline } from "./readings";
+import { BarList, Chip, Meter, Sparkline } from "./readings";
 
 afterEach(cleanup);
 
@@ -160,5 +160,83 @@ describe("Chip is a fact, and a link when the fact has somewhere to go", () => {
     const link = screen.getByRole("link", { name: "glazedfrog.example" });
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noreferrer");
+  });
+});
+
+describe("BarList", () => {
+  const rows = [
+    { key: "a", label: "Qualified", value: 40, amount: "40" },
+    { key: "b", label: "Proposal", value: 10, amount: "10" },
+  ] as const;
+
+  function bars(container: HTMLElement): readonly HTMLElement[] {
+    return [...container.querySelectorAll<HTMLElement>(".meterbar span")];
+  }
+
+  // The point of a list over N separate Meters: one denominator. Drawn against
+  // itself each row fills its own track and the list says every stage is equal,
+  // which is the opposite of what a ranking is for.
+  it("draws every bar against one denominator, not against itself", () => {
+    const { container } = render(<BarList rows={rows} label="Deals by stage" />);
+    const [first, second] = bars(container);
+    expect(first.style.width).toBe("100%");
+    expect(second.style.width).toBe("25%");
+  });
+
+  // A caller's whole is the denominator where the rows do not reach it: four
+  // stages of a hundred-deal pipeline must not each read as the whole pipeline.
+  it("takes the caller's whole as the denominator when it exceeds every row", () => {
+    const { container } = render(
+      <BarList rows={rows} label="Deals by stage" max={80} />,
+    );
+    const [first, second] = bars(container);
+    expect(first.style.width).toBe("50%");
+    expect(second.style.width).toBe("12.5%");
+  });
+
+  // A max BELOW the largest row would pin several rows at the clamp, and a list
+  // where three rows all read as full is one that has stopped comparing
+  // anything. The larger of the two wins, so the shares stay honest.
+  it("never lets a max below the largest row flatten the list", () => {
+    const { container } = render(
+      <BarList rows={rows} label="Deals by stage" max={5} />,
+    );
+    const [first, second] = bars(container);
+    expect(first.style.width).toBe("100%");
+    expect(second.style.width).toBe("25%");
+    expect(first.style.width).not.toBe(second.style.width);
+  });
+
+  // The bars are aria-hidden, so the table is the ONLY thing a screen reader
+  // gets. Every row's label and figure has to be in it or that reader is handed
+  // a caption and nothing else.
+  it("puts every row's label and amount in the table equivalent", () => {
+    render(<BarList rows={rows} label="Deals by stage" />);
+    const table = screen.getByRole("table", { name: "Deals by stage" });
+    for (const row of rows) {
+      expect(table.textContent).toContain(row.label);
+      expect(table.textContent).toContain(row.amount);
+    }
+  });
+
+  // Two rows may legitimately read the same. Keyed by display text one of them
+  // would disappear, so the list keys on identity and both rows draw.
+  it("draws two rows that share a label", () => {
+    const sameName = [
+      { key: "one", label: "Qualified", value: 3, amount: "3" },
+      { key: "two", label: "Qualified", value: 1, amount: "1" },
+    ] as const;
+    const { container } = render(
+      <BarList rows={sameName} label="Deals by stage" />,
+    );
+    expect(bars(container)).toHaveLength(2);
+  });
+
+  // An empty report is a real answer and must not be a crash: no rows means a
+  // zero denominator, which is the division this would otherwise do.
+  it("renders no bars and no NaN when there is nothing to rank", () => {
+    const { container } = render(<BarList rows={[]} label="Deals by stage" />);
+    expect(bars(container)).toHaveLength(0);
+    expect(container.textContent).not.toContain("NaN");
   });
 });
