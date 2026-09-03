@@ -228,6 +228,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // the same object those keys do.
   "lead.marker",
 
+  // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
+  // exactly as en does. Translating it would name a field no mail client
+  // labels that way.
+  "email.detail.cc",
+
   // Other cases verified individually against the source.
   "shell.logoAria",
   "ob.conv.connect.scopeMicrosoft",
