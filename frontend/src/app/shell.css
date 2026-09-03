@@ -674,7 +674,6 @@
   border-color: var(--borderSubtle);
   color: var(--textPrimary);
   font-weight: var(--fw-semibold);
-  box-shadow: var(--shadow-sm);
 }
 .rail .navitem.active svg {
   color: var(--accentText);
