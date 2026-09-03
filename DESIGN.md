@@ -343,8 +343,12 @@ one present, none at full depth:
   the filled verb that does it); the agent's suggestion is the second row
   of the same list, not a card beside it; then the tasks, the call as the
   task of preparing it. Below it Deals, three rows.
-- **Right column**: the ask field, About (the lead sentence, one paragraph,
-  its sources, "Profile" for the rest), People as chips with a "+N".
+- **Right column**: Ask as a pane of **prepared questions** (four the record
+  can answer today — "What changed since I last looked?", "Why is Rostock
+  stalled?" — each a full-width row on `--bg3` that tints indigo on hover;
+  no free-text field until the answers earn one), About (the lead sentence,
+  one paragraph, its sources, "Profile" for the rest), People as chips with
+  a "+N".
 - **The details panel is hidden until asked**, and the Details control in
   the top bar opens it on the right at 300px with the fields, the people and
   the tags. It is the only thing on the glance that starts closed.
@@ -373,7 +377,7 @@ glance line for line; what changes is the content of each slot.
 | In the 360 | the spine | the spine | the stage stepper, then the spine | the ladder, then the spine |
 | Needs-list lead | Your move | The move the call names | Margince found this, then the staged change | Ready to qualify (no agent tint: a lead carries no suggestions) |
 | Second left pane | Deals | The deal she decides, with the room | The buying committee, with the cover gap | The score as factors |
-| Right column | Ask · About · People | Ask · Understanding her · Around her | Ask · What this deal is · Offers · Deal Room | Ask · If she is qualified · What she asked for |
+| Right column | Ask (prepared questions) · About · People | Ask · Understanding her · Around her | Ask · What this deal is · Offers · Deal Room | Ask · If she is qualified · What she asked for |
 | Tabs | Overview · History · People · Deals · Tasks · Finance · Documents · Profile · Partner | Overview · History · Network · Deals · Meetings · Data & tools · Documents | Overview · History · Documents | Overview · History |
 
 The test: a rep back from a week away reads the glance in ten seconds and
