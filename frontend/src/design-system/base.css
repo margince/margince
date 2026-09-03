@@ -164,11 +164,12 @@
 .btn-ghost {
   background: var(--pane);
   color: var(--textPrimary);
-  border-color: var(--borderSubtle);
+  /* The control boundary, not the hairline: on the near-white pane the
+     hairline sits under the 3:1 floor a control's edge owes (tokens.css). */
+  border-color: var(--borderControl);
 }
 .btn-ghost:hover {
   background: var(--bgHover);
-  border-color: var(--borderControl);
 }
 /* A button that TOGGLES has to show which way it is set. `aria-pressed` is the
    fact — it is already on every toggle in the tree — but nothing drew it, so a
