@@ -101,6 +101,13 @@ var activityProjection = []activityColumn{
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
 
+// activityLive is the not-archived predicate, for the alias every read of this
+// table uses. One spelling, because three list builders composed it as a
+// string literal and a fourth would have been the fourth chance to type it
+// differently — a read that filtered on the wrong column would quietly serve
+// archived rows rather than fail.
+const activityLive = "a.archived_at IS NULL"
+
 // activityColumns renders the select list. contentArm is the predicate
 // auth.ActivityAudienceArm rendered for this query's arguments, which is why
 // the final column's SQL cannot be a constant.

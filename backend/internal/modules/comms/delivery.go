@@ -24,7 +24,28 @@ import (
 type Delivery struct {
 	ID         ids.UUID
 	ActivityID ids.ActivityID
-	UserID     ids.UserID
+	// UserID is the human whose mailbox sends this. ZERO for a controller
+	// message, which is not sent BY anybody: the installation writes in its own
+	// name, so there is no seat to check and no mailbox grant to intersect.
+	UserID ids.UserID
+	// SenderKind is "user" or "controller", and it decides which gates apply.
+	// See senderProfile: a controller row has no seat, no OAuth scope and no
+	// attachments, so asking those questions about it would refuse every
+	// message for the absence of things it was never meant to have.
+	SenderKind string
+	// TemplateKey and TemplateVersion name the registered wording a controller
+	// message was rendered from. A controller send carries no caller-supplied
+	// subject or body.
+	TemplateKey     string
+	TemplateVersion int
+	// PayloadRef points at the one-time link material in the key vault. The
+	// transport that fetches it at dispatch, renders it into the body in memory
+	// and retires it afterwards lands with the controller relay; what holds
+	// today is that Art. 17 destroys the material and clears this reference.
+	PayloadRef       string
+	PayloadExpiresAt *time.Time
+	// LinkID is the confirm_token this message carries, when it carries one.
+	LinkID     ids.UUID
 	Provider   string
 	MessageID  string
 	Recipients []string
@@ -86,3 +107,15 @@ func (d Delivery) ChannelRecipient() string {
 	}
 	return *d.ChannelUserID
 }
+
+// SenderController and SenderUser are the two kinds of outbound sender.
+const (
+	// SenderUser is a message from a human's own mailbox.
+	SenderUser = "user"
+	// SenderController is a message from the installation itself.
+	SenderController = "controller"
+)
+
+// IsController reports whether this delivery is the installation writing in its
+// own name rather than a person writing from their mailbox.
+func (d Delivery) IsController() bool { return d.SenderKind == SenderController }

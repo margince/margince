@@ -5470,6 +5470,102 @@ func (e FinanceSummaryState) Valid() bool {
 	}
 }
 
+// Defines values for ForecastAssuranceReadiness.
+const (
+	ForecastAssuranceChecksIncomplete    ForecastAssuranceReadiness = "checks_incomplete"
+	ForecastAssuranceNeedsReview         ForecastAssuranceReadiness = "needs_review"
+	ForecastAssuranceReady               ForecastAssuranceReadiness = "ready"
+	ForecastAssuranceReadyWithExceptions ForecastAssuranceReadiness = "ready_with_exceptions"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceReadiness enum.
+func (e ForecastAssuranceReadiness) Valid() bool {
+	switch e {
+	case ForecastAssuranceChecksIncomplete:
+		return true
+	case ForecastAssuranceNeedsReview:
+		return true
+	case ForecastAssuranceReady:
+		return true
+	case ForecastAssuranceReadyWithExceptions:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceStatus.
+const (
+	ForecastAssuranceStatusComplete   ForecastAssuranceStatus = "complete"
+	ForecastAssuranceStatusIncomplete ForecastAssuranceStatus = "incomplete"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceStatus enum.
+func (e ForecastAssuranceStatus) Valid() bool {
+	switch e {
+	case ForecastAssuranceStatusComplete:
+		return true
+	case ForecastAssuranceStatusIncomplete:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceSourceSource.
+const (
+	ForecastAssuranceSourceSourceCalendar  ForecastAssuranceSourceSource = "calendar"
+	ForecastAssuranceSourceSourceContracts ForecastAssuranceSourceSource = "contracts"
+	ForecastAssuranceSourceSourceDocuments ForecastAssuranceSourceSource = "documents"
+	ForecastAssuranceSourceSourceIncumbent ForecastAssuranceSourceSource = "incumbent"
+	ForecastAssuranceSourceSourceMail      ForecastAssuranceSourceSource = "mail"
+	ForecastAssuranceSourceSourceOffers    ForecastAssuranceSourceSource = "offers"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceSourceSource enum.
+func (e ForecastAssuranceSourceSource) Valid() bool {
+	switch e {
+	case ForecastAssuranceSourceSourceCalendar:
+		return true
+	case ForecastAssuranceSourceSourceContracts:
+		return true
+	case ForecastAssuranceSourceSourceDocuments:
+		return true
+	case ForecastAssuranceSourceSourceIncumbent:
+		return true
+	case ForecastAssuranceSourceSourceMail:
+		return true
+	case ForecastAssuranceSourceSourceOffers:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastAssuranceSourceState.
+const (
+	ForecastAssuranceSourceStateChecked           ForecastAssuranceSourceState = "checked"
+	ForecastAssuranceSourceStatePermissionLimited ForecastAssuranceSourceState = "permission_limited"
+	ForecastAssuranceSourceStateStale             ForecastAssuranceSourceState = "stale"
+	ForecastAssuranceSourceStateUnavailable       ForecastAssuranceSourceState = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceSourceState enum.
+func (e ForecastAssuranceSourceState) Valid() bool {
+	switch e {
+	case ForecastAssuranceSourceStateChecked:
+		return true
+	case ForecastAssuranceSourceStatePermissionLimited:
+		return true
+	case ForecastAssuranceSourceStateStale:
+		return true
+	case ForecastAssuranceSourceStateUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastCallScopeKind.
 const (
 	ForecastCallScopeKindOwner     ForecastCallScopeKind = "owner"
@@ -5848,6 +5944,72 @@ func (e IngestVoiceCorpusSourceRequestRegister) Valid() bool {
 	case IngestVoiceCorpusSourceRequestRegisterSocial:
 		return true
 	case IngestVoiceCorpusSourceRequestRegisterSpoken:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputCheckSeverity.
+const (
+	InputCheckSeverityHigh   InputCheckSeverity = "high"
+	InputCheckSeverityLow    InputCheckSeverity = "low"
+	InputCheckSeverityMedium InputCheckSeverity = "medium"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckSeverity enum.
+func (e InputCheckSeverity) Valid() bool {
+	switch e {
+	case InputCheckSeverityHigh:
+		return true
+	case InputCheckSeverityLow:
+		return true
+	case InputCheckSeverityMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputCheckStatus.
+const (
+	InputCheckStatusExpired  InputCheckStatus = "expired"
+	InputCheckStatusOpen     InputCheckStatus = "open"
+	InputCheckStatusResolved InputCheckStatus = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckStatus enum.
+func (e InputCheckStatus) Valid() bool {
+	switch e {
+	case InputCheckStatusExpired:
+		return true
+	case InputCheckStatusOpen:
+		return true
+	case InputCheckStatusResolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputCheckSubjectKind.
+const (
+	InputCheckSubjectKindContract InputCheckSubjectKind = "contract"
+	InputCheckSubjectKindDeal     InputCheckSubjectKind = "deal"
+	InputCheckSubjectKindOffer    InputCheckSubjectKind = "offer"
+	InputCheckSubjectKindSignal   InputCheckSubjectKind = "signal"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckSubjectKind enum.
+func (e InputCheckSubjectKind) Valid() bool {
+	switch e {
+	case InputCheckSubjectKindContract:
+		return true
+	case InputCheckSubjectKindDeal:
+		return true
+	case InputCheckSubjectKindOffer:
+		return true
+	case InputCheckSubjectKindSignal:
 		return true
 	default:
 		return false
@@ -7662,22 +7824,22 @@ func (e OrganizationFactSuspectReason) Valid() bool {
 
 // Defines values for OrganizationGraphGroupsOmitted.
 const (
-	OrganizationGraphGroupsOmittedContacts  OrganizationGraphGroupsOmitted = "contacts"
-	OrganizationGraphGroupsOmittedDeals     OrganizationGraphGroupsOmitted = "deals"
-	OrganizationGraphGroupsOmittedIntroPath OrganizationGraphGroupsOmitted = "intro_path"
-	OrganizationGraphGroupsOmittedOurSide   OrganizationGraphGroupsOmitted = "our_side"
+	Contacts  OrganizationGraphGroupsOmitted = "contacts"
+	Deals     OrganizationGraphGroupsOmitted = "deals"
+	IntroPath OrganizationGraphGroupsOmitted = "intro_path"
+	OurSide   OrganizationGraphGroupsOmitted = "our_side"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationGraphGroupsOmitted enum.
 func (e OrganizationGraphGroupsOmitted) Valid() bool {
 	switch e {
-	case OrganizationGraphGroupsOmittedContacts:
+	case Contacts:
 		return true
-	case OrganizationGraphGroupsOmittedDeals:
+	case Deals:
 		return true
-	case OrganizationGraphGroupsOmittedIntroPath:
+	case IntroPath:
 		return true
-	case OrganizationGraphGroupsOmittedOurSide:
+	case OurSide:
 		return true
 	default:
 		return false
@@ -8449,6 +8611,36 @@ func (e PersonGraphNodeType) Valid() bool {
 	}
 }
 
+// Defines values for PersonGraphReceiptKind.
+const (
+	PersonGraphReceiptKindCall    PersonGraphReceiptKind = "call"
+	PersonGraphReceiptKindEmail   PersonGraphReceiptKind = "email"
+	PersonGraphReceiptKindMeeting PersonGraphReceiptKind = "meeting"
+	PersonGraphReceiptKindMessage PersonGraphReceiptKind = "message"
+	PersonGraphReceiptKindNote    PersonGraphReceiptKind = "note"
+	PersonGraphReceiptKindTask    PersonGraphReceiptKind = "task"
+)
+
+// Valid indicates whether the value is a known member of the PersonGraphReceiptKind enum.
+func (e PersonGraphReceiptKind) Valid() bool {
+	switch e {
+	case PersonGraphReceiptKindCall:
+		return true
+	case PersonGraphReceiptKindEmail:
+		return true
+	case PersonGraphReceiptKindMeeting:
+		return true
+	case PersonGraphReceiptKindMessage:
+		return true
+	case PersonGraphReceiptKindNote:
+		return true
+	case PersonGraphReceiptKindTask:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PersonGraphRouteAvailability.
 const (
 	PersonGraphRouteAvailabilityAlreadyRequested PersonGraphRouteAvailability = "already_requested"
@@ -8982,19 +9174,19 @@ func (e PersonRelationshipChangeToBucket) Valid() bool {
 
 // Defines values for PersonResearchClaimConfidence.
 const (
-	High     PersonResearchClaimConfidence = "high"
-	Medium   PersonResearchClaimConfidence = "medium"
-	Unstated PersonResearchClaimConfidence = "unstated"
+	PersonResearchClaimConfidenceHigh     PersonResearchClaimConfidence = "high"
+	PersonResearchClaimConfidenceMedium   PersonResearchClaimConfidence = "medium"
+	PersonResearchClaimConfidenceUnstated PersonResearchClaimConfidence = "unstated"
 )
 
 // Valid indicates whether the value is a known member of the PersonResearchClaimConfidence enum.
 func (e PersonResearchClaimConfidence) Valid() bool {
 	switch e {
-	case High:
+	case PersonResearchClaimConfidenceHigh:
 		return true
-	case Medium:
+	case PersonResearchClaimConfidenceMedium:
 		return true
-	case Unstated:
+	case PersonResearchClaimConfidenceUnstated:
 		return true
 	default:
 		return false
@@ -9775,6 +9967,36 @@ func (e RenewContractRequestValueBasis) Valid() bool {
 	case RenewContractRequestValueBasisAnnualized12m:
 		return true
 	case RenewContractRequestValueBasisTotal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResolveInputCheckOutcome.
+const (
+	AddedEvidence ResolveInputCheckOutcome = "added_evidence"
+	FixedRecord   ResolveInputCheckOutcome = "fixed_record"
+	NotRelevant   ResolveInputCheckOutcome = "not_relevant"
+	Reassign      ResolveInputCheckOutcome = "reassign"
+	RemindLater   ResolveInputCheckOutcome = "remind_later"
+	ValueCorrect  ResolveInputCheckOutcome = "value_correct"
+)
+
+// Valid indicates whether the value is a known member of the ResolveInputCheckOutcome enum.
+func (e ResolveInputCheckOutcome) Valid() bool {
+	switch e {
+	case AddedEvidence:
+		return true
+	case FixedRecord:
+		return true
+	case NotRelevant:
+		return true
+	case Reassign:
+		return true
+	case RemindLater:
+		return true
+	case ValueCorrect:
 		return true
 	default:
 		return false
@@ -12084,22 +12306,22 @@ func (e VoiceProfileEvaluationRepeatsPerPrompt) Valid() bool {
 
 // Defines values for VoiceProfileVersionReason.
 const (
-	VoiceProfileVersionReasonAutomatic  VoiceProfileVersionReason = "automatic"
-	VoiceProfileVersionReasonManual     VoiceProfileVersionReason = "manual"
-	VoiceProfileVersionReasonOnboarding VoiceProfileVersionReason = "onboarding"
-	VoiceProfileVersionReasonRollback   VoiceProfileVersionReason = "rollback"
+	Automatic  VoiceProfileVersionReason = "automatic"
+	Manual     VoiceProfileVersionReason = "manual"
+	Onboarding VoiceProfileVersionReason = "onboarding"
+	Rollback   VoiceProfileVersionReason = "rollback"
 )
 
 // Valid indicates whether the value is a known member of the VoiceProfileVersionReason enum.
 func (e VoiceProfileVersionReason) Valid() bool {
 	switch e {
-	case VoiceProfileVersionReasonAutomatic:
+	case Automatic:
 		return true
-	case VoiceProfileVersionReasonManual:
+	case Manual:
 		return true
-	case VoiceProfileVersionReasonOnboarding:
+	case Onboarding:
 		return true
-	case VoiceProfileVersionReasonRollback:
+	case Rollback:
 		return true
 	default:
 		return false
@@ -12621,19 +12843,19 @@ func (e WorklistItemConsequence) Valid() bool {
 
 // Defines values for WorklistItemDispositions.
 const (
-	WorklistItemDispositionsNotMine  WorklistItemDispositions = "not_mine"
-	WorklistItemDispositionsNotSales WorklistItemDispositions = "not_sales"
-	WorklistItemDispositionsSnooze   WorklistItemDispositions = "snooze"
+	WorklistDispositionNotMine  WorklistItemDispositions = "not_mine"
+	WorklistDispositionNotSales WorklistItemDispositions = "not_sales"
+	WorklistDispositionSnooze   WorklistItemDispositions = "snooze"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemDispositions enum.
 func (e WorklistItemDispositions) Valid() bool {
 	switch e {
-	case WorklistItemDispositionsNotMine:
+	case WorklistDispositionNotMine:
 		return true
-	case WorklistItemDispositionsNotSales:
+	case WorklistDispositionNotSales:
 		return true
-	case WorklistItemDispositionsSnooze:
+	case WorklistDispositionSnooze:
 		return true
 	default:
 		return false
@@ -14172,22 +14394,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -20944,6 +21166,45 @@ type FinanceInvoiceStatus string
 // and the reader is told it is not current.
 type FinanceSummaryState string
 
+// ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
+type ForecastAssurance struct {
+	AsOf time.Time `json:"as_of"`
+
+	// EligibleDeals How many deals the run evaluated, counted one per deal.
+	EligibleDeals   int  `json:"eligible_deals"`
+	EligibleSignals *int `json:"eligible_signals,omitempty"`
+
+	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
+	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
+	RunId     openapi_types.UUID          `json:"run_id"`
+
+	// Sources Every source the run tried, and how far it reached into each.
+	Sources []ForecastAssuranceSource `json:"sources"`
+
+	// Status `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+	Status ForecastAssuranceStatus `json:"status"`
+}
+
+// ForecastAssuranceReadiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
+type ForecastAssuranceReadiness string
+
+// ForecastAssuranceStatus `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
+type ForecastAssuranceStatus string
+
+// ForecastAssuranceSource defines model for ForecastAssuranceSource.
+type ForecastAssuranceSource struct {
+	// CheckedThrough How current the source was. Present only for a `checked` source: a date on an unread one would read as "checked up to then" when nothing was read at all.
+	CheckedThrough *time.Time                    `json:"checked_through,omitempty"`
+	Source         ForecastAssuranceSourceSource `json:"source"`
+	State          ForecastAssuranceSourceState  `json:"state"`
+}
+
+// ForecastAssuranceSourceSource defines model for ForecastAssuranceSource.Source.
+type ForecastAssuranceSourceSource string
+
+// ForecastAssuranceSourceState defines model for ForecastAssuranceSource.State.
+type ForecastAssuranceSourceState string
+
 // ForecastCall defines model for ForecastCall.
 type ForecastCall struct {
 	AmountMinor int64                 `json:"amount_minor"`
@@ -21653,6 +21914,41 @@ type IngestVoiceCorpusSourceRequestKind string
 
 // IngestVoiceCorpusSourceRequestRegister defines model for IngestVoiceCorpusSourceRequest.Register.
 type IngestVoiceCorpusSourceRequestRegister string
+
+// InputCheck One finding from the nightly input check.
+type InputCheck struct {
+	// AffectedMinor How much money the finding puts in question. Absent where that cannot be said — which is different from zero, and zero would claim nothing is at stake.
+	AffectedMinor *int64 `json:"affected_minor,omitempty"`
+
+	// Claim What the record says, as structured values only.
+	Claim       *map[string]interface{} `json:"claim,omitempty"`
+	Currency    *string                 `json:"currency,omitempty"`
+	FirstSeenAt time.Time               `json:"first_seen_at"`
+	Id          openapi_types.UUID      `json:"id"`
+
+	// LastSeenAt The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
+	LastSeenAt time.Time `json:"last_seen_at"`
+
+	// Observed What the check found, as structured values only.
+	Observed    *map[string]interface{} `json:"observed,omitempty"`
+	OwnerId     *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Severity    InputCheckSeverity      `json:"severity"`
+	Status      InputCheckStatus        `json:"status"`
+	SubjectId   openapi_types.UUID      `json:"subject_id"`
+	SubjectKind InputCheckSubjectKind   `json:"subject_kind"`
+
+	// Type Which question noticed it. The key set in `claim` and `observed` depends on this.
+	Type string `json:"type"`
+}
+
+// InputCheckSeverity defines model for InputCheck.Severity.
+type InputCheckSeverity string
+
+// InputCheckStatus defines model for InputCheck.Status.
+type InputCheckStatus string
+
+// InputCheckSubjectKind defines model for InputCheck.SubjectKind.
+type InputCheckSubjectKind string
 
 // InstallationSettings The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
 // changed only by admin/ops.
@@ -26214,9 +26510,19 @@ type PersonGraphNodeType string
 // PersonGraphReceipt defines model for PersonGraphReceipt.
 type PersonGraphReceipt struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
-	OccurredAt time.Time          `json:"occurred_at"`
-	Subject    *string            `json:"subject,omitempty"`
+
+	// Kind What the receipt is evidence OF. The graph counts attendees and organizers as well
+	// as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+	// that drew every one of them as an email would tell a reader a meeting was one.
+	Kind       PersonGraphReceiptKind `json:"kind"`
+	OccurredAt time.Time              `json:"occurred_at"`
+	Subject    *string                `json:"subject,omitempty"`
 }
+
+// PersonGraphReceiptKind What the receipt is evidence OF. The graph counts attendees and organizers as well
+// as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+// that drew every one of them as an email would tell a reader a meeting was one.
+type PersonGraphReceiptKind string
 
 // PersonGraphRoute The warmest way in, chosen deterministically rather than scored by a model: the
 // strongest direct relationship if one exists, otherwise the strongest relationship any
@@ -28099,6 +28405,27 @@ type RescheduleSendRequest struct {
 	ScheduledTz string    `json:"scheduled_tz"`
 }
 
+// ResolveInputCheck defines model for ResolveInputCheck.
+type ResolveInputCheck struct {
+	// EvidenceRef What was looked at, for an answer that rests on something.
+	EvidenceRef *string `json:"evidence_ref,omitempty"`
+
+	// ExpiresAt When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// Outcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
+	Outcome ResolveInputCheckOutcome `json:"outcome"`
+
+	// Reason Required for `value_correct` and `not_relevant`. Those hide the finding, and the next person to see the number is owed the reason it is not flagged.
+	Reason *string `json:"reason,omitempty"`
+
+	// RemindAt Required for `remind_later`, and must be in the future. A deferral with no date is a dismissal wearing a different word.
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+}
+
+// ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a person naming it would be saying the condition stopped being true without anything having looked.
+type ResolveInputCheckOutcome string
+
 // ResponseMetrics What the workspace did with its waiting work over one window. Two questions: how
 // fast it answered what it answered, and how much it put down instead.
 type ResponseMetrics struct {
@@ -28465,8 +28792,11 @@ type SearchResponse struct {
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
 	// CarriedBy For a `tag` hit only: how many people, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
-	CarriedBy *int               `json:"carried_by,omitempty"`
-	Id        openapi_types.UUID `json:"id"`
+	CarriedBy *int `json:"carried_by,omitempty"`
+
+	// EmailSummary The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not.
+	EmailSummary *EmailSummary      `json:"email_summary,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
 
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
@@ -35122,7 +35452,9 @@ type SubmitConfirmDetailsJSONBody struct {
 	// MarketingChoice Their answer. Omit entirely for no answer — a page view grants nothing.
 	MarketingChoice *SubmitConfirmDetailsJSONBodyMarketingChoice `json:"marketing_choice,omitempty"`
 
-	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant.
+	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a
+	// grant. Bounded because it is stored on the proof row and read back through the subject
+	// access export — the same bound is enforced server-side, and the two are one rule.'
 	MarketingWording *string `json:"marketing_wording,omitempty"`
 
 	// RequestErasure The subject asked to be removed. Files a request for a human; never erases directly.
@@ -36424,6 +36756,9 @@ type CreateFilteredExportJSONRequestBody = FilteredExportRequest
 
 // PreviewFilterJSONRequestBody defines body for PreviewFilter for application/json ContentType.
 type PreviewFilterJSONRequestBody = FilterPreviewRequest
+
+// ResolveInputCheckJSONRequestBody defines body for ResolveInputCheck for application/json ContentType.
+type ResolveInputCheckJSONRequestBody = ResolveInputCheck
 
 // RecordForecastCallJSONRequestBody defines body for RecordForecastCall for application/json ContentType.
 type RecordForecastCallJSONRequestBody = NewForecastCall
@@ -45190,6 +45525,15 @@ type ServerInterface interface {
 	// What a period is expected to close, and what the figure does not cover.
 	// (GET /forecast)
 	GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams)
+	// What last night's input check found, and how much of the pipeline it reached.
+	// (GET /forecast/assurance)
+	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
+	// The open findings this caller can see.
+	// (GET /forecast/assurance/exceptions)
+	ListInputChecks(w http.ResponseWriter, r *http.Request)
+	// Answer a finding from the nightly input check.
+	// (POST /forecast/assurance/exceptions/{id}/resolve)
+	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
 	RecordForecastCall(w http.ResponseWriter, r *http.Request)
@@ -47518,6 +47862,24 @@ func (_ Unimplemented) GetFilterVocabulary(w http.ResponseWriter, r *http.Reques
 // What a period is expected to close, and what the figure does not cover.
 // (GET /forecast)
 func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What last night's input check found, and how much of the pipeline it reached.
+// (GET /forecast/assurance)
+func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The open findings this caller can see.
+// (GET /forecast/assurance/exceptions)
+func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a finding from the nightly input check.
+// (POST /forecast/assurance/exceptions/{id}/resolve)
+func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58557,6 +58919,84 @@ func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecast(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastAssurance operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastAssurance(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListInputChecks operation middleware
+func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListInputChecks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveInputCheck operation middleware
+func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveInputCheck(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74662,6 +75102,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast", wrapper.GetForecast)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/assurance", wrapper.GetForecastAssurance)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/assurance/exceptions", wrapper.ListInputChecks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)

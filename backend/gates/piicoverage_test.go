@@ -304,7 +304,13 @@ var piiTables = map[string]piiHandling{
 	// say what it did with somebody's data and why; this table IS that answer
 	// for every message sent to them. Withholding it would mean holding the
 	// clearest record of the processing and declining to disclose it.
-	"communication_decision": {erasureWrite: true, sarRead: true},
+	// Why a contact exists: what the person did, or what was done to obtain
+	// them. Subject data, and the part of their file that answers "why do you
+	// have me at all" — which is Art. 15(1)(g), the source. Erased with them,
+	// and disclosed, because a subject told their consent state and not how
+	// they were acquired has been answered halfway.
+	"person_acquisition_evidence": {erasureWrite: true, sarRead: true},
+	"communication_decision":      {erasureWrite: true, sarRead: true},
 	// The non-consent basis a message stood on — the thing that happened, its
 	// scope and its window. Same reasoning: erased with the subject, and
 	// disclosed, because "we wrote to you because you wrote to us on 2 May" is

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/collections"
@@ -91,6 +92,7 @@ type (
 	noticesHandlers        = notices.Handlers
 	weeklyPlanHandlers     = weeklyplan.Handlers
 	forecastHandlers       = forecasting.Handlers
+	assuranceHandlers      = assurance.Handlers
 	introductionHandlers   = introductions.Handlers
 )
 

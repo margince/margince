@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Eyebrow } from "../design-system/eyebrow";
-import { hourInZone } from "../format/format";
+import { formatTimeOfDay, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { briefSentence } from "./brief.sentence";
 import type { BriefView } from "./brief.view";
@@ -78,6 +78,30 @@ export type GlanceFacts = Readonly<{
 
 export type GlanceProps = GlanceFacts;
 
+// The eyebrow names the view and, for the morning, the moment the queue below
+// was read. The as-of is the morning's alone: the weekly's numbers were frozen
+// when the week closed, and a time-of-day against them would date the reading
+// rather than the week. A morning whose queue has not arrived yet says the
+// scope by itself instead of naming a moment it does not know.
+function eyebrowText(
+  view: BriefView,
+  day: Worklist | undefined,
+  t: Translator,
+  locale: Locale,
+): string {
+  if (view === "weekly") {
+    return t("brief.eyebrow.weekly");
+  }
+  const scope = t("brief.eyebrow");
+  if (day === undefined) {
+    return scope;
+  }
+  return t("brief.eyebrow.asOf", {
+    scope,
+    at: formatTimeOfDay(day.as_of, locale, viewerZone()),
+  });
+}
+
 export function HomeGlance({ firstName, now, day, view }: GlanceProps) {
   const t = useT();
   const hour = hourInZone(now, viewerZone());
@@ -101,7 +125,7 @@ export function HomeGlance({ firstName, now, day, view }: GlanceProps) {
       {/* Scope and date, above the greeting. A span rather than a heading: the
           page has ONE h1 and this is its label, not a level of its own. */}
       <Eyebrow className="glance-eyebrow">
-        {t(view === "weekly" ? "brief.eyebrow.weekly" : "brief.eyebrow")}
+        {eyebrowText(view, day, t, locale)}
       </Eyebrow>
       <h1 className="glance-greeting t-display">{greeting}</h1>
       {sentence ? (

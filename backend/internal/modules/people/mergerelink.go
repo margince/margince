@@ -112,6 +112,21 @@ func relinkPersonReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		WHERE person_id = $1 AND archived_at IS NULL`, sourceID, targetID); err != nil {
 		return counts, fmt.Errorf("relink channel identities: %w", err)
 	}
+	// Why each contact existed follows the survivor, and both accounts are
+	// kept rather than one winning. Two records merging is two accounts of how
+	// this person was obtained — one wrote first, the other was imported — and
+	// the merged file is honestly the sum of them.
+	//
+	// Moved rather than copied, which matters for erasure: a row left on the
+	// merged-away person would be deleted by an erasure of THAT id and missed
+	// by an erasure of the survivor, so the evidence would outlive whichever
+	// request came second. Every satellite in this function moves for the same
+	// reason.
+	if _, err := tx.Exec(ctx, `
+		UPDATE person_acquisition_evidence SET person_id = $2
+		WHERE person_id = $1`, sourceID, targetID); err != nil {
+		return counts, fmt.Errorf("relink acquisition evidence: %w", err)
+	}
 	// The promotion outcome pointer follows the survivor so a
 	// re-promote 409 names a live person.
 	if _, err := tx.Exec(ctx,

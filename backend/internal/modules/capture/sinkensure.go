@@ -63,6 +63,11 @@ type EnsureRequest struct {
 	Source      string
 	CapturedBy  string
 	SuppressOrg bool // free-mail domain: person yes, company no
+	// Replied says this counterparty wrote to US. A record is also created for
+	// somebody we wrote to twice with no answer, and the two must not be
+	// recorded as the same act: only the first is the person initiating
+	// contact, and that is the strongest acquisition in the vocabulary.
+	Replied bool
 }
 
 // WithEnsurer returns a copy wired to the counterparty auto-create path.
@@ -105,6 +110,7 @@ func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedR
 		Source:      captureSource(rec),
 		CapturedBy:  decision.capturedBy,
 		SuppressOrg: decision.suppressOrg,
+		Replied:     decision.replied,
 	})
 	if err != nil {
 		s.logEnsureFault(ctx, rec, err)
@@ -120,7 +126,12 @@ func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedR
 // NOT done in that transaction: the timeline row must never be lost to a
 // resolver fault, and the 60 s capture budget must not wait on record creation.
 type counterpartyDecision struct {
-	create      bool
+	create bool
+	// replied says the counterparty wrote to US, rather than merely being
+	// written to twice. Both create a record; only the first is the person
+	// initiating contact, and the acquisition evidence must not claim the
+	// stronger fact for the weaker case.
+	replied     bool
 	suppressOrg bool
 	owner       ids.UUID
 	capturedBy  string
@@ -220,7 +231,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
-	exchanged, err := s.exchangedWith(ctx, tx, cp.Email)
+	exchanged, replied, err := s.exchangedHow(ctx, tx, cp.Email)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -232,6 +243,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// behind it. A single send is deferred rather than refused, so a real
 	// prospect written to once still becomes a contact, for a reason.
 	decision.create = corresponded && exchanged && s.recordWorthy(cp)
+	decision.replied = replied
 	roleMailbox := refusesToNameAPerson(cp.Email, exchanged)
 	if roleMailbox {
 		decision.create = false

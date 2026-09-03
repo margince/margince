@@ -94,10 +94,12 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"comment_posted": true, "thread_resolved": true, "decision_recorded": true,
 		// The receiving mail system returned a sent message. Named like
 		// sla_breached — the noun carries which half of comms it happened to.
-		"delivery_bounced": true,
-		"state_changed":    true,
-		"snapshot_created": true,
-		"profile_created":  true, "profile_updated": true, "profile_archived": true,
+		"delivery_bounced":   true,
+		"state_changed":      true,
+		"exception_resolved": true,
+		"assurance_created":  true,
+		"snapshot_created":   true,
+		"profile_created":    true, "profile_updated": true, "profile_archived": true,
 		"corpus_changed": true, "build_changed": true, "version_changed": true,
 		"draft_outcome_recorded": true,
 		// engagement.reply is the §5.11 spec-pinned type name (EVT-SEM-14):

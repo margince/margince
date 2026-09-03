@@ -214,3 +214,140 @@ type ForecastMovementDealResult struct {
 	AuditID     *string `json:"audit_id,omitempty"`
 	ApprovalID  *string `json:"approval_id,omitempty"`
 }
+
+// AssuranceReader answers what last night's input check found.
+type AssuranceReader func(ctx context.Context) (json.RawMessage, error)
+
+// RegisterAssuranceTool joins forecast_input_checks to the surface.
+func RegisterAssuranceTool(r *Registry, read AssuranceReader) {
+	r.Register(forecastInputChecks{read: read})
+}
+
+type forecastInputChecks struct {
+	read AssuranceReader
+}
+
+func (t forecastInputChecks) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "forecast_input_checks", Title: "What the forecast's inputs were checked against",
+		Version: toolVersionV1,
+		Description: "What last night's input check found, and how much of the pipeline it " +
+			"reached. A forecast is only as good as its inputs, and the failures are " +
+			"mundane: a close date that went by, an amount that disagrees with the offer " +
+			"that was sent, a deal nobody has heard from in ninety days. " +
+			"Read `readiness` before quoting any forecast figure. `checks_incomplete` is " +
+			"NOT a worse `needs_review` — one says the pipeline has problems, the other " +
+			"says we could not look, and reporting the first when the second is true tells " +
+			"somebody their pipeline is sound when nobody read the mailbox. " +
+			"`sources` says why: each carries the state the run reached, and only a " +
+			"`checked` source has a date. An absent or unread source means the run could " +
+			"not confirm anything from it, which is different from finding nothing there. " +
+			"`eligible_deals` is how much there was to check — compared against an earlier " +
+			"run it shows a pass that covered less of the pipeline.",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp:    "getForecastAssurance",
+		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		OutputSchema: schemaFor[ForecastAssuranceResult](),
+	}
+}
+
+func (t forecastInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+	noteDerivedContent(ctx)
+	return t.read(ctx)
+}
+
+// ForecastAssuranceResult is what forecast_input_checks answers with.
+type ForecastAssuranceResult struct {
+	RunID string `json:"run_id"`
+	AsOf  string `json:"as_of"`
+	// Status is complete or incomplete. An incomplete run still happened and
+	// still recorded what it reached.
+	Status string `json:"status"`
+	// Readiness is the verdict. checks_incomplete means nobody could look,
+	// which is a different answer from the pipeline having problems.
+	Readiness string `json:"readiness,omitempty"`
+	// EligibleDeals is how much there was to check, counted per deal.
+	EligibleDeals   int `json:"eligible_deals"`
+	EligibleSignals int `json:"eligible_signals,omitempty"`
+	// Sources are the sources the run tried, and how far it reached into each.
+	// A source absent from this list is one the run did not attempt — which is
+	// different from one it attempted and could not read, and the state field
+	// is where that distinction lives.
+	Sources []ForecastAssuranceSourceResult `json:"sources"`
+}
+
+// ForecastAssuranceSourceResult is one source and the state the run reached.
+type ForecastAssuranceSourceResult struct {
+	Source string `json:"source"`
+	State  string `json:"state"`
+	// CheckedThrough is present only for a `checked` source: a date on an
+	// unread one would claim coverage that did not happen.
+	CheckedThrough string `json:"checked_through,omitempty"`
+}
+
+// InputChecksReader answers the open findings this caller may see.
+type InputChecksReader func(ctx context.Context) (json.RawMessage, error)
+
+// RegisterInputChecksTool joins list_input_checks to the surface.
+func RegisterInputChecksTool(r *Registry, read InputChecksReader) {
+	r.Register(listInputChecks{read: read})
+}
+
+type listInputChecks struct {
+	read InputChecksReader
+}
+
+func (t listInputChecks) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "list_input_checks", Title: "What the forecast's inputs still need",
+		Version: toolVersionV1,
+		Description: "The open findings from the nightly input check, most material first. " +
+			"Read them before quoting a forecast figure: a close date that went by, or an " +
+			"amount that disagrees with the offer that was sent, makes a total wrong " +
+			"without making the arithmetic wrong. " +
+			"Scoped to what this caller can open, with no count of what was withheld — a " +
+			"count of what somebody may not read is itself a statement about how much " +
+			"there is. `affected_minor` absent means the money at stake cannot be said, " +
+			"not that nothing is at stake.",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp:    "listInputChecks",
+		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		OutputSchema: schemaFor[InputChecksResult](),
+	}
+}
+
+func (t listInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+	noteDerivedContent(ctx)
+	return t.read(ctx)
+}
+
+// InputChecksResult is what list_input_checks answers with.
+type InputChecksResult struct {
+	// Data are the open findings this caller can see, most material first.
+	Data []InputCheckResult `json:"data"`
+}
+
+// InputCheckResult is one finding.
+type InputCheckResult struct {
+	ID          string `json:"id"`
+	Type        string `json:"type"`
+	SubjectKind string `json:"subject_kind"`
+	SubjectID   string `json:"subject_id"`
+	Severity    string `json:"severity"`
+	// AffectedMinor is the money in question. Absent means it cannot be said,
+	// which is not the same as nothing being at stake.
+	AffectedMinor *int64 `json:"affected_minor,omitempty"`
+	Currency      string `json:"currency,omitempty"`
+	// Claim and Observed hold structured values whose keys depend on Type.
+	//
+	// Raw rather than a map: the key set is the exception TYPE's, not this
+	// struct's, and a schema generator has nothing to describe a free-form
+	// object with. Passing the stored bytes through also keeps this from
+	// becoming a second place that knows what each type stores.
+	Claim       json.RawMessage `json:"claim"`
+	Observed    json.RawMessage `json:"observed"`
+	FirstSeenAt string          `json:"first_seen_at"`
+	// LastSeenAt is the most recent run that still found it. Something seen for
+	// weeks is a different problem from something that appeared last night.
+	LastSeenAt string `json:"last_seen_at"`
+}
