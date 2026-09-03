@@ -4,10 +4,10 @@
   "per_agent_listing_budget": 17000,
   "whole_catalog_floor": 21000,
   "catalog": {
-    "tools": 67,
-    "tokens": 20926,
-    "median_tool_tokens": 273,
-    "mean_tool_tokens": 311
+    "tools": 68,
+    "tokens": 20998,
+    "median_tool_tokens": 271,
+    "mean_tool_tokens": 308
   },
   "agents": [
     {
@@ -71,7 +71,7 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 1213
+      "tokens": 1274
     },
     {
       "name": "preview_import",
@@ -114,10 +114,6 @@
       "tokens": 456
     },
     {
-      "name": "forecast_readings",
-      "tokens": 441
-    },
-    {
       "name": "progress_deal",
       "tokens": 435
     },
@@ -148,6 +144,10 @@
     {
       "name": "search_context",
       "tokens": 352
+    },
+    {
+      "name": "forecast_readings",
+      "tokens": 335
     },
     {
       "name": "prep_for_meeting",
@@ -320,6 +320,10 @@
     {
       "name": "whoami",
       "tokens": 136
+    },
+    {
+      "name": "data_coverage",
+      "tokens": 116
     },
     {
       "name": "list_tags",

@@ -36,7 +36,12 @@ import (
 type WaitingReply struct {
 	// ActivityID is the message itself — what a draft would reply to.
 	ActivityID ids.UUID
-	Subject    string
+	// Kind tells an email from a channel message. The query spans both, and
+	// only an email has an email's shape: a caller drawing the canonical email
+	// row for a chat would put a mail icon on a message that never travelled
+	// on one.
+	Kind    string
+	Subject string
 	// Sender is the address the message came from, so a caller can tell a
 	// person waiting from a machine sending. Empty when no sender was recorded.
 	Sender string
@@ -234,7 +239,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		waiting = []WaitingReply{}
 		for rows.Next() {
 			var row WaitingReply
-			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.Sender, &row.OccurredAt,
+			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.PersonID, &row.OrganizationID, &row.DealID,
 				&row.HasOpenDeal, &row.OwnerID); err != nil {
 				return err

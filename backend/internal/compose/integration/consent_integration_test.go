@@ -16,8 +16,8 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -26,11 +26,16 @@ type consentEnv struct {
 	personID   string
 	activityID string
 	purposes   map[string]string // key -> id
+	// mail is the relay the confirm-details link rides. A double-opt-in purpose
+	// can only be granted by spending a mailed link, and the plaintext never
+	// appears in a response, so a test has to read the mail.
+	mail *capturingMailer
 }
 
 func setupConsent(t *testing.T) *consentEnv {
 	t.Helper()
-	e := apptest.SetupApp(t)
+	mail := &capturingMailer{}
+	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(mail))
 	apptest.BootstrapWorkspaceSession(t, e, "Consent E2E", "dpo@fable.test", "Admin")
 
 	var person struct {
@@ -69,7 +74,7 @@ func setupConsent(t *testing.T) *consentEnv {
 		purposes["business_correspondence"] == "" {
 		t.Fatalf("bootstrap did not seed the purpose catalog: %+v", purposeList.Data)
 	}
-	return &consentEnv{AppEnv: e, personID: person.ID, activityID: activity.ID, purposes: purposes}
+	return &consentEnv{AppEnv: e, mail: mail, personID: person.ID, activityID: activity.ID, purposes: purposes}
 }
 
 func (c *consentEnv) send(t *testing.T, purpose string) (int, string) {
@@ -113,13 +118,9 @@ func TestConsentDefaultDenySuppressesSends(t *testing.T) {
 
 	// Grant marketing through the round-trip its purpose demands; the send
 	// under THAT purpose then flows.
-	token := c.issueDOIToken(t, c.purposes["marketing_email"])
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
-		"purpose_id": c.purposes["marketing_email"], "new_state": "granted",
-		"lawful_basis": "consent", "double_opt_in_token": token,
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("record consent → %d", status)
-	}
+	// The grant IS the spent link: the public edge records it through the
+	// ordinary consent engine, so there is no second call to make here.
+	c.grantMarketingByConfirmLink(t)
 	if status, code := c.send(t, "marketing_email"); status != http.StatusAccepted {
 		t.Fatalf("granted send → %d %q, want 202", status, code)
 	}
@@ -330,16 +331,9 @@ func TestConsentDoubleOptInNorm(t *testing.T) {
 		t.Fatalf("forged DOI grant → %d, want 422", status)
 	}
 
-	// The real round-trip: the server mints the token (the contract has
-	// no mint/delivery endpoint yet, so issuance rides the store seam),
-	// the confirming grant presents it, and the send flows.
-	token := c.issueDOIToken(t, c.purposes["marketing_email"])
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
-		"purpose_id": c.purposes["marketing_email"], "new_state": "granted",
-		"double_opt_in_token": token,
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("DOI grant → %d", status)
-	}
+	// The real round trip: the workspace mails the link, the subject spends it
+	// from their own mailbox, and the send under that purpose then flows.
+	spent := c.grantMarketingByConfirmLink(t)
 	if status, code := c.send(t, "marketing_email"); status != http.StatusAccepted {
 		t.Fatalf("DOI-granted send → %d %q, want 202", status, code)
 	}
@@ -351,76 +345,80 @@ func TestConsentDoubleOptInNorm(t *testing.T) {
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("withdraw → %d", status)
 	}
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
-		"purpose_id": c.purposes["marketing_email"], "new_state": "granted",
-		"double_opt_in_token": token,
-	}, nil, nil); status != 422 {
-		t.Fatalf("re-grant with the consumed token → %d, want 422", status)
+	// And the spent link cannot put it back. A withdrawal that a replayed mail
+	// could undo would make the withdrawal advisory — the subject has to be
+	// asked again, with a link they have not already used.
+	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+spent, AnyMap{
+		"marketing_choice":  "granted",
+		"marketing_wording": "Yes, send me occasional product news.",
+	}, nil, nil); s != http.StatusNotFound {
+		t.Fatalf("replaying the spent link → %d, want 404", s)
 	}
 }
 
-// issueDOIToken mints a confirmation token over the contract surface
-// (POST /people/{id}/consent/double-opt-in) as the signed-in human —
-// the same call a Settings/capture surface makes before mailing the
-// link out.
-func (c *consentEnv) issueDOIToken(t *testing.T, purposeID string) string {
+// grantMarketingByConfirmLink takes the subject through the only round trip that
+// can now grant a double-opt-in purpose: the workspace mails them a link, and
+// they spend it with their answer.
+//
+// Both halves are real HTTP, and they are deliberately different callers. The
+// operator asks for the mail; the SUBJECT posts the answer through the anonymous
+// public edge carrying nothing but the token that reached their mailbox. That
+// separation is the whole evidentiary claim, and it is why there is no operator
+// shortcut to shorten this helper with.
+func (c *consentEnv) grantMarketingByConfirmLink(t *testing.T) string {
 	t.Helper()
-	var issued struct {
-		Token     string     `json:"token"`
-		ExpiresAt *time.Time `json:"expires_at"`
+	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/confirm-request",
+		AnyMap{}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/double-opt-in", AnyMap{
-		"purpose_id": purposeID, "deliver": false,
-	}, nil, &issued); status != http.StatusCreated {
-		t.Fatalf("issue DOI token → %d", status)
+	token := c.mail.confirmLinkToken(t)
+	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
+		"marketing_choice":  "granted",
+		"marketing_wording": "Yes, send me occasional product news.",
+	}, nil, nil); s != http.StatusNoContent {
+		t.Fatalf("the subject spends their own link → %d, want 204", s)
 	}
-	if issued.Token == "" || issued.ExpiresAt == nil {
-		t.Fatalf("DOI issuance response incomplete: %+v", issued)
-	}
-	return issued.Token
+	// Returned so a caller can assert what a SPENT link does next.
+	return token
 }
 
-// The issuance half of the DOI round-trip (feedback/11): a purpose that
-// does not require DOI refuses issuance, and a fresh token supersedes
-// the unredeemed prior one — an old confirmation link in a stale mail
-// can no longer confirm anything.
-func TestDOIIssuanceSupersedesAndValidatesPurpose(t *testing.T) {
+// Issuance mints nothing, and says so.
+//
+// This replaces a test of the issuance round trip — non-DOI purposes refused,
+// a fresh token superseding a stale one, both mints audited. None of that
+// exists now: the endpoint returns a conflict for every caller, nothing writes
+// consent_doi_token, and the redemption arm is gone. A double-opt-in purpose
+// confirms through a spent confirm-details link instead, which
+// TestConsentDoubleOptInNorm exercises.
+//
+// What is worth holding is that the refusal is a refusal: the same answer
+// whatever purpose is named, and no row behind it. An endpoint in the public
+// contract that quietly minted again would hand an operator both halves of a
+// round trip whose only value is that the subject completed one of them.
+func TestDOIIssuanceMintsNothingWhicheverPurposeIsNamed(t *testing.T) {
 	c := setupConsent(t)
 
-	// transactional does not require double opt-in → 422.
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/double-opt-in", AnyMap{
-		"purpose_id": c.purposes["transactional"],
-	}, nil, nil); status != 422 {
-		t.Fatalf("DOI issuance for a non-DOI purpose → %d, want 422", status)
+	// A purpose that requires double opt-in, and one that does not, get the
+	// same answer. The endpoint resolves no id, so it can tell a caller nothing
+	// about which purposes exist.
+	for _, purpose := range []string{"marketing_email", "transactional"} {
+		if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/double-opt-in", AnyMap{
+			"purpose_id": c.purposes[purpose],
+		}, nil, nil); status != http.StatusConflict {
+			t.Errorf("issuance under %s → %d, want 409", purpose, status)
+		}
 	}
 
-	first := c.issueDOIToken(t, c.purposes["marketing_email"])
-	second := c.issueDOIToken(t, c.purposes["marketing_email"])
-
-	// The superseded first token no longer redeems…
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
-		"purpose_id": c.purposes["marketing_email"], "new_state": "granted",
-		"double_opt_in_token": first,
-	}, nil, nil); status != 422 {
-		t.Fatalf("superseded token redeemed → %d, want 422", status)
-	}
-	// …the fresh one does.
-	if c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
-		"purpose_id": c.purposes["marketing_email"], "new_state": "granted",
-		"double_opt_in_token": second,
-	}, nil, nil) != http.StatusOK {
-		t.Fatalf("fresh token refused")
-	}
-
-	// Issuance is an audited fact.
+	// And nothing was written. The table keeps its history and takes no new
+	// rows, so an unredeemed invitation cannot outlive the change.
 	var audit struct {
 		Data []AnyMap `json:"data"`
 	}
 	if status := c.Call(t, "GET", "/v1/audit-log?entity_type=consent_doi_token", nil, nil, &audit); status != http.StatusOK {
 		t.Fatalf("audit read → %d", status)
 	}
-	if len(audit.Data) != 2 {
-		t.Fatalf("DOI issuances audited %d times, want exactly the 2 mints (a refused issuance writes nothing)", len(audit.Data))
+	if len(audit.Data) != 0 {
+		t.Fatalf("a refused issuance audited %d row(s), want none", len(audit.Data))
 	}
 }
 

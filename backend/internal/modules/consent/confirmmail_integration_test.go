@@ -66,9 +66,9 @@ func TestAConfirmRequestMailsTheSubjectTheirOwnLink(t *testing.T) {
 	}
 
 	var got struct {
-		DeliveredTo string `json:"delivered_to"`
-		Delivered   bool   `json:"delivered"`
-		Token       string `json:"token"`
+		DeliveredTo      string `json:"delivered_to"`
+		ProviderAccepted bool   `json:"provider_accepted"`
+		Token            string `json:"token"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decode the issue response: %v", err)
@@ -78,8 +78,8 @@ func TestAConfirmRequestMailsTheSubjectTheirOwnLink(t *testing.T) {
 	if got.DeliveredTo != want {
 		t.Fatalf("delivered_to = %q, want the subject's own address %q", got.DeliveredTo, want)
 	}
-	if !got.Delivered {
-		t.Fatal("delivered = false with a working relay wired")
+	if !got.ProviderAccepted {
+		t.Fatal("provider_accepted = false with a working relay wired")
 	}
 	// The token is the capability the whole mailbox-as-evidence claim rests on.
 	// A caller who could read it here could open the subject's record without
@@ -134,16 +134,16 @@ func TestAnInstallationThatCannotDeliverStillMintsTheLink(t *testing.T) {
 		t.Fatalf("status = %d, want 201 (body: %s)", rec.Code, rec.Body.String())
 	}
 	var got struct {
-		Delivered bool `json:"delivered"`
-		Sendable  bool `json:"sendable"`
+		ProviderAccepted bool `json:"provider_accepted"`
+		Sendable         bool `json:"sendable"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decode the issue response: %v", err)
 	}
 	// The write happened. Reporting it as a failure would invite a second
 	// request that mints another token and supersedes the first.
-	if got.Delivered {
-		t.Fatal("delivered = true with no relay configured")
+	if got.ProviderAccepted {
+		t.Fatal("provider_accepted = true with no relay configured")
 	}
 	// And the reason is NOT a failed send. A reader told "the mail did not go
 	// out" would press again forever against an installation that cannot send
@@ -166,8 +166,8 @@ func TestARelayOutageDoesNotFailTheRequestOrHideItself(t *testing.T) {
 		t.Fatalf("status = %d, want 201 (body: %s)", rec.Code, rec.Body.String())
 	}
 	var got struct {
-		Delivered bool `json:"delivered"`
-		Sendable  bool `json:"sendable"`
+		ProviderAccepted bool `json:"provider_accepted"`
+		Sendable         bool `json:"sendable"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decode the issue response: %v", err)
@@ -175,8 +175,8 @@ func TestARelayOutageDoesNotFailTheRequestOrHideItself(t *testing.T) {
 	// The distinction that matters: the token exists, and nobody was sent it.
 	// Collapsing this into a 201 that claims delivery leaves a rep believing a
 	// contact was asked when they never were.
-	if got.Delivered {
-		t.Fatal("delivered = true after the relay refused the message")
+	if got.ProviderAccepted {
+		t.Fatal("provider_accepted = true after the relay refused the message")
 	}
 	// And this is the OTHER undelivered case: a relay exists and refused. The
 	// reader's move is to press again, not to go configure a mailer that is
