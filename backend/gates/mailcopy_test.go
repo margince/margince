@@ -54,6 +54,10 @@ var mailLabelPairs = []struct {
 	{"home.weekly.decided", func(c mailcopy.Copy) string { return c.WeeklyDecided }},
 	{"home.weekly.queueWorked", func(c mailcopy.Copy) string { return c.WeeklyQueue }},
 	{"home.weekly.carriedOver", func(c mailcopy.Copy) string { return c.WeeklyCarried }},
+	// The planning question is the PANEL's heading. The mail asks it and the
+	// screen answers it, so two spellings would have the message invite
+	// something the page it opens does not offer under that name.
+	{"plan.title", func(c mailcopy.Copy) string { return c.WeeklyPlanAhead }},
 	{"home.weekly.outcome.won", func(c mailcopy.Copy) string { return c.WeeklyOutcomeWon }},
 	{"home.weekly.outcome.lost", func(c mailcopy.Copy) string { return c.WeeklyOutcomeLost }},
 	{"home.weekly.outcome.moved", func(c mailcopy.Copy) string { return c.WeeklyOutcomeMoved }},
