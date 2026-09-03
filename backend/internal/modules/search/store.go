@@ -250,8 +250,11 @@ var searchBranches = []searchBranch{
 // keyset pagination orders (score DESC, type, id) so the cursor is
 // stable under concurrent writes.
 func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
-	query := strings.TrimSpace(in.Query)
-	if query == "" {
+	// normalizeQuery, not TrimSpace: a TRAILING separator is what says the
+	// reader finished a word, and trimming it turned every completed search
+	// into a prefix search.
+	query := normalizeQuery(in.Query)
+	if strings.TrimSpace(query) == "" {
 		return Page{}, &BadQueryError{Field: "q", Reason: "q is required"}
 	}
 	limit := clampLimit(in.Limit)
@@ -280,9 +283,20 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		qPos := arg(query)
 
-		branches, err := admittedBranchSQL(ctx, types, qPos, arg)
+		// The query split at the last separator: the words the reader FINISHED,
+		// and the fragment they are still typing. The two are matched
+		// differently — finished words whole, the fragment as a prefix.
+		head, tail := splitTypedQuery(query)
+		headPos := arg(head)
+		// Bound only when there IS a fragment: a parameter no SQL references
+		// cannot have its type inferred, and Postgres fails the whole statement.
+		tailPos := 0
+		if tail != "" {
+			tailPos = arg(tail)
+		}
+
+		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, tail != "", arg)
 		if err != nil {
 			return err
 		}
@@ -323,7 +337,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 // entity type. A hit is a read twice over: object RBAC first (a role
 // without person.read gets no person hits — search must not out-see the
 // entity lists), then the row scope.
-func admittedBranchSQL(ctx context.Context, types []string, qPos int, arg func(any) int) ([]string, error) {
+func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool, arg func(any) int) ([]string, error) {
 	var branches []string
 	for _, branch := range searchBranches {
 		if !slices.Contains(types, branch.entity) {
@@ -336,21 +350,11 @@ func admittedBranchSQL(ctx context.Context, types []string, qPos int, arg func(a
 		if !admitted {
 			continue
 		}
-		// Name entities parse the query 'simple' (unaccented — Muller
-		// finds Müller), OR-ed with the apostrophe-collapsed parse so
-		// "o'reilly" also reaches a row stored as "OReilly" (the index
-		// side carries the collapsed tokens, migration 0077); the
-		// activity branch additionally ORs the German/English stemmed
-		// parses so "Vertrag" reaches rows whose tsvector stemmed
-		// "Verträge" under their captured language.
-		tsquery := fmt.Sprintf(
-			`(websearch_to_tsquery('simple', f_unaccent($%[1]d)) || websearch_to_tsquery('simple', f_fold_apostrophes($%[1]d)))`,
-			qPos)
-		if branch.entity == "activity" {
-			tsquery = fmt.Sprintf(
-				`(websearch_to_tsquery('simple', f_unaccent($%[1]d)) || websearch_to_tsquery('simple', f_fold_apostrophes($%[1]d)) || websearch_to_tsquery('german', f_unaccent($%[1]d)) || websearch_to_tsquery('english', f_unaccent($%[1]d)))`,
-				qPos)
-		}
+		// What this branch matches, and why it is shaped that way, lives with
+		// the expression in typedquery.go — including the parse configurations
+		// each entity uses and the rule that only the fragment widens.
+		tsquery := matchExpression(branch.entity, headPos, tailPos, hasFragment)
+
 		snippet, err := branch.excerpt(ctx, arg)
 		if err != nil {
 			return nil, err
