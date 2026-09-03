@@ -162,6 +162,24 @@ type Engine struct {
 	// no plan module is bound — the review then counts no commitments rather
 	// than failing, because a retrospective is still worth having without one.
 	plan WeekPlan
+	// teams answers whether the caller belongs to the team they are asking
+	// about. Nil FAILS CLOSED: a team read is refused rather than served
+	// unchecked, because an unbound seam is a wiring mistake and serving the
+	// snapshot anyway would hand every lead every team's week.
+	teams TeamMembers
+}
+
+// TeamMembers answers whether the caller belongs to a named team.
+//
+// The team-id half of the membership question identity already answers by user
+// id for the Worklist's owner reads. It lives behind an interface for the
+// reason WeekPlan does: this package cannot import the module that owns
+// team_membership, and what it needs is one boolean.
+type TeamMembers interface {
+	// CallerLeadsLiveTeam reports whether the acting human is a live member of
+	// this live team. False for a team that does not exist, so an outsider
+	// cannot learn which team ids are real.
+	CallerLeadsLiveTeam(ctx context.Context, team ids.UUID) (bool, error)
 }
 
 // WeekPlan settles the closing week's plan and says what it came to.
@@ -184,6 +202,13 @@ func NewEngine(pool *pgxpool.Pool) *Engine { return &Engine{pool: pool} }
 // to. Absent, the review's commitment counts stay zero.
 func (e *Engine) WithPlan(plan WeekPlan) *Engine {
 	e.plan = plan
+	return e
+}
+
+// WithTeamMembers binds the membership question the team snapshot is gated on.
+// Absent, every team read is refused.
+func (e *Engine) WithTeamMembers(teams TeamMembers) *Engine {
+	e.teams = teams
 	return e
 }
 

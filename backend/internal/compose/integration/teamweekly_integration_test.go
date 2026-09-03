@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -40,8 +41,12 @@ func setupTeamWeekly(t *testing.T) *teamEnv {
 	t.Helper()
 	e := integration.Setup(t)
 	return &teamEnv{
-		Env:     e,
-		engine:  weekly.NewEngine(e.Pool),
+		Env: e,
+		// Bound the way compose binds it. An engine WITHOUT the seam refuses
+		// every team read, so a suite built on one would prove nothing about
+		// which reader is admitted — and the real identity service, not a stub,
+		// because the question here is what team_membership says.
+		engine:  weekly.NewEngine(e.Pool).WithTeamMembers(identity.NewService(e.Pool)),
 		leadCtx: e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
 		repCtx:  ownScoped(e, e.Rep2),
 	}
@@ -71,6 +76,139 @@ func TestAnOwnScopedSeatIsRefusedTheTeamWeek(t *testing.T) {
 
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("an own-scoped seat got %v, wanted a refusal", err)
+	}
+}
+
+// teamScoped is a lead: they may read deals, and their row scope reaches a
+// team. Every other test here runs under AdminPerms, which is RowScopeAll and
+// short-circuits the membership question — which is exactly why the leak below
+// stayed invisible until someone asked for a team they are not on.
+func teamScoped(e *integration.Env, user ids.UUID, teams []ids.UUID) context.Context {
+	perms := integration.AdminPerms
+	perms.RowScope = principal.RowScopeTeam
+	return e.As(user, teams, perms)
+}
+
+// A LEAD OF ONE TEAM MUST NOT READ ANOTHER'S WEEK. The team id arrives from the
+// query string and nothing on the row narrows it to the reader, so without a
+// membership gate one changed parameter hands over every member of another
+// team: their name, their won deals, their breached leads, and the one thing
+// their own lead was told to raise with them.
+func TestALeadOfOneTeamCannotOpenAnothersWeek(t *testing.T) {
+	e := setupTeamWeekly(t)
+
+	// Team2 is Rep3's in the harness; Rep1 and Rep2 share Team1.
+	writeRepWeek(t, e, e.Rep3)
+	if _, _, err := e.engine.AssembleTeamFor(e.leadCtx, e.Team2, "Team Two",
+		[]weekly.TeamMember{{UserID: e.Rep3, DisplayName: "Rep Three"}}, teamClock); err != nil {
+		t.Fatal(err)
+	}
+
+	outsider := teamScoped(e.Env, e.Rep1, []ids.UUID{e.Team1})
+
+	_, err := e.engine.LatestTeamReview(outsider, e.Team2, nil)
+
+	// NOT FOUND, not permission denied. A refusal that distinguished "this team
+	// exists but is not yours" from "no such team" would let an outsider
+	// enumerate the chart one id at a time — the same reason a row-scope miss
+	// reads as 404 everywhere else in this tree.
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("a lead read another team's week: got %v, wanted ErrNotFound", err)
+	}
+}
+
+// AND THE SAME SEAT READS ITS OWN TEAM. Without this case the test above passes
+// over an engine that refuses everyone, which is how a refusal test proves
+// nothing at all.
+func TestATeamScopedLeadReadsTheirOwnTeamsWeek(t *testing.T) {
+	e := setupTeamWeekly(t)
+
+	writeRepWeek(t, e, e.Rep1)
+	if _, _, err := e.engine.AssembleTeamFor(
+		e.leadCtx, e.Team1, "Team One", members(e), teamClock); err != nil {
+		t.Fatal(err)
+	}
+
+	lead := teamScoped(e.Env, e.Rep1, []ids.UUID{e.Team1})
+
+	read, err := e.engine.LatestTeamReview(lead, e.Team1, nil)
+	if err != nil {
+		t.Fatalf("a lead reading their own team's week: %v", err)
+	}
+	if read.TeamName != "Team One" {
+		t.Errorf("got the week of %q, wanted Team One", read.TeamName)
+	}
+}
+
+// A MANAGEMENT SEAT OPENS A TEAM IT IS NOT ON. Row scope "all" reaches every
+// row by definition, so asking membership of it would refuse a reader the
+// row-scope predicate then admits.
+//
+// This case is why the gate short-circuits on auth.Unbounded rather than asking
+// membership of everyone: removing that short-circuit leaves every OTHER test
+// here green, because their readers happen to be members of the team they ask
+// about. Only a reader who is deliberately not can tell the difference.
+func TestAManagementSeatOpensATeamItIsNotOn(t *testing.T) {
+	e := setupTeamWeekly(t)
+
+	writeRepWeek(t, e, e.Rep3)
+	if _, _, err := e.engine.AssembleTeamFor(e.leadCtx, e.Team2, "Team Two",
+		[]weekly.TeamMember{{UserID: e.Rep3, DisplayName: "Rep Three"}}, teamClock); err != nil {
+		t.Fatal(err)
+	}
+
+	// Rep1 is on Team1 and nowhere near Team2 — AdminPerms is RowScopeAll.
+	management := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+
+	read, err := e.engine.LatestTeamReview(management, e.Team2, nil)
+	if err != nil {
+		t.Fatalf("a management seat reading another team's week: %v", err)
+	}
+	if read.TeamName != "Team Two" {
+		t.Errorf("got the week of %q, wanted Team Two", read.TeamName)
+	}
+}
+
+// The NAMED week takes the same gate as the newest one. They are separate entry
+// points, and a gate written into one alone leaves "?week=2026-06-01" open.
+func TestNamingTheWeekDoesNotBypassTheTeamGate(t *testing.T) {
+	e := setupTeamWeekly(t)
+
+	writeRepWeek(t, e, e.Rep3)
+	written, _, err := e.engine.AssembleTeamFor(e.leadCtx, e.Team2, "Team Two",
+		[]weekly.TeamMember{{UserID: e.Rep3, DisplayName: "Rep Three"}}, teamClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outsider := teamScoped(e.Env, e.Rep1, []ids.UUID{e.Team1})
+
+	// The week that was actually written, so a refusal cannot be a miss on the
+	// date rather than the gate doing its job.
+	_, err = e.engine.TeamReview(outsider, e.Team2, written.LocalWeekStart)
+
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("naming another team's week: got %v, wanted ErrNotFound", err)
+	}
+}
+
+// An engine with NO membership seam refuses a team read rather than serving it
+// unchecked. An unbound seam is a wiring mistake, and the failure mode of
+// serving anyway is handing every lead every team's week.
+func TestAnUnboundMembershipSeamRefusesTheTeamWeek(t *testing.T) {
+	e := setupTeamWeekly(t)
+
+	writeRepWeek(t, e, e.Rep1)
+	if _, _, err := e.engine.AssembleTeamFor(
+		e.leadCtx, e.Team1, "Team One", members(e), teamClock); err != nil {
+		t.Fatal(err)
+	}
+
+	unwired := weekly.NewEngine(e.Pool)
+	lead := teamScoped(e.Env, e.Rep1, []ids.UUID{e.Team1})
+
+	if _, err := unwired.LatestTeamReview(lead, e.Team1, nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("an unbound seam served a team week: got %v, wanted ErrNotFound", err)
 	}
 }
 

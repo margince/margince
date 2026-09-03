@@ -167,7 +167,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
 		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
 		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool).
-			WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)})),
+			WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)}).
+			// Which team's week a lead may open. Unbound, every team read is
+			// refused — the team id arrives from the request, and nothing else
+			// on the row narrows it to the reader.
+			WithTeamMembers(newTeammatesSeam(pool))),
 		// ONE spelling of "which Monday": the plan and the review beside it must
 		// be about the same seven days, and weekly owns that answer. A module
 		// may not import compose, so it takes the function.

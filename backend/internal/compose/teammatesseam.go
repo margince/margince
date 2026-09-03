@@ -5,13 +5,14 @@ package compose
 
 // Who are my teammates?
 //
-// One question with three askers, in two shapes. The Worklist asks the yes/no
+// One question with four askers, in three shapes. The Worklist asks the yes/no
 // shape to decide whether a team-scoped reader may open a named person's queue;
 // coaching asks the same one to decide whether a lead may put a notice in
-// somebody's queue; the team board asks the enumerating shape to draw its rows.
-// All three read through this one seam rather than each deriving membership for
-// itself — two derivations would drift, and the pair that drifts here is "may I
-// see your day" against "may I speak into it".
+// somebody's queue; the team board asks the enumerating shape to draw its rows;
+// the team's frozen week asks the by-team-id shape, because a snapshot names a
+// team rather than a person. All four read through this one seam rather than
+// each deriving membership for itself — two derivations would drift, and the
+// pair that drifts here is "may I see your day" against "may I speak into it".
 //
 // The two shapes answer from the same predicate inside identity, which is the
 // property the board depends on: a name this seam lists is a queue the same seam
@@ -42,6 +43,13 @@ func newTeammatesSeam(pool *pgxpool.Pool) teammatesSeam {
 // caller is not an end of.
 func (t teammatesSeam) SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error) {
 	return t.svc.SharesLiveTeamWithCaller(ctx, ids.From[ids.UserKind](other))
+}
+
+// CallerLeadsLiveTeam names a TEAM rather than a person, which is the shape the
+// frozen team week needs: its subject is a team id off the request, and the
+// question is whether the reader belongs to it.
+func (t teammatesSeam) CallerLeadsLiveTeam(ctx context.Context, team ids.UUID) (bool, error) {
+	return t.svc.CallerLeadsLiveTeam(ctx, team)
 }
 
 // LiveTeammatesOfCaller carries no caller argument for the same reason: identity
