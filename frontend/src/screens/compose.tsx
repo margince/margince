@@ -686,6 +686,38 @@ function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
   );
 }
 
+// The lead-started draft. One path parameter and optional steering: a lead
+// carries its own address, so unlike the account path there is no recipient to
+// name and no deal or project to pick.
+//
+// It answers the same `{available, draft}` shape as the other two, so the fill
+// below cannot tell the three origins apart and they cannot drift into
+// different clobber rules.
+async function draftFromLead({
+  entityId,
+  intent,
+  t,
+}: Readonly<{
+  entityId: string;
+  intent: string;
+  t: ReturnType<typeof useT>;
+}>): Promise<DraftResult> {
+  const { data, error, response } = await api.POST("/leads/{id}/draft-email", {
+    params: { path: { id: entityId } },
+    body: intent.trim() ? { intent: intent.trim() } : {},
+  });
+  if (response.status === 501) return { available: false as const };
+  if (!response.ok || !data) {
+    throwProblem(error || { title: t("compose.actionFailed") });
+  }
+  return {
+    available: true as const,
+    draft: data,
+    reasoning: data.reasoning,
+    scope: data.scope,
+  };
+}
+
 // The account-started draft (ADR-0087/A132). It grounds itself in the account
 // rather than in a message, so it needs the recipient named before it can say
 // anything — that is the one thing this path knows that an empty compose box
@@ -711,9 +743,16 @@ async function draftFromAccount({
   intent: string;
   t: ReturnType<typeof useT>;
 }>): Promise<DraftResult> {
-  // Only a company page can ground one: a person or a deal has no 360 to
-  // write from, and grounding a message to a contact in some nearby account
-  // would be a conversation the rep never chose.
+  // A LEAD grounds its own. The record IS the recipient — the address is on it
+  // rather than on a contact behind it — so there is nobody to name and nothing
+  // to pick, which is the shape /people/{id}/draft-email describes and the same
+  // writer answers.
+  if (entityType === "lead") {
+    return draftFromLead({ entityId, intent, t });
+  }
+  // A company page has to be told which contact, because an account has many.
+  // A person or a deal grounds nothing here: writing to a contact from whatever
+  // account sits nearby would be a conversation the rep never chose.
   if (entityType !== "organization" || !recipientId) {
     return { available: false as const };
   }

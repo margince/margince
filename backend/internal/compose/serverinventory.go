@@ -138,6 +138,7 @@ type Server struct {
 	dealStatusHandlers
 	personResearchHandlers
 	personDraftHandlers
+	leadDraftHandlers
 	orgBriefHandlers
 	orgDossierHandlers
 	accountDraftHandlers

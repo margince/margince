@@ -4587,6 +4587,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/{id}/draft-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft an email to this lead, grounded in their record.
+         * @description The lead-side mirror of `POST /people/{id}/draft-email`, and the same writer behind
+         *     both: the record IS the recipient, so the request carries nothing but optional
+         *     steering. A lead is the shape that endpoint's description already names — one
+         *     recipient, on the record itself — which is why this adds a fold and not a drafter.
+         *
+         *     **It changes no record.** No field on the lead, no activity, no voice-learning signal,
+         *     and nothing is sent. Sending stays `POST /emails`, with its own consent gate, approval
+         *     token and idempotency key. The two writes that do happen are about the CALL rather
+         *     than the lead: the workspace's AI usage meter and the model-call audit row.
+         *
+         *     **Grounded, per viewer.** The draft stands on what the lead page stands on: who they
+         *     are, the company they wrote from, where the lead sits on its ladder, and the recent
+         *     correspondence filed against it. A lead has no deal, no project and no claims — those
+         *     belong to a contact that exists, and a lead is by definition the record before one
+         *     does — so the draft says less than a contact's would rather than inventing the
+         *     difference. Every input but the intent is untrusted text and is fenced.
+         *
+         *     A lead with no email address on record is `422`: a draft addressed to nobody is not a
+         *     message, and the composer can say so before spending a model call.
+         *
+         *     When no model lane is configured, or the workspace's AI budget is exhausted, the draft
+         *     degrades to a deterministic one rather than failing — `generated_by` says which wrote
+         *     it.
+         *
+         *     Human-only: drafting spends the workspace's model budget on prose for a person to send
+         *     under their own name.
+         */
+        post: operations["draftLeadEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/{id}/manual-signals": {
         parameters: {
             query?: never;
@@ -36983,6 +37031,40 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    draftLeadEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
+                    intent?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description The draft, and what it was written from. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountEmailDraft"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listLeadManualSignals: {

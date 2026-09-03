@@ -66,19 +66,7 @@ func CorrespondenceText(view crmcontracts.Person360) string {
 	if view.Activities == nil {
 		return ""
 	}
-	var text strings.Builder
-	for i, activity := range view.Activities.Data {
-		if i == draftInputActivities {
-			break
-		}
-		if activity.Subject != nil {
-			text.WriteString(*activity.Subject + "\n")
-		}
-		if activity.Body != nil {
-			text.WriteString(*activity.Body + "\n\n")
-		}
-	}
-	return text.String()
+	return CorrespondenceTextOf(view.Activities.Data)
 }
 
 func recipientOf(view crmcontracts.Person360) RecipientIn {
@@ -323,9 +311,25 @@ func foldRecent(in *Input, view crmcontracts.Person360) {
 	if view.Activities == nil {
 		return
 	}
+	in.Recent = FoldRecent(view.Activities.Data)
+}
+
+// FoldRecent turns a record's newest-first activities into the conversation the
+// draft reads, bounded and with one snippet.
+//
+// Exported and taking a plain slice because a LEAD's correspondence folds by
+// exactly these rules — how many exchanges are read, which one yields its text,
+// how long that text may be. A record whose activities are a list is the whole
+// input this needs, and leaddraft has one without having a Person360.
+//
+// The alternative was a second copy of the loop in the lead's fold, which is
+// how the bound and the newest-inbound rule would come to disagree between two
+// drafts of the same conversation.
+func FoldRecent(activities []crmcontracts.Activity) []ActIn {
+	var out []ActIn
 	readInbound := false
-	for _, activity := range view.Activities.Data {
-		if len(in.Recent) == draftInputActivities {
+	for _, activity := range activities {
+		if len(out) == DraftInputActivities {
 			break
 		}
 		folded := ActIn{
@@ -351,8 +355,32 @@ func foldRecent(in *Input, view crmcontracts.Person360) {
 				folded.Snippet = snippetOf(*activity.Body)
 			}
 		}
-		in.Recent = append(in.Recent, folded)
+		out = append(out, folded)
 	}
+	return out
+}
+
+// CorrespondenceTextOf is the counterparty's own writing, newest first, for
+// detecting what language a correspondence is in.
+//
+// The slice-taking twin of CorrespondenceText above, for the same reason
+// FoldRecent is exported: a lead's language is read off a lead's activities by
+// the same rule, and the rule is "subjects and bodies both, bounded the same
+// way" rather than anything about a Person360.
+func CorrespondenceTextOf(activities []crmcontracts.Activity) string {
+	var text strings.Builder
+	for i, activity := range activities {
+		if i == DraftInputActivities {
+			break
+		}
+		if activity.Subject != nil {
+			text.WriteString(*activity.Subject + "\n")
+		}
+		if activity.Body != nil {
+			text.WriteString(*activity.Body + "\n\n")
+		}
+	}
+	return text.String()
 }
 
 // omittedNames renders the withheld sections as plain strings for the writer.
